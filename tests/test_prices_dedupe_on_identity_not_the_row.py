@@ -103,3 +103,70 @@ def test_a_store_holding_two_snapshot_windows_refuses_to_be_measured_as_one():
 
 def test_one_window_is_fine_and_names_itself():
     assert assert_single_window(pd.DataFrame([_quote()])) == "card"
+
+
+def test_a_csv_round_trip_cannot_break_the_dedupe_key(tmp_path):
+    """The fifth member of the join-vocabulary bug family, pinned.
+
+    Found by a line-movement test, not by review: appending the same capture
+    twice wrote it twice. The reason is that a CSV round-trip turns an empty
+    `player` into NaN, so the row already on disk and the identical row about
+    to be written compared UNEQUAL.
+
+    ROI is unchanged by exact duplication and the interval narrows by root
+    two. **A duplicated store does not look wrong — it looks significant.**
+    """
+    from cbb_betting_lab import stores
+
+    columns = ("event_id", "market", "player", "selection", "line", "book", "odds")
+    row = {
+        "event_id": "e1", "market": "total_points", "player": "",
+        "selection": "over", "line": 142.5, "book": "draftkings", "odds": -110.0,
+    }
+    path = tmp_path / "prices.csv"
+    frame = pd.DataFrame([row], columns=list(columns))
+
+    stores.append(frame, path, columns=columns, dedupe_on=columns)
+    assert len(pd.read_csv(path)) == 1
+    # The second append reads the file back — empty player is now NaN — and
+    # must still recognise the row as one it already holds.
+    stores.append(frame, path, columns=columns, dedupe_on=columns)
+    assert len(pd.read_csv(path)) == 1, (
+        "The same quote was written twice across a CSV round-trip."
+    )
+
+
+def test_a_line_is_the_same_line_however_it_was_written(tmp_path):
+    """142.5 and '142.50' are one line, and 3 and 3.0 are one line. A store
+    compared against itself across a CSV round-trip preserves neither type."""
+    from cbb_betting_lab import stores
+
+    columns = ("event_id", "market", "line")
+    path = tmp_path / "lines.csv"
+    stores.append(
+        pd.DataFrame([{"event_id": "e", "market": "spread", "line": 3.0}]),
+        path, columns=columns, dedupe_on=columns,
+    )
+    stores.append(
+        pd.DataFrame([{"event_id": "e", "market": "spread", "line": "3"}]),
+        path, columns=columns, dedupe_on=columns,
+    )
+    assert len(pd.read_csv(path)) == 1
+
+
+def test_the_string_nan_is_never_an_identity(tmp_path):
+    """`str(x or "")` on a NaN yields the literal string "nan", which is truthy
+    and matches nothing forever. It must collapse to absent, not to a value."""
+    from cbb_betting_lab import stores
+
+    columns = ("event_id", "player")
+    path = tmp_path / "p.csv"
+    stores.append(
+        pd.DataFrame([{"event_id": "e", "player": "nan"}]),
+        path, columns=columns, dedupe_on=columns,
+    )
+    stores.append(
+        pd.DataFrame([{"event_id": "e", "player": ""}]),
+        path, columns=columns, dedupe_on=columns,
+    )
+    assert len(pd.read_csv(path)) == 1

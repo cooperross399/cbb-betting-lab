@@ -21,10 +21,21 @@ from pathlib import Path
 
 WORKFLOWS = Path(__file__).resolve().parents[1] / ".github" / "workflows"
 
-#: The one workflow allowed to write to this repository, and the one ref it may
-#: write. Changing either is a deliberate act that has to happen here first.
-THE_WRITER = "cbb-gameday-refresh.yml"
-THE_REF = "refs/heads/card-feed"
+#: The CLOSED SET of workflows allowed to write to this repository, and the one
+#: ref each may write. Changing it is a deliberate act that has to happen here
+#: first, and a workflow absent from it may not hold `contents: write` at all.
+#:
+#: GitHub cannot scope `contents: write` to a ref — a token that may write
+#: `line-movement` may write `main` — so this mapping is the scope. It started
+#: as a single workflow and a single ref; the line-movement capture made it a
+#: set, because a capture must never be able to overwrite a card and a card
+#: must never be able to overwrite a capture. The rule was never "one writer",
+#: it was "a declared, closed set of writers and refs", and that is what this
+#: is now.
+WRITERS: dict[str, str] = {
+    "cbb-gameday-refresh.yml": "refs/heads/card-feed",
+    "line-movement.yml": "refs/heads/line-movement",
+}
 
 
 def workflow_files() -> list[Path]:
@@ -33,17 +44,17 @@ def workflow_files() -> list[Path]:
     return found
 
 
-def test_exactly_one_workflow_requests_write_access():
-    writers = [
+def test_only_declared_workflows_request_write_access():
+    writers = sorted(
         path.name
         for path in workflow_files()
         if re.search(r"^\s*contents:\s*write\s*$", path.read_text(), re.MULTILINE)
-    ]
-    assert writers == [THE_WRITER], (
-        f"Workflows requesting `contents: write`: {writers}. Exactly one may, "
-        f"and it must be {THE_WRITER}. GitHub cannot scope that permission to "
-        "a ref, so a second workflow holding it is a second way for a run to "
-        "write `main`."
+    )
+    assert writers == sorted(WRITERS), (
+        f"Workflows requesting `contents: write`: {writers}. The declared set "
+        f"is {sorted(WRITERS)}. GitHub cannot scope that permission to a ref, "
+        "so a workflow holding it that is not declared here is an undeclared "
+        "way for a run to write `main`."
     )
 
 
@@ -70,16 +81,26 @@ def real_lines(path: Path) -> list[str]:
     ]
 
 
-def test_every_git_push_in_every_workflow_targets_the_card_feed_ref():
-    """A push to any other ref is a workflow writing the repository proper."""
+def test_every_git_push_targets_the_ref_its_workflow_declared():
+    """A push to any other ref is a workflow writing the repository proper.
+
+    Each writer may push to ITS OWN declared ref and no other. The capture
+    workflow pushing to `card-feed` would be as wrong as it pushing to `main`:
+    a capture must never be able to overwrite a card.
+    """
     pattern = re.compile(r"^\s*git push\b.*$")
     for path in workflow_files():
-        for line in [l for l in real_lines(path) if pattern.match(l)]:
+        pushes = [l for l in real_lines(path) if pattern.match(l)]
+        if pushes:
+            assert path.name in WRITERS, (
+                f"{path.name} pushes but is not a declared writer: "
+                f"{[p.strip() for p in pushes]}"
+            )
+        expected = WRITERS.get(path.name, "")
+        for line in pushes:
             target = line.rstrip().rstrip('"\'')
-            assert target.endswith(f":{THE_REF}"), (
-                f"{path.name} pushes to something other than {THE_REF}:\n"
-                f"  {line.strip()}\n"
-                "Every push in this repository ends in that ref."
+            assert target.endswith(f":{expected}"), (
+                f"{path.name} may push only to {expected}:\n  {line.strip()}"
             )
 
 

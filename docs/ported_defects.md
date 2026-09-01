@@ -99,3 +99,20 @@ caught only because the settlement work measured its own coverage and printed
 the denominator — which is the house rule that "a number without a sample size
 is not a result", applied to settlement rather than to returns.
 
+| F | **A CSV round-trip broke a dedupe key, so every re-run wrote every quote twice.** `stores.append` deduped on a key including `player`; an empty player is written as `""` and read back as `NaN`, so the row already on disk and the identical row about to be written compared **unequal**. Any retried or re-dispatched capture doubled the store. | A line-movement test that appended the same capture twice and asserted the row count did not move. Not by review — the code reads correctly. | `test_prices_dedupe_on_identity_not_the_row.py::test_a_csv_round_trip_cannot_break_the_dedupe_key` |
+
+**Defect F is the fifth member of the NHL lab's join-vocabulary family arriving
+in a sixth place.** That lab listed it as *"a CSV round-trip turning empty
+players into the string `nan` on one side of a hand-built key"*, and this
+repository was built with `selection_key()` precisely so it could not recur —
+which it did not, in the joins. It recurred in the **store**, where a key is
+also built and where nobody had thought to look, and the symptom is the one the
+NHL lab named exactly: **a duplicated store does not look wrong, it looks
+significant.** ROI would have been unchanged and every interval root-two too
+narrow.
+
+The fix normalises the key on both sides before comparing — NaN, `None`, `""`
+and the literal string `"nan"` are one absent value, and `3`, `3.0` and
+`"3.00"` are one line — and normalises **only the key**, never the stored data.
+The lesson for the next lab is that "one function builds every join key" has to
+include the keys that are not called joins.

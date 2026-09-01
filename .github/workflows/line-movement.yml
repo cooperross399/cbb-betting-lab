@@ -1,0 +1,126 @@
+name: Line Movement
+
+# Six credits a capture. The featured board comes from the BULK endpoint —
+# 3 keys x 2 regions for the entire slate, whatever its size — so on a
+# 200-game opening Monday this is 200 games for 6 credits. Per-event ladders
+# are deliberately not captured: they would cost 96 credits a game a capture,
+# and the reachability question is answerable on the featured board, which is
+# also the board a card can actually bet.
+#
+# WHY THIS RUNS BEFORE THE SEASON. Survival is a statement about a quote at the
+# NEXT capture, so a store with one capture in it says nothing. The instrument
+# needs history of its own before the first card is ever frozen, which is why
+# Cooper's brief puts it in the first week of the build rather than late.
+#
+# An empty board between April and November is an OBSERVATION, not a fault. A
+# fetch that errors is degraded; a fetch that succeeds with no events is empty;
+# and the two are never allowed to look the same.
+
+on:
+  workflow_dispatch:
+    inputs:
+      live:
+        description: "Actually spend credits. Unchecked = dry run."
+        type: boolean
+        default: true
+  schedule:
+    # Four a day, year-round. Off-season captures cost 6 credits and return
+    # nothing, which is the correct and cheap way to be already running on the
+    # morning of 2026-11-01 rather than starting that day.
+    #
+    # Spread across the day so consecutive captures bracket the hours when a
+    # board actually moves: mid-morning, early afternoon, an hour before the
+    # first tips, and late in the evening slate.
+    - cron: "13 14 * * *"
+    - cron: "13 18 * * *"
+    - cron: "13 23 * * *"
+    - cron: "13 3 * * *"
+
+permissions:
+  # Writes the capture store to its own ref. A capture must never be able to
+  # overwrite a card and a card must never be able to overwrite a capture,
+  # which is why this is `line-movement` and not `card-feed`.
+  # `tests/test_workflows.py` holds the closed set of (workflow, ref) pairs.
+  contents: write
+
+jobs:
+  capture:
+    name: Line Movement
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt && python -m pip install -e .
+
+      # The store is evidence that cannot be rebuilt. A price that existed at
+      # 19:04 and not at 19:19 leaves no trace anywhere else, and no amount of
+      # money buys it back — the historical archive serves one snapshot per
+      # event, not the minute-by-minute board. So it is restored from the ref
+      # before every capture and published back after.
+      - name: Restore the capture store
+        run: |
+          set -eu
+          mkdir -p data/processed
+          REMOTE="https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}"
+          if git fetch --depth=1 "$REMOTE" +refs/heads/line-movement:refs/lm-tip 2>/dev/null; then
+            TMP=$(mktemp)
+            if git show refs/lm-tip:cbb_line_movement.csv > "$TMP" 2>/dev/null && [ -s "$TMP" ]; then
+              mv "$TMP" data/processed/cbb_line_movement.csv
+              echo "Restored $(wc -l < data/processed/cbb_line_movement.csv) lines."
+            else
+              echo "The ref exists but holds no store yet."
+            fi
+          else
+            echo "No line-movement ref yet; this is the first capture."
+          fi
+
+      - name: Capture
+        id: capture
+        env:
+          PYTHONPATH: src
+          CBB_ODDS_API_KEY: ${{ secrets.CBB_ODDS_API_KEY }}
+        run: |
+          set -o pipefail
+          FLAGS=""
+          if [ "${{ inputs.live }}" != "false" ]; then FLAGS="--live"; fi
+          python scripts/capture_line_movement.py $FLAGS | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish to the line-movement branch
+        if: always()
+        run: |
+          set -eu
+          [ -f data/processed/cbb_line_movement.csv ] || {
+            echo "No store to publish. Nothing was captured."
+            exit 0
+          }
+          REMOTE="https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}"
+          git fetch --depth=1 "$REMOTE" +refs/heads/line-movement:refs/lm-tip 2>/dev/null || true
+          PARENT=""
+          if git rev-parse --verify -q refs/lm-tip >/dev/null; then
+            PARENT=$(git rev-parse refs/lm-tip)
+          fi
+          # PLUMBING ONLY, and each file named. The working tree holds staged
+          # prices and cached feeds; `git add -A` on it is how a credential
+          # reaches a ref.
+          INPUT=$(mktemp)
+          add() {
+            [ -f "$2" ] || return 0
+            printf '100644 blob %s\t%s\n' "$(git hash-object -w "$2")" "$1" >> "$INPUT"
+          }
+          add cbb_line_movement.csv data/processed/cbb_line_movement.csv "$INPUT"
+          add latest_line_movement.md data/outputs/cbb_line_movement.md "$INPUT"
+          TREE=$(git mktree < "$INPUT")
+          export GIT_AUTHOR_NAME="CBB Line Movement" GIT_AUTHOR_EMAIL="actions@github.com"
+          export GIT_COMMITTER_NAME="CBB Line Movement" GIT_COMMITTER_EMAIL="actions@github.com"
+          if [ -n "$PARENT" ]; then
+            COMMIT=$(git commit-tree "$TREE" -p "$PARENT" -m "capture $(date -u +%FT%TZ)")
+          else
+            COMMIT=$(git commit-tree "$TREE" -m "capture $(date -u +%FT%TZ)")
+          fi
+          git push "$REMOTE" "$COMMIT:refs/heads/line-movement"
+          echo "line-movement updated."

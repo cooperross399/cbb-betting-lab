@@ -186,6 +186,34 @@ def assert_single_window(frame: pd.DataFrame, *, column: str = "snapshot_phase")
     return windows[0] if windows else ""
 
 
+def _dedupe_value(value: object) -> str:
+    """One spelling for the purposes of identity.
+
+    NaN, None and the empty string are the same absent value; 142.5 and
+    "142.5" are the same line. Both collapses are needed because a store is
+    compared against itself across a CSV round-trip, which preserves neither.
+    """
+    if value is None:
+        return ""
+    try:
+        if pd.isna(value):
+            return ""
+    except (TypeError, ValueError):
+        pass
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    text = str(value).strip()
+    # "142.50" and "142.5" are one line; "nan" is the string a careless
+    # `str(x or "")` produces from a NaN and must never be an identity.
+    if text.lower() in {"nan", "none", "<na>"}:
+        return ""
+    try:
+        number = float(text)
+    except ValueError:
+        return text
+    return str(int(number)) if number.is_integer() else repr(number)
+
+
 def append(
     frame: pd.DataFrame,
     path: Path,
@@ -202,7 +230,23 @@ def append(
     if dedupe_on:
         key = [c for c in dedupe_on if c in combined.columns]
         if key:
-            combined = combined.drop_duplicates(subset=key, keep="first")
+            # NORMALISE THE KEY ON BOTH SIDES BEFORE COMPARING IT.
+            #
+            # This is the fifth member of the NHL lab's join-vocabulary bug
+            # family, and it arrived here exactly as it did there: a CSV
+            # round-trip turns an empty `player` into NaN, so the row already
+            # on disk and the identical row about to be written compare
+            # UNEQUAL, and every re-run appends a second copy of every quote.
+            #
+            # ROI is unchanged by exact duplication and the interval narrows by
+            # root two. **A duplicated store does not look wrong — it looks
+            # significant.** So the comparison is made on normalised values
+            # rather than on whatever pandas happened to reconstruct.
+            #
+            # Only the key is normalised, never the stored data: the file keeps
+            # what it was given.
+            normalised = combined[key].map(_dedupe_value)
+            combined = combined[~normalised.duplicated(keep="first")]
     if len(combined) < before and not allow_shrink:
         raise ValueError(
             f"Refusing to write {len(combined):,} rows over a store holding "
