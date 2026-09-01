@@ -167,7 +167,7 @@ def main(argv: list[str] | None = None) -> int:
         print("::error::CBB_ODDS_API_KEY is not set. Nothing was requested.")
         return 3
 
-    provider = OddsApiProvider()
+    provider = OddsApiProvider(CBB)
     record = H.buy(
         plan=plan, provider=provider, indexes=indexes,
         credit_cap=args.credit_cap, cache_dir=cache_dir, competition=CBB,

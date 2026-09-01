@@ -76,6 +76,10 @@ def run_script(name: str, *argv: str) -> int:
     [
         ("run_retention_probe.py", ()),
         ("estimate_credit_cost.py", ()),
+        # The gameday card is the script the workflow runs four times a day
+        # through the season, and it is the one that spends the most. Its dry
+        # path prints what it would fetch and stops.
+        ("run_gameday_card.py", ("--card-slot", "morning")),
     ],
 )
 def test_the_default_path_opens_no_socket(

@@ -73,7 +73,7 @@ def main(argv: list[str] | None = None) -> int:
         if not os.environ.get("CBB_ODDS_API_KEY"):
             print("::error::CBB_ODDS_API_KEY is not set. Nothing was requested.")
             return 3
-        provider = OddsApiProvider()
+        provider = OddsApiProvider(CBB)
         spend = Spend()
         try:
             payloads = provider.fetch_bulk(

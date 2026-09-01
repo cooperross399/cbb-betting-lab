@@ -134,6 +134,7 @@ from typing import Protocol
 import pandas as pd
 
 from cbb_betting_lab import forward_evidence, stores, verdicts
+from cbb_betting_lab.data import hoopr
 from cbb_betting_lab.competitions import Competition
 from cbb_betting_lab.conferences import Tier, TierTable, tier_table
 from cbb_betting_lab.gates import (
@@ -377,7 +378,14 @@ class Board:
     spend: Spend
     #: Where the board came from, in words a report can print.
     source: str
-    events_on_the_board: int = 0
+    #: Every event this read saw, on any day. The bulk endpoint returns the
+    #: whole upcoming board, so this is deliberately not "games tonight" —
+    #: `CardRun.events_on_this_slate` is that, and conflating them is how a
+    #: card reports tomorrow's fixtures as tonight's coverage.
+    events_in_the_read: int = 0
+    #: Events the free listing put on the slate day being carded, at fetch
+    #: time. Zero for a board read from a file, which cannot know.
+    events_listed_for_the_slate: int = 0
     events_asked_per_event: int = 0
     per_event_asked: bool = False
     per_event_complete: bool = True
@@ -418,7 +426,7 @@ def board_from_payloads(
         counts=counts,
         spend=spend or Spend(),
         source=source,
-        events_on_the_board=counts.events,
+        events_in_the_read=counts.events,
     )
 
 
@@ -445,7 +453,7 @@ def read_staged_board(
         counts=counts,
         spend=Spend(),
         source=f"a staged fixture at `{Path(path).name}`",
-        events_on_the_board=counts.events,
+        events_in_the_read=counts.events,
         notes=[
             "This board was read from a staged file rather than from the "
             "provider, so nothing was requested, no credential was read and no "
@@ -506,7 +514,8 @@ def fetch_board(
         for event in events
         if slate_date(event.get("commence_time"), competition) == day
     ]
-    board.events_on_the_board = len(on_the_day)
+    board.events_in_the_read = len(events)
+    board.events_listed_for_the_slate = len(on_the_day)
 
     frames: list[pd.DataFrame] = []
     bulk_keys = tuple(sorted(BULK_SAFE_MARKETS))
@@ -731,24 +740,33 @@ def place_games(
     """
     if raw_dir is None:
         return Placement(note="No raw directory was given, so no tier table was built.")
-    directory = Path(raw_dir) / competition.data_dir_segment / "schedules"
+    # The feed registry owns the filename, not this module. A second copy of
+    # `mbb_schedule_{season}.parquet` here would be a sport literal outside the
+    # registry and a rename upstream would leave it silently finding nothing —
+    # which reads as "no cached schedule" and places every game `unplaced`
+    # rather than failing.
+    feed = hoopr.FEEDS["schedules"]
+    season = season_for_slate_date(day)
     schedules: dict[int, pd.DataFrame] = {}
-    for path in sorted(directory.glob("mbb_schedule_*.parquet")):
+    for candidate in range(feed.first_season, season + 1):
+        path = feed.path(candidate, Path(raw_dir))
+        if not path.is_file():
+            continue
         try:
-            schedules[int(path.stem.rsplit("_", 1)[-1])] = pd.read_parquet(path)
+            schedules[candidate] = pd.read_parquet(path)
         except (OSError, ValueError):
             continue
     if not schedules:
         return Placement(
             note=(
-                f"No cached schedule under `{directory}`, so no walk-forward "
-                "tier table could be built and every game is `unplaced`. The "
-                "card still prices and freezes; it simply cannot stratify, and "
-                "an unstratified number is never reported as a D-I headline."
+                f"No cached schedule under `{Path(raw_dir)}`, so no "
+                "walk-forward tier table could be built and every game is "
+                "`unplaced`. The card still prices and freezes; it simply "
+                "cannot stratify, and an unstratified number is never reported "
+                "as a Division I headline."
             )
         )
 
-    season = season_for_slate_date(day)
     earlier = tuple(s for s in sorted(schedules) if s < season)
     if not earlier:
         return Placement(
@@ -1116,6 +1134,11 @@ class CardRun:
     fingerprint: str = ""
     previous_fingerprint: str = ""
     verdicts_line: str = ""
+    #: Games this card could actually be about. Never `Board.events_in_the_read`
+    #: — the bulk endpoint returns the whole upcoming board, and reporting
+    #: tomorrow's fixtures as tonight's coverage is how a thin night reads as a
+    #: full one.
+    events_on_this_slate: int = 0
     rows_off_this_slate: int = 0
     degraded: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
@@ -1126,7 +1149,7 @@ class CardRun:
             return Decision.REHEARSAL
         if self.selections:
             return Decision.SELECTIONS
-        if not self.board.events_on_the_board and self.board.rows.empty:
+        if not self.events_on_this_slate:
             return Decision.NO_SLATE
         return Decision.NO_SELECTIONS
 
@@ -1233,29 +1256,25 @@ def run_card(
         tiers=placement.tiers,
     )
 
-    # `unparseable` is everything the board offered that could not become a
-    # wager, from both sides of the read: the outcomes `providers/staging.py`
-    # refused when the response was interpreted, and the rows `build_wagers`
-    # refused when they were grouped. Counting only the second would start the
-    # identity from an already-filtered board, and an identity that reconciles
-    # over a filtered board reconciles over whatever survived the filter.
+    # `unparseable` is the rows **on this slate day** that could not be grouped
+    # into a wager, and nothing else.
+    #
+    # It is tempting to fold `providers/staging.py`'s refusals in here too, and
+    # it would be wrong: those are counted per *outcome* over the whole read,
+    # including games on other slate days, and an identity whose two sides
+    # describe different populations reconciles over whichever population
+    # survived. Staging has its own identity — `outcomes = staged + four
+    # refusals` — it reconciles on its own, and the card prints it beside this
+    # one. Two links, each over one population, with the count that joins them
+    # (`rows_off_this_slate`) printed between them.
     identity = reconcile(
         result,
-        unparseable=unparseable + board.counts.refused,
+        unparseable=unparseable,
         withdrawn_after_pricing=len(withdrawn),
         notes=[
             f"{count:,} price row(s) refused when grouped into wagers: {reason}."
             for reason, count in sorted(refusals.items(), key=lambda kv: (-kv[1], kv[0]))
-        ]
-        + (
-            [
-                f"{board.counts.refused:,} provider outcome(s) refused when the "
-                "response was read. They are broken down by reason and provider "
-                "key in the board section below."
-            ]
-            if board.counts.refused
-            else []
-        ),
+        ],
     )
 
     enriched = [_enrich(row, opinions, competition=competition) for row in kept]
@@ -1278,6 +1297,9 @@ def run_card(
         snapshot_rows_offered=len(freezable),
         fingerprint=selection_fingerprint(enriched),
         previous_fingerprint=str(previous_fingerprint or ""),
+        events_on_this_slate=(
+            int(rows["event_id"].nunique()) if not rows.empty else 0
+        ),
         verdicts_line=verdicts.describe(
             competition, output_dir=Path(output_dir) if output_dir else None
         ),
@@ -1604,7 +1626,9 @@ def _board_section(run: CardRun) -> list[str]:
         "",
         f"Source: {board.source}.",
         "",
-        f"{board.events_on_the_board:,} game(s) on this slate day; "
+        f"{run.events_on_this_slate:,} game(s) priced on this slate day, out of "
+        f"{board.events_in_the_read:,} the read saw — the board carries every "
+        "upcoming game, not tonight's. "
         f"{board.counts.staged:,} staged quote(s) over "
         f"{board.counts.events:,} event block(s).",
         "",
@@ -1622,8 +1646,8 @@ def _board_section(run: CardRun) -> list[str]:
     if board.per_event_asked:
         lines += [
             f"Ladders, halves and props were asked for on "
-            f"{board.events_asked_per_event:,} of {board.events_on_the_board:,} "
-            "game(s)"
+            f"{board.events_asked_per_event:,} of "
+            f"{board.events_listed_for_the_slate:,} game(s)"
             + (
                 " — **incomplete**, and those rows are staged but not frozen."
                 if not board.per_event_complete
@@ -1697,6 +1721,19 @@ def _model_section(run: CardRun) -> list[str]:
 
 
 def _what_this_is_not_section(run: CardRun) -> list[str]:
+    # The allowlist line is read off the policy rather than asserted. A card
+    # that says "no market is allowlisted" while carrying a market's selections
+    # would be false on the one day it mattered most, and this lab's whole
+    # design is that what ships is auditable against the decision that shipped
+    # it rather than asserted in code.
+    allowlist = (
+        "* No market is allowlisted. Claude may withdraw an allowlist and may "
+        "never grant one."
+        if not run.policy.allowlist
+        else "* Every market above was allowlisted by a reviewed policy with a "
+        "human acceptance receipt behind it. Claude may withdraw an allowlist "
+        "and may never grant one."
+    )
     return [
         "## What this card is not",
         "",
@@ -1707,8 +1744,7 @@ def _what_this_is_not_section(run: CardRun) -> list[str]:
         "* No number here is a measured edge. Every number above is a count of "
         "what this run did, and each one is stated with what it is out of.",
         "* Nothing here is wired to a sportsbook, and no bet was placed.",
-        "* No market is allowlisted. Claude may withdraw an allowlist and may "
-        "never grant one.",
+        allowlist,
         "",
     ]
 

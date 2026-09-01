@@ -1,0 +1,17 @@
+{
+  "declared_on": "2026-09-01",
+  "why": "Written before any challenger was measured and before the historical purchase completed, so no number in this file was chosen with a result in view. A margin picked after seeing the comparison is not a margin, it is a description of the outcome.",
+  "roi_margin_points": 1.5,
+  "require_interval_excludes_zero": true,
+  "minimum_bets": 2000,
+  "must_clear_every_season": true,
+  "demotion_roi_floor": -0.02,
+  "demotion_minimum_bets": 500,
+  "notes": {
+    "roi_margin_points": "1.5 points of ROI, not 'greater than'. Two similar models' own intervals span several times the gap between them; comparing overlapping intervals and taking the larger number is how a lab ships noise. The football lab's first decision rule was literally `roi_variant > roi_baseline` and would have shipped a policy whose paired difference was -0.1% with an interval from -1.5% to +1.4%.",
+    "minimum_bets": "2,000 per season. College basketball supplies this easily on team markets - one season is roughly 5,800 D-I games - which is the whole reason this sport was worth a fourth lab. A market that cannot reach 2,000 in a season is one whose verdict should be 'not enough evidence' rather than a number.",
+    "must_clear_every_season": "Pooling lets one good season carry two bad ones. The football lab's verdict for one policy flipped depending on which season had been run last: same policy, same script, opposite verdicts, and the card read whichever ran most recently.",
+    "demotion_roi_floor": "-2%. Set below zero deliberately. A market is not withdrawn for failing to be profitable - nothing here is expected to be - it is withdrawn when the forward evidence says it is actively losing beyond the vig's noise.",
+    "demotion_minimum_bets": "500 settled forward bets. Withdrawal is not free: it stops the accumulation of the evidence that would settle the question, so a market withdrawn on 20 bets is withdrawn on noise and can never be re-granted without a new human receipt."
+  }
+}

@@ -257,6 +257,34 @@ def day(now) -> str:
 
 
 @pytest.fixture()
+def today() -> str:
+    return datetime.now(CBB.timezone).date().isoformat()
+
+
+@pytest.fixture()
+def board_for_today(today) -> GC.Board:
+    """The same board, tipping late **today** in the competition's own calendar.
+
+    The script refuses to card any day but today without `--rehearsal`, in both
+    directions, so a fixture pinned to a fixed date can only exercise the
+    refusal. The tip is placed at 23:45 Eastern, which is after the sport's real
+    last tip and comfortably ahead of any run — the point is that it is on
+    today's slate day and in the future, not that it is realistic.
+    """
+    at = datetime.fromisoformat(f"{today}T23:45:00").replace(tzinfo=CBB.timezone)
+    if at <= datetime.now(CBB.timezone) + timedelta(minutes=30):
+        pytest.skip(
+            "There is no future time left on today's Eastern slate day. The "
+            "same path is covered deterministically by the tests that call "
+            "run_card directly on a fixed clock."
+        )
+    return GC.board_from_payloads(
+        board_payloads(at.astimezone(timezone.utc) - timedelta(hours=6)),
+        competition=CBB,
+    )
+
+
+@pytest.fixture()
 def no_network(monkeypatch):
     """Every route to a socket, closed. A card built offline is built offline."""
 
@@ -303,7 +331,7 @@ def stage_to_disk(board: GC.Board, tmp_path: Path, day: str) -> Path:
 
 
 def test_the_whole_chain_runs_offline_from_a_staged_board(
-    board, day, tmp_path, capsys, no_network, no_credential
+    board_for_today, today, tmp_path, capsys, no_network, no_credential
 ):
     """The entry point, over a fixture, with the socket layer closed.
 
@@ -311,10 +339,9 @@ def test_the_whole_chain_runs_offline_from_a_staged_board(
     can work before a single credit is spent". It runs `scripts/run_gameday_card.py`
     itself rather than a helper, because the workflow runs the script.
     """
-    staged = stage_to_disk(board, tmp_path, day)
+    staged = stage_to_disk(board_for_today, tmp_path, today)
     status = run_script(
         "--card-slot", "morning",
-        "--slate-date", day,
         "--staged-board", str(staged),
         "--archive-dir", str(tmp_path / "archive"),
         "--output-dir", str(tmp_path / "outputs"),
@@ -328,8 +355,9 @@ def test_the_whole_chain_runs_offline_from_a_staged_board(
     assert card.is_file() and comment.is_file()
     assert out.rstrip().endswith(f"decision={GC.Decision.NO_SELECTIONS.value}")
     assert GC.ACCUMULATING_NOTE in card.read_text(encoding="utf-8")
+    assert GC.ACCUMULATING_NOTE in comment.read_text(encoding="utf-8")
     assert (
-        tmp_path / "archive" / forward_evidence.SNAPSHOT_DIRNAME / f"{day}.csv"
+        tmp_path / "archive" / forward_evidence.SNAPSHOT_DIRNAME / f"{today}.csv"
     ).is_file()
 
 
@@ -907,16 +935,28 @@ def test_a_rehearsal_labels_itself_and_cannot_reach_the_card_feed(
     ).is_file()
 
 
-def test_a_live_run_on_any_day_but_today_is_refused_without_rehearsal(
-    tmp_path, capsys, no_network, no_credential
+@pytest.mark.parametrize(
+    "when,extra",
+    [
+        # Backwards: the snapshot's name would say its opinions were frozen
+        # before results that already existed.
+        ("2020-01-01", ("--live",)),
+        ("2020-01-01", ()),
+        # Forwards, which is worse and does not need a credential: the snapshot
+        # is still standing when that day arrives, so the real run appends
+        # nothing for those wagers and the first opinion of the night is one
+        # taken before anybody knew who was playing.
+        ("2099-01-01", ()),
+    ],
+)
+def test_any_day_but_today_is_refused_without_rehearsal(
+    when, extra, tmp_path, capsys, no_network, no_credential
 ):
-    """Refused before anything is fetched. A live run backfilling another day
-    writes opinions into a snapshot whose name says they were frozen before
-    games that have already been played."""
+    """Refused before anything is fetched, read or frozen, in both directions."""
     status = run_script(
-        "--live",
+        *extra,
         "--card-slot", "morning",
-        "--slate-date", "2020-01-01",
+        "--slate-date", when,
         "--archive-dir", str(tmp_path / "archive"),
         "--output-dir", str(tmp_path / "outputs"),
         "--raw-dir", str(tmp_path / "raw"),
@@ -924,7 +964,7 @@ def test_a_live_run_on_any_day_but_today_is_refused_without_rehearsal(
     captured = capsys.readouterr()
 
     assert status == 2
-    assert "Refusing to price 2020-01-01 live" in captured.err
+    assert f"Refusing to card {when}" in captured.err
     assert captured.out.rstrip().endswith(f"decision={GC.Decision.REFUSED.value}")
     assert not (tmp_path / "archive").exists()
 
@@ -1158,12 +1198,12 @@ def test_the_changed_marker_fires_only_on_a_change(board, day, tmp_path):
 
 
 def test_the_run_records_its_fingerprint_for_the_next_run(
-    board, day, tmp_path, capsys, no_network, no_credential
+    board_for_today, today, tmp_path, capsys, no_network, no_credential
 ):
-    staged = stage_to_disk(board, tmp_path, day)
+    day = today
+    staged = stage_to_disk(board_for_today, tmp_path, day)
     run_script(
         "--card-slot", "morning",
-        "--slate-date", day,
         "--staged-board", str(staged),
         "--archive-dir", str(tmp_path / "archive"),
         "--output-dir", str(tmp_path / "outputs"),

@@ -30,12 +30,14 @@ is one of `cbb_betting_lab.reports.gameday_card.Decision`.
 
 ## The three refusals, and why each one is a refusal rather than a warning
 
-1. **A live run pricing a day that is not today**, without `--rehearsal`. The
-   snapshot is named by its day and the ledger is append-only within one; a live
-   run backfilling a past day would write opinions into a file whose name says
-   they were frozen before games that have already been played. There is no
-   error message that makes that recoverable afterwards, so it is refused
-   before it happens.
+1. **Any run pricing a day that is not today**, without `--rehearsal`. The
+   snapshot is named by its day and it is append-only within one, so neither
+   direction is recoverable afterwards. Backwards, the file's name says its
+   opinions were frozen before games that had already been played. **Forwards
+   is worse**: a snapshot frozen now for a future slate is still standing when
+   that day arrives, so the real run appends nothing for those wagers and the
+   first opinion of the night is one taken before anybody knew who was playing.
+   Neither depends on a credential, so the refusal is not gated on `--live`.
 2. **Less quota than the cap.** A run that starts short gets partway through the
    slate and stops, freezing the games it happened to reach. In this sport the
    bias has a shape — the fetch works in tip order, so a starved run keeps the
@@ -187,21 +189,30 @@ def main(argv: list[str] | None = None) -> int:
           f"freezes {slot.what}.")
     print(f"Credit cap {cap:,}, enforced against the measured running total.")
 
-    # Refusal one. See the module docstring.
+    # Refusal one. See the module docstring. It is not scoped to `--live`,
+    # because the more dangerous direction is the one that spends nothing.
     #
-    # Scoped to `--live`, deliberately. A live run fetches **today's** board and
-    # would file it under another day, which is the backfill the forward ledger
-    # cannot survive. A `--staged-board` run reads a file an operator pointed at
-    # by name, requests nothing, and is still held by the tip guard: every game
-    # on a past day has started, so nothing from one can be frozen. Refusing it
-    # too would refuse the only offline path there is.
-    if args.live and day != today and not args.rehearsal:
+    # Backwards, a run files today's board under a day whose games have already
+    # been played, and the snapshot's name then says those opinions were frozen
+    # before results that already existed.
+    #
+    # **Forwards is worse.** `write_snapshot` is append-only by key, so a
+    # snapshot frozen now for a future slate is still standing when that day
+    # arrives — and the real run finds it, appends nothing for those wagers, and
+    # leaves them at prices taken before anybody knew who was playing. The first
+    # opinion of opening night would be a rehearsal, and nothing downstream
+    # would ever say so. Neither direction depends on a credential, so neither
+    # is gated on `--live`.
+    if day != today and not args.rehearsal:
         print(
-            f"::error::Refusing to price {day} live: today is {today}. A live "
-            "run backfilling another day writes opinions into a snapshot whose "
-            "name says they were frozen before games that have already been "
-            "played, and the forward ledger is append-only. Pass --rehearsal to "
-            "rehearse that day into its own archive, which publishes nothing.",
+            f"::error::Refusing to card {day}: today is {today}. A snapshot "
+            "frozen for another day is append-only and cannot be corrected — "
+            "backwards it claims opinions were frozen before results that "
+            "already existed, and forwards it is still standing when that day "
+            "arrives, so the real run leaves it there and the first opinion of "
+            "the night was taken before anybody knew who was playing. Pass "
+            "--rehearsal to rehearse that day into its own archive, which "
+            "publishes nothing and which no real run reads.",
             file=sys.stderr,
         )
         print(f"decision={GC.Decision.REFUSED.value}")
