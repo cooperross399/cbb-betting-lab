@@ -113,18 +113,22 @@ second failure is the one that costs a season.
   `cbb_team_games.csv` flags an NCAA tournament game, and deriving a champion
   from "the winner of the last game of the season" would invent a settlement
   rule. Always :data:`Outcome.UNSETTLEABLE`.
-* **`player_first_team_basket` — about half the time.** `cbb_game_segments.csv`
-  records the scorer of the **game's** first basket and that scorer's team, and
-  nothing about the other team's first basket. When the player's team scored
-  the game's first basket the market settles exactly; otherwise it does not.
-  Measured on 2025-26: settleable on **63,527 of 126,968 (50.03%)** played
-  player-game rows that have a segment row.
+* **`player_first_team_basket` — 39 of 126,968 rows, plus 35 contradictions.**
+  This one was *half* a market until `build_game_segments` gained
+  `home_first_basket_athlete_id` and `away_first_basket_athlete_id`: with only
+  the game-level first basket it could answer for the side that scored first
+  and not for the other, measured at exactly 50.03% of played rows. It now
+  settles on the own-side column — present on **126,929 of 126,968 (99.97%)**
+  played 2025-26 rows with a segment row — and refuses the remainder rather
+  than guessing. See :func:`_settle_first_team_basket` for the 3 games whose
+  two derivations contradict each other.
 * **Half markets on 1,714 of 47,097 games (3.64%)** that record no halftime
   score at all — 25 of 6,299 in 2025-26 (0.40%), the rest concentrated in the
   older seasons. Missing, not zero.
 * **Both first-basket markets on 1,706 of 47,097 games (3.62%)** with no
-  `cbb_game_segments.csv` row. Where a row exists, the first-basket scorer is
-  present on 45,391 of 45,391 (100.00%).
+  `cbb_game_segments.csv` row. Where a row exists, the game's first-basket
+  scorer is present on 45,391 of 45,391 (100.00%) and both per-side scorers on
+  45,363 of 45,391 (99.94%).
 """
 
 from __future__ import annotations
@@ -879,9 +883,11 @@ def _settle_triple_double(ask: _Ask) -> Settled:
 
 _FIRST_BASKET_COLUMNS = (
     "`game` must be a cbb_game_segments.csv row carrying "
-    "first_basket_athlete_id (and first_basket_team_id for the team variant). "
-    "1,706 of 47,097 games (3.62%) have no segment row at all; where one "
-    "exists the scorer is present on 45,391 of 45,391 (100.00%)."
+    "first_basket_athlete_id (and, for the team variant, "
+    "home_first_basket_athlete_id / away_first_basket_athlete_id). 1,706 of "
+    "47,097 games (3.62%) have no segment row at all; where one exists the "
+    "game's scorer is present on 45,391 of 45,391 (100.00%) and both per-side "
+    "scorers on 45,363 of 45,391 (99.94%)."
 )
 
 
@@ -961,6 +967,25 @@ def _settle_first_team_basket(ask: _Ask) -> Settled:
     The old game-level columns are kept and used as a fallback, because a
     segments file built before this change is still a valid file and settling
     half a market is better than settling none of it.
+
+    Measured on 2025-26 after the rebuild: the own-side scorer is present on
+    **126,929 of 126,968 (99.97%)** played player-game rows that have a segment
+    row, and **12,528 of them (9.87%)** scored it — about double the 4.94% who
+    score the *game's* first basket, which is the sanity check that this is a
+    different quantity and not the same one re-read.
+
+    **One contradiction guard, and it is not hypothetical.** When
+    `first_basket_team_id` names the player's own team, that team's first basket
+    and the game's first basket are the same basket, so the side column and the
+    game column must name the same person. On **3 of 45,383 games (0.0066%)**
+    they do not — 401088453 in 2018-19, 401827171 and 401831242 in 2025-26 —
+    which is 35 of 63,527 affected player rows (0.055%). The evidence points at
+    `first_basket_team_id` being the wrong column, since the athlete columns
+    agree with each other on **45,363 of 45,363 games that carry both
+    (100.00%)**. This module still refuses those rows rather than choosing
+    between two upstream derivations: settling one of them would be this lab
+    deciding which of its own tables to believe, silently, on a market it is
+    about to keep a record on.
     """
     rows = _first_basket_rows(ask)
     if isinstance(rows, Settled):
@@ -975,12 +1000,33 @@ def _settle_first_team_basket(ask: _Ask) -> Settled:
         return _cannot(_NO_LINE.format(market=ask.market.key))
 
     # Which side is this player on? `home_away` is carried on every player row.
-    side = str(_field(player, "home_away") or "").strip().lower()
-    column = {"home": "home_first_basket_athlete_id",
-              "away": "away_first_basket_athlete_id"}.get(side)
-    if column is not None and _field(game, column) is not None:
-        scored = _same_id(_field(player, "athlete_id"), _field(game, column))
+    # Read through `clean_text`, never `str(x or "")`: a NaN is truthy, so the
+    # obvious spelling yields the literal string "nan" — the fifth member of the
+    # NHL lab's join-vocabulary bug family, and here it would silently drop
+    # every row onto the half-coverage fallback below.
+    side = clean_text(_field(player, "home_away")).casefold()
+    column = {HOME: "home_first_basket_athlete_id",
+              AWAY: "away_first_basket_athlete_id"}.get(side)
+    own_scorer = _field(game, column) if column else None
+    if clean_text(own_scorer):
+        scored = _same_id(_field(player, "athlete_id"), own_scorer)
         if scored is not None:
+            names_this_team = _same_id(
+                _field(player, "team_id"), _field(game, "first_basket_team_id")
+            )
+            contradicts = _same_id(
+                own_scorer, _field(game, "first_basket_athlete_id")
+            ) is False
+            if names_this_team and contradicts:
+                return _cannot(
+                    "cbb_game_segments.csv contradicts itself for this game: "
+                    "first_basket_team_id names this player's team, so his "
+                    "team's first basket and the game's first basket are the "
+                    "same basket, and the two columns name different scorers. "
+                    "Measured on 3 of 45,383 games (0.0066%). Two upstream "
+                    "derivations disagree and this module does not get to pick "
+                    "between them on a market it keeps a record on."
+                )
             return _grade_against_line(
                 1.0 if scored else 0.0, line, direction, ask.market
             )

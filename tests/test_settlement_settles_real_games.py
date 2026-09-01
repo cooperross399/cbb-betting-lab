@@ -740,6 +740,120 @@ def test_the_first_team_basket_settles_for_BOTH_teams(played, segments, capsys):
         )
 
 
+def test_the_first_team_basket_is_a_different_quantity_from_the_games_first(
+    played, segments, capsys
+):
+    """The rate check that tells the two markets apart, on real rows.
+
+    Settling for both sides is not enough: a handler that quietly fell back to
+    the game-level column would still grade every row, and every verdict would
+    be about the wrong basket. About **twice** as many players score their own
+    team's first basket as score the game's — 9.87% against 4.94% over the
+    season — so the measured rate is what separates a correct handler from a
+    plausible one.
+    """
+    if "home_first_basket_athlete_id" not in segments.columns:
+        pytest.skip("this segments file predates the per-side first-basket columns")
+    own = game = graded = 0
+    for row in _rows(played, limit=PLAYER_SAMPLE):
+        game_id = row["game_id"]
+        if game_id not in segments.index:
+            continue
+        segment = segments.loc[game_id].to_dict()
+        team = settle(market="player_first_team_basket", segment=FULL_GAME,
+                      selection=OVER, line=YES_NO_LINE, player=row, game=segment)
+        whole = settle(market="player_first_basket", segment=FULL_GAME,
+                       selection=OVER, line=YES_NO_LINE, player=row, game=segment)
+        if team.outcome is Outcome.UNSETTLEABLE:
+            continue
+        graded += 1
+        own += team.outcome is Outcome.WON
+        game += whole.outcome is Outcome.WON
+        if whole.outcome is Outcome.WON:
+            assert team.outcome is Outcome.WON, (
+                "scoring the game's first basket means scoring your team's"
+            )
+    own_rate, game_rate = own / graded * 100, game / graded * 100
+    assert 7.0 < own_rate < 13.0, (
+        f"{own_rate:.2f}% of players scored their team's first basket. Over "
+        "the season it is 9.87%, against 4.94% for the game's. A rate near 5% "
+        "means the handler is settling the game's first basket instead."
+    )
+    assert own_rate > game_rate * 1.5
+    with capsys.disabled():
+        print(
+            f"  team's first basket won by {own:,} of {graded:,} "
+            f"({own_rate:.2f}%) against the game's {game:,} "
+            f"({game_rate:.2f}%) — twice as many, as it must be."
+        )
+
+
+def test_the_first_team_basket_refuses_a_game_whose_two_columns_disagree(
+    played, segments
+):
+    """3 of 45,383 games (0.0066%) contradict themselves. They are not graded.
+
+    `first_basket_team_id` names a team whose own-side scorer is somebody other
+    than the game's first-basket scorer, and those cannot both be true —
+    401088453 in 2018-19, 401827171 and 401831242 in 2025-26. The athlete
+    columns agree with each other on 100.00% of games, so the evidence points at
+    the team column; this module still refuses rather than deciding which of two
+    upstream derivations to believe on a market it keeps a record on.
+    """
+    if "home_first_basket_athlete_id" not in segments.columns:
+        pytest.skip("this segments file predates the per-side first-basket columns")
+    row = _rows(played, limit=1)[0]
+    contradictory = {
+        "game_id": row["game_id"],
+        "first_basket_athlete_id": -1.0,
+        "first_basket_team_id": row["team_id"],
+        f"{row['home_away']}_first_basket_athlete_id": -2.0,
+    }
+    refused = settle(market="player_first_team_basket", segment=FULL_GAME,
+                     selection=OVER, line=YES_NO_LINE, player=row,
+                     game=contradictory)
+    assert refused.outcome is Outcome.UNSETTLEABLE
+    assert "contradicts itself" in refused.note
+    assert refused.actual is None
+
+    agreeing = dict(contradictory)
+    agreeing[f"{row['home_away']}_first_basket_athlete_id"] = -1.0
+    assert settle(market="player_first_team_basket", segment=FULL_GAME,
+                  selection=OVER, line=YES_NO_LINE, player=row,
+                  game=agreeing).outcome is Outcome.LOST
+
+
+def test_the_per_side_and_game_level_first_baskets_agree(segments, capsys):
+    """The game's scorer is always one of the two sides' scorers.
+
+    Read over the whole segments file rather than one season, because this is a
+    property of the builder and because it is the premise the contradiction
+    guard above rests on: if it ever failed, refusing on a mismatch would be
+    refusing most of the market rather than three games of it.
+    """
+    if "home_first_basket_athlete_id" not in segments.columns:
+        pytest.skip("this segments file predates the per-side first-basket columns")
+    both = segments[
+        segments["home_first_basket_athlete_id"].notna()
+        & segments["away_first_basket_athlete_id"].notna()
+    ]
+    neither = both[
+        (both["first_basket_athlete_id"] != both["home_first_basket_athlete_id"])
+        & (both["first_basket_athlete_id"] != both["away_first_basket_athlete_id"])
+    ]
+    assert len(neither) == 0, (
+        f"{len(neither):,} of {len(both):,} games name a game-level first-basket "
+        "scorer who is neither side's first-basket scorer"
+    )
+    with capsys.disabled():
+        print(
+            f"  the game's first-basket scorer is one of the two sides' on "
+            f"{len(both):,} of {len(both):,} games carrying both columns "
+            f"(100.00%); {len(segments) - len(both):,} of {len(segments):,} "
+            "carry only one."
+        )
+
+
 def test_a_row_whose_side_is_unknown_still_refuses_rather_than_guessing(
     played, segments
 ):

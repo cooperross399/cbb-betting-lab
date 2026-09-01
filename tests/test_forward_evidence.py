@@ -635,12 +635,92 @@ def test_a_player_is_resolved_by_athlete_identity_and_not_by_a_raw_string(tmp_pa
 
 
 def test_an_unknown_market_settles_nothing_rather_than_guessing(tmp_path):
+    """`markets.py` names every market this lab prices and every one it defers.
+
+    A key in neither arrived from somewhere unaccounted for, and guessing a
+    settlement rule for it is how a lab manufactures evidence.
+    """
     freeze(tmp_path, [price(market="a_market_nobody_wired")], {})
     result = settle(tmp_path)
     assert result.rows_unsettleable == 1
-    assert "no registry entry" in str(
-        fe.read_ledger(tmp_path / fe.LEDGER_FILENAME).iloc[0].to_dict()
-    ) or True  # the note lives in the result, not the ledger schema
+    assert result.rows_settled == 0
+    ledger = fe.read_ledger(tmp_path / fe.LEDGER_FILENAME)
+    assert ledger["outcome"].iloc[0] == Outcome.UNSETTLEABLE.value
+    assert pd.isna(ledger["profit_units"].iloc[0])
+
+
+def test_the_away_side_settles_from_the_away_row_and_never_the_home_one(tmp_path):
+    """Every quantity in `cbb_team_games.csv` is signed for its own team.
+
+    Purdue beat Butler by ten. Settling the away moneyline from the home row
+    reads a margin of +10 for a team that lost by ten — a plausible number, the
+    wrong bet, and nothing raises. `settlement` refuses the wrong row rather
+    than flipping it, which only helps if this side of the join hands it the
+    right one.
+    """
+    freeze(
+        tmp_path,
+        [
+            price(event_id="e1", selection="home"),
+            price(event_id="e1", selection="away", book="fd"),
+        ],
+        {},
+    )
+    result = settle(tmp_path)
+    assert result.rows_settled == 2, result.summary_line()
+    ledger = fe.read_ledger(tmp_path / fe.LEDGER_FILENAME).set_index("selection")
+    assert ledger.loc["home", "outcome"] == Outcome.WON.value
+    assert ledger.loc["away", "outcome"] == Outcome.LOST.value
+    assert float(ledger.loc["home", "actual"]) == 10.0
+    assert float(ledger.loc["away", "actual"]) == -10.0
+
+
+def test_a_team_total_settles_on_the_side_its_selection_names(tmp_path):
+    """`home_over` and `away_over` are different bets on different numbers."""
+    freeze(
+        tmp_path,
+        [
+            price(market="team_total", selection="home_over", line=75.5),
+            price(market="team_total", selection="away_over", line=75.5, book="fd"),
+        ],
+        {},
+    )
+    settle(tmp_path)
+    ledger = fe.read_ledger(tmp_path / fe.LEDGER_FILENAME).set_index("selection")
+    assert ledger.loc["home_over", "outcome"] == Outcome.WON.value  # Purdue 80
+    assert ledger.loc["away_over", "outcome"] == Outcome.LOST.value  # Butler 70
+
+
+def test_a_first_basket_prop_is_settled_from_the_game_segments_row(tmp_path):
+    """That market's `game` argument is a segments row, not a team-games row.
+
+    A made free throw is not a basket, which is why the scorer lives in
+    `cbb_game_segments` at all — see `tests/test_free_throws_are_not_baskets.py`.
+    """
+    freeze(
+        tmp_path,
+        [
+            price(
+                market="player_first_basket",
+                selection="over",
+                line=0.5,
+                player="Zach Edey",
+            ),
+            price(
+                market="player_first_basket",
+                selection="over",
+                line=0.5,
+                player="Braden Smith",
+                book="fd",
+            ),
+        ],
+        {},
+    )
+    result = settle(tmp_path)
+    assert result.rows_settled == 2, result.summary_line()
+    ledger = fe.read_ledger(tmp_path / fe.LEDGER_FILENAME).set_index("player")
+    assert ledger.loc["Zach Edey", "outcome"] == Outcome.WON.value
+    assert ledger.loc["Braden Smith", "outcome"] == Outcome.LOST.value
 
 
 def test_a_futures_row_is_deferred_and_is_never_called_a_pass_or_an_avoid(tmp_path):
@@ -798,8 +878,18 @@ def test_an_interval_including_zero_reads_no_demonstrated_edge_in_those_words():
     report = fe.render_ledger(_ledger(300, profit=lambda i: 1.0 if i % 2 else -1.0))
     assert stats.NO_DEMONSTRATED_EDGE in report
     assert f"**{stats.NO_DEMONSTRATED_EDGE}**" in report
-    for banned in ("promising", "trending positive", "small but positive"):
-        assert banned not in report.casefold()
+
+    # And no verdict cell is allowed to soften it. The report's closing sentence
+    # names these words in order to forbid them, so the check is on the verdicts
+    # themselves rather than on the prose around them.
+    verdicts = [
+        line.rsplit("|", 2)[-2].strip()
+        for line in report.splitlines()
+        if line.startswith("|") and line.count("|") > 3
+    ]
+    for verdict in verdicts:
+        for banned in ("promising", "trending positive", "small but positive"):
+            assert banned not in verdict.casefold(), verdict
 
 
 def test_a_thin_market_gets_a_phrase_and_never_a_number():
@@ -826,10 +916,28 @@ def test_a_replicated_win_is_reported_as_positive():
 
 
 def test_a_settlement_suspect_is_not_evidence_at_any_sample_size():
+    """400 winning bets is not evidence if the settlement rule is unverified.
+
+    The football lab's single largest false finding was a settlement offset it
+    could not see, and a constant settlement offset replicates by construction.
+    """
     ledger = _ledger(400, profit=lambda i: 1.0, market="spread_h2")
     report = fe.render_ledger(ledger, settlement_suspects=frozenset({"spread_h2"}))
     assert "**not evidence**" in report
-    assert "interval excludes zero, **positive**" not in report
+    assert "interval excludes zero, **positive**" not in report, (
+        "A suspect market was folded into an aggregate and reported as "
+        "positive. A number that is not evidence must never be averaged into a "
+        "number presented as evidence."
+    )
+    assert "held out of this roll-up" in report
+
+
+def test_a_second_half_market_is_footnoted_even_when_nobody_marked_it_suspect():
+    """`SECOND_HALF_INCLUDES_OVERTIME` is a book rule, not a fact about the sport."""
+    report = fe.render_ledger(_ledger(300, profit=lambda i: 1.0, market="total_points_h2"))
+    assert "Settlement ambiguity" in report
+    assert "`total_points_h2`" in report
+    assert "cannot read a book's rulebook" in report
 
 
 def test_the_family_correction_comes_from_the_cumulative_count_not_this_table():

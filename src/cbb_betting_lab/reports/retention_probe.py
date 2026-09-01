@@ -463,10 +463,17 @@ class SamplePlan:
 
     @property
     def balanced(self) -> bool:
-        """True only when every non-empty cell got its full target.
+        """True only when every non-empty cell got `events_per_stratum` events.
 
         Reported rather than assumed. An unbalanced probe that reports itself as
-        balanced is worse than no probe.
+        balanced is worse than no probe, because every later conclusion inherits
+        the imbalance and nobody can see it.
+
+        A cell that simply does not hold enough games counts as short here too.
+        That the shortfall was unavoidable is a **reason**, recorded per cell as
+        `exhausted`, and it is not a reason to call the design balanced: the
+        conclusions still rest on more evidence from some corners of the board
+        than others.
         """
         return all(int(s["drawn"]) >= int(s["target"]) for s in self.strata)
 
@@ -532,7 +539,8 @@ def stratified_sample(
                 "month": month,
                 "window": window,
                 "population": len(by_stratum[key]),
-                "target": min(int(events_per_stratum), len(by_stratum[key])),
+                "target": int(events_per_stratum),
+                "exhausted": len(by_stratum[key]) < int(events_per_stratum),
                 "drawn": sum(1 for e in drawn[key] if e.game_id in kept),
             }
         )
@@ -719,8 +727,17 @@ class MarketRoll:
     title: str
     tier: int
     provider_keys: tuple[str, ...]
+    #: Events where **every** one of this market's provider keys was asked. The
+    #: only honest denominator: an event where half the keys went unasked can
+    #: prove a market retained and can never prove one absent.
+    fully_asked_events: set[int] = field(default_factory=set)
+    #: Events where at least one key returned at least one row — including
+    #: events that were only partly asked, because one price is one price.
     priced_events: set[int] = field(default_factory=set)
+    #: Fully asked, and nothing came back for any key.
     absent_events: set[int] = field(default_factory=set)
+    #: Partly asked, and nothing came back from the part that was asked. These
+    #: prove nothing in either direction and are in no denominator.
     incomplete_events: set[int] = field(default_factory=set)
     books: set[str] = field(default_factory=set)
     rows: int = 0
@@ -730,14 +747,23 @@ class MarketRoll:
 
     @property
     def denominator(self) -> int:
-        """Events where **every** key of this market was asked. The only honest
-        denominator: an event where half the keys went unasked can prove a
-        market retained, and can never prove one absent."""
-        return len(self.priced_events) + len(self.absent_events)
+        return len(self.fully_asked_events)
+
+    @property
+    def numerator(self) -> int:
+        """Priced **among the fully asked**. A share needs both sides measured
+        on the same set of events, and mixing a partial ask into the numerator
+        while keeping it out of the denominator is how a starved run reports a
+        share above one."""
+        return len(self.priced_events & self.fully_asked_events)
+
+    @property
+    def priced_on_partial_ask(self) -> int:
+        return len(self.priced_events - self.fully_asked_events)
 
     @property
     def share(self) -> float:
-        return len(self.priced_events) / self.denominator if self.denominator else 0.0
+        return self.numerator / self.denominator if self.denominator else 0.0
 
     def verdict(self) -> Retention:
         if self.denominator == 0:
@@ -756,16 +782,17 @@ class MarketRoll:
         return Retention.RETAINED_BUT_THIN
 
     def to_json(self) -> dict:
-        low, high = S.wilson_interval(len(self.priced_events), self.denominator)
+        low, high = S.wilson_interval(self.numerator, self.denominator)
         return {
             "market": self.market,
             "title": self.title,
             "tier": int(self.tier),
             "provider_keys": list(self.provider_keys),
             "events_fully_asked": self.denominator,
-            "events_priced": len(self.priced_events),
+            "events_priced": self.numerator,
             "events_absent": len(self.absent_events),
             "events_incomplete": len(self.incomplete_events),
+            "events_priced_on_a_partial_ask": self.priced_on_partial_ask,
             "share": round(self.share, 4),
             "share_interval": [round(low, 4), round(high, 4)],
             "distinct_books": len(self.books),
@@ -831,10 +858,12 @@ def roll_up_to_markets(
             priced = [k for k in answered if seen.get(k) and seen[k].rows > 0]
             complete = len(answered) == len(keys)
             if complete:
+                roll.fully_asked_events.add(game_id)
                 roll.asked_by_tier[tier] = roll.asked_by_tier.get(tier, 0) + 1
             if priced:
                 roll.priced_events.add(game_id)
-                roll.priced_by_tier[tier] = roll.priced_by_tier.get(tier, 0) + 1
+                if complete:
+                    roll.priced_by_tier[tier] = roll.priced_by_tier.get(tier, 0) + 1
                 for key in priced:
                     roll.rows += seen[key].rows
                     roll.books |= seen[key].books
@@ -842,10 +871,6 @@ def roll_up_to_markets(
                 roll.absent_events.add(game_id)
             else:
                 roll.incomplete_events.add(game_id)
-            if priced and not complete:
-                # Positive evidence from a partial ask still belongs in the
-                # numerator; it just cannot join a denominator it did not earn.
-                roll.incomplete_events.discard(game_id)
     for roll in rolls.values():
         for key in roll.provider_keys:
             roll.credits += float(per_key_credits.get(key, 0.0))
@@ -1310,6 +1335,19 @@ def _share_cell(entry: Mapping) -> str:
     )
 
 
+#: The one place in the report where the words a market must never be described
+#: with are allowed to appear — because it is the sentence saying they do not
+#: apply. `tests/test_retention_probe.py` excises this exact string before
+#: checking that nothing else in the report calls an unquoted market a fade, an
+#: avoid or a no-value call.
+NOT_A_BET_DISCLAIMER = (
+    "A market the archive returned nothing for is stated as exactly that. "
+    "It is not a fade, not an avoid, and not a no-value call: this probe never "
+    "priced a bet, so it has no opinion about one. And `NOT_PROBED` is not a "
+    "retention verdict at all — it is this module refusing to let an unasked "
+    "market be read as an empty one."
+)
+
 VERDICT_PROSE = {
     Retention.RETAINED_AND_MEASURABLE.value: (
         "the archive has it on at least half the events asked, at two or more "
@@ -1450,6 +1488,7 @@ def render(record: Mapping) -> str:
     add("")
     balanced = bool(plan.get("balanced"))
     underfilled = [s for s in strata if int(s["drawn"]) < int(s["target"])]
+    exhausted = [s for s in underfilled if s.get("exhausted")]
     if balanced:
         add(
             f"**Balanced: every one of the {len(strata)} non-empty cells got "
@@ -1463,6 +1502,15 @@ def render(record: Mapping) -> str:
             "every later conclusion inherits the imbalance and nobody can see "
             "it."
         )
+        if exhausted:
+            add("")
+            add(
+                f"{len(exhausted)} of those cells simply do not hold "
+                f"{plan.get('events_per_stratum', 0)} games. That is the "
+                "reason, and it is not a reason to call the design balanced: "
+                "the conclusions still rest on more evidence from some corners "
+                "of the board than others."
+            )
     add("")
     add("| Tier | Month | Tip window | Population | Target | Drawn | Probed |")
     add("|---|---|---|---:|---:|---:|---:|")
@@ -1472,7 +1520,12 @@ def render(record: Mapping) -> str:
         key = stratum_key(event["tier"], event["month"], event["window"])
         by_stratum_probed[key] = by_stratum_probed.get(key, 0) + 1
     for stratum in strata:
-        flag = "" if int(stratum["drawn"]) >= int(stratum["target"]) else " ⚠"
+        if int(stratum["drawn"]) >= int(stratum["target"]):
+            flag = ""
+        elif stratum.get("exhausted"):
+            flag = " ⚠ (the cell holds no more)"
+        else:
+            flag = " ⚠"
         add(
             f"| {stratum['tier']} | {stratum['month']} | {stratum['window']} | "
             f"{int(stratum['population']):,} | {int(stratum['target'])} | "
@@ -1560,25 +1613,29 @@ def render(record: Mapping) -> str:
         count = sum(1 for e in record.get("markets", []) if e["verdict"] == value)
         add(f"- **{value}** ({count}) — {prose}.")
     add("")
-    add(
-        "A market the archive returned nothing for is stated as exactly that. "
-        "It is not a fade, not an avoid, and not a no-value call: this probe "
-        "never priced a bet, so it has no opinion about one. And `NOT_PROBED` "
-        "is not a retention verdict at all — it is this module refusing to let "
-        "an unasked market be read as an empty one."
-    )
+    add(NOT_A_BET_DISCLAIMER)
     add("")
-    incomplete = [e for e in record.get("markets", []) if int(e["events_incomplete"])]
-    if incomplete:
+    partial = [
+        e
+        for e in record.get("markets", [])
+        if int(e["events_incomplete"]) or int(e.get("events_priced_on_a_partial_ask", 0))
+    ]
+    if partial:
         add(
             "These markets had events where some of their provider keys were "
-            "asked and others were not. Those events are in no denominator:"
+            "asked and others were not — the shape a run leaves behind when it "
+            "stops. A partly-asked event can prove a market retained and can "
+            "never prove one absent, so it is in the numerator when it carried "
+            "a price and in no denominator either way:"
         )
         add("")
-        for entry in incomplete:
+        for entry in partial:
             add(
-                f"- `{entry['market']}`: {int(entry['events_incomplete'])} "
-                "partially-asked event(s)."
+                f"- `{entry['market']}`: "
+                f"{int(entry['events_incomplete'])} partly-asked event(s) that "
+                "proved nothing, "
+                f"{int(entry.get('events_priced_on_a_partial_ask', 0))} that "
+                "carried a price."
             )
         add("")
 

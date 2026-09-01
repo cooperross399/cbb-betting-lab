@@ -174,7 +174,16 @@ from cbb_betting_lab import season, stats, stores
 from cbb_betting_lab.competitions import CBB, Competition
 from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.config import DATA_DIR
-from cbb_betting_lab.selection import FULL_GAME, normalise_line
+from cbb_betting_lab.selection import (
+    AWAY,
+    AWAY_OVER,
+    AWAY_UNDER,
+    FULL_GAME,
+    HOME,
+    HOME_OVER,
+    HOME_UNDER,
+    normalise_line,
+)
 from cbb_betting_lab.settlement import Outcome, Settled, settle
 
 # The one American-odds-to-profit conversion in this repository, imported
@@ -273,6 +282,29 @@ LEDGER_IDENTITY: tuple[str, ...] = (
 #: Suffix of the sidecar that says a snapshot has been through the settle pass.
 #: A sidecar rather than a rename: the snapshot's own name is evidence.
 SETTLED_MARKER_SUFFIX = ".settled"
+
+#: Which team-games row a selection has to be settled from. **Every quantity in
+#: `cbb_team_games.csv` is signed for its own team**, so settling a home wager
+#: from the away row negates the margin and swaps the team total — a plausible
+#: number, the wrong bet, and nothing raises. `settlement._row_is_the_named_side`
+#: refuses the wrong row rather than flipping it, and refusing is only useful if
+#: this side of the join hands it the right one. A bare `over`/`under` is a game
+#: or half **total**, which is symmetric and does not consult the side at all.
+_ROW_FOR_SELECTION: dict[str, str] = {
+    HOME: "home",
+    HOME_OVER: "home",
+    HOME_UNDER: "home",
+    AWAY: "away",
+    AWAY_OVER: "away",
+    AWAY_UNDER: "away",
+}
+
+#: The two markets whose `game` argument is a `cbb_game_segments.csv` row
+#: rather than a team-games row: they settle on who scored the first basket,
+#: which lives in the segments table.
+_SEGMENT_SETTLED: frozenset[str] = frozenset(
+    {"player_first_basket", "player_first_team_basket"}
+)
 
 #: The literal a report prints when an edge exists but cannot be taken. From
 #: the brief: *"a soft number you cannot bet is not an edge."*
@@ -808,25 +840,20 @@ def _build_fixture_index(
         team = record.get("team_id")
         opponent = record.get("opponent_id")
         game_id = record.get("game_id")
+        side = str(record.get("home_away"))
         by_team_day.setdefault((day, team), []).append((game_id, opponent))
-        if str(record.get("home_away")) != "home":
-            continue
-        by_pair[(day, _pair(team, opponent))] = game_id
-        merged = dict(record)
-        merged["home_team_id"] = team
-        merged["away_team_id"] = opponent
-        segment = segments.get(game_id)
-        if segment:
-            for column, value in segment.items():
-                merged.setdefault(column, value)
-                if column in {
-                    "home_score_h1",
-                    "away_score_h1",
-                    "first_basket_athlete_id",
-                    "first_basket_team_id",
-                }:
-                    merged[column] = value
-        game[game_id] = merged
+        bundle = game.setdefault(game_id, {"home": None, "away": None, "segment": None})
+        if side in {"home", "away"}:
+            # Both perspectives are kept. `settle` grades a wager from the row
+            # of the side the selection names, because every quantity in the
+            # team-games table is signed for its own team — settling the away
+            # row for a home wager negates the margin and swaps the team total.
+            bundle[side] = record
+        if side == "home":
+            by_pair[(day, _pair(team, opponent))] = game_id
+            bundle["home_team_id"] = team
+            bundle["away_team_id"] = opponent
+        bundle["segment"] = segments.get(game_id)
     return _FixtureIndex(by_pair, by_team_day, game)
 
 
@@ -1050,14 +1077,15 @@ def _settle_row(
             settled_at,
         )
     if market.family == markets_registry.FUTURES:
-        result.rows_unsettleable += 1
+        # A future has no game row and no slate day to wait for; it settles on
+        # the tournament months later. It is handed straight to `settle`, which
+        # owns the reason it cannot be graded here, so this module does not keep
+        # a second copy of that reason to drift from. It is counted separately
+        # so a deferred future can never be read as a missing box score — and it
+        # is not a pass, an avoid, or a no-value call.
         result.rows_futures_deferred += 1
-        return _unsettleable(
-            record,
-            "a futures market settles on the tournament months after this "
-            "snapshot; this organ settles game markets against the box score "
-            "and does not guess a tournament result",
-            settled_at,
+        return _record_outcome(
+            record, _call_settle(market, row, None, None, result), result, settled_at
         )
     if not season.row_slate_date(row, competition):
         result.rows_unsettleable += 1
@@ -1078,14 +1106,16 @@ def _settle_row(
             settled_at,
         )
 
-    game = fixtures.game.get(game_id)
-    if game is None:
+    bundle = fixtures.game.get(game_id)
+    game = _game_row_for(row, market, bundle)
+    if bundle is None or (game is None and market.family != markets_registry.PLAYER):
         result.rows_unsettleable += 1
         result.rows_without_a_fixture += 1
         return _unsettleable(
             record,
-            "the fixture resolved but carries no home-perspective team-game "
-            "row, so the two sides cannot be told apart",
+            "the fixture resolved but the results tables carry no row for the "
+            f"side {row.selection!r} names, so the two sides cannot be told "
+            "apart and the margin would settle negated",
             settled_at,
         )
 
@@ -1113,25 +1143,58 @@ def _settle_row(
             return _ledger_row(record, decided, settled_at)
         player_row = candidates[0]
 
+    return _record_outcome(
+        record,
+        _call_settle(market, row, game, player_row, result),
+        result,
+        settled_at,
+    )
+
+
+def _game_row_for(row: SimpleNamespace, market, bundle) -> object:
+    """The row `settle` needs as its `game`, or None when it needs none.
+
+    Three cases, all of them from the settlement contract rather than guessed:
+    the two first-basket markets take a **game-segments** row, every other
+    player prop takes **none**, and a team market takes the **team-games row of
+    the side its selection names** — never the home row by default, because the
+    table is signed per team and the wrong row settles the opponent's bet.
+    """
+    if bundle is None:
+        return None
+    if market.settles_on in _SEGMENT_SETTLED:
+        return bundle.get("segment")
+    if market.family == markets_registry.PLAYER:
+        return None
+    return bundle.get(_ROW_FOR_SELECTION.get(row.selection, "home"))
+
+
+def _call_settle(market, row: SimpleNamespace, game, player_row, result) -> Settled:
+    """`settle`, with one row's failure kept to one row.
+
+    A contract mismatch must not look like a missing box score, so an exception
+    is counted under its own name and surfaced in the summary rather than
+    swallowed — and it must not stop the other 199 games of the night settling
+    either, which is the brief's rule that a run degrades rather than empties.
+    """
     try:
-        decided = settle(
-            market=market,
+        return settle(
+            market=market.key,
             segment=row.segment,
             selection=row.selection,
             line=row.line,
             game=game,
             player=player_row,
         )
-    except Exception as exc:  # noqa: BLE001
-        # Counted and named, never swallowed. One unreadable row must not stop
-        # a 200-game night from settling — the brief's rule is that a run
-        # degrades rather than empties — but a contract mismatch must not look
-        # like a missing box score either, so it gets its own tally.
+    except Exception as exc:  # noqa: BLE001 - counted and named, never swallowed
         message = f"{type(exc).__name__}: {exc}"[:200]
         result.settlement_errors[message] = result.settlement_errors.get(message, 0) + 1
-        result.rows_unsettleable += 1
-        return _unsettleable(record, f"settle raised {message}", settled_at)
+        return Settled(Outcome.UNSETTLEABLE, None, f"settle raised {message}")
 
+
+def _record_outcome(
+    record: Mapping, decided: Settled, result: SettlementResult, settled_at: str
+) -> dict:
     state = _outcome_value(decided.outcome)
     if state == Outcome.VOID.value:
         result.rows_void += 1
@@ -1164,19 +1227,53 @@ def _with_ledger_columns(ledger: object) -> pd.DataFrame:
     return frame
 
 
+def ledger_identity(record: Mapping) -> tuple:
+    """What makes two ledger rows the same settled opinion, **canonically**.
+
+    Normalised rather than read raw, and that is not tidiness. A moneyline's
+    blank line is `None` in memory and float NaN after a CSV round trip, and
+    `None != NaN` — so a raw-column dedupe on `LEDGER_IDENTITY` matches nothing
+    for every market with no line, and the append-only ledger quietly accepts a
+    second copy of an opinion it already holds. Caught by
+    `test_appending_the_same_settled_row_twice_keeps_the_row_recorded_first`,
+    and it is the same defect as the moneyline re-freeze in `_frozen_row`: the
+    NHL lab's join-vocabulary family has now cost this repository two members in
+    one file, both of them a blank behaving as two different values.
+    """
+    return (
+        season.clean_text(record.get("snapshot_date")),
+        season.clean_text(record.get("event_id")),
+        season.clean_text(record.get("market")),
+        season.clean_text(record.get("segment")),
+        season.clean_text(record.get("player")).casefold(),
+        season.clean_text(record.get("selection")),
+        normalise_line(record.get("line")),
+        season.clean_text(record.get("book")),
+    )
+
+
 def append_ledger(rows: pd.DataFrame, path: Path | str) -> int:
     """Append settled rows. **This store can only grow.** Returns the new count.
 
-    The shrink guard is deliberately duplicated at this call site even though
-    `stores.append` carries one, because this is the store that cannot be
-    rebuilt: the prices it settled against were quoted for a few minutes on a
-    Tuesday in January and are gone. `stores.read_store(..., for_append=True)`
-    raises on a parse error rather than returning an empty frame — a caller that
-    silently reads nothing and then writes replaces a damaged long file with a
-    short one, and that damage is permanent.
+    Two guards, both of which exist because this is the one store in the lab
+    that cannot be rebuilt — the prices these opinions were frozen at were
+    quoted for a few minutes on a Tuesday in January and are gone.
 
-    Deduplication is on `LEDGER_IDENTITY`, keeping the row already on disk. A
-    re-settled opinion never overwrites the one that was recorded first.
+    `stores.read_store(..., for_append=True)` raises on a parse error rather
+    than returning an empty frame: a caller that silently reads nothing and then
+    writes replaces a damaged long file with a short one, and that damage is
+    permanent.
+
+    And the write is refused outright if it would produce **fewer** rows than
+    the file already holds. The way that happens in practice is a ledger that
+    already contains duplicates: deduplicating it looks like tidying and is
+    actually deleting settled evidence. So the duplicates are kept, the append
+    is refused, and a human is told — rather than the file being quietly
+    compacted by a routine nightly write.
+
+    A row whose identity is already on disk is dropped from the incoming batch,
+    never written over it. **A re-settled opinion never replaces the one that
+    was recorded first.**
     """
     target = Path(path)
     existing = stores.read_store(target, columns=LEDGER_COLUMNS, for_append=True)
@@ -1190,22 +1287,32 @@ def append_ledger(rows: pd.DataFrame, path: Path | str) -> int:
             incoming[column] = pd.NA
     incoming = incoming[list(LEDGER_COLUMNS)]
 
-    combined = pd.concat([existing, incoming], ignore_index=True).drop_duplicates(
-        subset=[c for c in LEDGER_IDENTITY if c in incoming.columns], keep="first"
-    )
-    if len(combined) < before:
+    on_disk = [ledger_identity(r) for r in existing.to_dict("records")]
+    would_hold = len(set(on_disk))
+    if would_hold < before:
         raise ValueError(
-            f"Refusing to write {len(combined):,} rows over a forward-evidence "
-            f"ledger holding {before:,}. This ledger is append-only and cannot "
-            "be rebuilt: forward evidence cannot be back-dated, and the prices "
-            "these opinions were frozen at are gone. Something upstream lost "
-            "rows."
+            f"The forward-evidence ledger at {target.name} holds {before:,} rows "
+            f"but only {would_hold:,} distinct settled opinions, so appending "
+            "would compact it. Refusing: this ledger is append-only and cannot "
+            "be rebuilt — forward evidence cannot be back-dated and the prices "
+            "these opinions were frozen at are gone. Resolve the duplicates by "
+            "hand rather than letting a nightly write delete them."
         )
+
+    known = set(on_disk)
+    fresh: list[dict] = []
+    for record in incoming.to_dict("records"):
+        identity = ledger_identity(record)
+        if identity in known:
+            continue
+        known.add(identity)
+        fresh.append(record)
+    if not fresh:
+        return before
     return stores.append(
-        incoming,
+        pd.DataFrame(fresh, columns=list(LEDGER_COLUMNS)),
         target,
         columns=LEDGER_COLUMNS,
-        dedupe_on=LEDGER_IDENTITY,
     )
 
 
@@ -1520,9 +1627,20 @@ def render_ledger(
         add("")
         add(f"### {label} by tier")
         add("")
+        # A settlement suspect is **not evidence**, so it cannot be folded into
+        # a roll-up that is presented as evidence. Held out rather than
+        # labelled, because a per-tier row has no market column to carry the
+        # label on and an unlabelled suspect inside an aggregate is exactly how
+        # a number nobody trusts becomes a number everybody quotes.
+        clean = (
+            subset[[m not in suspects for m in subset["market"]]]
+            if not subset.empty
+            else subset
+        )
+        held_out = len(subset) - len(clean)
         lines.extend(
             _table(
-                subset,
+                clean,
                 looks=looks,
                 minimum_bets=minimum_bets,
                 suspects=frozenset(),
@@ -1530,6 +1648,16 @@ def render_ledger(
             )
         )
         add("")
+        if held_out:
+            add(
+                f"{held_out:,} rows are held out of this roll-up because their "
+                "market's settlement rule is one this lab cannot verify. They "
+                "appear per market above, marked **not evidence**. They are "
+                "excluded from an aggregate rather than averaged into one, "
+                "because a number that is not evidence must not be folded into "
+                "a number presented as evidence."
+            )
+            add("")
 
     second_half = sorted(
         {season.clean_text(m) for m in games["market"]} & SETTLEMENT_AMBIGUOUS_MARKETS
