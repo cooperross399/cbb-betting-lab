@@ -202,7 +202,7 @@ breaks his automation, and the breakage looks like the lab going quiet.
 | Status file on the feed | `latest_status.json` |
 | Odds API secret | `CBB_ODDS_API_KEY` |
 | CollegeBasketballData secret | `CBBD_API_KEY` |
-| Drive file title pattern | `CBB Card <date>` |
+| Drive file title pattern | `CBB Card <date> <slot>` |
 | Accumulating note | `This card is **accumulating evidence, not making recommendations.**` |
 | Claims output | `data/outputs/cbb_what_we_can_claim.md` |
 | Forward evidence output | `data/outputs/cbb_forward_evidence.md` |
