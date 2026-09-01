@@ -14,30 +14,40 @@ into the football lab and out of the football lab into this one. It is a
 `tests/test_competition_registry_is_the_only_place.py` fails the build when a
 sport literal appears anywhere else.
 
-## The day boundary, which is a basketball problem the siblings did not have
+## The day boundary, measured rather than chosen
 
 The NFL plays on a Sunday afternoon and the NHL at seven in the evening. D-I
-men's basketball tips games every fifteen minutes for twelve hours, from an
-11:00 Eastern morning game to a 22:30 Pacific tip — and 22:30 Pacific is
-**01:30 Eastern the following morning**. Assigning that game to its Eastern
-calendar date puts it on tomorrow's slate, where tomorrow's card will not price
-it and yesterday's settlement will not find it.
+men's basketball tips games for twelve hours, from an 11:00 Eastern morning
+game to a late West Coast start, and it plays in Honolulu. So "what day is this
+game" is a real question, and getting it wrong is the NHL lab's most expensive
+bug: **69% of every price it bought was silently discarded** by a UTC date
+meeting a league date, and the survivors were systematically the afternoon
+games.
 
-So a game belongs to the **slate day** it was played on, which runs from
-:data:`DAY_BOUNDARY_HOUR` Eastern to the same hour the next morning. That is
-the convention ESPN, the NCAA and every book use when they say "Tuesday's
-games", and it is the convention this lab joins on.
+**The answer is the plain Eastern calendar date**, :data:`DAY_BOUNDARY_HOUR`
+= 0. That is not what this file said first. The first version reasoned that a
+22:30 Pacific tip is 01:30 Eastern the following morning and therefore needed a
+06:00 boundary, the way a hockey or a baseball "day" works. Measured against
+ESPN's own filed `game_date` over all **6,318 games of the completed 2025-26
+season, a 0-hour boundary disagrees on 0 of them and a 6-hour boundary
+disagrees on 1.**
 
-This is the NHL lab's most expensive bug, ported as a rule rather than
-rediscovered: **69% of every price it bought was silently discarded** by a UTC
-date meeting a league date, and the survivors were systematically the afternoon
-games. Here the exposure is larger, because the late window is where the
-low-major games live and the low-major games are the entire reason this lab
-exists.
+The reason is a fact about this sport rather than a convention: **no D-I game
+tips between midnight and 08:00 Eastern.** The latest tip in that whole season
+is 23:xx ET — 20:00 Pacific — and the single game that starts before 08:00 ET
+is East Texas A&M at Hawai'i, 20:00 in Honolulu, which ESPN files under the
+**Eastern** date of the following morning. A boundary designed to protect late
+West Coast games would move that one game to the wrong day and protect nothing,
+because the games it was built for do not exist.
 
-The boundary is not asserted. `tests/test_slate_day_matches_the_source.py`
-checks this lab's `slate_date()` against the source's own game date over every
-cached game, and fails if they disagree on more than a handful.
+The boundary stays a named constant rather than becoming an implicit zero,
+because the reasoning that produced 6 was sound and only the sport made it
+wrong. If this lab ever reaches a competition that plays past midnight Eastern,
+the constant is where that is fixed.
+
+It is still not asserted. `tests/test_slate_day_and_season_match_the_source.py`
+checks `slate_date()` against the source's own game date over every cached
+game, and fails on a single disagreement.
 """
 
 from __future__ import annotations
@@ -47,10 +57,10 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 
-#: A basketball day runs 06:00 Eastern to 06:00 Eastern. A game tipping at
-#: 01:30 Eastern belongs to the night before, which is where the board, the
-#: card and the box score all put it.
-DAY_BOUNDARY_HOUR = 6
+#: A basketball day is the plain Eastern calendar date. Measured against ESPN's
+#: own filed date over 6,318 games: 0 disagreements at this value, 1 at six
+#: hours. See the module docstring — this was reasoned to 6 and measured to 0.
+DAY_BOUNDARY_HOUR = 0
 
 
 @dataclass(frozen=True)
@@ -119,11 +129,21 @@ CBB = Competition(
     data_adapter="cbb_betting_lab.data.sources",
     market_registry="cbb_betting_lab.markets",
     timezone=ZoneInfo("America/New_York"),
-    # Derived by `scripts/estimate_credit_cost.py` from the real schedule.
-    # Re-derived whenever the market list changes. The placeholder here is
-    # deliberately large enough that it can only ever be lowered by
-    # measurement, never raised by a slate it failed to hold.
-    daily_credit_cap=60_000,
+    # Derived by `scripts/estimate_credit_cost.py` from the real schedule, and
+    # re-derived by CI on every push so a market-list change that blows the cap
+    # fails the build rather than the season.
+    #
+    # The largest slate in five cached seasons is **200 games** (opening Monday
+    # of 2022-23). At 48 per-event keys across two regions that is 96 credits an
+    # event pessimistic, so one snapshot of the worst night is 19,206 and two
+    # snapshots are 38,412. The cap is 40,000 — above the worst night this sport
+    # has produced, because a cap below it is a cap that starves it, and **a
+    # starved fetch and an unquoted market look identical in the reports.**
+    #
+    # It is pessimistic by design: it assumes every asked-for market returns at
+    # every book, which on a low-major Tuesday is nothing like true. The real
+    # spend is read from `x-requests-last` and will come in far under.
+    daily_credit_cap=40_000,
 )
 
 #: Women's basketball, D-II and D-III are deliberately absent, and their

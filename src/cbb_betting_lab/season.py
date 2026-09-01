@@ -1,9 +1,10 @@
 """What slate day a game belongs to, and how CSV-borne text is read.
 
 The provider timestamps a game by tip-off, in UTC. The sport timestamps it by
-the night it was played. In college basketball those differ more often than in
-any sibling lab: a 22:30 Pacific tip is 01:30 Eastern *the following morning*,
-and 05:30 UTC the day after that. Three calendars, one game.
+the Eastern calendar date, and a 20:00 tip in Honolulu is 01:00 Eastern the
+following morning and 06:00 UTC the morning after that. Three calendars, one
+game — and the sport's own answer, verified against ESPN's filed date over
+6,318 games, is the middle one.
 
 The NHL lab measured what happens when two of them meet in a join: **69% of
 every price it bought was silently discarded**, and the survivors were
@@ -97,14 +98,23 @@ def row_slate_date(row: object, competition: Competition) -> str:
 
 
 def season_for_slate_date(day: str) -> int:
-    """The season a slate day belongs to, labelled by its **starting** year.
+    """The season a slate day belongs to, labelled by its **ending** year.
 
-    A college basketball season spans two calendar years. This lab labels
-    2026-27 as **2026**, matching hoopR and CollegeBasketballData, so a season
-    integer never has to be translated at a join. The cut is 1 July: everything
-    from July onward starts a new season, everything before it finishes the old
-    one. Nothing countable is played in June or July, so the exact day is
-    arbitrary and only its stability matters.
+    A college basketball season spans two calendar years, so the label is a
+    choice — and it is not a free one. **hoopR labels a season by the year it
+    ends**: `mbb_schedule_2026.parquet` holds 2025-11-03 to 2026-04-07, and
+    `mbb_schedule_2027.parquet` holds the 2026-27 season. Verified by reading
+    both files rather than assumed.
+
+    This lab uses the same convention, so a season integer never has to be
+    translated at a join. An earlier version of this function labelled by the
+    *starting* year, which would have made every `season == 2027` filter on our
+    side miss every `season == 2027` row on theirs — the join-vocabulary bug
+    family in its purest form, caught before a single row was joined.
+
+    The cut is 1 July: everything from July onward belongs to the season ending
+    the following year. Nothing countable is played in June or July, so the
+    exact day is arbitrary and only its stability matters.
     """
     text = str(day or "").strip()[:10]
     if len(text) != 10:
@@ -113,4 +123,4 @@ def season_for_slate_date(day: str) -> int:
         moment = datetime.fromisoformat(text)
     except ValueError:
         return 0
-    return moment.year if moment.month >= 7 else moment.year - 1
+    return moment.year + 1 if moment.month >= 7 else moment.year
