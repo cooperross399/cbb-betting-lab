@@ -1,0 +1,105 @@
+name: Provider Retention Probe
+
+# Spends credits. Manual dispatch only — there is no cron on this file and
+# there must not be one: the probe answers a question once per sport, and a
+# scheduled probe would re-answer it every night at full price.
+#
+# Two rules shape this workflow, both bought by the football lab's probe at
+# 7,280 credits:
+#
+#   1. Retention rolls up to the MARKET, never the provider key. A featured key
+#      that returns nothing while its alternate ladder is retained is not an
+#      unmeasurable market.
+#   2. The run record is written before the report, so the report re-renders
+#      from the record for free. Improving its wording must never cost credits
+#      a second time.
+#
+# This workflow does NOT hold `contents: write`. The run record comes back as
+# an artifact and is committed from a workstation, which keeps write access to
+# this repository pinned to the one workflow that publishes the card feed. A
+# discipline test enforces that.
+
+on:
+  workflow_dispatch:
+    inputs:
+      credit_cap:
+        description: "Hard cap, checked against the measured running total"
+        type: string
+        default: "55000"
+      events_per_stratum:
+        description: "Events sampled per (season x month) stratum"
+        type: string
+        default: "3"
+      tiers:
+        description: "Market tiers to probe (comma separated)"
+        type: string
+        default: "1,2,3"
+      live:
+        description: "Actually spend credits. Unchecked = dry run."
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Retention Probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt && python -m pip install -e .
+
+      - name: Quota before
+        env:
+          PYTHONPATH: src
+          CBB_ODDS_API_KEY: ${{ secrets.CBB_ODDS_API_KEY }}
+        run: python scripts/check_provider_quota.py | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Probe
+        env:
+          PYTHONPATH: src
+          CBB_ODDS_API_KEY: ${{ secrets.CBB_ODDS_API_KEY }}
+        run: |
+          set -o pipefail
+          FLAGS="--credit-cap ${{ inputs.credit_cap }}"
+          FLAGS="$FLAGS --events-per-stratum ${{ inputs.events_per_stratum }}"
+          FLAGS="$FLAGS --tiers ${{ inputs.tiers }}"
+          if [ "${{ inputs.live }}" = "true" ]; then
+            if [ -z "${CBB_ODDS_API_KEY}" ]; then
+              echo "::error::CBB_ODDS_API_KEY is not set; a live probe cannot run."
+              exit 1
+            fi
+            FLAGS="$FLAGS --live"
+          fi
+          python scripts/run_retention_probe.py $FLAGS | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Quota after
+        if: always()
+        env:
+          PYTHONPATH: src
+          CBB_ODDS_API_KEY: ${{ secrets.CBB_ODDS_API_KEY }}
+        run: python scripts/check_provider_quota.py | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # The record is the expensive artifact, not the report. Everything the
+      # report says must be derivable from it, and it is uploaded even when a
+      # later step failed — a probe that spent credits and then crashed while
+      # rendering must not lose what it bought.
+      - name: Upload the run record and the cached responses
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retention-probe
+          path: |
+            data/outputs/cbb_retention_probe.json
+            data/outputs/cbb_retention_probe.md
+            data/outputs/quota_history.json
+            data/raw/cbb/historical_probe/**
+          if-no-files-found: warn
+          retention-days: 90
