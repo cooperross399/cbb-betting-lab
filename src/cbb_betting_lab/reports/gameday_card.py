@@ -1193,6 +1193,16 @@ def run_card(
     )
     probabilities, opinions = opinions_for(wagers, matchups, day=day)
 
+    # The tip guard is read for **every** wager on the board, not only for the
+    # ones that reach it inside `select`. `select` applies its bars in order and
+    # `NOT_APPROVED` is first, so on a card with no allowlisted market — which
+    # is every card this lab will produce until Cooper signs a receipt — nothing
+    # would ever reach the tip check and the card would report an empty tip
+    # census on a slate with games already in progress. A gate that is only
+    # exercised behind another gate is a gate nobody has seen run.
+    for wager in wagers:
+        guard.state_for(wager)
+
     result = select(
         wagers,
         probabilities,
@@ -1223,14 +1233,29 @@ def run_card(
         tiers=placement.tiers,
     )
 
+    # `unparseable` is everything the board offered that could not become a
+    # wager, from both sides of the read: the outcomes `providers/staging.py`
+    # refused when the response was interpreted, and the rows `build_wagers`
+    # refused when they were grouped. Counting only the second would start the
+    # identity from an already-filtered board, and an identity that reconciles
+    # over a filtered board reconciles over whatever survived the filter.
     identity = reconcile(
         result,
-        unparseable=unparseable,
+        unparseable=unparseable + board.counts.refused,
         withdrawn_after_pricing=len(withdrawn),
         notes=[
-            f"{count:,} price row(s) refused: {reason}."
+            f"{count:,} price row(s) refused when grouped into wagers: {reason}."
             for reason, count in sorted(refusals.items(), key=lambda kv: (-kv[1], kv[0]))
-        ],
+        ]
+        + (
+            [
+                f"{board.counts.refused:,} provider outcome(s) refused when the "
+                "response was read. They are broken down by reason and provider "
+                "key in the board section below."
+            ]
+            if board.counts.refused
+            else []
+        ),
     )
 
     enriched = [_enrich(row, opinions, competition=competition) for row in kept]
@@ -1397,6 +1422,7 @@ def render_card(run: CardRun) -> str:
     ]
 
     lines += _selections_section(run)
+    lines += _exposure_section(run)
     lines += _identity_section(run)
     lines += _gates_section(run)
     lines += _board_section(run)
@@ -1472,6 +1498,22 @@ def _selections_section(run: CardRun) -> list[str]:
     return lines
 
 
+def _exposure_section(run: CardRun) -> list[str]:
+    """Printed every run, including the runs with nothing on them.
+
+    A cap that is only reported on the night it first binds is a cap nobody has
+    read, and one first written on that night is a cap chosen to fit it. Both
+    figures here were declared in advance and neither binds today, which is the
+    correct order.
+    """
+    return [
+        "## Exposure",
+        "",
+        run.result.exposure.summary_line(),
+        "",
+    ]
+
+
 def _identity_section(run: CardRun) -> list[str]:
     identity = run.identity
     lines = [
@@ -1479,12 +1521,12 @@ def _identity_section(run: CardRun) -> list[str]:
         "",
         identity.summary_line(),
         "",
-        f"The unit is a **wager**, plus the price rows that could not be made "
-        f"into one: {run.result.priced_wagers:,} wager(s) and "
-        f"{identity.unparseable:,} unreadable row(s). A wager is one bet however "
-        "many books hang it — twenty-one books quoting one game is not "
-        "twenty-one bets, and counting quotes as bets is what made every "
-        "interval in the NHL lab's first store √2.83 too narrow.",
+        f"The unit is a **wager**, plus everything the board offered that could "
+        f"not be made into one: {run.result.priced_wagers:,} wager(s) and "
+        f"{identity.unparseable:,} unreadable row(s) or refused outcome(s). A "
+        "wager is one bet however many books hang it — twenty-one books quoting "
+        "one game is not twenty-one bets, and counting quotes as bets is what "
+        "made every interval in the NHL lab's first store √2.83 too narrow.",
         "",
         "| Bar | Wagers | Bucket |",
         "|:---|---:|:---|",
@@ -1567,6 +1609,8 @@ def _board_section(run: CardRun) -> list[str]:
         f"{board.counts.events:,} event block(s).",
         "",
         board.counts.summary_line(),
+        "",
+        board.counts.refusal_table(),
         "",
         board.spend.summary_line(),
         "",

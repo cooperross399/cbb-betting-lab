@@ -45,7 +45,9 @@ permissions:
 env:
   # The seasons the probe samples from. Historical odds exist from 2023 for
   # this sport; earlier seasons would be fetched and never priced.
-  PROBE_SEASONS: "2023 2024 2025 2026"
+  # 2022 is fetched but not probed: the tier table is walk-forward and the
+  # earliest probed season needs a season behind it.
+  PROBE_SEASONS: "2022 2023 2024 2025 2026"
 
 jobs:
   probe:

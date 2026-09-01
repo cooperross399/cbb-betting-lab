@@ -2,14 +2,17 @@
 
 Generated from the measurement records on disk, so it cannot drift from them. The hand-written rules — written before the first measurement, which is the whole point of them — live in `docs/what_we_can_and_cannot_claim.md`. **This file is re-rendered from its own run record and is never edited by hand.**
 
-- Generated: 2026-09-01T18:59:45+00:00
+- Generated: 2026-09-01T19:08:20+00:00
 - Sample floor: **200 bets**, declared in advance. Below it this document prints a phrase and not a number.
 
 **Nothing in this repository has a demonstrated edge, because nothing has been measured against real prices yet.** That is a statement about the evidence, not about the models, and it is the correct state for a lab whose first game has not been played. Forward evidence cannot be back-dated, which is why the freeze-and-settle organ was built before the models were worth anything.
 
 ## The correction this document applies
 
-**No experiment ledger was found, so no family-wise correction could be applied.** Every interval below is therefore an *uncorrected* 95% interval, and an uncorrected interval on a lab that runs a search every week means less than it appears to. That is a fault in the instrument, not a licence to read the numbers as they stand.
+**30 distinct hypotheses have ever been tested here**, and every interval below is widened by **x1.60** before it means what it says. That is the ledger's **cumulative** count and never the day's: *a search that runs every week is not twelve tests, it is twelve tests a week, forever.*
+
+- Alpha budget: **6 new hypotheses a week**, declared —. When it is spent the search waits; it never lowers the bar.
+- 30 discovery, 0 holdout. Putting a discovery finding to the holdout is a second look and is counted as one.
 
 The correction is re-applied here at render time rather than copied out of the record it came from. A backtest run in December carries December's family size; by March the ledger has grown and the same number means less. This can only ever make an interval wider.
 
@@ -87,7 +90,7 @@ The survival split is computed in `data/outputs/cbb_forward_evidence.md`. Nothin
 
 ## Where every number above came from
 
-- Experiment ledger: `data/outputs/experiment_ledger.json` — **not found**, so this document says nothing about it
+- Experiment ledger: `data/outputs/experiment_ledger.json` — read
 - Price backtest: `data/outputs/cbb_price_backtest.json` — **not found**, so this document says nothing about it
 - Forward-evidence ledger: `data/processed/cbb_forward_evidence.csv` — **not found**, so this document says nothing about it
 - Replication record: `data/outputs/cbb_replication.json` — **not found**, so this document says nothing about it
@@ -97,7 +100,7 @@ A file that is missing and a file that is unreadable are reported differently an
 ## Standing notes
 
 - An interval that includes zero means **no demonstrated edge**. Not 'promising', not 'trending positive', not 'small but positive'.
-- An interval that excludes zero **on the losing side** is a **demonstrated deficit** and is named as one. It is never reported as a result that survived and replicated, which is exactly what a sibling lab's version of this document once did on a market returning −6.6%.
+- An interval that excludes zero **on the losing side** is a **demonstrated deficit** and is named as one. It is never reported as an **edge** that survived and replicated, which is exactly what a sibling lab's version of this document once did on a market returning −6.6%. When a deficit replicates, this report says the loss is more credible — replication is evidence that a result is real, never evidence that it is good.
 - Calibration can rule a model out. It can never rule one in. A market with only a calibration number has no price-based evidence, and this document will not present one as though it did.
 - A result clears three things before it counts: enough bets, an interval that survives correcting for everything this lab has ever tested, and then holding on a window it was not found on. Clearing the first two and failing the third is the ordinary outcome, not a surprise.
 - Every interval is clustered by game **and** by day, and the wider of the two is reported. One game supplies many correlated bets; a hundred-game Tuesday is not a thousand independent observations.

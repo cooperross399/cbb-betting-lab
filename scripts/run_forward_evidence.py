@@ -66,6 +66,12 @@ actually grew by.** The first three can only catch a counter that was never
 incremented; the fourth catches a pass that graded four hundred opinions and
 wrote none of them, which is the failure that looks exactly like a quiet night.
 
+That fourth line is also the one that found defect I in `docs/ported_defects.md`
+— `settle_snapshots` counts a row it grades before it discovers the day has to
+wait, so on a waiting night the two legitimately disagree. The gap is named and
+explained rather than subtracted out, because subtracting it out is how the
+line stops being able to catch the catastrophe it exists for.
+
 `rows_without_a_price` and `rows_without_a_fixture` are sub-counts and are
 printed under the total they belong to rather than beside it, because a reader
 who adds a sub-count into a total gets a number that reconciles to nothing.
@@ -436,8 +442,16 @@ class Reconciliation:
             f"    settled in an earlier pass         {self.snapshots_settled_earlier:>9,}",
         ]
         if self.snapshots_unreadable:
+            # NOT a fourth category, and it must not read as one. An unreadable
+            # snapshot is settled as a day with no rows, so it is already
+            # inside one of the three counts above. Printing it as a peer of
+            # them would produce a block that adds to more than it saw, which
+            # is the sub-count-inside-a-total confusion this whole section is
+            # arranged against.
             lines.append(
-                f"    unreadable, named above            {self.snapshots_unreadable:>9,}"
+                "  snapshots that could not be parsed   "
+                f"{self.snapshots_unreadable:>9,}"
+                "  (already counted above, settled as a day with no opinions)"
             )
         lines += [
             f"  rows seen                            {self.rows_seen:>9,}",
@@ -455,10 +469,30 @@ class Reconciliation:
         ]
         return lines
 
+    @property
+    def rows_graded_but_not_recorded(self) -> int:
+        """Rows this pass graded that the ledger did not grow by.
+
+        Two legitimate causes, and neither is a loss:
+
+        * **a day that waited after some of its rows were already graded.**
+          `settle_snapshots` grades a snapshot's rows in order and breaks out
+          when it meets one whose result has not been published, then discards
+          the whole day — but the rows it graded first have already incremented
+          the counters. Those rows are graded again, and counted again, on the
+          pass that finally settles the day.
+        * **a row the ledger already held**, dropped from the incoming batch by
+          `append_ledger` rather than written over the copy recorded first.
+
+        It is surfaced rather than smoothed over because the alternative — a
+        pass that graded four hundred opinions and wrote none of them — has
+        exactly the same signature, and that one is a defect.
+        """
+        return self.rows_seen - self.rows_appended
+
     def reconciliation_lines(self) -> list[str]:
         """The identity, spelled out as arithmetic a reader can check by eye."""
         verdict = "HOLDS" if self.holds else "DOES NOT HOLD"
-        already_held = self.rows_seen - self.rows_appended
         lines = [
             f"  snapshots:    {self.snapshots_settled:,} settled + "
             f"{self.snapshots_waiting:,} waiting + "
@@ -479,9 +513,17 @@ class Reconciliation:
             # a pass that graded a night and wrote none of it.
             f"  ledger:       {self.ledger_before:,} + {self.rows_appended:,} "
             f"appended = {self.ledger_after:,}, against {self.rows_seen:,} rows "
-            f"graded ({already_held:,} already held and refused as duplicates).",
-            f"  {verdict}.",
+            "graded.",
         ]
+        if self.rows_graded_but_not_recorded:
+            lines.append(
+                f"                {self.rows_graded_but_not_recorded:,} graded "
+                "row(s) did not reach the ledger: a day that waited after some "
+                "of its rows were graded, or a row the ledger already held. "
+                "Both are correct and neither is a loss — the waiting day's "
+                "rows are graded again on the pass that settles it."
+            )
+        lines.append(f"  {verdict}.")
         return lines + [f"  ::error::{failure}" for failure in self.breaks]
 
 

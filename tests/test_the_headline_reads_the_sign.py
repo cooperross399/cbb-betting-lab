@@ -207,7 +207,8 @@ def test_the_replication_of_a_loss_is_reported_as_making_the_loss_credible(
     )
 
     assert "replicated" in line
-    assert "more credible" in line
+    assert "**more** credible" in line
+    assert "never evidence that it is good" in line
 
 
 def test_a_replicated_gain_is_the_only_thing_that_may_be_called_profitable(
@@ -294,15 +295,24 @@ def test_the_headline_is_never_the_pooled_division_one_figure(tmp_path: Path):
 
 
 def test_a_futures_return_never_reaches_a_headline_over_game_bets(tmp_path: Path):
-    """Futures tie up stake for months and settle on a different clock."""
+    """Futures tie up stake for months and settle on a different clock.
+
+    A +30% futures result that replicates is still not a headline over game
+    bets. The headline says so explicitly rather than claiming nothing was
+    measured, because a bought and settled futures price **is** a measurement —
+    it is just one that may never be folded into a figure over game bets.
+    """
     record = _record(
         tmp_path,
         cells=[_cell(market="championship_winner", roi=+0.30, half_width=0.05)],
         replicated=("championship_winner",),
     )
+    line = WC.headline(record)
 
     assert WC.demonstrated_edges(record) == []
-    assert "nothing has been measured against real prices yet" in WC.headline(record)
+    assert "No game market has been measured against real prices." in line
+    assert "never folded into a headline over game bets" in line
+    assert "+30" not in line
     assert any(c["is_futures"] for c in record["claims"])
 
 

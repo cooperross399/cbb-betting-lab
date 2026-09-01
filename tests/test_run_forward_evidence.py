@@ -466,7 +466,13 @@ def test_an_unreadable_snapshot_is_named_and_the_rest_of_the_night_settles(lab, 
 
     out = capsys.readouterr().out
     assert "::warning::2026-01-14.csv could not be parsed" in out
-    assert "unreadable, named above" in out
+    numbers = counters(out)
+    assert numbers["snapshots that could not be parsed"] == 1
+    # It is inside `snapshots seen`, not beside it: a broken file is still
+    # settled as a day with no opinions, so counting it as a fourth category
+    # would make the block add to more than it saw.
+    assert numbers["snapshots seen"] == 2
+    assert numbers["settled this pass"] == 2
     assert lab.ledger_rows() == 4, "the readable night settled around the broken one"
 
 
@@ -484,7 +490,11 @@ def counters(out: str) -> dict[str, int]:
     """
     found: dict[str, int] = {}
     for line in out.splitlines():
-        match = re.match(r"^\s{2,}(?P<label>\S.*?)\s{2,}(?P<value>[\d,]+)\s*$", line)
+        # A trailing parenthetical is allowed: one counter overlaps the totals
+        # above it and says so on its own line rather than being read as a peer.
+        match = re.match(
+            r"^\s{2,}(?P<label>\S.*?)\s{2,}(?P<value>[\d,]+)(\s.*)?$", line
+        )
         if match:
             found[match.group("label")] = int(match.group("value").replace(",", ""))
     return found
@@ -549,7 +559,56 @@ def test_the_ledger_line_compares_the_pass_against_the_file_on_disk(lab, capsys)
     out = capsys.readouterr().out
 
     assert f"0 + {lab.ledger_rows():,} appended = {lab.ledger_rows():,}" in out
-    assert "already held and refused as duplicates" in out
+    assert f"against {lab.ledger_rows():,} rows graded" in out
+    # Nothing was discarded on a clean pass, so the explanatory line stays off.
+    assert "did not reach the ledger" not in out
+
+
+def test_the_rows_a_waiting_day_graded_before_waiting_are_explained(tmp_path, capsys):
+    """`settle_snapshots` counts rows it grades before discovering the day waits.
+
+    Reproduced rather than assumed: the pass walks a snapshot's rows in order
+    and breaks out at the first one whose result is not published, then discards
+    the whole day — but the rows it graded first have already incremented
+    `rows_settled`. So `rows seen` exceeds what the ledger grew by on a waiting
+    night, with nothing wrong and nothing lost; those rows are graded again on
+    the pass that finally settles the day.
+
+    The gap is explained on its own line rather than smoothed away, because a
+    pass that graded a whole night and wrote none of it has the identical
+    signature — and that one is a defect.
+    """
+    day = (date.today() - timedelta(days=1)).isoformat()
+    # The tables carry the first game of the night and not the second.
+    played = team_games(day)
+    lab = (
+        Lab(tmp_path)
+        .with_tables(games=played[played["game_id"] == 1])
+        .with_schedule(day)
+    )
+    lab.freeze(
+        [
+            price(event_id="e1", commence_time=f"{day}T23:00:00Z"),
+            price(
+                event_id="e2",
+                home="Duke",
+                away="North Carolina",
+                commence_time=f"{day}T23:00:00Z",
+            ),
+        ],
+        day=day,
+    )
+
+    assert lab.run("--settle") == 0
+
+    out = capsys.readouterr().out
+    numbers = counters(out)
+    assert numbers["waiting on a result"] == 1
+    assert numbers["rows seen"] == 1, "the first row was graded before the wait"
+    assert lab.ledger_rows() == 0, "a waiting day puts nothing in the ledger"
+    assert "1 graded row(s) did not reach the ledger" in out
+    assert "graded again on the pass that settles it" in out
+    assert "HOLDS." in out and "DOES NOT HOLD" not in out
 
 
 def test_a_night_still_waiting_on_its_box_score_is_named_and_not_settled(tmp_path, capsys):
@@ -676,6 +735,55 @@ def test_second_half_markets_are_reported_as_not_evidence(lab):
 
     report = (lab.outputs / fe.REPORT_MARKDOWN_FILENAME).read_text()
     assert "not evidence" in report
+
+
+def test_a_ledger_that_cannot_be_parsed_stops_the_pass(lab, capsys):
+    """A damaged ledger read as empty is worse than a damaged ledger read at all.
+
+    A zero-byte CSV is the exact shape of the football lab's defect 16:
+    `git show X > file` creates the file even when the show fails, and pandas
+    refuses to parse the result. Read leniently that is "0 frozen opinions" —
+    over a season of them, on a store where the prices are gone. So the run
+    stops, before a marker is written and before a report is published.
+    """
+    lab.freeze(a_night())
+    lab.ledger.write_bytes(b"")
+
+    assert lab.run("--settle") == 1
+
+    assert not lab.markers(), "nothing may be marked settled against a broken ledger"
+    assert "could not be read" in capsys.readouterr().err
+
+
+def test_report_only_publishes_nothing_over_a_damaged_ledger(lab, capsys):
+    """The report goes to `card-feed`, where it is the only copy anybody reads.
+
+    Publishing "0 frozen opinions" over a season of them would be the most
+    misleading output this lab could produce, and it would look completely
+    healthy.
+    """
+    lab.ledger.write_bytes(b"")
+
+    assert lab.run("--report-only") == 1
+
+    assert not (lab.outputs / fe.REPORT_MARKDOWN_FILENAME).exists()
+    assert "could not be read" in capsys.readouterr().err
+
+
+def test_a_team_name_that_never_resolves_is_reported_loudly(lab, capsys):
+    """`team_names`' fourth rule, on the settle side.
+
+    A name this lab cannot resolve is a game it silently cannot settle, and the
+    NHL lab proved that a silent loss looks exactly like a quiet market. The
+    count is worthless if nobody is told which spelling to add to the map.
+    """
+    lab.freeze([price(event_id="e9", home="Gonzaga", away="Saint Peter's")])
+
+    assert lab.run("--settle") == 0
+
+    out = capsys.readouterr().out
+    assert "did not resolve" in out
+    assert "Gonzaga" in out and "Saint Peter's" in out
 
 
 def test_the_settle_pass_opens_no_socket_and_reads_no_credential(lab, monkeypatch):

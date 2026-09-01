@@ -56,7 +56,12 @@ permissions:
   contents: read
 
 env:
-  PURCHASE_SEASONS: "2021 2022 2023 2024 2025 2026"
+  # 2019 and 2020 are fetched but NOT purchased. The conference-tier table
+  # is built walk-forward from seasons strictly earlier than the one being
+  # priced — tiering off the season under purchase would leak its own result
+  # into the stratum every game lands in — so the earliest priced season
+  # (2021, the first with featured-market history) needs seasons behind it.
+  PURCHASE_SEASONS: "2019 2020 2021 2022 2023 2024 2025 2026"
 
 jobs:
   buy:

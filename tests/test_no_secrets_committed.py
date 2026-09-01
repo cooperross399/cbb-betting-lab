@@ -84,7 +84,18 @@ ASSIGNMENT = re.compile(
     r"\b(" + "|".join(re.escape(n) for n in PROVIDER_ENV_ALLOWLIST) + r")[ \t]*=[ \t]*(\S+)"
 )
 
-_EVENT_ID_KEYS = ("id", "event_id")
+#: Field names under which a 32-hex value is a provider EVENT id rather than a
+#: credential. The exemption is **by recorded value, never by directory** —
+#: the football lab's refinement, and the reason a hex run that is not a known
+#: event id is still a finding even under `data/raw/`.
+#:
+#: `provider_event_id` was added on 2026-09-01 when the retention probe's run
+#: record was committed and this guard fired on 102 real event ids. The
+#: tempting fix was to exempt `data/outputs/`, which would have made every
+#: future report a place a credential could hide. Naming the key instead keeps
+#: the exemption tied to a value the repository has actually recorded as an
+#: event id.
+_EVENT_ID_KEYS = ("id", "event_id", "provider_event_id")
 
 
 def _tracked_files() -> list[Path]:

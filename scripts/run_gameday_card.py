@@ -1,0 +1,373 @@
+#!/usr/bin/env python3
+"""Fetch today's board, freeze the opinions it can still precede, render the card.
+
+    # Costs nothing, makes no request, needs no credential:
+    PYTHONPATH=src python scripts/run_gameday_card.py --card-slot morning
+
+    # The same, over a staged board on disk. This is the offline end-to-end path:
+    PYTHONPATH=src python scripts/run_gameday_card.py \
+        --card-slot morning --staged-board data/staging/cbb/2027-01-12_morning.csv
+
+    # What the workflow runs. Spends credits:
+    PYTHONPATH=src python scripts/run_gameday_card.py \
+        --live --card-slot morning --credit-cap 40000
+
+    # A rehearsal of one past day. Publishes nothing, settles nothing:
+    PYTHONPATH=src python scripts/run_gameday_card.py \
+        --live --card-slot evening --credit-cap 40000 \
+        --rehearsal --slate-date 2027-01-12
+
+**Dry by default.** Without `--live` nothing is requested, no credential is
+read and nothing is spent. `--staged-board` is the offline path that still
+exercises the whole chain — staging, pricing, the gates, the freeze and the
+render — which is the thing that had to be provable before a single credit was
+spent on it. `tests/test_the_dry_run_is_dry.py` blocks the socket layer and
+hides the credential, then runs this file.
+
+`.github/workflows/cbb-gameday-refresh.yml` reads `decision=<word>` off the last
+line of stdout and puts it on the card feed. Every word this script prints there
+is one of `cbb_betting_lab.reports.gameday_card.Decision`.
+
+## The three refusals, and why each one is a refusal rather than a warning
+
+1. **A live run pricing a day that is not today**, without `--rehearsal`. The
+   snapshot is named by its day and the ledger is append-only within one; a live
+   run backfilling a past day would write opinions into a file whose name says
+   they were frozen before games that have already been played. There is no
+   error message that makes that recoverable afterwards, so it is refused
+   before it happens.
+2. **Less quota than the cap.** A run that starts short gets partway through the
+   slate and stops, freezing the games it happened to reach. In this sport the
+   bias has a shape — the fetch works in tip order, so a starved run keeps the
+   early games and drops the late ones, which is the West Coast, low-major end
+   of the board this lab was built to look at. Refusing loses a night; starting
+   writes a biased night into a ledger that cannot be re-made.
+3. **An accounting identity that does not reconcile.** A wager that reached none
+   of the six buckets vanished, and a silent drop is how a card recommends from
+   a sixth of a slate and reports it as the whole one. It is an error, not a
+   warning, and the run exits on it.
+
+The credit cap is hard and is checked **inside the provider adapter, before
+every request, against the measured running total from `x-requests-last`** —
+never against this script's estimate. The NHL lab capped a run at 200,000 and
+spent 289,984 by estimating from markets asked rather than markets returned,
+while its test asserted the cap could not be breached.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+from cbb_betting_lab.competitions import DEFAULT_COMPETITION_KEY, competition_for
+from cbb_betting_lab.config import OUTPUTS_DIR, RAW_DIR, STAGING_DIR
+from cbb_betting_lab.forward_evidence import ARCHIVE_DIR
+from cbb_betting_lab.providers import staging
+from cbb_betting_lab.providers.env_file import load_provider_env, redact
+from cbb_betting_lab.providers.odds_api import (
+    OddsApiProvider,
+    ProviderError,
+    sufficient_quota,
+)
+from cbb_betting_lab.reports import gameday_card as GC
+from cbb_betting_lab.schedule_contract import SLOT_NAMES, slot_for
+from cbb_betting_lab.staging_provider_policy import load as load_policy
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--competition", default=DEFAULT_COMPETITION_KEY)
+    parser.add_argument(
+        "--card-slot",
+        default="morning",
+        choices=list(SLOT_NAMES),
+        help="Which slot this run publishes as. The evening slot freezes the "
+        "games the morning slot could not reach and never re-prices one it did.",
+    )
+    parser.add_argument(
+        "--credit-cap",
+        type=int,
+        default=0,
+        help="Hard. Checked before every request against the measured total. "
+        "Defaults to the competition registry's own daily cap.",
+    )
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        help="Actually fetch the board. Without this nothing is requested.",
+    )
+    parser.add_argument(
+        "--rehearsal",
+        action="store_true",
+        help="Rehearse one day. Writes to its own archive, settles nothing, "
+        "labels its output, and never publishes.",
+    )
+    parser.add_argument(
+        "--slate-date",
+        default="",
+        help="The league date to price (YYYY-MM-DD). Defaults to today in the "
+        "competition's own timezone. Any other date requires --rehearsal.",
+    )
+    parser.add_argument(
+        "--staged-board",
+        default="",
+        help="Read the board from a staged CSV instead of the provider. "
+        "Requests nothing, reads no credential, spends nothing.",
+    )
+    parser.add_argument(
+        "--market-tiers",
+        default="1,2,3",
+        help="Which market tiers to ask for per event. Futures are never on a "
+        "gameday card: they settle on a different clock.",
+    )
+    parser.add_argument("--skip-quota-check", action="store_true")
+    parser.add_argument("--archive-dir", default=str(ARCHIVE_DIR))
+    parser.add_argument("--output-dir", default=str(OUTPUTS_DIR))
+    parser.add_argument("--staging-dir", default=str(STAGING_DIR))
+    parser.add_argument("--raw-dir", default=str(RAW_DIR))
+    return parser
+
+
+def _today(competition) -> str:
+    return datetime.now(competition.timezone).date().isoformat()
+
+
+def _read_previous_fingerprint(path: Path) -> str:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return ""
+    if not isinstance(payload, dict):
+        return ""
+    return str(payload.get("fingerprint", ""))
+
+
+def _write_state(path: Path, run: GC.CardRun) -> None:
+    """Remember this run's fingerprint so `Selections changed` means something.
+
+    A marker that fires when nothing happened does not become noisy, it becomes
+    worthless: the run where the selection genuinely changed looks exactly like
+    the four hundred before it. So the comparison is made against the previous
+    card **for this slate day and slot pair**, and when there is no previous
+    card the card says nothing about change rather than claiming one.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "slate_date": run.slate_date,
+                "card_slot": run.card_slot,
+                "fingerprint": run.fingerprint,
+                "decision": run.decision.value,
+                "generated_at": run.generated_at,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    competition = competition_for(args.competition)
+    slot = slot_for(args.card_slot)
+    cap = int(args.credit_cap or competition.daily_credit_cap)
+    today = _today(competition)
+    day = str(args.slate_date or today).strip() or today
+    tiers = tuple(
+        int(t) for t in str(args.market_tiers).split(",") if str(t).strip().isdigit()
+    ) or (1, 2, 3)
+
+    print(f"{competition.title} — gameday card")
+    print(f"Slate day {day} ({competition.timezone.key}); slot `{slot.name}`, which "
+          f"freezes {slot.what}.")
+    print(f"Credit cap {cap:,}, enforced against the measured running total.")
+
+    # Refusal one. See the module docstring.
+    #
+    # Scoped to `--live`, deliberately. A live run fetches **today's** board and
+    # would file it under another day, which is the backfill the forward ledger
+    # cannot survive. A `--staged-board` run reads a file an operator pointed at
+    # by name, requests nothing, and is still held by the tip guard: every game
+    # on a past day has started, so nothing from one can be frozen. Refusing it
+    # too would refuse the only offline path there is.
+    if args.live and day != today and not args.rehearsal:
+        print(
+            f"::error::Refusing to price {day} live: today is {today}. A live "
+            "run backfilling another day writes opinions into a snapshot whose "
+            "name says they were frozen before games that have already been "
+            "played, and the forward ledger is append-only. Pass --rehearsal to "
+            "rehearse that day into its own archive, which publishes nothing.",
+            file=sys.stderr,
+        )
+        print(f"decision={GC.Decision.REFUSED.value}")
+        return 2
+
+    if args.live and args.staged_board:
+        print(
+            "::error::--live and --staged-board are mutually exclusive. One "
+            "spends credits and one reads a file; a run that did both could not "
+            "say which board it carded.",
+            file=sys.stderr,
+        )
+        print(f"decision={GC.Decision.REFUSED.value}")
+        return 2
+
+    archive = Path(args.archive_dir)
+    if args.rehearsal:
+        # Its own archive, which the gameday workflow neither restores nor
+        # publishes. A rehearsal's snapshot cannot reach the card feed however
+        # this script is invoked.
+        archive = archive / GC.REHEARSAL_ARCHIVE_SEGMENT / day
+        print(f"REHEARSAL. Frozen opinions go to `{archive}`; nothing is published.")
+
+    policy = load_policy()
+    print(policy.summary_line(competition))
+
+    # ---- the board -------------------------------------------------------
+    if args.staged_board:
+        source = Path(args.staged_board)
+        if not source.is_file():
+            print(f"::error::No staged board at {source}.", file=sys.stderr)
+            print(f"decision={GC.Decision.REFUSED.value}")
+            return 2
+        board = GC.read_staged_board(source, competition=competition)
+        staged_path = source
+    elif args.live:
+        load_provider_env()
+        try:
+            provider = OddsApiProvider(competition)
+        except ProviderError as exc:
+            print(redact(f"::error::{exc}"), file=sys.stderr)
+            print(f"decision={GC.Decision.REFUSED.value}")
+            return 2
+        if not args.skip_quota_check:
+            try:
+                headers = provider.quota()
+            except ProviderError as exc:
+                print(redact(f"::error::{exc}"), file=sys.stderr)
+                print(f"decision={GC.Decision.REFUSED.value}")
+                return 2
+            # Refusal two.
+            enough, note = sufficient_quota(headers, cap)
+            print(note)
+            if not enough:
+                print(
+                    "::error::Refusing to start. Nothing was fetched and "
+                    "nothing was frozen.",
+                    file=sys.stderr,
+                )
+                print(f"decision={GC.Decision.REFUSED.value}")
+                return 1
+        try:
+            board = GC.fetch_board(
+                provider,
+                competition=competition,
+                credit_cap=cap,
+                day=day,
+                market_tiers=tiers,
+            )
+        except ProviderError as exc:
+            print(redact(f"::error::{exc}"), file=sys.stderr)
+            print(f"decision={GC.Decision.REFUSED.value}")
+            return 2
+        # Every quote, every book, to a place the card cannot read. The freeze
+        # keeps one row per wager; line shopping and price survival are measured
+        # from here.
+        staged_path = staging.staging_path(
+            competition,
+            day=day,
+            slot=f"{slot.name}_rehearsal" if args.rehearsal else slot.name,
+            staging_dir=Path(args.staging_dir),
+        )
+        staging.write_staged(board.rows, staged_path, staging_dir=Path(args.staging_dir))
+    else:
+        print(
+            "Dry run. Nothing was requested, no credential was read and no "
+            "credit was spent. Pass --staged-board to card a board already on "
+            "disk, or --live to fetch one."
+        )
+        print(f"decision={GC.Decision.DRY_RUN.value}")
+        return 0
+
+    print(f"Board: {board.source}. {board.counts.summary_line()}")
+    print(board.spend.summary_line())
+
+    # ---- place, price, gate, freeze, render -------------------------------
+    placement = GC.place_games(
+        board, competition=competition, day=day, raw_dir=Path(args.raw_dir)
+    )
+    print(placement.summary_line())
+
+    outputs = Path(args.output_dir)
+    state = GC.state_path(competition, outputs)
+    try:
+        run = GC.run_card(
+            board,
+            competition=competition,
+            day=day,
+            card_slot=slot.name,
+            archive_dir=archive,
+            policy=policy,
+            placement=placement,
+            rehearsal=bool(args.rehearsal),
+            previous_fingerprint=_read_previous_fingerprint(state),
+            output_dir=outputs,
+        )
+    except ValueError as exc:
+        # Refusal three: the accounting identity. `AccountingIdentity` raises a
+        # ValueError, and it is an error rather than a warning by design.
+        print(f"::error::{exc}", file=sys.stderr)
+        print(f"decision={GC.Decision.REFUSED.value}")
+        return 2
+    run.staged_path = staged_path
+
+    print(run.identity.summary_line())
+    print(run.opinions.summary_line())
+    print(run.tip.summary_line())
+    if run.snapshot_path is not None:
+        print(
+            f"Froze {run.snapshot_rows_offered:,} wager(s) offered into "
+            f"{run.snapshot_path}. The first opinion of the day for a game is "
+            "never retroactively replaced."
+        )
+    else:
+        print(
+            f"Nothing new was frozen from {run.snapshot_rows_offered:,} wager(s) "
+            "offered: they were already frozen for this slate day, or none "
+            "could be."
+        )
+
+    try:
+        card, comment = GC.write_outputs(run, outputs)
+    except GC.CardWouldEmail as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        print(f"decision={GC.Decision.REFUSED.value}")
+        return 2
+    print(f"Wrote {card}")
+    print(f"Wrote {comment}")
+    _write_state(state, run)
+
+    if not run.selections:
+        print(
+            "No selection, no lean, no pass and no stake. No market is "
+            "allowlisted, which is the correct state for a lab with no signed "
+            "acceptance receipt, and an excluded market is never reported as a "
+            "pass, an avoid or a no-value call."
+        )
+    else:
+        print(f"{len(run.selections):,} selection(s); {run.result.exposure.summary_line()}")
+
+    for note in run.degraded:
+        print(f"::warning::{note}")
+    print(f"degraded={'true' if run.is_degraded else 'false'}")
+    print(f"decision={run.decision.value}")
+    return 1 if run.is_degraded else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

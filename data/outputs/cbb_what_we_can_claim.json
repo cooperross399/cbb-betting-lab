@@ -6,14 +6,14 @@
   "claims": [],
   "competition": "cbb",
   "correction": {
-    "applied": false,
+    "applied": true,
     "budget_declared_on": "",
-    "budget_per_week": 0,
-    "discovery": 0,
-    "factor": 1.0,
+    "budget_per_week": 6,
+    "discovery": 30,
+    "factor": 1.6041010507684776,
     "holdout": 0,
-    "hypotheses": 0,
-    "looks": 1,
+    "hypotheses": 30,
+    "looks": 30,
     "reversals": 0,
     "source": "data/outputs/experiment_ledger.json"
   },
@@ -196,7 +196,7 @@
       "title": "First team basket scorer"
     }
   ],
-  "generated_at": "2026-09-01T18:59:45+00:00",
+  "generated_at": "2026-09-01T19:08:20+00:00",
   "headline": "**Nothing in this repository has a demonstrated edge, because nothing has been measured against real prices yet.** That is a statement about the evidence, not about the models, and it is the correct state for a lab whose first game has not been played. Forward evidence cannot be back-dated, which is why the freeze-and-settle organ was built before the models were worth anything.",
   "minimum_bets": 200,
   "no_demonstrated_edge_phrase": "no demonstrated edge",

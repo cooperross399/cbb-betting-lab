@@ -142,3 +142,37 @@ yields both `michigan state` and `michigan saint`, and only one is a school.
 The alternative — a rule deciding by position, or a list of which schools are
 "State" schools — is right most of the time, and the times it is wrong settle a
 bet against the wrong game without erroring.
+
+| H | **An unreadable snapshot is settled as a day with no opinions, and the day is then marked done.** `forward_evidence.read_snapshot` reads through `stores.read_store` *without* `for_append`, so a snapshot pandas cannot parse comes back as an **empty frame**. `settle_snapshots` then grades zero rows, writes the `.settled` sidecar and moves on: a night of frozen opinions is recorded as a night with nothing in it, and the prices they were frozen at are gone. **Open — reported, not fixed.** | Reproduced by putting a zero-byte CSV beside a good snapshot and running `scripts/run_forward_evidence.py --settle`: the good day settled 18 rows against real 2026 box scores and the broken day was marked settled with a note reading `0 rows`. | Not pinned. The wiring names it — `run_forward_evidence.unreadable_snapshots` reports every unparseable snapshot as a `::warning::` and counts it in the reconciliation — and `test_run_forward_evidence.py::test_an_unreadable_snapshot_is_named_and_the_rest_of_the_night_settles` pins **that**. |
+
+**Defect H is defect 16 arriving one layer higher up.** The football lab's
+zero-byte `git show` artifact is already on the inherited list, and the gameday
+workflow's restore step already carries the temp-then-move guard that stops one
+reaching the archive. This is the same file shape reaching the *settle* pass
+instead, where the defensive read that is right for a renderer is wrong for a
+recorder: the module cannot tell "this day held no opinions" from "this day's
+file is broken", and only one of those may be marked done.
+
+The fix belongs in `forward_evidence.py` rather than in the script — most
+plausibly `read_snapshot` raising for a snapshot it cannot parse, so the day is
+skipped and left unmarked rather than closed at zero — and it is left alone here
+because that module was handed over complete and the honest half of the job is
+to say so loudly. What the script can do it does: it names the file, counts it,
+and settles the rest of the archive around it. What it cannot do is stop the
+sidecar being written, and a day closed at zero rows is closed permanently.
+
+| I | **The settle pass's row counters over-count on a waiting day.** `settle_snapshots` grades a snapshot's rows in order and breaks out at the first row whose result has not been published, then discards the whole day — but every row graded before that break has already incremented `rows_settled` / `rows_void` / `rows_unsettleable`. So `rows_seen` includes rows that reached no ledger, and the same rows are counted a second time on the pass that finally settles the day. The ledger itself is correct and the day still waits atomically; what is wrong is the **accounting identity the workflow prints**. **Open — reported, not fixed.** | The reconciliation in `scripts/run_forward_evidence.py` compares rows graded against what the ledger actually grew by, and the two disagreed on a night the tables carried one of two games. Reproduced directly against `settle_snapshots`: `rows_seen` 1, `ledger_rows` 0, no ledger file written. | `test_run_forward_evidence.py::test_the_rows_a_waiting_day_graded_before_waiting_are_explained` pins the **explanation**, not the miscount — the script names the gap and its two legitimate causes rather than smoothing it away. |
+
+**Defect I is what the accounting identity is for.** It is not a data defect —
+nothing is lost, nothing is double-written, and the ledger is exactly right —
+which is precisely why nothing else would ever have noticed it. It was visible
+only because the reconciliation carries one line that is **not** arithmetic on
+the counters themselves: what the pass says it graded, against what the file on
+disk actually grew by. Every other line in that block can only catch a counter
+that was never incremented.
+
+The same signature belongs to a genuine catastrophe — a pass that grades a whole
+night and writes none of it — so the gap is printed and explained rather than
+subtracted out. The fix belongs in `forward_evidence.py`, most plausibly by
+deciding whether the day waits before any of its rows are graded, or by grading
+into a provisional result that is only merged when the day is appended.

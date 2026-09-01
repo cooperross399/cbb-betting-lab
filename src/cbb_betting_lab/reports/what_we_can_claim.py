@@ -593,6 +593,22 @@ def claims_from_forward(
     threshold and could actually have been selected. Reporting only one of them
     would let the choice flatter whichever looked better, which is the move this
     whole repository is arranged against.
+
+    **The numbers come from `forward_evidence.report_payload` and the words do
+    not.** That module's `row_verdict` says *"interval excludes zero,
+    **negative**"* where this one says :data:`stats.DEMONSTRATED_DEFICIT`. They
+    are the same reading of the same interval in two vocabularies, and this
+    document uses the `stats` one because that is the vocabulary its headline
+    partitions on — a headline that partitioned on prose would be re-deriving
+    the sign, which is the defect.
+
+    This module is also **stricter in one place**: `report_payload` defaults to
+    an empty `settlement_suspects` set, deliberately, because deciding on a
+    lab's behalf which of its own numbers are not evidence is the caller's job.
+    Here that decision is made — a second-half market is flagged
+    `settlement_suspect` and excluded from both the edge list and the deficit
+    list — because this is the document a reader consults *instead of* reading
+    the numbers.
     """
     rows: list[dict] = []
     for row in payload.get("rows", []) or []:
@@ -736,6 +752,24 @@ def headline(record: Mapping) -> str:
     """
     claims = _headline_claims(record)
     if not claims:
+        futures = [
+            c
+            for c in record.get("claims", []) or []
+            if isinstance(c, Mapping) and c.get("is_futures")
+        ]
+        if futures:
+            # Not the same statement as "nothing has been measured". A futures
+            # price bought and settled IS a measurement; it is simply one that
+            # may never be folded into a headline computed over game bets, and
+            # saying nothing was measured here would be false.
+            return (
+                f"**No game market has been measured against real prices.** "
+                f"{len(futures)} futures cell(s) have been, and they are "
+                "reported in their own section with their hold time beside "
+                "them — a futures return is never folded into a headline over "
+                "game bets, because it ties up stake for months and settles on "
+                "a different clock."
+            )
         return (
             "**Nothing in this repository has a demonstrated edge, because "
             "nothing has been measured against real prices yet.** That is a "
@@ -828,9 +862,10 @@ def headline(record: Mapping) -> str:
         # distinction the phrase exists to make.
         replicated_deficits = [c for c in deficits if c.get("replicated")]
         replication_note = (
-            " It has also **replicated** on a window it was not found on, "
-            "which makes the loss more credible rather than less — replication "
-            "is not evidence of an edge, it is evidence that a result is real, "
+            f" {len(replicated_deficits)} of those cell(s) also "
+            "**replicated** on a window they were not found on, which makes "
+            "the loss **more** credible rather than less: replication is "
+            "evidence that a result is real, never evidence that it is good, "
             "and this result is a loss."
             if replicated_deficits
             else ""
@@ -1294,7 +1329,15 @@ def render(record: Mapping) -> str:
     # --- measured ----------------------------------------------------------
     add("## Measured against real prices")
     add("")
-    if not game_claims:
+    if not game_claims and futures_claims:
+        add(
+            "**No game market has been measured against real prices.** The "
+            "futures below have been, and they are reported apart rather than "
+            "here — a futures return is never folded into a figure computed "
+            "over game bets."
+        )
+        add("")
+    elif not game_claims:
         add(
             f"**{NOTHING_TO_MEASURE.capitalize()}.** No historical price has "
             "been bought and no frozen opinion has settled, so there is no "
@@ -1347,7 +1390,17 @@ def render(record: Mapping) -> str:
             "**No futures return is ever folded into a headline ROI computed "
             "over game bets.** They tie up stake for months, they settle on a "
             "different clock, and their return is not comparable to a "
-            "single-game bet. The hold time belongs beside every number here."
+            "single-game bet."
+        )
+        add("")
+        add(
+            "**The hold time is not in this table**, because the record these "
+            "rows come from does not carry a freeze date and a settle date and "
+            "this document will not invent one. It is computed and printed, as "
+            "a median in days, in `data/outputs/"
+            f"{forward_evidence.REPORT_MARKDOWN_FILENAME}`, which reads the "
+            "ledger rows themselves. Read a futures return there or read it "
+            "with that caveat."
         )
         add("")
         lines.extend(_claims_table(futures_claims))
@@ -1571,9 +1624,11 @@ def render(record: Mapping) -> str:
         "'promising', not 'trending positive', not 'small but positive'.",
         "An interval that excludes zero **on the losing side** is a "
         f"**{S.DEMONSTRATED_DEFICIT}** and is named as one. It is never "
-        "reported as a result that survived and replicated, which is exactly "
-        "what a sibling lab's version of this document once did on a market "
-        "returning −6.6%.",
+        "reported as an **edge** that survived and replicated, which is "
+        "exactly what a sibling lab's version of this document once did on a "
+        "market returning −6.6%. When a deficit replicates, this report says "
+        "the loss is more credible — replication is evidence that a result is "
+        "real, never evidence that it is good.",
         "Calibration can rule a model out. It can never rule one in. A market "
         "with only a calibration number has no price-based evidence, and this "
         "document will not present one as though it did.",
