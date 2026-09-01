@@ -82,22 +82,19 @@ import pandas as pd
 
 from cbb_betting_lab import experiment_ledger, forward_evidence as fe, season, stores
 from cbb_betting_lab.competitions import DEFAULT_COMPETITION_KEY, Competition, competition_for
-from cbb_betting_lab.config import DATA_DIR, OUTPUTS_DIR, PROCESSED_DIR, RAW_DIR
+from cbb_betting_lab.config import OUTPUTS_DIR, PROCESSED_DIR, RAW_DIR
 from cbb_betting_lab.providers import team_names
 
-#: Where the workflow restores the frozen snapshots to, and where the card run
-#: writes them. `forward_evidence.snapshot_dir` appends `priced_snapshots`.
-ARCHIVE_DIR = DATA_DIR / "archive"
-
-#: The three processed tables a settle pass reads. Every one of them is
+#: The three processed tables a settle pass reads, by stem. Every one of them is
 #: required: the first two settle team and player markets, and the third is
 #: where the first-basket markets settle from. A missing one is refused rather
 #: than treated as an empty frame — see the module docstring.
-REQUIRED_TABLES: tuple[tuple[str, str], ...] = (
-    ("team_games", "cbb_team_games.csv"),
-    ("player_games", "cbb_player_games.csv"),
-    ("game_segments", "cbb_game_segments.csv"),
-)
+#:
+#: Stems rather than filenames, because the prefix belongs to the competition
+#: registry. `Competition.output_name` is the one place that knows a CBB file is
+#: called `cbb_something`, and a sport literal spelled again here is exactly the
+#: scattering the registry exists to prevent.
+REQUIRED_TABLES: tuple[str, ...] = ("team_games", "player_games", "game_segments")
 
 
 class InputError(RuntimeError):
@@ -144,7 +141,7 @@ class Inputs:
         ]
 
 
-def load_tables(processed_dir: Path) -> dict[str, pd.DataFrame]:
+def load_tables(processed_dir: Path, *, competition: Competition) -> dict[str, pd.DataFrame]:
     """The three processed tables, or an `InputError` naming what is missing.
 
     Existence is checked for all three before any of them is read, so an
@@ -152,7 +149,11 @@ def load_tables(processed_dir: Path) -> dict[str, pd.DataFrame]:
     missing file per attempt.
     """
     directory = Path(processed_dir)
-    missing = [name for _, name in REQUIRED_TABLES if not (directory / name).is_file()]
+    paths = {
+        stem: directory / competition.output_name(stem, ".csv")
+        for stem in REQUIRED_TABLES
+    }
+    missing = [path.name for path in paths.values() if not path.is_file()]
     if missing:
         raise InputError(
             f"No processed table at {directory}/{{{', '.join(missing)}}}. "
@@ -163,9 +164,7 @@ def load_tables(processed_dir: Path) -> dict[str, pd.DataFrame]:
             f"{fe.PATIENCE_DAYS}-day patience window that verdict is written "
             "into an append-only ledger that nothing can revise."
         )
-    return {
-        attribute: pd.read_csv(directory / name) for attribute, name in REQUIRED_TABLES
-    }
+    return {stem: pd.read_csv(path) for stem, path in paths.items()}
 
 
 def snapshot_seasons(archive_dir: Path) -> tuple[int, ...]:
@@ -235,7 +234,7 @@ def load_team_index(
 def load_inputs(
     *, processed_dir: Path, raw_dir: Path, archive_dir: Path, competition: Competition
 ) -> Inputs:
-    tables = load_tables(processed_dir)
+    tables = load_tables(processed_dir, competition=competition)
     index, index_seasons = load_team_index(
         raw_dir, competition=competition, seasons=snapshot_seasons(archive_dir)
     )
@@ -268,10 +267,28 @@ def unreadable_snapshots(archive_dir: Path) -> list[Path]:
     bad: list[Path] = []
     for path in fe.snapshot_files(archive_dir):
         try:
+            # `for_append` is the store's own "raise rather than swallow" flag.
+            # Borrowed rather than reimplemented: a second try/except over
+            # `pd.read_csv` here would be a second copy of what counts as an
+            # unreadable store, and the two would drift the moment either
+            # learns about a new exception class.
             stores.read_store(path, columns=fe.SNAPSHOT_COLUMNS, for_append=True)
         except stores.CorruptStoreError:
             bad.append(path)
     return bad
+
+
+def read_ledger_strictly(path: Path) -> pd.DataFrame:
+    """The ledger, or `CorruptStoreError`. Never a silently empty frame.
+
+    `forward_evidence.read_ledger` is lenient, which is right for a reader that
+    only wants to render something. It is wrong here: a damaged ledger read as
+    empty would publish a forward-evidence report saying **0 frozen opinions**
+    over a season of them, onto the `card-feed` branch, where it is the only
+    copy anybody looks at. A missing file is still an empty frame — that is a
+    fresh clone, not damage.
+    """
+    return stores.read_store(Path(path), columns=fe.LEDGER_COLUMNS, for_append=True)
 
 
 # --------------------------------------------------------------------------
@@ -401,17 +418,21 @@ class Reconciliation:
 
     def counter_lines(self) -> list[str]:
         """Every counter, with each sub-count under the total it belongs to."""
-        waiting = (
-            f"  ({', '.join(self.waiting_days)}, inside the "
-            f"{fe.PATIENCE_DAYS}-day patience window)"
-            if self.waiting_days
-            else ""
-        )
         lines = [
             f"  snapshots seen                       {self.snapshots_seen:>9,}",
             f"    settled this pass                  {self.snapshots_settled:>9,}",
-            f"    waiting on a result                {self.snapshots_waiting:>9,}"
-            + waiting,
+            f"    waiting on a result                {self.snapshots_waiting:>9,}",
+        ]
+        if self.waiting_days:
+            # Named on their own line rather than appended to the count. A day
+            # that is waiting is the one thing here an operator may need to go
+            # and look at, and a number with prose trailing it is a number the
+            # eye skips.
+            lines.append(
+                f"      inside the {fe.PATIENCE_DAYS}-day patience window: "
+                + ", ".join(self.waiting_days)
+            )
+        lines += [
             f"    settled in an earlier pass         {self.snapshots_settled_earlier:>9,}",
         ]
         if self.snapshots_unreadable:
@@ -544,7 +565,7 @@ def build_parser() -> argparse.ArgumentParser:
             "nothing, reads no results table, and is the default."
         ),
     )
-    parser.add_argument("--archive-dir", default=str(ARCHIVE_DIR))
+    parser.add_argument("--archive-dir", default=str(fe.ARCHIVE_DIR))
     parser.add_argument("--processed-dir", default=str(PROCESSED_DIR))
     parser.add_argument("--raw-dir", default=str(RAW_DIR))
     parser.add_argument("--output-dir", default=str(OUTPUTS_DIR))
@@ -579,7 +600,11 @@ def main(argv: list[str] | None = None) -> int:
             "Report only. Nothing was settled, no snapshot was read, and no "
             "marker was written."
         )
-        ledger = fe.read_ledger(ledger_path)
+        try:
+            ledger = read_ledger_strictly(ledger_path)
+        except stores.CorruptStoreError as exc:
+            print(f"::error::{exc}", file=sys.stderr)
+            return 1
         print(f"Ledger holds {len(ledger):,} settled opinions.")
         for line in render(ledger, output_dir=output_dir, competition=competition):
             print(line)
@@ -613,8 +638,12 @@ def main(argv: list[str] | None = None) -> int:
             "one needs a human."
         )
 
-    ledger_before = len(fe.read_ledger(ledger_path))
     try:
+        # Strictly, and before the pass. A ledger that cannot be parsed must
+        # stop this run rather than be counted as zero rows: `settle_snapshots`
+        # would then read the same file leniently on the path where nothing is
+        # pending and report an empty season with nothing looking wrong.
+        ledger_before = len(read_ledger_strictly(ledger_path))
         result = fe.settle_snapshots(
             archive_dir=archive_dir,
             ledger_path=ledger_path,
@@ -668,9 +697,12 @@ def main(argv: list[str] | None = None) -> int:
         print(inputs.team_index.unresolved_report())
         print("")
 
-    for line in render(
-        fe.read_ledger(ledger_path), output_dir=output_dir, competition=competition
-    ):
+    try:
+        settled_ledger = read_ledger_strictly(ledger_path)
+    except stores.CorruptStoreError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+    for line in render(settled_ledger, output_dir=output_dir, competition=competition):
         print(line)
 
     print("")

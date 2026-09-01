@@ -72,3 +72,286 @@ def test_the_family_correction_can_turn_an_edge_into_no_demonstrated_edge():
     assert one_look.verdict() == DEMONSTRATED_EDGE
     assert many_looks.verdict() == NO_DEMONSTRATED_EDGE
     assert many_looks.adjusted_low < one_look.adjusted_low
+
+
+# ---------------------------------------------------------------------------
+# The headline itself
+# ---------------------------------------------------------------------------
+#
+# Everything above pins `stats.RoiInterval`, which is where the sign is read.
+# That is necessary and it is not sufficient: the NHL lab's defect was not in
+# its arithmetic, it was in a **headline predicate** that tested
+# measured + survives-correction + replicated and never consulted the
+# arithmetic's answer. So these tests drive the real document end to end — a
+# fabricated price-backtest record on disk, a replication record saying the
+# market replicated, and an assertion about the sentence a human reads.
+
+import json
+from pathlib import Path
+
+from cbb_betting_lab.competitions import CBB
+from cbb_betting_lab.config import REPO_ROOT
+from cbb_betting_lab.reports import price_backtest
+from cbb_betting_lab.reports import what_we_can_claim as WC
+
+
+def _cell(
+    *,
+    market: str = "spread",
+    tier: str = "low_major",
+    roi: float,
+    half_width: float,
+    bets: int = 9_000,
+    clusters: int = 2_200,
+) -> dict:
+    return {
+        "name": "",
+        "market": market,
+        "tier": tier,
+        "roi": roi,
+        "low": roi - half_width,
+        "high": roi + half_width,
+        "adjusted_low": roi - half_width,
+        "adjusted_high": roi + half_width,
+        "bets": bets,
+        "clusters": clusters,
+        "cluster_unit": "game",
+        "looks": 1,
+        "standard_error": half_width / 1.959963984540054,
+        "enough_evidence": bets >= MINIMUM_BETS,
+        "verdict": "",
+    }
+
+
+def _write_evidence(
+    outputs: Path,
+    *,
+    cells: list[dict],
+    replicated: tuple[str, ...] = (),
+    pooled: list[dict] | None = None,
+) -> None:
+    """A price-backtest record and an optional replication record on disk."""
+    outputs.mkdir(parents=True, exist_ok=True)
+    record = {
+        "record_version": price_backtest.RECORD_VERSION,
+        "competition": CBB.key,
+        "generated_at": "2027-04-19T00:00:00+00:00",
+        "season_label": "2026-27",
+        "by_market_and_tier": cells,
+        "pooled": pooled or [],
+    }
+    price_backtest.record_path(CBB, outputs).write_text(
+        json.dumps(record, indent=2), encoding="utf-8"
+    )
+    if replicated:
+        WC.replication_path(CBB, outputs).write_text(
+            json.dumps(
+                {
+                    "test_label": "2025-26",
+                    "markets": [
+                        {"market": m, "state": "replicated"} for m in replicated
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+
+def _record(tmp_path: Path, **kwargs) -> dict:
+    outputs = tmp_path / "outputs"
+    _write_evidence(outputs, **kwargs)
+    return WC.build_record(
+        competition=CBB,
+        output_dir=outputs,
+        processed_dir=tmp_path / "processed",
+        manual_dir=tmp_path / "manual",
+    )
+
+
+def test_a_replicated_loss_is_never_announced_as_an_edge(tmp_path: Path):
+    """**The defect, reproduced against the real document.**
+
+    A market returning −6.6% over 9,000 bets whose interval excludes zero and
+    which then replicates satisfies the NHL lab's headline predicate exactly:
+    measured, survives the correction, replicated. It announced that as *"at
+    least one result survived the correction and then replicated"*, which reads
+    as good news and was a loss.
+    """
+    record = _record(
+        tmp_path, cells=[_cell(roi=-0.066, half_width=0.02)], replicated=("spread",)
+    )
+
+    assert WC.demonstrated_edges(record) == []
+    assert len(WC.demonstrated_deficits(record)) == 1
+
+    line = WC.headline(record)
+    assert DEMONSTRATED_DEFICIT in line
+    assert "loss" in line.casefold()
+    assert "profitable" not in line.casefold(), (
+        "The headline called a −6.6% market profitable. This is the NHL lab's "
+        "defect, reproduced: its predicate never read the sign."
+    )
+    assert "survived the correction and then replicated" not in line
+
+
+def test_the_replication_of_a_loss_is_reported_as_making_the_loss_credible(
+    tmp_path: Path,
+):
+    """Replication is evidence a result is real, not evidence it is good."""
+    line = WC.headline(
+        _record(
+            tmp_path,
+            cells=[_cell(roi=-0.066, half_width=0.02)],
+            replicated=("spread",),
+        )
+    )
+
+    assert "replicated" in line
+    assert "more credible" in line
+
+
+def test_a_replicated_gain_is_the_only_thing_that_may_be_called_profitable(
+    tmp_path: Path,
+):
+    record = _record(
+        tmp_path, cells=[_cell(roi=+0.066, half_width=0.02)], replicated=("spread",)
+    )
+
+    line = WC.headline(record)
+    assert len(WC.demonstrated_edges(record)) == 1
+    assert WC.demonstrated_deficits(record) == []
+    assert "profitable" in line
+    assert "replicated" in line
+    # Even here it is a candidate for a receipt and nothing more.
+    assert "human acceptance receipt" in line
+
+
+def test_a_surviving_gain_that_has_not_replicated_is_a_candidate_not_a_finding(
+    tmp_path: Path,
+):
+    line = WC.headline(_record(tmp_path, cells=[_cell(roi=+0.066, half_width=0.02)]))
+
+    assert "candidates, not findings" in line
+    assert "profitable" not in line.casefold()
+
+
+def test_an_interval_spanning_zero_yields_the_exact_phrase(tmp_path: Path):
+    line = WC.headline(_record(tmp_path, cells=[_cell(roi=+0.02, half_width=0.09)]))
+
+    assert NO_DEMONSTRATED_EDGE.capitalize() in line
+
+
+def test_a_deficit_headline_does_not_open_with_no_demonstrated_edge(tmp_path: Path):
+    """The two phrases mean different things and must not be interchanged.
+
+    `no demonstrated edge` is reserved for an interval that **includes** zero. A
+    deficit's interval excludes it, and opening a deficit headline with the
+    reserved phrase would blur the one distinction the phrase exists to make.
+    """
+    line = WC.headline(_record(tmp_path, cells=[_cell(roi=-0.066, half_width=0.02)]))
+
+    assert not line.startswith(f"**{NO_DEMONSTRATED_EDGE.capitalize()}")
+    assert line.startswith("**The only result that survives is a loss.**")
+
+
+def test_below_the_sample_floor_the_headline_is_a_phrase_and_not_a_number(
+    tmp_path: Path,
+):
+    record = _record(
+        tmp_path,
+        cells=[_cell(roi=+0.317, half_width=0.01, bets=57, clusters=41)],
+    )
+    line = WC.headline(record)
+
+    assert "sample floor" in line
+    # The bet count IS printed — a sample size is the thing this document
+    # insists on. The *return* is not, at any width.
+    assert "57 bets" in line
+    for spelling in ("31.7", "+31", "0.317"):
+        assert spelling not in line, (
+            f"The return appeared in the headline as {spelling!r} over 57 bets. "
+            "Below the floor this document prints a phrase and not a number, "
+            "because printing the figure invites somebody to quote it out of "
+            "the row that qualifies it."
+        )
+    assert WC.demonstrated_edges(record) == []
+
+
+def test_the_headline_is_never_the_pooled_division_one_figure(tmp_path: Path):
+    """A pooled figure is computed for the stopping rule and never headlined.
+
+    High-major, mid-major and low-major are different distributions. The
+    headline reads `record["claims"]`, which is per market **and** tier; the
+    pooled block lives in its own key and is structurally unreachable from it.
+    """
+    pooled_edge = _cell(roi=+0.20, half_width=0.02)
+    pooled_edge["name"] = "every market"
+    record = _record(tmp_path, cells=[], pooled=[pooled_edge])
+
+    assert WC.demonstrated_edges(record) == []
+    assert "nothing has been measured against real prices yet" in WC.headline(record)
+    assert record["pooled"], "the pooled block should still be carried, just not headlined"
+
+
+def test_a_futures_return_never_reaches_a_headline_over_game_bets(tmp_path: Path):
+    """Futures tie up stake for months and settle on a different clock."""
+    record = _record(
+        tmp_path,
+        cells=[_cell(market="championship_winner", roi=+0.30, half_width=0.05)],
+        replicated=("championship_winner",),
+    )
+
+    assert WC.demonstrated_edges(record) == []
+    assert "nothing has been measured against real prices yet" in WC.headline(record)
+    assert any(c["is_futures"] for c in record["claims"])
+
+
+def test_a_second_half_market_is_not_evidence_either_way(tmp_path: Path):
+    """A settlement rule this lab cannot verify is neither an edge nor a deficit.
+
+    Second-half wagers settle including overtime at most US books and not at all
+    of them. That is a book rule, not a fact about basketball, and a number
+    computed on an unverified settlement rule is an artefact at any sample size
+    — which is the shape of the football lab's largest false finding.
+    """
+    record = _record(
+        tmp_path,
+        cells=[_cell(market="spread_h2", roi=+0.066, half_width=0.02)],
+        replicated=("spread_h2",),
+    )
+
+    assert WC.demonstrated_edges(record) == []
+    assert WC.demonstrated_deficits(record) == []
+    assert len(WC.not_evidence(record)) == 1
+    assert "not evidence" in WC.headline(record)
+
+
+def test_the_rendered_headline_is_recomputed_and_not_read_from_the_record(
+    tmp_path: Path,
+):
+    """A record whose stored headline is a lie still renders the true one.
+
+    The headline sits directly above the table it describes. If it were copied
+    out of the record, a stale or hand-edited record could put a sentence over
+    numbers that contradict it — which is the failure mode this whole document
+    exists to prevent, one level up.
+    """
+    record = _record(tmp_path, cells=[_cell(roi=-0.066, half_width=0.02)])
+    record["headline"] = "**Everything is fine and this market is profitable.**"
+
+    rendered = WC.render(record)
+    assert "Everything is fine" not in rendered
+    assert "The only result that survives is a loss." in rendered
+
+
+def test_the_sample_floor_here_matches_the_document_that_declared_it():
+    """`docs/when_this_ends.md` declared both numbers before any data existed.
+
+    A floor that quietly moved is not a floor, so the constants this report
+    prints are pinned against the document that set them.
+    """
+    text = (Path(REPO_ROOT) / "docs" / "when_this_ends.md").read_text(encoding="utf-8")
+
+    assert f"{WC.SAMPLE_FLOOR_OPINIONS:,} settled opinions" in text
+    assert f"{WC.SAMPLE_FLOOR_GAMES:,} distinct games" in text
+    assert WC.DECISION_DATE in text

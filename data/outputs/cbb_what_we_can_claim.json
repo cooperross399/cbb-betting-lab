@@ -1,0 +1,589 @@
+{
+  "backtest": {
+    "found": false,
+    "path": "data/outputs/cbb_price_backtest.json"
+  },
+  "claims": [],
+  "competition": "cbb",
+  "correction": {
+    "applied": false,
+    "budget_declared_on": "",
+    "budget_per_week": 0,
+    "discovery": 0,
+    "factor": 1.0,
+    "holdout": 0,
+    "hypotheses": 0,
+    "looks": 1,
+    "reversals": 0,
+    "source": "data/outputs/experiment_ledger.json"
+  },
+  "deferred": [
+    {
+      "provider_keys": [
+        "alternate_spreads_q1",
+        "alternate_spreads_q2",
+        "alternate_spreads_q3",
+        "alternate_spreads_q4",
+        "alternate_team_totals_q1",
+        "alternate_team_totals_q2",
+        "alternate_team_totals_q3",
+        "alternate_team_totals_q4",
+        "alternate_totals_q1",
+        "alternate_totals_q2",
+        "alternate_totals_q3",
+        "alternate_totals_q4",
+        "h2h_q1",
+        "h2h_q2",
+        "h2h_q3",
+        "h2h_q4",
+        "player_assists_q1",
+        "player_points_q1",
+        "player_rebounds_q1",
+        "spreads_q1",
+        "spreads_q2",
+        "spreads_q3",
+        "spreads_q4",
+        "team_totals_q1",
+        "team_totals_q2",
+        "team_totals_q3",
+        "team_totals_q4",
+        "totals_q1",
+        "totals_q2",
+        "totals_q3",
+        "totals_q4"
+      ],
+      "reason": "Men's college basketball plays two twenty-minute halves. There is no first quarter, so there is nothing to settle against. The provider documents this key because its basketball catalogue is shared with the NBA and WNBA. Asking for it would cost nothing and return nothing, which is exactly why it must be deferred with a reason rather than asked for and quietly found empty \u2014 a market nobody quotes and a market that cannot exist look identical in a coverage report and mean completely different things."
+    },
+    {
+      "provider_keys": [
+        "player_method_of_first_basket"
+      ],
+      "reason": "Settles on how the first basket was scored \u2014 a dunk, a layup, a three, a tip-in. Play-by-play carries a text description of the shot, but the vocabulary is not standardised across the feed's own history and a book's categories are its own. Settling this would mean inventing a mapping from free text to a book's rulebook, and an invented settlement rule is how a lab manufactures a constant offset that replicates by construction. Revisit only with a source that states shot type as a code."
+    },
+    {
+      "provider_keys": [
+        "player_fantasy_points"
+      ],
+      "reason": "Fantasy points are a scoring formula, and the formula differs by operator. Two books quoting `player_fantasy_points` are not quoting the same quantity, so there is no single named quantity for this market to settle against. DFS-only per the provider's own note."
+    },
+    {
+      "provider_keys": [
+        "player_fantasy_points_alternate"
+      ],
+      "reason": "Same reason as `player_fantasy_points`: no single settlement quantity exists across operators."
+    }
+  ],
+  "detection": [
+    {
+      "bets": 1537,
+      "edge": 0.05
+    },
+    {
+      "bets": 601,
+      "edge": 0.08
+    },
+    {
+      "bets": 385,
+      "edge": 0.1
+    },
+    {
+      "bets": 171,
+      "edge": 0.15
+    }
+  ],
+  "forward": {
+    "bet_threshold": 0.02,
+    "found": false,
+    "frozen_opinions": 0,
+    "measurable_rows": 0,
+    "path": "data/processed/cbb_forward_evidence.csv",
+    "settled_opinions": 0
+  },
+  "gated": [
+    {
+      "market": "player_points",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player points"
+    },
+    {
+      "market": "player_rebounds",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player rebounds"
+    },
+    {
+      "market": "player_assists",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player assists"
+    },
+    {
+      "market": "player_threes",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player three-pointers made"
+    },
+    {
+      "market": "player_blocks",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player blocks"
+    },
+    {
+      "market": "player_steals",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player steals"
+    },
+    {
+      "market": "player_turnovers",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player turnovers"
+    },
+    {
+      "market": "player_field_goals",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player field goals made"
+    },
+    {
+      "market": "player_frees_made",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player free throws made"
+    },
+    {
+      "market": "player_frees_attempts",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player free throws attempted"
+    },
+    {
+      "market": "player_pra",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player points + rebounds + assists"
+    },
+    {
+      "market": "player_points_rebounds",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player points + rebounds"
+    },
+    {
+      "market": "player_points_assists",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player points + assists"
+    },
+    {
+      "market": "player_rebounds_assists",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player rebounds + assists"
+    },
+    {
+      "market": "player_blocks_steals",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player blocks + steals"
+    },
+    {
+      "market": "player_double_double",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player double-double"
+    },
+    {
+      "market": "player_triple_double",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "Player triple-double"
+    },
+    {
+      "market": "player_first_basket",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "First basket scorer"
+    },
+    {
+      "market": "player_first_team_basket",
+      "note": "**cannot produce a selection** \u2014 no availability report exists for this game. Division I men's basketball has no mandated injury report, and roughly two thirds of the division is never covered by the conference reports that do exist. This is not a pass, an avoid or a no-value call: it is a market the lab prices, freezes and settles but may not bet.",
+      "title": "First team basket scorer"
+    }
+  ],
+  "generated_at": "2026-09-01T18:59:45+00:00",
+  "headline": "**Nothing in this repository has a demonstrated edge, because nothing has been measured against real prices yet.** That is a statement about the evidence, not about the models, and it is the correct state for a lab whose first game has not been played. Forward evidence cannot be back-dated, which is why the freeze-and-settle organ was built before the models were worth anything.",
+  "minimum_bets": 200,
+  "no_demonstrated_edge_phrase": "no demonstrated edge",
+  "policy": {
+    "allowlisted": [],
+    "manual_only": true,
+    "mode": "manual_only",
+    "provider": "the_odds_api",
+    "summary": "`the_odds_api:cbb` is **manual-only**. No market is allowlisted, the card produces no selection, and that is the correct state for a lab with no signed receipt.",
+    "withdrawn": 0
+  },
+  "pooled": [],
+  "record_version": 1,
+  "replication": {
+    "found": false,
+    "path": "data/outputs/cbb_replication.json",
+    "states": [],
+    "test_label": ""
+  },
+  "stopping_rule": {
+    "decision_date": "2027-04-19",
+    "floor_games": 2000,
+    "floor_opinions": 10000
+  },
+  "title": "NCAA Division I men's basketball",
+  "unmeasured": [
+    {
+      "family": "team",
+      "market": "moneyline",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
+      "segment": "game",
+      "settles_on": "game_margin",
+      "tier": 1,
+      "title": "Moneyline"
+    },
+    {
+      "family": "team",
+      "market": "spread",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
+      "segment": "game",
+      "settles_on": "game_margin",
+      "tier": 1,
+      "title": "Spread"
+    },
+    {
+      "family": "team",
+      "market": "total_points",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
+      "segment": "game",
+      "settles_on": "game_total",
+      "tier": 1,
+      "title": "Total points"
+    },
+    {
+      "family": "team",
+      "market": "team_total",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
+      "segment": "game",
+      "settles_on": "team_score",
+      "tier": 1,
+      "title": "Team total"
+    },
+    {
+      "family": "team",
+      "market": "alternate_spread",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
+      "segment": "game",
+      "settles_on": "game_margin",
+      "tier": 2,
+      "title": "Spread ladder"
+    },
+    {
+      "family": "team",
+      "market": "alternate_total_points",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
+      "segment": "game",
+      "settles_on": "game_total",
+      "tier": 2,
+      "title": "Total ladder"
+    },
+    {
+      "family": "team",
+      "market": "alternate_team_total",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
+      "segment": "game",
+      "settles_on": "team_score",
+      "tier": 2,
+      "title": "Team total ladder"
+    },
+    {
+      "family": "team",
+      "market": "moneyline_h1",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
+      "segment": "h1",
+      "settles_on": "half_margin",
+      "tier": 2,
+      "title": "First-half moneyline"
+    },
+    {
+      "family": "team",
+      "market": "spread_h1",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
+      "segment": "h1",
+      "settles_on": "half_margin",
+      "tier": 2,
+      "title": "First-half spread"
+    },
+    {
+      "family": "team",
+      "market": "total_points_h1",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
+      "segment": "h1",
+      "settles_on": "half_total",
+      "tier": 2,
+      "title": "First-half total"
+    },
+    {
+      "family": "team",
+      "market": "team_total_h1",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
+      "segment": "h1",
+      "settles_on": "half_team_score",
+      "tier": 2,
+      "title": "First-half team total"
+    },
+    {
+      "family": "team",
+      "market": "moneyline_h2",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
+      "segment": "h2",
+      "settles_on": "half_margin",
+      "tier": 2,
+      "title": "Second-half moneyline"
+    },
+    {
+      "family": "team",
+      "market": "spread_h2",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
+      "segment": "h2",
+      "settles_on": "half_margin",
+      "tier": 2,
+      "title": "Second-half spread"
+    },
+    {
+      "family": "team",
+      "market": "total_points_h2",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
+      "segment": "h2",
+      "settles_on": "half_total",
+      "tier": 2,
+      "title": "Second-half total"
+    },
+    {
+      "family": "team",
+      "market": "team_total_h2",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
+      "segment": "h2",
+      "settles_on": "half_team_score",
+      "tier": 2,
+      "title": "Second-half team total"
+    },
+    {
+      "family": "player",
+      "market": "player_points",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_points",
+      "tier": 3,
+      "title": "Player points"
+    },
+    {
+      "family": "player",
+      "market": "player_rebounds",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_rebounds",
+      "tier": 3,
+      "title": "Player rebounds"
+    },
+    {
+      "family": "player",
+      "market": "player_assists",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_assists",
+      "tier": 3,
+      "title": "Player assists"
+    },
+    {
+      "family": "player",
+      "market": "player_threes",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_threes_made",
+      "tier": 3,
+      "title": "Player three-pointers made"
+    },
+    {
+      "family": "player",
+      "market": "player_blocks",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_blocks",
+      "tier": 3,
+      "title": "Player blocks"
+    },
+    {
+      "family": "player",
+      "market": "player_steals",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_steals",
+      "tier": 3,
+      "title": "Player steals"
+    },
+    {
+      "family": "player",
+      "market": "player_turnovers",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_turnovers",
+      "tier": 3,
+      "title": "Player turnovers"
+    },
+    {
+      "family": "player",
+      "market": "player_field_goals",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_field_goals_made",
+      "tier": 3,
+      "title": "Player field goals made"
+    },
+    {
+      "family": "player",
+      "market": "player_frees_made",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_free_throws_made",
+      "tier": 3,
+      "title": "Player free throws made"
+    },
+    {
+      "family": "player",
+      "market": "player_frees_attempts",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_free_throws_attempted",
+      "tier": 3,
+      "title": "Player free throws attempted"
+    },
+    {
+      "family": "player",
+      "market": "player_pra",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_pra",
+      "tier": 3,
+      "title": "Player points + rebounds + assists"
+    },
+    {
+      "family": "player",
+      "market": "player_points_rebounds",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_points_rebounds",
+      "tier": 3,
+      "title": "Player points + rebounds"
+    },
+    {
+      "family": "player",
+      "market": "player_points_assists",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_points_assists",
+      "tier": 3,
+      "title": "Player points + assists"
+    },
+    {
+      "family": "player",
+      "market": "player_rebounds_assists",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_rebounds_assists",
+      "tier": 3,
+      "title": "Player rebounds + assists"
+    },
+    {
+      "family": "player",
+      "market": "player_blocks_steals",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_blocks_steals",
+      "tier": 3,
+      "title": "Player blocks + steals"
+    },
+    {
+      "family": "player",
+      "market": "player_double_double",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_double_double",
+      "tier": 3,
+      "title": "Player double-double"
+    },
+    {
+      "family": "player",
+      "market": "player_triple_double",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_triple_double",
+      "tier": 3,
+      "title": "Player triple-double"
+    },
+    {
+      "family": "player",
+      "market": "player_first_basket",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_first_basket",
+      "tier": 3,
+      "title": "First basket scorer"
+    },
+    {
+      "family": "player",
+      "market": "player_first_team_basket",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection",
+      "segment": "game",
+      "settles_on": "player_first_team_basket",
+      "tier": 3,
+      "title": "First team basket scorer"
+    },
+    {
+      "family": "futures",
+      "market": "championship_winner",
+      "reason": "a futures market, served under a separate provider sport key, settling on a clock measured in months. Nothing has been bought for it and nothing has settled",
+      "segment": "game",
+      "settles_on": "tournament_champion",
+      "tier": 4,
+      "title": "National championship winner"
+    }
+  ],
+  "verdicts": [
+    {
+      "citation": "`calibration_correction` is **not in force**. No verdict is recorded.",
+      "policy": "calibration_correction",
+      "ships": false
+    },
+    {
+      "citation": "`champion_model` is **not in force**. No verdict is recorded.",
+      "policy": "champion_model",
+      "ships": false
+    },
+    {
+      "citation": "`conference_tier_fits` is **not in force**. No verdict is recorded.",
+      "policy": "conference_tier_fits",
+      "ships": false
+    },
+    {
+      "citation": "`endgame_segment_model` is **not in force**. No verdict is recorded.",
+      "policy": "endgame_segment_model",
+      "ships": false
+    },
+    {
+      "citation": "`november_prior_schedule` is **not in force**. No verdict is recorded.",
+      "policy": "november_prior_schedule",
+      "ships": false
+    },
+    {
+      "citation": "`overtime_segment_model` is **not in force**. No verdict is recorded.",
+      "policy": "overtime_segment_model",
+      "ships": false
+    },
+    {
+      "citation": "`props_selectable_when_unconfirmed` is **not in force**. No verdict is recorded.",
+      "policy": "props_selectable_when_unconfirmed",
+      "ships": false
+    },
+    {
+      "citation": "`schedule_state_adjustment` is **not in force**. No verdict is recorded.",
+      "policy": "schedule_state_adjustment",
+      "ships": false
+    },
+    {
+      "citation": "`venue_home_effect` is **not in force**. No verdict is recorded.",
+      "policy": "venue_home_effect",
+      "ships": false
+    }
+  ]
+}

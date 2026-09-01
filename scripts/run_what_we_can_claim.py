@@ -1,0 +1,180 @@
+#!/usr/bin/env python3
+"""Re-render `data/outputs/cbb_what_we_can_claim.md` from the evidence on disk.
+
+    PYTHONPATH=src python scripts/run_what_we_can_claim.py --competition cbb
+
+That is exactly how `.github/workflows/cbb-gameday-refresh.yml` invokes it,
+under `if: always()` and `continue-on-error: true`, after the card has been
+frozen and the ledger settled. **It touches no network, needs no credential and
+cannot spend a credit**, which is what makes it safe to run on every game day
+and in CI on every push.
+
+## What it does
+
+Reads the experiment ledger, the price backtest record, the forward-evidence
+ledger, any replication record, every recorded verdict and the staging provider
+policy; writes a **run record** holding every number it found; then renders the
+markdown as a pure function of that record. The report is never written by hand
+— `--check` fails when the markdown on disk has stopped matching what its record
+renders to, because a hand-edited generated file survives exactly one re-render.
+
+## Why it exits zero with nothing to say
+
+Today there is nothing to claim: no price has been bought and no opinion has
+settled. That produces a short, true document rather than an empty one or a
+failure. A run that exits non-zero here would mark the whole game-day run
+degraded, and *"the lab has measured nothing yet"* is not a fault — it is the
+correct state for a lab whose season opens in November.
+
+It exits non-zero for exactly two things: `--check` finding drift, and a record
+it was asked to render that cannot be read. Both are faults in the instrument.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+from cbb_betting_lab.competitions import DEFAULT_COMPETITION_KEY, competition_for
+from cbb_betting_lab.config import OUTPUTS_DIR, PROCESSED_DIR
+from cbb_betting_lab.reports import what_we_can_claim as WC
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--competition", default=DEFAULT_COMPETITION_KEY)
+    parser.add_argument("--output-dir", default=str(OUTPUTS_DIR))
+    parser.add_argument(
+        "--processed-dir",
+        default=str(PROCESSED_DIR),
+        help="Where the forward-evidence ledger lives.",
+    )
+    parser.add_argument(
+        "--manual-dir",
+        default="",
+        help="Where the staging provider policy lives. Read, never written.",
+    )
+    parser.add_argument(
+        "--record",
+        default="",
+        help="Run record to write, or to render from with --rerender.",
+    )
+    parser.add_argument("--report", default="", help="Where to write the markdown.")
+    parser.add_argument(
+        "--rerender",
+        action="store_true",
+        help=(
+            "Render the existing record without rebuilding it from the "
+            "evidence. Use this to improve a sentence without re-reading a "
+            "measurement — the report is a pure function of the record."
+        ),
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help=(
+            "Do not write. Exit non-zero when the report on disk differs from "
+            "what its record renders to, which means it was edited by hand."
+        ),
+    )
+    args = parser.parse_args(argv)
+
+    competition = competition_for(args.competition)
+    output_dir = Path(args.output_dir)
+    record_target = (
+        Path(args.record) if args.record else WC.record_path(competition, output_dir)
+    )
+    report_target = (
+        Path(args.report) if args.report else WC.report_path(competition, output_dir)
+    )
+
+    # `--rerender` and `--check` read the record; the default run rebuilds it
+    # from the evidence. The distinction matters because rebuilding is the only
+    # step that consults the measurement records, and a check that rebuilt
+    # first could never detect drift — it would overwrite the thing it was
+    # asked to compare against.
+    if args.rerender or args.check:
+        try:
+            record = WC.read_record(record_target)
+        except WC.ClaimsError as exc:
+            print(f"::error::{exc}", file=sys.stderr)
+            return 2
+    else:
+        record = WC.build_record(
+            competition=competition,
+            output_dir=output_dir,
+            processed_dir=Path(args.processed_dir),
+            manual_dir=Path(args.manual_dir) if args.manual_dir else None,
+        )
+
+    try:
+        rendered = WC.render(record)
+    except WC.ClaimsError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 2
+
+    if args.check:
+        existing = (
+            report_target.read_text(encoding="utf-8")
+            if report_target.is_file()
+            else ""
+        )
+        if existing != rendered:
+            print(
+                f"::error::{report_target} does not match what {record_target} "
+                "renders to. Re-render it rather than editing it: this report "
+                "is a pure function of its record, and an edit here is lost the "
+                "next time anybody re-renders.",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"{report_target} matches its run record.")
+        return 0
+
+    if not args.rerender:
+        WC.write_record(record, record_target)
+    try:
+        WC.write_report(record, report_target)
+    except WC.ClaimsError as exc:
+        # The forbidden-vocabulary guard. Refusing to write is the point: a
+        # document that has started selling must not reach the card feed.
+        print(f"::error::{exc}", file=sys.stderr)
+        return 2
+
+    print(f"Wrote {report_target} from {record_target}.")
+    print()
+    print(WC.headline(record))
+    print()
+
+    correction = record.get("correction", {}) or {}
+    if correction.get("applied"):
+        print(
+            f"Correction: {int(correction.get('hypotheses', 0)):,} cumulative "
+            f"hypotheses, intervals widened by "
+            f"x{float(correction.get('factor', 1.0)):.2f}."
+        )
+    else:
+        print(
+            "Correction: NO experiment ledger was found, so no family-wise "
+            "correction could be applied. The report says so rather than "
+            "quietly applying none."
+        )
+
+    claims = record.get("claims", []) or []
+    print(
+        f"Cells measured: {len(claims):,}. "
+        f"Demonstrated edges: {len(WC.demonstrated_edges(record)):,}. "
+        f"Demonstrated deficits: {len(WC.demonstrated_deficits(record)):,}."
+    )
+    policy = record.get("policy", {}) or {}
+    print(f"Policy: {policy.get('summary', '')}")
+    print(
+        "This run read records, rendered markdown, and touched no network. It "
+        "allowlisted no market, signed no receipt and spent no credit."
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

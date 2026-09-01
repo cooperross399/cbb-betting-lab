@@ -116,3 +116,29 @@ and the literal string `"nan"` are one absent value, and `3`, `3.0` and
 `"3.00"` are one line — and normalises **only the key**, never the stored data.
 The lesson for the next lab is that "one function builds every join key" has to
 include the keys that are not called joins.
+
+| G | **The provider's team names did not resolve for a fifth of Division I**, and the failures were concentrated exactly where this lab's thesis lives. `_EXPANSIONS` mapped `st -> saint` unconditionally, so `Michigan St` normalised to `michigan saint` and matched nothing; a further 27 schools are simply called something else (`Fort Wayne Mastodons`, `Grand Canyon Antelopes`, `UMKC Kangaroos`). **75 of 365 provider names (20.5%) resolved to nothing**, and the per-tier match rate over 144 sampled games was high-major 86.8%, mid-major 76.1%, **low-major 46.7%**. | The retention probe reported 42 of 144 sampled games unmatched and named them. The probe's own cached slate listings then answered whether the schools were absent or merely misspelt — 365 provider names against 365 D-I teams, so nothing was absent. | `test_every_provider_team_name_resolves.py` — all 365, on every run |
+
+**Defect G is member one of the NHL lab's join-vocabulary family — "provider
+team names vs league abbreviations" — and it is the most expensive one this lab
+has found.** Not because it was hard to fix, but because of *which* rows it
+dropped. A join that fails uniformly is a smaller sample. A join that fails on
+53% of low-major games and 13% of high-major ones is a **biased** sample, and
+the bias runs directly against the hypothesis the lab exists to test: Cooper's
+case for a fourth lab is that *"the low-major end of the board is priced with
+far less attention"*. Measuring that on a population that had silently lost half
+its low-major games would have produced a number, an interval, and a wrong
+answer — with nothing anywhere indicating that a fifth of the vocabulary was
+unreadable.
+
+It was also nearly bought. The purchase was one dispatch away, and it would have
+paid for events whose prices no join could ever have found — the precise thing
+the brief warns about: *"Fetching prices nothing can consume spends credits on
+rows no join will ever find."*
+
+The fix is `variants()`: an ambiguous token expands into **every** reading and
+`resolve()` refuses when the readings name different schools. `Michigan St`
+yields both `michigan state` and `michigan saint`, and only one is a school.
+The alternative — a rule deciding by position, or a list of which schools are
+"State" schools — is right most of the time, and the times it is wrong settle a
+bet against the wrong game without erroring.

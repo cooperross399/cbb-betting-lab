@@ -49,18 +49,49 @@ _NOISE = re.compile(r"\b(?:university|univ|college|the)\b")
 _PUNCT = re.compile(r"[^a-z0-9 ]+")
 _SPACE = re.compile(r"\s+")
 
-#: Common prefixes that both sources spell both ways.
+#: Tokens with exactly ONE reading. Applied unconditionally.
 _EXPANSIONS = {
-    "st": "saint",
-    "st.": "saint",
-    "n": "north",
-    "s": "south",
-    "e": "east",
-    "w": "west",
     "cent": "central",
     "mt": "mount",
     "ft": "fort",
+    "intl": "international",
+    "univ": "university",
 }
+
+#: Tokens with MORE THAN ONE reading, each of which is a real school somewhere.
+#:
+#: **`st` is the expensive one, and it was wrong here for a while.** The
+#: provider writes `Michigan St` for Michigan **State** and `St. John's` for
+#: **Saint** John's — one token, two schools, and no rule of position
+#: separates them (`Mt. St. Mary's` has it medially as Saint). This module
+#: previously mapped `st -> saint` unconditionally, so `Michigan St`
+#: normalised to `michigan saint` and matched nothing. Measured against 365
+#: real provider spellings: **75 of them (20.5%) failed to resolve**, and the
+#: failures were concentrated in the low-major end of the board — the exact
+#: population this lab's thesis is about.
+#:
+#: So an ambiguous token is not resolved; it is EXPANDED INTO EVERY READING,
+#: and `resolve()` refuses when the readings point at different schools. A
+#: guess that is right 90% of the time is worse here than a miss, because the
+#: 10% settle against the wrong game and nothing errors.
+_AMBIGUOUS = {
+    "st": ("state", "saint"),
+    "n": ("north", "northern"),
+    "s": ("south", "southern"),
+    "e": ("east", "eastern"),
+    "w": ("west", "western"),
+    "se": ("southeast", "southeastern"),
+    "sw": ("southwest", "southwestern"),
+    "ne": ("northeast", "northeastern"),
+    "nw": ("northwest", "northwestern"),
+    "csu": ("cal state", "colorado state", "cleveland state"),
+    "so": ("south", "southern"),
+}
+
+#: A bound on the combinatorial expansion. A name with many ambiguous tokens
+#: would otherwise generate a large set; four is comfortably above the worst
+#: real case (`SE Missouri St` has two) and stops a pathological input.
+_MAX_AMBIGUOUS_TOKENS = 4
 
 
 def normalise(name: object) -> str:
@@ -81,6 +112,41 @@ def normalise(name: object) -> str:
     text = _NOISE.sub(" ", text)
     words = [_EXPANSIONS.get(w, w) for w in text.split()]
     return _SPACE.sub(" ", " ".join(words)).strip()
+
+
+def variants(name: object) -> frozenset[str]:
+    """Every normalised form this spelling could plausibly mean.
+
+    One string in, a SET out, because some tokens genuinely have more than one
+    reading and picking one is guessing. `Michigan St` yields both
+    `michigan state` and `michigan saint`; only the first is a school, so the
+    index resolves it. `St. John's` yields both, and only the second is.
+
+    The alternative — deciding by position, or by a list of which schools are
+    "State" schools — is a rule that is right most of the time, and the times
+    it is wrong settle a bet against the wrong game without erroring.
+    """
+    base = normalise(name)
+    if not base:
+        return frozenset()
+    words = base.split()
+    ambiguous_positions = [i for i, w in enumerate(words) if w in _AMBIGUOUS]
+    if not ambiguous_positions:
+        return frozenset({base})
+    if len(ambiguous_positions) > _MAX_AMBIGUOUS_TOKENS:
+        return frozenset({base})
+
+    forms = {tuple(words)}
+    for position in ambiguous_positions:
+        grown: set[tuple[str, ...]] = set()
+        for form in forms:
+            grown.add(form)  # the unexpanded reading stays a candidate
+            for reading in _AMBIGUOUS[words[position]]:
+                replaced = list(form)
+                replaced[position : position + 1] = reading.split()
+                grown.add(tuple(replaced))
+        forms = grown
+    return frozenset(_SPACE.sub(" ", " ".join(f)).strip() for f in forms)
 
 
 @dataclass
@@ -111,10 +177,16 @@ class TeamIndex:
         makes an otherwise-ambiguous name usable — and it is also the guard
         that turns *the wrong* lone candidate into a miss rather than a match.
         """
-        key = normalise(name)
-        if not key:
+        forms = variants(name)
+        if not forms:
             return None
-        candidates = self.aliases.get(key)
+        # Every reading of an ambiguous spelling is tried, and the candidates
+        # are UNIONED. If two readings name two different schools the union has
+        # two members and the length check below refuses — which is the point:
+        # an ambiguous name resolves to nothing, never to a coin flip.
+        candidates: set = set()
+        for form in forms:
+            candidates |= self.aliases.get(form, set())
         if not candidates:
             # Record the miss under the raw spelling, which is what a human
             # needs to see to fix the map.
@@ -150,16 +222,28 @@ class TeamIndex:
         return "\n".join(lines)
 
 
-#: Spellings a provider uses that the results source does not, seeded by hand.
+#: Spellings the provider uses that the results source does not.
 #:
-#: **This map is incomplete and knowingly so.** `basketball_ncaab` is inactive
-#: at the provider today (verified from its own sports listing, 2026-09-01,
-#: `active=False`), so there is no live board to read real spellings off. These
-#: entries are the ones a human can be confident about — schools whose common
-#: name differs from ESPN's `location` string — and the rest is what
-#: `scripts/discover_provider_teams.py` is for: on the first live board it
-#: reports every name that did not resolve, loudly, and each one is added here
-#: with the date it was observed. Guessing them now would be inventing data.
+#: **These are OBSERVED, not guessed.** Every entry below the marked line was
+#: read off real provider responses: the 2026-09-01 retention probe cached 140
+#: historical slate listings, which between them carry **365 distinct provider
+#: team names** — the complete D-I vocabulary. They are committed verbatim in
+#: `data/manual/provider_team_names_observed.json`, and
+#: `tests/test_every_provider_team_name_resolves.py` resolves all 365 on every
+#: run.
+#:
+#: An earlier version of this comment said the map was "incomplete and
+#: knowingly so" because the sport was out of season and there was no live
+#: board to read. That was true and it was also the reason **20.5% of provider
+#: names did not resolve** — 75 of 365, concentrated in the low-major end of
+#: the board, which is the exact population this lab's thesis is about. The
+#: historical listings turned out to be a board: off-season is a reason not to
+#: know what a market COSTS, not a reason not to know what a school is CALLED.
+#:
+#: **Always include the nickname.** The provider spells a team
+#: `Fort Wayne Mastodons`, never `Fort Wayne`, so an alias of `Fort Wayne`
+#: matches nothing. This map previously carried exactly that and it silently
+#: did nothing.
 SEED_ALIASES: dict[str, tuple[str, ...]] = {
     # ESPN's `location`, then the other spellings that mean the same school.
     "UConn": ("Connecticut", "Connecticut Huskies", "UConn Huskies"),
@@ -197,7 +281,46 @@ SEED_ALIASES: dict[str, tuple[str, ...]] = {
     "Omaha": ("Nebraska Omaha", "Nebraska-Omaha"),
     "Little Rock": ("Arkansas Little Rock", "Arkansas-Little Rock"),
     "UT Arlington": ("Texas Arlington", "Texas-Arlington"),
-    "Kansas City": ("UMKC", "Missouri Kansas City"),
+    "Kansas City": ("UMKC", "Missouri Kansas City", "UMKC Kangaroos"),
+
+    # ---------------------------------------------------------------------
+    # OBSERVED on real provider responses, 2026-09-01. Each key is ESPN's
+    # `location`; each value is the provider's spelling VERBATIM, nickname
+    # included. Every one of these failed to resolve before it was added.
+    # ---------------------------------------------------------------------
+    "UAlbany": ("Albany Great Danes",),
+    "App State": ("Appalachian St Mountaineers", "Appalachian State Mountaineers"),
+    "Little Rock": ("Arkansas-Little Rock Trojans",),
+    "Army": ("Army Knights",),
+    "California Baptist": ("Cal Baptist Lancers",),
+    "Central Connecticut": ("Central Connecticut St Blue Devils",),
+    "Florida International": ("Florida Int'l Golden Panthers", "Florida Intl Golden Panthers"),
+    "Purdue Fort Wayne": ("Fort Wayne Mastodons",),
+    "George Washington": ("GW Revolutionaries",),
+    "Gardner-Webb": ("Gardner-Webb Bulldogs",),
+    "Grambling": ("Grambling St Tigers",),
+    # ESPN calls them the Lopes; the provider uses the unabbreviated Antelopes.
+    "Grand Canyon": ("Grand Canyon Antelopes",),
+    "IU Indianapolis": ("IUPUI Jaguars",),
+    "Long Island University": ("LIU Sharks",),
+    # ESPN's nickname is literally "Beach", so the display name is
+    # "Long Beach State Beach" and the provider's "49ers" shares no token.
+    "Long Beach State": ("Long Beach St 49ers",),
+    "Loyola Chicago": ("Loyola (Chi) Ramblers",),
+    "Loyola Maryland": ("Loyola (MD) Greyhounds",),
+    "Mississippi Valley State": ("Miss Valley St Delta Devils",),
+    "Nicholls": ("Nicholls St Colonels",),
+    "Prairie View A&M": ("Prairie View Panthers",),
+    "Sam Houston": ("Sam Houston St Bearkats",),
+    "Seattle U": ("Seattle Redhawks",),
+    # ESPN carries id 2598 as "Saint Francis RED WOLVES", which is Arkansas
+    # State's nickname and an upstream error. The school is right and that is
+    # what the join needs. Saint Francis (PA) reclassified to D-III for
+    # 2026-27, so this alias matters for the historical seasons only.
+    "Saint Francis": ("St. Francis (PA) Red Flash", "St Francis PA Red Flash"),
+    "St. Thomas-Minnesota": ("St. Thomas (MN) Tommies",),
+    "UT Martin": ("Tenn-Martin Skyhawks",),
+    "Texas A&M-Corpus Christi": ("Texas A&M-CC Islanders",),
 }
 
 

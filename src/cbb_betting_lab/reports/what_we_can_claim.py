@@ -111,7 +111,7 @@ from cbb_betting_lab import staging_provider_policy as policy_module
 from cbb_betting_lab import stats as S
 from cbb_betting_lab import verdicts as verdicts_module
 from cbb_betting_lab.competitions import CBB, Competition
-from cbb_betting_lab.config import OUTPUTS_DIR, PROCESSED_DIR
+from cbb_betting_lab.config import OUTPUTS_DIR, PROCESSED_DIR, REPO_ROOT
 from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.experiment_ledger import LEDGER_FILENAME as EXPERIMENT_LEDGER_FILENAME
 from cbb_betting_lab.experiment_ledger import load as load_experiment_ledger
@@ -280,6 +280,22 @@ def _text(value: object) -> str:
     return "" if value is None else str(value).strip()
 
 
+def _repo_relative(path: Path) -> str:
+    """A path as the reader will recognise it, not as this machine spells it.
+
+    The rendered document is published to `card-feed` and read by a human on a
+    phone. `/home/runner/work/cbb-betting-lab/cbb-betting-lab/data/outputs/...`
+    is the same file as `data/outputs/...` and only one of them is legible — and
+    a record whose contents change with the machine that built it makes the
+    `--check` re-render comparison depend on where it ran.
+    """
+    target = Path(path)
+    try:
+        return str(target.resolve().relative_to(Path(REPO_ROOT).resolve()))
+    except ValueError:
+        return str(target)
+
+
 # ---------------------------------------------------------------------------
 # The correction
 # ---------------------------------------------------------------------------
@@ -340,7 +356,7 @@ def correction_from_ledger(path: Path) -> Correction:
             looks=1,
             factor=1.0,
             applied=False,
-            source=str(target),
+            source=_repo_relative(target),
         )
     ledger = load_experiment_ledger(target)
     stages = ledger.by_stage()
@@ -355,7 +371,7 @@ def correction_from_ledger(path: Path) -> Correction:
         discovery=int(stages.get("discovery", 0)),
         holdout=int(stages.get("holdout", 0)),
         reversals=len(ledger.reversals()),
-        source=str(target),
+        source=_repo_relative(target),
     )
 
 
@@ -696,8 +712,8 @@ def _named_figures(claims: Sequence[Mapping]) -> str:
 def headline(record: Mapping) -> str:
     """The one paragraph somebody who reads nothing else will read.
 
-    Five states, and they are checked in an order chosen so that no reading of
-    the document can turn a loss into good news:
+    Six states, checked in an order chosen so that no reading of the document
+    can turn a loss into good news:
 
     1. **Nothing measured.** True today and for the next two months.
     2. **Measured, nothing at the declared sample floor.** A phrase, not a
@@ -706,13 +722,17 @@ def headline(record: Mapping) -> str:
        *profitable*, and it still names any deficit beside it.
     4. **A surviving profitable result that has not replicated.** A candidate,
        explicitly not a finding.
-    5. **Neither.** `no demonstrated edge`, in those exact words, and any
-       demonstrated deficit is **named**.
+    5. **A surviving loss and no surviving gain.** Led by the loss, named as a
+       `demonstrated deficit`, and **not** opened with `no demonstrated edge` —
+       that phrase belongs to an interval that includes zero and a deficit's
+       does not.
+    6. **Neither.** `no demonstrated edge`, in those exact words.
 
     States 3 and 4 are reachable only through :func:`demonstrated_edges`, which
     partitions on a verdict string that read the sign. A market returning −6.6%
-    lands in state 5 with its loss named, which is what the NHL lab's version of
-    this function did not do.
+    that survives correction and replicates lands in state 5 — where the
+    replication makes the loss *more* credible and is said so — which is exactly
+    what the NHL lab's version of this function did not do.
     """
     claims = _headline_claims(record)
     if not claims:
@@ -737,10 +757,11 @@ def headline(record: Mapping) -> str:
         if not deficits:
             return ""
         return (
-            f" **What has survived the correction is a loss**, in "
-            f"{len(deficits)} cell(s): {_named_figures(deficits)}. A "
-            "demonstrated deficit is a finding, not a null result, and it is "
-            "the finding this lab has."
+            f" Alongside it, {len(deficits)} cell(s) are a "
+            f"**{S.DEMONSTRATED_DEFICIT}** — an interval excluding zero on the "
+            f"**losing** side: {_named_figures(deficits)}. A "
+            f"{S.DEMONSTRATED_DEFICIT} is a finding, not a null result, and it "
+            "is never reported as a result that survived and replicated."
         )
 
     def _unverifiable_clause() -> str:
@@ -795,13 +816,46 @@ def headline(record: Mapping) -> str:
             + _unverifiable_clause()
         )
 
+    if deficits:
+        # THE BRANCH THE NHL LAB DID NOT HAVE. A result that is measured,
+        # survives the correction and replicates satisfies its headline
+        # predicate whichever side of zero it sits on, and so a −6.6% market
+        # was announced as good news. Here the deficit leads its own sentence.
+        #
+        # It deliberately does NOT open with `NO_DEMONSTRATED_EDGE`. That phrase
+        # is reserved for an interval that **includes** zero; a deficit's
+        # interval excludes it, and reusing the phrase here would blur the one
+        # distinction the phrase exists to make.
+        replicated_deficits = [c for c in deficits if c.get("replicated")]
+        replication_note = (
+            " It has also **replicated** on a window it was not found on, "
+            "which makes the loss more credible rather than less — replication "
+            "is not evidence of an edge, it is evidence that a result is real, "
+            "and this result is a loss."
+            if replicated_deficits
+            else ""
+        )
+        return (
+            f"**The only result that survives is a loss.** {cells} "
+            f"market-and-tier cell(s) across {markets} market(s) are measured "
+            f"against real prices. None excludes zero on the winning side; "
+            f"{len(deficits)} exclude(s) it on the **losing** side after "
+            f"correcting for everything this lab has ever tested, which is a "
+            f"**{S.DEMONSTRATED_DEFICIT}**: {_named_figures(deficits)}."
+            + replication_note
+            + " A "
+            + S.DEMONSTRATED_DEFICIT
+            + " is a finding, not a null result, and it is the finding this "
+            "lab has."
+            + _unverifiable_clause()
+        )
+
     return (
         f"**{S.NO_DEMONSTRATED_EDGE.capitalize()} in any market.** {cells} "
         f"market-and-tier cell(s) across {markets} market(s) are measured "
         "against real prices, and nothing survives correcting for the number "
         "of hypotheses this lab has tested and then holds on a window it was "
         "not found on."
-        + _deficit_clause()
         + _unverifiable_clause()
     )
 
@@ -935,7 +989,10 @@ def build_record(
 
     # --- the historical backtest -------------------------------------------
     backtest_file = backtest.record_path(competition, outputs)
-    backtest_block: dict = {"path": str(backtest_file), "found": backtest_file.is_file()}
+    backtest_block: dict = {
+        "path": _repo_relative(backtest_file),
+        "found": backtest_file.is_file(),
+    }
     backtest_claims: list[dict] = []
     pooled_rows: list[dict] = []
     if backtest_file.is_file():
@@ -969,7 +1026,10 @@ def build_record(
 
     # --- the forward ledger -------------------------------------------------
     ledger_file = forward_ledger_path(processed)
-    forward_block: dict = {"path": str(ledger_file), "found": ledger_file.is_file()}
+    forward_block: dict = {
+        "path": _repo_relative(ledger_file),
+        "found": ledger_file.is_file(),
+    }
     forward_claims: list[dict] = []
     try:
         ledger = forward_evidence.read_ledger(ledger_file)
@@ -1025,7 +1085,7 @@ def build_record(
         "backtest": backtest_block,
         "forward": forward_block,
         "replication": {
-            "path": str(replication_file),
+            "path": _repo_relative(replication_file),
             "found": replication_file.is_file(),
             "test_label": test_label,
             "states": [
@@ -1357,11 +1417,21 @@ def render(record: Mapping) -> str:
     add("")
     unmeasured = [r for r in record.get("unmeasured", []) or [] if isinstance(r, Mapping)]
     if unmeasured:
+        # Grouped by the reason they share. Thirty-five markets each carrying
+        # the same sentence is a wall nobody reads, and a wall nobody reads is
+        # where a market with a *different* reason goes unnoticed.
+        grouped: dict[str, list[Mapping]] = {}
         for row in unmeasured:
+            grouped.setdefault(_text(row.get("reason")), []).append(row)
+        for reason, rows in sorted(grouped.items(), key=lambda kv: -len(kv[1])):
+            add(f"- **{len(rows)} market(s)** — {reason}.")
             add(
-                f"- `{_text(row.get('market'))}` ({_text(row.get('title'))}) — "
-                f"{_text(row.get('reason'))}. It settles on "
-                f"`{_text(row.get('settles_on'))}`."
+                "  - "
+                + ", ".join(
+                    f"`{_text(r.get('market'))}` (settles on "
+                    f"`{_text(r.get('settles_on'))}`)"
+                    for r in rows
+                )
             )
     else:
         add("- Every market this lab prices has a measurement.")
