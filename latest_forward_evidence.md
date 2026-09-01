@@ -4,7 +4,7 @@
 
 **0 frozen opinions in the ledger.** 0 are resolved wagers carrying a readable price and are measured below. 0 are **unsettleable**, 0 are **void** — a bet that never existed rather than one that returned its stake — and 0 settled at a price this lab cannot read. None of those three is a zero, and none of them enters any interval.
 
-**No experiment-ledger count was supplied, so no family correction is applied.** Every interval below is therefore narrower than the truth, and none of them should be read as a finding. A search that runs every week is not twelve tests; it is twelve tests a week, forever.
+Every interval is corrected across **30 hypotheses ever tested**, from the experiment ledger's cumulative count rather than this table's row count.
 
 Intervals are clustered by game **and** by day, and the wider of the two is reported. One game supplies a moneyline, a spread, a total, two team totals and a dozen props: a 100-game Tuesday is not 1,500 independent observations.
 

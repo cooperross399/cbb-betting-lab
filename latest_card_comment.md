@@ -1,4 +1,4 @@
-**NCAA Division I men's basketball — 2026-09-01, morning slot.** Decision: `no-slate`. This run was clean.
+**NCAA Division I men's basketball — 2026-09-01, morning slot.** Decision: `no-slate`. The card itself rendered without a problem; `latest_status.json` carries the run's health, which this process cannot see.
 # CBB card — 2026-09-01 (morning)
 
 This card is **accumulating evidence, not making recommendations.**
@@ -7,7 +7,9 @@ This card is **accumulating evidence, not making recommendations.**
 
 ## Selections
 
-**None.** No wager on this slate cleared every bar, and the first bar every one of them met is that its market is not allowlisted by a reviewed policy.
+**None.** No wager on this slate cleared every bar.
+
+No bar was reached, because there was no priced wager on this slate day to reach one. That is an absence of board coverage and it is reported as one.
 
 That is not a pass, an avoid, or a no-value call, and it is not the model declining to find value. It is the state this lab is designed to be in until Cooper signs an acceptance receipt for a market: **Claude may withdraw an allowlist and may never grant one.** No selection, no lean, no pass and no stake.
 
@@ -19,7 +21,9 @@ That is not a pass, an avoid, or a no-value call, and it is not the model declin
 
 0 priced = 0 no opinion + 0 below threshold + 0 unparseable + 0 ambiguous + 0 gated + 0 bets (reconciles).
 
-The unit is a **wager**, plus everything the board offered that could not be made into one: 0 wager(s) and 0 unreadable row(s) or refused outcome(s). A wager is one bet however many books hang it — twenty-one books quoting one game is not twenty-one bets, and counting quotes as bets is what made every interval in the NHL lab's first store √2.83 too narrow.
+The unit is a **wager**, plus the price rows on this slate day that could not be made into one: 0 wager(s) and 0 unreadable row(s). A wager is one bet however many books hang it — twenty-one books quoting one game is not twenty-one bets, and counting quotes as bets is what made every interval in the NHL lab's first store √2.83 too narrow.
+
+**This is the second of two identities and they are deliberately not merged.** The board section below carries the first, over the provider's *outcomes*: `outcomes = staged + unwired market + unknown selection + unreadable price + unplaceable event`. It reconciles on its own. Folding it into this one would put two populations on either side of a single equals sign — the outcomes are counted across every day the read saw, and these wagers are this slate day only — and an identity whose two sides describe different populations reconciles over whichever population survived. The count that joins them is the off-slate figure below.
 
 | Bar | Wagers | Bucket |
 |:---|---:|:---|
@@ -31,6 +35,8 @@ The unit is a **wager**, plus everything the board offered that could not be mad
 | the game has tipped, is imminent, or has no readable tip time | 0 | gated |
 | a position is already taken on this game | 0 | gated |
 | the slate's declared position cap is already full | 0 | gated |
+
+0 staged row(s) belong to a slate day other than 2026-09-01 and were not considered here. The bulk endpoint returns every upcoming game, not tonight's; a row for tomorrow frozen under today's date would look unfrozen tomorrow and be priced twice.
 
 ## The gates, each of which fails closed
 
@@ -58,7 +64,7 @@ Source: the provider.
 
 Every outcome in this response was staged.
 
-6 credit(s) actually spent over 1 request(s); the pessimistic pre-flight bound was 6; 4935868 remaining.
+6 credit(s) actually spent over 1 request(s); the pessimistic pre-flight bound was 6; 4705916 remaining.
 
 The cap is enforced inside the provider adapter before every request, against the **measured** running total from the response headers, never against the pre-flight estimate.
 
@@ -87,4 +93,4 @@ No earlier card for this slate day was available to this run, so nothing is clai
 * No market is allowlisted. Claude may withdraw an allowlist and may never grant one.
 
 ---
-Run: https://github.com/cooperross399/cbb-betting-lab/actions/runs/33548634161
+Run: https://github.com/cooperross399/cbb-betting-lab/actions/runs/33551726107
