@@ -174,10 +174,15 @@ what a market costs, not a reason not to know what a school is called.*
   2026-09-01, not from documentation). Cooper authorises up to 1,500,000 a
   month for this lab. The siblings' committed monthly spend is ~36,000.
 - **`basketball_ncaab` is `active=False` today** — the off-season — so there is
-  no live board to read team spellings or market coverage off. That is why the
-  provider-side team alias map is seeded by hand and **knowingly incomplete**,
-  and why market coverage must be probed **in season**: a market unquoted in
-  September establishes nothing.
+  no live board, and market coverage must still be probed **in season**: a
+  market unquoted in September establishes nothing.
+  **The team alias map is no longer incomplete, and the reason is worth
+  keeping.** This file used to say the map was seeded by hand and knowingly
+  incomplete *because* there was no live board. That was the wrong inference
+  from a true premise: the archive's historical slate listings are a board, and
+  the probe's cache holds 140 of them carrying the complete 365-name D-I
+  vocabulary. Off-season is a reason not to know what a market **costs**, not a
+  reason not to know what a school is **called**.
 - **Women's basketball is a separate sport key** (`basketball_wncaab`), so
   excluding it from the price side is total and free.
 - **Historical NCAAB featured markets exist from 2020-11-16; everything else
