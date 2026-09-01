@@ -1,0 +1,157 @@
+name: Historical Purchase
+
+# SPENDS A LARGE FRACTION OF A FINITE BALANCE. Manual dispatch only, one wave
+# per dispatch, and there is no cron on this file — a discipline test enforces
+# that. A recurring purchase is a standing order to spend money.
+#
+# The waves, in the brief's priority order:
+#   1. core_team          moneyline, spread, total, team total — six seasons
+#   2. ladders_and_halves alternate rungs and the halves — three seasons
+#   3. props              player props — three seasons
+#   4. futures            blocked; see the wave's own reason
+#
+# Every season of a wave is bought before any of the next, so a purchase that
+# runs out of credits holds the family it is most sure of across every season
+# rather than a little of everything.
+#
+# THE CAP IS ENFORCED AGAINST THE MEASURED RUNNING TOTAL from `x-requests-last`,
+# never against the estimate. The NHL lab capped a run at 200,000 and it spent
+# 289,984, because the estimate counted markets asked for while the provider
+# bills per market returned — and both the code and its test asserted the cap
+# "cannot be breached".
+#
+# RESUMING COSTS NOTHING. Every response is cached raw and keyed by event and
+# market-chunk fingerprint, so an interrupted purchase resumes rather than
+# restarts. The cache is uploaded as an artifact on every run, including a
+# failed one — at ten times the live rate, losing a bought response is the most
+# expensive mistake available here.
+
+on:
+  workflow_dispatch:
+    inputs:
+      waves:
+        description: "Wave to buy (one per dispatch)"
+        type: choice
+        options: [core_team, ladders_and_halves, props]
+        default: core_team
+      credit_cap:
+        description: "Hard cap, checked against the measured running total"
+        type: string
+        default: "1300000"
+      window:
+        description: "card = T-60m (what a card could take). close = T-10m (CLV only)."
+        type: choice
+        options: [card, close]
+        default: card
+      max_events_per_segment:
+        description: "0 = no limit. Use to buy a deliberate sample."
+        type: string
+        default: "0"
+      live:
+        description: "Actually spend credits. Unchecked = dry run."
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  PURCHASE_SEASONS: "2021 2022 2023 2024 2025 2026"
+
+jobs:
+  buy:
+    name: Historical Purchase
+    runs-on: ubuntu-latest
+    timeout-minutes: 1440
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt && python -m pip install -e .
+
+      - name: Restore the feed and table cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            data/raw/cbb
+            data/processed
+          key: cbb-data-v1-${{ env.PURCHASE_SEASONS }}-${{ hashFiles('src/cbb_betting_lab/data/**') }}
+          restore-keys: cbb-data-v1-
+
+      - name: Fetch the feeds and build the tables
+        env:
+          PYTHONPATH: src
+        run: |
+          set -eu
+          python scripts/fetch_cbb_data.py --seasons $PURCHASE_SEASONS
+          python scripts/build_datasets.py --seasons $PURCHASE_SEASONS
+
+      # The bought responses, restored from the previous run of the same wave
+      # and window. This is what makes a purchase resumable.
+      - name: Restore the bought responses
+        uses: actions/cache@v4
+        with:
+          path: data/raw/cbb/historical_${{ inputs.window }}
+          key: cbb-bought-${{ inputs.window }}-${{ inputs.waves }}-${{ github.run_id }}
+          restore-keys: |
+            cbb-bought-${{ inputs.window }}-${{ inputs.waves }}-
+            cbb-bought-${{ inputs.window }}-
+
+      - name: Quota before
+        env:
+          PYTHONPATH: src
+          CBB_ODDS_API_KEY: ${{ secrets.CBB_ODDS_API_KEY }}
+        run: python scripts/check_provider_quota.py | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Buy
+        env:
+          PYTHONPATH: src
+          CBB_ODDS_API_KEY: ${{ secrets.CBB_ODDS_API_KEY }}
+        run: |
+          set -o pipefail
+          FLAGS="--waves ${{ inputs.waves }}"
+          FLAGS="$FLAGS --credit-cap ${{ inputs.credit_cap }}"
+          FLAGS="$FLAGS --window ${{ inputs.window }}"
+          FLAGS="$FLAGS --max-events-per-segment ${{ inputs.max_events_per_segment }}"
+          if [ "${{ inputs.live }}" = "true" ]; then
+            if [ -z "${CBB_ODDS_API_KEY}" ]; then
+              echo "::error::CBB_ODDS_API_KEY is not set; a live purchase cannot run."
+              exit 1
+            fi
+            FLAGS="$FLAGS --live"
+          fi
+          python scripts/buy_historical_prices.py $FLAGS | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Quota after
+        if: always()
+        env:
+          PYTHONPATH: src
+          CBB_ODDS_API_KEY: ${{ secrets.CBB_ODDS_API_KEY }}
+        run: python scripts/check_provider_quota.py | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # The price store and the raw cache are the bought goods. Both are
+      # uploaded even when a step failed: a purchase that spent a million
+      # credits and then died staging them must not lose what it bought.
+      - name: Upload the store, the record and the cache
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: historical-${{ inputs.waves }}-${{ inputs.window }}
+          path: |
+            data/processed/cbb_historical_prices_*.csv
+            data/outputs/cbb_historical_purchase.*
+            data/outputs/quota_history.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Upload the raw bought responses
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: historical-cache-${{ inputs.waves }}-${{ inputs.window }}
+          path: data/raw/cbb/historical_${{ inputs.window }}/**
+          if-no-files-found: warn
+          retention-days: 90

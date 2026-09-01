@@ -158,3 +158,32 @@ def test_the_probe_and_purchase_workflows_carry_no_cron():
             f"{name} carries a cron. The probe answers its question once per "
             "sport and the purchase is a one-way spend; neither repeats."
         )
+
+
+def test_every_script_a_workflow_runs_actually_exists():
+    """A workflow naming a script that is not in the repository is a workflow
+    that has never run.
+
+    This test was written because three of them were missing at once —
+    `run_gameday_card.py`, `run_forward_evidence.py` and
+    `run_what_we_can_claim.py` — in the workflow that produces the card, which
+    is the whole delivery chain. Nothing failed, because nothing had dispatched
+    it. A green workflow file is not a workflow that works, and an unreferenced
+    filename is the cheapest possible way to find that out.
+    """
+    referenced: dict[str, set[str]] = {}
+    for path in workflow_files():
+        for match in re.findall(r"scripts/[A-Za-z0-9_]+\.py", path.read_text()):
+            referenced.setdefault(match, set()).add(path.name)
+
+    assert referenced, "No workflow runs any script; this test would pass vacuously."
+    root = WORKFLOWS.parents[1]
+    missing = {
+        script: sorted(where)
+        for script, where in sorted(referenced.items())
+        if not (root / script).is_file()
+    }
+    assert not missing, (
+        "Workflows reference scripts that do not exist:\n"
+        + "\n".join(f"  {s} — named by {', '.join(w)}" for s, w in missing.items())
+    )

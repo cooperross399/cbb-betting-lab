@@ -1,0 +1,614 @@
+{
+  "achieved_stratification": [
+    {
+      "axis": "conference_tier",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.2427,
+      "population": 7855,
+      "population_share": 0.2427,
+      "value": "high_major"
+    },
+    {
+      "axis": "conference_tier",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.3145,
+      "population": 10180,
+      "population_share": 0.3145,
+      "value": "low_major"
+    },
+    {
+      "axis": "conference_tier",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.4426,
+      "population": 14328,
+      "population_share": 0.4426,
+      "value": "mid_major"
+    },
+    {
+      "axis": "conference_tier",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0002,
+      "population": 6,
+      "population_share": 0.0002,
+      "value": "unplaced"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0076,
+      "population": 247,
+      "population_share": 0.0076,
+      "value": "2020-11"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0261,
+      "population": 846,
+      "population_share": 0.0261,
+      "value": "2020-12"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0381,
+      "population": 1234,
+      "population_share": 0.0381,
+      "value": "2021-01"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0335,
+      "population": 1084,
+      "population_share": 0.0335,
+      "value": "2021-02"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0164,
+      "population": 532,
+      "population_share": 0.0164,
+      "value": "2021-03"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0001,
+      "population": 3,
+      "population_share": 0.0001,
+      "value": "2021-04"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0332,
+      "population": 1076,
+      "population_share": 0.0332,
+      "value": "2021-11"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0278,
+      "population": 900,
+      "population_share": 0.0278,
+      "value": "2021-12"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0431,
+      "population": 1396,
+      "population_share": 0.0431,
+      "value": "2022-01"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0453,
+      "population": 1466,
+      "population_share": 0.0453,
+      "value": "2022-02"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0196,
+      "population": 633,
+      "population_share": 0.0196,
+      "value": "2022-03"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0001,
+      "population": 4,
+      "population_share": 0.0001,
+      "value": "2022-04"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0368,
+      "population": 1191,
+      "population_share": 0.0368,
+      "value": "2022-11"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0343,
+      "population": 1111,
+      "population_share": 0.0343,
+      "value": "2022-12"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0452,
+      "population": 1464,
+      "population_share": 0.0452,
+      "value": "2023-01"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.043,
+      "population": 1391,
+      "population_share": 0.043,
+      "value": "2023-02"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0171,
+      "population": 554,
+      "population_share": 0.0171,
+      "value": "2023-03"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0001,
+      "population": 3,
+      "population_share": 0.0001,
+      "value": "2023-04"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0352,
+      "population": 1140,
+      "population_share": 0.0352,
+      "value": "2023-11"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0308,
+      "population": 996,
+      "population_share": 0.0308,
+      "value": "2023-12"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0428,
+      "population": 1386,
+      "population_share": 0.0428,
+      "value": "2024-01"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0431,
+      "population": 1395,
+      "population_share": 0.0431,
+      "value": "2024-02"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0247,
+      "population": 800,
+      "population_share": 0.0247,
+      "value": "2024-03"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0002,
+      "population": 6,
+      "population_share": 0.0002,
+      "value": "2024-04"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.038,
+      "population": 1231,
+      "population_share": 0.038,
+      "value": "2024-11"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0286,
+      "population": 927,
+      "population_share": 0.0286,
+      "value": "2024-12"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0446,
+      "population": 1444,
+      "population_share": 0.0446,
+      "value": "2025-01"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0424,
+      "population": 1374,
+      "population_share": 0.0424,
+      "value": "2025-02"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0237,
+      "population": 766,
+      "population_share": 0.0237,
+      "value": "2025-03"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0005,
+      "population": 17,
+      "population_share": 0.0005,
+      "value": "2025-04"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0385,
+      "population": 1245,
+      "population_share": 0.0385,
+      "value": "2025-11"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0298,
+      "population": 963,
+      "population_share": 0.0298,
+      "value": "2025-12"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0479,
+      "population": 1549,
+      "population_share": 0.0479,
+      "value": "2026-01"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0423,
+      "population": 1369,
+      "population_share": 0.0423,
+      "value": "2026-02"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0189,
+      "population": 613,
+      "population_share": 0.0189,
+      "value": "2026-03"
+    },
+    {
+      "axis": "month",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.0004,
+      "population": 13,
+      "population_share": 0.0004,
+      "value": "2026-04"
+    },
+    {
+      "axis": "tip_window",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.3134,
+      "population": 10146,
+      "population_share": 0.3134,
+      "value": "afternoon"
+    },
+    {
+      "axis": "tip_window",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.522,
+      "population": 16897,
+      "population_share": 0.522,
+      "value": "early_evening"
+    },
+    {
+      "axis": "tip_window",
+      "bought": 0,
+      "bought_share": 0.0,
+      "difference": -0.1645,
+      "population": 5326,
+      "population_share": 0.1645,
+      "value": "late"
+    }
+  ],
+  "chunk_size": 8,
+  "competition": "cbb",
+  "competition_title": "NCAA Division I men's basketball",
+  "completed": false,
+  "credit_cap": 1200000,
+  "credits_estimated": 0,
+  "credits_spent": 0,
+  "cutoffs": {
+    "everything_else_from": "2023-05-03",
+    "featured_from": "2020-11-16",
+    "featured_seasons": [
+      2021,
+      2022,
+      2023,
+      2024,
+      2025,
+      2026
+    ],
+    "full_catalogue_seasons": [
+      2024,
+      2025,
+      2026
+    ]
+  },
+  "events_bought": 0,
+  "events_from_cache": 0,
+  "events_reached": 0,
+  "generated_at": "2026-09-01T18:52:17+00:00",
+  "live": false,
+  "pessimistic_bound": 2296233,
+  "plan": {
+    "pessimistic_bound": 2296233,
+    "seed": 20260901,
+    "segments": [
+      {
+        "blocked_reason": "",
+        "events_planned": 3946,
+        "keys": [
+          "h2h",
+          "spreads",
+          "totals"
+        ],
+        "keys_refused": {
+          "team_totals": "2023-05-03"
+        },
+        "pessimistic_bound": 238137,
+        "regions": 2,
+        "season": 2021,
+        "wave": "core_team",
+        "window": "card"
+      },
+      {
+        "blocked_reason": "",
+        "events_planned": 5475,
+        "keys": [
+          "h2h",
+          "spreads",
+          "totals"
+        ],
+        "keys_refused": {
+          "team_totals": "2023-05-03"
+        },
+        "pessimistic_bound": 329992,
+        "regions": 2,
+        "season": 2022,
+        "wave": "core_team",
+        "window": "card"
+      },
+      {
+        "blocked_reason": "",
+        "events_planned": 5714,
+        "keys": [
+          "h2h",
+          "spreads",
+          "totals"
+        ],
+        "keys_refused": {
+          "team_totals": "2023-05-03"
+        },
+        "pessimistic_bound": 344430,
+        "regions": 2,
+        "season": 2023,
+        "wave": "core_team",
+        "window": "card"
+      },
+      {
+        "blocked_reason": "",
+        "events_planned": 5723,
+        "keys": [
+          "h2h",
+          "spreads",
+          "team_totals",
+          "totals"
+        ],
+        "keys_refused": {},
+        "pessimistic_bound": 459480,
+        "regions": 2,
+        "season": 2024,
+        "wave": "core_team",
+        "window": "card"
+      },
+      {
+        "blocked_reason": "",
+        "events_planned": 5759,
+        "keys": [
+          "h2h",
+          "spreads",
+          "team_totals",
+          "totals"
+        ],
+        "keys_refused": {},
+        "pessimistic_bound": 462384,
+        "regions": 2,
+        "season": 2025,
+        "wave": "core_team",
+        "window": "card"
+      },
+      {
+        "blocked_reason": "",
+        "events_planned": 5752,
+        "keys": [
+          "h2h",
+          "spreads",
+          "team_totals",
+          "totals"
+        ],
+        "keys_refused": {},
+        "pessimistic_bound": 461810,
+        "regions": 2,
+        "season": 2026,
+        "wave": "core_team",
+        "window": "card"
+      }
+    ],
+    "window": "card",
+    "window_minutes_before_tip": 60
+  },
+  "population_events": 32369,
+  "quota_remaining": "",
+  "regions": "2",
+  "request_failures": [],
+  "requests_made": 0,
+  "responses_bought": 0,
+  "responses_from_cache": 0,
+  "rows_staged": 0,
+  "schema_version": 1,
+  "seed": 20260901,
+  "segments": [],
+  "spend_notes": [],
+  "sport_key": "basketball_ncaab",
+  "staging_census": {},
+  "stopped_because": "This was a dry run. Nothing was requested.",
+  "unmatched_events": [],
+  "waves": [
+    {
+      "blocked_reason": "",
+      "name": "core_team",
+      "order": 1,
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "tiers": [
+        1
+      ],
+      "title": "Core team markets",
+      "why": "Moneyline, spread, total and team total. Quoted on essentially every game by every book, settleable from the team-game table alone, and the only family with six seasons of archive behind it \u2014 `h2h`, `spreads` and `totals` reach back to 2020-11-16. `team_totals` is **not** a featured market and only reaches back to 2023-05-03, so this wave asks for different key sets in different seasons rather than asking for a market that could not exist and recording the silence as absence."
+    },
+    {
+      "blocked_reason": "",
+      "name": "ladders_and_halves",
+      "order": 2,
+      "seasons": [
+        2024,
+        2025,
+        2026
+      ],
+      "tiers": [
+        2
+      ],
+      "title": "Alternate ladders and the halves",
+      "why": "Every rung of a ladder prices off the same distribution object as its featured line, so a ladder is the cheapest way to add rows without adding a model. Halves are a genuinely different quantity, and a first half **can** end level where a full game cannot (3.54% of 90,766 college first halves against 0.000% of 94,194 full games). Three seasons only: everything here is past the 2023-05-03 cut-off."
+    },
+    {
+      "blocked_reason": "",
+      "name": "props",
+      "order": 3,
+      "seasons": [
+        2024,
+        2025,
+        2026
+      ],
+      "tiers": [
+        3
+      ],
+      "title": "Player props",
+      "why": "Bought last of the per-event families and worth stating plainly: **nothing in this lab reaches `Availability.CONFIRMED`, so no player prop can produce a selection.** These prices are bought to be modelled, frozen and settled, and they are evidence about the model rather than a bet the card can make. That is not a pass, an avoid, or a no-value call. Coverage is also expected to be thin and concentrated on televised high-major games, which is exactly why the event order is stratified by tier."
+    },
+    {
+      "blocked_reason": "Futures are served under a separate sport key (`basketball_ncaab_championship_winner`) as a whole-competition snapshot rather than per event, and `providers/odds_api.OddsApiProvider` exposes no historical bulk endpoint. This script therefore cannot buy them, and the wave is named here with its cost rather than dropped \u2014 a wave that vanishes from a plan is one nobody notices is missing. Adding that endpoint is a change to a module this one does not own.",
+      "name": "futures",
+      "order": 4,
+      "seasons": [
+        2024,
+        2025,
+        2026
+      ],
+      "tiers": [
+        4
+      ],
+      "title": "Futures",
+      "why": "Last, and their own section of every report for ever: a futures stake is tied up for months and settles on a different clock, so no futures return is ever folded into a headline computed over game bets."
+    }
+  ],
+  "window": "card",
+  "window_minutes_before_tip": 60,
+  "window_why": "The lead the card actually publishes at (`schedule_contract.CARD_LEAD_MINUTES` = 60) and the lead the retention probe measured coverage at. Edge is measured against a price available at card time, so this is the window a claim about this lab's own cards has to rest on.",
+  "worst_share_deviation": 0.522,
+  "worst_single_response_overrun": 0
+}
