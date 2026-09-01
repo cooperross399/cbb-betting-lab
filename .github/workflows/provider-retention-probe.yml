@@ -42,6 +42,11 @@ on:
 permissions:
   contents: read
 
+env:
+  # The seasons the probe samples from. Historical odds exist from 2023 for
+  # this sport; earlier seasons would be fetched and never priced.
+  PROBE_SEASONS: "2023 2024 2025 2026"
+
 jobs:
   probe:
     name: Retention Probe
@@ -56,15 +61,34 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt && python -m pip install -e .
 
-      # THE PROBE READS THE CACHED SCHEDULE TO BUILD ITS SAMPLE, and the
-      # cache is gitignored. Without this step the run dies with "No cached
-      # schedule" after the checkout — which is exactly how the first dispatch
-      # of this workflow failed. Schedules only: ~7MB, and the probe needs no
-      # play-by-play.
-      - name: Fetch the schedules the sample is drawn from
+      # THE PROBE DRAWS ITS POPULATION FROM `cbb_team_games.csv`, deliberately:
+      # the same `game_state` the backtest uses, so the two can never disagree
+      # about which games count. That table is gitignored (14MB) and is built
+      # from play-by-play, so the runner has to fetch and build it.
+      #
+      # Two dispatches failed here before this step existed — the first for a
+      # missing schedule, the second for a missing processed table. The fix
+      # that was NOT taken was letting the probe fall back to the raw schedule
+      # when the table is absent: that would have made the probe's population
+      # and the backtest's diverge silently, which is the exact class of defect
+      # the shared `game_state` exists to prevent.
+      - name: Restore the feed and table cache
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            data/raw/cbb
+            data/processed
+          key: cbb-data-v1-${{ env.PROBE_SEASONS }}-${{ hashFiles('src/cbb_betting_lab/data/**') }}
+          restore-keys: cbb-data-v1-
+
+      - name: Fetch the feeds and build the tables
         env:
           PYTHONPATH: src
-        run: python scripts/fetch_cbb_data.py --seasons 2023 2024 2025 2026 --feeds schedules
+        run: |
+          set -eu
+          python scripts/fetch_cbb_data.py --seasons $PROBE_SEASONS
+          python scripts/build_datasets.py --seasons $PROBE_SEASONS
 
       - name: Quota before
         env:
