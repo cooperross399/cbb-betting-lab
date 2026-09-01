@@ -123,6 +123,51 @@ runway.
   lab labelled by the starting year, which would have made every season filter
   miss on one side of every join.
 
+### What the retention probe measured, 2026-09-01
+
+**77,160 credits, 144 events planned and 102 matched, run completed inside its
+cap** — so a `NOT_RETAINED` verdict is a fact about the archive rather than
+about the budget. `data/outputs/cbb_retention_probe.{json,md}`; the report
+re-renders from the record for free.
+
+- **All 15 team, ladder and half markets are RETAINED_AND_MEASURABLE**, at
+  93-100% of probed events across up to **17 books**. `moneyline`, `spread`,
+  `total_points`, `team_total`; every alternate ladder; both halves of spread,
+  total, moneyline and team total. This is the population the lab's thesis
+  rests on and the archive has all of it.
+- **Props are thin and uneven, as expected.** Measurable: `player_points`
+  (59.8%), `player_assists` and `player_rebounds` (58.8%), `player_threes`
+  (54.9%), `player_points_rebounds` (51.0%). Thin: blocks, steals, turnovers,
+  double-double, first basket, and three of the combinations. **Not retained at
+  all (0 of 102):** `player_field_goals`, `player_first_team_basket`,
+  `player_frees_attempts`, `player_frees_made`, `player_triple_double`.
+- **The stratification is NOT balanced and says so.** 2 of 49 cells hold fewer
+  than 3 games. An unbalanced probe reporting itself as balanced is worse than
+  no probe.
+
+### The defect the probe found, which is the most expensive one so far
+
+**20.5% of provider team names did not resolve, and the misses were biased.**
+`_EXPANSIONS` mapped `st -> saint` unconditionally, so `Michigan St` normalised
+to `michigan saint` and matched nothing; 27 further schools are simply called
+something else by the provider (`Fort Wayne Mastodons`, `Grand Canyon
+Antelopes`, `UMKC Kangaroos`). Per-tier match rate over 144 sampled games:
+**high-major 86.8%, mid-major 76.1%, low-major 46.7%.**
+
+A join that fails uniformly is a smaller sample. **One that fails on half the
+low-major board is a biased sample, and the bias runs directly against the
+hypothesis this lab exists to test.** It would have produced a number, an
+interval and a wrong answer, with nothing indicating a fifth of the vocabulary
+was unreadable — and it was one dispatch away from buying those events.
+
+Fixed with `variants()`: an ambiguous token expands into **every** reading and
+`resolve()` refuses when the readings name different schools. **0 of 365
+unresolved**, pinned by `test_every_provider_team_name_resolves.py`, which runs
+all 365 observed spellings every time. The vocabulary is committed at
+`data/manual/provider_team_names_observed.json` — read off 140 cached
+historical slate listings, not guessed. *Off-season is a reason not to know
+what a market costs, not a reason not to know what a school is called.*
+
 ### Prices
 
 - **Quota: 4,992,714 credits remaining** (read from `x-requests-remaining`,
