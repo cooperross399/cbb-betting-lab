@@ -44,10 +44,12 @@ is one of `cbb_betting_lab.reports.gameday_card.Decision`.
    early games and drops the late ones, which is the West Coast, low-major end
    of the board this lab was built to look at. Refusing loses a night; starting
    writes a biased night into a ledger that cannot be re-made.
-3. **An accounting identity that does not reconcile.** A wager that reached none
-   of the six buckets vanished, and a silent drop is how a card recommends from
-   a sixth of a slate and reports it as the whole one. It is an error, not a
-   warning, and the run exits on it.
+3. **An accounting identity that does not reconcile**, and its two neighbours:
+   a bar with no bucket in the identity at all, and an already-frozen row this
+   run cannot re-key. All three mean the same thing — the run can no longer
+   account for every wager it saw — and a wager that reached none of the six
+   buckets vanished, which is how a card recommends from a sixth of a slate and
+   reports it as the whole one. Errors, not warnings, and the run exits on each.
 
 The credit cap is hard and is checked **inside the provider adapter, before
 every request, against the measured running total from `x-requests-last`** —

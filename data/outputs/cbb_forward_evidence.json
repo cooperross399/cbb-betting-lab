@@ -1,7 +1,7 @@
 {
   "frozen_opinions": 0,
   "measurable_rows": 0,
-  "families": null,
+  "families": 30,
   "minimum_bets": 200,
   "bet_threshold": 0.02,
   "no_pooled_division_one_headline": true,
