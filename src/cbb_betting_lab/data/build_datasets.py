@@ -154,7 +154,7 @@ def build_game_segments(season: int, *, raw_dir: Path | None = None) -> pd.DataF
         "game_id", "period_number", "home_score", "away_score", "game_play_number",
         "scoring_play", "score_value", "type_text", "athlete_id_1", "team_id",
         "home_team_id", "away_team_id",
-    ]
+    ]  # home/away_team_id are needed for the per-team first basket below
     pbp = hoopr.load("pbp", season, raw_dir=raw_dir, columns=columns)
     if pbp.empty:
         return pd.DataFrame()
@@ -176,6 +176,15 @@ def build_game_segments(season: int, *, raw_dir: Path | None = None) -> pd.DataF
     made = pbp[is_made_field_goal(pbp)]
     first = made.groupby("game_id").first()
 
+    # And each TEAM's first basket, which is a different market and a different
+    # bet. Storing only the game's first basket makes `player_first_team_basket`
+    # settleable for one side and unsettleable for the other — measured at
+    # exactly 50% of rows before this was added, which is the shape of a gap
+    # that looks like thin coverage and is really a missing column.
+    per_team = made.groupby(["game_id", "team_id"]).first().reset_index()
+    home_first = per_team[per_team["team_id"] == per_team["home_team_id"]].set_index("game_id")
+    away_first = per_team[per_team["team_id"] == per_team["away_team_id"]].set_index("game_id")
+
     out = pd.DataFrame({"game_id": periods.index})
     out["periods"] = out["game_id"].map(periods)
     out["overtime"] = out["periods"] > REGULATION_PERIODS
@@ -183,6 +192,12 @@ def build_game_segments(season: int, *, raw_dir: Path | None = None) -> pd.DataF
     out["away_score_h1"] = out["game_id"].map(halftime["away_score"])
     out["first_basket_athlete_id"] = out["game_id"].map(first["athlete_id_1"])
     out["first_basket_team_id"] = out["game_id"].map(first["team_id"])
+    out["home_first_basket_athlete_id"] = out["game_id"].map(
+        home_first["athlete_id_1"]
+    )
+    out["away_first_basket_athlete_id"] = out["game_id"].map(
+        away_first["athlete_id_1"]
+    )
     return out
 
 

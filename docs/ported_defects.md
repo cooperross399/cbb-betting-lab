@@ -89,3 +89,13 @@ Not inherited, but recorded in the same place because the next lab will inherit
 | B | **A season labelled by its starting year.** hoopR labels a season by the year it **ends**; this lab briefly did the opposite, which would have made every `season == 2027` filter miss every `season == 2027` row. | Verified against the real parquet rather than assumed. | `test_slate_day_and_season_match_the_source.py` |
 | C | **A six-hour "basketball day" boundary**, reasoned by analogy with hockey. Measured against ESPN's own filed date over 6,318 games: **0 disagreements at midnight, 1 at six hours.** No D-I game tips between midnight and 08:00 ET, so the boundary protected nothing and broke the one Hawai'i game. | Measured rather than argued. | same file, plus a test for the Hawai'i game specifically |
 | D | **A gate test that banned a word instead of an assertion.** It failed on the note that says *"this is not a pass, an avoid or a no-value call"* — the required phrasing. | The test failed on correct code. | `test_gates_fail_closed.py` now strips negated clauses first |
+| E | **`player_first_team_basket` settleable for only one side.** `cbb_game_segments.csv` stored the *game's* first basket and nothing about each team's, so the market graded for whichever side scored first — measured at **exactly 50.03% of played rows**. | The settlement agent measured the coverage and reported the denominator instead of quoting a record on half a market. | `test_settlement_settles_real_games.py::test_the_first_team_basket_settles_for_BOTH_teams` — now 100.00% |
+
+**Defect E is the one worth reading twice.** A market that settles for half its
+rows produces a *record*, and a record with no denominator beside it looks
+exactly like a market with thin book coverage. Nothing errored, nothing was
+wrong, and the number would have been half a market reported as a market. It was
+caught only because the settlement work measured its own coverage and printed
+the denominator — which is the house rule that "a number without a sample size
+is not a result", applied to settlement rather than to returns.
+
