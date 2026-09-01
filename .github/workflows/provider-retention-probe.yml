@@ -56,6 +56,16 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt && python -m pip install -e .
 
+      # THE PROBE READS THE CACHED SCHEDULE TO BUILD ITS SAMPLE, and the
+      # cache is gitignored. Without this step the run dies with "No cached
+      # schedule" after the checkout — which is exactly how the first dispatch
+      # of this workflow failed. Schedules only: ~7MB, and the probe needs no
+      # play-by-play.
+      - name: Fetch the schedules the sample is drawn from
+        env:
+          PYTHONPATH: src
+        run: python scripts/fetch_cbb_data.py --seasons 2023 2024 2025 2026 --feeds schedules
+
       - name: Quota before
         env:
           PYTHONPATH: src

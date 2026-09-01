@@ -47,15 +47,12 @@ jobs:
           PYTHONPATH: src
         run: python -m pytest -q
 
-      - name: The cost arithmetic still runs and still spends nothing
-        env:
-          PYTHONPATH: src
-        run: python scripts/estimate_credit_cost.py > /dev/null
-
-      - name: The probe refuses to spend without --live
-        env:
-          PYTHONPATH: src
-        run: |
-          # A dry run must stay a dry run. If this ever starts needing a
-          # credential, the default has stopped being safe.
-          python scripts/run_retention_probe.py | tail -1 | grep -q "no credit was spent"
+      # The cost arithmetic and the probe's dry run both read the cached
+      # hoopR schedules, which are gitignored (460MB) and absent here.
+      # Fetching them in CI would put an external release host on the critical
+      # path of a gate that must stay green for reasons internal to this
+      # repository. Both are exercised in the workflows that hold the cache.
+      #
+      # What matters about the dry run — that it opens no socket and reads no
+      # credential — is proved by `tests/test_the_dry_run_is_dry.py`, which is
+      # stronger than grepping its last line and needs no cache.
