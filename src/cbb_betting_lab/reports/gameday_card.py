@@ -219,6 +219,40 @@ PRIOR_REGIME_MONTHS: frozenset[int] = frozenset({11, 12})
 #: season will say.
 TIER_LOOKBACK_SEASONS = 3
 
+#: The markets the bulk endpoint serves, derived from the registry rather than
+#: named here. When the per-event stage is cut short by the cap, these are the
+#: markets whose coverage is still complete across the whole slate, and they are
+#: the only ones that may be frozen from such a run — the rest are a tip-ordered
+#: prefix. A market carrying both a bulk key and a per-event-only key would be
+#: complete for the wrong reason; none exists today and this is where that would
+#: need re-deriving if one ever did.
+BULK_MARKETS: frozenset[str] = frozenset(
+    market.key
+    for market in MARKETS_BY_KEY.values()
+    if set(market.provider_keys) & set(BULK_SAFE_MARKETS)
+)
+
+#: The columns handed to `forward_evidence.write_snapshot`. Named rather than
+#: sliced off `staging.STAGED_COLUMNS`, because a positional slice of somebody
+#: else's tuple silently freezes the wrong field the day that tuple is
+#: reordered — and a snapshot is the one artefact in this lab that cannot be
+#: rebuilt afterwards. `provider_key` is deliberately absent: it is the
+#: provider's vocabulary, and nothing downstream of the freeze speaks it.
+FROZEN_COLUMNS: tuple[str, ...] = (
+    "event_id",
+    "commence_time",
+    "slate_date",
+    "home_team",
+    "away_team",
+    "market",
+    "segment",
+    "player",
+    "selection",
+    "line",
+    "american_odds",
+    "book",
+)
+
 #: The workflow's own mention regex, character for character. Written here so
 #: the renderer fails on the same string the workflow would fail on, one step
 #: earlier and with the offending text named.
@@ -227,10 +261,6 @@ _MENTION = re.compile(r"(^|[^A-Za-z0-9_/])@[A-Za-z0-9][A-Za-z0-9-]*", re.MULTILI
 
 class CardError(RuntimeError):
     """The card refused. Every subclass says what it refused and why."""
-
-
-class SlateDateRefused(CardError):
-    """A live run was asked to price a day that is not today, without `--rehearsal`."""
 
 
 class CardWouldEmail(CardError):
@@ -343,9 +373,14 @@ def _matchup_field(matchup: object, name: str, default=None):
     `getattr` with a default rather than attribute access, so a partially
     populated matchup declines rather than raising. A missing field is missing
     information, and missing information is not a reason to price a game.
+
+    An **explicit `None` is kept**, never replaced by the default. A matchup
+    that says `priceable=None` has not said it is priceable, and substituting
+    `True` there would turn "the ratings module did not answer" into "the
+    ratings module said yes" — ambiguity resolving to the play side, which is
+    the one direction every gate in this lab refuses to resolve in.
     """
-    value = getattr(matchup, name, default)
-    return default if value is None and default is not None else value
+    return getattr(matchup, name, default)
 
 
 # --------------------------------------------------------------------------
@@ -368,9 +403,9 @@ class Board:
     the early tips kept and the late ones dropped, which in this sport is the
     West Coast, low-major end of the board — exactly the end this lab was built
     to look at. A prefix frozen into the ledger is a biased subset wearing the
-    name of a night, so :meth:`ledger_rows` withholds it. The rows are still
-    staged: they were paid for and they are evidence, they are just not a
-    stratum.
+    name of a night, so :func:`_rows_to_freeze` withholds every market outside
+    :data:`BULK_MARKETS` when this is False. The rows are still staged: they
+    were paid for and they are evidence, they are just not a stratum.
     """
 
     rows: pd.DataFrame
@@ -394,16 +429,6 @@ class Board:
     events_failed: int = 0
     notes: list[str] = field(default_factory=list)
     degraded: list[str] = field(default_factory=list)
-
-    @property
-    def ledger_rows(self) -> pd.DataFrame:
-        """The rows that may be frozen: complete strata only. See the class docstring."""
-        if self.per_event_complete or self.rows.empty:
-            return self.rows
-        if "provider_key" not in self.rows.columns:
-            return self.rows.iloc[0:0]
-        keep = self.rows["provider_key"].astype(str).isin(BULK_SAFE_MARKETS)
-        return self.rows.loc[keep].reset_index(drop=True)
 
 
 def board_from_payloads(
@@ -1239,7 +1264,9 @@ def run_card(
 
     # Freeze first. Only wagers whose game is still upcoming: an opinion frozen
     # after tip is not forward evidence, it is a note about a game in progress.
-    freezable = _freezable_rows(board.ledger_rows, day=day, guard=guard)
+    freezable = _rows_to_freeze(
+        wagers, guard=guard, per_event_complete=board.per_event_complete
+    )
     # A rehearsal freezes too — into its own archive, which the gameday
     # workflow neither restores nor publishes. Rehearsing everything except the
     # one step that cannot be re-made would rehearse the wrong thing: the
@@ -1309,38 +1336,68 @@ def run_card(
     )
 
 
-def _freezable_rows(
-    rows: pd.DataFrame, *, day: str, guard: TipGuard
+def _rows_to_freeze(
+    wagers: Iterable[Wager], *, guard: TipGuard, per_event_complete: bool
 ) -> pd.DataFrame:
     """One row per wager, at the best price, for games that have not tipped.
 
-    Two collapses, for two different reasons.
+    Built **from the wagers**, never from the board's raw rows, and that is the
+    fix for a defect this file had and a test caught. `write_snapshot` keys
+    every row it is handed through the injected `key_for`, and `selection_key`
+    *raises* on a segment outside the three it knows. Hand it the raw frame and
+    a single malformed row — a staged file written by an older stager, or one a
+    human edited — takes down the freeze, which is the one step in this whole
+    pipeline that cannot be re-made afterwards. `build_wagers` has already
+    refused and **counted** those rows; taking its output means only rows that
+    survived a guard can ever reach the freeze.
+
+    Three filters, for three separate reasons.
 
     **Not yet tipped**, because an opinion frozen after tip is not a frozen
-    opinion. **One row per wager at the best price**, because
-    `write_snapshot` dedupes on the selection key and the selection key does not
-    carry the book: hand it every quote and it keeps whichever arrived first,
-    which is the provider's bookmaker order. That is an arbitrary book rather
-    than the price the card would have taken. Collapsing here makes the frozen
-    price deterministic and makes it the same price `card_pricing.select` reads
-    when it takes the best price last. Every book's quote is still written to
-    `data/staging/`, which is where the line-shopping and price-survival
-    evidence lives.
+    opinion. This is the third continuous reading of the guard in one run and it
+    is recorded like the others.
+
+    **One row per wager at the best price**, because `write_snapshot` dedupes on
+    the selection key and the selection key does not carry the book: hand it
+    every quote and it keeps whichever arrived first, which is the provider's
+    bookmaker order — an arbitrary book rather than the price the card would
+    have taken. `stores.best_price_per_wager` is the one implementation of
+    "best" in this repository, and it is reused rather than reimplemented
+    because American odds do not sort numerically. Every book's quote is still
+    written to `data/staging/`, which is where the line-shopping and
+    price-survival evidence lives.
+
+    **Complete strata only.** When the per-event stage was cut short, the
+    markets it carried are a tip-ordered prefix and are withheld from the
+    ledger — see :class:`Board`.
     """
-    if rows.empty:
-        return rows
-    frame = rows
-    if "slate_date" in frame.columns:
-        frame = frame.loc[frame["slate_date"].astype(str) == str(day)]
+    rows: list[dict] = []
+    for wager in wagers:
+        if not can_be_played(guard.state_for(wager)):
+            continue
+        if not per_event_complete and wager.market not in BULK_MARKETS:
+            continue
+        for quote in wager.quotes:
+            rows.append(
+                {
+                    "event_id": wager.event_id,
+                    "commence_time": wager.commence_time,
+                    "slate_date": wager.slate_date,
+                    "home_team": wager.home_team,
+                    "away_team": wager.away_team,
+                    "market": wager.market,
+                    "segment": wager.segment,
+                    "player": wager.player,
+                    "selection": wager.selection,
+                    "line": wager.line,
+                    "american_odds": quote.american_odds,
+                    "book": quote.book,
+                }
+            )
+    frame = pd.DataFrame(rows, columns=list(FROZEN_COLUMNS))
     if frame.empty:
         return frame
-    upcoming = frame["commence_time"].map(
-        lambda t: can_be_played(tip_state(t, now=guard.now()))
-    )
-    frame = frame.loc[upcoming]
-    if frame.empty:
-        return frame
-    return stores.best_price_per_wager(frame.reset_index(drop=True))
+    return stores.best_price_per_wager(frame)
 
 
 def _by_key(mapping: Mapping[tuple, float]) -> dict:
@@ -1543,12 +1600,23 @@ def _identity_section(run: CardRun) -> list[str]:
         "",
         identity.summary_line(),
         "",
-        f"The unit is a **wager**, plus everything the board offered that could "
-        f"not be made into one: {run.result.priced_wagers:,} wager(s) and "
-        f"{identity.unparseable:,} unreadable row(s) or refused outcome(s). A "
-        "wager is one bet however many books hang it — twenty-one books quoting "
-        "one game is not twenty-one bets, and counting quotes as bets is what "
-        "made every interval in the NHL lab's first store √2.83 too narrow.",
+        f"The unit is a **wager**, plus the price rows on this slate day that "
+        f"could not be made into one: {run.result.priced_wagers:,} wager(s) and "
+        f"{identity.unparseable:,} unreadable row(s). A wager is one bet however "
+        "many books hang it — twenty-one books quoting one game is not "
+        "twenty-one bets, and counting quotes as bets is what made every "
+        "interval in the NHL lab's first store √2.83 too narrow.",
+        "",
+        "**This is the second of two identities and they are deliberately not "
+        "merged.** The board section below carries the first, over the "
+        "provider's *outcomes*: `outcomes = staged + unwired market + unknown "
+        "selection + unreadable price + unplaceable event`. It reconciles on "
+        "its own. Folding it into this one would put two populations on either "
+        "side of a single equals sign — the outcomes are counted across every "
+        "day the read saw, and these wagers are this slate day only — and an "
+        "identity whose two sides describe different populations reconciles "
+        "over whichever population survived. The count that joins them is the "
+        "off-slate figure below.",
         "",
         "| Bar | Wagers | Bucket |",
         "|:---|---:|:---|",
@@ -1561,15 +1629,13 @@ def _identity_section(run: CardRun) -> list[str]:
         lines += ["Rows that could not be read at all:", ""]
         lines += [f"* {note}" for note in identity.notes]
         lines.append("")
-    if run.rows_off_this_slate:
-        lines += [
-            f"{run.rows_off_this_slate:,} staged row(s) belong to a slate day "
-            f"other than {run.slate_date} and were not considered here. The "
-            "bulk endpoint returns every upcoming game; a row for tomorrow "
-            "frozen under today's date would look unfrozen tomorrow and be "
-            "priced twice.",
-            "",
-        ]
+    lines += [
+        f"{run.rows_off_this_slate:,} staged row(s) belong to a slate day other "
+        f"than {run.slate_date} and were not considered here. The bulk endpoint "
+        "returns every upcoming game, not tonight's; a row for tomorrow frozen "
+        "under today's date would look unfrozen tomorrow and be priced twice.",
+        "",
+    ]
     return lines
 
 
@@ -1757,10 +1823,26 @@ def render_comment(run: CardRun) -> str:
     verbatim — the relay copies it without summarising and the chat task
     presents it without ranking anything.
     """
+    # THE CARD SPEAKS ONLY FOR ITSELF. It cannot say the RUN was clean,
+    # because the run is a workflow with steps either side of this one — the
+    # feed refresh before it and settlement after — and this process sees
+    # neither. A real dispatch published a comment reading "This run was
+    # clean." beside a `latest_status.json` reading `"degraded": "true"`, and
+    # both were produced by the same run. The workflow's health step is the
+    # single decider; a second opinion here is not a second check, it is a
+    # disagreement the reader has to arbitrate.
+    #
+    # So the lead reports what THIS process observed and names the authority
+    # for the rest.
+    state = (
+        "The card itself rendered with problems."
+        if run.is_degraded
+        else "The card itself rendered without a problem; `latest_status.json` "
+        "carries the run's health, which this process cannot see."
+    )
     lead = [
         f"**{run.competition.title} — {run.slate_date}, {run.card_slot} slot.** "
-        f"Decision: `{run.decision.value}`. "
-        + ("This run was degraded." if run.is_degraded else "This run was clean."),
+        f"Decision: `{run.decision.value}`. " + state,
         "",
     ]
     if run.is_degraded:

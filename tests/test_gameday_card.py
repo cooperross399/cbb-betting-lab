@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import runpy
+from pathlib import Path
 import socket
 import sys
 from datetime import datetime, timedelta, timezone
@@ -439,12 +440,78 @@ def test_the_identity_reconciles_over_a_real_board(board, day, tmp_path):
     assert identity.reconciles(), identity.summary_line()
     assert identity.priced == run.result.priced_wagers + identity.unparseable
     assert identity.priced > 0
-    assert identity.unparseable == board.counts.refused > 0, (
-        "The fixture carries a Draw, an unwired quarter market and an "
-        "unreadable price. All three are refused when the response is read "
-        "rather than when the rows are grouped, and counting only the second "
-        "kind would start the identity from an already-filtered board."
+
+
+def test_the_two_identities_are_printed_separately_and_both_reconcile(
+    board, day, tmp_path
+):
+    """The provider's outcomes and this slate day's wagers are two populations.
+
+    The fixture carries a `Draw` (which cannot exist in this sport), an unwired
+    quarter market and an unreadable price. All three are refused when the
+    *response* is read, and they are counted in staging's identity — which is
+    over every day the read saw. Folding them into the card's identity, which is
+    over one slate day, would put two populations either side of one equals
+    sign, and an identity like that reconciles over whichever population
+    survived.
+    """
+    run = GC.run_card(
+        board, competition=CBB, day=day, card_slot="morning",
+        archive_dir=tmp_path / "archive",
     )
+    text = GC.render_card(run)
+
+    assert board.counts.refused == 3
+    assert board.counts.reconciles(), board.counts.summary_line()
+    assert run.identity.reconciles(), run.identity.summary_line()
+    assert board.counts.summary_line() in text
+    assert run.identity.summary_line() in text
+    assert "two identities and they are deliberately not merged" in text
+    for reason in ("the market key is not wired", "the price is missing or unreadable"):
+        assert reason in text
+
+
+def test_a_corrupt_row_in_a_staged_file_is_counted_and_never_dropped(
+    board, day, tmp_path
+):
+    """On the offline path the staged file is the input, and `build_wagers` is
+    the only guard between it and the card.
+
+    A staged file is data on disk: it can be hand-edited, or written by an
+    earlier version of the stager whose vocabulary has since moved. Four things
+    stop a row becoming a wager — a market this lab does not wire, a segment
+    that is not one of the three, a selection outside the vocabulary, and a
+    price that will not read as a number — and every one of them is counted into
+    `unparseable`. A row that reached none of them vanished, and a silent drop
+    is how a card recommends from a sixth of a slate.
+    """
+    rows = board.rows.copy()
+    corrupt = rows.iloc[[0, 0, 0, 0]].copy().reset_index(drop=True)
+    corrupt["american_odds"] = corrupt["american_odds"].astype(object)
+    corrupt.loc[0, "market"] = "a_market_this_lab_does_not_wire"
+    corrupt.loc[1, "segment"] = "q1"
+    corrupt.loc[2, "selection"] = "draw"
+    corrupt.loc[3, "american_odds"] = "not a number"
+    staged = tmp_path / "staging" / CBB.data_dir_segment / f"{day}_morning.csv"
+    staged.parent.mkdir(parents=True, exist_ok=True)
+    pd.concat([rows, corrupt], ignore_index=True).to_csv(staged, index=False)
+
+    run = GC.run_card(
+        GC.read_staged_board(staged, competition=CBB),
+        competition=CBB, day=day, card_slot="morning",
+        archive_dir=tmp_path / "archive",
+    )
+
+    assert run.identity.unparseable == 4, run.identity.summary_line()
+    assert run.identity.reconciles(), run.identity.summary_line()
+    text = GC.render_card(run)
+    for reason in (
+        "the market is not one this lab wires",
+        "the segment is not one of game, h1 or h2",
+        "the selection is outside this lab's vocabulary",
+        "the price is missing or unreadable",
+    ):
+        assert reason in text
 
 
 def test_an_identity_that_does_not_reconcile_raises_rather_than_warns():
@@ -656,6 +723,41 @@ def test_the_frozen_price_is_the_best_price_and_not_whichever_book_came_first(
     assert away["book"].iloc[0] == "fanduel"
 
 
+def test_one_unreadable_row_cannot_take_down_the_freeze(board, day, tmp_path, now):
+    """Regression. This defect was in this file and a test found it.
+
+    The freeze was handed the board's **raw rows**, and `write_snapshot` keys
+    every row it is given through the injected `key_for` — where
+    `selection.selection_key` *raises* on a segment outside the three it knows.
+    So a single malformed row in a staged file (an older stager's vocabulary, a
+    human edit) crashed the freeze: the one step in this pipeline that cannot be
+    re-made afterwards, brought down by a row `build_wagers` had already refused
+    and counted.
+
+    The fix is to build the frozen frame from the wagers rather than from the
+    frame, so only rows that survived a guard can reach it.
+    """
+    rows = board.rows.copy()
+    poison = rows.iloc[[0]].copy()
+    poison["segment"] = "q1"
+    poison["market"] = "a_market_this_lab_does_not_wire"
+    staged = tmp_path / "staging" / CBB.data_dir_segment / f"{day}_morning.csv"
+    staged.parent.mkdir(parents=True, exist_ok=True)
+    pd.concat([rows, poison], ignore_index=True).to_csv(staged, index=False)
+
+    run = GC.run_card(
+        GC.read_staged_board(staged, competition=CBB),
+        competition=CBB, day=day, card_slot="morning",
+        archive_dir=tmp_path / "archive", now=lambda: now,
+    )
+    frozen = forward_evidence.read_snapshot(run.snapshot_path)
+
+    assert len(frozen) > 0, "The freeze produced nothing."
+    assert "q1" not in set(frozen["segment"].astype(str))
+    assert run.identity.unparseable == 1
+    assert run.identity.reconciles()
+
+
 def test_a_row_for_another_slate_day_is_never_frozen_under_this_one(
     board, day, tmp_path, now
 ):
@@ -764,6 +866,64 @@ def test_an_unknown_venue_quarantines_the_game_rather_than_defaulting_to_neutral
 
     assert probabilities == {}
     assert any("venue state is unknown" in reason for reason in census.declined)
+
+
+def test_a_matchup_that_says_nothing_about_being_priceable_is_not_priced(board, day):
+    """Ambiguity falls on the not-a-play side, always. A matchup carrying
+    `priceable=None` has not said it is priceable, and reading a missing answer
+    as yes is the one direction no gate here resolves in."""
+    wagers, _, _ = _wagers_for(board, day)
+
+    probabilities, census = GC.opinions_for(
+        wagers, {"evt-cardable": a_matchup(priceable=None)}, day=day
+    )
+
+    assert probabilities == {}
+    assert any("refuses to price" in reason for reason in census.declined)
+
+
+def test_a_distribution_that_refuses_a_segment_is_counted_not_crashed(day, tmp_path, now):
+    """A market whose joint cannot be built is a counted absence, never an
+    exception out of the card.
+
+    The live example today is the **second half**: `distributions.build` defaults
+    `resolves_ties=True` for that segment and then refuses its own joint,
+    because a second half settled including overtime can still end level and the
+    invariant reads it as a full game that cannot. That is an upstream defect,
+    reported rather than patched from here. This test asserts only the property
+    this module owns — the card survives it and says so — so it keeps passing on
+    the day the default is corrected.
+    """
+    tip = now + timedelta(hours=6)
+    payload = _event(
+        "evt-halves",
+        home="Duke Blue Devils",
+        away="Kansas Jayhawks",
+        commence=tip,
+        books=[
+            _book("draftkings", [
+                {"key": "h2h_h2", "outcomes": [
+                    {"name": "Duke Blue Devils", "price": -120},
+                    {"name": "Kansas Jayhawks", "price": 100}]},
+            ])
+        ],
+    )
+    halves = GC.board_from_payloads([payload], competition=CBB)
+
+    run = GC.run_card(
+        halves, competition=CBB, day=day, card_slot="morning",
+        archive_dir=tmp_path / "archive",
+        matchups={"evt-halves": a_matchup()}, now=lambda: now,
+    )
+
+    assert run.identity.reconciles(), run.identity.summary_line()
+    assert run.opinions.wagers == 2
+    assert run.opinions.priced == 2 or any(
+        "distribution" in reason for reason in run.opinions.declined
+    ), run.opinions.declined
+    # Either way the price itself is frozen: it is evidence, and reachability
+    # and closing-line movement are measured from it later.
+    assert len(forward_evidence.read_snapshot(run.snapshot_path)) == 2
 
 
 def test_a_matchup_the_ratings_module_refuses_to_price_is_not_priced(board, day):
@@ -1093,24 +1253,50 @@ def test_the_per_event_stage_is_skipped_whole_rather_than_truncated(now):
     assert any("says nothing about whether those markets are quoted" in n for n in board.notes)
 
 
-def test_an_incomplete_per_event_stage_is_staged_but_never_frozen():
+def test_an_incomplete_per_event_stage_is_staged_but_never_frozen(
+    board, day, tmp_path, now
+):
     """The rows were paid for and they are evidence; they are not a stratum.
     A tip-ordered prefix written into the ledger is a biased subset wearing the
     name of a night."""
-    rows = pd.DataFrame(
-        [
-            {"event_id": "a", "provider_key": "h2h", "market": "moneyline"},
-            {"event_id": "a", "provider_key": "alternate_spreads", "market": "alternate_spread"},
-        ]
+    board.per_event_complete = False
+    run = GC.run_card(
+        board, competition=CBB, day=day, card_slot="morning",
+        archive_dir=tmp_path / "archive", now=lambda: now,
     )
-    board = GC.Board(
-        rows=rows, counts=staging.StagingCounts(), spend=odds_api.Spend(),
-        source="a test", per_event_complete=False,
+    frozen = forward_evidence.read_snapshot(run.snapshot_path)
+
+    assert set(frozen["market"]) <= GC.BULK_MARKETS
+    assert "team_total" in set(board.rows["market"]), (
+        "The fixture must carry a per-event market for this test to mean "
+        "anything."
+    )
+    assert "team_total" not in set(frozen["market"])
+
+
+def test_the_frozen_columns_are_a_subset_of_the_staged_ones_by_name():
+    """Named, never sliced off somebody else's tuple. A positional slice
+    silently freezes the wrong field the day that tuple is reordered, and a
+    snapshot is the one artefact here that cannot be rebuilt."""
+    assert set(GC.FROZEN_COLUMNS) < set(staging.STAGED_COLUMNS)
+    assert "provider_key" not in GC.FROZEN_COLUMNS
+    assert set(GC.FROZEN_COLUMNS) <= set(forward_evidence.SNAPSHOT_COLUMNS) | {
+        "slate_date"
+    }, (
+        "Every frozen column must be one the snapshot carries; `slate_date` is "
+        "the exception, and only because the snapshot names its day in the "
+        "filename and in `snapshot_date`."
     )
 
-    assert list(board.ledger_rows["provider_key"]) == ["h2h"]
-    board.per_event_complete = True
-    assert len(board.ledger_rows) == 2
+
+def test_the_bulk_markets_are_derived_from_the_registry():
+    """Never named here. A market list written twice drifts, and the direction
+    a drifted copy goes is not the conservative one."""
+    assert GC.BULK_MARKETS == {"moneyline", "spread", "total_points"}
+    assert "team_total" not in GC.BULK_MARKETS, (
+        "`team_totals` is not a bulk-safe key; asking for it there makes the "
+        "provider refuse the whole request with a 422 that names nothing."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1238,3 +1424,26 @@ def _wagers_for(board: GC.Board, day: str, *, force_day: bool = False):
         competition=CBB,
         key_for=default_key_for(CBB),
     )
+
+
+def test_the_card_never_claims_the_RUN_was_healthy():
+    """The card is one step of a workflow and cannot see the others.
+
+    Found by dispatching the real thing: a comment reading *"This run was
+    clean."* was published beside a `latest_status.json` reading
+    `"degraded": "true"`, both from the same run. The feed refresh before this
+    step had failed and settlement after it had failed; neither is visible from
+    inside the card.
+
+    The brief's rule is that ONE step decides, so the summary, the status file
+    and the publish guard cannot disagree. A second opinion rendered here is
+    not a second check — it is a disagreement the reader has to arbitrate, and
+    the reader is a scheduled task that copies the text verbatim.
+    """
+    from cbb_betting_lab.reports import gameday_card as GC
+
+    source = Path(GC.__file__).read_text(encoding="utf-8")
+    for claim in ("This run was clean", "this run was clean"):
+        assert claim not in source, (
+            "The card asserts the run's health. It can only speak for the card."
+        )

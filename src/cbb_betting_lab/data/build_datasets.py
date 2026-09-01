@@ -373,10 +373,28 @@ def possession_validation(season: int, *, raw_dir: Path | None = None) -> dict:
 
 def build(seasons: tuple[int, ...], *, raw_dir: Path | None = None,
           processed_dir: Path | None = None, allow_shrink: bool = False) -> dict:
-    """Build every processed table for the named seasons."""
+    """Build every processed table for the named seasons.
+
+    **A season whose feeds are not cached is SKIPPED AND REPORTED, never
+    silently dropped and never fatal.** The distinction cost a real run: the
+    2026-27 season has a published schedule and no play-by-play — it has not
+    been played — and `build_game_segments` raised on it while the other two
+    builders caught the same error and continued. The asymmetry killed the
+    whole build, which in turn left settlement with no segments table, which
+    marked the run degraded for two reasons that were really one.
+
+    Skipping is reported through `written["skipped"]` and printed by the
+    caller, because *"a failed fetch degrades rather than empties, and a
+    degraded run is marked, never silently published as a thin slate."* The
+    silent `continue` that used to be here was half of that rule.
+    """
     target = Path(processed_dir) if processed_dir else Path(PROCESSED_DIR)
     target.mkdir(parents=True, exist_ok=True)
     written: dict[str, int] = {}
+    skipped: dict[str, list[int]] = {}
+
+    def _skip(table: str, season: int, why: str) -> None:
+        skipped.setdefault(table, []).append(season)
 
     for name, builder, columns in (
         ("team_games", build_team_games, TEAM_GAME_COLUMNS),
@@ -386,7 +404,8 @@ def build(seasons: tuple[int, ...], *, raw_dir: Path | None = None,
         for season in seasons:
             try:
                 frames.append(builder(season, raw_dir=raw_dir))
-            except hoopr.FeedError:
+            except hoopr.FeedError as error:
+                _skip(name, season, str(error))
                 continue
         if not frames:
             continue
@@ -404,11 +423,21 @@ def build(seasons: tuple[int, ...], *, raw_dir: Path | None = None,
         frame.to_csv(path, index=False, lineterminator="\n")
         written[name] = len(frame)
 
-    segments = [
-        s for s in (build_game_segments(x, raw_dir=raw_dir) for x in seasons) if not s.empty
-    ]
+    # The same handling as the two builders above. This list comprehension had
+    # no `except` and was the one place a missing feed was fatal.
+    segments = []
+    for season in seasons:
+        try:
+            frame = build_game_segments(season, raw_dir=raw_dir)
+        except hoopr.FeedError:
+            _skip("game_segments", season, "feed not cached")
+            continue
+        if not frame.empty:
+            segments.append(frame)
     if segments:
         frame = pd.concat(segments, ignore_index=True)
         frame.to_csv(target / "cbb_game_segments.csv", index=False, lineterminator="\n")
         written["game_segments"] = len(frame)
+    if skipped:
+        written["skipped"] = skipped  # type: ignore[assignment]
     return written

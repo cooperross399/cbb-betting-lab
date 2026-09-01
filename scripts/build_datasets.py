@@ -21,8 +21,23 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     written = build(tuple(args.seasons), allow_shrink=args.allow_shrink)
+    skipped = written.pop("skipped", {}) if isinstance(written.get("skipped"), dict) else {}
     for name, rows in sorted(written.items()):
         print(f"  {name}: {rows:,} rows")
+
+    # A skipped season is REPORTED, never silent. The 2026-27 season has a
+    # schedule and no play-by-play until it is played, and a build that says
+    # nothing about that looks identical to one that covered it.
+    for table, seasons in sorted(skipped.items()):
+        print(
+            f"::warning::{table}: no cached feed for season(s) "
+            f"{', '.join(str(s) for s in seasons)} — skipped, not failed. A "
+            "season with a published schedule and no play-by-play has not been "
+            "played yet."
+        )
+    if not written:
+        print("::error::No table could be built for any requested season.")
+        return 1
 
     if args.validate_possessions:
         checks = [possession_validation(s) for s in args.seasons]
