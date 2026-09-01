@@ -1,0 +1,9 @@
+{
+  "date": "2026-09-01",
+  "slate_date": "2026-09-01",
+  "decision": "no-slate",
+  "degraded": "true",
+  "trigger": "workflow_dispatch",
+  "run_url": "https://github.com/cooperross399/cbb-betting-lab/actions/runs/33548634161",
+  "card_slot": "morning"
+}
