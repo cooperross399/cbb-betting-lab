@@ -1,0 +1,595 @@
+name: CBB Gameday Refresh
+
+# THE NAME IS A CONTRACT. Cooper's scheduled routines hard-code this workflow
+# name, this file name, the `card-feed` branch, `latest_card_comment.md` and
+# `latest_status.json`. Renaming any of them silently breaks his automation and
+# the breakage does not look like a rename — it looks like the lab going quiet,
+# which is also what a lab with nothing to say looks like.
+# `tests/test_contract_strings.py` pins every one of them against CLAUDE.md.
+#
+# WHAT THIS DOES, EVERY RUN: settle whatever finished overnight, refetch the
+# free feeds, rebuild the tables, fetch today's board under a hard cap, freeze
+# the opinions it can still precede into a dated snapshot, render the card, and
+# publish it to `card-feed` where the cloud relay reads it. No laptop, no
+# terminal, and no email.
+#
+# WHAT IT NEVER DOES: allowlist a market, sign a receipt, place a bet, or spend
+# past its cap. The cap is enforced inside the adapter against the measured
+# running total from `x-requests-last`, before every request — the NHL lab
+# capped a run at 200,000 and spent 289,984 by estimating from markets *asked*
+# rather than markets *returned*.
+#
+# FOUR CRONS, TWO SLOTS. `docs/card_cadence.md` has the arithmetic. The slate
+# spans twelve hours — first tip 11:00 ET, last tip 23:00 ET, and **45.3% of
+# 6,318 games in 2025-26 had still not tipped at 19:00 ET**. One freeze cannot
+# price a noon tip and an eleven o'clock tip, so there are two slots, each with
+# a primary and a backup an hour apart, and the backup stands down when the
+# primary published that slot cleanly.
+#
+# THE SECOND CARD IS NOT A SECOND OPINION. `forward_evidence.write_snapshot` is
+# append-only within a day: the evening slot freezes games the morning slot did
+# not, and may never re-price one it did. Without that rule two cards a day is
+# two bites at the same apple and the ledger records the better of two guesses.
+#
+# THE CRON TIMES ASSUME GITHUB IS LATE, because it is. Cooper's repositories
+# have fired 4.5-5.3 hours late since 2026-08-27, so every landing here is
+# checked against `nominal + schedule_contract.OBSERVED_LATENESS_H`. At the
+# worst lateness observed, the morning backup lands 10:18 ET (42 minutes before
+# the 11:00 ET first tip) and the evening backup 17:18 ET (1h42 before the
+# 19:00 ET block). `tests/test_the_card_schedule_survives_cron_lateness.py`
+# recomputes that table from the constant and fails if a slot stops preceding
+# its block.
+#
+# THREE GAMES A SEASON TIP BEFORE THE MORNING BACKUP'S WORST-CASE LANDING —
+# 0.05% of the slate, and one of them is the 2026-27 opener in Rome at 09:30 ET
+# on 2026-11-01. That is a coverage gap, recorded rather than chased: moving
+# the cron earlier would card the whole day earlier, with less information, to
+# buy three games.
+
+on:
+  schedule:
+    # `morning` primary. 09:00 UTC is 04:00 ET nominal and 09:18 ET at the
+    # worst lateness observed. It also runs after the last game of the previous
+    # night is final (the latest tip is 23:00 ET, plus one Honolulu game at
+    # 01:00 ET), which is why the post-slate settlement lives in this run
+    # rather than in a workflow of its own: settlement needs the ledger, and
+    # the ledger only comes back from the branch the one writing workflow can
+    # reach.
+    - cron: "0 9 * 11,12,1,2,3,4 *"
+    # `morning` backup, an hour later. It stands down when the primary
+    # published this slot cleanly, so on a healthy day it costs one
+    # authenticated fetch of a status file and no credits at all.
+    - cron: "0 10 * 11,12,1,2,3,4 *"
+    # `evening` primary. 55% of the slate had not been priced by anybody at the
+    # morning slot; this is the run that covers it, and it exists for no other
+    # reason.
+    - cron: "0 16 * 11,12,1,2,3,4 *"
+    # `evening` backup.
+    - cron: "0 17 * 11,12,1,2,3,4 *"
+  workflow_dispatch:
+    inputs:
+      card_slot:
+        description: "Which slot this run publishes as"
+        type: choice
+        options: [morning, evening]
+        default: morning
+        required: true
+      credit_cap:
+        description: "Hard credit cap for this run"
+        type: string
+        required: true
+        default: "40000"
+      rehearsal_slate_date:
+        description: "Rehearse one league date (YYYY-MM-DD). A rehearsal never touches the ledger and never publishes. Leave blank for a real run."
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  # Write, and this is the ONLY workflow in the repository that has it.
+  #
+  # GitHub cannot scope `contents: write` to a single ref, so this permission
+  # is write access to `main` as well, and no YAML can say otherwise. What
+  # makes it safe is `tests/test_workflows.py`: every `git push` line in every
+  # workflow must end in `:refs/heads/card-feed`, and the list of workflows
+  # containing `contents: write` must be exactly this one. THAT TEST IS THE
+  # SCOPE. It is also why the line-movement capture keeps its history in run
+  # artifacts rather than on a branch of its own.
+  contents: write
+
+concurrency:
+  # Serialised, never cancelled. A cancelled run that has already frozen a
+  # snapshot but not yet settled or published leaves the day half-recorded, and
+  # a frozen opinion is evidence precisely because it was written before the
+  # game — it cannot be re-made afterwards.
+  group: cbb-gameday-refresh
+  cancel-in-progress: false
+
+jobs:
+  already-published:
+    # The backup trigger exists only to cover a dropped primary, and when the
+    # primary worked it has nothing to add: it would refetch the same board for
+    # the same credits and republish the same card. So a scheduled run asks the
+    # card-feed branch whether THIS SLOT is already published cleanly for
+    # today, and stands down when it is.
+    #
+    # A manual dispatch never skips. Asking for a run by hand means run it.
+    name: Already published?
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+      card_slot: ${{ steps.check.outputs.card_slot }}
+    steps:
+      - id: check
+        env:
+          # THE REPOSITORY IS PRIVATE, so an unauthenticated fetch cannot see
+          # the branch at all. Without this token the guard failed open in the
+          # football lab: it read "no card-feed branch yet", the backup never
+          # stood down, and every game day fetched the slate twice and posted
+          # the card twice. Defect 18 in `docs/ported_defects.md`. A guard that
+          # cannot fail closed is not a guard.
+          GH_TOKEN: ${{ github.token }}
+          SCHEDULE: ${{ github.event.schedule }}
+          DISPATCH_SLOT: ${{ inputs.card_slot }}
+        run: |
+          set -eu
+          # Which slot this run is. Derived from the cron that fired it, so the
+          # two triggers of a pair agree on which slot they are covering — the
+          # backup has to compare against the primary's publication, not
+          # against "today".
+          HOUR=$(printf '%s\n' "${SCHEDULE:-}" | awk '{print $2}')
+          SLOT="${DISPATCH_SLOT:-morning}"
+          case "$HOUR" in
+            9|10) SLOT=morning ;;
+            16|17) SLOT=evening ;;
+          esac
+          echo "card_slot=$SLOT" >> "$GITHUB_OUTPUT"
+          echo "This run is the '$SLOT' slot."
+
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "run=yes" >> "$GITHUB_OUTPUT"
+            echo "Manual run: never skipped."
+            exit 0
+          fi
+
+          # The league date. Never `date -u`: the card stamps its slate in
+          # league time, the publish step stamps the same, and a guard reading
+          # a third calendar stands the run down on the wrong day the moment a
+          # trigger moves either side of midnight UTC. Three calendars for one
+          # slate is how a run stands itself down on the wrong day.
+          DAY=$(TZ=America/New_York date +%F)
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}"
+          git init -q feed
+          cd feed
+          if ! git fetch --depth=1 "$REMOTE" +refs/heads/card-feed:refs/card-feed-tip 2>/dev/null; then
+            echo "run=yes" >> "$GITHUB_OUTPUT"
+            echo "No card-feed branch yet; running."
+            exit 0
+          fi
+          STATUS=$(git show refs/card-feed-tip:latest_status.json 2>/dev/null || echo '{}')
+          FEED_DAY=$(printf '%s' "$STATUS" | jq -r '.date // ""')
+          FEED_SLOT=$(printf '%s' "$STATUS" | jq -r '.card_slot // ""')
+          FEED_DEGRADED=$(printf '%s' "$STATUS" | jq -r '.degraded // "unknown"')
+          # All three, and the slot is not decoration. Comparing the date alone
+          # would read the evening refresh as "today is already published" and
+          # stand it down — which would drop the 55% of the slate that had not
+          # tipped when the morning card was frozen.
+          #
+          # A DEGRADED CARD NEVER SATISFIES THIS GUARD. That is precisely what
+          # the backup trigger exists to replace, and "unknown" is degraded: a
+          # run whose health step never executed cannot report that it was fine.
+          if [ "$FEED_DAY" = "$DAY" ] && [ "$FEED_SLOT" = "$SLOT" ] && [ "$FEED_DEGRADED" = "false" ]; then
+            echo "run=no" >> "$GITHUB_OUTPUT"
+            echo "The $SLOT card for $DAY is already published and clean. Standing down."
+          else
+            echo "run=yes" >> "$GITHUB_OUTPUT"
+            echo "Feed holds day '$FEED_DAY' slot '$FEED_SLOT' degraded '$FEED_DEGRADED', which is not a clean $SLOT card for $DAY. Running."
+          fi
+
+  card:
+    name: Card
+    needs: already-published
+    if: needs.already-published.outputs.run == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The publish step authenticates its own two git calls with the run's
+          # token, so the checkout does not need to leave a credential behind
+          # in `.git/config` where every later step can read it.
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -e .
+
+      - name: Name the day and the slot, once
+        # One step decides the league date, the slot and the trigger, and every
+        # later step reads them from here. Two steps computing a date
+        # independently is how the guard, the card and the status file end up
+        # disagreeing about which day it is.
+        id: identity
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          SLOT_FROM_GUARD: ${{ needs.already-published.outputs.card_slot }}
+        run: |
+          set -eu
+          DAY=$(TZ=America/New_York date +%F)
+          SLOT="${SLOT_FROM_GUARD:-morning}"
+          echo "day=$DAY" >> "$GITHUB_OUTPUT"
+          echo "slot=$SLOT" >> "$GITHUB_OUTPUT"
+          echo "trigger=${{ github.event_name }}" >> "$GITHUB_OUTPUT"
+          echo "League date $DAY, slot $SLOT, trigger ${{ github.event_name }}."
+
+      - name: Restore the ledger and the snapshots from card-feed
+        # The forward ledger is the product of this whole lab and it cannot be
+        # rebuilt: an opinion is evidence because it was frozen before the
+        # game, and the prices it settles against are gone afterwards. So it
+        # lives on a branch rather than in an artifact with a retention window.
+        #
+        # TEMP-THEN-MOVE, EVERY TIME. `git show X > file` creates the file even
+        # when the show fails, which leaves a zero-byte CSV that pandas refuses
+        # to parse — and that is exactly how the football lab's first rehearsal
+        # died, on the branch state its first real run would have had. Defect
+        # 16 in `docs/ported_defects.md`.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          mkdir -p data/processed data/archive/priced_snapshots
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}"
+          if ! git fetch --depth=1 "$REMOTE" +refs/heads/card-feed:refs/card-feed-tip 2>/dev/null; then
+            echo "::warning::No card-feed branch. If this is not the first run, the season's ledger is gone."
+            exit 0
+          fi
+          TMP=$(mktemp)
+          if git show refs/card-feed-tip:forward_evidence.csv > "$TMP" 2>/dev/null && [ -s "$TMP" ]; then
+            mv "$TMP" data/processed/cbb_forward_evidence.csv
+            echo "Ledger restored: $(( $(wc -l < data/processed/cbb_forward_evidence.csv) - 1 )) rows."
+          else
+            rm -f "$TMP"
+            echo "No ledger on card-feed yet."
+          fi
+          for path in $(git ls-tree -r --name-only refs/card-feed-tip snapshots/ 2>/dev/null); do
+            TMP=$(mktemp)
+            if git show "refs/card-feed-tip:$path" > "$TMP" 2>/dev/null && [ -s "$TMP" ]; then
+              mv "$TMP" "data/archive/priced_snapshots/$(basename "$path")"
+            else
+              rm -f "$TMP"
+              echo "::warning::Could not restore $path from card-feed. An empty snapshot for a day is indistinguishable from a day with no opinions, so it was not written."
+            fi
+          done
+          echo "Snapshots restored: $(ls data/archive/priced_snapshots 2>/dev/null | wc -l)."
+
+      - name: Refetch the free feeds and rebuild the tables
+        # hoopR release assets and the derived tables. Costs no credits, so it
+        # runs before any quota is spent and an outage here is free.
+        #
+        # SOFT. In this sport a partial fetch looks exactly like a light slate,
+        # so the fetcher degrades rather than empties: it reports what it could
+        # not get and leaves the previous cache in place. Fitting on results a
+        # day old beats no card.
+        id: feeds
+        continue-on-error: true
+        env:
+          PYTHONPATH: src
+        run: |
+          set -eu
+          # A season is labelled by the year it ENDS, matching hoopR:
+          # mbb_schedule_2027.parquet is the 2026-27 season.
+          SEASONS="2024 2025 2026 2027"
+          python scripts/fetch_cbb_data.py --seasons $SEASONS
+          python scripts/build_datasets.py --seasons $SEASONS
+
+      - name: Settle whatever finished, then append to the forward ledger
+        # POST-SLATE SETTLEMENT, and it lives here rather than in a workflow of
+        # its own for one structural reason: the ledger comes back from
+        # `card-feed`, and this is the only workflow allowed to write it back.
+        # A settlement job with `contents: read` could settle and then have
+        # nowhere to put the answer.
+        #
+        # The morning slot fires at 04:00 ET nominal, after the previous
+        # night's last game is final (latest tip 23:00 ET, plus the Honolulu
+        # 01:00 ET outlier), so by the time the card is frozen the ledger
+        # already carries yesterday.
+        #
+        # Idempotent and keyed by snapshot date, so the evening run re-settling
+        # what the morning run settled is a no-op rather than a duplicate.
+        id: settle
+        continue-on-error: true
+        env:
+          PYTHONPATH: src
+        run: |
+          set -eu
+          python scripts/run_forward_evidence.py --settle --competition cbb
+
+      - name: Fetch the board, freeze the opinions, render the card
+        id: card
+        env:
+          PYTHONPATH: src
+          CBB_ODDS_API_KEY: ${{ secrets.CBB_ODDS_API_KEY }}
+        run: |
+          set -eu
+          # The credential is read from the environment and never passed as an
+          # argument: a process list is world-readable on a shared machine and
+          # a CI log echoes commands. Nothing below prints it, compares it, or
+          # writes it anywhere.
+          if [ -z "${CBB_ODDS_API_KEY:-}" ]; then
+            echo "::error::CBB_ODDS_API_KEY is not set. Nothing was requested."
+            exit 1
+          fi
+          REHEARSAL=""
+          if [ -n "${{ inputs.rehearsal_slate_date }}" ]; then
+            REHEARSAL="--rehearsal --slate-date ${{ inputs.rehearsal_slate_date }}"
+          fi
+          python scripts/run_gameday_card.py \
+            --live \
+            --card-slot "${{ steps.identity.outputs.slot }}" \
+            --credit-cap "${{ inputs.credit_cap || '40000' }}" \
+            $REHEARSAL \
+            | tee card_run.txt
+          echo "decision=$(grep -oE 'decision=[a-z-]+' card_run.txt | tail -1 | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+
+      - name: Rebuild the claims report
+        # Offline and free — it reads the ledger and the verdict files and
+        # writes `data/outputs/cbb_what_we_can_claim.md`. Soft, because a
+        # measurement failure must never cost a card, and the card's own gates
+        # do not depend on this report.
+        if: always()
+        continue-on-error: true
+        env:
+          PYTHONPATH: src
+        run: |
+          python scripts/run_what_we_can_claim.py --competition cbb
+
+      - name: Record a degraded run rather than going quiet
+        if: failure()
+        run: |
+          # A run that fails silently looks exactly like a day with no games,
+          # and in this sport there are real days with no games.
+          echo "::warning::The card did not complete. The card-feed status will say so."
+          mkdir -p data/outputs
+          printf '# CBB card\n\nThis run did not complete. No opinion was frozen and nothing was settled. **This is a fault, not a day without basketball.**\n' \
+            > data/outputs/cbb_gameday_card.md
+
+      - name: Record what went wrong
+        # One step decides whether the run was degraded, so the summary, the
+        # status file and the publish guard cannot disagree about it. `degraded`
+        # is a STRING on the feed and "unknown" counts as degraded.
+        id: health
+        if: always()
+        run: |
+          set -eu
+          : > run_degraded.txt
+          if [ ! -f data/outputs/cbb_gameday_card.md ]; then
+            echo "No card was rendered at all." >> run_degraded.txt
+          fi
+          if [ "${{ steps.feeds.outcome }}" = "failure" ]; then
+            echo "The free feeds could not be refreshed, so the models were fitted on the previously cached games." >> run_degraded.txt
+          fi
+          if [ "${{ steps.settle.outcome }}" = "failure" ]; then
+            echo "Settlement did not run, so the forward ledger is missing whatever finished since the last successful run." >> run_degraded.txt
+          fi
+          if [ "${{ steps.card.outcome }}" != "success" ]; then
+            echo "The board fetch or the card render failed. No price was invented and no opinion was frozen." >> run_degraded.txt
+          fi
+          if [ -s run_degraded.txt ]; then
+            echo "degraded=true" >> "$GITHUB_OUTPUT"
+            cat run_degraded.txt
+          else
+            echo "degraded=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing went wrong."
+          fi
+
+      - name: Assemble the card comment
+        if: always()
+        continue-on-error: true
+        run: |
+          set -eu
+          if [ -f data/outputs/cbb_card_comment.md ]; then
+            cp data/outputs/cbb_card_comment.md card_comment.md
+          elif [ -f data/outputs/cbb_gameday_card.md ]; then
+            cp data/outputs/cbb_gameday_card.md card_comment.md
+          else
+            printf '# CBB card\n\nNo card was rendered this run. **This is a fault, not a day without basketball.**\n' > card_comment.md
+          fi
+          {
+            echo
+            echo "---"
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> card_comment.md
+
+      - name: Zero email, and it takes two changes rather than one
+        # The card comment MENTIONS NOBODY. That is half of zero email and only
+        # half: an @mention overrides an ignored repository subscription, so
+        # the EPL lab kept emailing Cooper after he set the subscription to
+        # ignored, because the comment still mentioned him. Defect 19 in
+        # `docs/ported_defects.md`. Both changes are needed and neither works
+        # alone, so this step states the manual half every run rather than
+        # trusting a note in a doc nobody reopens.
+        if: always()
+        run: |
+          set -eu
+          if [ -f card_comment.md ] && grep -nE '(^|[^A-Za-z0-9_/])@[A-Za-z0-9][A-Za-z0-9-]*' card_comment.md; then
+            echo "::error::The card comment above contains an @mention. A mention overrides an ignored repository subscription, so this card would email Cooper however his notification settings are set. The mention must come out of the renderer."
+            exit 1
+          fi
+          echo "The card comment mentions nobody."
+          echo "THE OTHER HALF IS MANUAL AND THIS WORKFLOW CANNOT DO IT:"
+          echo "  ${{ github.server_url }}/${{ github.repository }} -> Watch -> Ignore."
+          echo "Without both, the card still arrives by email. Delivery is the"
+          echo "card-feed branch -> cloud relay -> Drive file, and nothing here"
+          echo "sends a message to anybody."
+
+      - name: Write the card to the run summary
+        if: always()
+        continue-on-error: true
+        run: |
+          {
+            echo "## CBB card — ${{ steps.identity.outputs.day }} (${{ steps.identity.outputs.slot }})"
+            echo
+            cat data/outputs/cbb_gameday_card.md 2>/dev/null || echo "No card was produced."
+            echo
+            echo "## What went wrong"
+            echo
+            if [ -s run_degraded.txt ]; then cat run_degraded.txt; else echo "Nothing."; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish to the card-feed branch
+        # EVERY RUN PUBLISHES, including a broken one, which is why this is
+        # `if: always()`. The reader is told that "no commit for today" means
+        # the workflow did not finish, and that only stays true if a finished
+        # run always leaves one.
+        #
+        # NEVER ON A REHEARSAL. Publishing a rehearsal would stamp the feed
+        # with the rehearsed day and slot, and the already-published guard
+        # would stand the real run down on the day it matters.
+        #
+        # PLUMBING ONLY — hash-object, mktree, commit-tree, push. Never a
+        # checkout of the branch and never `git add`. The working tree at this
+        # point holds staged prices, cached feeds and possibly a local `.env`;
+        # `git add -A` on that tree is how a credential reaches a ref. Only the
+        # files named below can ever reach the branch.
+        #
+        # Every push parents on the tip that was just fetched, so it is always
+        # a fast-forward and never a force.
+        if: always() && inputs.rehearsal_slate_date == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}"
+          DAY="${{ steps.identity.outputs.day }}"
+          SLOT="${{ steps.identity.outputs.slot }}"
+          DECISION="${{ steps.card.outputs.decision || 'degraded' }}"
+          DEGRADED="${{ steps.health.outputs.degraded || 'unknown' }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          SLATE="${{ inputs.rehearsal_slate_date || '' }}"
+          [ -n "$SLATE" ] || SLATE="$DAY"
+
+          git fetch --depth=1 "$REMOTE" +refs/heads/card-feed:refs/card-feed-tip 2>/dev/null || true
+          PARENT=""
+          if git rev-parse --verify -q refs/card-feed-tip >/dev/null; then
+            PARENT=$(git rev-parse refs/card-feed-tip)
+          fi
+
+          # THE CLOBBER GUARD, after the parent is resolved and before anything
+          # is committed. Its logic is in `.github/workflows/lib/clobber_guard.sh`
+          # rather than inline here, because Cooper's brief is explicit that
+          # string assertions about shell logic in a workflow file are
+          # near-worthless — `tests/test_card_feed_publish_guard.py` runs THIS
+          # script against a real git ref across every case.
+          GUARD=$(PARENT="$PARENT" TIP_REF="refs/card-feed-tip" DAY="$DAY" \
+                  CARD_SLOT="$SLOT" DEGRADED="$DEGRADED" \
+                  bash .github/workflows/lib/clobber_guard.sh)
+          if [ "$GUARD" = "skip" ]; then
+            echo "::warning::A clean $SLOT card for $DAY is already on the feed and this run is degraded ($DEGRADED). Nothing was published; the good card stands."
+            exit 0
+          fi
+
+          jq -n \
+            --arg date "$DAY" \
+            --arg slate_date "$SLATE" \
+            --arg decision "$DECISION" \
+            --arg degraded "$DEGRADED" \
+            --arg trigger "${{ steps.identity.outputs.trigger }}" \
+            --arg run_url "$RUN_URL" \
+            --arg card_slot "$SLOT" \
+            '{date: $date, slate_date: $slate_date, decision: $decision,
+              degraded: $degraded, trigger: $trigger, run_url: $run_url,
+              card_slot: $card_slot}' > latest_status.json
+
+          ROOT_INPUT=$(mktemp)
+          SNAP_INPUT=$(mktemp)
+          add() {
+            [ -f "$2" ] || return 0
+            printf '100644 blob %s\t%s\n' "$(git hash-object -w "$2")" "$1" >> "$3"
+          }
+          add latest_status.json latest_status.json "$ROOT_INPUT"
+          add latest_card_comment.md card_comment.md "$ROOT_INPUT"
+          add latest_forward_evidence.md data/outputs/cbb_forward_evidence.md "$ROOT_INPUT"
+          add latest_what_we_can_claim.md data/outputs/cbb_what_we_can_claim.md "$ROOT_INPUT"
+
+          # NEVER PUBLISH THE ABSENCE OF EVIDENCE. This tree is rebuilt from
+          # local files under `if: always()`, so a run that died at or before
+          # the restore step holds NO ledger and NO snapshots — and publishing
+          # that tree would replace a season of frozen opinions with a commit
+          # that simply omits them. The prices those rows settled against are
+          # gone, so nothing could rebuild them. Anything this run does not
+          # hold locally is carried forward from the tip instead of dropped.
+          if [ -f data/processed/cbb_forward_evidence.csv ]; then
+            add forward_evidence.csv data/processed/cbb_forward_evidence.csv "$ROOT_INPUT"
+          elif git cat-file -e refs/card-feed-tip:forward_evidence.csv 2>/dev/null; then
+            git show refs/card-feed-tip:forward_evidence.csv > carried_ledger.csv
+            add forward_evidence.csv carried_ledger.csv "$ROOT_INPUT"
+            echo "::warning::This run held no local ledger; carried the branch copy forward rather than publishing a tree without it."
+          fi
+
+          for snapshot in data/archive/priced_snapshots/*.csv; do
+            [ -f "$snapshot" ] || continue
+            add "$(basename "$snapshot")" "$snapshot" "$SNAP_INPUT"
+          done
+          SNAP_CARRIED=""
+          if [ ! -s "$SNAP_INPUT" ] && git cat-file -e refs/card-feed-tip:snapshots 2>/dev/null; then
+            CARRIED=$(git rev-parse refs/card-feed-tip:snapshots)
+            printf '040000 tree %s\tsnapshots\n' "$CARRIED" >> "$ROOT_INPUT"
+            echo "::warning::This run held no local snapshots; carried the branch tree forward."
+            SNAP_CARRIED=yes
+          fi
+          if [ -s "$SNAP_INPUT" ] && [ -z "$SNAP_CARRIED" ]; then
+            # `git mktree` builds ONE FLAT LEVEL and refuses a path containing
+            # a slash, so `snapshots/` is its own tree object referenced from
+            # the root. Flattening the names instead would have worked and
+            # would have made the feed a heap of files.
+            SNAP_TREE=$(git mktree < "$SNAP_INPUT")
+            printf '040000 tree %s\tsnapshots\n' "$SNAP_TREE" >> "$ROOT_INPUT"
+          fi
+
+          TREE=$(git mktree < "$ROOT_INPUT")
+          export GIT_AUTHOR_NAME="CBB Gameday Refresh" GIT_AUTHOR_EMAIL="actions@github.com"
+          export GIT_COMMITTER_NAME="CBB Gameday Refresh" GIT_COMMITTER_EMAIL="actions@github.com"
+          if [ -n "$PARENT" ]; then
+            COMMIT=$(git commit-tree "$TREE" -p "$PARENT" -m "card $DAY $SLOT ($DECISION)")
+          else
+            COMMIT=$(git commit-tree "$TREE" -m "card $DAY $SLOT ($DECISION)")
+          fi
+          git push "$REMOTE" "$COMMIT:refs/heads/card-feed"
+          echo "card-feed updated for $DAY / $SLOT (decision: $DECISION, degraded: $DEGRADED)."
+
+      - name: Upload the reports and the frozen opinions
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbb-gameday-${{ steps.identity.outputs.day }}-${{ steps.identity.outputs.slot }}
+          path: |
+            data/outputs/
+            data/processed/cbb_forward_evidence.csv
+            data/archive/priced_snapshots/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Report the outcome
+        # Last, and the only step that may fail the job. Everything above is
+        # allowed to degrade so the card still gets built, published and
+        # recorded; the run then finishes red so the failure notice arrives and
+        # silence keeps meaning "it ran and nothing was wrong".
+        if: always()
+        run: |
+          echo "This run fetched prices, froze opinions and settled what was final."
+          echo "It placed no bet, edited no policy, wrote no receipt, allowlisted"
+          echo "no market, and sent no message to anybody."
+          if [ "${{ steps.health.outputs.degraded }}" = "true" ]; then
+            echo "::error::This run was degraded. See the job summary."
+            exit 1
+          fi
+          echo "Clean run."

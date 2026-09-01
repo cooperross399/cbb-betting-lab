@@ -1484,7 +1484,12 @@ def _table(
         lines.append(
             "| "
             + " | ".join(str(k) for k in keys)
-            + f" | {interval.bets:,} | {interval.clusters:,} "
+            # The cluster unit is printed, not just the count. `interval_two_way`
+            # computes the interval by game and by day and reports the wider,
+            # and which one won is a fact about the dependence structure the
+            # reader needs — a day-clustered row means a whole slate moved
+            # together, which is a different claim from a game-clustered one.
+            + f" | {interval.bets:,} | {interval.clusters:,} {interval.cluster_unit}s "
             f"| {interval.roi:+.1%} | {interval.low:+.1%} to {interval.high:+.1%} "
             f"| {interval.adjusted_low:+.1%} to {interval.adjusted_high:+.1%} "
             f"| {row_verdict(interval, suspect=suspect, minimum_bets=minimum_bets)} |"

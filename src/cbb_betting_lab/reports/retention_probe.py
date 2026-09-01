@@ -126,7 +126,7 @@ from __future__ import annotations
 
 import json
 import random
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
@@ -1323,6 +1323,16 @@ def _pct(value: float) -> str:
     return f"{100.0 * float(value):.1f}%"
 
 
+def _by_strength(tiers: Iterable[str]) -> list[str]:
+    """High-major first, then mid, then low, then unplaced.
+
+    Alphabetical order puts low-major between high and mid, which reads as
+    noise. This lab's whole thesis is a gradient down that axis, and a table
+    whose columns are out of order hides the gradient it exists to show.
+    """
+    return sorted(set(tiers), key=lambda t: (-_TIER_RANK.get(t, 0), t))
+
+
 def _share_cell(entry: Mapping) -> str:
     """A share is never printed without its denominator and its interval."""
     n = int(entry["events_fully_asked"])
@@ -1519,6 +1529,14 @@ def render(record: Mapping) -> str:
     for event in record.get("events", []):
         key = stratum_key(event["tier"], event["month"], event["window"])
         by_stratum_probed[key] = by_stratum_probed.get(key, 0) + 1
+    strata = sorted(
+        strata,
+        key=lambda s: (
+            -_TIER_RANK.get(str(s.get("tier", "")), 0),
+            str(s.get("month", "")),
+            str(s.get("window", "")),
+        ),
+    )
     for stratum in strata:
         if int(stratum["drawn"]) >= int(stratum["target"]):
             flag = ""
@@ -1559,7 +1577,8 @@ def render(record: Mapping) -> str:
         add("")
     if record.get("probed_by_tier"):
         parts = ", ".join(
-            f"{tier}: {count}" for tier, count in sorted(record["probed_by_tier"].items())
+            f"{tier}: {record['probed_by_tier'][tier]}"
+            for tier in _by_strength(record["probed_by_tier"])
         )
         add(f"Events asked about, by conference tier — {parts}.")
         add("")
@@ -1602,13 +1621,14 @@ def render(record: Mapping) -> str:
             f"**{entry['verdict']}** |"
         )
     add("")
-    add(
-        "⚠ marks a market whose Wilson interval straddles the "
-        "measurability threshold: at this sample size the probe cannot separate "
-        "it from the line, and it is classified on the conservative side "
-        "because ambiguity falls on the not-a-play side."
-    )
-    add("")
+    if any(e.get("straddles_threshold") for e in record.get("markets", [])):
+        add(
+            "⚠ marks a market whose Wilson interval straddles the "
+            "measurability threshold: at this sample size the probe cannot "
+            "separate it from the line, and it is classified on the "
+            "conservative side because ambiguity falls on the not-a-play side."
+        )
+        add("")
     for value, prose in VERDICT_PROSE.items():
         count = sum(1 for e in record.get("markets", []) if e["verdict"] == value)
         add(f"- **{value}** ({count}) — {prose}.")
@@ -1640,7 +1660,7 @@ def render(record: Mapping) -> str:
         add("")
 
     # -- retention by tier ---------------------------------------------------
-    tiers = sorted(record.get("probed_by_tier", {}))
+    tiers = _by_strength(record.get("probed_by_tier", {}))
     if tiers:
         add("### Retention by conference tier")
         add("")
@@ -1673,7 +1693,10 @@ def render(record: Mapping) -> str:
         "there is no bracket left."
     )
     add("")
-    coverage = record.get("book_coverage_by_tier", [])
+    coverage = sorted(
+        record.get("book_coverage_by_tier", []),
+        key=lambda c: -_TIER_RANK.get(str(c.get("tier", "")), 0),
+    )
     if coverage:
         add(
             "| Tier | Events probed | Mean books/event | Median | Min | Max | "
@@ -1690,6 +1713,35 @@ def render(record: Mapping) -> str:
                 f"{int(entry['distinct_markets_priced'])} |"
             )
         add("")
+        measured = [c for c in coverage if int(c["events_probed"])]
+        if len(measured) >= 2:
+            richest = max(measured, key=lambda c: float(c["mean_books_per_event"]))
+            thinnest = min(measured, key=lambda c: float(c["mean_books_per_event"]))
+            if richest is not thinnest:
+                ratio = float(thinnest["mean_books_per_event"]) and (
+                    float(richest["mean_books_per_event"])
+                    / float(thinnest["mean_books_per_event"])
+                )
+                add(
+                    f"**{richest['tier']} games carry "
+                    f"{float(richest['mean_books_per_event']):.2f} distinct "
+                    f"books per event over {int(richest['events_probed'])} "
+                    f"events, {thinnest['tier']} games "
+                    f"{float(thinnest['mean_books_per_event']):.2f} over "
+                    f"{int(thinnest['events_probed'])}"
+                    + (f" — {ratio:.1f} to 1.**" if ratio else ".**")
+                )
+                add("")
+                add(
+                    "That gap is the thesis in one number, and it is also the "
+                    "warning beside it: fewer books is a wider spread and a "
+                    "narrower best-price bracket, so an edge measured where the "
+                    "board is thin is the hardest kind to take. It is measured "
+                    "on one event per (tier, month, tip window) cell, which is "
+                    "the sample size printed in the column beside it and not a "
+                    "season."
+                )
+                add("")
     books = record.get("books", [])
     if books:
         tier_columns = sorted({t for b in books for t in b.get("events_by_tier", {})})
