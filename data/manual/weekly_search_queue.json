@@ -1,0 +1,29 @@
+{
+  "declared_on": "2026-09-01",
+  "why": "The alpha budget is a rate limit on degrees of freedom, and a rate limit is only real if the thing being rated is written down BEFORE the search runs. This file is that declaration: an ordered queue of hypotheses, each with a falsifiable predicted direction, which scripts/run_weekly_loop.py drains at no more than the ledger's declared per-week budget. The loop READS this file and never writes it, which is the fence: a search that could add to its own queue is a search with no budget at all. Adding an entry is a commit in a pull request, made before the number it predicts has been seen.",
+  "how_to_read_this": {
+    "order_is_fixed": "Entries are spent in file order. Reordering after seeing a result is how a queue becomes a menu, so the order is part of the declaration and a reordering commit is as visible as a new entry.",
+    "predicted_direction": "Required, and validated by experiment_ledger.Hypothesis, which raises without one. The football lab spent three of twelve pre-registered slots on cuts written with no direction, which could therefore only ever be exploratory.",
+    "stage": "discovery or holdout. Putting a discovery finding to the holdout IS a second look and is counted as one, so a holdout entry costs a slot exactly like a new question does.",
+    "re_running_is_free": "experiment_ledger.Hypothesis.key() is (search, name, seasons, stage) and does not include the date. Re-measuring an entry already in the ledger on another week's data is the SAME look, not a new one, so it spends nothing. That is why the steady state of this file is empty and why an empty queue is the correct weekly outcome rather than an idle loop.",
+    "an_empty_queue_is_not_a_stalled_lab": "When this queue empties, the weekly loop keeps refitting, re-measuring, re-rendering and checking for demotion. What it stops doing is spending new degrees of freedom, which is exactly what 'when the budget is spent the search waits' means."
+  },
+  "queue": [
+    {
+      "search": "champion_challenger",
+      "name": "the weekly refit's ROI exceeds the standing champion's by the pre-registered margin",
+      "seasons": [2027],
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "why": "The weekly refit is itself a search, and an unrecorded one would be the exact failure experiment_ledger.py was written against: a model replaced every week by whichever fit looked best, with no cumulative tally of how many comparisons that took. promotion.judge() decides the comparison against data/manual/promotion_criteria.json; this entry is the degree of freedom the comparison spends. Predicted higher because refitting on more data is supposed to help - and the football lab's four reversals are the reason that prediction is written down rather than assumed."
+    },
+    {
+      "search": "forward_evidence",
+      "name": "CLV: frozen opinions beat the closing price",
+      "seasons": [2027],
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "why": "Cooper's brief asks for closing-line value tracked per market beside ROI, and CLV can flatter: a positive-CLV record that loses money is still losing money, and a winning record with negative CLV is variance. Either way it is a claim about whether this lab knows something the market does not, so it spends a slot. Predicted higher, which is the claim CLV is normally cited to support, so a reversal here is informative."
+    }
+  ]
+}

@@ -1510,21 +1510,89 @@ def render_card(run: CardRun) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _bars_that_stopped_wagers(run: CardRun) -> list[tuple[Bar, int]]:
+    """Every bar that stopped at least one wager, in the order they are applied.
+
+    **Read off `result.bar_counts`, never asserted**, for the same reason the
+    allowlist line in :func:`_what_this_is_not_section` is read off the policy.
+    `select` counts a wager under the **first** bar it meets and then stops
+    asking, so this list is the card's whole answer to "why nothing" — and on
+    the day a receipt is signed it is a different answer than it is today.
+    """
+    return [
+        (bar, int(run.result.bar_counts.get(bar.value, 0)))
+        for bar in BAR_ORDER
+        if int(run.result.bar_counts.get(bar.value, 0))
+    ]
+
+
 def _selections_section(run: CardRun) -> list[str]:
     lines = ["## Selections", ""]
     if not run.selections:
-        lines += [
-            "**None.** No wager on this slate cleared every bar, and the first "
-            "bar every one of them met is that its market is not allowlisted by "
-            "a reviewed policy.",
-            "",
-            "That is not a pass, an avoid, or a no-value call, and it is not "
-            "the model declining to find value. It is the state this lab is "
-            "designed to be in until Cooper signs an acceptance receipt for a "
-            "market: **Claude may withdraw an allowlist and may never grant "
-            "one.** No selection, no lean, no pass and no stake.",
-            "",
-        ]
+        # WHY NOTHING IS READ OFF THE RUN, NOT TYPED INTO THE PROSE. This
+        # paragraph asserted the allowlist bar unconditionally until a
+        # verification pass reproduced the card it produces with a market
+        # allowlisted and every wager stopped at the edge threshold: the header
+        # read "allowlists 1 market(s)", the identity table read
+        # `not allowlisted = 0`, and this paragraph still told the reader the
+        # missing receipt was the reason. A card that names the wrong gate is
+        # worse than a card that names none — the reader acts on the reason,
+        # and the one reason that must never be invented is the one that says
+        # the lab has not yet been asked a question it has in fact answered.
+        stopped = _bars_that_stopped_wagers(run)
+        barred = sum(count for _, count in stopped)
+        only_the_allowlist = len(stopped) == 1 and stopped[0][0] is Bar.NOT_APPROVED
+        lines.append("**None.** No wager on this slate cleared every bar.")
+        lines.append("")
+        if not stopped:
+            lines += [
+                "No bar was reached, because there was no priced wager on this "
+                "slate day to reach one. That is an absence of board coverage "
+                "and it is reported as one.",
+                "",
+            ]
+        elif only_the_allowlist:
+            lines += [
+                f"The first bar every one of them met — all {barred:,} of them "
+                "— is that its market is not allowlisted by a reviewed policy. "
+                "No later question was asked of any wager on this card.",
+                "",
+            ]
+        else:
+            lines += [
+                "These are the bars they met, in the order the bars are "
+                "applied. A wager is counted under the **first** bar it meets "
+                "and is asked nothing after it, so a market stopped by the "
+                "allowlist was never put to the model at all:",
+                "",
+            ]
+            lines += [
+                f"* {bar.value} — {count:,} wager(s)" for bar, count in stopped
+            ]
+            lines.append("")
+        # The receipt half of the paragraph is the policy's to state, exactly
+        # as in `_what_this_is_not_section`.
+        if not run.policy.allowlist:
+            lines += [
+                "That is not a pass, an avoid, or a no-value call, and it is "
+                "not the model declining to find value. It is the state this "
+                "lab is designed to be in until Cooper signs an acceptance "
+                "receipt for a market: **Claude may withdraw an allowlist and "
+                "may never grant one.** No selection, no lean, no pass and no "
+                "stake.",
+                "",
+            ]
+        else:
+            lines += [
+                "None of the above is a pass, an avoid, or a no-value call. "
+                "Where a gate stopped a market the card names the gate, and "
+                "where the edge threshold stopped one that is a statement "
+                "about the prices this run could actually reach at card time "
+                "and not a view about the bet. **Claude may withdraw an "
+                "allowlist and may never grant one.** No selection, no lean, "
+                "no pass and no stake.",
+                "",
+            ]
     else:
         lines += [
             "| Game | Market | Selection | Price | Book | Model | Edge | Push mass | Prior weight | Tier |",

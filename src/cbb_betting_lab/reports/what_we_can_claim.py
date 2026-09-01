@@ -310,9 +310,16 @@ class Correction:
     #: `max(hypotheses, 1)`, which is what `stats` wants.
     looks: int
     factor: float
-    #: False when no ledger was found. The report then says the correction could
-    #: not be applied rather than quietly applying none.
+    #: False when no ledger was found, and also when one was found and could not
+    #: be read. The report then says the correction could not be applied rather
+    #: than quietly applying none — and :attr:`error` is what separates the two
+    #: cases, because a missing instrument and a broken one are different claims.
     applied: bool
+    #: Non-empty when the ledger is **present and unreadable**. A broken
+    #: instrument is never reported as an absent one, and it never takes the rest
+    #: of the document down with it: every other section of this report is
+    #: independent of the family size and stays true when it cannot be read.
+    error: str = ""
     budget_per_week: int = 0
     budget_declared_on: str = ""
     discovery: int = 0
@@ -326,6 +333,7 @@ class Correction:
             "looks": self.looks,
             "factor": self.factor,
             "applied": self.applied,
+            "error": self.error,
             "budget_per_week": self.budget_per_week,
             "budget_declared_on": self.budget_declared_on,
             "discovery": self.discovery,
@@ -348,6 +356,20 @@ def correction_from_ledger(path: Path) -> Correction:
     states that the correction could not be applied, which is a different and
     much more alarming claim than "the correction was applied and nothing
     needed widening".
+
+    **A ledger that is present and unreadable returns the same `applied=False`
+    with `error` set, and never raises.** It is the only input this function
+    reads, and letting its exception escape took the whole document down —
+    including every section that has nothing to do with the family size. That is
+    not a fail-closed outcome: the workflow step that re-renders this report is
+    `continue-on-error: true` and the health step does not consult it, so the run
+    is not marked degraded and the publish step carries the *previous*
+    `cbb_what_we_can_claim.md` from the checkout onto `card-feed` as
+    `latest_what_we_can_claim.md`. A reader would get a coherent, confident
+    document with nothing in it to say that today's render never happened —
+    which is precisely the substitution of a stale claim for a broken instrument
+    that `build_record` already refuses to make for the backtest record and the
+    forward ledger.
     """
     target = Path(path)
     if not target.is_file():
@@ -358,7 +380,17 @@ def correction_from_ledger(path: Path) -> Correction:
             applied=False,
             source=_repo_relative(target),
         )
-    ledger = load_experiment_ledger(target)
+    try:
+        ledger = load_experiment_ledger(target)
+    except Exception as exc:  # noqa: BLE001 - reported, never swallowed
+        return Correction(
+            hypotheses=0,
+            looks=1,
+            factor=1.0,
+            applied=False,
+            error=f"{type(exc).__name__}: {exc}",
+            source=_repo_relative(target),
+        )
     stages = ledger.by_stage()
     looks = max(ledger.count, 1)
     return Correction(
@@ -1210,9 +1242,20 @@ def _claims_table(claims: Sequence[Mapping]) -> list[str]:
             replication = "no held-out test has been run"
         verdict = _text(claim.get("verdict"))
         if claim.get("settlement_suspect"):
+            # THE VERDICT WORD IS WITHHELD, not qualified. This cell used to
+            # print "…it would read *demonstrated edge*", which is the exact
+            # thing `not_evidence` says is the mistake: *"it is neither an edge
+            # nor a deficit, and saying which it 'would have been' is the
+            # mistake."* A reader skimming a verdict column reads the last
+            # bolded-or-italic phrase in it, and on a second-half market that
+            # phrase was the finding the lab is not entitled to. The ROI, the
+            # interval and the corrected interval are all still printed in
+            # their own columns with the sample size, so nothing is hidden —
+            # only the word that would turn an artefact into a verdict.
             verdict = (
-                "**not evidence** — the settlement rule cannot be verified; "
-                f"stated in the stats vocabulary it would read *{verdict}*"
+                "**not evidence** — the settlement rule cannot be verified, so "
+                "this number measures the rule as much as the model and is "
+                "neither an edge nor a deficit"
             )
         lines.append(
             f"| `{_text(claim.get('market'))}` | {_text(claim.get('tier'))} "
@@ -1280,14 +1323,31 @@ def render(record: Mapping) -> str:
     add("## The correction this document applies")
     add("")
     if not correction.get("applied"):
-        add(
-            "**No experiment ledger was found, so no family-wise correction "
-            "could be applied.** Every interval below is therefore an "
-            "*uncorrected* 95% interval, and an uncorrected interval on a lab "
-            "that runs a search every week means less than it appears to. That "
-            "is a fault in the instrument, not a licence to read the numbers "
-            "as they stand."
-        )
+        # A ledger that is missing and a ledger that is broken are different
+        # claims, and only one of them is a true statement about a fresh clone.
+        # Reporting the broken one as "not found" would make a fault look like
+        # a lab that has simply not searched yet.
+        if _text(correction.get("error")):
+            add(
+                "**The experiment ledger is present and could not be read, so "
+                "no family-wise correction could be applied.** "
+                f"`{_text(correction.get('source'))}` — "
+                f"{_text(correction.get('error'))}. This is a **broken "
+                "instrument**, not a lab that has tested nothing: the count of "
+                "hypotheses this lab has searched is unknown, so every interval "
+                "below is an *uncorrected* 95% interval and is **narrower than "
+                "the evidence supports**. Nothing below may be read as a "
+                "finding until the ledger reads again."
+            )
+        else:
+            add(
+                "**No experiment ledger was found, so no family-wise correction "
+                "could be applied.** Every interval below is therefore an "
+                "*uncorrected* 95% interval, and an uncorrected interval on a lab "
+                "that runs a search every week means less than it appears to. That "
+                "is a fault in the instrument, not a licence to read the numbers "
+                "as they stand."
+            )
     else:
         add(
             f"**{_as_int(correction.get('hypotheses')):,} distinct hypotheses "
@@ -1594,7 +1654,17 @@ def render(record: Mapping) -> str:
     add("## Where every number above came from")
     add("")
     for label, block in (
-        ("Experiment ledger", {"path": _text(correction.get("source")), "found": bool(correction.get("applied"))}),
+        (
+            "Experiment ledger",
+            {
+                "path": _text(correction.get("source")),
+                "found": bool(correction.get("applied")),
+                # Carried through so the provenance list distinguishes a ledger
+                # that is missing from one that is present and unreadable, the
+                # same way it already does for the other three records.
+                "error": _text(correction.get("error")),
+            },
+        ),
         ("Price backtest", record.get("backtest", {}) or {}),
         ("Forward-evidence ledger", record.get("forward", {}) or {}),
         ("Replication record", record.get("replication", {}) or {}),

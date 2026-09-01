@@ -538,3 +538,134 @@ def test_rerender_does_not_consult_the_evidence(tmp_path: Path):
     assert result.returncode == 0, result.stderr
     assert WC.report_path(CBB, outputs).read_text(encoding="utf-8") == before
     assert "The only result that survives is a loss." in before
+
+
+# ---------------------------------------------------------------------------
+# Two regressions found by adversarial review on 2026-09-01
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("label", "payload"),
+    [
+        ("malformed json", "{ this is not json"),
+        # `experiment_ledger.Hypothesis.__post_init__` raises `DirectionRequired`
+        # on a hypothesis with no predicted direction. That is the right thing
+        # for the ledger to do and the wrong thing for this report to die of.
+        (
+            "a hypothesis with no declared direction",
+            json.dumps(
+                {
+                    "alpha_budget": {"per_week": 6, "declared_on": "", "rationale": ""},
+                    "hypotheses": [
+                        {
+                            "search": "core_team_markets",
+                            "name": "moneyline",
+                            "tested_on": "2026-09-01",
+                            "seasons": [2026],
+                            "outcome": "pending",
+                            "predicted_direction": "",
+                            "stage": "discovery",
+                            "realised_direction": "",
+                        }
+                    ],
+                }
+            ),
+        ),
+        ("a JSON array where an object belongs", "[]"),
+    ],
+)
+def test_an_unreadable_experiment_ledger_is_reported_and_never_takes_the_document_down(
+    tmp_path: Path, label: str, payload: str
+):
+    """The experiment ledger was the one input whose failure escaped.
+
+    `build_record` already catches a broken backtest record and a broken forward
+    ledger and reports each as *present and unreadable*, because reporting a
+    broken instrument as *nothing measured* turns a fault into a null result.
+    `correction_from_ledger` did not: the exception escaped `build_record`, the
+    script died with a traceback, and **no document was written at all**.
+
+    That is not fail-closed. The workflow step that re-renders this report is
+    `continue-on-error: true` and the health step does not consult it, so the run
+    is not marked degraded — and the publish step then carries the *previous*
+    `data/outputs/cbb_what_we_can_claim.md` from the checkout onto `card-feed`
+    as `latest_what_we_can_claim.md`. The reader gets a coherent, confident
+    document with nothing in it to say that today's render never happened, which
+    is the stale-claim-for-broken-instrument substitution this whole file exists
+    to prevent.
+
+    So: the correction is not applied, the report says the ledger is present and
+    could not be read, it names the reason, and every other section still
+    renders — none of them depends on the family size.
+    """
+    outputs = tmp_path / "outputs"
+    outputs.mkdir(parents=True)
+    WC.experiment_ledger_path(outputs).write_text(payload, encoding="utf-8")
+    _write_backtest(outputs, [_cell(roi=0.05, half_width=0.02)])
+
+    correction = WC.correction_from_ledger(WC.experiment_ledger_path(outputs))
+    assert not correction.applied, label
+    assert correction.error, f"{label}: an unreadable ledger must name its fault"
+    assert correction.looks == 1
+
+    record = _build(tmp_path)
+    rendered = WC.render(record)
+
+    # Present and unreadable, never "not found" — they are different claims.
+    assert "present and could not be read" in rendered, label
+    assert "No experiment ledger was found" not in rendered, label
+    assert "broken instrument" in rendered
+    assert "narrower than the evidence supports" in rendered
+    assert "**present and unreadable**" in rendered
+    # And the rest of the document is still there.
+    assert "## Measured against real prices" in rendered
+    assert WC.NOT_A_NO_VALUE_CALL in rendered
+
+    # End to end, through the entry point the workflow actually runs.
+    result = _run_script(cwd=tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert WC.report_path(CBB, outputs).is_file()
+
+
+def test_a_suspect_settlement_row_never_prints_the_verdict_it_would_have_had(
+    tmp_path: Path,
+):
+    """`not_evidence` says it in words: *saying which it "would have been" is
+    the mistake.*
+
+    The verdict cell for a second-half market used to read "**not evidence** —
+    the settlement rule cannot be verified; stated in the stats vocabulary it
+    would read *demonstrated edge*". That is the sentence the docstring forbids,
+    printed in the one column a reader skims for the answer, on exactly the
+    market family that produced the football lab's largest false finding. The
+    ROI, the interval and the corrected interval are all still printed with the
+    sample size beside them, so no number is hidden — only the verdict word the
+    lab is not entitled to.
+    """
+    outputs = tmp_path / "outputs"
+    _write_backtest(outputs, [_cell(market="total_points_h2", roi=0.099, half_width=0.02)])
+
+    record = _build(tmp_path)
+    rendered = WC.render(record)
+
+    assert len(WC.not_evidence(record)) == 1
+    assert WC.demonstrated_edges(record) == []
+    assert WC.demonstrated_deficits(record) == []
+
+    assert "not evidence" in rendered
+    assert "neither an edge nor a deficit" in rendered
+    assert "would read" not in rendered
+
+    # The verdict word must not appear in the cell's own row. Checked on the
+    # row rather than on the whole document, because the headline's
+    # `no demonstrated edge` legitimately contains `demonstrated edge` as a
+    # substring — the distinction the phrase exists to make lives in the word
+    # in front of it, which is why nothing in this repository tests for the
+    # sign by substring.
+    row = next(l for l in rendered.splitlines() if l.startswith("| `total_points_h2`"))
+    assert S.DEMONSTRATED_EDGE not in row
+    assert S.DEMONSTRATED_DEFICIT not in row
+    # The numbers themselves are still in that row, with their sample size.
+    assert "+9.9%" in row
+    assert "9,000" in row

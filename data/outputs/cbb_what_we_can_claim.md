@@ -2,7 +2,7 @@
 
 Generated from the measurement records on disk, so it cannot drift from them. The hand-written rules — written before the first measurement, which is the whole point of them — live in `docs/what_we_can_and_cannot_claim.md`. **This file is re-rendered from its own run record and is never edited by hand.**
 
-- Generated: 2026-09-01T19:29:22+00:00
+- Generated: 2026-09-01T19:38:15+00:00
 - Sample floor: **200 bets**, declared in advance. Below it this document prints a phrase and not a number.
 
 **Nothing in this repository has a demonstrated edge, because nothing has been measured against real prices yet.** That is a statement about the evidence, not about the models, and it is the correct state for a lab whose first game has not been played. Forward evidence cannot be back-dated, which is why the freeze-and-settle organ was built before the models were worth anything.
@@ -11,7 +11,7 @@ Generated from the measurement records on disk, so it cannot drift from them. Th
 
 **30 distinct hypotheses have ever been tested here**, and every interval below is widened by **x1.60** before it means what it says. That is the ledger's **cumulative** count and never the day's: *a search that runs every week is not twelve tests, it is twelve tests a week, forever.*
 
-- Alpha budget: **6 new hypotheses a week**, declared —. When it is spent the search waits; it never lowers the bar.
+- Alpha budget: **6 new hypotheses a week**, declared 2026-09-01. When it is spent the search waits; it never lowers the bar.
 - 30 discovery, 0 holdout. Putting a discovery finding to the holdout is a second look and is counted as one.
 
 The correction is re-applied here at render time rather than copied out of the record it came from. A backtest run in December carries December's family size; by March the ledger has grown and the same number means less. This can only ever make an interval wider.

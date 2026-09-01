@@ -45,28 +45,35 @@ the results tables matches" is indistinguishable from a night that genuinely was
 not played. Both are refused up front, before a single marker is written.
 
 **A single unreadable snapshot degrades rather than crashes.** It is named, it
-is counted, and the other days of the archive settle around it — the brief's
-rule that a run degrades rather than empties. See `unreadable_snapshots()` for
-what this script can and cannot do about one.
+is counted, it is **left unsettled and unmarked**, and the other days of the
+archive settle around it — the brief's rule that a run degrades rather than
+empties. See `unreadable_snapshots()`.
 
-## The accounting identity, printed rather than assumed
+## The accounting identity, checked rather than merely printed
 
 Cooper's rule, ported from the NHL lab where the identity is
 `priced = no_opinion + below_threshold + unparseable + ambiguous + bets`. Here
-the pass has three of them and every one is printed:
+the pass has four, and the two that matter are checked against numbers that came
+from somewhere other than the counters being checked:
 
     snapshots seen  = settled now + waiting + settled in an earlier pass
-    rows seen       = settled + void + unsettleable
+                      + could not be parsed
+    rows seen       = settled + void + unsettleable, against the rows READ
+                      off the snapshot files before anything was graded
     unsettleable    = no fixture + ambiguous player + futures deferred
                       + raised inside settle + everything else
+    ledger          = rows before + rows appended, against the rows graded
 
-and one that is not arithmetic on the same object at all, which is what makes
-it worth printing: **the rows this pass graded, against the rows the ledger
-actually grew by.** The first three can only catch a counter that was never
-incremented; the fourth catches a pass that graded four hundred opinions and
-wrote none of them, which is the failure that looks exactly like a quiet night.
+**An identity whose two sides are computed from each other is decoration.**
+`SettlementResult.rows_seen` is a property returning
+`rows_settled + rows_void + rows_unsettleable`, so a line asserting that those
+three sum to it holds for every pass that could ever run — including one that
+graded four hundred opinions and counted none of them, which is precisely the
+failure it would be there to catch. So the rows line is checked against
+`rows_read`, counted off the files in `settle_snapshots` before a row is graded,
+and the ledger line against the length of the file on disk.
 
-That fourth line is also the one that found defect I in `docs/ported_defects.md`
+The ledger line is also the one that found defect I in `docs/ported_defects.md`
 — `settle_snapshots` counts a row it grades before it discovers the day has to
 wait, so on a waiting night the two legitimately disagree. The gap is named and
 explained rather than subtracted out, because subtracting it out is how the
@@ -256,29 +263,29 @@ def load_inputs(
 def unreadable_snapshots(archive_dir: Path) -> list[Path]:
     """Snapshot files this pass cannot parse, named before it starts.
 
-    `forward_evidence.read_snapshot` reads defensively and returns an **empty
-    frame** for a file it cannot parse, which is right for a reader and wrong
-    for the operator: the settle pass then grades zero rows, writes a `.settled`
-    sidecar and moves on, and a day of frozen opinions is quietly recorded as a
-    day with nothing in it. This function is the loud half of that, and it is
-    all this script can honestly do — the sidecar is written inside the module.
+    The pass itself now skips them — `settle_snapshots` reads through
+    `read_snapshot_strictly` and leaves an unparseable day **unsettled and
+    unmarked**, so the night stays gradeable if the file is restored or
+    repaired. This function is the loud half: the module counts and names them
+    in its own result, and this names them in the log *before* the pass runs, so
+    an operator reading the Actions log top to bottom meets the broken file
+    before meeting the numbers it is missing from.
 
-    A corrupt snapshot is therefore reported, counted, and **not** allowed to
-    stop the rest of the archive settling. It is deliberately not an error
-    status either: it is a permanent fault needing a human, and exiting red on
-    every subsequent run would keep the gameday backup trigger from ever
-    standing down, which spends a second slate's credits every day for a file
-    no run can repair.
+    A corrupt snapshot is reported, counted, and **not** allowed to stop the rest
+    of the archive settling. It is deliberately not an error status either: it
+    is a fault needing a human, and exiting red on every subsequent run would
+    keep the gameday backup trigger from ever standing down, which spends a
+    second slate's credits every day for a file no rerun repairs.
     """
     bad: list[Path] = []
     for path in fe.snapshot_files(archive_dir):
         try:
-            # `for_append` is the store's own "raise rather than swallow" flag.
-            # Borrowed rather than reimplemented: a second try/except over
-            # `pd.read_csv` here would be a second copy of what counts as an
-            # unreadable store, and the two would drift the moment either
-            # learns about a new exception class.
-            stores.read_store(path, columns=fe.SNAPSHOT_COLUMNS, for_append=True)
+            # The module's own strict read, not a second copy of it. A
+            # `pd.read_csv` in a try/except here would be a second definition
+            # of "unreadable", and the two would drift the moment either
+            # learned about a new exception class — leaving this warning and the
+            # pass's own skip disagreeing about which files are broken.
+            fe.read_snapshot_strictly(path)
         except stores.CorruptStoreError:
             bad.append(path)
     return bad
@@ -318,6 +325,10 @@ class Reconciliation:
     snapshots_settled_earlier: int
     waiting_days: tuple[str, ...]
     rows_seen: int
+    #: Rows read off the snapshot files, before anything was graded. NOT derived
+    #: from the three outcome counters, which is what makes the rows identity
+    #: falsifiable — see `breaks`.
+    rows_read: int
     rows_settled: int
     rows_void: int
     rows_unsettleable: int
@@ -331,10 +342,11 @@ class Reconciliation:
     ledger_after: int
     rows_appended: int
     snapshots_unreadable: int
+    unreadable_days: tuple[str, ...]
 
     @classmethod
     def of(
-        cls, result: fe.SettlementResult, *, ledger_before: int, unreadable: int
+        cls, result: fe.SettlementResult, *, ledger_before: int
     ) -> Reconciliation:
         raised = sum(result.settlement_errors.values())
         return cls(
@@ -342,16 +354,18 @@ class Reconciliation:
             snapshots_settled=result.snapshots_settled,
             snapshots_waiting=result.snapshots_waiting,
             # Not a counter the module keeps, and it is the residual on
-            # purpose: a snapshot the pass neither settled nor waited on is one
-            # it recognised as already done, through the sidecar or through the
-            # ledger's own set of snapshot dates.
+            # purpose: a snapshot the pass neither settled, waited on, nor
+            # failed to parse is one it recognised as already done, through the
+            # sidecar or through the ledger's own set of snapshot dates.
             snapshots_settled_earlier=(
                 result.snapshots_seen
                 - result.snapshots_settled
                 - result.snapshots_waiting
+                - result.snapshots_unreadable
             ),
             waiting_days=tuple(result.waiting_days),
             rows_seen=result.rows_seen,
+            rows_read=result.rows_read,
             rows_settled=result.rows_settled,
             rows_void=result.rows_void,
             rows_unsettleable=result.rows_unsettleable,
@@ -374,7 +388,8 @@ class Reconciliation:
             ledger_before=ledger_before,
             ledger_after=result.ledger_rows,
             rows_appended=result.ledger_rows - ledger_before,
-            snapshots_unreadable=unreadable,
+            snapshots_unreadable=result.snapshots_unreadable,
+            unreadable_days=tuple(result.unreadable_days),
         )
 
     @property
@@ -388,16 +403,38 @@ class Reconciliation:
         if self.snapshots_settled_earlier < 0:
             failures.append(
                 f"{self.snapshots_settled:,} settled + {self.snapshots_waiting:,} "
-                f"waiting exceeds the {self.snapshots_seen:,} snapshots seen."
+                f"waiting + {self.snapshots_unreadable:,} unreadable exceeds the "
+                f"{self.snapshots_seen:,} snapshots seen."
             )
-        if (
-            self.rows_settled + self.rows_void + self.rows_unsettleable
-            != self.rows_seen
-        ):
+        # THE ROWS IDENTITY, AGAINST THE FILES RATHER THAN AGAINST ITSELF.
+        #
+        # `SettlementResult.rows_seen` is a property returning
+        # `rows_settled + rows_void + rows_unsettleable`, so comparing that sum
+        # to it is a tautology: it holds for every possible pass, including one
+        # that graded four hundred opinions and counted none of them. The check
+        # has to be made against a number that came from somewhere else, and
+        # `rows_read` is counted off the snapshot files before a single row is
+        # graded.
+        #
+        # An inequality in one direction only. `rows_seen < rows_read` is the
+        # legitimate signature of a day that waited part-way through, so it is
+        # explained below rather than failed; `rows_seen > rows_read` cannot
+        # happen for any honest reason, and neither can a shortfall on a pass
+        # where nothing waited.
+        if self.rows_seen > self.rows_read:
             failures.append(
                 f"{self.rows_settled:,} settled + {self.rows_void:,} void + "
-                f"{self.rows_unsettleable:,} unsettleable is not the "
-                f"{self.rows_seen:,} rows seen."
+                f"{self.rows_unsettleable:,} unsettleable = {self.rows_seen:,} "
+                f"outcomes, over {self.rows_read:,} rows read from the "
+                "snapshots. A row was counted twice, or counted without being "
+                "read."
+            )
+        elif self.rows_seen < self.rows_read and not self.snapshots_waiting:
+            failures.append(
+                f"{self.rows_read:,} rows were read from the snapshots and only "
+                f"{self.rows_seen:,} reached an outcome, with no day waiting to "
+                "explain the difference. A frozen opinion was graded and "
+                "counted nowhere."
             )
         if self.rows_unsettleable_other < 0:
             failures.append(
@@ -442,18 +479,18 @@ class Reconciliation:
             f"    settled in an earlier pass         {self.snapshots_settled_earlier:>9,}",
         ]
         if self.snapshots_unreadable:
-            # NOT a fourth category, and it must not read as one. An unreadable
-            # snapshot is settled as a day with no rows, so it is already
-            # inside one of the three counts above. Printing it as a peer of
-            # them would produce a block that adds to more than it saw, which
-            # is the sub-count-inside-a-total confusion this whole section is
-            # arranged against.
+            # A fourth category, and a peer of the three above it: an unreadable
+            # snapshot is neither settled, nor waiting, nor done in an earlier
+            # pass. It is a day this run could not read and deliberately did not
+            # close, so it belongs in the identity rather than hidden inside one
+            # of the other counts.
             lines.append(
-                "  snapshots that could not be parsed   "
+                "    could not be parsed, left OPEN     "
                 f"{self.snapshots_unreadable:>9,}"
-                "  (already counted above, settled as a day with no opinions)"
             )
+            lines.append("      needing a human: " + ", ".join(self.unreadable_days))
         lines += [
+            f"  rows read from the snapshots         {self.rows_read:>9,}",
             f"  rows seen                            {self.rows_seen:>9,}",
             f"    settled (won, lost or pushed)      {self.rows_settled:>9,}",
             f"      of those, no readable price      {self.rows_without_a_price:>9,}",
@@ -496,21 +533,27 @@ class Reconciliation:
         lines = [
             f"  snapshots:    {self.snapshots_settled:,} settled + "
             f"{self.snapshots_waiting:,} waiting + "
-            f"{self.snapshots_settled_earlier:,} settled earlier = "
+            f"{self.snapshots_settled_earlier:,} settled earlier + "
+            f"{self.snapshots_unreadable:,} unreadable = "
             f"{self.snapshots_seen:,} seen.",
+            # Against `rows read`, never against the sum of the three counters.
+            # `rows_seen` IS that sum, so the version of this line that ends in
+            # "= rows seen" holds for every pass that could ever run, including
+            # one that graded a night and counted none of it.
             f"  rows:         {self.rows_settled:,} settled + {self.rows_void:,} "
             f"void + {self.rows_unsettleable:,} unsettleable = "
-            f"{self.rows_seen:,} seen.",
+            f"{self.rows_seen:,} outcomes, against {self.rows_read:,} rows read "
+            "from the snapshots.",
             f"  unsettleable: {self.rows_without_a_fixture:,} no fixture + "
             f"{self.rows_ambiguous_player:,} ambiguous player + "
             f"{self.rows_futures_deferred:,} futures + "
             f"{self.rows_raised_inside_settle:,} raised + "
             f"{self.rows_unsettleable_other:,} other = "
             f"{self.rows_unsettleable:,}.",
-            # The one that is not arithmetic on the counters themselves. It
-            # compares what the pass says it graded against what the file on
-            # disk actually grew by, which is the only line here that can catch
-            # a pass that graded a night and wrote none of it.
+            # The second of the two that are not arithmetic on the counters
+            # themselves. It compares what the pass says it graded against what
+            # the file on disk actually grew by, which is the only line here
+            # that can catch a pass that graded a night and wrote none of it.
             f"  ledger:       {self.ledger_before:,} + {self.rows_appended:,} "
             f"appended = {self.ledger_after:,}, against {self.rows_seen:,} rows "
             "graded.",
@@ -674,10 +717,11 @@ def main(argv: list[str] | None = None) -> int:
     unreadable = unreadable_snapshots(archive_dir)
     for path in unreadable:
         print(
-            f"::warning::{path.name} could not be parsed. The opinions frozen "
-            "in it settle as a day with no rows, and the prices they were "
-            "frozen at are gone. The rest of the archive still settles; this "
-            "one needs a human."
+            f"::warning::{path.name} could not be parsed. This day is left "
+            "UNSETTLED and unmarked rather than settled as a night with no "
+            "opinions — a marked day is closed forever, an unmarked one still "
+            "grades if the file is restored from card-feed or repaired. The "
+            "rest of the archive settles around it; this one needs a human."
         )
 
     try:
@@ -708,9 +752,7 @@ def main(argv: list[str] | None = None) -> int:
     print(result.summary_line())
     print("")
 
-    reconciliation = Reconciliation.of(
-        result, ledger_before=ledger_before, unreadable=len(unreadable)
-    )
+    reconciliation = Reconciliation.of(result, ledger_before=ledger_before)
     print("Counters:")
     for line in reconciliation.counter_lines():
         print(line)

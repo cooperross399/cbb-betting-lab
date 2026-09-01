@@ -154,12 +154,39 @@ def _today(competition) -> str:
     return datetime.now(competition.timezone).date().isoformat()
 
 
-def _read_previous_fingerprint(path: Path) -> str:
+def _read_previous_fingerprint(path: Path, *, day: str, card_slot: str) -> str:
+    """The previous fingerprint, and only when it describes the same card.
+
+    **The day and the slot are checked, not merely recorded.** `_write_state`
+    stores both and this reader ignored them, while the card renders the
+    comparison as *"since the last card for this slate day"* — so the moment
+    the state file survives a run, which is precisely the change the module
+    docstring above proposes, the morning card would be compared against last
+    night's evening card and today's against yesterday's. `Selections changed`
+    would then fire on a day boundary rather than on a change, which is the one
+    failure mode the marker cannot survive: a notification that fires when
+    nothing happened stops being read long before it stops being sent.
+
+    A state file for a different day or slot is not an error and not a stale
+    file to be repaired. It is simply not a card this run may compare itself
+    against, so it reads as "nothing to compare", which the card already knows
+    how to say.
+
+    A rehearsal's state is refused for the same reason it is never published: a
+    rehearsal is not a card, and a real run must not report a change against
+    one.
+    """
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError):
         return ""
     if not isinstance(payload, dict):
+        return ""
+    if str(payload.get("slate_date", "")) != str(day):
+        return ""
+    if str(payload.get("card_slot", "")) != str(card_slot):
+        return ""
+    if str(payload.get("decision", "")) == GC.Decision.REHEARSAL.value:
         return ""
     return str(payload.get("fingerprint", ""))
 
@@ -343,7 +370,9 @@ def main(argv: list[str] | None = None) -> int:
             policy=policy,
             placement=placement,
             rehearsal=bool(args.rehearsal),
-            previous_fingerprint=_read_previous_fingerprint(state),
+            previous_fingerprint=_read_previous_fingerprint(
+                state, day=day, card_slot=slot.name
+            ),
             output_dir=outputs,
         )
     except (ValueError, GC.CardError, SnapshotKeyError) as exc:

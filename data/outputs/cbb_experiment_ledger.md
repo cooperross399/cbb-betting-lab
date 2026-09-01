@@ -6,7 +6,7 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 
 **30 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.60** before it means what it says.
 
-**Alpha budget: 6 new hypotheses a week**, declared —.
+**Alpha budget: 6 new hypotheses a week**, declared 2026-09-01. Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state — re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise.
 
 **30 discovery, 0 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
 

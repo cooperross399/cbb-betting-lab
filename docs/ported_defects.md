@@ -143,7 +143,7 @@ The alternative — a rule deciding by position, or a list of which schools are
 "State" schools — is right most of the time, and the times it is wrong settle a
 bet against the wrong game without erroring.
 
-| H | **An unreadable snapshot is settled as a day with no opinions, and the day is then marked done.** `forward_evidence.read_snapshot` reads through `stores.read_store` *without* `for_append`, so a snapshot pandas cannot parse comes back as an **empty frame**. `settle_snapshots` then grades zero rows, writes the `.settled` sidecar and moves on: a night of frozen opinions is recorded as a night with nothing in it, and the prices they were frozen at are gone. **Open — reported, not fixed.** | Reproduced by putting a zero-byte CSV beside a good snapshot and running `scripts/run_forward_evidence.py --settle`: the good day settled 18 rows against real 2026 box scores and the broken day was marked settled with a note reading `0 rows`. | Not pinned. The wiring names it — `run_forward_evidence.unreadable_snapshots` reports every unparseable snapshot as a `::warning::` and counts it in the reconciliation — and `test_run_forward_evidence.py::test_an_unreadable_snapshot_is_named_and_the_rest_of_the_night_settles` pins **that**. |
+| H | **An unreadable snapshot is settled as a day with no opinions, and the day is then marked done.** `forward_evidence.read_snapshot` reads through `stores.read_store` *without* `for_append`, so a snapshot pandas cannot parse comes back as an **empty frame**. `settle_snapshots` then grades zero rows, writes the `.settled` sidecar and moves on: a night of frozen opinions is recorded as a night with nothing in it, and the prices they were frozen at are gone. **Closed on adversarial review.** `settle_snapshots` now reads through `read_snapshot_strictly` and an unparseable snapshot is counted, named and **skipped** — no grading, no sidecar, the day left open. | Reproduced by putting a zero-byte CSV beside a good snapshot and running `scripts/run_forward_evidence.py --settle`: the good day settled its rows against real 2026 box scores and the broken day was marked settled with a note reading `0 rows`. Re-run after the fix over the same real archive: the broken day is left unmarked, and when the file is restored its **32 real opinions settle in full**. | `test_run_forward_evidence.py::test_an_unreadable_snapshot_is_not_marked_settled_and_still_grades_once_repaired` — both halves: no sidecar for the broken day, and the night grading in full on the pass after the file comes back. |
 
 **Defect H is defect 16 arriving one layer higher up.** The football lab's
 zero-byte `git show` artifact is already on the inherited list, and the gameday
@@ -153,15 +153,21 @@ instead, where the defensive read that is right for a renderer is wrong for a
 recorder: the module cannot tell "this day held no opinions" from "this day's
 file is broken", and only one of those may be marked done.
 
-The fix belongs in `forward_evidence.py` rather than in the script — most
-plausibly `read_snapshot` raising for a snapshot it cannot parse, so the day is
-skipped and left unmarked rather than closed at zero — and it is left alone here
-because that module was handed over complete and the honest half of the job is
-to say so loudly. What the script can do it does: it names the file, counts it,
-and settles the rest of the archive around it. What it cannot do is stop the
-sidecar being written, and a day closed at zero rows is closed permanently.
+The fix is in `forward_evidence.py` rather than in the script, and it is the one
+the original report proposed: `read_snapshot` stays lenient for renderers, and
+the settle pass reads through a second entry point, `read_snapshot_strictly`,
+which raises. A snapshot it cannot parse is counted into
+`SettlementResult.snapshots_unreadable`, named in `unreadable_days`, and skipped
+— never graded and never marked.
 
-| I | **The settle pass's row counters over-count on a waiting day.** `settle_snapshots` grades a snapshot's rows in order and breaks out at the first row whose result has not been published, then discards the whole day — but every row graded before that break has already incremented `rows_settled` / `rows_void` / `rows_unsettleable`. So `rows_seen` includes rows that reached no ledger, and the same rows are counted a second time on the pass that finally settles the day. The ledger itself is correct and the day still waits atomically; what is wrong is the **accounting identity the workflow prints**. **Open — reported, not fixed.** | The reconciliation in `scripts/run_forward_evidence.py` compares rows graded against what the ledger actually grew by, and the two disagreed on a night the tables carried one of two games. Reproduced directly against `settle_snapshots`: `rows_seen` 1, `ledger_rows` 0, no ledger file written. | `test_run_forward_evidence.py::test_the_rows_a_waiting_day_graded_before_waiting_are_explained` pins the **explanation**, not the miscount — the script names the gap and its two legitimate causes rather than smoothing it away. |
+**The marker was the damage, not the empty frame.** A day left unmarked still
+grades when the file is restored from `card-feed` or repaired by hand; a day
+marked done never will be, and the prices it was frozen at are gone. So the run
+still stays green — a permanent red would keep the gameday backup trigger from
+ever standing down and spend a second slate's credits every day — but the night
+is now recoverable rather than closed at zero.
+
+| I | **A waiting day counted rows it threw away.** `settle_snapshots` grades a snapshot's rows in order and breaks at the first whose result is not published, then discards the day — but every row graded before the break had already incremented `rows_settled`. The ledger was always correct and the day always waited atomically; what was wrong was the **accounting identity the workflow prints**, and the same rows were counted again on the pass that finally settled the day. | The one reconciliation line that is not arithmetic over the counters themselves — rows graded against what the ledger file actually grew by. | `test_run_forward_evidence.py::test_a_waiting_day_counts_nothing_it_threw_away` |
 
 **Defect I is what the accounting identity is for.** It is not a data defect —
 nothing is lost, nothing is double-written, and the ledger is exactly right —
@@ -176,3 +182,32 @@ night and writes none of it — so the gap is printed and explained rather than
 subtracted out. The fix belongs in `forward_evidence.py`, most plausibly by
 deciding whether the day waits before any of its rows are graded, or by grading
 into a provisional result that is only merged when the day is appended.
+
+| J | **An accounting identity whose two sides were computed from each other.** The settle pass printed `settled + void + unsettleable = rows seen` and failed the run when it did not hold — but `SettlementResult.rows_seen` is a **property** returning exactly that sum, so the line was a tautology. It held for every pass that could ever run, including one that graded four hundred opinions and counted none of them, which is the failure it was printed to catch. **Closed on adversarial review.** | Found by reading the identity rather than the output. Confirmed by constructing a `Reconciliation` from a result whose counters were all zero after a full night was graded: it reported **HOLDS**. | `test_run_forward_evidence.py::test_a_graded_row_that_reaches_no_counter_fails_the_rows_identity` — `_record_outcome` is replaced with one that grades the row and increments nothing, which is what a new branch added without its counter would do. The run exits 1. |
+
+**Defect J is the reason defect I was worth printing.** An identity is only
+worth the independence of its two sides. `settle_snapshots` now counts
+`rows_read` off the snapshot files before a single row is graded, and the rows
+line is checked against **that** — a number no outcome counter can influence.
+The inequality runs one way only: `rows_seen < rows_read` is the legitimate
+signature of defect I, a day that waited part-way through, so it is explained;
+`rows_seen > rows_read`, or any shortfall on a pass where nothing waited, is a
+frozen opinion that reached no count, and the run exits non-zero.
+
+The general rule, and the one the next lab will need: **a reconciliation line
+whose right-hand side is derived from its left-hand side is decoration, and
+decoration inside an accounting block is worse than no line at all — a reader
+trusts it.** Every identity here now names where its other side came from: the
+files on disk, or the length of the ledger.
+
+**Defect I was first shipped as an explanation and is now a fix, and the
+difference matters.** The agent that found it printed the gap on its own line
+and pinned the wording with a test, on the reasoning that a pass which graded a
+whole night and wrote none of it has the identical signature. That reasoning is
+right about the *signature* and wrong about the *remedy*: **the accounting
+identity is the instrument that catches rows going missing, and an identity
+carrying a standing exemption cannot catch anything.** The counters are now
+snapshotted before a day is graded and restored when it turns out to be
+waiting, so the identity holds with no exemption — and the case the explanation
+was protecting (a night graded and written nowhere) now shows up as the
+anomaly it is.

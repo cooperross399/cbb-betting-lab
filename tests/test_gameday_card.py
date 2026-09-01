@@ -420,6 +420,111 @@ def test_the_policy_on_disk_is_manual_only_and_nothing_here_changed_it():
     assert policy.allowlist == {}
 
 
+def test_the_empty_card_names_the_bar_that_actually_stopped_the_wagers(
+    board, day, tmp_path
+):
+    """The Selections section asserted the allowlist bar instead of reading it.
+
+    Found by an adversarial verification pass, reproduced here. The paragraph
+    that explains an empty card was written as a constant — *"the first bar
+    every one of them met is that its market is not allowlisted by a reviewed
+    policy"* — while the header above it and the identity table below it are
+    both read off the run. With a market allowlisted and every wager stopped
+    somewhere later, all three disagreed on the same page: the header read
+    `allowlists 1 market(s)`, the identity table read `not allowlisted = 0`,
+    and this paragraph still told the reader the missing receipt was the
+    reason.
+
+    That is the one reason a card must never invent. It says the lab has not
+    been asked a question it has in fact answered, and the reader acts on the
+    reason rather than on the table. `_bars_that_stopped_wagers` now reads the
+    bars off `result.bar_counts`, the same way `_what_this_is_not_section`
+    reads the allowlist off the policy.
+
+    The wagers here are stopped at `NO_OPINION` — the state of this lab with no
+    ratings module — behind a policy allowlisting **every** market on the
+    board, which is the shortest path to a card whose first bar is not the
+    allowlist. The markets are read off the board rather than typed, so a
+    fixture that grows a market cannot quietly reintroduce `NOT_APPROVED` and
+    make this test pass for the wrong reason.
+    """
+    everything = a_policy(*sorted(set(board.rows["market"].astype(str))))
+    run = GC.run_card(
+        board, competition=CBB, day=day, card_slot="morning",
+        archive_dir=tmp_path / "archive", policy=everything,
+    )
+    text = GC.render_card(run)
+    selections = text.split("## Selections")[1].split("## Exposure")[0]
+
+    assert run.selections == []
+    assert run.result.bar_counts.get(Bar.NOT_APPROVED.value, 0) == 0, (
+        "This fixture must not be stopped by the allowlist, or it cannot tell "
+        "the two paragraphs apart."
+    )
+    assert run.result.bar_counts.get(Bar.NO_OPINION.value, 0) > 0
+
+    # The bar that actually stopped them is named, with its count.
+    assert Bar.NO_OPINION.value in selections
+    assert f"{run.result.bar_counts[Bar.NO_OPINION.value]:,} wager(s)" in selections
+    # And the bar that did not is not claimed.
+    assert "the first bar every one of them met" not in selections.casefold()
+    assert "is not allowlisted by a reviewed policy" not in selections
+    assert "until Cooper signs an acceptance receipt" not in selections
+
+    # Every invariant sentence survives the rewrite. A card that stopped saying
+    # these would have traded one false statement for a missing one.
+    assert "No selection, no lean, no pass and no stake." in text
+    assert "pass, an avoid, or a no-value call" in text
+    assert GC.ACCUMULATING_NOTE in text
+
+
+def test_the_empty_card_still_names_the_allowlist_when_that_is_the_bar(
+    board, day, tmp_path
+):
+    """The true half of the sentence stays true, and stays on the card.
+
+    The fix above must not be a deletion. With the policy this lab actually
+    ships — manual-only — the allowlist **is** the first bar every wager meets,
+    and the card must go on saying so in those words, including the sentence
+    about the receipt Cooper has not signed.
+    """
+    run = GC.run_card(
+        board, competition=CBB, day=day, card_slot="morning",
+        archive_dir=tmp_path / "archive", policy=StagingProviderPolicy(),
+    )
+    text = GC.render_card(run)
+    selections = text.split("## Selections")[1].split("## Exposure")[0]
+    barred = run.result.bar_counts[Bar.NOT_APPROVED.value]
+
+    assert set(run.result.bar_counts) == {Bar.NOT_APPROVED.value}
+    assert "is not allowlisted by a reviewed policy" in selections
+    assert f"all {barred:,} of them" in selections
+    assert "until Cooper signs an acceptance receipt" in selections
+    assert "No selection, no lean, no pass and no stake." in text
+
+
+def test_the_reasons_on_the_card_are_the_reasons_in_the_identity(
+    board, day, tmp_path
+):
+    """One run, one set of counts, however many places the card prints them.
+
+    The Selections paragraph and the identity table are two renderings of
+    `result.bar_counts`, and the defect above was exactly what it looks like
+    when one of them is a copy typed by hand instead.
+    """
+    for policy in (StagingProviderPolicy(), a_policy("moneyline", "spread")):
+        run = GC.run_card(
+            board, competition=CBB, day=day, card_slot="morning",
+            archive_dir=tmp_path / f"archive-{policy.mode}", policy=policy,
+        )
+        named = dict(GC._bars_that_stopped_wagers(run))
+
+        assert {bar.value: count for bar, count in named.items()} == {
+            reason: count for reason, count in run.result.bar_counts.items() if count
+        }
+        assert sum(named.values()) + len(run.selections) == run.result.priced_wagers
+
+
 # ---------------------------------------------------------------------------
 # The accounting identity
 # ---------------------------------------------------------------------------
@@ -1467,6 +1572,93 @@ def test_the_run_records_its_fingerprint_for_the_next_run(
     assert state["slate_date"] == day
     assert state["card_slot"] == "morning"
     assert len(state["fingerprint"]) == 16
+
+
+def _fingerprint_reader():
+    """`_read_previous_fingerprint`, imported without running the script.
+
+    `run_name` is deliberately not `__main__`, so the module's own entry guard
+    does not fire and no card is rendered by the import.
+    """
+    return runpy.run_path(str(SCRIPT))["_read_previous_fingerprint"]
+
+
+def test_a_state_file_from_another_day_or_slot_is_not_a_card_to_compare_against(
+    tmp_path,
+):
+    """Regression. `_write_state` recorded the day and the slot; the reader
+    ignored them.
+
+    Found by an adversarial verification pass. The card renders the comparison
+    as *"since the last card for this slate day"*, and the reader took the
+    fingerprint out of whatever state file was on disk. Today that is inert —
+    `data/outputs/` is rebuilt from an empty checkout every CI run, so the file
+    is never there — but the module docstring proposes carrying it forward on
+    `card-feed` as "two lines in the workflow and nothing here". On the day
+    those two lines land, the morning card would have been compared against
+    last night's evening card and today's against yesterday's, and
+    `Selections changed` would have fired on a day boundary rather than on a
+    change. That is the one failure this marker cannot survive: the run where
+    the selection genuinely moved looks exactly like the four hundred before it.
+
+    A rehearsal's state is refused too, for the reason a rehearsal is never
+    published: it is not a card, and a real run must not report a change
+    against one.
+    """
+    read = _fingerprint_reader()
+    state = tmp_path / "cbb_card_state.json"
+
+    def write(**overrides) -> None:
+        payload = {
+            "slate_date": "2027-01-12",
+            "card_slot": "morning",
+            "fingerprint": "abcdef0123456789",
+            "decision": "no-selections",
+            "generated_at": "2027-01-12T09:00:00Z",
+        }
+        payload.update(overrides)
+        state.write_text(json.dumps(payload), encoding="utf-8")
+
+    write()
+    assert read(state, day="2027-01-12", card_slot="morning") == "abcdef0123456789"
+
+    # The three that must read as "nothing to compare against".
+    assert read(state, day="2027-01-13", card_slot="morning") == ""
+    assert read(state, day="2027-01-12", card_slot="evening") == ""
+    write(decision="rehearsal")
+    assert read(state, day="2027-01-12", card_slot="morning") == ""
+
+    # And the pre-existing failure modes still fail closed rather than raising.
+    state.write_text("not json at all", encoding="utf-8")
+    assert read(state, day="2027-01-12", card_slot="morning") == ""
+    assert read(tmp_path / "absent.json", day="2027-01-12", card_slot="morning") == ""
+
+
+def test_a_second_run_of_the_same_slot_compares_against_the_first(
+    board_for_today, today, tmp_path, capsys, no_network, no_credential
+):
+    """The check above must not have turned the comparison off altogether.
+
+    Same day, same slot, same board: the second run finds the first run's state
+    file, compares against it, and says the selections are unchanged rather
+    than saying it had nothing to compare against.
+    """
+    staged = stage_to_disk(board_for_today, tmp_path, today)
+    argv = (
+        "--card-slot", "morning",
+        "--staged-board", str(staged),
+        "--archive-dir", str(tmp_path / "archive"),
+        "--output-dir", str(tmp_path / "outputs"),
+        "--raw-dir", str(tmp_path / "raw"),
+    )
+    run_script(*argv)
+    run_script(*argv)
+    capsys.readouterr()
+    text = (tmp_path / "outputs" / "cbb_gameday_card.md").read_text(encoding="utf-8")
+
+    assert "nothing is claimed about whether the selections changed" not in text
+    assert "unchanged since the last card for this slate day" in text
+    assert GC.SELECTIONS_CHANGED not in text
 
 
 # ---------------------------------------------------------------------------

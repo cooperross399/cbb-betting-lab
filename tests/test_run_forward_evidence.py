@@ -467,13 +467,55 @@ def test_an_unreadable_snapshot_is_named_and_the_rest_of_the_night_settles(lab, 
     out = capsys.readouterr().out
     assert "::warning::2026-01-14.csv could not be parsed" in out
     numbers = counters(out)
-    assert numbers["snapshots that could not be parsed"] == 1
-    # It is inside `snapshots seen`, not beside it: a broken file is still
-    # settled as a day with no opinions, so counting it as a fourth category
-    # would make the block add to more than it saw.
+    # A fourth category and a peer of the other three, because a day nobody
+    # could read is not a day that settled, waited, or was done earlier.
+    assert numbers["could not be parsed, left OPEN"] == 1
     assert numbers["snapshots seen"] == 2
-    assert numbers["settled this pass"] == 2
+    assert numbers["settled this pass"] == 1, "the broken day must not count as settled"
+    assert "2026-01-14" in out
     assert lab.ledger_rows() == 4, "the readable night settled around the broken one"
+    assert "HOLDS." in out and "DOES NOT HOLD" not in out
+
+
+def test_an_unreadable_snapshot_is_not_marked_settled_and_still_grades_once_repaired(
+    lab, capsys
+):
+    """Defect H, found by adversarial review of the settle wiring.
+
+    `read_snapshot` reads leniently, so a file pandas cannot parse came back as
+    an EMPTY FRAME. `settle_snapshots` then graded zero rows, wrote the
+    `.settled` sidecar and moved on: a night of frozen opinions permanently
+    recorded as a night with nothing in it, on the one store in this lab that
+    cannot be rebuilt, with nothing in the log looking wrong.
+
+    The marker is the damage. A day left unmarked can still be graded when the
+    file is restored from `card-feed` or repaired by hand; a day marked done
+    never will be, and the prices it was frozen at are gone.
+
+    So this asserts both halves: no sidecar for the broken day, and the night
+    settling in full on the pass after the file is put back.
+    """
+    broken = fe.snapshot_dir(lab.archive) / f"{DAY}.csv"
+    good = lab.freeze(a_night())
+    assert good == broken
+    intact = broken.read_bytes()
+    broken.write_bytes(b"")
+
+    assert lab.run("--settle") == 0
+    capsys.readouterr()
+
+    assert lab.ledger_rows() == 0
+    assert not lab.markers(), (
+        "a snapshot nobody could read must not be marked settled: the marker "
+        "closes the night, and the prices it was frozen at are gone"
+    )
+
+    # The file comes back — a re-restore from card-feed, or a human repair.
+    broken.write_bytes(intact)
+    assert lab.run("--settle") == 0
+
+    assert lab.ledger_rows() == 4, "the repaired night must still be gradeable"
+    assert lab.markers(), "and settling it must mark it, once"
 
 
 # --------------------------------------------------------------------------
@@ -564,19 +606,59 @@ def test_the_ledger_line_compares_the_pass_against_the_file_on_disk(lab, capsys)
     assert "did not reach the ledger" not in out
 
 
-def test_the_rows_a_waiting_day_graded_before_waiting_are_explained(tmp_path, capsys):
-    """`settle_snapshots` counts rows it grades before discovering the day waits.
+def test_a_graded_row_that_reaches_no_counter_fails_the_rows_identity(lab, capsys):
+    """The rows identity has to be checked against the files, not against itself.
 
-    Reproduced rather than assumed: the pass walks a snapshot's rows in order
-    and breaks out at the first one whose result is not published, then discards
-    the whole day — but the rows it graded first have already incremented
-    `rows_settled`. So `rows seen` exceeds what the ledger grew by on a waiting
-    night, with nothing wrong and nothing lost; those rows are graded again on
-    the pass that finally settles the day.
+    Found by adversarial review. `SettlementResult.rows_seen` is a **property**
+    returning `rows_settled + rows_void + rows_unsettleable`, so the line that
+    once read `settled + void + unsettleable = rows seen` was a tautology: it
+    held for every pass that could ever run, including one that graded a whole
+    night and counted none of it — which is the exact failure it was printed to
+    catch. A guard that cannot fail is decoration, and decoration in an
+    accounting block is worse than nothing, because a reader trusts it.
 
-    The gap is explained on its own line rather than smoothed away, because a
-    pass that graded a whole night and wrote none of it has the identical
-    signature — and that one is a defect.
+    So the check is made against `rows_read`, counted off the snapshot files in
+    `settle_snapshots` before anything is graded. This reproduces the failure
+    directly: `_record_outcome` is replaced with one that grades the row and
+    increments nothing, which is what a new branch added without its counter
+    would do. The old line said HOLDS. This one must not.
+    """
+    lab.freeze(a_night())
+    uncounted = lambda record, decided, result, settled_at: fe._ledger_row(  # noqa: E731
+        record, decided, settled_at
+    )
+    original = fe._record_outcome
+    fe._record_outcome = uncounted
+    try:
+        assert lab.run("--settle") == 1
+    finally:
+        fe._record_outcome = original
+
+    captured = capsys.readouterr()
+    assert "DOES NOT HOLD" in captured.out
+    assert "reached an outcome" in captured.out
+    assert "counted nowhere" in captured.out
+    assert "::error::The settle pass does not reconcile." in captured.err
+
+
+def test_a_waiting_day_counts_nothing_it_threw_away(tmp_path, capsys):
+    """A waiting day grades rows speculatively and must un-count them.
+
+    **This test previously pinned the miscount and its explanation; it now pins
+    the fix.** `settle_snapshots` walks a snapshot's rows in order and breaks at
+    the first whose result is not published, then discards the whole day — and
+    every row graded before that break had already incremented `rows_settled`.
+    The ledger was always correct and the day always waited atomically, so
+    nothing was lost; what was wrong was the accounting identity the workflow
+    prints, and the same rows were counted a second time on the pass that
+    finally settled the day.
+
+    Explaining a wrong number on its own line is worse than not producing it.
+    The identity is the thing that is supposed to catch rows going missing, and
+    an identity with a standing exemption written into it cannot.
+
+    The counters are snapshotted before the day is graded and restored when it
+    turns out to be waiting, so `rows seen` is what the pass actually kept.
     """
     day = (date.today() - timedelta(days=1)).isoformat()
     # The tables carry the first game of the night and not the second.
@@ -604,12 +686,41 @@ def test_the_rows_a_waiting_day_graded_before_waiting_are_explained(tmp_path, ca
     out = capsys.readouterr().out
     numbers = counters(out)
     assert numbers["waiting on a result"] == 1
-    assert numbers["rows seen"] == 1, "the first row was graded before the wait"
+    assert numbers["rows seen"] == 0, (
+        "A waiting day kept nothing, so it must have counted nothing. Rows "
+        "graded before the break are speculative and are rolled back."
+    )
     assert lab.ledger_rows() == 0, "a waiting day puts nothing in the ledger"
-    assert "1 graded row(s) did not reach the ledger" in out
-    assert "graded again on the pass that settles it" in out
     assert "HOLDS." in out and "DOES NOT HOLD" not in out
 
+
+def test_the_day_settles_in_full_once_the_result_arrives(tmp_path, capsys):
+    """The other half of the rollback: nothing was lost by un-counting.
+
+    A day that waited must settle completely on the next pass, counting each
+    row exactly once — not zero times because it was rolled back, and not twice
+    because it was graded before.
+    """
+    day = (date.today() - timedelta(days=1)).isoformat()
+    lab = Lab(tmp_path).with_tables(games=team_games(day)).with_schedule(day)
+    lab.freeze(
+        [
+            price(event_id="e1", commence_time=f"{day}T23:00:00Z"),
+            price(
+                event_id="e2",
+                home="Duke",
+                away="North Carolina",
+                commence_time=f"{day}T23:00:00Z",
+            ),
+        ],
+        day=day,
+    )
+
+    assert lab.run("--settle") == 0
+    out = capsys.readouterr().out
+    assert counters(out)["waiting on a result"] == 0
+    assert lab.ledger_rows() == 2
+    assert "HOLDS." in out
 
 def test_a_night_still_waiting_on_its_box_score_is_named_and_not_settled(tmp_path, capsys):
     """Waiting is not a verdict, and a guess would be one.

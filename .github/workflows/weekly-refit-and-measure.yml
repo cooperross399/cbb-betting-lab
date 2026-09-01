@@ -1,0 +1,264 @@
+name: Weekly Refit and Measure
+
+# THE SELF-IMPROVING LOOP, AND THE FENCE AROUND WHAT THAT IS ALLOWED TO MEAN.
+# Cooper's brief: *"Self-improving must not mean 'search until something looks
+# good.' An automated edge-hunter without a cumulative tally does not find
+# edges; it manufactures them on a schedule, with clean intervals and good
+# prose."*
+#
+# WHAT THIS DOES, EVERY MONDAY: pre-register the week's search against the alpha
+# budget declared on disk, refit the ratings walk-forward, re-run the price
+# backtest and its replication, re-render the claims report from its run record,
+# check every allowlisted market against the floor its receipt declared, and
+# check the stopping rule `docs/when_this_ends.md` wrote before the data existed.
+#
+# WHAT IT NEVER DOES: spend a credit, allowlist a market, sign a receipt, place a
+# bet, or lower a bar. The promotion criteria, the alpha budget and the stopping
+# rule are all read from disk. `run_weekly_loop.py` can call
+# `staging_provider_policy.withdraw()` and there is no `grant()` anywhere in the
+# repository for it to call.
+#
+# IT IS NOT GIVEN THE CREDENTIAL, deliberately. No `secrets.` appears below,
+# because this run reads the store that was already bought and a workflow with no
+# key cannot spend one. That is a stronger claim than a cap.
+#
+# IT DOES NOT PUSH, and cannot. `tests/test_workflows.py` holds the closed set of
+# (workflow, ref) pairs allowed to hold `contents: write`; this file is not in it
+# and must never be added to it. GitHub cannot scope write access to a ref, so a
+# weekly measurement job holding it would be a weekly job able to write `main`.
+#
+# THE CONSEQUENCE IS REAL AND IS HANDLED RATHER THAN IGNORED. Two things this
+# loop decides have to reach `main` to take effect — a market it withdrew, and
+# the grown experiment ledger — and neither can be committed from here. So both
+# come back in the artifact, a fired demotion exits 3 and turns this run red, and
+# a grown ledger emits a `::warning::`. A card that keeps reading a market this
+# loop withdrew is the failure mode, and the only thing that prevents it is
+# somebody being told.
+#
+# TWO SCRIPTS ARE NAMED BY THE LOOP AT RUN TIME AND NOT HERE: the ratings refit
+# (`fit_ratings.py`) and the price backtest (`run_price_backtest.py`). That is
+# deliberate. `test_every_script_a_workflow_runs_actually_exists` reads this
+# file's text and fails on a path to a program that is not in the repository —
+# which is exactly right for a delivery chain and exactly wrong here, where the
+# loop's job is to report a missing step and finish red rather than to stop the
+# build. `run_weekly_loop.py` resolves them, degrades gracefully when one is
+# absent, and says which one it was.
+
+on:
+  schedule:
+    # MONDAY 11:00 UTC, and both halves of that are measured rather than chosen.
+    #
+    # MONDAY, because Saturday carries roughly a third of the season on its own
+    # — 2,049, 2,072 and 1,955 games of ~6,300 in the three cached seasons —
+    # and a weekly loop that fires before Saturday has settled measures a week
+    # missing a third of it. Monday is the first day on which the previous
+    # week's Saturday is final and in the forward ledger. It is also the
+    # second-lightest slate day of the week (559-679 games a season against
+    # Saturday's ~2,000), so a two-hour refit does not contend with the heaviest
+    # card day.
+    #
+    # 11:00 UTC, because of the lateness. Cooper's repositories have fired
+    # 4.5-5.3 hours late since 2026-08-27, and
+    # `schedule_contract.OBSERVED_LATENESS_H` is 5.3. Nominal 11:00 UTC lands at
+    # 16:18 UTC at that worst case — still Monday, in UTC and in Eastern, with
+    # about 8 hours of Monday left over. That margin is the whole point: the
+    # alpha budget's bucket is the ISO WEEK the run stamps, so a trigger that
+    # can slip across a Sunday/Monday boundary would spend next week's budget on
+    # this week's search. A Sunday-evening cron would do exactly that.
+    # `tests/test_weekly_loop.py` recomputes the margin from the constant and
+    # fails if raising it ever makes this cron unsafe.
+    #
+    # YEAR-ROUND, not November-to-April. It spends nothing, and the line-movement
+    # capture already established the reason: the first in-season run must not
+    # be the first run ever. An off-season week refits on the cached seasons,
+    # re-renders a claims document that says nothing has been measured, and
+    # proves the machinery still works.
+    - cron: "0 11 * * 1"
+  workflow_dispatch:
+    inputs:
+      seasons:
+        description: "Seasons passed through to the refit and the backtest. Blank lets each script pick its own default."
+        type: string
+        required: false
+        default: ""
+      dry_run:
+        description: "Report what the loop would do and write nothing anywhere."
+        type: boolean
+        default: false
+
+permissions:
+  # READ. This workflow is not in the declared writer set in
+  # `tests/test_workflows.py` and must not be added to it. Everything it decides
+  # comes back as an artifact.
+  contents: read
+
+concurrency:
+  # Serialised, never cancelled. A cancelled run that has appended to the
+  # experiment ledger but not yet written its report leaves the week half
+  # recorded, and the ledger is append-only.
+  group: cbb-weekly-refit-and-measure
+  cancel-in-progress: false
+
+env:
+  # 2021 is the earliest season this lab can ever price — the provider's
+  # featured NCAAB archive starts 2020-11-16, inside the 2020-21 season, and a
+  # season is labelled by the year it ENDS. 2020 is fetched and not priced,
+  # because a walk-forward fit for the earliest priced season needs a completed
+  # season behind it. 2027 is the live one.
+  WEEKLY_SEASONS: "2020 2021 2022 2023 2024 2025 2026 2027"
+
+jobs:
+  refit-and-measure:
+    name: Weekly Refit and Measure
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Nothing here authenticates a push, so no credential is left behind
+          # in `.git/config` for a later step to find.
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -e .
+
+      # THE REFIT AND THE BACKTEST DRAW THEIR POPULATION FROM
+      # `cbb_team_games.csv`, the same `game_state` the retention probe uses, so
+      # the three can never disagree about which games count. That table is
+      # gitignored and is built from play-by-play, so the runner fetches and
+      # builds it — the same pattern, and the same reasoning, as
+      # `provider-retention-probe.yml`. The fix that was NOT taken there, and is
+      # not taken here, is letting a run fall back to the raw schedule when the
+      # processed table is absent: that makes two populations diverge silently,
+      # in the direction that looks like success.
+      - name: Restore the feed and table cache
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            data/raw/cbb
+            data/processed
+          key: cbb-data-v1-${{ env.WEEKLY_SEASONS }}-${{ hashFiles('src/cbb_betting_lab/data/**') }}
+          restore-keys: cbb-data-v1-
+
+      - name: Fetch the feeds and build the tables
+        # Costs no credits, so an outage here is free. SOFT, because in this
+        # sport a partial fetch looks exactly like a light slate: the fetcher
+        # degrades rather than empties, and refitting on games a day old beats
+        # refitting on nothing. The loop's own report says the run was degraded.
+        id: feeds
+        continue-on-error: true
+        env:
+          PYTHONPATH: src
+        run: |
+          set -eu
+          python scripts/fetch_cbb_data.py --seasons $WEEKLY_SEASONS
+          python scripts/build_datasets.py --seasons $WEEKLY_SEASONS
+
+      - name: Restore the forward-evidence ledger from card-feed
+        # READ ONLY. The demotion check is judged on settled forward opinions,
+        # and they live on the `card-feed` branch because the gameday workflow
+        # is the only one allowed to write them. This fetch takes a copy and
+        # writes nothing back — the whole point of `contents: read`.
+        #
+        # THE REPOSITORY IS PRIVATE, so an unauthenticated fetch cannot see the
+        # branch at all and would report "no ledger" on a season of evidence.
+        # That is the football lab's defect 18 in another costume: a guard that
+        # cannot fail closed is not a guard.
+        #
+        # TEMP-THEN-MOVE. `git show X > file` creates the file even when the
+        # show fails, and a zero-byte CSV is a ledger pandas refuses to parse.
+        # Defect 16 in `docs/ported_defects.md`.
+        id: ledger
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          mkdir -p data/processed
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}"
+          if ! git fetch --depth=1 "$REMOTE" +refs/heads/card-feed:refs/card-feed-tip 2>/dev/null; then
+            echo "::warning::No card-feed branch. If this is not the first week, the season's forward evidence is not being read by this run."
+            exit 0
+          fi
+          TMP=$(mktemp)
+          if git show refs/card-feed-tip:forward_evidence.csv > "$TMP" 2>/dev/null && [ -s "$TMP" ]; then
+            mv "$TMP" data/processed/cbb_forward_evidence.csv
+            echo "Ledger restored: $(( $(wc -l < data/processed/cbb_forward_evidence.csv) - 1 )) rows."
+          else
+            rm -f "$TMP"
+            echo "No forward-evidence ledger on card-feed yet. The demotion check will have nothing to judge, which is not the same as judging that nothing has fallen through the floor."
+          fi
+
+      - name: Run the weekly loop
+        # THE ONLY STEP ALLOWED TO FAIL THE JOB, and it reports three different
+        # kinds of non-zero:
+        #   1  a step degraded or a program it drives is missing
+        #   2  an instrument fault - a record that cannot be read, a ledger that
+        #      would shrink
+        #   3  a market was auto-withdrawn and the withdrawal has to be
+        #      committed by hand, because this workflow cannot push
+        id: loop
+        env:
+          PYTHONPATH: src
+        run: |
+          set -o pipefail
+          FLAGS=""
+          if [ -n "${{ inputs.seasons }}" ]; then
+            FLAGS="$FLAGS --seasons ${{ inputs.seasons }}"
+          fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            FLAGS="$FLAGS --dry-run"
+          fi
+          python scripts/run_weekly_loop.py --competition cbb $FLAGS \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Write the weekly report to the run summary
+        if: always()
+        continue-on-error: true
+        run: |
+          {
+            echo
+            echo "---"
+            echo
+            cat data/outputs/cbb_weekly_loop.md 2>/dev/null \
+              || echo "No weekly report was produced. **This is a fault, not a quiet week.**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # THE ARTIFACT IS THE ONLY WAY ANYTHING THIS RUN DECIDED LEAVES THE
+      # RUNNER. It carries the two files that have to be committed by hand — the
+      # grown experiment ledger and, if a demotion fired, the edited staging
+      # policy — as well as every report. Uploaded even when the loop exited
+      # non-zero, because a run that withdrew a market and then failed must not
+      # lose the withdrawal.
+      - name: Upload the run record, the reports and anything that must be committed
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbb-weekly-refit-and-measure
+          path: |
+            data/outputs/
+            data/manual/staging_provider_policy.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Report the outcome
+        if: always()
+        run: |
+          echo "This run refitted, re-measured and re-rendered."
+          echo "It allowlisted no market, signed no receipt, placed no bet and"
+          echo "spent no credit. It was given no provider credential at all."
+          if [ "${{ steps.loop.outcome }}" != "success" ]; then
+            echo "::error::The weekly loop did not finish clean. Read the job summary: a withdrawn market or a grown experiment ledger has to be committed from the artifact, and neither takes effect until it is."
+            exit 1
+          fi
+          echo "Clean week."

@@ -162,6 +162,7 @@ import json
 import re
 import unicodedata
 from collections.abc import Callable, Iterable, Mapping
+from typing import ClassVar
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -644,7 +645,30 @@ def _tier_value(tier: object) -> str:
 
 
 def read_snapshot(path: Path | str) -> pd.DataFrame:
+    """A snapshot, read leniently. For readers and renderers only.
+
+    An unparseable file comes back as an **empty frame** here, which is the
+    right answer for anything that only wants to show what it can find. It is
+    the wrong answer for the settle pass — see `read_snapshot_strictly`.
+    """
     return stores.read_store(Path(path), columns=SNAPSHOT_COLUMNS)
+
+
+def read_snapshot_strictly(path: Path | str) -> pd.DataFrame:
+    """A snapshot, or `CorruptStoreError`. Never a silently empty frame.
+
+    The lenient read is a trap for a caller that is about to *decide something
+    permanent* about the day. A night of frozen opinions read as zero rows is
+    settled as a night with nothing in it, the `.settled` sidecar is written,
+    and the day is closed forever — while the prices those opinions were frozen
+    at are gone and nothing can re-make them. That is the football lab's defect
+    16 arriving one layer above the workflow's temp-then-move guard.
+
+    So the settle pass reads through here, and a file it cannot parse leaves the
+    day **unsettled** rather than settled-as-empty. A day left open is a day a
+    restored or repaired file can still be graded on; a day marked done is not.
+    """
+    return stores.read_store(Path(path), columns=SNAPSHOT_COLUMNS, for_append=True)
 
 
 # --------------------------------------------------------------------------
@@ -687,6 +711,20 @@ class SettlementResult:
     night, a finished night, and a pipeline that stopped freezing.
     """
 
+    #: The row-level counters, named once so a caller can snapshot and restore
+    #: them without listing them again. A field added to this dataclass and not
+    #: to this tuple would silently stop being rolled back on a waiting day,
+    #: which is the defect this exists to close returning by another door.
+    ROW_COUNTERS: ClassVar[tuple[str, ...]] = (
+        "rows_settled",
+        "rows_void",
+        "rows_unsettleable",
+        "rows_without_a_price",
+        "rows_without_a_fixture",
+        "rows_ambiguous_player",
+        "rows_futures_deferred",
+    )
+
     snapshots_seen: int = 0
     snapshots_settled: int = 0
     snapshots_waiting: int = 0
@@ -706,6 +744,18 @@ class SettlementResult:
     rows_futures_deferred: int = 0
     #: Snapshot days still inside the patience window, named.
     waiting_days: tuple[str, ...] = ()
+    #: Rows READ from the snapshots this pass took up, before any of them was
+    #: graded. Independent of every counter above, which is the whole point: the
+    #: three outcome counters sum to `rows_seen` by construction and so cannot
+    #: disagree with it, while this one comes off the files on disk and can.
+    rows_read: int = 0
+    #: Snapshots that could not be parsed. They are NOT settled, NOT marked and
+    #: NOT graded — a broken file is a day needing a human, not a day with no
+    #: opinions, and the two must never be recorded as the same thing.
+    snapshots_unreadable: int = 0
+    #: Those days, named. A count alone tells an operator nothing to go and look
+    #: at, and this is the one fault here that no rerun repairs.
+    unreadable_days: tuple[str, ...] = ()
     ledger_rows: int = 0
     #: Exceptions raised inside `settle`, by message. Counted into
     #: `rows_unsettleable` and surfaced, never swallowed.
@@ -730,6 +780,12 @@ class SettlementResult:
                 f" ({', '.join(self.waiting_days)}, inside the "
                 f"{PATIENCE_DAYS}-day patience window)"
                 if self.waiting_days
+                else ""
+            )
+            + (
+                f", {self.snapshots_unreadable:,} unreadable and left UNSETTLED "
+                f"({', '.join(self.unreadable_days)})"
+                if self.snapshots_unreadable
                 else ""
             )
             + ".",
@@ -915,6 +971,13 @@ def settle_snapshots(
     with no final result, the whole day waits and nothing is appended — half a
     day in the ledger would make `snapshot_date in ledger` mean either "done" or
     "partly done", which destroys the second idempotence source.
+
+    A snapshot that **cannot be parsed is skipped, not settled**. It is counted
+    and named, the rest of the archive settles around it, and no marker is
+    written for it — because a marker is this pass saying "this night is
+    recorded", and a night read as zero rows is not recorded, it is lost. Left
+    unmarked, the day is still gradeable if the file is restored from
+    `card-feed` or repaired by hand; marked, it never would be again.
     """
     moment = now or datetime.now(timezone.utc)
     ledger = Path(ledger_path)
@@ -936,7 +999,19 @@ def settle_snapshots(
             # the two sources exist to cover each other, not to argue.
             _write_marker(path, note="already present in the ledger")
             continue
-        pending.append((path, read_snapshot(path)))
+        try:
+            frame = read_snapshot_strictly(path)
+        except stores.CorruptStoreError:
+            # Named and counted, and deliberately NOT marked. Read leniently
+            # this file is an empty frame, which grades zero rows, writes the
+            # sidecar and closes the night — the prices are gone, so that loss
+            # is permanent and nothing about the log would look wrong.
+            result.snapshots_unreadable += 1
+            result.unreadable_days = tuple(
+                sorted(set(result.unreadable_days) | {path.stem})
+            )
+            continue
+        pending.append((path, frame))
 
     if not pending:
         result.ledger_rows = len(stores.read_store(ledger, columns=LEDGER_COLUMNS))
@@ -948,6 +1023,11 @@ def settle_snapshots(
     for path, frame in pending:
         records = frame.to_dict("records")
         rows = [_frozen_row(r) for r in records]
+        # Counted here, off the file, and never off an outcome. This is the one
+        # number a caller can hold the three outcome counters against: those sum
+        # to `rows_seen` by construction and can agree with each other while
+        # every one of them is wrong.
+        result.rows_read += len(rows)
         for row in rows:
             day = season.row_slate_date(row, competition)
             if day:
@@ -980,6 +1060,9 @@ def settle_snapshots(
     for path, rows, records in prepared:
         graded: list[dict] = []
         waiting = False
+        # Grading is speculative until the day is known not to be waiting: a
+        # break discards `graded`, so the counters it moved have to move back.
+        before = _row_counter_snapshot(result)
         for row, record in zip(rows, records):
             day = season.row_slate_date(row, competition)
             game_id = resolved.get((day, row.home_team, row.away_team)) if day else None
@@ -1007,6 +1090,7 @@ def settle_snapshots(
                 )
             )
         if waiting:
+            _restore_row_counters(result, before)
             result.snapshots_waiting += 1
             result.waiting_days = tuple(sorted(set(result.waiting_days) | {path.stem}))
             continue
@@ -1210,6 +1294,32 @@ def _record_outcome(
 # --------------------------------------------------------------------------
 # The ledger
 # --------------------------------------------------------------------------
+
+
+def _row_counter_snapshot(result: "SettlementResult") -> dict[str, int]:
+    """The row counters as they stand, for restoring after a waiting day."""
+    return {name: getattr(result, name) for name in SettlementResult.ROW_COUNTERS}
+
+
+def _restore_row_counters(result: "SettlementResult", saved: dict[str, int]) -> None:
+    """Undo the grading a waiting day did before it discovered it was waiting.
+
+    **The rows a waiting day grades are thrown away, and their counters were
+    not.** `settle_snapshots` grades a snapshot's rows in order and breaks at
+    the first row whose result is not published, then discards the whole day —
+    but every row graded before the break had already incremented
+    `rows_settled` / `rows_void` / `rows_unsettleable`. The ledger stayed
+    correct and the day still waited atomically; what was wrong was the
+    accounting identity the workflow prints, and the same rows were counted
+    again on the pass that finally settled the day.
+
+    It was found by the one reconciliation line that is not arithmetic over the
+    counters themselves — rows graded against what the ledger file actually
+    grew by — which is the whole reason that line is computed independently
+    rather than derived from the numbers it is checking.
+    """
+    for name, value in saved.items():
+        setattr(result, name, value)
 
 
 def read_ledger(path: Path | str) -> pd.DataFrame:

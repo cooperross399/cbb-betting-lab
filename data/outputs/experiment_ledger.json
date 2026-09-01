@@ -1,8 +1,8 @@
 {
   "alpha_budget": {
     "per_week": 6,
-    "declared_on": "",
-    "rationale": ""
+    "declared_on": "2026-09-01",
+    "rationale": "Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state \u2014 re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise."
   },
   "hypotheses": [
     {
