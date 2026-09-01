@@ -104,6 +104,24 @@ with a commit that omits it.
 
 ## Link 3 — `CBB CARD RELAY`, a Claude Code cloud routine
 
+> **BLOCKED ON ONE CLICK, AND IT IS THE ONLY THING IN THIS DOCUMENT THAT IS.**
+> Creating the routine returns
+> `HTTP 403 "You don't have access to a repository this routine uses."`
+> The three sibling labs' routines work and they name sibling repositories, so
+> the grant is per-repository and this repository is new. No token in this
+> environment can change it — listing app installations already returns 403
+> here — so it is Cooper's, and it is one click:
+>
+> `https://github.com/settings/installations` → **Claude** → *Repository
+> access* → add **`cbb-betting-lab`** → Save.
+>
+> The body is built and waiting in `scripts/create_card_relay_routine.py`,
+> read off the working `EPL CARD RELAY` rather than guessed — same connector
+> uuid, same environment, same transport — so it creates unchanged once the
+> grant lands. **Nothing else in the chain waits on this**: the workflow
+> publishes to `card-feed` on its own, verified with a real card on
+> 2026-09-01, and the feed is readable by anything with repository access.
+
 **It is a relay, not a reader.** It copies the card into Google Drive verbatim
 and stops. It summarises nothing, sends nothing, and Cooper never reads its
 output.

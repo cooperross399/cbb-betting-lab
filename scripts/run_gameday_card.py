@@ -54,6 +54,21 @@ every request, against the measured running total from `x-requests-last`** —
 never against this script's estimate. The NHL lab capped a run at 200,000 and
 spent 289,984 by estimating from markets asked rather than markets returned,
 while its test asserted the cap could not be breached.
+
+## The one thing this script cannot do on its own
+
+`Selections changed` fires by comparing this run's selection fingerprint against
+the previous one, which is kept in `<output-dir>/cbb_card_state.json`. In CI
+`data/outputs/` is rebuilt from an empty checkout every run, so that file is
+absent and **the card says so** — "nothing is claimed about whether the
+selections changed" — rather than firing the marker on every run, which is how a
+notification stops being read long before it stops being sent.
+
+Making it operative needs the state file carried on `card-feed` beside the
+ledger and the snapshots, restored into `--output-dir` before this script runs.
+That is two lines in `.github/workflows/cbb-gameday-refresh.yml` and nothing
+here: point `--output-dir` at a directory holding the previous state file and
+the comparison works with no change to this file.
 """
 
 from __future__ import annotations
@@ -66,7 +81,7 @@ from pathlib import Path
 
 from cbb_betting_lab.competitions import DEFAULT_COMPETITION_KEY, competition_for
 from cbb_betting_lab.config import OUTPUTS_DIR, RAW_DIR, STAGING_DIR
-from cbb_betting_lab.forward_evidence import ARCHIVE_DIR
+from cbb_betting_lab.forward_evidence import ARCHIVE_DIR, SnapshotKeyError
 from cbb_betting_lab.providers import staging
 from cbb_betting_lab.providers.env_file import load_provider_env, redact
 from cbb_betting_lab.providers.odds_api import (
@@ -329,9 +344,17 @@ def main(argv: list[str] | None = None) -> int:
             previous_fingerprint=_read_previous_fingerprint(state),
             output_dir=outputs,
         )
-    except ValueError as exc:
-        # Refusal three: the accounting identity. `AccountingIdentity` raises a
-        # ValueError, and it is an error rather than a warning by design.
+    except (ValueError, GC.CardError, SnapshotKeyError) as exc:
+        # Refusal three, and its two neighbours. `AccountingIdentity` raises a
+        # ValueError when the identity does not reconcile; `gameday_card`
+        # raises a `CardError` when a bar has no bucket in the identity at all,
+        # which is the same failure one level up; and `write_snapshot` raises a
+        # `SnapshotKeyError` when a row already frozen for this day cannot be
+        # re-keyed — at which point this run cannot tell an unfrozen game from a
+        # re-price, and the first opinion of the day for a game is never
+        # replaced. All three are errors rather than warnings, and all three
+        # stop the run rather than reaching the reader as a traceback with no
+        # `decision=` line behind it.
         print(f"::error::{exc}", file=sys.stderr)
         print(f"decision={GC.Decision.REFUSED.value}")
         return 2
@@ -364,11 +387,19 @@ def main(argv: list[str] | None = None) -> int:
     _write_state(state, run)
 
     if not run.selections:
+        # The allowlist half of this sentence is read off the policy, never
+        # asserted. A run that printed "no market is allowlisted" while one was
+        # would be false on the one day it mattered.
         print(
-            "No selection, no lean, no pass and no stake. No market is "
-            "allowlisted, which is the correct state for a lab with no signed "
-            "acceptance receipt, and an excluded market is never reported as a "
-            "pass, an avoid or a no-value call."
+            "No selection, no lean, no pass and no stake. "
+            + (
+                "No market is allowlisted, which is the correct state for a "
+                "lab with no signed acceptance receipt, and "
+                if not policy.allowlist
+                else "Markets are allowlisted and none of them produced one, and "
+            )
+            + "an excluded market is never reported as a pass, an avoid or a "
+            "no-value call."
         )
     else:
         print(f"{len(run.selections):,} selection(s); {run.result.exposure.summary_line()}")

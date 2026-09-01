@@ -263,14 +263,17 @@ def today() -> str:
 
 
 @pytest.fixture()
-def board_for_today(today) -> GC.Board:
+def payloads_for_today(today) -> list[dict]:
     """The same board, tipping late **today** in the competition's own calendar.
 
     The script refuses to card any day but today without `--rehearsal`, in both
-    directions, so a fixture pinned to a fixed date can only exercise the
-    refusal. The tip is placed at 23:45 Eastern, which is after the sport's real
-    last tip and comfortably ahead of any run — the point is that it is on
-    today's slate day and in the future, not that it is realistic.
+    directions, so a fixture pinned to a fixed date can only ever exercise the
+    refusal. The cardable tip is placed at 23:45 Eastern, which is after the
+    sport's real last tip and comfortably ahead of any run — the point is that
+    it lands on today's slate day and in the future, not that it is realistic.
+    Deriving it from the Eastern calendar rather than from `now + 6 hours` is
+    what stops the test flipping to `no-slate` whenever it happens to run in
+    the evening.
     """
     at = datetime.fromisoformat(f"{today}T23:45:00").replace(tzinfo=CBB.timezone)
     if at <= datetime.now(CBB.timezone) + timedelta(minutes=30):
@@ -279,10 +282,12 @@ def board_for_today(today) -> GC.Board:
             "same path is covered deterministically by the tests that call "
             "run_card directly on a fixed clock."
         )
-    return GC.board_from_payloads(
-        board_payloads(at.astimezone(timezone.utc) - timedelta(hours=6)),
-        competition=CBB,
-    )
+    return board_payloads(at.astimezone(timezone.utc) - timedelta(hours=6))
+
+
+@pytest.fixture()
+def board_for_today(payloads_for_today) -> GC.Board:
+    return GC.board_from_payloads(payloads_for_today, competition=CBB)
 
 
 @pytest.fixture()
@@ -1169,6 +1174,65 @@ class FakeProvider:
     def fetch_event_odds(self, event_id, markets, *, spend, credit_cap):
         self.calls.append("fetch_event_odds")
         return {}
+
+
+def test_the_live_path_runs_end_to_end_against_a_provider_that_answers(
+    payloads_for_today, today, tmp_path, monkeypatch, capsys, no_network, no_credential
+):
+    """The path the workflow actually takes, with the socket layer closed.
+
+    The offline `--staged-board` path proves the card can be rendered; this
+    proves the branch that *reaches for the provider* also reaches the freeze —
+    quota check, bulk call, per-event stage, staging write, gates, snapshot,
+    card. A live path that only ever runs on a game day is a path that debuts
+    in production.
+    """
+    payloads = payloads_for_today
+
+    class AnsweringProvider(FakeProvider):
+        remaining = "5000000"
+
+        def list_events(self):
+            self.calls.append("list_events")
+            return [
+                {k: v for k, v in event.items() if k != "bookmakers"}
+                for event in payloads
+            ]
+
+        def fetch_bulk(self, markets, *, spend, credit_cap):
+            self.calls.append("fetch_bulk")
+            spend.record({"x-requests-last": "6"}, fallback=6)
+            return payloads
+
+        def fetch_event_odds(self, event_id, markets, *, spend, credit_cap):
+            self.calls.append("fetch_event_odds")
+            spend.record({"x-requests-last": "0"}, fallback=0)
+            return {}
+
+    monkeypatch.setattr(odds_api, "OddsApiProvider", AnsweringProvider)
+    status = run_script(
+        "--live",
+        "--card-slot", "morning",
+        "--credit-cap", "40000",
+        "--archive-dir", str(tmp_path / "archive"),
+        "--output-dir", str(tmp_path / "outputs"),
+        "--staging-dir", str(tmp_path / "staging"),
+        "--raw-dir", str(tmp_path / "raw"),
+    )
+    out = capsys.readouterr().out
+
+    assert status == 0, out
+    assert out.rstrip().endswith(f"decision={GC.Decision.NO_SELECTIONS.value}")
+    assert (tmp_path / "outputs" / "cbb_gameday_card.md").is_file()
+    # Every book's quote reaches staging, which the card cannot read; the freeze
+    # keeps one row per wager at the best price.
+    staged = list((tmp_path / "staging").rglob("*.csv"))
+    assert staged, "The board was not staged."
+    assert len(pd.read_csv(staged[0])) > len(
+        forward_evidence.read_snapshot(
+            forward_evidence.snapshot_path(tmp_path / "archive", today)
+        )
+    )
 
 
 def test_a_run_that_starts_with_less_quota_than_its_cap_refuses(
