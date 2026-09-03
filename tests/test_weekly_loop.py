@@ -598,7 +598,22 @@ def test_the_report_never_shows_a_pooled_market_row_without_its_tiers(lab: dict)
     report = LOOP.report_path(CBB, lab["outputs"]).read_text(encoding="utf-8")
 
     assert "| spread | pooled (decision) |" in report
-    assert "| | low_major |" in report
+    # The market cell is empty on a tier row, so the rendered separator is
+    # `|  | low_major |` — two spaces, not one. Asserting the exact spacing of
+    # a markdown table is asserting the formatter, so this reads the table.
+    tier_rows = [
+        line
+        for line in report.splitlines()
+        if line.startswith("|") and line.split("|")[1].strip() == ""
+        and line.split("|")[2].strip() == "low_major"
+    ]
+    assert tier_rows, (
+        "The pooled `spread` row is not followed by a `low_major` tier row. "
+        "The prose above that table promises every market row is followed by "
+        "its tiers, and the brief forbids a pooled headline across the whole "
+        "of D-I; a market row standing alone is that headline."
+    )
+    assert "900" in tier_rows[0]
     pooled_at = report.index("pooled (decision)")
     assert report.index("low_major", pooled_at) > pooled_at
 
