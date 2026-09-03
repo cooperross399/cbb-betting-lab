@@ -1,0 +1,3571 @@
+{
+  "record_version": 1,
+  "competition": "cbb",
+  "title": "NCAA Division I men's basketball",
+  "generated_at": "2026-09-03T23:46:19+00:00",
+  "processed_dir": "/Users/cooperross/Projects/cbb-betting-lab/data/processed",
+  "raw_dir": "/Users/cooperross/Projects/cbb-betting-lab/data/raw",
+  "seasons": [
+    2026
+  ],
+  "prior_window_seasons": 3,
+  "team_games_supplied": 94194,
+  "prepared_summary": "42,658 fittable team-games of 50,090 supplied (reconciles): not countable 4,194, venue unknown 0, overtime 2,670, period count missing 568, possessions below 40 0.",
+  "prepared_reconciles": true,
+  "prepared_counts": {
+    "supplied": 50090,
+    "fittable": 42658,
+    "not_countable": 4194,
+    "venue_unknown": 0,
+    "overtime": 2670,
+    "periods_unknown": 568,
+    "too_few_possessions": 0,
+    "quasi_local_side_unknown": 10,
+    "has_venue_ids": true,
+    "unaccounted": 0
+  },
+  "player_games_available": true,
+  "roster_turnover": {
+    "available": true,
+    "note": "",
+    "division_one_teams": 368,
+    "division_one": [
+      {
+        "season": 2020,
+        "teams": 357,
+        "returning_minutes_share": 0.5286708985060825,
+        "returning_minutes_median": 0.5414864864864865,
+        "incoming_transfer_share": 0.06022553105000599
+      },
+      {
+        "season": 2021,
+        "teams": 354,
+        "returning_minutes_share": 0.51890244870511,
+        "returning_minutes_median": 0.5433941035856573,
+        "incoming_transfer_share": 0.10569728068477645
+      },
+      {
+        "season": 2022,
+        "teams": 349,
+        "returning_minutes_share": 0.5791870047705879,
+        "returning_minutes_median": 0.5907142857142857,
+        "incoming_transfer_share": 0.2152051782635703
+      },
+      {
+        "season": 2023,
+        "teams": 359,
+        "returning_minutes_share": 0.47343333748668626,
+        "returning_minutes_median": 0.4843240175911477,
+        "incoming_transfer_share": 0.21345469023095875
+      },
+      {
+        "season": 2024,
+        "teams": 363,
+        "returning_minutes_share": 0.4464555437270038,
+        "returning_minutes_median": 0.4408540925266904,
+        "incoming_transfer_share": 0.23165814939056353
+      },
+      {
+        "season": 2025,
+        "teams": 363,
+        "returning_minutes_share": 0.3806661421728989,
+        "returning_minutes_median": 0.3909818181818182,
+        "incoming_transfer_share": 0.3021345710039823
+      },
+      {
+        "season": 2026,
+        "teams": 364,
+        "returning_minutes_share": 0.27247747875656064,
+        "returning_minutes_median": 0.2620092226613966,
+        "incoming_transfer_share": 0.3554939806179069
+      }
+    ],
+    "unrestricted": [
+      {
+        "season": 2020,
+        "teams": 652,
+        "returning_minutes_share": 0.4067987541832143,
+        "returning_minutes_median": 0.45319598607413475,
+        "incoming_transfer_share": 0.04408420013156198
+      },
+      {
+        "season": 2021,
+        "teams": 663,
+        "returning_minutes_share": 0.31851133927984643,
+        "returning_minutes_median": 0.34,
+        "incoming_transfer_share": 0.09151243727329136
+      },
+      {
+        "season": 2022,
+        "teams": 493,
+        "returning_minutes_share": 0.4867360838507794,
+        "returning_minutes_median": 0.5330882352941176,
+        "incoming_transfer_share": 0.18214427941085637
+      },
+      {
+        "season": 2023,
+        "teams": 679,
+        "returning_minutes_share": 0.3813593301398885,
+        "returning_minutes_median": 0.42,
+        "incoming_transfer_share": 0.1446364259721821
+      },
+      {
+        "season": 2024,
+        "teams": 706,
+        "returning_minutes_share": 0.35629295807912925,
+        "returning_minutes_median": 0.38639273622653125,
+        "incoming_transfer_share": 0.15745048229924896
+      },
+      {
+        "season": 2025,
+        "teams": 717,
+        "returning_minutes_share": 0.32858118634250105,
+        "returning_minutes_median": 0.3553667953667954,
+        "incoming_transfer_share": 0.1917092914395832
+      },
+      {
+        "season": 2026,
+        "teams": 701,
+        "returning_minutes_share": 0.2530860834256554,
+        "returning_minutes_median": 0.24197798790885133,
+        "incoming_transfer_share": 0.2395679117738694
+      }
+    ],
+    "schedule_seasons": [
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025,
+      2026
+    ]
+  },
+  "looks": 30,
+  "correction_factor": 1.6041010507684776,
+  "minimum_sample": 200,
+  "no_demonstrated_edge_phrase": "no demonstrated edge",
+  "max_effective_resistance": 1.0,
+  "minimum_game_possessions": 40.0,
+  "seasons_detail": [
+    {
+      "season": 2026,
+      "fit_days": 146,
+      "first_day": "2025-11-03",
+      "last_day": "2026-04-06",
+      "games_offered": 5415,
+      "games_priced": 4719,
+      "prior_summary": "Prior for season 2026 from seasons [2023, 2024, 2025]: 364 teams, league 106.25 per 100 at 68.03 possessions. offence: carryover 0.672, with roster terms, prior sd 2.939 (out-of-sample), observation sd 13.112 -> lambda 19.9 games, 723 team-season pairs. defence: carryover 0.650, with roster terms, prior sd 2.543 (out-of-sample), observation sd 13.112 -> lambda 26.6 games, 723 team-season pairs. tempo: carryover 0.542, carryover only, prior sd 1.620 (out-of-sample), observation sd 3.751 -> lambda 5.4 games, 723 team-season pairs.",
+      "venue_summary": "Home advantage per 100 possessions of margin: league +7.87 (high_major=+12.36, low_major=+3.90, mid_major=+7.34, unplaced=+7.87). Quasi-neutral +0.56. 409 venues, between-venue sd 1.32 per side, shrinkage 39.9 home games. Fitted on 31,828 team-games from seasons [2023, 2024, 2025].",
+      "final_summary": "Season 2026 as of 2026-04-07 (priced through 2026-04-06): 5,415 games, 365 teams, league 108.38 per 100 at 68.39 possessions, residual sd 13.16. Median prior weight: offence 18%, defence 38%, tempo 8%. 5,415 games over 365 teams: 1 component(s), largest 365, algebraic connectivity 4.4135.",
+      "venue_effect_note": "no `venue_home_effect` verdict is recorded, so the tier effect prices and the per-venue departures are reported, not applied",
+      "report_days": [
+        "2025-11-03",
+        "2025-11-05",
+        "2025-11-10",
+        "2025-11-15",
+        "2025-11-20",
+        "2025-11-25",
+        "2025-12-01",
+        "2025-12-05",
+        "2025-12-10",
+        "2025-12-15",
+        "2025-12-20",
+        "2026-01-01",
+        "2026-01-05",
+        "2026-01-10",
+        "2026-01-15",
+        "2026-01-20",
+        "2026-01-25",
+        "2026-02-01",
+        "2026-02-05",
+        "2026-02-10",
+        "2026-02-15",
+        "2026-02-20",
+        "2026-02-25",
+        "2026-03-01",
+        "2026-03-05",
+        "2026-03-10",
+        "2026-03-15",
+        "2026-03-20",
+        "2026-03-25",
+        "2026-04-01",
+        "2026-04-06"
+      ],
+      "timeline": [
+        {
+          "day": "2025-11-03",
+          "season": 2026,
+          "priced_through": "",
+          "games": 0,
+          "team_games": 0,
+          "teams": 364,
+          "league_efficiency": 106.24563511306651,
+          "league_tempo": 68.02631541924593,
+          "residual_sd": 0.0,
+          "prior_weight": {
+            "offence": {
+              "0.1": 1.0,
+              "0.25": 1.0,
+              "0.5": 1.0,
+              "0.75": 1.0,
+              "0.9": 1.0
+            },
+            "defence": {
+              "0.1": 1.0,
+              "0.25": 1.0,
+              "0.5": 1.0,
+              "0.75": 1.0,
+              "0.9": 1.0
+            },
+            "tempo": {
+              "0.1": 1.0,
+              "0.25": 1.0,
+              "0.5": 1.0,
+              "0.75": 1.0,
+              "0.9": 1.0
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 0,
+              "largest": 0.0,
+              "worst_team": null
+            },
+            "defence": {
+              "teams": 0,
+              "largest": 0.0,
+              "worst_team": null
+            },
+            "tempo": {
+              "teams": 0,
+              "largest": 0.0,
+              "worst_team": null
+            }
+          },
+          "connectivity": {
+            "teams": 0,
+            "components": 0,
+            "largest_component": 0,
+            "median_resistance": null,
+            "priceable_share": 0.0,
+            "fiedler_value": 0.0
+          }
+        },
+        {
+          "day": "2025-11-05",
+          "season": 2026,
+          "priced_through": "2025-11-04",
+          "games": 121,
+          "team_games": 242,
+          "teams": 365,
+          "league_efficiency": 105.90038265973548,
+          "league_tempo": 71.48945425766293,
+          "residual_sd": 14.094627605292313,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.9076546940566604,
+              "0.25": 0.9076546940566604,
+              "0.5": 0.9076546940566604,
+              "0.75": 1.0,
+              "0.9": 1.0
+            },
+            "defence": {
+              "0.1": 0.9308610586302988,
+              "0.25": 0.9308610586302988,
+              "0.5": 0.9308610586302988,
+              "0.75": 1.0,
+              "0.9": 1.0
+            },
+            "tempo": {
+              "0.1": 0.7284205343524666,
+              "0.25": 0.7284205343524666,
+              "0.5": 0.7284205343524667,
+              "0.75": 1.0,
+              "0.9": 1.0
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 0,
+              "largest": 0.0,
+              "worst_team": null
+            },
+            "defence": {
+              "teams": 0,
+              "largest": 0.0,
+              "worst_team": null
+            },
+            "tempo": {
+              "teams": 0,
+              "largest": 0.0,
+              "worst_team": null
+            }
+          },
+          "connectivity": {
+            "teams": 242,
+            "components": 121,
+            "largest_component": 2,
+            "median_resistance": 0.9999999999999998,
+            "priceable_share": 0.004149377593360996,
+            "fiedler_value": 2.0
+          }
+        },
+        {
+          "day": "2025-11-10",
+          "season": 2026,
+          "priced_through": "2025-11-09",
+          "games": 295,
+          "team_games": 590,
+          "teams": 365,
+          "league_efficiency": 106.0308046378812,
+          "league_tempo": 71.55373819437317,
+          "residual_sd": 13.986737986328238,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.8262149611786783,
+              "0.25": 0.8289249540135076,
+              "0.5": 0.8292381193403763,
+              "0.75": 0.9106035859185545,
+              "0.9": 0.9107403528134173
+            },
+            "defence": {
+              "0.1": 0.8691447906740655,
+              "0.25": 0.8718116140903783,
+              "0.5": 0.8721517468461112,
+              "0.75": 0.9338099973297257,
+              "0.9": 0.9339124941057183
+            },
+            "tempo": {
+              "0.1": 0.5459002149204772,
+              "0.25": 0.5674334407356143,
+              "0.5": 0.5763726565355508,
+              "0.75": 0.7567967855116131,
+              "0.9": 0.760889310935801
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 84,
+              "largest": 0.005777441996021593,
+              "worst_team": 2752
+            },
+            "defence": {
+              "teams": 84,
+              "largest": 0.005809163187065369,
+              "worst_team": 2752
+            },
+            "tempo": {
+              "teams": 88,
+              "largest": 0.05459274236856648,
+              "worst_team": 2752
+            }
+          },
+          "connectivity": {
+            "teams": 351,
+            "components": 59,
+            "largest_component": 51,
+            "median_resistance": 6.0,
+            "priceable_share": 0.0020838420838420837,
+            "fiedler_value": 0.007157723276898134
+          }
+        },
+        {
+          "day": "2025-11-15",
+          "season": 2026,
+          "priced_through": "2025-11-14",
+          "games": 485,
+          "team_games": 970,
+          "teams": 365,
+          "league_efficiency": 106.24050672420518,
+          "league_tempo": 71.11616336093692,
+          "residual_sd": 13.32840135201383,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.6951823350403091,
+              "0.25": 0.7590367833480407,
+              "0.5": 0.7638635438640802,
+              "0.75": 0.8338180816470555,
+              "0.9": 0.8365610521002576
+            },
+            "defence": {
+              "0.1": 0.7695328181736966,
+              "0.25": 0.8189357584212748,
+              "0.5": 0.8237492009712022,
+              "0.75": 0.876813020885617,
+              "0.9": 0.87945819038281
+            },
+            "tempo": {
+              "0.1": 0.3701597371444777,
+              "0.25": 0.45448102571262117,
+              "0.5": 0.48660140710421734,
+              "0.75": 0.6021425800534262,
+              "0.9": 0.6240429407798239
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 181,
+              "largest": 0.006894105005229911,
+              "worst_team": 2545
+            },
+            "defence": {
+              "teams": 181,
+              "largest": 0.0068939778823281506,
+              "worst_team": 2545
+            },
+            "tempo": {
+              "teams": 181,
+              "largest": 0.04103712687835381,
+              "worst_team": 2545
+            }
+          },
+          "connectivity": {
+            "teams": 362,
+            "components": 1,
+            "largest_component": 362,
+            "median_resistance": 1.9671061387650883,
+            "priceable_share": 0.010223290124118089,
+            "fiedler_value": 0.05661579070314054
+          }
+        },
+        {
+          "day": "2025-11-20",
+          "season": 2026,
+          "priced_through": "2025-11-19",
+          "games": 696,
+          "team_games": 1392,
+          "teams": 365,
+          "league_efficiency": 106.52687229774754,
+          "league_tempo": 70.90690104763817,
+          "residual_sd": 13.19806830914189,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.6425670083992219,
+              "0.25": 0.6982088892921169,
+              "0.5": 0.7043688146014591,
+              "0.75": 0.7653499400364092,
+              "0.9": 0.7715840385818608
+            },
+            "defence": {
+              "0.1": 0.7298871851301624,
+              "0.25": 0.7729421138134906,
+              "0.5": 0.779033909966566,
+              "0.75": 0.8254086176269388,
+              "0.9": 0.831578459713591
+            },
+            "tempo": {
+              "0.1": 0.31637381391237945,
+              "0.25": 0.37706178991151423,
+              "0.5": 0.407178325650583,
+              "0.75": 0.48960620981893677,
+              "0.9": 0.5205753905978973
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 172,
+              "largest": 0.006167188209227015,
+              "worst_team": 2429
+            },
+            "defence": {
+              "teams": 172,
+              "largest": 0.006263268825606683,
+              "worst_team": 2429
+            },
+            "tempo": {
+              "teams": 173,
+              "largest": 0.03151259660508149,
+              "worst_team": 2429
+            }
+          },
+          "connectivity": {
+            "teams": 364,
+            "components": 1,
+            "largest_component": 364,
+            "median_resistance": 0.8276051969611933,
+            "priceable_share": 0.7829443283988738,
+            "fiedler_value": 0.279431417567627
+          }
+        },
+        {
+          "day": "2025-11-25",
+          "season": 2026,
+          "priced_through": "2025-11-24",
+          "games": 919,
+          "team_games": 1838,
+          "teams": 365,
+          "league_efficiency": 106.8185188469371,
+          "league_tempo": 70.64175996043099,
+          "residual_sd": 13.187406524923688,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.5943859035981457,
+              "0.25": 0.6010880602019552,
+              "0.5": 0.651739295113473,
+              "0.75": 0.7069528682265684,
+              "0.9": 0.7168572371711293
+            },
+            "defence": {
+              "0.1": 0.6931707360216449,
+              "0.25": 0.6999047580548274,
+              "0.5": 0.739547770330535,
+              "0.75": 0.7819317216062649,
+              "0.9": 0.7918020073769211
+            },
+            "tempo": {
+              "0.1": 0.27211611065423025,
+              "0.25": 0.2956511647404888,
+              "0.5": 0.34878115951510946,
+              "0.75": 0.41270244065392425,
+              "0.9": 0.4529676924986373
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 187,
+              "largest": 0.007289489877884026,
+              "worst_team": 2628
+            },
+            "defence": {
+              "teams": 187,
+              "largest": 0.007505839816672744,
+              "worst_team": 2628
+            },
+            "tempo": {
+              "teams": 189,
+              "largest": 0.03218339956314453,
+              "worst_team": 2628
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.5420216646512788,
+            "priceable_share": 0.9933012193286166,
+            "fiedler_value": 0.7334670301841067
+          }
+        },
+        {
+          "day": "2025-12-01",
+          "season": 2026,
+          "priced_through": "2025-11-30",
+          "games": 1186,
+          "team_games": 2372,
+          "teams": 365,
+          "league_efficiency": 106.81317151565274,
+          "league_tempo": 70.17735624191901,
+          "residual_sd": 13.336323145588977,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.5181763141490665,
+              "0.25": 0.558249871966458,
+              "0.5": 0.5670149129254156,
+              "0.75": 0.6123559559967455,
+              "0.9": 0.6638316021287551
+            },
+            "defence": {
+              "0.1": 0.6360353413439032,
+              "0.25": 0.6672795233427615,
+              "0.5": 0.6763693420131701,
+              "0.75": 0.7115916246595951,
+              "0.9": 0.7518766862006044
+            },
+            "tempo": {
+              "0.1": 0.2283241727948657,
+              "0.25": 0.2589615417947119,
+              "0.5": 0.28538677940961643,
+              "0.75": 0.3284000140444885,
+              "0.9": 0.38736629865534866
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 178,
+              "largest": 0.005101977088039833,
+              "worst_team": 227
+            },
+            "defence": {
+              "teams": 179,
+              "largest": 0.005289826594322311,
+              "worst_team": 227
+            },
+            "tempo": {
+              "teams": 182,
+              "largest": 0.01473233321049211,
+              "worst_team": 228
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.3832622311277637,
+            "priceable_share": 1.0,
+            "fiedler_value": 1.1994159927438102
+          }
+        },
+        {
+          "day": "2025-12-05",
+          "season": 2026,
+          "priced_through": "2025-12-04",
+          "games": 1316,
+          "team_games": 2632,
+          "teams": 365,
+          "league_efficiency": 106.98157403911684,
+          "league_tempo": 70.04393555115695,
+          "residual_sd": 13.270063248628718,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.4893802231661651,
+              "0.25": 0.5222369089657904,
+              "0.5": 0.5631488624002796,
+              "0.75": 0.5757117881666107,
+              "0.9": 0.6197210299704393
+            },
+            "defence": {
+              "0.1": 0.6153622891364787,
+              "0.25": 0.6403681798486301,
+              "0.5": 0.6726272434491478,
+              "0.75": 0.6853307559156565,
+              "0.9": 0.7193819108447853
+            },
+            "tempo": {
+              "0.1": 0.21453332144270626,
+              "0.25": 0.23789705128412236,
+              "0.5": 0.27061724873033544,
+              "0.75": 0.3068290884515068,
+              "0.9": 0.34500787563739066
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 157,
+              "largest": 0.004990706936277178,
+              "worst_team": 155
+            },
+            "defence": {
+              "teams": 157,
+              "largest": 0.0050746584505233505,
+              "worst_team": 155
+            },
+            "tempo": {
+              "teams": 161,
+              "largest": 0.012620923830003045,
+              "worst_team": 155
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.33453983397749576,
+            "priceable_share": 1.0,
+            "fiedler_value": 1.3828633670366877
+          }
+        },
+        {
+          "day": "2025-12-10",
+          "season": 2026,
+          "priced_through": "2025-12-09",
+          "games": 1499,
+          "team_games": 2998,
+          "teams": 365,
+          "league_efficiency": 107.00505652143889,
+          "league_tempo": 69.90929508649302,
+          "residual_sd": 13.193428287134054,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.45401963578161575,
+              "0.25": 0.48894343764125936,
+              "0.5": 0.5260566761823575,
+              "0.75": 0.5702191632590451,
+              "0.9": 0.5790305266468541
+            },
+            "defence": {
+              "0.1": 0.5872513571853696,
+              "0.25": 0.6152643418103958,
+              "0.5": 0.6445846613044144,
+              "0.75": 0.6800650597988088,
+              "0.9": 0.6887984610435971
+            },
+            "tempo": {
+              "0.1": 0.19222965264078418,
+              "0.25": 0.21705422480341746,
+              "0.5": 0.2435337942189599,
+              "0.75": 0.2878269145380061,
+              "0.9": 0.3097246381874239
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 197,
+              "largest": 0.004469630503377786,
+              "worst_team": 160
+            },
+            "defence": {
+              "teams": 199,
+              "largest": 0.00453086360172017,
+              "worst_team": 160
+            },
+            "tempo": {
+              "teams": 202,
+              "largest": 0.010441994216688066,
+              "worst_team": 160
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.28670435487518964,
+            "priceable_share": 1.0,
+            "fiedler_value": 1.7284455245679493
+          }
+        },
+        {
+          "day": "2025-12-15",
+          "season": 2026,
+          "priced_through": "2025-12-14",
+          "games": 1648,
+          "team_games": 3296,
+          "teams": 365,
+          "league_efficiency": 107.11955232898812,
+          "league_tempo": 69.81697473619955,
+          "residual_sd": 13.20145800538655,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.42703897375719246,
+              "0.25": 0.46004970678491325,
+              "0.5": 0.4947424566800997,
+              "0.75": 0.5356974093292013,
+              "0.9": 0.5765273091090778
+            },
+            "defence": {
+              "0.1": 0.5668952807073436,
+              "0.25": 0.5939422271463666,
+              "0.5": 0.6214044370785888,
+              "0.75": 0.6548099518713851,
+              "0.9": 0.6867342401517531
+            },
+            "tempo": {
+              "0.1": 0.17803347986731355,
+              "0.25": 0.2015106030991762,
+              "0.5": 0.2273500632113878,
+              "0.75": 0.2639431534108202,
+              "0.9": 0.3004051368040708
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 208,
+              "largest": 0.00647330106942251,
+              "worst_team": 325
+            },
+            "defence": {
+              "teams": 209,
+              "largest": 0.0065660513985152935,
+              "worst_team": 325
+            },
+            "tempo": {
+              "teams": 206,
+              "largest": 0.015162382232873917,
+              "worst_team": 325
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.25652928349009885,
+            "priceable_share": 1.0,
+            "fiedler_value": 1.9704002452541802
+          }
+        },
+        {
+          "day": "2025-12-20",
+          "season": 2026,
+          "priced_through": "2025-12-19",
+          "games": 1785,
+          "team_games": 3570,
+          "teams": 365,
+          "league_efficiency": 107.14781801299267,
+          "league_tempo": 69.81080435897957,
+          "residual_sd": 13.147775711157372,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.42519059523898467,
+              "0.25": 0.4329075187387246,
+              "0.5": 0.46552466388958885,
+              "0.75": 0.5020330348276622,
+              "0.9": 0.5426697111675153
+            },
+            "defence": {
+              "0.1": 0.5655925354094075,
+              "0.25": 0.5734400006283541,
+              "0.5": 0.5997507376501058,
+              "0.75": 0.6295064254036539,
+              "0.9": 0.6620450421941483
+            },
+            "tempo": {
+              "0.1": 0.17416946633694838,
+              "0.25": 0.1875468330654875,
+              "0.5": 0.21051355384483017,
+              "0.75": 0.24171387115563442,
+              "0.9": 0.27823641748542877
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 225,
+              "largest": 0.004729610012531638,
+              "worst_team": 107
+            },
+            "defence": {
+              "teams": 225,
+              "largest": 0.004776672509149926,
+              "worst_team": 107
+            },
+            "tempo": {
+              "teams": 223,
+              "largest": 0.009149062564440286,
+              "worst_team": 107
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.23138602362377325,
+            "priceable_share": 1.0,
+            "fiedler_value": 2.186830421853101
+          }
+        },
+        {
+          "day": "2026-01-01",
+          "season": 2026,
+          "priced_through": "2025-12-31",
+          "games": 2099,
+          "team_games": 4198,
+          "teams": 365,
+          "league_efficiency": 107.33750631600896,
+          "league_tempo": 69.69161898376962,
+          "residual_sd": 13.216040711004698,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.375687186237524,
+              "0.25": 0.3859403663950419,
+              "0.5": 0.41529985880396975,
+              "0.75": 0.4528074125864931,
+              "0.9": 0.5085584907538203
+            },
+            "defence": {
+              "0.1": 0.5278077840252172,
+              "0.25": 0.5381407248890306,
+              "0.5": 0.5624307997004857,
+              "0.75": 0.5941512894615452,
+              "0.9": 0.636624063918906
+            },
+            "tempo": {
+              "0.1": 0.1508930658344788,
+              "0.25": 0.1633675489593885,
+              "0.5": 0.18572326424814287,
+              "0.75": 0.2143013076866585,
+              "0.9": 0.2503625508403775
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 256,
+              "largest": 0.004994237319479733,
+              "worst_team": 2545
+            },
+            "defence": {
+              "teams": 257,
+              "largest": 0.005173904028775378,
+              "worst_team": 2545
+            },
+            "tempo": {
+              "teams": 237,
+              "largest": 0.0076681594737536,
+              "worst_team": 2545
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.19380499391177708,
+            "priceable_share": 1.0,
+            "fiedler_value": 2.6877047735765083
+          }
+        },
+        {
+          "day": "2026-01-05",
+          "season": 2026,
+          "priced_through": "2026-01-04",
+          "games": 2315,
+          "team_games": 4630,
+          "teams": 365,
+          "league_efficiency": 107.42829130410148,
+          "league_tempo": 69.52388938883936,
+          "residual_sd": 13.237391168563688,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.354597171922345,
+              "0.25": 0.3645073279473589,
+              "0.5": 0.3915454785877589,
+              "0.75": 0.422540230760795,
+              "0.9": 0.4516144060366419
+            },
+            "defence": {
+              "0.1": 0.5119646537620888,
+              "0.25": 0.5220622830148361,
+              "0.5": 0.5446642294233504,
+              "0.75": 0.5702782500573867,
+              "0.9": 0.5937164962723591
+            },
+            "tempo": {
+              "0.1": 0.14153525489154503,
+              "0.25": 0.15472115004527634,
+              "0.5": 0.17267410570634978,
+              "0.75": 0.19497876316137347,
+              "0.9": 0.21501371996048296
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 256,
+              "largest": 0.004860158385975422,
+              "worst_team": 2612
+            },
+            "defence": {
+              "teams": 261,
+              "largest": 0.004983605746797015,
+              "worst_team": 2612
+            },
+            "tempo": {
+              "teams": 234,
+              "largest": 0.007215980924633103,
+              "worst_team": 2612
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.17425031308950256,
+            "priceable_share": 1.0,
+            "fiedler_value": 2.923596583573411
+          }
+        },
+        {
+          "day": "2026-01-10",
+          "season": 2026,
+          "priced_through": "2026-01-09",
+          "games": 2477,
+          "team_games": 4954,
+          "teams": 365,
+          "league_efficiency": 107.4506142589547,
+          "league_tempo": 69.43921114775875,
+          "residual_sd": 13.189882682257942,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.33726540112109343,
+              "0.25": 0.3454921552752547,
+              "0.5": 0.371680997020726,
+              "0.75": 0.4003009903335659,
+              "0.9": 0.4262741358360162
+            },
+            "defence": {
+              "0.1": 0.49954777531215594,
+              "0.25": 0.5079591463363645,
+              "0.5": 0.5299089656902376,
+              "0.75": 0.5538299385334796,
+              "0.9": 0.5747210870480766
+            },
+            "tempo": {
+              "0.1": 0.1359219691195733,
+              "0.25": 0.14728276670688942,
+              "0.5": 0.16385470899162913,
+              "0.75": 0.1834947156176212,
+              "0.9": 0.19928636203484315
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 171,
+              "largest": 0.0036844982077509636,
+              "worst_team": 2523
+            },
+            "defence": {
+              "teams": 173,
+              "largest": 0.003751327949277683,
+              "worst_team": 2523
+            },
+            "tempo": {
+              "teams": 179,
+              "largest": 0.004985915102256461,
+              "worst_team": 2523
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.16172594395181103,
+            "priceable_share": 1.0,
+            "fiedler_value": 3.101973619352295
+          }
+        },
+        {
+          "day": "2026-01-15",
+          "season": 2026,
+          "priced_through": "2026-01-14",
+          "games": 2740,
+          "team_games": 5480,
+          "teams": 365,
+          "league_efficiency": 107.67126050950401,
+          "league_tempo": 69.30278454398915,
+          "residual_sd": 13.197681122747767,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.3052740661028658,
+              "0.25": 0.32464652559488827,
+              "0.5": 0.3497707431698455,
+              "0.75": 0.3762265853199168,
+              "0.9": 0.4032837047813416
+            },
+            "defence": {
+              "0.1": 0.47599287518050565,
+              "0.25": 0.4917790171206999,
+              "0.5": 0.5131922270562304,
+              "0.75": 0.5351260638061126,
+              "0.9": 0.5576382862353837
+            },
+            "tempo": {
+              "0.1": 0.12585036324599638,
+              "0.25": 0.1349159889417078,
+              "0.5": 0.15072452996611269,
+              "0.75": 0.16822160691547536,
+              "0.9": 0.18597771796940604
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 242,
+              "largest": 0.005493843860955638,
+              "worst_team": 48
+            },
+            "defence": {
+              "teams": 244,
+              "largest": 0.00571663691379054,
+              "worst_team": 48
+            },
+            "tempo": {
+              "teams": 229,
+              "largest": 0.006986025220008574,
+              "worst_team": 48
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.145268195094287,
+            "priceable_share": 1.0,
+            "fiedler_value": 3.3463514324357315
+          }
+        },
+        {
+          "day": "2026-01-20",
+          "season": 2026,
+          "priced_through": "2026-01-19",
+          "games": 2970,
+          "team_games": 5940,
+          "teams": 365,
+          "league_efficiency": 107.85857031157919,
+          "league_tempo": 69.1634545376675,
+          "residual_sd": 13.277681365444696,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.2898961056314869,
+              "0.25": 0.30572582329938275,
+              "0.5": 0.32891925794420923,
+              "0.75": 0.3556264331564897,
+              "0.9": 0.3798568054305758
+            },
+            "defence": {
+              "0.1": 0.464586939291742,
+              "0.25": 0.477058041919815,
+              "0.5": 0.4968591903810427,
+              "0.75": 0.519740851283149,
+              "0.9": 0.5397689972416229
+            },
+            "tempo": {
+              "0.1": 0.12036117500870815,
+              "0.25": 0.1281532782593004,
+              "0.5": 0.14024930357538046,
+              "0.75": 0.15705064779570807,
+              "0.9": 0.17186192176039988
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 231,
+              "largest": 0.0047974875057517075,
+              "worst_team": 2514
+            },
+            "defence": {
+              "teams": 236,
+              "largest": 0.005181739294535415,
+              "worst_team": 2514
+            },
+            "tempo": {
+              "teams": 220,
+              "largest": 0.005084938813181797,
+              "worst_team": 2514
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.13338431819996033,
+            "priceable_share": 1.0,
+            "fiedler_value": 3.4925863512565165
+          }
+        },
+        {
+          "day": "2026-01-25",
+          "season": 2026,
+          "priced_through": "2026-01-24",
+          "games": 3248,
+          "team_games": 6496,
+          "teams": 365,
+          "league_efficiency": 107.93915374001746,
+          "league_tempo": 69.02158144278187,
+          "residual_sd": 13.200414296392239,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.26249950010760503,
+              "0.25": 0.27954600841527244,
+              "0.5": 0.3002465568892074,
+              "0.75": 0.3206467583396035,
+              "0.9": 0.35594218361698643
+            },
+            "defence": {
+              "0.1": 0.4440813904578731,
+              "0.25": 0.4584754953471736,
+              "0.5": 0.4760710061903778,
+              "0.75": 0.49315319743844716,
+              "0.9": 0.5207853205951858
+            },
+            "tempo": {
+              "0.1": 0.11053210544617421,
+              "0.25": 0.11884029117362614,
+              "0.5": 0.13030335876435342,
+              "0.75": 0.14144939428077047,
+              "0.9": 0.15962250668248346
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 111,
+              "largest": 0.005904826440494726,
+              "worst_team": 104
+            },
+            "defence": {
+              "teams": 111,
+              "largest": 0.006396027410295879,
+              "worst_team": 2619
+            },
+            "tempo": {
+              "teams": 111,
+              "largest": 0.006757275682733904,
+              "worst_team": 104
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.12177912724982018,
+            "priceable_share": 1.0,
+            "fiedler_value": 3.6637512554958516
+          }
+        },
+        {
+          "day": "2026-02-01",
+          "season": 2026,
+          "priced_through": "2026-01-31",
+          "games": 3542,
+          "team_games": 7084,
+          "teams": 365,
+          "league_efficiency": 107.9901470146466,
+          "league_tempo": 68.90216659108025,
+          "residual_sd": 13.222175067753989,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.24862798366187047,
+              "0.25": 0.25542335801421545,
+              "0.5": 0.27811982530201923,
+              "0.75": 0.298956993683531,
+              "0.9": 0.3251223518792415
+            },
+            "defence": {
+              "0.1": 0.4338000692005247,
+              "0.25": 0.4408197030310843,
+              "0.5": 0.45899849817154853,
+              "0.75": 0.4756951966718884,
+              "0.9": 0.4986482226910988
+            },
+            "tempo": {
+              "0.1": 0.10442818415432112,
+              "0.25": 0.11010839352517261,
+              "0.5": 0.12057502225572565,
+              "0.75": 0.13123280763490527,
+              "0.9": 0.145454971771614
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 113,
+              "largest": 0.00508489444853788,
+              "worst_team": 250
+            },
+            "defence": {
+              "teams": 113,
+              "largest": 0.005538392344029197,
+              "worst_team": 250
+            },
+            "tempo": {
+              "teams": 111,
+              "largest": 0.005011665421208761,
+              "worst_team": 250
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.1120393911813912,
+            "priceable_share": 1.0,
+            "fiedler_value": 3.7890875415915315
+          }
+        },
+        {
+          "day": "2026-02-05",
+          "season": 2026,
+          "priced_through": "2026-02-04",
+          "games": 3669,
+          "team_games": 7338,
+          "teams": 365,
+          "league_efficiency": 108.02363623185228,
+          "league_tempo": 68.84309553458519,
+          "residual_sd": 13.222758362937151,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.23805606752860853,
+              "0.25": 0.2478937741241557,
+              "0.5": 0.2707125296559169,
+              "0.75": 0.2888821705805372,
+              "0.9": 0.31165890380774053
+            },
+            "defence": {
+              "0.1": 0.42602865181694816,
+              "0.25": 0.43376251978471453,
+              "0.5": 0.45385569625014877,
+              "0.75": 0.46926640261923763,
+              "0.9": 0.4890045560634917
+            },
+            "tempo": {
+              "0.1": 0.10151429243090368,
+              "0.25": 0.1063763490845294,
+              "0.5": 0.11746097608213175,
+              "0.75": 0.12689849839997933,
+              "0.9": 0.1406403391917688
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 237,
+              "largest": 0.004348004765767521,
+              "worst_team": 2382
+            },
+            "defence": {
+              "teams": 248,
+              "largest": 0.004593896858051394,
+              "worst_team": 2382
+            },
+            "tempo": {
+              "teams": 228,
+              "largest": 0.004172594831984441,
+              "worst_team": 526
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.10836567460433406,
+            "priceable_share": 1.0,
+            "fiedler_value": 3.8387918022051752
+          }
+        },
+        {
+          "day": "2026-02-10",
+          "season": 2026,
+          "priced_through": "2026-02-09",
+          "games": 3907,
+          "team_games": 7814,
+          "teams": 365,
+          "league_efficiency": 108.02060398065322,
+          "league_tempo": 68.76539488932946,
+          "residual_sd": 13.199050153733577,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.2231801181733083,
+              "0.25": 0.2316207546366743,
+              "0.5": 0.25018009080468134,
+              "0.75": 0.2736302297101848,
+              "0.9": 0.29726453861553603
+            },
+            "defence": {
+              "0.1": 0.41466883674385174,
+              "0.25": 0.42299827383122474,
+              "0.5": 0.43827760799332505,
+              "0.75": 0.4574734653551722,
+              "0.9": 0.47839434233131856
+            },
+            "tempo": {
+              "0.1": 0.09625887106277811,
+              "0.25": 0.10158313424541546,
+              "0.5": 0.11038106691102074,
+              "0.75": 0.12014589442733653,
+              "0.9": 0.13360711826702265
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 248,
+              "largest": 0.003938334077478789,
+              "worst_team": 357
+            },
+            "defence": {
+              "teams": 251,
+              "largest": 0.0041994617664025125,
+              "worst_team": 357
+            },
+            "tempo": {
+              "teams": 237,
+              "largest": 0.003380712510815509,
+              "worst_team": 2640
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.10209419801444349,
+            "priceable_share": 1.0,
+            "fiedler_value": 3.9221775808025763
+          }
+        },
+        {
+          "day": "2026-02-15",
+          "season": 2026,
+          "priced_through": "2026-02-14",
+          "games": 4172,
+          "team_games": 8344,
+          "teams": 365,
+          "league_efficiency": 108.11928439421074,
+          "league_tempo": 68.68875055030402,
+          "residual_sd": 13.192928058451196,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.2061554311173365,
+              "0.25": 0.21938055513202714,
+              "0.5": 0.23549521178472102,
+              "0.75": 0.2527470848679138,
+              "0.9": 0.2761918936944867
+            },
+            "defence": {
+              "0.1": 0.4022321888595371,
+              "0.25": 0.41344529475192926,
+              "0.5": 0.42767829836810295,
+              "0.75": 0.442483086369329,
+              "0.9": 0.46137430352072717
+            },
+            "tempo": {
+              "0.1": 0.09070005912122146,
+              "0.25": 0.09667685924122761,
+              "0.5": 0.10447242425847085,
+              "0.75": 0.11324841056150328,
+              "0.9": 0.12378682272516135
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 120,
+              "largest": 0.004997324748233972,
+              "worst_team": 2934
+            },
+            "defence": {
+              "teams": 121,
+              "largest": 0.005588970735450283,
+              "worst_team": 2934
+            },
+            "tempo": {
+              "teams": 118,
+              "largest": 0.004126586146829703,
+              "worst_team": 3084
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.09626129654844129,
+            "priceable_share": 1.0,
+            "fiedler_value": 4.003168518752603
+          }
+        },
+        {
+          "day": "2026-02-20",
+          "season": 2026,
+          "priced_through": "2026-02-19",
+          "games": 4356,
+          "team_games": 8712,
+          "teams": 365,
+          "league_efficiency": 108.15398305512055,
+          "league_tempo": 68.63813677044459,
+          "residual_sd": 13.219763401723206,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.19616824393430057,
+              "0.25": 0.2102234782324842,
+              "0.5": 0.2239031740073072,
+              "0.75": 0.24122437054708087,
+              "0.9": 0.2648759064275642
+            },
+            "defence": {
+              "0.1": 0.3944697294625412,
+              "0.25": 0.4069460094855458,
+              "0.5": 0.4186153270830433,
+              "0.75": 0.4339188098646968,
+              "0.9": 0.4529081501595899
+            },
+            "tempo": {
+              "0.1": 0.08739110576952545,
+              "0.25": 0.09388850003411783,
+              "0.5": 0.09999830590573605,
+              "0.75": 0.10883458421776629,
+              "0.9": 0.12043926519596046
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 242,
+              "largest": 0.0038644685399363554,
+              "worst_team": 2546
+            },
+            "defence": {
+              "teams": 249,
+              "largest": 0.004226254698672383,
+              "worst_team": 2546
+            },
+            "tempo": {
+              "teams": 237,
+              "largest": 0.003029097341053888,
+              "worst_team": 2000
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.09247285169298722,
+            "priceable_share": 1.0,
+            "fiedler_value": 4.046943542018763
+          }
+        },
+        {
+          "day": "2026-02-25",
+          "season": 2026,
+          "priced_through": "2026-02-24",
+          "games": 4569,
+          "team_games": 9138,
+          "teams": 365,
+          "league_efficiency": 108.2297717771369,
+          "league_tempo": 68.57205291371534,
+          "residual_sd": 13.203027191528895,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.18520920611783417,
+              "0.25": 0.19796085301848995,
+              "0.5": 0.2136065540341839,
+              "0.75": 0.23068561612667846,
+              "0.9": 0.2555981879392479
+            },
+            "defence": {
+              "0.1": 0.385872878418624,
+              "0.25": 0.39708348901084706,
+              "0.5": 0.41058716946128354,
+              "0.75": 0.42634928313065124,
+              "0.9": 0.4466244492758778
+            },
+            "tempo": {
+              "0.1": 0.08361935530460919,
+              "0.25": 0.08873342465883036,
+              "0.5": 0.09591428646793859,
+              "0.75": 0.104501139343508,
+              "0.9": 0.11600030000024243
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 243,
+              "largest": 0.003102859050081369,
+              "worst_team": 248
+            },
+            "defence": {
+              "teams": 265,
+              "largest": 0.0032851039220997413,
+              "worst_team": 248
+            },
+            "tempo": {
+              "teams": 238,
+              "largest": 0.002218572040891445,
+              "worst_team": 248
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.08871444844694201,
+            "priceable_share": 1.0,
+            "fiedler_value": 4.088655289641271
+          }
+        },
+        {
+          "day": "2026-03-01",
+          "season": 2026,
+          "priced_through": "2026-02-28",
+          "games": 4833,
+          "team_games": 9666,
+          "teams": 365,
+          "league_efficiency": 108.28636301097946,
+          "league_tempo": 68.51143181915995,
+          "residual_sd": 13.182691371619459,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.171851719630885,
+              "0.25": 0.1831898293269296,
+              "0.5": 0.1973921682354559,
+              "0.75": 0.21664889292569894,
+              "0.9": 0.23462372393183528
+            },
+            "defence": {
+              "0.1": 0.3767930087287353,
+              "0.25": 0.386552166672896,
+              "0.5": 0.3992773214974491,
+              "0.75": 0.41484324717926363,
+              "0.9": 0.4308596692446633
+            },
+            "tempo": {
+              "0.1": 0.08008819796276262,
+              "0.25": 0.08483584387483066,
+              "0.5": 0.09138139728010954,
+              "0.75": 0.09899334697025226,
+              "0.9": 0.10791094700973365
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 89,
+              "largest": 0.004485986516962359,
+              "worst_team": 152
+            },
+            "defence": {
+              "teams": 89,
+              "largest": 0.004981662109255325,
+              "worst_team": 152
+            },
+            "tempo": {
+              "teams": 89,
+              "largest": 0.003303915826246437,
+              "worst_team": 152
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.08446997281335272,
+            "priceable_share": 1.0,
+            "fiedler_value": 4.14102688094134
+          }
+        },
+        {
+          "day": "2026-03-05",
+          "season": 2026,
+          "priced_through": "2026-03-04",
+          "games": 4960,
+          "team_games": 9920,
+          "teams": 365,
+          "league_efficiency": 108.29141030250145,
+          "league_tempo": 68.47795666435132,
+          "residual_sd": 13.185006089239485,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.16501174586832457,
+              "0.25": 0.1767532293086648,
+              "0.5": 0.1929128969479454,
+              "0.75": 0.21026516001155315,
+              "0.9": 0.22692429911015483
+            },
+            "defence": {
+              "0.1": 0.3718371975842528,
+              "0.25": 0.3816171911100658,
+              "0.5": 0.39482314612919095,
+              "0.75": 0.4105562046159596,
+              "0.9": 0.42522059303314497
+            },
+            "tempo": {
+              "0.1": 0.07788633149074035,
+              "0.25": 0.08270522325126814,
+              "0.5": 0.08897578717826005,
+              "0.75": 0.0968985679762756,
+              "0.9": 0.10552253195529747
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 245,
+              "largest": 0.002955216674451977,
+              "worst_team": 2870
+            },
+            "defence": {
+              "teams": 262,
+              "largest": 0.003270177236975258,
+              "worst_team": 2870
+            },
+            "tempo": {
+              "teams": 238,
+              "largest": 0.0020080972157103527,
+              "worst_team": 2441
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.08255293977512576,
+            "priceable_share": 1.0,
+            "fiedler_value": 4.163146402232273
+          }
+        },
+        {
+          "day": "2026-03-10",
+          "season": 2026,
+          "priced_through": "2026-03-09",
+          "games": 5164,
+          "team_games": 10328,
+          "teams": 365,
+          "league_efficiency": 108.36179283168022,
+          "league_tempo": 68.44137515570281,
+          "residual_sd": 13.200567102735338,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.15652017149622124,
+              "0.25": 0.1680637836658707,
+              "0.5": 0.1812084157973494,
+              "0.75": 0.2016736730323639,
+              "0.9": 0.2165923979532606
+            },
+            "defence": {
+              "0.1": 0.36528624320890807,
+              "0.25": 0.3753143582834335,
+              "0.5": 0.3871861291556751,
+              "0.75": 0.4041622739243045,
+              "0.9": 0.41771756142714406
+            },
+            "tempo": {
+              "0.1": 0.07505905231877746,
+              "0.25": 0.07982320985861528,
+              "0.5": 0.0858405641688331,
+              "0.75": 0.09370606027461546,
+              "0.9": 0.10093186182341714
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 215,
+              "largest": 0.001542400001468297,
+              "worst_team": 2473
+            },
+            "defence": {
+              "teams": 216,
+              "largest": 0.0016810817996601446,
+              "worst_team": 2473
+            },
+            "tempo": {
+              "teams": 212,
+              "largest": 0.001029218261486678,
+              "worst_team": 2473
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.07981263416420721,
+            "priceable_share": 1.0,
+            "fiedler_value": 4.192996912816698
+          }
+        },
+        {
+          "day": "2026-03-15",
+          "season": 2026,
+          "priced_through": "2026-03-14",
+          "games": 5313,
+          "team_games": 10626,
+          "teams": 365,
+          "league_efficiency": 108.35010427377779,
+          "league_tempo": 68.40416833753854,
+          "residual_sd": 13.168556123478716,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.1506202608934119,
+              "0.25": 0.16063986339225683,
+              "0.5": 0.1762241603591717,
+              "0.75": 0.1944437554732459,
+              "0.9": 0.21341207545067634
+            },
+            "defence": {
+              "0.1": 0.3602683767543483,
+              "0.25": 0.3696455586102321,
+              "0.5": 0.38289298426347285,
+              "0.75": 0.3993603027505398,
+              "0.9": 0.4147527207512666
+            },
+            "tempo": {
+              "0.1": 0.07252120793421954,
+              "0.25": 0.07705014043381402,
+              "0.5": 0.08388823436420922,
+              "0.75": 0.09205379385074983,
+              "0.9": 0.09861539321820084
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 258,
+              "largest": 0.0014536292937354645,
+              "worst_team": 2655
+            },
+            "defence": {
+              "teams": 263,
+              "largest": 0.0015602842478749657,
+              "worst_team": 2655
+            },
+            "tempo": {
+              "teams": 256,
+              "largest": 0.0009762378124062165,
+              "worst_team": 163
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.07813255762402307,
+            "priceable_share": 1.0,
+            "fiedler_value": 4.218224113413111
+          }
+        },
+        {
+          "day": "2026-03-20",
+          "season": 2026,
+          "priced_through": "2026-03-19",
+          "games": 5351,
+          "team_games": 10702,
+          "teams": 365,
+          "league_efficiency": 108.35509877233898,
+          "league_tempo": 68.4034804867202,
+          "residual_sd": 13.167563309154232,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.14805064049917366,
+              "0.25": 0.16014893476944933,
+              "0.5": 0.1758704120370178,
+              "0.75": 0.1930696774371942,
+              "0.9": 0.21299308050326438
+            },
+            "defence": {
+              "0.1": 0.3584270145648401,
+              "0.25": 0.3684762283760303,
+              "0.5": 0.38220086128937963,
+              "0.75": 0.39800116394829466,
+              "0.9": 0.4144525053145199
+            },
+            "tempo": {
+              "0.1": 0.07185837329055768,
+              "0.25": 0.07639395100910842,
+              "0.5": 0.08299297585444702,
+              "0.75": 0.0912455951801065,
+              "0.9": 0.09886604017983262
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 267,
+              "largest": 0.0014188863738090474,
+              "worst_team": 201
+            },
+            "defence": {
+              "teams": 271,
+              "largest": 0.0015201282289454277,
+              "worst_team": 201
+            },
+            "tempo": {
+              "teams": 256,
+              "largest": 0.0009054699258842086,
+              "worst_team": 201
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.07743426659452801,
+            "priceable_share": 1.0,
+            "fiedler_value": 4.328485445393186
+          }
+        },
+        {
+          "day": "2026-03-25",
+          "season": 2026,
+          "priced_through": "2026-03-24",
+          "games": 5392,
+          "team_games": 10784,
+          "teams": 365,
+          "league_efficiency": 108.37508165396653,
+          "league_tempo": 68.3976821725412,
+          "residual_sd": 13.160484114010497,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.14508188364315328,
+              "0.25": 0.1562923028110971,
+              "0.5": 0.17569567407395487,
+              "0.75": 0.19330872939351793,
+              "0.9": 0.21272442258486993
+            },
+            "defence": {
+              "0.1": 0.3560465530837864,
+              "0.25": 0.36634581787395976,
+              "0.5": 0.382590878004284,
+              "0.75": 0.3983538472233642,
+              "0.9": 0.41440800219358487
+            },
+            "tempo": {
+              "0.1": 0.07089166792501095,
+              "0.25": 0.07613336921588705,
+              "0.5": 0.08308062636409255,
+              "0.75": 0.09150934722436439,
+              "0.9": 0.09891131034544583
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 91,
+              "largest": 0.0005955479715763767,
+              "worst_team": 58
+            },
+            "defence": {
+              "teams": 107,
+              "largest": 0.0006251016560959721,
+              "worst_team": 58
+            },
+            "tempo": {
+              "teams": 110,
+              "largest": 0.00037604570878703447,
+              "worst_team": 58
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.07687742378971589,
+            "priceable_share": 1.0,
+            "fiedler_value": 4.401737383922756
+          }
+        },
+        {
+          "day": "2026-04-01",
+          "season": 2026,
+          "priced_through": "2026-03-29",
+          "games": 5406,
+          "team_games": 10812,
+          "teams": 365,
+          "league_efficiency": 108.3846344217188,
+          "league_tempo": 68.38924828557873,
+          "residual_sd": 13.156447106536064,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.14360232619074345,
+              "0.25": 0.1567299356315146,
+              "0.5": 0.17554932998110387,
+              "0.75": 0.1934640628904304,
+              "0.9": 0.21265292890333026
+            },
+            "defence": {
+              "0.1": 0.3544337584587572,
+              "0.25": 0.3666504505462586,
+              "0.5": 0.38264720337130437,
+              "0.75": 0.3985324317334377,
+              "0.9": 0.4144350819462248
+            },
+            "tempo": {
+              "0.1": 0.07055622553496853,
+              "0.25": 0.07603039246588776,
+              "0.5": 0.08311257946162326,
+              "0.75": 0.09147746856726889,
+              "0.9": 0.09887105974855381
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 102,
+              "largest": 0.0004773772395452458,
+              "worst_team": 127
+            },
+            "defence": {
+              "teams": 117,
+              "largest": 0.00048603290507315267,
+              "worst_team": 127
+            },
+            "tempo": {
+              "teams": 122,
+              "largest": 0.0002698691884913951,
+              "worst_team": 127
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.07677747699379095,
+            "priceable_share": 1.0,
+            "fiedler_value": 4.40988360567815
+          }
+        },
+        {
+          "day": "2026-04-06",
+          "season": 2026,
+          "priced_through": "2026-04-04",
+          "games": 5414,
+          "team_games": 10828,
+          "teams": 365,
+          "league_efficiency": 108.38201344380633,
+          "league_tempo": 68.38946875832984,
+          "residual_sd": 13.158740541465402,
+          "prior_weight": {
+            "offence": {
+              "0.1": 0.1436207219625619,
+              "0.25": 0.1554887416962018,
+              "0.5": 0.17566131842180957,
+              "0.75": 0.19362213621376675,
+              "0.9": 0.2126008234076084
+            },
+            "defence": {
+              "0.1": 0.354507738514584,
+              "0.25": 0.3664870034799087,
+              "0.5": 0.38252117358305954,
+              "0.75": 0.39855715484587434,
+              "0.9": 0.4143846021232638
+            },
+            "tempo": {
+              "0.1": 0.07029716351739898,
+              "0.25": 0.07578626293970613,
+              "0.5": 0.08303415388031088,
+              "0.75": 0.09149384716350693,
+              "0.9": 0.09883604745822487
+            }
+          },
+          "teams_added": 0,
+          "per_team_rises": {
+            "offence": {
+              "teams": 122,
+              "largest": 0.0007805381796158195,
+              "worst_team": 2752
+            },
+            "defence": {
+              "teams": 136,
+              "largest": 0.0008110909075048633,
+              "worst_team": 2752
+            },
+            "tempo": {
+              "teams": 136,
+              "largest": 0.00047340854693919687,
+              "worst_team": 2752
+            }
+          },
+          "connectivity": {
+            "teams": 365,
+            "components": 1,
+            "largest_component": 365,
+            "median_resistance": 0.0766793372545487,
+            "priceable_share": 1.0,
+            "fiedler_value": 4.41265562933704
+          }
+        }
+      ],
+      "connectivity_timeline": [
+        {
+          "day": "2025-11-03",
+          "games": 0,
+          "teams": 0,
+          "components": 0,
+          "largest_component": 0,
+          "median_resistance": null,
+          "priceable_share": 0.0,
+          "fiedler_value": 0.0
+        },
+        {
+          "day": "2025-11-05",
+          "games": 121,
+          "teams": 242,
+          "components": 121,
+          "largest_component": 2,
+          "median_resistance": 0.9999999999999998,
+          "priceable_share": 0.004149377593360996,
+          "fiedler_value": 2.0
+        },
+        {
+          "day": "2025-11-10",
+          "games": 295,
+          "teams": 351,
+          "components": 59,
+          "largest_component": 51,
+          "median_resistance": 6.0,
+          "priceable_share": 0.0020838420838420837,
+          "fiedler_value": 0.007157723276898134
+        },
+        {
+          "day": "2025-11-15",
+          "games": 485,
+          "teams": 362,
+          "components": 1,
+          "largest_component": 362,
+          "median_resistance": 1.9671061387650883,
+          "priceable_share": 0.010223290124118089,
+          "fiedler_value": 0.05661579070314054
+        },
+        {
+          "day": "2025-11-20",
+          "games": 696,
+          "teams": 364,
+          "components": 1,
+          "largest_component": 364,
+          "median_resistance": 0.8276051969611933,
+          "priceable_share": 0.7829443283988738,
+          "fiedler_value": 0.279431417567627
+        },
+        {
+          "day": "2025-11-25",
+          "games": 919,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.5420216646512788,
+          "priceable_share": 0.9933012193286166,
+          "fiedler_value": 0.7334670301841067
+        },
+        {
+          "day": "2025-12-01",
+          "games": 1186,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.3832622311277637,
+          "priceable_share": 1.0,
+          "fiedler_value": 1.1994159927438102
+        },
+        {
+          "day": "2025-12-05",
+          "games": 1316,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.33453983397749576,
+          "priceable_share": 1.0,
+          "fiedler_value": 1.3828633670366877
+        },
+        {
+          "day": "2025-12-10",
+          "games": 1499,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.28670435487518964,
+          "priceable_share": 1.0,
+          "fiedler_value": 1.7284455245679493
+        },
+        {
+          "day": "2025-12-15",
+          "games": 1648,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.25652928349009885,
+          "priceable_share": 1.0,
+          "fiedler_value": 1.9704002452541802
+        },
+        {
+          "day": "2025-12-20",
+          "games": 1785,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.23138602362377325,
+          "priceable_share": 1.0,
+          "fiedler_value": 2.186830421853101
+        },
+        {
+          "day": "2026-01-01",
+          "games": 2099,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.19380499391177708,
+          "priceable_share": 1.0,
+          "fiedler_value": 2.6877047735765083
+        },
+        {
+          "day": "2026-01-05",
+          "games": 2315,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.17425031308950256,
+          "priceable_share": 1.0,
+          "fiedler_value": 2.923596583573411
+        },
+        {
+          "day": "2026-01-10",
+          "games": 2477,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.16172594395181103,
+          "priceable_share": 1.0,
+          "fiedler_value": 3.101973619352295
+        },
+        {
+          "day": "2026-01-15",
+          "games": 2740,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.145268195094287,
+          "priceable_share": 1.0,
+          "fiedler_value": 3.3463514324357315
+        },
+        {
+          "day": "2026-01-20",
+          "games": 2970,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.13338431819996033,
+          "priceable_share": 1.0,
+          "fiedler_value": 3.4925863512565165
+        },
+        {
+          "day": "2026-01-25",
+          "games": 3248,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.12177912724982018,
+          "priceable_share": 1.0,
+          "fiedler_value": 3.6637512554958516
+        },
+        {
+          "day": "2026-02-01",
+          "games": 3542,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.1120393911813912,
+          "priceable_share": 1.0,
+          "fiedler_value": 3.7890875415915315
+        },
+        {
+          "day": "2026-02-05",
+          "games": 3669,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.10836567460433406,
+          "priceable_share": 1.0,
+          "fiedler_value": 3.8387918022051752
+        },
+        {
+          "day": "2026-02-10",
+          "games": 3907,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.10209419801444349,
+          "priceable_share": 1.0,
+          "fiedler_value": 3.9221775808025763
+        },
+        {
+          "day": "2026-02-15",
+          "games": 4172,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.09626129654844129,
+          "priceable_share": 1.0,
+          "fiedler_value": 4.003168518752603
+        },
+        {
+          "day": "2026-02-20",
+          "games": 4356,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.09247285169298722,
+          "priceable_share": 1.0,
+          "fiedler_value": 4.046943542018763
+        },
+        {
+          "day": "2026-02-25",
+          "games": 4569,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.08871444844694201,
+          "priceable_share": 1.0,
+          "fiedler_value": 4.088655289641271
+        },
+        {
+          "day": "2026-03-01",
+          "games": 4833,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.08446997281335272,
+          "priceable_share": 1.0,
+          "fiedler_value": 4.14102688094134
+        },
+        {
+          "day": "2026-03-05",
+          "games": 4960,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.08255293977512576,
+          "priceable_share": 1.0,
+          "fiedler_value": 4.163146402232273
+        },
+        {
+          "day": "2026-03-10",
+          "games": 5164,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.07981263416420721,
+          "priceable_share": 1.0,
+          "fiedler_value": 4.192996912816698
+        },
+        {
+          "day": "2026-03-15",
+          "games": 5313,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.07813255762402307,
+          "priceable_share": 1.0,
+          "fiedler_value": 4.218224113413111
+        },
+        {
+          "day": "2026-03-20",
+          "games": 5351,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.07743426659452801,
+          "priceable_share": 1.0,
+          "fiedler_value": 4.328485445393186
+        },
+        {
+          "day": "2026-03-25",
+          "games": 5392,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.07687742378971589,
+          "priceable_share": 1.0,
+          "fiedler_value": 4.401737383922756
+        },
+        {
+          "day": "2026-04-01",
+          "games": 5406,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.07677747699379095,
+          "priceable_share": 1.0,
+          "fiedler_value": 4.40988360567815
+        },
+        {
+          "day": "2026-04-06",
+          "games": 5414,
+          "teams": 365,
+          "components": 1,
+          "largest_component": 365,
+          "median_resistance": 0.0766793372545487,
+          "priceable_share": 1.0,
+          "fiedler_value": 4.41265562933704
+        }
+      ],
+      "decay": {
+        "checked": true,
+        "days": 115,
+        "printed_days": 23,
+        "months": [
+          "11",
+          "12",
+          "01",
+          "02"
+        ],
+        "material_rise": 0.005,
+        "teams_added": 1,
+        "components": {
+          "offence": {
+            "first_day": "2025-11-03",
+            "last_day": "2026-02-28",
+            "first": 1.0,
+            "last": 0.20585327571896508,
+            "day_steps": 114,
+            "printed_monotone": true,
+            "printed_rises": [],
+            "daily_rise_count": 4,
+            "team_day_steps": 41610,
+            "team_rise_share": 0.5182888728670992,
+            "daily_largest_rise": 0.00023666186918130938,
+            "material_rises": [],
+            "material_rise_count": 0,
+            "team_rise_steps": 21566,
+            "largest_team_rise": 0.009001042957112793
+          },
+          "defence": {
+            "first_day": "2025-11-03",
+            "last_day": "2026-02-28",
+            "first": 1.0,
+            "last": 0.4056368154004437,
+            "day_steps": 114,
+            "printed_monotone": true,
+            "printed_rises": [],
+            "daily_rise_count": 5,
+            "team_day_steps": 41610,
+            "team_rise_share": 0.527661619802932,
+            "daily_largest_rise": 0.000268659149674888,
+            "material_rises": [],
+            "material_rise_count": 0,
+            "team_rise_steps": 21956,
+            "largest_team_rise": 0.009371028857030894
+          },
+          "tempo": {
+            "first_day": "2025-11-03",
+            "last_day": "2026-02-28",
+            "first": 1.0,
+            "last": 0.09423053704298674,
+            "day_steps": 114,
+            "printed_monotone": true,
+            "printed_rises": [],
+            "daily_rise_count": 3,
+            "team_day_steps": 41610,
+            "team_rise_share": 0.5090843547224225,
+            "daily_largest_rise": 0.00037241628326878384,
+            "material_rises": [],
+            "material_rise_count": 0,
+            "team_rise_steps": 21183,
+            "largest_team_rise": 0.05459274236856648
+          }
+        },
+        "monotone": true
+      },
+      "per_tier": [
+        {
+          "tier": "high_major",
+          "teams": 61,
+          "games_offered": 712,
+          "games_priced": 687,
+          "priced_share": 0.9648876404494382,
+          "median_prior_weight": {
+            "offence": 0.155385252721457,
+            "defence": 0.3665451557572219,
+            "tempo": 0.07638176704771912
+          },
+          "rating_sd": {
+            "offence": 4.340905898238142,
+            "defence": 3.6674485469940077,
+            "tempo": 2.2935298040760803
+          },
+          "margin_bias": {
+            "mean": 3.840831087697798,
+            "low": 2.6984351048415585,
+            "high": 4.983227070554038,
+            "n": 687,
+            "clusters": 109,
+            "cluster_unit": "day",
+            "standard_error": 0.5828658035899197,
+            "looks": 30,
+            "adjusted_low": 2.0083124912044164,
+            "adjusted_high": 5.67334968419118,
+            "enough_evidence": true,
+            "survives_correction": true
+          },
+          "margin_absolute_error": 10.893218351239991,
+          "total_bias": {
+            "mean": 2.756022713149363,
+            "low": 1.4968658979481286,
+            "high": 4.015179528350597,
+            "n": 687,
+            "clusters": 109,
+            "cluster_unit": "day",
+            "standard_error": 0.6424387514940594,
+            "looks": 30,
+            "adjusted_low": 0.736207942802773,
+            "adjusted_high": 4.775837483495953,
+            "enough_evidence": true,
+            "survives_correction": true
+          },
+          "total_absolute_error": 11.99986701118401
+        },
+        {
+          "tier": "mid_major",
+          "teams": 131,
+          "games_offered": 1464,
+          "games_priced": 1387,
+          "priced_share": 0.9474043715846995,
+          "median_prior_weight": {
+            "offence": 0.17384286210129615,
+            "defence": 0.3815374421754223,
+            "tempo": 0.08301588075712457
+          },
+          "rating_sd": {
+            "offence": 4.491678485646691,
+            "defence": 3.465999142614318,
+            "tempo": 1.928799359890062
+          },
+          "margin_bias": {
+            "mean": 1.8290904042019125,
+            "low": 1.0715035412321692,
+            "high": 2.586677267171656,
+            "n": 1387,
+            "clusters": 116,
+            "cluster_unit": "day",
+            "standard_error": 0.3865310122764968,
+            "looks": 30,
+            "adjusted_low": 0.6138445212637529,
+            "adjusted_high": 3.044336287140072,
+            "enough_evidence": true,
+            "survives_correction": true
+          },
+          "margin_absolute_error": 9.401666791231655,
+          "total_bias": {
+            "mean": 1.868141720901188,
+            "low": 0.9620888907210154,
+            "high": 2.7741945510813606,
+            "n": 1387,
+            "clusters": 116,
+            "cluster_unit": "day",
+            "standard_error": 0.4622803466425922,
+            "looks": 30,
+            "adjusted_low": 0.4147414239574203,
+            "adjusted_high": 3.3215420178449557,
+            "enough_evidence": true,
+            "survives_correction": true
+          },
+          "total_absolute_error": 13.022932116195681
+        },
+        {
+          "tier": "low_major",
+          "teams": 172,
+          "games_offered": 1946,
+          "games_priced": 1841,
+          "priced_share": 0.9460431654676259,
+          "median_prior_weight": {
+            "offence": 0.18051975195931147,
+            "defence": 0.38718469522443755,
+            "tempo": 0.08568122267364014
+          },
+          "rating_sd": {
+            "offence": 4.0359419071587075,
+            "defence": 3.1875834839064807,
+            "tempo": 2.0397038607027222
+          },
+          "margin_bias": {
+            "mean": -0.17486742437444916,
+            "low": -0.7548781837527496,
+            "high": 0.40514333500385136,
+            "n": 1841,
+            "clusters": 112,
+            "cluster_unit": "day",
+            "standard_error": 0.29592929459589634,
+            "looks": 30,
+            "adjusted_low": -1.1052632929502035,
+            "adjusted_high": 0.7555284442013053,
+            "enough_evidence": true,
+            "survives_correction": false
+          },
+          "margin_absolute_error": 9.240139723613519,
+          "total_bias": {
+            "mean": 2.8591749264963697,
+            "low": 2.1110697602727426,
+            "high": 3.607280092719997,
+            "n": 1841,
+            "clusters": 1841,
+            "cluster_unit": "game",
+            "standard_error": 0.3816933230021496,
+            "looks": 30,
+            "adjusted_low": 1.659138643271723,
+            "adjusted_high": 4.059211209721017,
+            "enough_evidence": true,
+            "survives_correction": true
+          },
+          "total_absolute_error": 13.470875471742056
+        },
+        {
+          "tier": "mixed",
+          "teams": null,
+          "games_offered": 1293,
+          "games_priced": 804,
+          "priced_share": 0.6218097447795824,
+          "median_prior_weight": {
+            "offence": null,
+            "defence": null,
+            "tempo": null
+          },
+          "rating_sd": {
+            "offence": null,
+            "defence": null,
+            "tempo": null
+          },
+          "margin_bias": {
+            "mean": -3.3856748003219077,
+            "low": -4.568587209358232,
+            "high": -2.2027623912855834,
+            "n": 804,
+            "clusters": 88,
+            "cluster_unit": "day",
+            "standard_error": 0.6035378294534934,
+            "looks": 30,
+            "adjusted_low": -5.2831858386241475,
+            "adjusted_high": -1.4881637620196682,
+            "enough_evidence": true,
+            "survives_correction": true
+          },
+          "margin_absolute_error": 11.31001272777129,
+          "total_bias": {
+            "mean": 1.6470709410370432,
+            "low": 0.4552873896574454,
+            "high": 2.8388544924166412,
+            "n": 804,
+            "clusters": 804,
+            "cluster_unit": "game",
+            "standard_error": 0.6080640056553255,
+            "looks": 30,
+            "adjusted_low": -0.26467030601955743,
+            "adjusted_high": 3.558812188093644,
+            "enough_evidence": true,
+            "survives_correction": false
+          },
+          "total_absolute_error": 13.907776884305553
+        },
+        {
+          "tier": "POOLED",
+          "teams": 365,
+          "games_offered": 5415,
+          "games_priced": 4719,
+          "priced_share": 0.8714681440443214,
+          "median_prior_weight": {
+            "offence": 0.17564795760247942,
+            "defence": 0.3825206800943348,
+            "tempo": 0.08302960865194203
+          },
+          "rating_sd": {
+            "offence": 5.030868531828359,
+            "defence": 3.7499178955779167,
+            "tempo": 2.0481553602100013
+          },
+          "margin_bias": {
+            "mean": 0.4517028777589038,
+            "low": -0.12569902453450915,
+            "high": 1.0291047800523168,
+            "n": 4719,
+            "clusters": 136,
+            "cluster_unit": "day",
+            "standard_error": 0.2945982206039935,
+            "looks": 30,
+            "adjusted_low": -0.47450812042567775,
+            "adjusted_high": 1.3779138759434852,
+            "enough_evidence": true,
+            "survives_correction": false
+          },
+          "margin_absolute_error": 9.88092822865878,
+          "total_bias": {
+            "mean": 2.346362841088612,
+            "low": 1.8569668010088818,
+            "high": 2.8357588811683425,
+            "n": 4719,
+            "clusters": 136,
+            "cluster_unit": "day",
+            "standard_error": 0.24969644541431568,
+            "looks": 30,
+            "adjusted_low": 1.5613221389547847,
+            "adjusted_high": 3.1314035432224396,
+            "enough_evidence": true,
+            "survives_correction": true
+          },
+          "total_absolute_error": 13.199501979297652
+        }
+      ],
+      "venue_audit": [
+        {
+          "tier": "high_major",
+          "fitted_per_100": 12.361969065776835,
+          "fitted_points_at_league_tempo": 8.454218139527073,
+          "measured": {
+            "mean": 5.5776274891393545,
+            "low": 4.523424441953679,
+            "high": 6.63183053632503,
+            "n": 475,
+            "clusters": 475,
+            "cluster_unit": "pair",
+            "standard_error": 0.5378685810051071,
+            "looks": 30,
+            "adjusted_low": 3.8865792734254825,
+            "adjusted_high": 7.2686757048532264,
+            "enough_evidence": true,
+            "survives_correction": true
+          },
+          "pairs": 475,
+          "inside": false,
+          "inside_corrected": false,
+          "gap_per_100": 6.78434157663748
+        },
+        {
+          "tier": "mid_major",
+          "fitted_per_100": 7.339343222113889,
+          "fitted_points_at_league_tempo": 5.0192981611955805,
+          "measured": {
+            "mean": 4.697653803137796,
+            "low": 4.031982056191138,
+            "high": 5.363325550084454,
+            "n": 1134,
+            "clusters": 1134,
+            "cluster_unit": "pair",
+            "standard_error": 0.33963468318672796,
+            "looks": 30,
+            "adjusted_low": 3.6298490543937736,
+            "adjusted_high": 5.765458551881819,
+            "enough_evidence": true,
+            "survives_correction": true
+          },
+          "pairs": 1134,
+          "inside": false,
+          "inside_corrected": false,
+          "gap_per_100": 2.6416894189760924
+        },
+        {
+          "tier": "low_major",
+          "fitted_per_100": 3.903955508764523,
+          "fitted_points_at_league_tempo": 2.6698733270151265,
+          "measured": {
+            "mean": 3.687053796745604,
+            "low": 3.145795543009598,
+            "high": 4.22831205048161,
+            "n": 1728,
+            "clusters": 1728,
+            "cluster_unit": "pair",
+            "standard_error": 0.27615724472764924,
+            "looks": 30,
+            "adjusted_low": 2.818820863190565,
+            "adjusted_high": 4.555286730300643,
+            "enough_evidence": true,
+            "survives_correction": true
+          },
+          "pairs": 1728,
+          "inside": true,
+          "inside_corrected": true,
+          "gap_per_100": 0.21690171201891895
+        },
+        {
+          "tier": "unplaced",
+          "fitted_per_100": 7.868422598885077,
+          "fitted_points_at_league_tempo": 5.381129875912591,
+          "measured": null,
+          "pairs": 0,
+          "inside": null,
+          "inside_corrected": null,
+          "gap_per_100": null
+        }
+      ],
+      "measured_home_advantage": [
+        {
+          "tier": "high_major",
+          "pairs": 475,
+          "games": 953,
+          "seasons": [
+            2023,
+            2024,
+            2025
+          ],
+          "per_100": {
+            "mean": 5.5776274891393545,
+            "low": 4.523424441953679,
+            "high": 6.63183053632503,
+            "n": 475,
+            "clusters": 475,
+            "cluster_unit": "pair",
+            "standard_error": 0.5378685810051071,
+            "looks": 30,
+            "adjusted_low": 3.8865792734254825,
+            "adjusted_high": 7.2686757048532264,
+            "enough_evidence": true,
+            "survives_correction": true
+          },
+          "points": {
+            "mean": 3.781578947368421,
+            "low": 3.0634541071990804,
+            "high": 4.4997037875377615,
+            "n": 475,
+            "clusters": 475,
+            "cluster_unit": "pair",
+            "standard_error": 0.36639695720626386,
+            "looks": 30,
+            "adjusted_low": 2.6296341366698366,
+            "adjusted_high": 4.933523758067006,
+            "enough_evidence": true,
+            "survives_correction": true
+          }
+        },
+        {
+          "tier": "mid_major",
+          "pairs": 1134,
+          "games": 2269,
+          "seasons": [
+            2023,
+            2024,
+            2025
+          ],
+          "per_100": {
+            "mean": 4.697653803137796,
+            "low": 4.031982056191138,
+            "high": 5.363325550084454,
+            "n": 1134,
+            "clusters": 1134,
+            "cluster_unit": "pair",
+            "standard_error": 0.33963468318672796,
+            "looks": 30,
+            "adjusted_low": 3.6298490543937736,
+            "adjusted_high": 5.765458551881819,
+            "enough_evidence": true,
+            "survives_correction": true
+          },
+          "points": {
+            "mean": 3.1964285714285716,
+            "low": 2.7478185088190505,
+            "high": 3.6450386340380927,
+            "n": 1134,
+            "clusters": 1134,
+            "cluster_unit": "pair",
+            "standard_error": 0.22888689085518932,
+            "looks": 30,
+            "adjusted_low": 2.476812698611326,
+            "adjusted_high": 3.9160444442458173,
+            "enough_evidence": true,
+            "survives_correction": true
+          }
+        },
+        {
+          "tier": "low_major",
+          "pairs": 1728,
+          "games": 3538,
+          "seasons": [
+            2023,
+            2024,
+            2025
+          ],
+          "per_100": {
+            "mean": 3.687053796745604,
+            "low": 3.145795543009598,
+            "high": 4.22831205048161,
+            "n": 1728,
+            "clusters": 1728,
+            "cluster_unit": "pair",
+            "standard_error": 0.27615724472764924,
+            "looks": 30,
+            "adjusted_low": 2.818820863190565,
+            "adjusted_high": 4.555286730300643,
+            "enough_evidence": true,
+            "survives_correction": true
+          },
+          "points": {
+            "mean": 2.5247395833333335,
+            "low": 2.159764465724525,
+            "high": 2.889714700942142,
+            "n": 1728,
+            "clusters": 1728,
+            "cluster_unit": "pair",
+            "standard_error": 0.18621521644667216,
+            "looks": 30,
+            "adjusted_low": 1.9392826136726957,
+            "adjusted_high": 3.1101965529939712,
+            "enough_evidence": true,
+            "survives_correction": true
+          }
+        },
+        {
+          "tier": "mixed",
+          "pairs": 116,
+          "games": 236,
+          "seasons": [
+            2023,
+            2024,
+            2025
+          ],
+          "per_100": {
+            "mean": 7.229678587227869,
+            "low": 5.321995398735863,
+            "high": 9.137361775719874,
+            "n": 116,
+            "clusters": 116,
+            "cluster_unit": "pair",
+            "standard_error": 0.9733256343175521,
+            "looks": 30,
+            "adjusted_low": 4.169561980034484,
+            "adjusted_high": 10.289795194421254,
+            "enough_evidence": false,
+            "survives_correction": false
+          },
+          "points": {
+            "mean": 4.946120689655173,
+            "low": 3.6433032630731343,
+            "high": 6.248938116237211,
+            "n": 116,
+            "clusters": 116,
+            "cluster_unit": "pair",
+            "standard_error": 0.6647149829581032,
+            "looks": 30,
+            "adjusted_low": 2.8562698867154417,
+            "adjusted_high": 7.0359714925949035,
+            "enough_evidence": false,
+            "survives_correction": false
+          }
+        },
+        {
+          "tier": "POOLED",
+          "pairs": 3453,
+          "games": 6996,
+          "seasons": [
+            2023,
+            2024,
+            2025
+          ],
+          "per_100": {
+            "mean": 4.398026106861943,
+            "low": 4.014618222825463,
+            "high": 4.781433990898423,
+            "n": 3453,
+            "clusters": 3453,
+            "cluster_unit": "pair",
+            "standard_error": 0.19561986192641934,
+            "looks": 30,
+            "adjusted_low": 3.7830011172061067,
+            "adjusted_high": 5.0130510965177795,
+            "enough_evidence": true,
+            "survives_correction": true
+          },
+          "points": {
+            "mean": 2.9995655951346656,
+            "low": 2.7406095491713107,
+            "high": 3.2585216410980204,
+            "n": 3453,
+            "clusters": 3453,
+            "cluster_unit": "pair",
+            "standard_error": 0.13212285940250287,
+            "looks": 30,
+            "adjusted_low": 2.584173929701998,
+            "adjusted_high": 3.4149572605673333,
+            "enough_evidence": true,
+            "survives_correction": true
+          }
+        }
+      ],
+      "seam_comparison": [
+        {
+          "day": "2025-11-03",
+          "season_only": {
+            "team_games": 0,
+            "median_prior_weight": {
+              "offence": 1.0,
+              "defence": 1.0,
+              "tempo": 1.0
+            }
+          },
+          "pooled": {
+            "team_games": 31828,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.242033660566569,
+              "tempo": 0.02968342948470061
+            }
+          }
+        },
+        {
+          "day": "2025-11-05",
+          "season_only": {
+            "team_games": 242,
+            "median_prior_weight": {
+              "offence": 0.9076546940566604,
+              "defence": 0.9308610586302988,
+              "tempo": 0.7284205343524667
+            }
+          },
+          "pooled": {
+            "team_games": 32070,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.24163534380258647,
+              "tempo": 0.029460727056673706
+            }
+          }
+        },
+        {
+          "day": "2025-11-10",
+          "season_only": {
+            "team_games": 590,
+            "median_prior_weight": {
+              "offence": 0.8292381193403763,
+              "defence": 0.8721517468461112,
+              "tempo": 0.5763726565355508
+            }
+          },
+          "pooled": {
+            "team_games": 32418,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.24047191164362278,
+              "tempo": 0.029185326965026345
+            }
+          }
+        },
+        {
+          "day": "2025-11-15",
+          "season_only": {
+            "team_games": 970,
+            "median_prior_weight": {
+              "offence": 0.7638635438640802,
+              "defence": 0.8237492009712022,
+              "tempo": 0.48660140710421734
+            }
+          },
+          "pooled": {
+            "team_games": 32798,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.23972117591409564,
+              "tempo": 0.028764225200316563
+            }
+          }
+        },
+        {
+          "day": "2025-11-20",
+          "season_only": {
+            "team_games": 1392,
+            "median_prior_weight": {
+              "offence": 0.7043688146014591,
+              "defence": 0.779033909966566,
+              "tempo": 0.407178325650583
+            }
+          },
+          "pooled": {
+            "team_games": 33220,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.23854104421639696,
+              "tempo": 0.02858840756731736
+            }
+          }
+        },
+        {
+          "day": "2025-11-25",
+          "season_only": {
+            "team_games": 1838,
+            "median_prior_weight": {
+              "offence": 0.651739295113473,
+              "defence": 0.739547770330535,
+              "tempo": 0.34878115951510946
+            }
+          },
+          "pooled": {
+            "team_games": 33666,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.23715486649918363,
+              "tempo": 0.02816830552918859
+            }
+          }
+        },
+        {
+          "day": "2025-12-01",
+          "season_only": {
+            "team_games": 2372,
+            "median_prior_weight": {
+              "offence": 0.5670149129254156,
+              "defence": 0.6763693420131701,
+              "tempo": 0.28538677940961643
+            }
+          },
+          "pooled": {
+            "team_games": 34200,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.23608578275726652,
+              "tempo": 0.027755149491575214
+            }
+          }
+        },
+        {
+          "day": "2025-12-05",
+          "season_only": {
+            "team_games": 2632,
+            "median_prior_weight": {
+              "offence": 0.5631488624002796,
+              "defence": 0.6726272434491478,
+              "tempo": 0.27061724873033544
+            }
+          },
+          "pooled": {
+            "team_games": 34460,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.2353304024111004,
+              "tempo": 0.02761414336722836
+            }
+          }
+        },
+        {
+          "day": "2025-12-10",
+          "season_only": {
+            "team_games": 2998,
+            "median_prior_weight": {
+              "offence": 0.5260566761823575,
+              "defence": 0.6445846613044144,
+              "tempo": 0.2435337942189599
+            }
+          },
+          "pooled": {
+            "team_games": 34826,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.23432258997623828,
+              "tempo": 0.027284547663918073
+            }
+          }
+        },
+        {
+          "day": "2025-12-15",
+          "season_only": {
+            "team_games": 3296,
+            "median_prior_weight": {
+              "offence": 0.4947424566800997,
+              "defence": 0.6214044370785888,
+              "tempo": 0.2273500632113878
+            }
+          },
+          "pooled": {
+            "team_games": 35124,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.234156267828412,
+              "tempo": 0.027006123465950434
+            }
+          }
+        },
+        {
+          "day": "2025-12-20",
+          "season_only": {
+            "team_games": 3570,
+            "median_prior_weight": {
+              "offence": 0.46552466388958885,
+              "defence": 0.5997507376501058,
+              "tempo": 0.21051355384483017
+            }
+          },
+          "pooled": {
+            "team_games": 35398,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.23373401634144927,
+              "tempo": 0.026932760763428154
+            }
+          }
+        },
+        {
+          "day": "2026-01-01",
+          "season_only": {
+            "team_games": 4198,
+            "median_prior_weight": {
+              "offence": 0.41529985880396975,
+              "defence": 0.5624307997004857,
+              "tempo": 0.18572326424814287
+            }
+          },
+          "pooled": {
+            "team_games": 36026,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.2321144531940639,
+              "tempo": 0.02639712731672253
+            }
+          }
+        },
+        {
+          "day": "2026-01-05",
+          "season_only": {
+            "team_games": 4630,
+            "median_prior_weight": {
+              "offence": 0.3915454785877589,
+              "defence": 0.5446642294233504,
+              "tempo": 0.17267410570634978
+            }
+          },
+          "pooled": {
+            "team_games": 36458,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.23068942074603607,
+              "tempo": 0.025934815885506543
+            }
+          }
+        },
+        {
+          "day": "2026-01-10",
+          "season_only": {
+            "team_games": 4954,
+            "median_prior_weight": {
+              "offence": 0.371680997020726,
+              "defence": 0.5299089656902376,
+              "tempo": 0.16385470899162913
+            }
+          },
+          "pooled": {
+            "team_games": 36782,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.2299099271098047,
+              "tempo": 0.02572192536537711
+            }
+          }
+        },
+        {
+          "day": "2026-01-15",
+          "season_only": {
+            "team_games": 5480,
+            "median_prior_weight": {
+              "offence": 0.3497707431698455,
+              "defence": 0.5131922270562304,
+              "tempo": 0.15072452996611269
+            }
+          },
+          "pooled": {
+            "team_games": 37308,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.22912785131894045,
+              "tempo": 0.025460390138079783
+            }
+          }
+        },
+        {
+          "day": "2026-01-20",
+          "season_only": {
+            "team_games": 5940,
+            "median_prior_weight": {
+              "offence": 0.32891925794420923,
+              "defence": 0.4968591903810427,
+              "tempo": 0.14024930357538046
+            }
+          },
+          "pooled": {
+            "team_games": 37768,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.22807561646593955,
+              "tempo": 0.02513968497558303
+            }
+          }
+        },
+        {
+          "day": "2026-01-25",
+          "season_only": {
+            "team_games": 6496,
+            "median_prior_weight": {
+              "offence": 0.3002465568892074,
+              "defence": 0.4760710061903778,
+              "tempo": 0.13030335876435342
+            }
+          },
+          "pooled": {
+            "team_games": 38324,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.22705268534389442,
+              "tempo": 0.024822250605595376
+            }
+          }
+        },
+        {
+          "day": "2026-02-01",
+          "season_only": {
+            "team_games": 7084,
+            "median_prior_weight": {
+              "offence": 0.27811982530201923,
+              "defence": 0.45899849817154853,
+              "tempo": 0.12057502225572565
+            }
+          },
+          "pooled": {
+            "team_games": 38912,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.22610637271432907,
+              "tempo": 0.024481928580487068
+            }
+          }
+        },
+        {
+          "day": "2026-02-05",
+          "season_only": {
+            "team_games": 7338,
+            "median_prior_weight": {
+              "offence": 0.2707125296559169,
+              "defence": 0.45385569625014877,
+              "tempo": 0.11746097608213175
+            }
+          },
+          "pooled": {
+            "team_games": 39166,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.2254387016257303,
+              "tempo": 0.024227292650217655
+            }
+          }
+        },
+        {
+          "day": "2026-02-10",
+          "season_only": {
+            "team_games": 7814,
+            "median_prior_weight": {
+              "offence": 0.25018009080468134,
+              "defence": 0.43827760799332505,
+              "tempo": 0.11038106691102074
+            }
+          },
+          "pooled": {
+            "team_games": 39642,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.2245708901498549,
+              "tempo": 0.023937581029275505
+            }
+          }
+        },
+        {
+          "day": "2026-02-15",
+          "season_only": {
+            "team_games": 8344,
+            "median_prior_weight": {
+              "offence": 0.23549521178472102,
+              "defence": 0.42767829836810295,
+              "tempo": 0.10447242425847085
+            }
+          },
+          "pooled": {
+            "team_games": 40172,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.22332627276838934,
+              "tempo": 0.023650339893322922
+            }
+          }
+        },
+        {
+          "day": "2026-02-20",
+          "season_only": {
+            "team_games": 8712,
+            "median_prior_weight": {
+              "offence": 0.2239031740073072,
+              "defence": 0.4186153270830433,
+              "tempo": 0.09999830590573605
+            }
+          },
+          "pooled": {
+            "team_games": 40540,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.22274045003329088,
+              "tempo": 0.02344398408677237
+            }
+          }
+        },
+        {
+          "day": "2026-02-25",
+          "season_only": {
+            "team_games": 9138,
+            "median_prior_weight": {
+              "offence": 0.2136065540341839,
+              "defence": 0.41058716946128354,
+              "tempo": 0.09591428646793859
+            }
+          },
+          "pooled": {
+            "team_games": 40966,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.22197439230003732,
+              "tempo": 0.023168877284775072
+            }
+          }
+        },
+        {
+          "day": "2026-03-01",
+          "season_only": {
+            "team_games": 9666,
+            "median_prior_weight": {
+              "offence": 0.1973921682354559,
+              "defence": 0.3992773214974491,
+              "tempo": 0.09138139728010954
+            }
+          },
+          "pooled": {
+            "team_games": 41494,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.2212505059189257,
+              "tempo": 0.02295070354423384
+            }
+          }
+        },
+        {
+          "day": "2026-03-05",
+          "season_only": {
+            "team_games": 9920,
+            "median_prior_weight": {
+              "offence": 0.1929128969479454,
+              "defence": 0.39482314612919095,
+              "tempo": 0.08897578717826005
+            }
+          },
+          "pooled": {
+            "team_games": 41748,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.22068598300889428,
+              "tempo": 0.02281281051141022
+            }
+          }
+        },
+        {
+          "day": "2026-03-10",
+          "season_only": {
+            "team_games": 10328,
+            "median_prior_weight": {
+              "offence": 0.1812084157973494,
+              "defence": 0.3871861291556751,
+              "tempo": 0.0858405641688331
+            }
+          },
+          "pooled": {
+            "team_games": 42156,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.22008103267484685,
+              "tempo": 0.022615608116583294
+            }
+          }
+        },
+        {
+          "day": "2026-03-15",
+          "season_only": {
+            "team_games": 10626,
+            "median_prior_weight": {
+              "offence": 0.1762241603591717,
+              "defence": 0.38289298426347285,
+              "tempo": 0.08388823436420922
+            }
+          },
+          "pooled": {
+            "team_games": 42454,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.21978942940269594,
+              "tempo": 0.022501508662064493
+            }
+          }
+        },
+        {
+          "day": "2026-03-20",
+          "season_only": {
+            "team_games": 10702,
+            "median_prior_weight": {
+              "offence": 0.1758704120370178,
+              "defence": 0.38220086128937963,
+              "tempo": 0.08299297585444702
+            }
+          },
+          "pooled": {
+            "team_games": 42530,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.2196583932257655,
+              "tempo": 0.02248480603939796
+            }
+          }
+        },
+        {
+          "day": "2026-03-25",
+          "season_only": {
+            "team_games": 10784,
+            "median_prior_weight": {
+              "offence": 0.17569567407395487,
+              "defence": 0.382590878004284,
+              "tempo": 0.08308062636409255
+            }
+          },
+          "pooled": {
+            "team_games": 42612,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.21974473439851328,
+              "tempo": 0.02251549609654596
+            }
+          }
+        },
+        {
+          "day": "2026-04-01",
+          "season_only": {
+            "team_games": 10812,
+            "median_prior_weight": {
+              "offence": 0.17554932998110387,
+              "defence": 0.38264720337130437,
+              "tempo": 0.08311257946162326
+            }
+          },
+          "pooled": {
+            "team_games": 42640,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.2197706090956047,
+              "tempo": 0.02251110440425954
+            }
+          }
+        },
+        {
+          "day": "2026-04-06",
+          "season_only": {
+            "team_games": 10828,
+            "median_prior_weight": {
+              "offence": 0.17566131842180957,
+              "defence": 0.38252117358305954,
+              "tempo": 0.08303415388031088
+            }
+          },
+          "pooled": {
+            "team_games": 42656,
+            "median_prior_weight": {
+              "offence": 0.0,
+              "defence": 0.2196888892997688,
+              "tempo": 0.022495529098632228
+            }
+          }
+        }
+      ],
+      "tier_leak": {
+        "checked": true,
+        "season": 2026,
+        "teams": 367,
+        "changed": 34,
+        "share": 0.09264305177111716,
+        "strictly_before": "Tiers from seasons [2023, 2024, 2025]: high_major=61, low_major=174, mid_major=131 (33 conferences).",
+        "including_priced": "Tiers from seasons [2023, 2024, 2025, 2026]: high_major=61, low_major=156, mid_major=150 (33 conferences)."
+      },
+      "refusals": [
+        {
+          "reason": "less connecting evidence than one head-to-head meeting (effective resistance at or above the bar)",
+          "count": 306,
+          "example": "the effective resistance between them is 2.00 against a bar of 1.00 \u2014 less connecting evidence than a single head-to-head meeting, or than two common opponents"
+        },
+        {
+          "reason": "a team has played no countable game this season, so its rating is the preseason prior and nothing else",
+          "count": 224,
+          "example": "team 248 has played no countable game this season, so its rating is the preseason prior and nothing else"
+        },
+        {
+          "reason": "the two teams are in different components of the games-played graph",
+          "count": 165,
+          "example": "the two teams are in different components of the games-played graph (121 components over 242 teams, 121 games) \u2014 no chain of results connects them and any difference between their ratings is the prior's opinion"
+        },
+        {
+          "reason": "a quasi-neutral game whose local participant could not be identified",
+          "count": 1,
+          "example": "this game is flagged neutral in a participant's own city and the lab cannot tell whose. The designation is the wrong team 32.5% of the time, so it is refused rather than guessed"
+        }
+      ]
+    }
+  ]
+}

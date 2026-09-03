@@ -1,0 +1,45 @@
+{
+  "record_version": 1,
+  "competition": "cbb",
+  "title": "NCAA Division I men's basketball",
+  "generated_at": "2026-09-03T23:53:02+00:00",
+  "regions": "us,us2",
+  "looks": 30,
+  "correction_factor": 1.6041010507684776,
+  "minimum_bets": 200,
+  "minimum_captures": 2,
+  "minimum_judged_quotes": 1000,
+  "store": {
+    "path": "data/processed/cbb_line_movement.csv",
+    "quotes": 0,
+    "captures": 0,
+    "first_capture": "",
+    "last_capture": "",
+    "events": 0,
+    "books": 0,
+    "slate_days": 0,
+    "judged_quotes": 0,
+    "enough_evidence": false,
+    "reason": "The line-movement store holds no captures. The season opens in November, there is no college basketball between April and November, and the capture script writes nothing when the board is empty \u2014 because an empty capture would later read as every price having vanished. This is an observation about the calendar and not a fault."
+  },
+  "capture_pairs": [],
+  "by_book": [],
+  "board_by_tier": [],
+  "survival_provenance": {
+    "source": "none",
+    "bets": 0,
+    "survived": 0,
+    "gone": 0,
+    "unknown": 0,
+    "note": "No staked bet was supplied, so there was nothing to split. This is a wiring state and not a null result."
+  },
+  "by_tier_and_reachability": [],
+  "by_market_tier_and_reachability": [],
+  "verdicts": [],
+  "opening_number": {
+    "measured": false,
+    "note": "No staked bet reached this report, so nothing could be split by when its price was taken. **Beating an opening number is not a bet.** The first capture of a slate day is the earliest number this lab holds, and a return measured against it describes how the market moved rather than a wager anybody placed. No figure in this report is evidence about a price that had already gone by the time a card was produced."
+  },
+  "games": 0,
+  "days": 0
+}

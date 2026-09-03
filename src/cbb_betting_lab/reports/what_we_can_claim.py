@@ -104,6 +104,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pandas as pd
+
 from cbb_betting_lab import forward_evidence
 from cbb_betting_lab import gates
 from cbb_betting_lab import markets as markets_registry
@@ -932,7 +934,9 @@ def headline(record: Mapping) -> str:
 # ---------------------------------------------------------------------------
 
 
-def unmeasured_markets(claims: Sequence[Mapping]) -> list[dict]:
+def unmeasured_markets(
+    claims: Sequence[Mapping], *, processed_dir: Path | str | None = None
+) -> list[dict]:
     """Every wired market no claim speaks for, with the reason it has none.
 
     The reasons are specific rather than a single shrug, because *"the source
@@ -941,6 +945,7 @@ def unmeasured_markets(claims: Sequence[Mapping]) -> list[dict]:
     """
     measured = {_text(c.get("market")) for c in claims if c.get("measured")}
     rows: list[dict] = []
+    bought = markets_with_bought_prices(processed_dir)
     for market in markets_registry.MARKETS:
         if market.key in measured:
             continue
@@ -956,6 +961,18 @@ def unmeasured_markets(claims: Sequence[Mapping]) -> list[dict]:
                 "a futures market, served under a separate provider sport key, "
                 "settling on a clock measured in months. Nothing has been "
                 "bought for it and nothing has settled"
+            )
+        elif market.key in bought:
+            # BOUGHT BUT NOT MEASURED IS NOT THE SAME AS NEVER BOUGHT, and the
+            # brief is explicit that the reports must never confuse them: "a
+            # starved fetch and an unquoted market look identical". Saying
+            # nothing was bought for a market whose prices are sitting in the
+            # store would be exactly that confusion, in the one document whose
+            # job is to stop a number being misread.
+            reason = (
+                "historical prices for it **have** been bought and no "
+                "measurement has scored them yet. That is a step this lab has "
+                "not run, not a market the provider does not serve"
             )
         else:
             reason = (
@@ -1014,6 +1031,32 @@ def gated_markets() -> list[dict]:
 # ---------------------------------------------------------------------------
 # The record
 # ---------------------------------------------------------------------------
+
+
+
+def markets_with_bought_prices(processed_dir: Path | str | None) -> set[str]:
+    """Which markets actually have historical prices on disk.
+
+    Read from the store rather than assumed, because the two failure modes look
+    identical in a report and mean opposite things: a market nobody quotes and
+    a market this lab has bought and not yet scored. The first is a fact about
+    the sport; the second is a step not run.
+
+    A missing or unreadable store returns the empty set, which makes every
+    market read as "not bought" — the conservative direction, since it can only
+    ever understate what this lab holds.
+    """
+    if processed_dir is None:
+        return set()
+    directory = Path(processed_dir)
+    found: set[str] = set()
+    for path in sorted(directory.glob("*historical_prices*.csv")):
+        try:
+            column = pd.read_csv(path, usecols=["market"])
+        except (OSError, UnicodeError, ValueError, KeyError):
+            continue
+        found |= {str(x) for x in column["market"].dropna().unique()}
+    return found
 
 
 def build_record(
@@ -1146,7 +1189,7 @@ def build_record(
         "correction": correction.as_dict(),
         "claims": claims,
         "pooled": pooled_rows,
-        "unmeasured": unmeasured_markets(claims),
+        "unmeasured": unmeasured_markets(claims, processed_dir=processed_dir),
         "deferred": deferred_groups(),
         "gated": gated_markets(),
         "backtest": backtest_block,
