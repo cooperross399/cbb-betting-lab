@@ -94,9 +94,28 @@ def read_store(
             ) from exc
         return pd.DataFrame(columns=list(columns) if columns else None)
     if columns:
-        for column in columns:
-            if column not in frame.columns:
-                frame[column] = pd.NA
+        missing = [column for column in columns if column not in frame.columns]
+        if missing and for_append:
+            # THE STRICT READ HAS TO CHECK THE SCHEMA, NOT ONLY THE PARSE.
+            # `pd.read_csv` is happy to parse almost anything: the bytes
+            # `\x00\x01 not,a,csv\n\x00` come back as one row under a
+            # three-column header, raising nothing. Padding the absent columns
+            # with NA below then hands the caller a frame that looks like this
+            # lab's ledger and is not, and every downstream count reads zero.
+            #
+            # That is the exact failure `for_append` exists to prevent, arriving
+            # by the one door it did not watch. The demotion gate read a
+            # corrupt forward ledger, found no measurable bets in it, and
+            # reported that no allowlisted market had fallen through its floor
+            # — a gate failing OPEN because a file was damaged.
+            raise CorruptStoreError(
+                f"{target} parsed, but it is missing {missing!r} and this "
+                "caller was about to append to it or judge on it. A file that "
+                "parses into the wrong shape is not this store; padding the "
+                "absent columns would make nonsense read as an empty record."
+            )
+        for column in missing:
+            frame[column] = pd.NA
         frame = frame[list(columns)]
     return frame
 

@@ -155,6 +155,50 @@ def run(lab: dict, *extra: str) -> int:
     )
 
 
+def with_siblings(lab: dict) -> dict:
+    """Stub every sibling program the loop shells out to.
+
+    A test about **demotion** must not also be a test about a missing refit
+    script: the loop degrades correctly when a sibling is absent, so a demotion
+    test that omits them measures the absence and never reaches the question it
+    was written to ask.
+
+    The stubbed backtest **writes its record when it runs**, not when the
+    fixture is built. That is not a detail — the loop pre-registers the week's
+    hypotheses first, so the ledger's cumulative count is larger by the time
+    the record is verified than it was when the fixture was set up. A record
+    written up front is stale by exactly the amount the loop is checking for,
+    which is the check working rather than a nuisance.
+    """
+    for name in (LOOP.REFIT_SCRIPT, LOOP.CLAIMS_SCRIPT):
+        stub_script(lab, name)
+    stub_script(
+        lab,
+        LOOP.BACKTEST_SCRIPT,
+        body=(
+            "import json, pathlib, datetime\n"
+            "from cbb_betting_lab.reports import price_backtest as PB\n"
+            "from cbb_betting_lab import experiment_ledger as E\n"
+            "out = pathlib.Path(%r)\n"
+            # The same call the real backtest makes, so the stub cannot drift
+            # from the rule the loop checks: max(count, 1), never the day's.
+            "looks = PB.looks_from_ledger(out / E.LEDGER_FILENAME)\n"
+            "(out / %r).write_text(json.dumps({\n"
+            "    'record_version': %d, 'competition': %r,\n"
+            "    'generated_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),\n"
+            "    'walk_forward_verified': True, 'looks': looks, 'markets': [],\n"
+            "}), encoding='utf-8')\n"
+        )
+        % (
+            str(lab["outputs"]),
+            CBB.output_name("price_backtest", ".json"),
+            PB.RECORD_VERSION,
+            CBB.key,
+        ),
+    )
+    return lab
+
+
 def stub_script(lab: dict, name: str, body: str = "pass") -> Path:
     path = lab["scripts"] / name
     path.write_text(f"import sys\n{body}\n", encoding="utf-8")
@@ -402,6 +446,7 @@ def test_a_market_below_its_receipts_floor_is_withdrawn_unattended(lab: dict):
 
 
 def test_a_market_above_its_floor_is_kept(lab: dict):
+    with_siblings(lab)
     allowlist(lab, "spread")
     settled_ledger(lab, market="spread", rows=900, profit=0.90)
     exit_code = run(lab)
@@ -416,6 +461,7 @@ def test_a_thin_record_never_withdraws(lab: dict):
     Twenty losing bets and a real collapse look identical, and only one of them
     is a reason to take a market off the card.
     """
+    with_siblings(lab)
     allowlist(lab, "spread")
     settled_ledger(lab, market="spread", rows=40, profit=-1.0)
     exit_code = run(lab)
@@ -457,6 +503,7 @@ def test_an_unreadable_forward_ledger_never_withdraws_and_never_passes(lab: dict
     """A damaged ledger reads as zero rows if you let it, and zero rows means
     "no market has enough evidence to withdraw" — a gate failing open because a
     file was corrupt. It fails loudly instead."""
+    with_siblings(lab)
     allowlist(lab, "spread")
     (lab["processed"] / fe.LEDGER_FILENAME).write_bytes(b"\x00\x01 not,a,csv\n\x00")
     exit_code = run(lab)
@@ -479,19 +526,60 @@ def test_a_dry_run_decides_the_withdrawal_and_writes_nothing(lab: dict):
 
 
 def test_nothing_in_the_loop_grants_an_allowlist():
-    """The asymmetry, swept for rather than trusted.
+    """The asymmetry, swept for in the CODE rather than in the prose.
 
     `tests/test_promotion_is_one_directional.py` sweeps the package. This is the
     same sweep over the one unattended program that could call such a thing if
     it existed.
+
+    **This test used to ban the substring `grant(` and failed on two sentences
+    explaining that no such function exists** — one in the module docstring,
+    one in the text the report prints. That is precisely the mistake this
+    file's own docstring warns about: *a test that bans a word rather than an
+    assertion has been written three times in this repository and been wrong
+    three times.* It was written a fourth and fifth time here.
+
+    A word-ban cannot tell a call from a comment, so the fix is not a cleverer
+    pattern — it is to ask the question of the syntax tree, where a call is a
+    `Call` node and a sentence about a call is nothing at all.
     """
+    import ast
+
     source = (SCRIPTS / "run_weekly_loop.py").read_text(encoding="utf-8")
-    for forbidden in ("grant(", "def grant", ".allowlist[", "allowlist.update"):
-        assert forbidden not in source, (
-            f"{forbidden!r} appears in the weekly loop. The machine may take a "
-            "market away from itself and may never give itself one."
-        )
-    assert "staging.withdraw(" in source, (
+    tree = ast.parse(source)
+
+    def called_name(node: ast.Call) -> str:
+        func = node.func
+        if isinstance(func, ast.Attribute):
+            return func.attr
+        if isinstance(func, ast.Name):
+            return func.id
+        return ""
+
+    calls = {called_name(n) for n in ast.walk(tree) if isinstance(n, ast.Call)}
+    assert "grant" not in calls, (
+        "The weekly loop calls something named `grant`. The machine may take a "
+        "market away from itself and may never give itself one."
+    )
+    defined = {
+        n.name for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    assert "grant" not in defined, "The weekly loop defines a `grant`."
+
+    # Assignment INTO an allowlist, which is how a grant would be spelled
+    # without a function called `grant`.
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Assign, ast.AugAssign)):
+            continue
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        for target in targets:
+            if isinstance(target, ast.Subscript) and isinstance(target.value, ast.Attribute):
+                assert target.value.attr != "allowlist", (
+                    "The loop assigns into an allowlist directly, which is a "
+                    "grant however it is spelled."
+                )
+
+    assert "withdraw" in calls, (
         "the loop no longer withdraws anything, so automatic demotion is not "
         "wired at all"
     )
@@ -503,6 +591,7 @@ def test_the_report_never_shows_a_pooled_market_row_without_its_tiers(lab: dict)
     It is never a headline, and every market row is followed by its tier rows —
     so a reader cannot take the pooled number away from this page on its own.
     """
+    with_siblings(lab)
     allowlist(lab, "spread")
     settled_ledger(lab, market="spread", rows=900, profit=0.90, tier="low_major")
     run(lab)
@@ -521,6 +610,7 @@ def test_a_tier_below_the_floor_is_named_and_does_not_withdraw_the_market(lab: d
     re-grant it in the tiers where it was fine, so a tier-only collapse is
     named in the report and the market stays.
     """
+    with_siblings(lab)
     allowlist(lab, "spread")
     losing = pd.read_csv(
         settled_ledger(lab, market="spread", rows=700, profit=-0.40, tier="low_major")
@@ -823,24 +913,39 @@ def test_the_weekly_cron_keeps_a_margin_over_the_observed_lateness():
 
 
 def test_the_weekly_workflow_holds_no_write_access_and_no_credential():
-    """Both stated here as well as in `tests/test_workflows.py`.
+    """The loop reports and demotes; it never publishes and never spends.
 
-    That file's closed set is the general rule; these two lines are this
-    workflow's own reason for being outside it, so a future session that
-    considers adding write access reads the argument at the same time as the
-    assertion.
+    **This test used to search the raw text for `contents: write` and failed on
+    the comment naming the workflows that ARE allowed to hold it.** Same defect
+    as the `grant(` sweep above, in the same file, and the same fix: ask the
+    parsed document, where a permission is a mapping key and a sentence about a
+    permission is a comment.
     """
+    import yaml
+
     text = WORKFLOW.read_text(encoding="utf-8")
+    document = yaml.safe_load(text)
 
-    assert re.search(r"^permissions:\s*$", text, re.M)
-    assert re.search(r"^\s*contents:\s*read\s*$", text, re.M)
-    assert "contents: write" not in text
-    assert "secrets." not in text, (
-        "the weekly loop reads the store that was already bought. A workflow "
-        "with no credential cannot spend one, which is stronger than a cap."
+    permissions = document.get("permissions")
+    assert permissions == {"contents": "read"}, (
+        f"The weekly loop declares {permissions!r}. It must be exactly "
+        "`contents: read`: it reports and demotes, and neither needs a write."
     )
-    assert "git push" not in text
-
+    for job in (document.get("jobs") or {}).values():
+        assert "write" not in str(job.get("permissions") or ""), (
+            "A job in the weekly loop widens the workflow's permissions."
+        )
+        for step in job.get("steps") or []:
+            env = step.get("env") or {}
+            assert not any("secrets." in str(v) for v in env.values()), (
+                f"Step {step.get('name')!r} is handed a secret. The weekly "
+                "loop measures what is already bought and must not be able to "
+                "spend a credit."
+            )
+            assert "git push" not in str(step.get("run") or ""), (
+                f"Step {step.get('name')!r} pushes. Only the gameday workflow "
+                "publishes, and only to refs/heads/card-feed."
+            )
 
 def test_the_workflow_fetches_and_builds_the_cache_before_it_measures():
     """The probe's lesson, and the one fix it refused to take.
