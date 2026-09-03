@@ -199,6 +199,19 @@ def with_siblings(lab: dict) -> dict:
     return lab
 
 
+def with_real_claims_script(lab: dict) -> dict:
+    """Stub the siblings, but use the REAL claims program.
+
+    A stubbed claims script is a no-op, so a test about what the claims step
+    writes would pass whatever the splice did — including nothing.
+    """
+    import shutil
+
+    with_siblings(lab)
+    shutil.copy(SCRIPTS / LOOP.CLAIMS_SCRIPT, lab["scripts"] / LOOP.CLAIMS_SCRIPT)
+    return lab
+
+
 def stub_script(lab: dict, name: str, body: str = "pass") -> Path:
     path = lab["scripts"] / name
     path.write_text(f"import sys\n{body}\n", encoding="utf-8")
@@ -713,18 +726,62 @@ def test_every_program_the_loop_drives_is_named_by_a_constant():
     assert (SCRIPTS / LOOP.CLAIMS_SCRIPT).is_file()
 
 
-def test_the_loop_re_renders_the_generated_claims_report_and_not_the_pre_registration():
-    """`docs/what_we_can_and_cannot_claim.md` was written before the first
-    measurement and its own first paragraph says that timing is the whole point.
-    A machine that rewrote it weekly would destroy the pre-registration it
-    exists to be. The generated claims report is the competition-prefixed output
-    CLAUDE.md pins, and that is what gets re-rendered."""
-    source = (SCRIPTS / "run_weekly_loop.py").read_text(encoding="utf-8")
+def test_the_loop_re_renders_the_claims_doc_without_destroying_its_framing(lab, tmp_path):
+    """Both halves of a requirement that pulls against itself.
 
-    assert "docs/what_we_can_and_cannot_claim.md" not in re.sub(
-        r"#.*", "", source
-    ).replace('"""', ""), "the loop must not write the pre-registration"
-    assert LOOP.CLAIMS_SCRIPT == "run_what_we_can_claim.py"
+    `docs/what_we_can_and_cannot_claim.md` was written before the first
+    measurement, and its own first paragraph says that timing is the whole
+    point: a document explaining how to read a number, written after the number
+    arrives, is a justification rather than a rule. A machine that rewrote it
+    weekly would destroy exactly that.
+
+    Cooper's brief also requires the weekly loop to *re-render* it from the run
+    record rather than by hand.
+
+    **The earlier version of this test resolved the tension by banning the
+    filename from the loop's source.** That satisfied the first half and made
+    the second impossible, and it was the sixth word-ban test in this
+    repository — the fifth and fourth were caught two days ago in this same
+    file. The answer is a fenced block: the framing is untouched and only what
+    sits between the markers moves.
+
+    So this asserts the behaviour rather than the vocabulary: run the loop
+    against a real document, then check that the framing survived AND the block
+    was replaced.
+    """
+    with_real_claims_script(lab)
+    doc = tmp_path / "claims.md"
+    framing = "Written before the first measurement, and that timing is the point."
+    doc.write_text(
+        f"# What the evidence supports\n\n{framing}\n\n"
+        "<!-- BEGIN GENERATED: what_we_can_claim -->\n\nplaceholder\n\n"
+        "<!-- END GENERATED -->\n\nClosing prose that must also survive.\n",
+        encoding="utf-8",
+    )
+
+    assert run(lab, "--claims-doc", str(doc)) == LOOP.EXIT_OK
+
+    after = doc.read_text(encoding="utf-8")
+    assert framing in after, "the loop destroyed the pre-measurement framing"
+    assert "Closing prose that must also survive." in after
+    assert "placeholder" not in after, "the fenced block was not re-rendered"
+    assert after.count("<!-- BEGIN GENERATED") == 1
+    assert after.count("<!-- END GENERATED -->") == 1
+
+
+def test_a_claims_doc_with_no_fence_fails_rather_than_appending(lab, tmp_path):
+    """A document that looks updated and is not is worse than an obviously
+    stale one, so a missing fence is an error and never an append."""
+    with_real_claims_script(lab)
+    doc = tmp_path / "unfenced.md"
+    doc.write_text("# No markers here\n", encoding="utf-8")
+
+    run(lab, "--claims-doc", str(doc))
+
+    assert "BEGIN GENERATED" not in doc.read_text(encoding="utf-8"), (
+        "the splice appended a block to a document with no fence"
+    )
+    assert steps_from(lab)["re-render the claims report from its run record"] != LOOP.OK
 
 
 # --------------------------------------------------------------------------

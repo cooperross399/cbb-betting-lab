@@ -1392,6 +1392,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--processed-dir", default=str(PROCESSED_DIR))
     parser.add_argument("--manual-dir", default=str(MANUAL_DIR))
     parser.add_argument(
+        "--claims-doc",
+        default="",
+        help=(
+            "The hand-written claims document whose fenced block this loop "
+            "re-renders. Empty means the repository's own "
+            "docs/what_we_can_and_cannot_claim.md."
+        ),
+    )
+    parser.add_argument(
         "--scripts-dir",
         default=str(Path(__file__).resolve().parent),
         help="Where the sibling scripts this loop drives live.",
@@ -1445,6 +1454,12 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     competition = competition_for(args.competition)
     output_dir = Path(args.output_dir)
+    # The hand-written claims document, whose fenced block this loop
+    # re-renders. `--claims-doc ''` turns the splice off for a test
+    # tree that has no docs/ directory.
+    claims_doc = Path(args.claims_doc) if args.claims_doc else (
+        Path(__file__).resolve().parents[1] / "docs" / "what_we_can_and_cannot_claim.md"
+    )
     processed_dir = Path(args.processed_dir)
     manual_dir = Path(args.manual_dir)
     scripts_dir = Path(args.scripts_dir)
@@ -1594,7 +1609,16 @@ def main(argv: list[str] | None = None) -> int:
     steps.append(
         run_script(
             CLAIMS_SCRIPT,
-            ["--competition", competition.key, "--output-dir", str(output_dir)],
+            [
+                "--competition", competition.key,
+                "--output-dir", str(output_dir),
+                # DoD 19: the loop re-renders the claims DOC, not only the
+                # output report. The doc's framing was written before the first
+                # measurement and must stay; only the fenced block moves. A
+                # missing fence makes this step fail rather than append, so a
+                # document that looks updated and is not cannot be produced.
+                "--splice-into", str(claims_doc),
+            ],
             scripts_dir=scripts_dir,
             name="re-render the claims report from its run record",
             dry_run=args.dry_run,

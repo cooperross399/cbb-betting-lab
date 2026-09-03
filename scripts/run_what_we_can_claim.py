@@ -41,6 +41,62 @@ from cbb_betting_lab.config import OUTPUTS_DIR, PROCESSED_DIR
 from cbb_betting_lab.reports import what_we_can_claim as WC
 
 
+
+#: The markers that fence the generated block inside a hand-written document.
+BEGIN = "<!-- BEGIN GENERATED: what_we_can_claim -->"
+END = "<!-- END GENERATED -->"
+
+
+class ClaimsSpliceError(RuntimeError):
+    """The target document cannot receive a generated block."""
+
+
+def splice(path: Path, rendered: str) -> Path:
+    """Replace the fenced block in `path`, leaving every other line alone.
+
+    **Why a splice rather than a write.** Cooper's brief asks for two things
+    that pull against each other: `docs/what_we_can_and_cannot_claim.md` is
+    written *before the first measurement* — that timing is the whole point of
+    the file, because a document explaining how to read a number, written after
+    the number arrives, is a justification rather than a rule — and the weekly
+    loop must *re-render it from the run record rather than by hand*.
+
+    Overwriting the file would satisfy the second and destroy the first. So the
+    hand-written framing stays exactly where it is and only the fenced block
+    moves, which is what makes the sentence "generated weekly, framing written
+    first" true of one file rather than of two that can drift apart.
+
+    A missing fence raises. Appending the block instead would leave a document
+    that looks updated and is not, which is the failure mode this whole
+    repository is arranged against.
+    """
+    target = Path(path)
+    if not target.is_file():
+        raise ClaimsSpliceError(f"{target} does not exist; nothing to splice into.")
+    text = target.read_text(encoding="utf-8")
+    start = text.find(BEGIN)
+    stop = text.find(END)
+    if start < 0 or stop < 0 or stop < start:
+        raise ClaimsSpliceError(
+            f"{target} carries no generated block. It needs the markers\n"
+            f"  {BEGIN}\n  {END}\n"
+            "in that order. Refusing to append instead: a document that looks "
+            "updated and is not is worse than one that is obviously stale."
+        )
+    body = "\n".join(
+        line for line in rendered.splitlines() if not line.startswith("# ")
+    ).strip()
+    return _write(
+        target,
+        text[: start + len(BEGIN)] + "\n\n" + body + "\n\n" + text[stop:],
+    )
+
+
+def _write(target: Path, text: str) -> Path:
+    target.write_text(text, encoding="utf-8")
+    return target
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--competition", default=DEFAULT_COMPETITION_KEY)
@@ -76,6 +132,15 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "Do not write. Exit non-zero when the report on disk differs from "
             "what its record renders to, which means it was edited by hand."
+        ),
+    )
+    parser.add_argument(
+        "--splice-into",
+        default="",
+        help=(
+            "A hand-written document carrying BEGIN/END GENERATED markers. The "
+            "rendered report replaces what sits between them and the prose "
+            "around them is left alone."
         ),
     )
     args = parser.parse_args(argv)
@@ -141,6 +206,14 @@ def main(argv: list[str] | None = None) -> int:
         # document that has started selling must not reach the card feed.
         print(f"::error::{exc}", file=sys.stderr)
         return 2
+
+    if args.splice_into:
+        try:
+            spliced = splice(Path(args.splice_into), rendered)
+        except ClaimsSpliceError as exc:
+            print(f"::error::{exc}", file=sys.stderr)
+            return 2
+        print(f"Spliced the generated block into {spliced}.")
 
     print(f"Wrote {report_target} from {record_target}.")
     print()
