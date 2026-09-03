@@ -203,11 +203,11 @@ STORE_COLUMNS: tuple[str, ...] = (
     "tier",
 )
 
-#: The three processed tables this script grades against. `team_games` settles
-#: every team market, `game_segments` settles the two first-basket markets, and
-#: `player_games` settles every other prop. A missing one is refused rather than
-#: worked around: a settle pass that cannot find its table grades every row as
-#: "no game matches", which does not fail — it succeeds quietly and wrongly.
+#: The processed tables every run needs: `team_games` settles every team market
+#: and `game_segments` settles the two first-basket markets. A missing one is
+#: refused rather than worked around, because grading without it settles every
+#: row as "no game matches", which does not fail — it succeeds quietly and
+#: wrongly, and a measurement built on that still prints an interval.
 REQUIRED_TABLES: tuple[str, ...] = ("team_games", "game_segments")
 
 #: Loaded only when the store actually holds a player market. It is 208 MB and
@@ -233,6 +233,18 @@ class ModelNotWired(RuntimeError):
 # --------------------------------------------------------------------------
 # Counting every wager, into exactly one bucket
 # --------------------------------------------------------------------------
+
+
+def _reason_lines(what: str, reasons: Mapping[str, int], *, most: int = 6) -> list[str]:
+    """The commonest reasons, largest first, and how many are not shown."""
+    if not reasons:
+        return []
+    ordered = sorted(reasons.items(), key=lambda kv: (-kv[1], kv[0]))
+    lines = [f"  why {what}:"]
+    lines += [f"    {count:,} x {reason}" for reason, count in ordered[:most]]
+    if len(ordered) > most:
+        lines.append(f"    and {len(ordered) - most:,} further reason(s)")
+    return lines
 
 
 @dataclass
@@ -280,7 +292,7 @@ class OpinionAccounting:
         return self.accounted == self.offered
 
     def lines(self) -> list[str]:
-        return [
+        out = [
             "Accounting identity — offered = unparseable + no opinion + "
             "below threshold + bets:",
             f"  wagers offered           {self.offered:,}",
@@ -291,6 +303,12 @@ class OpinionAccounting:
             f"  reconciles               {'yes' if self.reconciles else 'NO'} "
             f"({self.accounted:,} accounted of {self.offered:,} offered)",
         ]
+        # Grouped by reason and printed rather than only counted. A store where
+        # a third of the rows are unparseable is a wiring signal, and a count
+        # with no reason beside it is a number nobody can act on.
+        out += _reason_lines("unparseable", self.unparseable_reasons)
+        out += _reason_lines("no opinion", self.declined_reasons)
+        return out
 
 
 @dataclass
@@ -342,6 +360,7 @@ class GradingCensus:
                 f"  {self.unreadable_price:,} won at a price this lab cannot "
                 "read, so the profit is missing rather than zero"
             )
+        out += _reason_lines("a wager could not be graded", self.reasons)
         for message, count in sorted(
             self.errors.items(), key=lambda kv: (-kv[1], kv[0])
         )[:5]:

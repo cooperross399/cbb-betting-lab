@@ -208,3 +208,62 @@ def test_every_script_a_workflow_runs_actually_exists():
         "Workflows reference scripts that do not exist:\n"
         + "\n".join(f"  {s} — named by {', '.join(w)}" for s, w in missing.items())
     )
+
+
+def test_the_purchase_workflow_names_the_directory_the_module_actually_writes():
+    """The most expensive defect in this repository, pinned.
+
+    The purchase workflow spelled its cache and artifact paths by hand as
+    `data/raw/cbb/historical_<window>`. `historical.cache_dir_for` returns
+    `data/raw/cbb/historical_purchase/<window>`. So:
+
+    * the `actions/cache` step saved nothing, and resume never resumed;
+    * the artifact step uploaded nothing, warning where it should have failed;
+    * a run that spent **1,299,945 credits** buying 1.82M price rows persisted
+      only its own report.
+
+    The responses survived by luck — a sibling cache happened to cover the
+    whole of `data/raw/cbb`. Nothing about that was designed.
+
+    A path duplicated between Python and YAML is a path that will disagree.
+    This test is the only thing that makes the duplication safe, so it derives
+    the expected string from the module rather than restating it.
+    """
+    from cbb_betting_lab.competitions import CBB
+    from cbb_betting_lab.providers import historical as H
+
+    path = WORKFLOWS / "historical-purchase.yml"
+    if not path.is_file():
+        return
+    text = path.read_text()
+
+    for window in (H.CARD_WINDOW, H.CLOSE_WINDOW):
+        expected = H.cache_dir_for(CBB, Path("data/raw"), window)
+        # The workflow templates the window, so compare the parent segment.
+        stem = str(expected.parent).replace("data/raw/", "data/raw/")
+        assert stem in text, (
+            f"The purchase workflow does not mention {stem!r}, which is where "
+            f"`cache_dir_for` actually writes. A workflow caching or uploading "
+            "some other directory persists nothing and warns rather than fails."
+        )
+
+
+def test_the_purchase_workflow_builds_the_store_it_uploads():
+    """The live buy caches raw responses and stages rows in memory; it does not
+    write the processed CSV. That is a defensible design — the cache is the
+    source of truth and the store is derived — but only if something derives
+    it. The first run reported 1.82M rows staged and left no store on disk."""
+    path = WORKFLOWS / "historical-purchase.yml"
+    if not path.is_file():
+        return
+    text = path.read_text()
+    assert "--rebuild" in text, (
+        "Nothing in the purchase workflow rebuilds the store from the cached "
+        "responses, so a completed purchase leaves no store behind."
+    )
+    rebuild_at = text.index("--rebuild")
+    upload_at = text.index("upload-artifact")
+    assert rebuild_at < upload_at, (
+        "The store is rebuilt after it is uploaded, so the upload carries the "
+        "previous run's store or none at all."
+    )

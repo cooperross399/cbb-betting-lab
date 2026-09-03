@@ -96,10 +96,18 @@ jobs:
 
       # The bought responses, restored from the previous run of the same wave
       # and window. This is what makes a purchase resumable.
+      # THE PATH HERE WAS WRONG AND COST 1.3M CREDITS OF PERSISTENCE.
+      # `historical.cache_dir_for` returns
+      # `data/raw/cbb/historical_purchase/<window>`, not
+      # `data/raw/cbb/historical_<window>`. The old path matched nothing, so
+      # this cache saved nothing, the resume never resumed, and the artifact
+      # step below uploaded nothing. The responses survived only because the
+      # sibling `cbb-data-v1` cache happens to cover the whole of
+      # `data/raw/cbb`. Derived from the module now, never spelled by hand.
       - name: Restore the bought responses
         uses: actions/cache@v4
         with:
-          path: data/raw/cbb/historical_${{ inputs.window }}
+          path: data/raw/cbb/historical_purchase/${{ inputs.window }}
           key: cbb-bought-${{ inputs.window }}-${{ inputs.waves }}-${{ github.run_id }}
           restore-keys: |
             cbb-bought-${{ inputs.window }}-${{ inputs.waves }}-
@@ -130,6 +138,27 @@ jobs:
           fi
           python scripts/buy_historical_prices.py $FLAGS | tee -a "$GITHUB_STEP_SUMMARY"
 
+      # THE LIVE BUY DOES NOT WRITE THE STORE. It caches every raw response and
+      # counts the rows it staged, but the processed CSV is derived data built
+      # by `--rebuild`, which makes no request and costs nothing. Without this
+      # step a completed purchase leaves 1.8M staged rows reported in the
+      # summary and no store on disk — which is exactly what the first run did.
+      #
+      # `if: always()`, because a run that hit its cap raises after buying, and
+      # the responses it bought before raising are worth just as much.
+      - name: Build the store from the cached responses
+        if: always()
+        env:
+          PYTHONPATH: src
+        run: |
+          set -o pipefail
+          python scripts/buy_historical_prices.py \
+            --waves ${{ inputs.waves }} \
+            --window ${{ inputs.window }} \
+            --max-events-per-segment ${{ inputs.max_events_per_segment }} \
+            --rebuild | tee -a "$GITHUB_STEP_SUMMARY"
+          ls -la data/processed/ | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Quota after
         if: always()
         env:
@@ -157,6 +186,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: historical-cache-${{ inputs.waves }}-${{ inputs.window }}
-          path: data/raw/cbb/historical_${{ inputs.window }}/**
+          path: data/raw/cbb/historical_purchase/${{ inputs.window }}/**
           if-no-files-found: warn
           retention-days: 90
