@@ -113,6 +113,24 @@ jobs:
             cbb-bought-${{ inputs.window }}-${{ inputs.waves }}-
             cbb-bought-${{ inputs.window }}-
 
+      # DID THE RESPONSES SURVIVE? The first purchase persisted them only by
+      # accident, inside the sibling `data/raw/cbb` cache. This step answers
+      # "is the cache empty or did staging fail" before anything else runs,
+      # because those are different faults with the same symptom.
+      - name: What is actually in the response cache
+        run: |
+          DIR="data/raw/cbb/historical_purchase/${{ inputs.window }}"
+          echo "## Response cache" >> "$GITHUB_STEP_SUMMARY"
+          if [ -d "$DIR" ]; then
+            N=$(find "$DIR" -type f -name '*.json' | wc -l)
+            SZ=$(du -sh "$DIR" | cut -f1)
+            echo "\`$DIR\`: **$N cached responses**, $SZ" | tee -a "$GITHUB_STEP_SUMMARY"
+            find "$DIR" -type f -name '*.json' | head -3
+          else
+            echo "\`$DIR\` **does not exist**. Nothing was restored." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "Present under data/raw/cbb:"; ls -la data/raw/cbb 2>/dev/null || echo "  (data/raw/cbb absent)"
+          fi
+
       - name: Quota before
         env:
           PYTHONPATH: src

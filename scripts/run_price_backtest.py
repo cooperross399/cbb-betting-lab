@@ -411,7 +411,10 @@ def resolve_model(spec: str) -> Callable:
             f"{module_name} has no attribute {attribute!r}. It must be a "
             "callable taking the keyword arguments it declares out of "
             f"{list(MODEL_ARGUMENTS)} and returning a mapping of event_id to a "
-            "matchup object."
+            "matchup object. "
+            "Nothing was scored and nothing was written: a backtest with no "
+            "model is an empty report, and an empty report reads as a null "
+            "result."
         ) from exc
     if not callable(model):
         raise ModelNotWired(f"{spec} resolved to {type(model).__name__}, not a callable.")

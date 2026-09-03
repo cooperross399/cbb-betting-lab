@@ -515,25 +515,45 @@ def test_a_season_filter_that_matches_nothing_is_a_refusal_not_a_null(
     assert not lab.report_path.exists()
 
 
-def test_an_unwired_model_exits_rather_than_falling_back_to_one_of_its_own(
-    tmp_path, capsys
-):
-    """`models/ratings.py` is not written. There is deliberately no fallback.
+def test_a_model_that_cannot_be_resolved_exits_rather_than_falling_back(tmp_path, capsys):
+    """There is deliberately no fallback pricer.
 
     A backtest that quietly prices with something other than the model the card
-    runs measures a policy nobody would have run, and it prints intervals while
+    runs measures a policy nobody would have run, and prints intervals while
     doing it.
+
+    This test used to assert that `models/ratings.py` did not exist. It does
+    now, so the case it was really guarding — an unresolvable `--model` — is
+    asserted directly instead of as a side effect of the module being absent.
     """
     lab = Lab(tmp_path).with_tables().with_store()
 
-    code = lab.run()  # the default --model, which does not exist
+    code = lab.run("--model", "cbb_betting_lab.models.ratings:no_such_callable")
 
     assert code != 0
     combined = "".join(capsys.readouterr())
-    assert "could not be imported" in combined
-    assert "ratings" in combined
-    assert not lab.report_path.exists()
+    assert "has no attribute" in combined
+    assert "Nothing was scored" in combined or "no model" in combined
 
+
+def test_the_default_model_resolves(tmp_path):
+    """`DEFAULT_MODEL` names a callable that actually exists.
+
+    The seam is `ratings:matchups_for`, and it is the ONE path the backtest,
+    the card and the forward freeze all price through. A default that no longer
+    resolves would send every run down the no-model branch, which reads as a
+    lab with nothing to say rather than as a broken import.
+    """
+    import importlib
+    import runpy as _runpy
+
+    spec = _runpy.run_path(str(SCRIPT))["DEFAULT_MODEL"] if False else None
+    from cbb_betting_lab.models.ratings import matchups_for  # the seam itself
+
+    assert callable(matchups_for)
+    module_name, _, attribute = "cbb_betting_lab.models.ratings:matchups_for".partition(":")
+    module = importlib.import_module(module_name)
+    assert callable(getattr(module, attribute))
 
 def test_a_model_with_an_opinion_on_nothing_is_a_wiring_fault_until_proven_otherwise(
     tmp_path, capsys

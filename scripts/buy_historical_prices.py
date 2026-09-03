@@ -140,12 +140,34 @@ def main(argv: list[str] | None = None) -> int:
     cache_dir = H.cache_dir_for(CBB, Path(args.raw_dir), window)
 
     if args.rebuild:
-        rows, census = H.rebuild_from_cache(
+        # Three values, not two: rows, census, and the events that had at
+        # least one cached response. The two-value unpack here had never been
+        # exercised, because nothing ran `--rebuild` until the purchase turned
+        # out not to write its own store.
+        rows, census, reached = H.rebuild_from_cache(
             plan=plan, cache_dir=cache_dir, indexes=indexes,
             chunk_size=args.chunk_size,
         )
-        written = H.append_prices(rows, H.store_path(CBB, Path(args.processed_dir), window), window=window)
-        print(f"Rebuilt {written:,} price rows from cache. No request was made.")
+        target = H.store_path(CBB, Path(args.processed_dir), window)
+        written = H.append_prices(rows, target, window=window)
+        print(
+            f"Rebuilt {written:,} price rows from {len(reached):,} cached "
+            f"events into {target.name}. No request was made and no credit "
+            "was spent."
+        )
+        if census:
+            print("\nWhat did not become a row:")
+            for reason, count in sorted(census.items(), key=lambda kv: -kv[1]):
+                print(f"  {count:>9,}  {reason}")
+        if not rows:
+            # An empty rebuild is the signature of a cache that did not
+            # survive, and it must not read as a purchase with nothing in it.
+            print(
+                "\n::warning::No cached response staged a single row. Either "
+                f"the cache under {cache_dir} is empty, or every response in "
+                "it failed to stage. Those are different faults and the census "
+                "above tells them apart: an empty census means an empty cache."
+            )
         return 0
 
     if not args.live:

@@ -252,12 +252,13 @@ from typing import Iterable, Mapping, Sequence
 import numpy as np
 import pandas as pd
 
-from cbb_betting_lab import verdicts
+from cbb_betting_lab import config, verdicts
 from cbb_betting_lab.competitions import CBB, Competition
 from cbb_betting_lab.conferences import Tier, TierTable, tier_table
 from cbb_betting_lab.data.build_datasets import REGULATION_PERIODS
 from cbb_betting_lab.models import distributions
 from cbb_betting_lab.population import GameState, VenueState, classify, home_venues
+from cbb_betting_lab.season import clean_text, season_for_slate_date
 
 
 # --------------------------------------------------------------------------
@@ -2415,3 +2416,181 @@ def fit_report(ratings: Ratings, prepared: PreparedGames | None = None) -> str:
         "can rule a model out and never in; the price backtest decides."
     )
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# The seam: one callable the backtest, the card and the freeze all price through
+# ---------------------------------------------------------------------------
+
+#: Prepared once per season and reused across that season's slate days. The
+#: `Prior` docstring is explicit that it is built from seasons strictly earlier
+#: than the one being priced, so it does not move within a season and rebuilding
+#: it daily would be ~147x the work for the same object. The roster evidence
+#: inside it does move, and moves legitimately — a player who has appeared has
+#: appeared — which is why the key carries the day's month rather than the day.
+_SEASON_CACHE: dict[tuple, "Prior"] = {}
+_TIER_CACHE: dict[tuple, "TierTable"] = {}
+_SCHEDULE_CACHE: dict[int, "pd.DataFrame"] = {}
+_CLASSIFIED_CACHE: dict[int, "pd.DataFrame"] = {}
+
+
+def clear_caches() -> None:
+    """Drop every memo. Tests that change the cached feeds call this."""
+    for cache in (_SEASON_CACHE, _TIER_CACHE, _SCHEDULE_CACHE, _CLASSIFIED_CACHE):
+        cache.clear()
+
+
+def _cached_schedule(season: int, raw_dir: Path | str | None = None) -> "pd.DataFrame":
+    """One season's schedule, from the hoopR cache.
+
+    Reading the schedule for the day being priced is **not** a walk-forward
+    leak. It supplies who is playing and where, both of which are knowable
+    hours before tip and are exactly what the card knows. Nothing here reads a
+    score: `fit` is handed `history`, which the backtest has already cut to
+    games strictly earlier than the day.
+    """
+    if season in _SCHEDULE_CACHE:
+        return _SCHEDULE_CACHE[season]
+    root = Path(raw_dir) if raw_dir else Path(config.RAW_DIR)
+    path = root / CBB.data_dir_segment / "schedules" / f"mbb_schedule_{season}.parquet"
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"No cached schedule for season {season} at {path}. The model "
+            "cannot learn who is playing tonight, and inventing a fixture is "
+            "worse than declining to price one. Run scripts/fetch_cbb_data.py."
+        )
+    frame = pd.read_parquet(path)
+    _SCHEDULE_CACHE[season] = frame
+    return frame
+
+
+def _cached_classified(season: int, raw_dir: Path | str | None = None) -> "pd.DataFrame":
+    if season in _CLASSIFIED_CACHE:
+        return _CLASSIFIED_CACHE[season]
+    out = classify(_cached_schedule(season, raw_dir))
+    _CLASSIFIED_CACHE[season] = out
+    return out
+
+
+def matchups_for(
+    *,
+    day: str,
+    history: "pd.DataFrame",
+    prices: "pd.DataFrame",
+    competition: Competition = CBB,
+    raw_dir: Path | str | None = None,
+    player_games: "pd.DataFrame | None" = None,
+) -> dict[str, "Matchup"]:
+    """One `Matchup` per priced event, or no entry at all.
+
+    This is the single seam between the ratings and everything that consumes
+    them — the price backtest, the gameday card and the forward freeze all call
+    it, so a game priced in a measurement is priced the same way it would be on
+    a card. Two pricing paths is how the football lab shipped a ladder whose
+    −6.5 beat its −7.5 on a team it made a favourite.
+
+    **A missing entry is not a probability of zero.** An event this returns
+    nothing for reads `no opinion` downstream, which is a different census
+    bucket from the model declining to find value, and both are different from
+    the model refusing to price the matchup at all. That last case *does* get an
+    entry — a `Matchup` with `priceable=False` and a reason — because "the
+    schedule graph has not connected these two teams by anything but the prior"
+    is a finding the report should carry, not a silence.
+
+    **Joined on `game_id`, never on a name.** The store carries the hoopR game
+    id that the purchase plan resolved at buy time, so this join does not go
+    near the provider's spelling of a school. That matters more here than in
+    any sibling lab: the retention probe measured 20.5% of provider team names
+    unresolved, biased to **46.7% at the low-major end** — the exact population
+    this lab exists to ask about. Names are resolved once, at purchase, where a
+    failure is visible as an unmatched event rather than as a quiet absence.
+    """
+    season = season_for_slate_date(day)
+    if not season:
+        return {}
+
+    schedule = _cached_schedule(season, raw_dir)
+    classified = _cached_classified(season, raw_dir)
+
+    tier_key = (season,)
+    tiers = _TIER_CACHE.get(tier_key)
+    if tiers is None:
+        tiers = tier_table({season: schedule}, (season,))
+        _TIER_CACHE[tier_key] = tiers
+
+    prepared = prepare(history, schedules={season: schedule})
+
+    # The prior does not move within a season, so it is built once. The month
+    # is in the key because the roster evidence inside it legitimately does
+    # move as players appear.
+    prior_key = (season, str(day)[:7])
+    prior = _SEASON_CACHE.get(prior_key)
+    if prior is None:
+        prior = prepare_prior(
+            prepared,
+            season=season,
+            tiers=tiers,
+            schedules={season: schedule},
+            player_games=player_games,
+        )
+        _SEASON_CACHE[prior_key] = prior
+
+    # `fit` takes `prepare(...).rows`, not raw team-games — it reads the
+    # derived `efficiency` and `possessions` columns that `prepare` computes
+    # and validates. Handing it the raw frame raises on a missing column, which
+    # is the right failure: a fit that silently skipped the preparation would
+    # be fitting on unvalidated possessions.
+    ratings = fit(
+        prepared.rows,
+        prior=prior,
+        as_of=day,
+        season=season,
+        competition=competition,
+    )
+
+    # Fixture facts for the day, keyed by game id. Who is playing and where.
+    fixtures: dict[int, dict] = {}
+    for row in classified.to_dict("records"):
+        game_id = row.get("id")
+        if game_id is None:
+            continue
+        try:
+            fixtures[int(game_id)] = row
+        except (TypeError, ValueError):
+            continue
+
+    local = local_teams({season: schedule})
+    venues = venue_ids({season: schedule})
+
+    out: dict[str, Matchup] = {}
+    seen: set[str] = set()
+    for record in prices.to_dict("records"):
+        event_id = clean_text(record.get("event_id"))
+        if not event_id or event_id in seen:
+            continue
+        seen.add(event_id)
+        raw_game = record.get("game_id")
+        try:
+            game_id = int(raw_game)
+        except (TypeError, ValueError):
+            # No id means no fixture, and a fixture guessed from two school
+            # names is the join this seam exists to avoid.
+            continue
+        fixture = fixtures.get(game_id)
+        if fixture is None:
+            continue
+        try:
+            home_team_id = int(fixture.get("home_id"))
+            away_team_id = int(fixture.get("away_id"))
+        except (TypeError, ValueError):
+            continue
+        out[event_id] = matchup(
+            ratings,
+            home_team_id=home_team_id,
+            away_team_id=away_team_id,
+            venue_state=clean_text(fixture.get("venue_state")),
+            local_team_id=local.get(game_id),
+            venue_id=venues.get(game_id),
+            event_id=event_id,
+        )
+    return out
