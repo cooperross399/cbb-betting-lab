@@ -311,6 +311,13 @@ TIER_HOME_EFFECT_SHRINKAGE = 50.0
 #: with the prior spreads taken from the **held-out** 2026 season rather than
 #: from the seasons the carryover was fitted on. An in-sample prior spread
 #: would overstate λ and hand the prior more weight than it has earned, which
+#: One pseudo-observation of "no effect" on each venue column, so the design is
+#: well-posed even when a season supplies no game of some venue kind. See the
+#: block comment in `_season_fit`; this is a numerical guard, not a prior with
+#: an opinion, and at 1.0 against thousands of rows it moves an estimable
+#: effect in the fourth decimal place.
+VENUE_RIDGE = 1.0
+
 #: is the one direction this number must not be wrong in.
 DECLARED_PRIOR_STRENGTH: dict[str, float] = {
     "offence": 18.0,
@@ -1031,6 +1038,20 @@ def _season_fit(
     penalty = np.zeros(columns)
     penalty[:size] = strength[OFFENCE]
     penalty[size : 2 * size] = strength[DEFENCE]
+    # THE FOUR VENUE COLUMNS ARE PENALISED TOO, AND THE REASON IS NOT TASTE.
+    # Left at zero they are the only unregularised columns in the design, so a
+    # season in which one of them is structurally empty — no quasi-neutral game
+    # carrying a local team, say — makes the normal matrix singular and
+    # `np.linalg.solve` raise. That is not a hypothetical: it happened on
+    # 2019, 2020 and 2021 simultaneously, and the fit worked on 2022 only
+    # because those seasons had 18 such rows and the others had none.
+    #
+    # A ridge of one pseudo-observation is negligible against the ~4,400 real
+    # rows that populate a venue column when the effect is estimable, and it
+    # makes an inestimable effect come back as exactly **zero** — which is the
+    # honest answer to "what is the quasi-neutral home effect in a season with
+    # no quasi-neutral games?" — rather than as an exception.
+    penalty[2 * size :] = VENUE_RIDGE
     response = rows["efficiency"].to_numpy(dtype=float) - league_efficiency
     normal = design.T @ design + np.diag(penalty)
     coefficients = np.linalg.solve(normal, design.T @ response)
@@ -2512,13 +2533,34 @@ def matchups_for(
     schedule = _cached_schedule(season, raw_dir)
     classified = _cached_classified(season, raw_dir)
 
-    tier_key = (season,)
+    # EVERY SEASON IN THE HISTORY NEEDS ITS OWN SCHEDULE, not just the one
+    # being priced. `prepare` reads venue and locality off the schedule, and the
+    # prior is fitted on seasons strictly earlier than this one — so supplying
+    # only this season's schedule left those earlier seasons with no local team
+    # on any game. Their two quasi-neutral venue columns were then structurally
+    # zero, and the fit raised `Singular matrix` on 2019, 2020 and 2021 while
+    # working on 2022. The ridge in `_season_fit` makes that survivable; this
+    # makes it correct, and the two fixes are not substitutes for one another.
+    history_seasons = sorted(
+        {int(s) for s in pd.to_numeric(history.get("season"), errors="coerce").dropna().unique()}
+        | {season}
+    ) if "season" in getattr(history, "columns", []) else [season]
+    schedules: dict[int, pd.DataFrame] = {}
+    for one in history_seasons:
+        try:
+            schedules[one] = _cached_schedule(one, raw_dir)
+        except FileNotFoundError:
+            # A season with no cached schedule contributes no venue or locality
+            # evidence. It is counted by `prepare` rather than silently dropped.
+            continue
+
+    tier_key = tuple(sorted(schedules))
     tiers = _TIER_CACHE.get(tier_key)
     if tiers is None:
-        tiers = tier_table({season: schedule}, (season,))
+        tiers = tier_table(schedules, tuple(sorted(schedules)))
         _TIER_CACHE[tier_key] = tiers
 
-    prepared = prepare(history, schedules={season: schedule})
+    prepared = prepare(history, schedules=schedules)
 
     # The prior does not move within a season, so it is built once. The month
     # is in the key because the roster evidence inside it legitimately does
@@ -2530,7 +2572,7 @@ def matchups_for(
             prepared,
             season=season,
             tiers=tiers,
-            schedules={season: schedule},
+            schedules=schedules,
             player_games=player_games,
         )
         _SEASON_CACHE[prior_key] = prior
