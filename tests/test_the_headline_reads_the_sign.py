@@ -365,3 +365,45 @@ def test_the_sample_floor_here_matches_the_document_that_declared_it():
     assert f"{WC.SAMPLE_FLOOR_OPINIONS:,} settled opinions" in text
     assert f"{WC.SAMPLE_FLOOR_GAMES:,} distinct games" in text
     assert WC.DECISION_DATE in text
+
+
+def test_an_absent_ledger_is_never_reported_as_a_family_of_one():
+    """The most dangerous shape of an absent measurement in this repository.
+
+    `looks_from_ledger` returns `max(count, 1)`, so a ledger that is not there
+    and a ledger holding one entry are the same integer. The renderer stated
+    that integer as fact — *"Family correction: 1 cumulative hypotheses in
+    experiment ledger"* — about a file it had never opened.
+
+    A correction of x1.00 widens nothing, so an absent ledger makes every
+    result on the page look **more** significant than it is, and the sentence
+    claiming otherwise reads exactly like a measurement. Caught when a
+    discovery run was pointed at a fresh `--output-dir`.
+    """
+    from cbb_betting_lab.reports import price_backtest as PB
+
+    absent = PB.render({"record_version": PB.RECORD_VERSION, "looks": 1,
+                        "ledger_read": False, "correction_factor": 1.0})
+    assert "NO FAMILY CORRECTION WAS APPLIED" in absent
+    assert "unknown family" in absent
+    assert "1 cumulative hypotheses" not in absent, (
+        "An absent ledger is still being described as a family of one."
+    )
+
+    present = PB.render({"record_version": PB.RECORD_VERSION, "looks": 30,
+                         "ledger_read": True, "correction_factor": 1.6})
+    assert "30 cumulative hypotheses" in present
+    assert "NO FAMILY CORRECTION WAS APPLIED" not in present
+
+
+def test_ledger_was_read_distinguishes_absent_from_empty():
+    from pathlib import Path
+
+    from cbb_betting_lab.reports import price_backtest as PB
+
+    assert PB.ledger_was_read(None) is False
+    assert PB.ledger_was_read(Path("/definitely/not/here.json")) is False
+    real = Path(__file__).resolve().parents[1] / "data" / "outputs" / "experiment_ledger.json"
+    if real.is_file():
+        assert PB.ledger_was_read(real) is True
+        assert PB.looks_from_ledger(real) > 1
