@@ -407,3 +407,51 @@ def test_ledger_was_read_distinguishes_absent_from_empty():
     if real.is_file():
         assert PB.ledger_was_read(real) is True
         assert PB.looks_from_ledger(real) > 1
+
+
+def test_a_pooled_verdict_no_tier_shares_is_flagged_where_it_happens():
+    """Three intervals that each span zero can pool into one that does not.
+
+    The sample triples while the estimate barely moves. That is arithmetic, not
+    a discovery, and it is precisely why the brief forbids a pooled headline
+    across the whole of Division I.
+
+    It happened on the real run: every tier's disagreement coefficient read
+    *no demonstrated edge* and pooled read **demonstrated edge** — in the same
+    words this repository reserves for a profitable return. A reader skimming
+    for the strongest phrase on the page would find it in the one cell the
+    brief says is never the headline.
+    """
+    from cbb_betting_lab.reports import forecast_skill as FS
+
+    def cell(label, verdict):
+        return {
+            "label": label,
+            "fit": {"coefficients": [
+                {"name": "market_implied", "verdict": None},
+                {"name": "disagreement", "verdict": verdict},
+            ]},
+        }
+
+    record = {
+        "pooled": cell("pooled", "demonstrated edge"),
+        "by_tier": [cell("high_major", "no demonstrated edge"),
+                    cell("mid_major", "no demonstrated edge")],
+    }
+    warning = "\n".join(FS._pooling_artefact_warning(record))
+    assert "no tier says that" in warning
+    assert "arithmetic and not a discovery" in warning
+
+    # Agreement is silent — the line must mean something when it appears.
+    agreeing = {
+        "pooled": cell("pooled", "no demonstrated edge"),
+        "by_tier": [cell("high_major", "no demonstrated edge")],
+    }
+    assert FS._pooling_artefact_warning(agreeing) == []
+
+    # A pooled cell below its floor claims nothing, so there is nothing to flag.
+    thin = {
+        "pooled": cell("pooled", "not enough evidence (6 bets)"),
+        "by_tier": [cell("high_major", "no demonstrated edge")],
+    }
+    assert FS._pooling_artefact_warning(thin) == []

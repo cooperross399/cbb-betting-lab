@@ -1,0 +1,1310 @@
+{
+  "record_version": 1,
+  "competition": "cbb",
+  "title": "NCAA Division I men's basketball",
+  "generated_at": "2026-09-04T17:27:08Z",
+  "source": "data/processed/cbb_skill_frame.csv",
+  "season_label": "2020-11-27 to 2024-04-08",
+  "snapshot_phase": "",
+  "edge_threshold": 0.02,
+  "devig_method": "multiplicative",
+  "pair_scope": "book",
+  "minimum_rows": 200,
+  "minimum_clusters": 30,
+  "minimum_bucket": 30,
+  "edge_buckets": [
+    [
+      -Infinity,
+      -0.1
+    ],
+    [
+      -0.1,
+      -0.05
+    ],
+    [
+      -0.05,
+      0.0
+    ],
+    [
+      0.0,
+      0.02
+    ],
+    [
+      0.02,
+      0.05
+    ],
+    [
+      0.05,
+      0.1
+    ],
+    [
+      0.1,
+      0.2
+    ],
+    [
+      0.2,
+      Infinity
+    ]
+  ],
+  "looks": 30,
+  "correction_factor": 1.6041010507684776,
+  "devig_census": {
+    "scope": "book",
+    "supplied": 172702,
+    "devigged": 172702,
+    "excluded": 0,
+    "reconciles": true,
+    "unknown_selection": 0,
+    "unreadable_price": 0,
+    "no_complement": 0,
+    "not_two_sided": 0,
+    "overround_not_above_one": 0
+  },
+  "population_census": {
+    "devigged": 172702,
+    "scored": 85556,
+    "excluded": 87146,
+    "reconciles": true,
+    "no_model_probability": 86351,
+    "push": 795,
+    "void": 0,
+    "unsettleable": 0,
+    "other_outcome": 0
+  },
+  "overround": {
+    "pairs": 86351,
+    "rows": 172702,
+    "median": 1.0470788428814521,
+    "mean": 1.0452983795656403,
+    "minimum": 1.0015384615384615,
+    "maximum": 1.6654236852256654
+  },
+  "by_tier": [
+    {
+      "label": "high_major",
+      "rows": 19384,
+      "games": 3827,
+      "days": 462,
+      "fit": {
+        "fitted": true,
+        "reason": "",
+        "rows": 19384,
+        "games": 3827,
+        "days": 462,
+        "coefficients": [
+          {
+            "name": "intercept",
+            "estimate": -0.030880290727107518,
+            "standard_error": 0.013498091897625032,
+            "low": -0.05733606470646449,
+            "high": -0.004424516747750542,
+            "adjusted_low": -0.07331802556628739,
+            "adjusted_high": 0.011557444112072358,
+            "rows": 19384,
+            "clusters": 462,
+            "cluster_unit": "day",
+            "looks": 30,
+            "null_value": 0.0,
+            "answers_the_question": false,
+            "enough_evidence": true,
+            "contains_null": true,
+            "reading": "contains zero",
+            "gloss": "contains zero"
+          },
+          {
+            "name": "market_implied",
+            "estimate": 1.0422696930612902,
+            "standard_error": 0.023453335165615655,
+            "low": 0.9963020008193368,
+            "high": 1.0882373853032437,
+            "adjusted_low": 0.9685328696345707,
+            "adjusted_high": 1.1160065164880097,
+            "rows": 19384,
+            "clusters": 462,
+            "cluster_unit": "day",
+            "looks": 30,
+            "null_value": 1.0,
+            "answers_the_question": false,
+            "enough_evidence": true,
+            "contains_null": true,
+            "reading": "contains 1.0 \u2014 the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable",
+            "gloss": "contains 1.0 \u2014 the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable"
+          },
+          {
+            "name": "disagreement",
+            "estimate": 0.17688919494300848,
+            "standard_error": 0.06788962192718112,
+            "low": 0.04382798104169275,
+            "high": 0.30995040884432423,
+            "adjusted_low": -0.036554438092621266,
+            "adjusted_high": 0.3903328279786382,
+            "rows": 19384,
+            "clusters": 462,
+            "cluster_unit": "day",
+            "looks": 30,
+            "null_value": 0.0,
+            "answers_the_question": true,
+            "enough_evidence": true,
+            "contains_null": true,
+            "reading": "no demonstrated edge",
+            "gloss": "**The model knows nothing the price does not.** The interval on the disagreement includes zero, so none of the claimed edge is demonstrably realised.",
+            "verdict": "no demonstrated edge"
+          }
+        ],
+        "standard_errors_by_game": [
+          0.013123871530382976,
+          0.023164705658684146,
+          0.0657851311623505
+        ],
+        "standard_errors_by_day": [
+          0.013498091897625032,
+          0.023453335165615655,
+          0.06788962192718112
+        ]
+      },
+      "brier": {
+        "rows": 19384,
+        "scored": true,
+        "base_rate": 0.49329343788691704,
+        "model": 0.256978234822495,
+        "market_devigged": 0.23818908699610108,
+        "market_raw": 0.23814873697578706,
+        "base_rate_reference": 0.24995502202462336,
+        "skill_vs_devigged": -0.07888332779369311,
+        "skill_vs_raw": -0.07906612516959233,
+        "advantage_over_devigged": {
+          "name": "model minus de-vigged market",
+          "value": -0.01878914782639388,
+          "low": -0.02274568266220707,
+          "high": -0.01483261299058069,
+          "adjusted_low": -0.025135829513923902,
+          "adjusted_high": -0.012442466138863857,
+          "rows": 19384,
+          "clusters": 462,
+          "cluster_unit": "day",
+          "looks": 30,
+          "standard_error": 0.0020186773160230653,
+          "enough_evidence": true,
+          "verdict": "demonstrated deficit"
+        },
+        "advantage_over_raw": {
+          "name": "model minus raw market",
+          "value": -0.018829497846707954,
+          "low": -0.02237515258578883,
+          "high": -0.015283843107627077,
+          "adjusted_low": -0.02451708633932982,
+          "adjusted_high": -0.013141909354086087,
+          "rows": 19384,
+          "clusters": 462,
+          "cluster_unit": "day",
+          "looks": 30,
+          "standard_error": 0.001809040761487736,
+          "enough_evidence": true,
+          "verdict": "demonstrated deficit"
+        },
+        "loses_to_the_handicapped_market": true
+      },
+      "buckets": [
+        {
+          "low": -Infinity,
+          "high": -0.1,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": -0.1,
+          "high": -0.05,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": -0.05,
+          "high": 0.0,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": 0.0,
+          "high": 0.02,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": 0.02,
+          "high": 0.05,
+          "rows": 2515,
+          "games": 1650,
+          "enough": true,
+          "claimed_edge": 0.03469112280468811,
+          "model_implied": 0.5563505067489871,
+          "market_implied": 0.5142658474197266,
+          "realised": 0.5053677932405567,
+          "wilson_low": 0.48583453286376954,
+          "wilson_high": 0.5248846808864446,
+          "gap_to_model": -0.05098271350843042,
+          "gap_to_market": -0.00889805417916989
+        },
+        {
+          "low": 0.05,
+          "high": 0.1,
+          "rows": 3608,
+          "games": 2008,
+          "enough": true,
+          "claimed_edge": 0.07446972190452016,
+          "model_implied": 0.5710184371161551,
+          "market_implied": 0.5081922760947283,
+          "realised": 0.5188470066518847,
+          "wilson_low": 0.5025323003131995,
+          "wilson_high": 0.5351216226373402,
+          "gap_to_model": -0.05217143046427042,
+          "gap_to_market": 0.010654730557156378
+        },
+        {
+          "low": 0.1,
+          "high": 0.2,
+          "rows": 5118,
+          "games": 2226,
+          "enough": true,
+          "claimed_edge": 0.1455685789505511,
+          "model_implied": 0.6012146135556076,
+          "market_implied": 0.5021469655821669,
+          "realised": 0.5041031652989449,
+          "wilson_low": 0.49040734613142056,
+          "wilson_high": 0.5177928295939856,
+          "gap_to_model": -0.09711144825666262,
+          "gap_to_market": 0.001956199716778073
+        },
+        {
+          "low": 0.2,
+          "high": Infinity,
+          "rows": 8143,
+          "games": 2569,
+          "enough": true,
+          "claimed_edge": 0.4964214974560534,
+          "model_implied": 0.6526370088026873,
+          "market_implied": 0.44478114064444574,
+          "realised": 0.4714478693356257,
+          "wilson_low": 0.4606217002522606,
+          "wilson_high": 0.48230096464180855,
+          "gap_to_model": -0.18118913946706156,
+          "gap_to_market": 0.026666728691179975
+        }
+      ],
+      "rows_outside_every_bucket": 0,
+      "anti_predictive": {
+        "usable_buckets": 4,
+        "measurable": true,
+        "lowest_bucket": {
+          "low": 0.02,
+          "high": 0.05,
+          "rows": 2515,
+          "gap_to_model": -0.05098271350843042
+        },
+        "highest_bucket": {
+          "low": 0.2,
+          "high": Infinity,
+          "rows": 8143,
+          "gap_to_model": -0.18118913946706156
+        },
+        "worse_at_the_top": true,
+        "shortfall_widens_by": 0.13020642595863113
+      }
+    },
+    {
+      "label": "mid_major",
+      "rows": 39810,
+      "games": 7463,
+      "days": 486,
+      "fit": {
+        "fitted": true,
+        "reason": "",
+        "rows": 39810,
+        "games": 7463,
+        "days": 486,
+        "coefficients": [
+          {
+            "name": "intercept",
+            "estimate": -0.025756727706466087,
+            "standard_error": 0.010350695667057276,
+            "low": -0.04604371842883313,
+            "high": -0.005469736984099038,
+            "adjusted_low": -0.05829911084114543,
+            "adjusted_high": 0.006785655428213258,
+            "rows": 39810,
+            "clusters": 486,
+            "cluster_unit": "day",
+            "looks": 30,
+            "null_value": 0.0,
+            "answers_the_question": false,
+            "enough_evidence": true,
+            "contains_null": true,
+            "reading": "contains zero",
+            "gloss": "contains zero"
+          },
+          {
+            "name": "market_implied",
+            "estimate": 1.056789700688715,
+            "standard_error": 0.018248713829481043,
+            "low": 1.021022878818754,
+            "high": 1.092556522558676,
+            "adjusted_low": 0.9994161041444618,
+            "adjusted_high": 1.1141632972329683,
+            "rows": 39810,
+            "clusters": 7463,
+            "cluster_unit": "game",
+            "looks": 30,
+            "null_value": 1.0,
+            "answers_the_question": false,
+            "enough_evidence": true,
+            "contains_null": true,
+            "reading": "contains 1.0 \u2014 the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable",
+            "gloss": "contains 1.0 \u2014 the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable"
+          },
+          {
+            "name": "disagreement",
+            "estimate": 0.13326819467747342,
+            "standard_error": 0.06235484041976955,
+            "low": 0.011054953192982678,
+            "high": 0.25548143616196417,
+            "adjusted_low": -0.06277419440561988,
+            "adjusted_high": 0.3293105837605667,
+            "rows": 39810,
+            "clusters": 486,
+            "cluster_unit": "day",
+            "looks": 30,
+            "null_value": 0.0,
+            "answers_the_question": true,
+            "enough_evidence": true,
+            "contains_null": true,
+            "reading": "no demonstrated edge",
+            "gloss": "**The model knows nothing the price does not.** The interval on the disagreement includes zero, so none of the claimed edge is demonstrably realised.",
+            "verdict": "no demonstrated edge"
+          }
+        ],
+        "standard_errors_by_game": [
+          0.009675307930311008,
+          0.018248713829481043,
+          0.05870857637808571
+        ],
+        "standard_errors_by_day": [
+          0.010350695667057276,
+          0.01804767288599007,
+          0.06235484041976955
+        ]
+      },
+      "brier": {
+        "rows": 39810,
+        "scored": true,
+        "base_rate": 0.4879678472745541,
+        "model": 0.25180943258342187,
+        "market_devigged": 0.2393854429198269,
+        "market_raw": 0.23912548749020512,
+        "base_rate_reference": 0.24985522730079157,
+        "skill_vs_devigged": -0.05189952033865275,
+        "skill_vs_raw": -0.053043049598534786,
+        "advantage_over_devigged": {
+          "name": "model minus de-vigged market",
+          "value": -0.01242398966359494,
+          "low": -0.014746548728972922,
+          "high": -0.010101430598216957,
+          "adjusted_low": -0.016149609100839617,
+          "adjusted_high": -0.008698370226350262,
+          "rows": 39810,
+          "clusters": 486,
+          "cluster_unit": "day",
+          "looks": 30,
+          "standard_error": 0.0011850008896581944,
+          "enough_evidence": true,
+          "verdict": "demonstrated deficit"
+        },
+        "advantage_over_raw": {
+          "name": "model minus raw market",
+          "value": -0.012683945093216725,
+          "low": -0.014678650967841985,
+          "high": -0.010689239218591464,
+          "adjusted_low": -0.01588365488267716,
+          "adjusted_high": -0.00948423530375629,
+          "rows": 39810,
+          "clusters": 486,
+          "cluster_unit": "day",
+          "looks": 30,
+          "standard_error": 0.0010177257798404695,
+          "enough_evidence": true,
+          "verdict": "demonstrated deficit"
+        },
+        "loses_to_the_handicapped_market": true
+      },
+      "buckets": [
+        {
+          "low": -Infinity,
+          "high": -0.1,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": -0.1,
+          "high": -0.05,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": -0.05,
+          "high": 0.0,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": 0.0,
+          "high": 0.02,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": 0.02,
+          "high": 0.05,
+          "rows": 6156,
+          "games": 3771,
+          "enough": true,
+          "claimed_edge": 0.03472468464224314,
+          "model_implied": 0.5432843928622839,
+          "market_implied": 0.501761546193553,
+          "realised": 0.49821312540610785,
+          "wilson_low": 0.48572803200719544,
+          "wilson_high": 0.510700447500423,
+          "gap_to_model": -0.04507126745617607,
+          "gap_to_market": -0.0035484207874451057
+        },
+        {
+          "low": 0.05,
+          "high": 0.1,
+          "rows": 8521,
+          "games": 4465,
+          "enough": true,
+          "claimed_edge": 0.07406854028012083,
+          "model_implied": 0.5577874489338469,
+          "market_implied": 0.4963956241406457,
+          "realised": 0.5153151038610492,
+          "wilson_low": 0.5046992817957389,
+          "wilson_high": 0.5259171233609742,
+          "gap_to_model": -0.042472345072797735,
+          "gap_to_market": 0.018919479720403476
+        },
+        {
+          "low": 0.1,
+          "high": 0.2,
+          "rows": 11265,
+          "games": 4591,
+          "enough": true,
+          "claimed_edge": 0.14454771959895887,
+          "model_implied": 0.5866824211297937,
+          "market_implied": 0.48996408118093826,
+          "realised": 0.5141588992454506,
+          "wilson_low": 0.5049261419692214,
+          "wilson_high": 0.5233820032084094,
+          "gap_to_model": -0.07252352188434319,
+          "gap_to_market": 0.02419481806451229
+        },
+        {
+          "low": 0.2,
+          "high": Infinity,
+          "rows": 13868,
+          "games": 4351,
+          "enough": true,
+          "claimed_edge": 0.4416976038604201,
+          "model_implied": 0.612231102852898,
+          "market_implied": 0.4297317394941983,
+          "realised": 0.44534179405826363,
+          "wilson_low": 0.4370862504583119,
+          "wilson_high": 0.4536276100986785,
+          "gap_to_model": -0.16688930879463432,
+          "gap_to_market": 0.015610054564065334
+        }
+      ],
+      "rows_outside_every_bucket": 0,
+      "anti_predictive": {
+        "usable_buckets": 4,
+        "measurable": true,
+        "lowest_bucket": {
+          "low": 0.02,
+          "high": 0.05,
+          "rows": 6156,
+          "gap_to_model": -0.04507126745617607
+        },
+        "highest_bucket": {
+          "low": 0.2,
+          "high": Infinity,
+          "rows": 13868,
+          "gap_to_model": -0.16688930879463432
+        },
+        "worse_at_the_top": true,
+        "shortfall_widens_by": 0.12181804133845825
+      }
+    },
+    {
+      "label": "low_major",
+      "rows": 26356,
+      "games": 5333,
+      "days": 418,
+      "fit": {
+        "fitted": true,
+        "reason": "",
+        "rows": 26356,
+        "games": 5333,
+        "days": 418,
+        "coefficients": [
+          {
+            "name": "intercept",
+            "estimate": -0.04507434725026904,
+            "standard_error": 0.013114927305188035,
+            "low": -0.07077913242829853,
+            "high": -0.019369562072239548,
+            "adjusted_low": -0.08630742016412414,
+            "adjusted_high": -0.003841274336413944,
+            "rows": 26356,
+            "clusters": 5333,
+            "cluster_unit": "game",
+            "looks": 30,
+            "null_value": 0.0,
+            "answers_the_question": false,
+            "enough_evidence": true,
+            "contains_null": false,
+            "reading": "excludes zero, below it \u2014 a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model",
+            "gloss": "excludes zero, below it \u2014 a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model"
+          },
+          {
+            "name": "market_implied",
+            "estimate": 1.0541877944083666,
+            "standard_error": 0.02519972112394019,
+            "low": 1.0047972485849908,
+            "high": 1.1035783402317425,
+            "adjusted_low": 0.9749603679550606,
+            "adjusted_high": 1.1334152208616728,
+            "rows": 26356,
+            "clusters": 5333,
+            "cluster_unit": "game",
+            "looks": 30,
+            "null_value": 1.0,
+            "answers_the_question": false,
+            "enough_evidence": true,
+            "contains_null": true,
+            "reading": "contains 1.0 \u2014 the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable",
+            "gloss": "contains 1.0 \u2014 the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable"
+          },
+          {
+            "name": "disagreement",
+            "estimate": 0.2562698089369597,
+            "standard_error": 0.08607095979520564,
+            "low": 0.08757382762356167,
+            "high": 0.42496579025035774,
+            "adjusted_low": -0.014335591948281545,
+            "adjusted_high": 0.5268752098222009,
+            "rows": 26356,
+            "clusters": 418,
+            "cluster_unit": "day",
+            "looks": 30,
+            "null_value": 0.0,
+            "answers_the_question": true,
+            "enough_evidence": true,
+            "contains_null": true,
+            "reading": "no demonstrated edge",
+            "gloss": "**The model knows nothing the price does not.** The interval on the disagreement includes zero, so none of the claimed edge is demonstrably realised.",
+            "verdict": "no demonstrated edge"
+          }
+        ],
+        "standard_errors_by_game": [
+          0.013114927305188035,
+          0.02519972112394019,
+          0.08456512748155974
+        ],
+        "standard_errors_by_day": [
+          0.013057745659142035,
+          0.025178553860877074,
+          0.08607095979520564
+        ]
+      },
+      "brier": {
+        "rows": 26356,
+        "scored": true,
+        "base_rate": 0.47105023524055245,
+        "model": 0.24966686328515067,
+        "market_devigged": 0.23969780223507445,
+        "market_raw": 0.24000578496994693,
+        "base_rate_reference": 0.24916191112037264,
+        "skill_vs_devigged": -0.04159012288439534,
+        "skill_vs_raw": -0.040253522707435874,
+        "advantage_over_devigged": {
+          "name": "model minus de-vigged market",
+          "value": -0.009969061050076201,
+          "low": -0.012332947159458334,
+          "high": -0.007605174940694069,
+          "adjusted_low": -0.013760973242033087,
+          "adjusted_high": -0.0061771488581193155,
+          "rows": 26356,
+          "clusters": 418,
+          "cluster_unit": "day",
+          "looks": 30,
+          "standard_error": 0.0012060865036440283,
+          "enough_evidence": true,
+          "verdict": "demonstrated deficit"
+        },
+        "advantage_over_raw": {
+          "name": "model minus raw market",
+          "value": -0.00966107831520376,
+          "low": -0.011655099500852893,
+          "high": -0.007667057129554629,
+          "adjusted_low": -0.012859689794358139,
+          "adjusted_high": -0.0064624668360493825,
+          "rows": 26356,
+          "clusters": 418,
+          "cluster_unit": "day",
+          "looks": 30,
+          "standard_error": 0.0010173764423110408,
+          "enough_evidence": true,
+          "verdict": "demonstrated deficit"
+        },
+        "loses_to_the_handicapped_market": true
+      },
+      "buckets": [
+        {
+          "low": -Infinity,
+          "high": -0.1,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": -0.1,
+          "high": -0.05,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": -0.05,
+          "high": 0.0,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": 0.0,
+          "high": 0.02,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": 0.02,
+          "high": 0.05,
+          "rows": 4508,
+          "games": 2825,
+          "enough": true,
+          "claimed_edge": 0.03464505477317082,
+          "model_implied": 0.5327803532806571,
+          "market_implied": 0.49237742705350845,
+          "realised": 0.4846938775510204,
+          "wilson_low": 0.47012421529174386,
+          "wilson_high": 0.49928960359805596,
+          "gap_to_model": -0.0480864757296367,
+          "gap_to_market": -0.007683549502488063
+        },
+        {
+          "low": 0.05,
+          "high": 0.1,
+          "rows": 6427,
+          "games": 3301,
+          "enough": true,
+          "claimed_edge": 0.07387380053886376,
+          "model_implied": 0.5496747469155421,
+          "market_implied": 0.4894109728677134,
+          "realised": 0.48685234168352265,
+          "wilson_low": 0.47464405302568635,
+          "wilson_high": 0.4990763378310661,
+          "gap_to_model": -0.06282240523201943,
+          "gap_to_market": -0.0025586311841907516
+        },
+        {
+          "low": 0.1,
+          "high": 0.2,
+          "rows": 8000,
+          "games": 3382,
+          "enough": true,
+          "claimed_edge": 0.1440509047938154,
+          "model_implied": 0.575747075702425,
+          "market_implied": 0.48134286511566826,
+          "realised": 0.485625,
+          "wilson_low": 0.4746825229753625,
+          "wilson_high": 0.49658127564142196,
+          "gap_to_model": -0.09012207570242503,
+          "gap_to_market": 0.004282134884331712
+        },
+        {
+          "low": 0.2,
+          "high": Infinity,
+          "rows": 7421,
+          "games": 2681,
+          "enough": true,
+          "claimed_edge": 0.40647680818822424,
+          "model_implied": 0.5771176644098716,
+          "market_implied": 0.4138825054499111,
+          "realised": 0.43336477563670667,
+          "wilson_low": 0.42212766299011445,
+          "wilson_high": 0.4446708396465891,
+          "gap_to_model": -0.1437528887731649,
+          "gap_to_market": 0.019482270186795547
+        }
+      ],
+      "rows_outside_every_bucket": 0,
+      "anti_predictive": {
+        "usable_buckets": 4,
+        "measurable": true,
+        "lowest_bucket": {
+          "low": 0.02,
+          "high": 0.05,
+          "rows": 4508,
+          "gap_to_model": -0.0480864757296367
+        },
+        "highest_bucket": {
+          "low": 0.2,
+          "high": Infinity,
+          "rows": 7421,
+          "gap_to_model": -0.1437528887731649
+        },
+        "worse_at_the_top": true,
+        "shortfall_widens_by": 0.09566641304352819
+      }
+    },
+    {
+      "label": "unplaced",
+      "rows": 6,
+      "games": 2,
+      "days": 2,
+      "fit": {
+        "fitted": true,
+        "reason": "",
+        "rows": 6,
+        "games": 2,
+        "days": 2,
+        "coefficients": [
+          {
+            "name": "intercept",
+            "estimate": 0.5401119251552375,
+            "standard_error": 0.10492118302332373,
+            "low": 0.3344701852141877,
+            "high": 0.7457536650962874,
+            "adjusted_low": 0.21024179403394144,
+            "adjusted_high": 0.8699820562765337,
+            "rows": 6,
+            "clusters": 2,
+            "cluster_unit": "game",
+            "looks": 30,
+            "null_value": 0.0,
+            "answers_the_question": false,
+            "enough_evidence": false,
+            "contains_null": false,
+            "reading": "not enough evidence (6 bets, below the 200 declared in advance)",
+            "gloss": "not enough evidence (6 bets, below the 200 declared in advance)"
+          },
+          {
+            "name": "market_implied",
+            "estimate": -0.2547029973619146,
+            "standard_error": 0.20228606701677185,
+            "low": -0.6511764032890431,
+            "high": 0.14177040856521395,
+            "adjusted_low": -0.8906864044113787,
+            "adjusted_high": 0.3812804096875495,
+            "rows": 6,
+            "clusters": 2,
+            "cluster_unit": "game",
+            "looks": 30,
+            "null_value": 1.0,
+            "answers_the_question": false,
+            "enough_evidence": false,
+            "contains_null": false,
+            "reading": "not enough evidence (6 bets, below the 200 declared in advance)",
+            "gloss": "not enough evidence (6 bets, below the 200 declared in advance)"
+          },
+          {
+            "name": "disagreement",
+            "estimate": -1.7651585277357162,
+            "standard_error": 0.0332283416419221,
+            "low": -1.8302848806198762,
+            "high": -1.7000321748515563,
+            "adjusted_low": -1.8696277788299158,
+            "adjusted_high": -1.6606892766415167,
+            "rows": 6,
+            "clusters": 2,
+            "cluster_unit": "game",
+            "looks": 30,
+            "null_value": 0.0,
+            "answers_the_question": true,
+            "enough_evidence": false,
+            "contains_null": false,
+            "reading": "not enough evidence (6 bets, below the 200 declared in advance)",
+            "gloss": "There is no number here yet, and that is not a null result \u2014 it is a sample below the floor declared in advance.",
+            "verdict": "not enough evidence (6 bets, below the 200 declared in advance)"
+          }
+        ],
+        "standard_errors_by_game": [
+          0.10492118302332373,
+          0.20228606701677185,
+          0.0332283416419221
+        ],
+        "standard_errors_by_day": [
+          0.10492118302332373,
+          0.20228606701677185,
+          0.0332283416419221
+        ]
+      },
+      "brier": {
+        "rows": 6,
+        "scored": true,
+        "base_rate": 0.16666666666666666,
+        "model": 0.3699206123662148,
+        "market_devigged": 0.22698223173917506,
+        "market_raw": 0.23900042998589346,
+        "base_rate_reference": 0.13888888888888892,
+        "skill_vs_devigged": -0.6297337881111771,
+        "skill_vs_raw": -0.5477822043585807,
+        "advantage_over_devigged": {
+          "name": "model minus de-vigged market",
+          "value": -0.1429383806270398,
+          "low": -0.3898131013267899,
+          "high": 0.10393634007271033,
+          "adjusted_low": -0.5389503795096835,
+          "adjusted_high": 0.2530736182556038,
+          "rows": 6,
+          "clusters": 2,
+          "cluster_unit": "game",
+          "looks": 30,
+          "standard_error": 0.12595880467552795,
+          "enough_evidence": false,
+          "verdict": "not enough evidence (6 bets, below the 200 declared in advance)"
+        },
+        "advantage_over_raw": {
+          "name": "model minus raw market",
+          "value": -0.13092018238032138,
+          "low": -0.36989800569535475,
+          "high": 0.10805764093471198,
+          "adjusted_low": -0.51426475987033,
+          "adjusted_high": 0.2524243951096872,
+          "rows": 6,
+          "clusters": 2,
+          "cluster_unit": "game",
+          "looks": 30,
+          "standard_error": 0.12192970136189234,
+          "enough_evidence": false,
+          "verdict": "not enough evidence (6 bets, below the 200 declared in advance)"
+        },
+        "loses_to_the_handicapped_market": true
+      },
+      "buckets": [
+        {
+          "low": -Infinity,
+          "high": -0.1,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": -0.1,
+          "high": -0.05,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": -0.05,
+          "high": 0.0,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": 0.0,
+          "high": 0.02,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": 0.02,
+          "high": 0.05,
+          "rows": 2,
+          "games": 1,
+          "enough": false,
+          "claimed_edge": 0.03629408860470473,
+          "model_implied": 0.5380757767755198,
+          "market_implied": 0.494624580717296,
+          "realised": 0.5,
+          "wilson_low": 0.09453120573423074,
+          "wilson_high": 0.9054687942657693,
+          "gap_to_model": -0.038075776775519765,
+          "gap_to_market": 0.005375419282704019
+        },
+        {
+          "low": 0.05,
+          "high": 0.1,
+          "rows": 1,
+          "games": 1,
+          "enough": false,
+          "claimed_edge": 0.06377748184706711,
+          "model_implied": 0.5572167762056065,
+          "market_implied": 0.5010897994768962,
+          "realised": 0.0,
+          "wilson_low": 0.0,
+          "wilson_high": 0.7934506856227626,
+          "gap_to_model": -0.5572167762056065,
+          "gap_to_market": -0.5010897994768962
+        },
+        {
+          "low": 0.1,
+          "high": 0.2,
+          "rows": 0,
+          "games": 0,
+          "enough": false
+        },
+        {
+          "low": 0.2,
+          "high": Infinity,
+          "rows": 3,
+          "games": 1,
+          "enough": false,
+          "claimed_edge": 0.5092446139419922,
+          "model_implied": 0.6832404398132637,
+          "market_implied": 0.44345889605573063,
+          "realised": 0.0,
+          "wilson_low": 5.551115123125783e-17,
+          "wilson_high": 0.5614970317550454,
+          "gap_to_model": -0.6832404398132637,
+          "gap_to_market": -0.44345889605573063
+        }
+      ],
+      "rows_outside_every_bucket": 0,
+      "anti_predictive": {
+        "usable_buckets": 0,
+        "measurable": false
+      }
+    }
+  ],
+  "rows_without_a_tier": 0,
+  "pooled": {
+    "label": "every tier pooled",
+    "rows": 85556,
+    "games": 16625,
+    "days": 513,
+    "fit": {
+      "fitted": true,
+      "reason": "",
+      "rows": 85556,
+      "games": 16625,
+      "days": 513,
+      "coefficients": [
+        {
+          "name": "intercept",
+          "estimate": -0.03237069978971596,
+          "standard_error": 0.006674620769286729,
+          "low": -0.04545271610798098,
+          "high": -0.01928868347145094,
+          "adjusted_low": -0.05335557591201525,
+          "adjusted_high": -0.011385823667416674,
+          "rows": 85556,
+          "clusters": 513,
+          "cluster_unit": "day",
+          "looks": 30,
+          "null_value": 0.0,
+          "answers_the_question": false,
+          "enough_evidence": true,
+          "contains_null": false,
+          "reading": "excludes zero, below it \u2014 a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model",
+          "gloss": "excludes zero, below it \u2014 a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model"
+        },
+        {
+          "name": "market_implied",
+          "estimate": 1.0525714285506047,
+          "standard_error": 0.012541066667826683,
+          "low": 1.0279913895539488,
+          "high": 1.0771514675472607,
+          "adjusted_low": 1.0131425621681387,
+          "adjusted_high": 1.0920002949330707,
+          "rows": 85556,
+          "clusters": 16625,
+          "cluster_unit": "game",
+          "looks": 30,
+          "null_value": 1.0,
+          "answers_the_question": false,
+          "enough_evidence": true,
+          "contains_null": false,
+          "reading": "excludes 1.0 (over-responsive) \u2014 the de-vigged price is not calibrated on this population, so read the disagreement coefficient only after understanding why",
+          "gloss": "excludes 1.0 (over-responsive) \u2014 the de-vigged price is not calibrated on this population, so read the disagreement coefficient only after understanding why"
+        },
+        {
+          "name": "disagreement",
+          "estimate": 0.17351152420673088,
+          "standard_error": 0.042241082266267986,
+          "low": 0.09072052429685207,
+          "high": 0.2563025241166097,
+          "adjusted_low": 0.04070639425712133,
+          "adjusted_high": 0.30631665415634046,
+          "rows": 85556,
+          "clusters": 513,
+          "cluster_unit": "day",
+          "looks": 30,
+          "null_value": 0.0,
+          "answers_the_question": true,
+          "enough_evidence": true,
+          "contains_null": false,
+          "reading": "demonstrated edge",
+          "gloss": "**17% of each point of claimed edge is realised.** The interval excludes zero on the winning side. That is a necessary condition for a real edge and not a sufficient one: `price_backtest.py` decides whether a policy would have made money, and `reachability` decides whether the price could have been taken.",
+          "verdict": "demonstrated edge"
+        }
+      ],
+      "standard_errors_by_game": [
+        0.006635036505220199,
+        0.012541066667826683,
+        0.038479626529173805
+      ],
+      "standard_errors_by_day": [
+        0.006674620769286729,
+        0.012176434950631575,
+        0.042241082266267986
+      ]
+    },
+    "brier": {
+      "rows": 85556,
+      "scored": true,
+      "base_rate": 0.4839403431670485,
+      "model": 0.25232875528733106,
+      "market_devigged": 0.23920974465927336,
+      "market_raw": 0.2391753617019444,
+      "base_rate_reference": 0.24974208742240786,
+      "skill_vs_devigged": -0.05484312792835522,
+      "skill_vs_raw": -0.054994768239456704,
+      "advantage_over_devigged": {
+        "name": "model minus de-vigged market",
+        "value": -0.013119010628057697,
+        "low": -0.014676166290175256,
+        "high": -0.011561854965940137,
+        "adjusted_low": -0.015616845661870557,
+        "adjusted_high": -0.010621175594244836,
+        "rows": 85556,
+        "clusters": 513,
+        "cluster_unit": "day",
+        "looks": 30,
+        "standard_error": 0.0007944817733387981,
+        "enough_evidence": true,
+        "verdict": "demonstrated deficit"
+      },
+      "advantage_over_raw": {
+        "name": "model minus raw market",
+        "value": -0.013153393585386612,
+        "low": -0.014525181721322321,
+        "high": -0.011781605449450902,
+        "adjusted_low": -0.015353880375672814,
+        "adjusted_high": -0.01095290679510041,
+        "rows": 85556,
+        "clusters": 513,
+        "cluster_unit": "day",
+        "looks": 30,
+        "standard_error": 0.0006999047670039854,
+        "enough_evidence": true,
+        "verdict": "demonstrated deficit"
+      },
+      "loses_to_the_handicapped_market": true
+    },
+    "buckets": [
+      {
+        "low": -Infinity,
+        "high": -0.1,
+        "rows": 0,
+        "games": 0,
+        "enough": false
+      },
+      {
+        "low": -0.1,
+        "high": -0.05,
+        "rows": 0,
+        "games": 0,
+        "enough": false
+      },
+      {
+        "low": -0.05,
+        "high": 0.0,
+        "rows": 0,
+        "games": 0,
+        "enough": false
+      },
+      {
+        "low": 0.0,
+        "high": 0.02,
+        "rows": 0,
+        "games": 0,
+        "enough": false
+      },
+      {
+        "low": 0.02,
+        "high": 0.05,
+        "rows": 13181,
+        "games": 8247,
+        "enough": true,
+        "claimed_edge": 0.034691285001601,
+        "model_implied": 0.5421842220678762,
+        "market_implied": 0.5009369072867593,
+        "realised": 0.4949548592671269,
+        "wilson_low": 0.48642221330034113,
+        "wilson_high": 0.5034904450797092,
+        "gap_to_model": -0.0472293628007493,
+        "gap_to_market": -0.005982048019632424
+      },
+      {
+        "low": 0.05,
+        "high": 0.1,
+        "rows": 18557,
+        "games": 9775,
+        "enough": true,
+        "claimed_edge": 0.07407854081497778,
+        "model_implied": 0.5575501529709971,
+        "market_implied": 0.4962704239840757,
+        "realised": 0.5061162903486555,
+        "wilson_low": 0.4989224101212102,
+        "wilson_high": 0.5133076388506332,
+        "gap_to_model": -0.05143386262234162,
+        "gap_to_market": 0.009845866364579736
+      },
+      {
+        "low": 0.1,
+        "high": 0.2,
+        "rows": 24383,
+        "games": 10199,
+        "enough": true,
+        "claimed_edge": 0.14459899465618323,
+        "model_implied": 0.5861448743724779,
+        "market_implied": 0.4896926738005227,
+        "realised": 0.5026862978304556,
+        "wilson_low": 0.4964105810643602,
+        "wilson_high": 0.5089611682956872,
+        "gap_to_model": -0.08345857654202227,
+        "gap_to_market": 0.012993624029932871
+      },
+      {
+        "low": 0.2,
+        "high": Infinity,
+        "rows": 29435,
+        "games": 9602,
+        "enough": true,
+        "claimed_edge": 0.4479638101419258,
+        "model_implied": 0.6145637508391155,
+        "market_implied": 0.42990062990335387,
+        "realised": 0.44949889587226094,
+        "wilson_low": 0.443823090498888,
+        "wilson_high": 0.4551878809702624,
+        "gap_to_model": -0.16506485496685458,
+        "gap_to_market": 0.01959826596890707
+      }
+    ],
+    "rows_outside_every_bucket": 0,
+    "anti_predictive": {
+      "usable_buckets": 4,
+      "measurable": true,
+      "lowest_bucket": {
+        "low": 0.02,
+        "high": 0.05,
+        "rows": 13181,
+        "gap_to_model": -0.0472293628007493
+      },
+      "highest_bucket": {
+        "low": 0.2,
+        "high": Infinity,
+        "rows": 29435,
+        "gap_to_model": -0.16506485496685458
+      },
+      "worse_at_the_top": true,
+      "shortfall_widens_by": 0.11783549216610528
+    }
+  },
+  "raw_market_fit": {
+    "fitted": true,
+    "reason": "",
+    "rows": 85556,
+    "games": 16625,
+    "days": 513,
+    "coefficients": [
+      {
+        "name": "intercept",
+        "estimate": -0.03134612198218678,
+        "standard_error": 0.006677766254160371,
+        "low": -0.04443430333751805,
+        "high": -0.018257940626855512,
+        "adjusted_low": -0.05234088744692207,
+        "adjusted_high": -0.01035135651745149,
+        "rows": 85556,
+        "clusters": 513,
+        "cluster_unit": "day",
+        "looks": 30,
+        "null_value": 0.0,
+        "answers_the_question": false,
+        "enough_evidence": true,
+        "contains_null": false,
+        "reading": "excludes zero, below it \u2014 a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model",
+        "gloss": "excludes zero, below it \u2014 a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model"
+      },
+      {
+        "name": "market_implied",
+        "estimate": 1.011562232748363,
+        "standard_error": 0.011970444177481391,
+        "low": 0.9881005932815524,
+        "high": 1.035023872215174,
+        "adjusted_low": 0.9739273922269008,
+        "adjusted_high": 1.0491970732698253,
+        "rows": 85556,
+        "clusters": 16625,
+        "cluster_unit": "game",
+        "looks": 30,
+        "null_value": 1.0,
+        "answers_the_question": false,
+        "enough_evidence": true,
+        "contains_null": true,
+        "reading": "contains 1.0 \u2014 the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable",
+        "gloss": "contains 1.0 \u2014 the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable"
+      },
+      {
+        "name": "disagreement",
+        "estimate": 0.17679647736028237,
+        "standard_error": 0.04229951994403337,
+        "low": 0.09389094170664324,
+        "high": 0.2597020130139215,
+        "adjusted_low": 0.043807620503756334,
+        "adjusted_high": 0.30978533421680843,
+        "rows": 85556,
+        "clusters": 513,
+        "cluster_unit": "day",
+        "looks": 30,
+        "null_value": 0.0,
+        "answers_the_question": true,
+        "enough_evidence": true,
+        "contains_null": false,
+        "reading": "demonstrated edge",
+        "gloss": "**18% of each point of claimed edge is realised.** The interval excludes zero on the winning side. That is a necessary condition for a real edge and not a sufficient one: `price_backtest.py` decides whether a policy would have made money, and `reachability` decides whether the price could have been taken.",
+        "verdict": "demonstrated edge"
+      }
+    ],
+    "standard_errors_by_game": [
+      0.006648924451962776,
+      0.011970444177481391,
+      0.038409375379613045
+    ],
+    "standard_errors_by_day": [
+      0.006677766254160371,
+      0.011470528888133895,
+      0.04229951994403337
+    ]
+  }
+}
