@@ -1,93 +1,102 @@
 # Why the model does not have an edge
 
-**Generated from `data/outputs/cbb_price_backtest.json`, the run record of the
-price backtest over the full bought population.** Every figure below is read
-from that file rather than typed, so this document cannot drift from the
-measurement that produced it. Re-render it whenever the record changes.
+**Generated from `data/outputs/cbb_price_backtest.json`.** Every figure is read
+from that record rather than typed, so this cannot drift from the measurement.
+Re-render whenever the record changes.
 
-Read `docs/what_we_can_and_cannot_claim.md` first. This file says what the
-evidence *is*; that one says how to read it.
+Read `docs/what_we_can_and_cannot_claim.md` first. This says what the evidence
+*is*; that says how to read it.
 
 ## The answer
 
-**No demonstrated edge, on 86,351 graded bets.** Where an
-interval excludes zero it does so on the losing side, and this document calls
-that a **demonstrated deficit** rather than an edge, because the sign is read
-rather than assumed.
+**No demonstrated edge, on 118,050 graded bets across
+32 market-and-tier cells.** 0 cell shows a demonstrated
+edge. 1 shows a demonstrated deficit.
 
 | Cut | Result |
 |:---|:---|
-| high-major | 19,565 bets, **-2.0%**, corrected -6.3% to +2.3% — no demonstrated edge |
-| mid-major | 40,179 bets, **-1.9%**, corrected -5.0% to +1.3% — no demonstrated edge |
-| low-major | 26,601 bets, **-3.9%**, corrected -7.4% to -0.3% — demonstrated deficit |
-| **pooled** | 86,351 bets, **-2.5%**, corrected -4.6% to -0.4% — demonstrated deficit |
+| high-major | 24,691 bets, **-3.1%**, corrected -10.0% to +3.8% — no demonstrated edge |
+| mid-major | 58,633 bets, **-4.1%**, corrected -9.0% to +0.9% — no demonstrated edge |
+| low-major | 34,720 bets, **-4.3%**, corrected -10.0% to +1.4% — no demonstrated edge |
+| **pooled** | 118,050 bets, **-3.9%**, corrected -7.2% to -0.7% — demonstrated deficit |
 
-Pooled is listed last and is never the headline. High-major, mid-major and
-low-major are three different distributions and the brief forbids a single
-Division I number standing alone.
+Pooled is listed last and is never the headline: the three tiers are three
+distributions and the brief forbids a single Division I number standing alone.
 
-## The thesis this lab was built on is contradicted
+## A correction, and it is the point of re-measuring
 
-The reason for a fourth lab was market heterogeneity: *"A 32-team league priced
-by every book is the hardest possible case. 360 teams on a Tuesday night in
-January is the opposite."* The expectation was that softness would show up at
-the low-major end.
+**An earlier version of this document said low-major was "the only tier whose
+interval excludes zero, and it excludes zero on the losing side".** That was
+true of the core team markets alone — low-major then read −3.9%, corrected
+−7.4% to −0.3%, a demonstrated deficit.
 
-**It is the low-major tier that carries the only interval excluding zero, and
-it excludes zero on the losing side.** High-major and mid-major both span zero;
-low-major does not. Whatever is different about the low-major board, this model
-is worse there, not better.
+It is **no longer true**. With the alternate ladders and the halves added, the
+same tier reads -4.3%, corrected
+-10.0% to +1.4%
+— **no demonstrated edge**.
 
-That is a real finding and it is the opposite of the one the lab was built to
-look for. It is recorded here in the direction it came out.
+Nothing about the model changed. The population did: the new markets are one
+season deep and thin, which widens every interval they enter. A deficit that
+survives on four seasons of three markets and dissolves when a fifth is added
+was **fragile to the population all along**, and the earlier wording did not
+say so because at the time there was nothing to say it against.
+
+The direction is unchanged and worth keeping: low-major is still the worst
+tier by point estimate, and the lab was built expecting it to be the best.
+
+## The thesis this lab was built on is still contradicted
+
+The reason for a fourth lab was market heterogeneity — *"360 teams on a Tuesday
+night in January"* being priced with less attention than a 32-team league, so
+softness should appear at the low-major end. Low-major is the **worst** tier by
+point estimate in both measurements. Whatever is different about that board,
+this model is not better there.
 
 ## The model is not worthless — it is beaten by the vig
 
-Betting blind returns far worse than the model does. From the same run record,
-every blind side that clears the 200-bet floor is negative,
-and the worst are heavily so:
+Blind betting is far worse than the model. The worst blind sides that clear the
+200-bet floor:
 
+- `high_major / alternate_total_points / always under`: 6,618 bets, **-25.3%**
+- `mid_major / alternate_spread / always home`: 18,066 bets, **-21.7%**
+- `mid_major / alternate_total_points / always the underdog`: 25,824 bets, **-18.1%**
+- `low_major / spread_h1 / always home`: 654 bets, **-16.9%**
+- `high_major / alternate_spread / always the favourite`: 2,285 bets, **-15.9%**
 
-- `high_major / team_total / always under`: 1,995 bets, **-13.9%**
-- `high_major / moneyline / always away`: 4,837 bets, **-10.8%**
-- `mid_major / team_total / always under`: 7,161 bets, **-8.2%**
-- `mid_major / moneyline / always away`: 9,170 bets, **-7.6%**
-- `mid_major / team_total / always the underdog`: 5,533 bets, **-7.4%**
+The pooled model figure of **-3.9%** beats every one of them. The
+model carries information and not enough of it to cross the hold. A model
+returning the blind figure would be worth deleting; this one is worth keeping
+and still not worth betting.
 
-The pooled model figure of **-2.5%** is better than every one of them.
-So the model carries information — it simply does not carry enough to cross the
-hold. That distinction matters: a model that returned the blind figure would be
-worth deleting, and this one is worth keeping and improving.
+## Three instruments agree, and none of them is the return
 
-**It is not worth betting.** A number that is better than blind and still
-negative is a smaller loss, not a profit.
+- **Forecast skill.** The model loses to the market on Brier in every tier
+  **with the vig left in** — pooled advantage −0.01312 [−0.01468, −0.01156]. In
+  high-major its Brier is worse than the base rate: beaten by always predicting
+  the league average.
+- **Anti-predictiveness.** By claimed edge, the shortfall widens **11.8 pp**
+  from the smallest bucket to the largest. The biggest claimed edges do worst,
+  so raising the edge threshold is the wrong response — the one move a
+  disappointing backtest invites.
+- **Calibration on selected bets.** Overall
+  **0.5 pp underconfident**
+  over 369,902 rows; on the bets it **selected**,
+  **10.0 pp overconfident** over
+  116,891. Every selected bin is over-predicted.
+  The overall figure is not evidence.
 
 ## What this does not settle
 
-- **Four seasons of core team markets only.** `moneyline`, `spread`,
-  `total_points` and `team_total`. Ladders, halves, player props and futures
-  were not bought — the purchase cap bound first — so nothing here says
-  anything about them.
-- **One price window.** Every quote is card time, T-60m. A different lead is a
-  different measurement.
-- **The half-point decomposition was refused, not computed.** The ticket-margin
-  reconstruction agreed with the recorded outcome on 83.8% of scorable bets,
-  below the 99% the module requires, so it declined rather than compute on an
-  unverified spread convention. How much of any spread or total figure is half
-  a point at a key number is therefore **still open**.
-- **Reachability is unmeasured.** The line-movement store holds no in-season
-  captures yet, so nothing here is split by whether the price survived. An edge
-  that lived only in vanishing prices would look identical to one that did not,
-  and `reachability.py` exists to tell them apart once there is a season to
-  measure.
-- **The forward ledger is untouched by all of this.** It starts on
-  2026-11-01 and is the only evidence that can still grow.
-
-## What would change the answer
-
-Nothing in `docs/when_this_ends.md` is loosened by this result. The stopping
-rule was declared before the data existed and this measurement does not meet
-the bar for continuing on the strength of a finding, because there is no
-finding. The lab keeps running because forward evidence cannot be back-dated,
-not because anything here is promising.
+- **The new markets are one season deep.** Ladders and halves were bought for
+  2024 only before the credit cap bound, so every figure on them rests on a
+  few hundred events and says so.
+- **Props and futures are still unbought.** Nothing here speaks to them.
+- **One price window**, card time T−60m.
+- **The half-point decomposition was refused, not computed** — the ticket-margin
+  reconstruction verified below the 99% bar, so how much of any spread or total
+  figure is half a point at a key number is still open.
+- **Reachability is unmeasured.** There is no in-season line-movement store to
+  split on, and there will not be before November.
+- **The forward ledger is untouched by all of this** and is the only evidence
+  that can still grow.
 

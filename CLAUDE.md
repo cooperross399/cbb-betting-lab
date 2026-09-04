@@ -170,44 +170,46 @@ what a market costs, not a reason not to know what a school is called.*
 
 ### The measurement, and it is decisive
 
-**2026-09-04. Four independent instruments, one answer: no demonstrated edge,
-and in places a demonstrated deficit.** 1,821,842 bought quotes collapse to
-278,246 wagers and **86,351 bets**; the accounting identity reconciles exactly;
-the family correction is x1.60 from 30 pre-registered hypotheses.
+**2026-09-04, on the expanded store: 2,233,844 quotes, 13 markets, 118,050
+graded bets, 32 market-and-tier cells. Not one shows a demonstrated edge.**
+The accounting identity reconciles at 436,920 of 436,920 offered; the family
+correction is x1.60 from 30 pre-registered hypotheses.
 
 | Cut | Bets | ROI | Corrected | Verdict |
 |:---|---:|---:|:---|:---|
-| high-major | 19,565 | -2.0% | -6.3% to +2.3% | no demonstrated edge |
-| mid-major | 40,179 | -1.9% | -5.0% to +1.3% | no demonstrated edge |
-| low-major | 26,601 | **-3.9%** | -7.4% to -0.3% | **demonstrated deficit** |
-| pooled | 86,351 | -2.5% | -4.6% to -0.4% | demonstrated deficit |
+| high-major | 24,691 | -3.1% | -10.0% to +3.8% | no demonstrated edge |
+| mid-major | 58,633 | -4.1% | -9.0% to +0.9% | no demonstrated edge |
+| low-major | 34,720 | -4.3% | -10.0% to +1.4% | no demonstrated edge |
+| pooled | 118,050 | -3.9% | -7.2% to -0.7% | demonstrated deficit |
 
-- **The lab's own thesis is contradicted.** The reason for a fourth lab was that
-  360 teams on a Tuesday are priced with less attention than a 32-team league,
-  so softness should appear at the low-major end. **Low-major is the only tier
-  whose interval excludes zero, and it excludes zero on the losing side.**
-- **The model beats blind betting and loses to the vig.** Blind sides run -3.4%
-  to -13.9%; the model's -2.5% beats every one. It carries information and not
-  enough of it. A model returning the blind figure would be worth deleting.
+**A CLAIM IN THIS FILE WAS RETRACTED BY THE RE-MEASUREMENT.** The core-team-only
+run had low-major at -3.9% corrected -7.4% to -0.3%, and this file called it
+*the only tier whose interval excludes zero*. Adding the alternate ladders and
+the halves — one season deep and thin, which widens every interval they enter —
+takes the same tier to **no demonstrated edge**. Nothing about the model
+changed; the population did. **A deficit that dissolves when a fifth market is
+added was fragile to the population all along.** The direction survives:
+low-major is the worst tier by point estimate in both runs, and the lab was
+built expecting it to be the best.
+
+- **The lab's own thesis is contradicted.** Softness was expected at the
+  low-major end. It is the worst tier in both measurements.
+- **The model beats blind betting and loses to the vig.** Blind sides run to
+  -13.9%; the model's -3.9% beats every one. Information, and not enough of it.
 - **The model loses to the market on Brier in every tier, with the vig left
-  in.** Pooled: model 0.25233, de-vigged market 0.23921, advantage **-0.01312
-  [-0.01468, -0.01156]**. In high-major its Brier (0.25698) is worse than the
-  **base rate** (0.24996) — beaten by always predicting the league average.
-- **Anti-predictiveness is a shape.** By claimed edge, pooled: +2-5% -4.7pp,
-  +5-10% -5.1pp, +10-20% -8.3pp, **+20% and above -16.5pp**. The shortfall
-  widens 11.8pp across the buckets, so **raising the edge threshold makes it
-  worse** — the one move a disappointing backtest invites.
+  in.** Pooled advantage **-0.01312 [-0.01468, -0.01156]**. In high-major its
+  Brier is worse than the **base rate** — beaten by predicting the league mean.
+- **Anti-predictiveness is a shape.** The shortfall widens **11.8pp** from the
+  smallest claimed-edge bucket to the largest, so **raising the threshold makes
+  it worse** — the move a disappointing backtest invites.
 - **Replication: 0 replicated / 0 failed / 0 reversed / 5 nothing to
-  replicate.** Nothing replicates because discovery found nothing to. When
-  `low_major/total_points` returned -12.1% on the holdout with an interval
-  excluding zero, the module refused to call it a replication: *"a NEW
-  DISCOVERY made on the only clean season this lab had"*. That cell's holdout
-  is burned.
-- **Not measured, and the reports say so rather than guessing.** The half-point
-  decomposition was **refused** — ticket-margin reconstruction verified at 83.8%
-  against a 99% bar. Reachability has no in-season line-movement store to split
-  on. Only core team markets were bought; ladders, halves, props and futures
-  were not.
+  replicate.** When a holdout cell returned -12.1% with an interval excluding
+  zero, the module refused to call it a replication: *"a NEW DISCOVERY made on
+  the only clean season this lab had"*. That cell's holdout is burned.
+- **Not measured, and the reports say so.** The half-point decomposition was
+  **refused** (ticket-margin verified at 83.8% against a 99% bar).
+  Reachability has no in-season store to split on. Props and futures are
+  unbought; futures cannot be bought at all — no historical bulk endpoint.
 
 ### The winner's curse, measured
 
