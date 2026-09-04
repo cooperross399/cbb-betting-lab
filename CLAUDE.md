@@ -168,6 +168,69 @@ all 365 observed spellings every time. The vocabulary is committed at
 historical slate listings, not guessed. *Off-season is a reason not to know
 what a market costs, not a reason not to know what a school is called.*
 
+### The measurement, and it is decisive
+
+**2026-09-04. Four independent instruments, one answer: no demonstrated edge,
+and in places a demonstrated deficit.** 1,821,842 bought quotes collapse to
+278,246 wagers and **86,351 bets**; the accounting identity reconciles exactly;
+the family correction is x1.60 from 30 pre-registered hypotheses.
+
+| Cut | Bets | ROI | Corrected | Verdict |
+|:---|---:|---:|:---|:---|
+| high-major | 19,565 | -2.0% | -6.3% to +2.3% | no demonstrated edge |
+| mid-major | 40,179 | -1.9% | -5.0% to +1.3% | no demonstrated edge |
+| low-major | 26,601 | **-3.9%** | -7.4% to -0.3% | **demonstrated deficit** |
+| pooled | 86,351 | -2.5% | -4.6% to -0.4% | demonstrated deficit |
+
+- **The lab's own thesis is contradicted.** The reason for a fourth lab was that
+  360 teams on a Tuesday are priced with less attention than a 32-team league,
+  so softness should appear at the low-major end. **Low-major is the only tier
+  whose interval excludes zero, and it excludes zero on the losing side.**
+- **The model beats blind betting and loses to the vig.** Blind sides run -3.4%
+  to -13.9%; the model's -2.5% beats every one. It carries information and not
+  enough of it. A model returning the blind figure would be worth deleting.
+- **The model loses to the market on Brier in every tier, with the vig left
+  in.** Pooled: model 0.25233, de-vigged market 0.23921, advantage **-0.01312
+  [-0.01468, -0.01156]**. In high-major its Brier (0.25698) is worse than the
+  **base rate** (0.24996) — beaten by always predicting the league average.
+- **Anti-predictiveness is a shape.** By claimed edge, pooled: +2-5% -4.7pp,
+  +5-10% -5.1pp, +10-20% -8.3pp, **+20% and above -16.5pp**. The shortfall
+  widens 11.8pp across the buckets, so **raising the edge threshold makes it
+  worse** — the one move a disappointing backtest invites.
+- **Replication: 0 replicated / 0 failed / 0 reversed / 5 nothing to
+  replicate.** Nothing replicates because discovery found nothing to. When
+  `low_major/total_points` returned -12.1% on the holdout with an interval
+  excluding zero, the module refused to call it a replication: *"a NEW
+  DISCOVERY made on the only clean season this lab had"*. That cell's holdout
+  is burned.
+- **Not measured, and the reports say so rather than guessing.** The half-point
+  decomposition was **refused** — ticket-margin reconstruction verified at 83.8%
+  against a 99% bar. Reachability has no in-season line-movement store to split
+  on. Only core team markets were bought; ladders, halves, props and futures
+  were not.
+
+### Four defects the measurement path found, all fixed
+
+1. **An absent experiment ledger was reported as a family of one.**
+   `looks_from_ledger` returns `max(count, 1)`, so a missing file and a
+   one-entry file are the same integer — and the report stated it as fact about
+   a file it never opened. A correction of x1.00 widens nothing, so a missing
+   ledger makes every result look **more** significant.
+2. **The weekly loop could never finish its own measurement.** Unbounded, the
+   backtest scores the whole store: a measured **eight hours** against a
+   240-minute timeout and GitHub's six-hour ceiling. It would have been killed
+   every Monday and looked exactly like a lab that was running.
+3. **The seam deleted the November prior regime.** `matchups_for` passed
+   multi-season history straight to `fit`, whose contract is one season, so the
+   prior's weight was **0.0% on 3 November and 0.0% on 20 February**. Also the
+   tier table saw the season it was pricing, moving 9.3% of teams across a
+   boundary that selects the home-court effect.
+4. **A pooled verdict no tier shared.** The pooled disagreement coefficient read
+   `demonstrated edge` while every tier read `no demonstrated edge` — three
+   intervals each spanning zero pooling into one that does not. Arithmetic, not
+   a discovery, and it put the reserved phrase in the one cell the brief says is
+   never the headline. Now flagged where it happens.
+
 ### Prices
 
 - **Quota: 4,992,714 credits remaining** (read from `x-requests-remaining`,

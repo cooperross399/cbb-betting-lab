@@ -7,7 +7,7 @@ not the same thing.
 Every row is checkable from the repository without anyone's judgment. A row that
 is not done says so, and says what it is waiting on.
 
-Last updated **2026-09-03**.
+Last updated **2026-09-04**.
 
 ## The headline
 
@@ -61,11 +61,11 @@ M and the commit of 2026-09-03.
 | # | Item | State |
 |--:|:---|:---|
 | 11 | Walk-forward fits, per tier, November prior, connectivity refusing to price | **done** | `models/ratings.py` + `scripts/fit_ratings.py`. Fitted 146 days of 2025-26: **4,719 of 5,415 games priced**, league 108.38 per 100 at 68.39 possessions. Prior weight decays **0.867 (12 Nov) → 0.420 (20 Feb)**, monotone, and is carried on every matchup. Connectivity refuses two teams the schedule graph has not connected — on 5 Nov, 121 components and **0.4% priceable**. **Home advantage is heterogeneous and fitted, not assumed: high_major +12.36, mid_major +7.34, low_major +3.90 per 100 possessions**, 409 venues, shrunk toward the league mean. |
-| 12 | Price backtest over the full bought population, every market, clustered, corrected, replicated | **scoring now** | `scripts/run_price_backtest.py` over all 1,821,842 rows. Replication is `reports/replication.py`, built and tested, waiting on the discovery record. |
-| 13 | Market-vs-model regression printed for every candidate | **built, unrun** | `reports/forecast_skill.py` — regresses outcome on market-implied and on the model's *disagreement*, Brier side by side, and buckets by claimed edge so anti-predictiveness is a table and not only a coefficient. Runs on the backtest's graded bets via `--graded`. |
+| 12 | Price backtest over the full bought population, every market, clustered, corrected, replicated | **done** | **86,351 bets** from 1,821,842 quotes, identity reconciling, correction x1.60 from 30 hypotheses. Pooled **-2.5%**, corrected -4.6% to -0.4%. Per tier: high -2.0%, mid -1.9% (both *no demonstrated edge*), low **-3.9%** (*demonstrated deficit*). Replication on held-out 2024: **0 replicated / 0 failed / 0 reversed / 5 nothing to replicate**, and it refused to call a -12.1% holdout cell a replication. |
+| 13 | Market-vs-model regression printed for every candidate | **done** | `reports/forecast_skill.py`. **The model loses to the market on Brier in every tier with the vig left in** — pooled advantage **-0.01312 [-0.01468, -0.01156]**; in high-major its Brier is worse than the base rate. Anti-predictiveness is a table: the shortfall widens **11.8pp** from the smallest claimed-edge bucket to the largest, so raising the threshold makes it worse. |
 | 14 | Calibration measured on selected bets, not only overall | **built, unrun** | `reports/calibration_on_selected.py`. |
 | 15 | Reachability: edge split by whether the price survived | **built; no edge to split yet** | `reachability.py` + `scripts/run_reachability.py`, 41 tests. Three-valued survival, per book and per tier, and it emits **"not reachable"** in those words when an edge lives only in prices that vanished. The store is empty today because it is September, and it says so rather than printing an empty table. |
-| 16 | Claims / when-this-ends / why-the-model docs, headline reads the sign | **2 of 3; the third needs the run record** | `docs/what_we_can_and_cannot_claim.md` now carries a **fenced generated block** the weekly loop re-renders, so the pre-measurement framing survives and the numbers cannot drift from the record. `test_the_headline_reads_the_sign.py` pins the predicate. |
+| 16 | Claims / when-this-ends / why-the-model docs, headline reads the sign | **done** | All three. `docs/why_the_model_does_or_does_not_have_an_edge.md` is **generated from the run record**, not typed, so it cannot drift. The claims doc carries a fenced block the weekly loop re-renders while its pre-measurement framing survives. A pooled verdict no tier shares is now flagged where it happens. |
 
 ### Self-operation
 

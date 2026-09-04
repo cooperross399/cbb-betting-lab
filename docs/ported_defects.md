@@ -215,3 +215,29 @@ snapshotted before a day is graded and restored when it turns out to be
 waiting, so the identity holds with no exemption — and the case the explanation
 was protecting (a night graded and written nowhere) now shows up as the
 anomaly it is.
+
+| O | **An absent experiment ledger reported as a family of one.** `looks_from_ledger` returns `max(count, 1)`, so a missing file and a one-entry file are the same integer, and the renderer stated it as fact about a file it had never opened. A correction of x1.00 widens nothing, so a missing ledger makes every result look **more** significant than it is. | New here. Nearest sibling: the NHL lab's headline that announced a replicated loss as good news. | `test_the_headline_reads_the_sign.py::test_an_absent_ledger_is_never_reported_as_a_family_of_one` |
+| P | **The weekly loop could never finish its own measurement.** Unbounded, the price backtest scores every season in the store — a measured **eight hours** against a 240-minute job timeout and GitHub's six-hour ceiling. It would have been killed every Monday and reported degraded for ever, which looks exactly like a lab that is running. | New here, and specific to a sport with 1.8M bought quotes. | `test_weekly_loop.py::test_the_weekly_backtest_is_bounded_to_a_season` |
+| Q | **A pooled verdict no tier shared.** The pooled disagreement coefficient read `demonstrated edge` while every tier read `no demonstrated edge`: three intervals each spanning zero pooled into one that does not, because the sample triples while the estimate barely moves. Arithmetic, not a discovery — and it put this repository's strongest reserved phrase in the one cell the brief says is never the headline. | The brief's rule 9, arriving by a door nobody had watched. | `test_the_headline_reads_the_sign.py::test_a_pooled_verdict_no_tier_shares_is_flagged_where_it_happens` |
+| R | **A card test that only failed at night.** The fixture built tips at `now + 3..8h`; run at 20:45 ET the later ones land after midnight, which `slate_date` correctly files under tomorrow. The card reported them off-slate and froze nothing — **the card was right** — but it read as a regression, and the suite passed all afternoon and failed after dark. | New here. The nearest sibling is the NHL lab's UTC-vs-league-date defect, which discarded 69% of bought prices. | `test_the_card_runs_end_to_end_offline.py` (simultaneous tips at `now+65min`, with the boundary window skipped and its reason stated) |
+
+**Four refusals earned their keep on 2026-09-04**, and none of them was a
+defect in the thing that refused:
+
+1. `forecast_skill` **would not de-vig without a `book` column**, because
+   pooling every row into one nameless book pairs quotes across books and
+   understates the hold, sometimes to nothing.
+2. It **would not de-vig a one-sided quote** — a fair price needs both sides of
+   the wager, and the complement is the only pair with a hold in it.
+3. `replication` **would not replicate on a season inside the discovery
+   window**, because re-scoring a rule on the data it was chosen on reproduces
+   the selection rather than the effect, with a tighter interval each time the
+   sample grows.
+4. The **relay declined to copy the card to Drive** on a prompt that told it to
+   override a stated guard, not notify Cooper, and move private data to an
+   external service. The payload was genuine; the prompt was shaped exactly
+   like an injection, and a relay that complied with it would comply with a
+   real one.
+
+A lab whose instruments only ever say yes is a lab with no instruments.
+
