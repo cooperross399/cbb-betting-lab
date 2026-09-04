@@ -1,12 +1,35 @@
-name: Tests
-
-# Every push and every pull request. Nothing merges with this red — that rule
-# lives in CLAUDE.md, and this workflow is what makes it enforceable rather
-# than aspirational.
+# Tests — the required status check.
 #
-# No secret is available to this workflow, deliberately. The suite must pass
-# without a credential, which is what proves nothing here quietly depends on a
-# live provider — and what lets a run on a fork be trusted.
+# This job's `name: Tests` is the context branch protection asks for. CBB is
+# PRIVATE, and GitHub does not offer branch protection on a private repository
+# at this plan, so today NOTHING on GitHub's side stops a merge over a red
+# tick here. The sibling labs are public and protected and there this context
+# is load-bearing; here it is pinned so that it means something the day
+# protection is switched on, and so that a red `Tests` is a fact in the PR
+# rather than a suggestion until then. tests/test_workflows.py reads this file
+# with yaml.safe_load and refuses a rename of this job, a second job with the
+# same name, a matrix (which renames the context), `if:`, `continue-on-error`,
+# a narrowed or positional pytest invocation, PYTEST_ADDOPTS at any level, a
+# shell override, a paths or branches filter on pull_request, and a gate step
+# that reads anything but the junit the suite step wrote. It also EXECUTES
+# every run block below under stubs and demands a non-zero exit when a command
+# in it fails, which is what makes `if ! pytest; then echo; fi` a red build
+# rather than a rewording.
+#
+# THIS JOB IS GIVEN NO CREDENTIAL, DELIBERATELY. The suite must pass without
+# one; that is what proves no test depends on a live provider, and it is what
+# makes a run on a fork safe. The secret's name is written here in prose only,
+# and the linter refuses the secrets context anywhere in this file.
+#
+# `python -m pytest -q` ALONE IS NOT THE GATE. pytest exits 0 on a skipped
+# test and on an xfail. Measured on 2026-09-04 on a clean clone — which is
+# what this runner is — the suite ran as 647 passed, 80 skipped, exit 0, every
+# skip waiting on a gitignored table, and this workflow was green. The gate
+# step reads the junit the suite wrote and fails on any skip, any xfail, any
+# failure, an empty run, or a required guard module that contributed nothing.
+# It runs under `if: always()` so it also fires when the suite step died.
+
+name: Tests
 
 on:
   push:
@@ -16,17 +39,25 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   tests:
     name: Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+
     steps:
-      - name: Check out repository
+      - name: Check out the repository
         uses: actions/checkout@v4
         with:
           # The secrets guard runs `git ls-files`, so it needs a real
           # repository rather than an export.
           fetch-depth: 1
+          # Nothing here pushes. A token left in .git/config is blast radius.
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -35,24 +66,57 @@ jobs:
 
       - name: Install
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
           python -m pip install -e .
 
-      - name: Compile
-        run: python -m compileall -q src scripts
+      - name: Byte-compile every module, including the untested ones
+        # `python -m compileall -q src` exits 0 when src/ does not exist —
+        # measured, and pinned by tests/test_workflows.py, which runs this
+        # block in a sandbox with no such directory and demands it fail. `-f`
+        # because a cached .pyc would mask a module that no longer compiles.
+        run: |
+          set -euo pipefail
+          for d in src scripts; do
+            [ -d "$d" ] || { echo "::error::$d is missing — the byte-compile gate would have passed on nothing."; exit 1; }
+          done
+          python -m compileall -q -f src scripts
 
-      - name: Tests
-        env:
-          PYTHONPATH: src
-        run: python -m pytest -q
+      - name: Run the suite
+        # The cost arithmetic and the probe's dry run read the cached hoopR
+        # schedules, which are gitignored and absent here. Every test that
+        # needs them, or a processed table, reads the tracked real-data sample
+        # under tests/fixtures/real_data/ instead — nothing skips.
+        run: |
+          set -euo pipefail
+          if [ -n "${CBB_ODDS_API_KEY:-}" ] || [ -n "${CBBD_API_KEY:-}" ]; then
+            echo '::error::A provider credential is in scope for the step that runs the suite. This suite needs none, and its absence is the proof that no test depends on a live provider.'
+            exit 1
+          fi
+          python -m pytest -q -rs --junit-xml="$RUNNER_TEMP/junit.xml"
 
-      # The cost arithmetic and the probe's dry run both read the cached
-      # hoopR schedules, which are gitignored (460MB) and absent here.
-      # Fetching them in CI would put an external release host on the critical
-      # path of a gate that must stay green for reasons internal to this
-      # repository. Both are exercised in the workflows that hold the cache.
-      #
-      # What matters about the dry run — that it opens no socket and reads no
-      # credential — is proved by `tests/test_the_dry_run_is_dry.py`, which is
-      # stronger than grepping its last line and needs no cache.
+      - name: Fail on a skip, an xfail, a missing guard module, or an empty run
+        if: always()
+        run: python scripts/check_test_results.py "$RUNNER_TEMP/junit.xml"
+
+      - name: Fail if the suite wrote into the working tree
+        if: always()
+        run: test -z "$(git status --porcelain)" || { git status --porcelain; echo '::error::The suite wrote into the working tree.'; exit 1; }
+
+      - name: Assert this job ran with no provider credential
+        if: always()
+        run: |
+          if [ -n "${CBB_ODDS_API_KEY:-}" ] || [ -n "${CBBD_API_KEY:-}" ]; then
+            echo '::error::A provider credential is present in the test job environment.'
+            exit 1
+          fi
+          echo 'No provider credential in scope. The suite passed without one.'
+
+      - name: Upload the test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ${{ runner.temp }}/junit.xml
+          if-no-files-found: error

@@ -21,8 +21,14 @@ exercise, because real data does not contain a NaN line: the poison-line guard,
 the did-not-play void, and the import-time completeness check that fails the
 build when `markets.py` wires a market this module cannot grade.
 
-Skipped rather than failed when the processed tables are absent, so a clone
-without a build still runs the rest of the suite.
+Nothing here skips. When `data/processed/` is built the assertions run over
+the whole season; when it is not — which is CI, where the tables are
+gitignored — they run over the tracked real-data sample cut by
+`scripts/build_test_fixtures.py` (400 games of 2025-26 drawn at a stride
+across the season, every player row and segment row of each). Both corpora
+are real rows the builder wrote; the printed sample size says which one a
+number is over. Until 2026-09-04 this file skipped 50 tests on every CI run,
+and `python -m pytest -q` exits 0 on a skip.
 """
 
 from __future__ import annotations
@@ -32,7 +38,6 @@ import math
 import pandas as pd
 import pytest
 
-from cbb_betting_lab.config import PROCESSED_DIR
 from cbb_betting_lab.markets import (
     DOUBLE_CATEGORIES,
     DOUBLE_FIGURES,
@@ -67,9 +72,11 @@ from cbb_betting_lab.settlement import (
 #: printed by this suite are comparable between runs.
 SEASON = 2026
 
-TEAM_GAMES = PROCESSED_DIR / "cbb_team_games.csv"
-PLAYER_GAMES = PROCESSED_DIR / "cbb_player_games.csv"
-GAME_SEGMENTS = PROCESSED_DIR / "cbb_game_segments.csv"
+from conftest import processed_table  # noqa: E402  (tests/ is on sys.path under pytest)
+
+TEAM_GAMES, CORPUS = processed_table("cbb_team_games.csv")
+PLAYER_GAMES, _ = processed_table("cbb_player_games.csv")
+GAME_SEGMENTS, _ = processed_table("cbb_game_segments.csv")
 
 #: How many player-game rows the prop assertions run over. The full 2025-26
 #: player table is 196,876 rows and every prop assertion would walk it once per
@@ -81,8 +88,9 @@ PLAYER_SAMPLE = 20_000
 
 
 def _require(path):
-    if not path.is_file():
-        pytest.skip(f"{path} has not been built; run scripts/build_datasets.py")
+    """The table, which is always there: `processed_table` resolved it to the
+    built table or the tracked sample and asserted the file exists."""
+    assert path.is_file(), f"{path} vanished between collection and use"
     return path
 
 
@@ -91,6 +99,11 @@ def team_games() -> pd.DataFrame:
     frame = pd.read_csv(_require(TEAM_GAMES))
     season = frame[frame["season"] == SEASON].reset_index(drop=True)
     assert not season.empty, f"no season {SEASON} rows in {TEAM_GAMES}"
+    print(
+        f"\n  corpus: the {CORPUS} {SEASON} tables "
+        f"({season['game_id'].nunique():,} games; "
+        f"{'data/processed' if CORPUS == 'full' else 'tests/fixtures/real_data'})."
+    )
     return season
 
 
@@ -752,8 +765,9 @@ def test_the_first_team_basket_is_a_different_quantity_from_the_games_first(
     season — so the measured rate is what separates a correct handler from a
     plausible one.
     """
-    if "home_first_basket_athlete_id" not in segments.columns:
-        pytest.skip("this segments file predates the per-side first-basket columns")
+    assert "home_first_basket_athlete_id" in segments.columns, (
+        "this segments file predates the per-side first-basket columns; rebuild it"
+    )
     own = game = graded = 0
     for row in _rows(played, limit=PLAYER_SAMPLE):
         game_id = row["game_id"]
@@ -800,8 +814,9 @@ def test_the_first_team_basket_refuses_a_game_whose_two_columns_disagree(
     the team column; this module still refuses rather than deciding which of two
     upstream derivations to believe on a market it keeps a record on.
     """
-    if "home_first_basket_athlete_id" not in segments.columns:
-        pytest.skip("this segments file predates the per-side first-basket columns")
+    assert "home_first_basket_athlete_id" in segments.columns, (
+        "this segments file predates the per-side first-basket columns; rebuild it"
+    )
     row = _rows(played, limit=1)[0]
     contradictory = {
         "game_id": row["game_id"],
@@ -831,8 +846,9 @@ def test_the_per_side_and_game_level_first_baskets_agree(segments, capsys):
     guard above rests on: if it ever failed, refusing on a mismatch would be
     refusing most of the market rather than three games of it.
     """
-    if "home_first_basket_athlete_id" not in segments.columns:
-        pytest.skip("this segments file predates the per-side first-basket columns")
+    assert "home_first_basket_athlete_id" in segments.columns, (
+        "this segments file predates the per-side first-basket columns; rebuild it"
+    )
     both = segments[
         segments["home_first_basket_athlete_id"].notna()
         & segments["away_first_basket_athlete_id"].notna()

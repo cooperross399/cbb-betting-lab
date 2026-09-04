@@ -57,7 +57,9 @@ def test_no_script_constructs_the_provider_without_a_competition():
     that got through — a zero-argument call to a one-argument constructor.
     """
     offenders: list[str] = []
-    for path in sorted(SCRIPTS.glob("*.py")):
+    scripts = sorted(SCRIPTS.glob("*.py"))
+    assert len(scripts) > 5, f"{len(scripts)} scripts under {SCRIPTS}; a moved directory is not a pass"
+    for path in scripts:
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
@@ -83,8 +85,7 @@ def test_no_script_constructs_the_provider_without_a_competition():
 def test_every_spending_script_imports_cleanly(script):
     """A NameError in the live branch is invisible until money is being spent."""
     path = SCRIPTS / script
-    if not path.is_file():
-        pytest.skip(f"{script} does not exist.")
+    assert path.is_file(), f"{script} does not exist; a spending script that vanished is not a pass"
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     assigned = {
         target.id

@@ -68,7 +68,7 @@ AUTHORISED_MONTHLY_CEILING = 1_500_000
 
 def load_seasons(raw_dir: Path) -> dict[int, pd.DataFrame]:
     out: dict[int, pd.DataFrame] = {}
-    directory = Path(raw_dir) / "cbb" / "schedules"
+    directory = Path(raw_dir) / CBB.data_dir_segment / "schedules"
     for path in sorted(directory.glob("mbb_schedule_*.parquet")):
         season = int(path.stem.rsplit("_", 1)[-1])
         out[season] = pd.read_parquet(path)
@@ -216,7 +216,7 @@ def main(argv: list[str] | None = None) -> int:
     add("")
     add(
         f"- **Featured markets** (`h2h`, `spreads`, `totals`) exist from "
-        f"**{FEATURED_HISTORY_FROM}** for `basketball_ncaab`."
+        f"**{FEATURED_HISTORY_FROM}** for `{CBB.provider_sport_key}`."
     )
     add(
         f"- **Everything else** — props, halves, every alternate ladder — "

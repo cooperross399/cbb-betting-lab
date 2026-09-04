@@ -47,6 +47,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from cbb_betting_lab.competitions import CBB
 from cbb_betting_lab.selection import FIRST_HALF, FULL_GAME, SECOND_HALF
 
 
@@ -91,8 +92,9 @@ class Market:
     segment: str
     #: The named quantity it settles against, in this lab's vocabulary. Never a
     #: prose description: a settlement function dispatches on this string, and
-    #: `tests/test_every_market_settles_a_real_game.py` proves each one against
-    #: real historical games.
+    #: `tests/test_settlement_settles_real_games.py` proves each one against
+    #: real historical games (this comment used to name a
+    #: `test_every_market_settles_a_real_game.py` that never existed).
     settles_on: str
     #: Which processed table supplies that quantity.
     settlement_table: str
@@ -293,7 +295,7 @@ FUTURES_MARKETS: tuple[Market, ...] = (
        settles_on="tournament_champion", settlement_table="tournament_results",
        tier=4, push_possible=False,
        notes="Served under the separate sport key "
-             "`basketball_ncaab_championship_winner`. Hold time is months and "
+             f"`{CBB.futures_sport_keys[0]}`. Hold time is months and "
              "is stated beside every number."),
 )
 

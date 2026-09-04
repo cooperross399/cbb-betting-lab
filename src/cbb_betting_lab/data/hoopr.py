@@ -65,6 +65,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from cbb_betting_lab.competitions import CBB
 from cbb_betting_lab.config import RAW_DIR
 
 
@@ -101,7 +102,7 @@ class Feed:
 
     def path(self, season: int, raw_dir: Path | None = None) -> Path:
         root = Path(raw_dir) if raw_dir else Path(RAW_DIR)
-        return root / "cbb" / self.directory / f"{self.stem}_{season}.parquet"
+        return root / CBB.data_dir_segment / self.directory / f"{self.stem}_{season}.parquet"
 
 
 #: The feeds this lab reads. Each verified by fetching it on 2026-09-01.
@@ -172,7 +173,7 @@ def _sha256(payload: bytes) -> str:
 
 def manifest_path(raw_dir: Path | None = None) -> Path:
     root = Path(raw_dir) if raw_dir else Path(RAW_DIR)
-    return root / "cbb" / MANIFEST_FILENAME
+    return root / CBB.data_dir_segment / MANIFEST_FILENAME
 
 
 def read_manifest(raw_dir: Path | None = None) -> dict:

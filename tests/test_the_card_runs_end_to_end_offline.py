@@ -38,10 +38,18 @@ OBSERVED = REPO / "data" / "manual" / "provider_team_names_observed.json"
 BOOKS = ("draftkings", "fanduel", "betmgm")
 
 
+#: The day every board here is carded for: a week out, so every tip is in the
+#: future whatever the wall clock says, carded under `--rehearsal` because it
+#: is not today. The fixture used to place tips 65 minutes ahead of the run
+#: and SKIP inside the last 65 minutes of the Eastern day, when no such tip
+#: exists on today's slate — a skip that fired by time of day, which the junit
+#: gate would turn into a red build once a night.
+REHEARSAL_DAY = (datetime.now(timezone.utc) + timedelta(days=7)).strftime("%Y-%m-%d")
+
+
 @pytest.fixture(scope="module")
 def provider_names() -> list[str]:
-    if not OBSERVED.is_file():
-        pytest.skip("The observed provider vocabulary is not present.")
+    assert OBSERVED.is_file(), f"{OBSERVED} is tracked; its absence is a broken checkout, not a pass"
     return json.loads(OBSERVED.read_text(encoding="utf-8"))["names"]
 
 
@@ -56,8 +64,6 @@ def build_board(tmp_path: Path, names: list[str], *, games: int = 6) -> Path:
     from cbb_betting_lab.competitions import CBB
     from cbb_betting_lab.providers.staging import stage_payloads
     from cbb_betting_lab.season import slate_date
-
-    now = datetime.now(timezone.utc)
 
     # EVERY GAME TIPS AT THE SAME MOMENT, AND THE MOMENT MATTERS.
     #
@@ -75,16 +81,10 @@ def build_board(tmp_path: Path, names: list[str], *, games: int = 6) -> Path:
     # 65 minutes is the smallest lead that clears the card's "at least an hour
     # after the run" rule with a minute to spare, and simultaneous tips are
     # realistic: this sport routinely tips a dozen games at once.
-    tip = now + timedelta(minutes=65)
-    if slate_date(tip.strftime("%Y-%m-%dT%H:%M:%SZ"), CBB) != slate_date(
-        now.strftime("%Y-%m-%dT%H:%M:%SZ"), CBB
-    ):
-        pytest.skip(
-            "Within 65 minutes of the slate-day boundary, a future tip belongs "
-            "to tomorrow's slate while the card cards today. There is no board "
-            "this fixture can build that is both in the future and on today's "
-            "slate, so the case is skipped rather than asserted around."
-        )
+    # 19:00 Eastern on the rehearsal day: on that slate day by construction,
+    # and a week in the future whatever the wall clock says.
+    tip = datetime.fromisoformat(f"{REHEARSAL_DAY}T19:00:00").replace(tzinfo=CBB.timezone).astimezone(timezone.utc)
+    assert slate_date(tip.strftime("%Y-%m-%dT%H:%M:%SZ"), CBB) == REHEARSAL_DAY
 
     payloads = []
     for i in range(games):
@@ -133,6 +133,7 @@ def run_card(board: Path, tmp_path: Path, *extra: str):
         [
             sys.executable, str(REPO / "scripts" / "run_gameday_card.py"),
             "--card-slot", "morning",
+            "--rehearsal", "--slate-date", REHEARSAL_DAY,
             "--staged-board", str(board),
             "--archive-dir", str(tmp_path / "archive"),
             "--output-dir", str(tmp_path / "outputs"),
@@ -235,8 +236,10 @@ def test_opinions_are_frozen_before_the_games_they_describe(carded):
     when it was written."""
     _, tmp = carded
     snapshots = list((tmp / "archive").rglob("*.csv"))
-    if not snapshots:
-        pytest.skip("This card froze nothing, which is legitimate with no board coverage.")
+    assert snapshots, (
+        "This card froze nothing. Six games tipping in the future on the carded "
+        "day must leave a snapshot; a run that freezes nothing has lost the night."
+    )
     frame = pd.read_csv(snapshots[0])
     assert len(frame) > 0
     if "commence_time" in frame.columns and "snapshot_date" in frame.columns:

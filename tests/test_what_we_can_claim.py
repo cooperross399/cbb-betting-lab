@@ -264,7 +264,7 @@ def test_the_correction_is_the_ledgers_cumulative_count_and_not_the_days(
     week, forever.*"""
     outputs = tmp_path / "outputs"
     outputs.mkdir(parents=True)
-    save_ledger(_ledger_with(40), WC.experiment_ledger_path(outputs))
+    save_ledger(_ledger_with(40), WC.experiment_ledger_path(outputs), floor=0)
 
     correction = WC.correction_from_ledger(WC.experiment_ledger_path(outputs))
 
@@ -301,7 +301,7 @@ def test_a_grown_ledger_can_turn_a_recorded_edge_into_no_demonstrated_edge(
     before = _build(tmp_path)
     assert [c["verdict"] for c in before["claims"]] == [S.DEMONSTRATED_EDGE]
 
-    save_ledger(_ledger_with(40), WC.experiment_ledger_path(outputs))
+    save_ledger(_ledger_with(40), WC.experiment_ledger_path(outputs), floor=0)
     after = _build(tmp_path)
 
     assert [c["verdict"] for c in after["claims"]] == [S.NO_DEMONSTRATED_EDGE]

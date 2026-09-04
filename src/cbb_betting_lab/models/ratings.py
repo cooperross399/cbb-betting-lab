@@ -231,9 +231,11 @@ the past:
 * **conference tiers** — `conferences.tier_table` on seasons strictly before,
   which is that module's own rule.
 
-`tests/test_ratings_are_walk_forward.py` corrupts every game after a cut date
-and asserts the fit is unchanged to the last bit, which is the test
-`docs/ported_defects.md` names against the football lab's defect 13.
+`tests/test_fit_ratings.py::test_corrupting_every_game_after_a_cut_leaves_the_
+earlier_fits_identical` corrupts every game after a cut date and asserts the
+fit is unchanged to the last bit, which is the test `docs/ported_defects.md`
+names against the football lab's defect 13. (This used to cite a
+`tests/test_ratings_are_walk_forward.py` that never existed.)
 
 ## What this module does not do
 

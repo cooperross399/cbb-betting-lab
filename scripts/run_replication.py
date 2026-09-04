@@ -280,6 +280,7 @@ def record_holdout_looks(
     settlement validation.
     """
     ledger = E.load(Path(ledger_path))
+    loaded = len(ledger.hypotheses)
     hypotheses = [
         E.Hypothesis(
             search=SEARCH,
@@ -298,7 +299,7 @@ def record_holdout_looks(
     ]
     added = ledger.record(*hypotheses)
     if added:
-        E.save(ledger, Path(ledger_path))
+        E.save(ledger, Path(ledger_path), floor=loaded)
     return added, len(hypotheses)
 
 

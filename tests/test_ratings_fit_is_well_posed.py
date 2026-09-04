@@ -92,48 +92,25 @@ def test_the_venue_ridge_is_small_enough_not_to_move_an_estimable_effect():
     assert R.VENUE_RIDGE < min(R.DECLARED_PRIOR_STRENGTH.values()) / 5
 
 
-@pytest.mark.parametrize("season", [2019, 2020, 2021, 2022])
-def test_every_cached_season_fits_from_a_multi_season_prepare(season: int):
-    """The exact arrangement that broke: prepare over many seasons, fit one.
-
-    Skipped when the processed table is not on disk, which is CI. The unit
-    reproductions above carry the invariant there.
-    """
-    from pathlib import Path
-
-    table = Path(__file__).resolve().parents[1] / "data" / "processed" / "cbb_team_games.csv"
-    if not table.is_file():
-        pytest.skip("cbb_team_games.csv is not built here.")
-    frame = pd.read_csv(table, low_memory=False)
-    frame = frame[frame["season"] <= 2022]
-    if frame.empty or season not in set(frame["season"]):
-        pytest.skip(f"season {season} is not in the table")
-    try:
-        schedules = {
-            int(s): R._cached_schedule(int(s))
-            for s in sorted(frame["season"].unique())
-        }
-    except FileNotFoundError:
-        pytest.skip("schedules are not cached here")
-    prepared = R.prepare(frame, schedules=schedules)
-    subset = prepared.rows[prepared.rows["season"] == season]
-    if subset.empty:
-        pytest.skip(f"no prepared rows for {season}")
-    offence, *_ = R._season_fit(subset, strength=dict(R.DECLARED_PRIOR_STRENGTH))
-    assert offence, "the fit returned no team ratings"
+#: The synthetic league `tests/test_fit_ratings.py` builds: three seasons, a
+#: double round-robin, every venue state present. Imported from the sibling
+#: test module because it is the fixture the whole ratings suite already
+#: runs on, and because a second copy would drift.
+from test_fit_ratings import build_universe  # noqa: E402
 
 
-def _slate(season: int, day: str):
+def _slate(season: int, day: str, raw_dir):
     """The real games on a real slate day, as a price frame."""
-    import pandas as pd
-
     from cbb_betting_lab.competitions import CBB
     from cbb_betting_lab.season import slate_date
 
-    schedule = R._cached_schedule(season)
-    days = schedule["date"].map(
-        lambda x: slate_date(pd.Timestamp(x).tz_convert("UTC").isoformat(), CBB)
-    )
+    schedule = R._cached_schedule(season, raw_dir)
+    if "date" in schedule.columns:
+        days = schedule["date"].map(
+            lambda x: slate_date(pd.Timestamp(x).tz_convert("UTC").isoformat(), CBB)
+        )
+    else:
+        days = schedule["game_date"].astype(str)
     today = schedule[days == day]
     return pd.DataFrame(
         {
@@ -143,143 +120,137 @@ def _slate(season: int, day: str):
     )
 
 
-def _november_regime_case():
-    from pathlib import Path
+@pytest.mark.parametrize("season", [2024, 2025, 2026])
+def test_every_season_fits_from_a_multi_season_prepare(season: int, tmp_path):
+    """The exact arrangement that broke: prepare over many seasons, fit one.
 
-    table = Path(__file__).resolve().parents[1] / "data" / "processed" / "cbb_team_games.csv"
-    if not table.is_file():
-        pytest.skip("cbb_team_games.csv is not built here.")
-    return pd.read_csv(table, low_memory=False)
+    Over the synthetic universe rather than the gitignored processed table, so
+    it runs in CI. This test used to read `data/processed/cbb_team_games.csv`
+    and skip when it was absent — which is CI — so the invariant had only
+    ever been checked on a laptop.
+    """
+    world = build_universe(tmp_path)
+    frame = pd.read_csv(world["processed"] / "cbb_team_games.csv")
+    schedules = {s: R._cached_schedule(s, world["raw"]) for s in world["seasons"]}
+    prepared = R.prepare(frame, schedules=schedules)
+    subset = prepared.rows[prepared.rows["season"] == season]
+    assert not subset.empty, f"no prepared rows for {season}"
+    offence, *_ = R._season_fit(subset, strength=dict(R.DECLARED_PRIOR_STRENGTH))
+    assert offence, "the fit returned no team ratings"
 
 
-def test_the_seam_does_not_delete_the_november_prior_regime():
+def _november_regime_case(tmp_path):
+    world = build_universe(tmp_path)
+    frame = pd.read_csv(world["processed"] / "cbb_team_games.csv")
+    return world, frame
+
+
+def _slate_days(world, season: int) -> list[str]:
+    schedule = R._cached_schedule(season, world["raw"])
+    return sorted(schedule["game_date"].astype(str).unique())
+
+
+def test_the_seam_does_not_delete_the_november_prior_regime(tmp_path):
     """The defect that mattered most, and it was mine.
 
     `ratings.fit`'s contract is *history filtered to the season being priced* —
-    because **a team is not the team it was last March**, and in this sport the
-    transfer portal sees to that. `run_price_backtest.walk_forward` hands the
-    model EVERY season strictly earlier than the day, so a seam that passes its
-    history straight through puts tens of thousands of old team-games in the
-    design matrix on opening night.
+    because **a team is not the team it was last March** — and
+    `run_price_backtest.walk_forward` hands the model EVERY season strictly
+    earlier than the day, so a seam that passes its history straight through
+    puts every earlier season's team-games in the design matrix on opening
+    night.
 
     Measured before the fix, by `scripts/fit_ratings.py` on the real 2025-26
     season: 31,828 team-games in the matrix on 3 November, and the prior's
-    weight **0.0% on 3 November and 0.0% on 20 February** — it did not move all
-    season.
+    weight **0.0% on 3 November and 0.0% on 20 February**.
 
-    That is not a rounding error. Cooper's requirement is that the prior's
-    weight is reported in every price *so that a November number can never be
-    presented as if it were a February one*, and a card priced through the seam
-    would have printed 0% on both. The earlier seasons still do their work:
-    they build the PRIOR, which is the channel they are supposed to reach the
-    fit through.
+    Reproduced here on the synthetic league: an early slate day of the last
+    season against a late one, history = every season strictly before the day,
+    exactly as the backtest passes it. The prior must dominate early and fall
+    by the end.
     """
-    frame = _november_regime_case()
-    try:
-        R._cached_schedule(2026)
-    except FileNotFoundError:
-        pytest.skip("the 2026 schedule is not cached here")
+    world, frame = _november_regime_case(tmp_path)
+    season = world["seasons"][-1]
+    days = _slate_days(world, season)
+    # Measured on the synthetic league: nothing is priceable before the
+    # fourth slate day (the schedule graph has not connected the teams), the
+    # prior weight is 0.956 on the fifth and 0.812 on the last.
+    early, late = days[4], days[-1]
 
     weights = {}
-    for day in ("2025-11-12", "2026-02-20"):
-        prices = _slate(2026, day)
-        if prices.empty:
-            pytest.skip(f"no cached games on {day}")
+    for day in (early, late):
+        prices = _slate(season, day, world["raw"])
+        assert not prices.empty, f"no synthetic games on {day}"
         matchups = R.matchups_for(
             day=day,
-            # EVERY season, exactly as the backtest passes it.
             history=frame[frame["slate_date"] < day],
             prices=prices,
+            raw_dir=world["raw"],
         )
         priceable = [m for m in matchups.values() if m.priceable]
-        if not priceable:
-            pytest.skip(f"nothing priceable on {day}")
+        assert priceable, f"nothing priceable on {day}"
         weights[day] = sum(m.prior_weight for m in priceable) / len(priceable)
 
-    assert weights["2025-11-12"] > 0.5, (
-        f"November prior weight is {weights['2025-11-12']:.3f}. In the second "
-        "week of a season almost all of a rating must still be prior; a low "
-        "number here means the fit is treating last season's team as this "
-        "season's."
+    assert weights[early] > 0.5, (
+        f"early-season prior weight is {weights[early]:.3f}. In the first week "
+        "almost all of a rating must still be prior; a low number here means "
+        "the fit is treating last season's team as this season's."
     )
-    assert weights["2025-11-12"] > weights["2026-02-20"] + 0.1, (
-        "The prior's weight does not fall between November and February, so a "
-        "November price is indistinguishable from a February one — which is "
-        "the exact thing the prior weight is carried to prevent."
+    assert weights[early] > weights[late] + 0.1, (
+        "The prior's weight does not fall across the season, so an early price "
+        "is indistinguishable from a late one — the exact thing the prior "
+        "weight is carried to prevent."
     )
 
 
-def test_the_tier_table_never_sees_the_season_it_is_pricing():
+def test_the_tier_table_never_sees_the_season_it_is_pricing(tmp_path):
     """A tier is not a label — it selects which home-court effect is applied.
 
     Letting the priced season into `conferences.tier_table` moved **34 of 367
-    teams (9.3%)** across a boundary, measured by `scripts/fit_ratings.py`. A
-    team on the wrong side of a cut point is a multi-point error on every market
-    on its home games, and it is a leak: it uses the season's own conference
-    membership to price that season.
+    teams (9.3%)** across a boundary, measured by `scripts/fit_ratings.py` on
+    the real tables. Pinned here on the synthetic league: the tier cache must
+    hold no key that includes the season being priced.
     """
-    frame = _november_regime_case()
-    try:
-        R._cached_schedule(2026)
-    except FileNotFoundError:
-        pytest.skip("the 2026 schedule is not cached here")
-
+    world, frame = _november_regime_case(tmp_path)
+    season = world["seasons"][-1]
     R.clear_caches()
-    day = "2026-01-13"
-    prices = _slate(2026, day)
-    if prices.empty:
-        pytest.skip("no cached games")
-    R.matchups_for(day=day, history=frame[frame["slate_date"] < day], prices=prices)
+    day = _slate_days(world, season)[4]
+    prices = _slate(season, day, world["raw"])
+    assert not prices.empty
+    R.matchups_for(day=day, history=frame[frame["slate_date"] < day], prices=prices, raw_dir=world["raw"])
 
     keys = [k for k in R._TIER_CACHE if isinstance(k, tuple)]
     assert keys, "no tier table was built"
-    assert all(2026 not in key for key in keys), (
-        f"A tier table was built over {keys}, which includes the season being "
-        "priced."
+    assert all(season not in key for key in keys), (
+        f"A tier table was built over {keys}, which includes the season being priced."
     )
 
 
-def test_the_schedule_caches_change_no_number():
+def test_the_schedule_caches_change_no_number(tmp_path):
     """The optimisation must be invisible in the output, or it is not one.
 
     `local_teams` and `venue_ids` are pure functions of the schedules and were
-    being recomputed inside `prepare` on every walk-forward day. Measured on the
-    real tables, `local_teams` alone was **3.01 seconds of `prepare`'s 3.09**,
-    and across ~600 days that is an hour of identical work — a backtest taking
-    over two hours instead of ten minutes, every week, unattended.
-
-    Caching it is only legitimate if it changes nothing. A cache that quietly
-    altered a venue classification would move the home-court effect on every
-    game at that venue, and the report would look exactly as it does now.
-
-    So this compares a cold run against a warm one field by field, rather than
-    asserting that the cache exists.
+    being recomputed inside `prepare` on every walk-forward day — measured on
+    the real tables, 3.01 seconds of `prepare`'s 3.09. Caching them is only
+    legitimate if it changes nothing, so a cold run is compared against a
+    warm one field by field.
     """
     import dataclasses
-    from pathlib import Path
 
     from cbb_betting_lab.competitions import CBB
 
-    table = Path(__file__).resolve().parents[1] / "data" / "processed" / "cbb_team_games.csv"
-    if not table.is_file():
-        pytest.skip("cbb_team_games.csv is not built here.")
-    try:
-        R._cached_schedule(2026)
-    except FileNotFoundError:
-        pytest.skip("the 2026 schedule is not cached here")
-
-    frame = pd.read_csv(table, low_memory=False)
-    day = "2026-01-13"
-    prices = _slate(2026, day)
-    if prices.empty:
-        pytest.skip("no cached games")
+    world, frame = _november_regime_case(tmp_path)
+    season = world["seasons"][-1]
+    day = _slate_days(world, season)[4]
+    prices = _slate(season, day, world["raw"])
+    assert not prices.empty
     history = frame[frame["slate_date"] < day]
 
     R.clear_caches()
-    cold = R.matchups_for(day=day, history=history, prices=prices, competition=CBB)
-    warm = R.matchups_for(day=day, history=history, prices=prices, competition=CBB)
+    cold = R.matchups_for(day=day, history=history, prices=prices, competition=CBB, raw_dir=world["raw"])
+    warm = R.matchups_for(day=day, history=history, prices=prices, competition=CBB, raw_dir=world["raw"])
 
-    assert set(cold) == set(warm)
+    assert set(cold) == set(warm) and cold
     for key in cold:
         first = dataclasses.asdict(cold[key])
         second = dataclasses.asdict(warm[key])

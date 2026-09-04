@@ -21,7 +21,13 @@ rather than scattered through the code, which is exactly what made this
 machinery copyable out of the NHL lab and into this one. It is a **portability**
 device rather than a multi-sport one, and
 `tests/test_competition_registry_is_the_only_place.py` fails the build when a
-sport literal appears anywhere else.
+sport literal appears anywhere else. That file was cited here for the whole of
+the build and did not exist until 2026-09-04; written and run, it found four
+literals (the `"cbb"` data-directory segment in `data/hoopr.py` and
+`scripts/estimate_credit_cost.py`, the sport key in two report strings) and
+they now read the registry. It does NOT enforce the `cbb_` output-prefix
+convention on filenames — the lab writes those as literals in twenty places
+and the guard says so in its docstring.
 
 **This is the fourth lab, and the port is a known cost.** These four
 repositories share no code, and the same defect classes appear independently in
@@ -384,15 +390,49 @@ this table.
   September establishes nothing.
 - **Never print, write, compare, or commit an API key.**
   `tests/test_no_secrets_committed.py` enforces it; the exemption for
-  key-shaped strings is **by recorded value, never by directory**.
+  key-shaped strings is **by recorded value, vouched by hand, never by
+  directory** — and the guard's known gaps are asserted in its own
+  `test_the_gaps_this_guard_still_has_are_the_ones_written_down` rather than
+  claimed away.
 - **Never weaken a gate**, never sign a human acceptance receipt on Cooper's
-  behalf, never merge with failing CI, never force-push.
+  behalf, never merge with failing CI, never force-push. **CBB is private, and
+  GitHub offers no branch protection on a private repository at this plan, so
+  nothing on GitHub's side stops a merge over a red `Tests`.** The sibling
+  labs are public and protected; here the rule binds the person merging, and
+  `tests/test_workflows.py` pins the `Tests` job so that the day protection is
+  switched on it gates on the check as written.
 - **Never edit protected manual files** except through the one permitted path:
   `data/manual/staging_provider_policy.json` (withdrawal only) and
   `data/manual/human_acceptance_receipts/*` (never).
 - **Do not trust the nominal cron time.** GitHub has been firing these repos'
   crons 4.5-5.3 hours late since 2026-08-27. Every deadline is checked against
   `nominal + schedule_contract.OBSERVED_LATENESS_H`.
+
+## How the hard rules are enforced, and where they are not
+
+Every guard below is listed in three places that are held against each
+other — `tests/test_the_guards_exist.py`, `tests/conftest.py` and
+`scripts/check_test_results.py` — so that `git rm` of a guard, a `-k` that
+deselects it, a `PYTEST_ADDOPTS` nobody reads, or a rename is a red build
+rather than a smaller green one. Until 2026-09-04 deleting the two hard-rule
+guards made the suite greener and nothing said so.
+
+| Rule | Enforced by | What it does not reach |
+|:---|:---|:---|
+| No committed key | `tests/test_no_secrets_committed.py`: every tracked path, symlink target and text body; assignment in every suffix and every spelling; 102 probe event ids vouched by hand against their file | a key split across a concatenation, an encoded body, a homoglyph inside a `:`-separated value, a body behind a binary suffix — each asserted open in the guard |
+| No sibling import | `tests/test_no_sibling_lab_import.py`: source and environment; an unparseable module is a failure | — |
+| No sport literal outside the registry | `tests/test_competition_registry_is_the_only_place.py` | the `cbb_` output prefix on filenames; a key assembled at run time |
+| Contract strings | `tests/test_contract_strings.py` | — |
+| The required check `Tests` | `tests/test_workflows.py`: parsed YAML, and every run block of `tests.yml` and `ledger-guard.yml` EXECUTED under stubs and required to fail when a command fails | the six operational workflows keep their deliberate `continue-on-error`, `\|\| true` and `if-no-files-found: warn`; a nested `bash -c`; `cd` before pytest |
+| Zero skips, every guard ran | `scripts/check_test_results.py` on the junit CI writes; `tests/conftest.py` at collection | a non-strict `xfail` marker; a waiver keyed on a token no sweep arm draws |
+| Ledger append-only | `save(floor=…)` at runtime; `Ledger Guard` diffing both tracked ledgers against the PR base, keyed on `(search, name, seasons, stage)`; `pending` may be filled in once, nothing else moves | an appended hypothesis is taken on trust; the same span written in two orders is two keys |
+| Real-data tests run in CI | `tests/fixtures/real_data/` — 400 games of 2025-26 and every row of three schedules, cut by `scripts/build_test_fixtures.py`; the full tables when built | the CI numbers are over the sample, and every printed number says so |
+
+**A population guard for a scraped page does not exist because no scraper
+does.** `tests/test_population_purity.py` says so and fails the day one
+appears. Do not cite a test that is not on disk; nine such citations were
+found and corrected on 2026-09-04, and this table is the place to add the
+tenth when a rule gains a guard.
 
 ## What Claude decides, and what Cooper decides
 
@@ -420,7 +460,10 @@ PYTHONPATH=src .venv/bin/python scripts/estimate_credit_cost.py
 # Quota (free endpoint)
 PYTHONPATH=src .venv/bin/python scripts/check_provider_quota.py
 
-# Tests
+# Tests — the whole suite, or the collection hook stops the run
 PYTHONPATH=src .venv/bin/python -m pytest -q
-PYTHONPATH=src .venv/bin/python -m compileall -q src scripts
+PYTHONPATH=src .venv/bin/python -m compileall -q -f src scripts
+
+# Re-cut the tracked real-data sample the suite reads where the tables are absent
+PYTHONPATH=src .venv/bin/python scripts/build_test_fixtures.py
 ```

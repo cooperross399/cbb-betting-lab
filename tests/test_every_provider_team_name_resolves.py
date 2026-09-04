@@ -32,7 +32,6 @@ from pathlib import Path
 
 import pytest
 
-from cbb_betting_lab.data import hoopr
 from cbb_betting_lab.providers import team_names as T
 
 OBSERVED = Path(__file__).resolve().parents[1] / "data" / "manual" / "provider_team_names_observed.json"
@@ -51,12 +50,16 @@ def observed() -> list[str]:
 
 @pytest.fixture(scope="module")
 def index():
-    try:
-        schedule = hoopr.load("schedules", 2026)
-    except Exception:  # noqa: BLE001
-        pytest.skip("The 2026 schedule is not cached.")
-    if schedule.empty:
-        pytest.skip("The 2026 schedule is not cached.")
+    """The index over the tracked 2025-26 schedule — every row of it, trimmed
+    to the columns `build_index` reads — so this runs in CI, where the hoopR
+    cache is gitignored. It used to skip there, which for the highest-value
+    test in the repository meant it had never run on the machine whose tick
+    the lab reads."""
+    import pandas as pd
+    from conftest import schedule_fixture
+
+    schedule = pd.read_parquet(schedule_fixture(2026))
+    assert len(schedule) > 6_000, f"{len(schedule)} rows is not a season"
     return T.build_index(schedule)
 
 

@@ -92,7 +92,7 @@ def write_ledger(path: Path, *, declared_on: str = "2026-09-01", count: int = 0)
                 predicted_direction="higher",
             )
         )
-    return E.save(ledger, path)
+    return E.save(ledger, path, floor=0)
 
 
 def write_queue(path: Path, entries: list[dict]) -> Path:
@@ -307,7 +307,7 @@ def test_a_ledger_file_edited_upward_cannot_buy_more_than_the_script_declares(
     path = lab["outputs"] / E.LEDGER_FILENAME
     ledger = E.load(path)
     ledger.budget = replace(ledger.budget, per_week=60)
-    E.save(ledger, path)
+    E.save(ledger, path, floor=len(ledger.hypotheses))
     write_queue(lab["manual"] / LOOP.QUEUE_FILENAME, [queue_entry(i) for i in range(30)])
     run(lab)
 

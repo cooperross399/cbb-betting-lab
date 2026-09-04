@@ -43,13 +43,25 @@ Three things, each because the football lab recorded a defect that this closes.
    itself, so a result found in discovery cannot quietly be reported as though
    it had been validated. The holdout is not looked at until discovery closes.
 
-## Why append-only, enforced
+## Why append-only, and how it is enforced (and how it was not)
 
 The tempting edit is to drop the tests that failed, on the reasoning that they
 were exploratory. That reasoning is exactly backwards: the failed tests are
 what make the surviving one unlikely to be chance. A ledger that can shrink is
 a ledger that will, one honest-seeming commit at a time, and the correction it
 reports afterwards is smaller than the truth.
+
+This section used to be titled "Why append-only, enforced", and until
+2026-09-04 it was not. `save()` refused to shrink the ledger by re-reading the
+file it was about to overwrite, and every caller loads from that file, mutates,
+and saves back to it — so the comparison was the same count against itself.
+Reproduced on this lab's tracked ledger: twelve of thirty hypotheses deleted by
+hand, `scripts/record_experiments.py` re-run, the printed correction fell from
+x1.60 to x1.46, and nothing raised. Three things enforce it now: `save()`
+takes the count the caller LOADED as a required `floor`;
+`scripts/check_ledger_append_only.py` compares the ledger on a PR's head
+against its base, keyed on `Hypothesis.key()`, in the `Ledger Guard` workflow;
+and `tests/test_check_ledger_append_only.py` holds both to the reproduction.
 
 ## What this is not
 
@@ -245,24 +257,47 @@ def load(path: Path) -> ExperimentLedger:
     )
 
 
-def save(ledger: ExperimentLedger, path: Path) -> Path:
-    """Write the ledger, refusing to shrink it.
+def save(ledger: ExperimentLedger, path: Path, *, floor: int) -> Path:
+    """Write the ledger, refusing to shrink it below `floor`.
 
-    The guard is the point. The tempting edit is to drop the tests that failed
-    because they were "exploratory"; the failed tests are precisely what make a
-    surviving one unlikely to be chance. This raises rather than warns, because
-    a warning in a workflow log is not a guard.
+    `floor` is the entry count the caller LOADED, before it mutated anything,
+    and it is required rather than defaulted because the previous signature
+    was a guard that could not fire. It re-read the file it was about to
+    overwrite and compared the in-memory count against that — and every
+    caller in this repository loads the ledger from `path`, mutates it, and
+    saves it back to `path`, so the two counts were the same object's count
+    twice. Reproduced on this lab: twelve of thirty tracked hypotheses
+    deleted by hand, the recorder re-run, the printed correction fell from
+    x1.60 to x1.46, and this function raised nothing. The comparison has to be
+    against a number the caller held BEFORE the edit, which only the caller
+    can supply.
+
+    The re-read is kept as a second net for the one shape it can see — a
+    caller that loaded from one path and saves to another — and
+    `scripts/check_ledger_append_only.py` is the third, at the PR diff. The
+    tempting edit is to drop the tests that failed because they were
+    "exploratory"; the failed tests are precisely what make a surviving one
+    unlikely to be chance. This raises rather than warns, because a warning
+    in a workflow log is not a guard.
     """
     target = Path(path)
+    if floor < 0:
+        raise ValueError(f"floor must be the count the caller loaded, not {floor}")
+    if len(ledger.hypotheses) < floor:
+        raise ValueError(
+            f"The experiment ledger would fall from {floor} entries (the count "
+            f"loaded) to {len(ledger.hypotheses)}. It is append-only: the tests "
+            "that failed are what make a surviving one unlikely to be chance, "
+            "and a ledger that can shrink reports a correction smaller than the "
+            "truth."
+        )
     if target.is_file():
         existing = load(target)
         if len(ledger.hypotheses) < len(existing.hypotheses):
             raise ValueError(
                 f"The experiment ledger would fall from "
-                f"{len(existing.hypotheses)} entries to {len(ledger.hypotheses)}. "
-                "It is append-only: the tests that failed are what make a "
-                "surviving one unlikely to be chance, and a ledger that can "
-                "shrink reports a correction smaller than the truth."
+                f"{len(existing.hypotheses)} entries on disk to "
+                f"{len(ledger.hypotheses)}. It is append-only."
             )
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(

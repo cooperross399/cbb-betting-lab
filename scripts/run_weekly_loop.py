@@ -1497,12 +1497,13 @@ def main(argv: list[str] | None = None) -> int:
     ledger_path = Path(output_dir) / E.LEDGER_FILENAME
     ledger = E.load(ledger_path)
     ledger_before = ledger.count
+    ledger_entries_loaded = len(ledger.hypotheses)
     correction_before = ledger.correction_factor()
     queue, problems = load_queue(manual_dir / QUEUE_FILENAME, week=week)
     spend = spend_alpha_budget(ledger, queue, week=week, problems=problems)
     if spend.count and not args.dry_run:
         try:
-            E.save(ledger, ledger_path)
+            E.save(ledger, ledger_path, floor=ledger_entries_loaded)
         except (ValueError, OSError) as exc:
             # `save()` refuses to shrink the ledger. That refusal is the guard
             # working, and it is a fault rather than a degradation: the record

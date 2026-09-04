@@ -353,7 +353,7 @@ WAVES: tuple[Wave, ...] = (
         seasons=FULL_CATALOGUE_SEASONS,
         blocked_reason=(
             "Futures are served under a separate sport key "
-            "(`basketball_ncaab_championship_winner`) as a whole-competition "
+            f"(`{CBB.futures_sport_keys[0]}`) as a whole-competition "
             "snapshot rather than per event, and "
             "`providers/odds_api.OddsApiProvider` exposes no historical bulk "
             "endpoint. This script therefore cannot buy them, and the wave is "

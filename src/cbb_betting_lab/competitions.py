@@ -149,9 +149,10 @@ CBB = Competition(
 #: Women's basketball, D-II and D-III are deliberately absent, and their
 #: absence is enforced rather than assumed. They are not a registry entry
 #: waiting to be filled in: they are separate repositories if they ever happen.
-#: `tests/test_population_purity.py` fails the build if a women's or non-D-I
-#: identifier reaches the population through a provider key, an ESPN id or a
-#: scraped page.
+#: `tests/test_population_purity.py` fails the build if the women's sport key
+#: reaches shipped code or a team without a conference reaches the countable
+#: population through an ESPN id. Nothing here reads a scraped page, so that
+#: route has no guard because it has no code; the test says so.
 COMPETITIONS: dict[str, Competition] = {CBB.key: CBB}
 
 #: Anything defaulting to a competition uses this rather than the string "cbb".
