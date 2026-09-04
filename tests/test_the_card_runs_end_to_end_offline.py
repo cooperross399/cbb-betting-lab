@@ -55,12 +55,40 @@ def build_board(tmp_path: Path, names: list[str], *, games: int = 6) -> Path:
     sys.path.insert(0, str(REPO / "src"))
     from cbb_betting_lab.competitions import CBB
     from cbb_betting_lab.providers.staging import stage_payloads
+    from cbb_betting_lab.season import slate_date
 
     now = datetime.now(timezone.utc)
+
+    # EVERY GAME TIPS AT THE SAME MOMENT, AND THE MOMENT MATTERS.
+    #
+    # This fixture used to spread tips over `now + 3h ... now + 8h`, which is
+    # fine in the morning and wrong in the evening: run at 20:45 ET the later
+    # tips land after midnight, which `season.slate_date` correctly files under
+    # TOMORROW's slate day, while the card is carding today. The card then
+    # reported them as off-slate and froze nothing — the card was right and the
+    # fixture was wrong, but the failure looked like a regression in the card.
+    #
+    # It also only appeared for part of the day, so the suite passed all
+    # afternoon and failed at night, which is the worst way for a test to be
+    # wrong.
+    #
+    # 65 minutes is the smallest lead that clears the card's "at least an hour
+    # after the run" rule with a minute to spare, and simultaneous tips are
+    # realistic: this sport routinely tips a dozen games at once.
+    tip = now + timedelta(minutes=65)
+    if slate_date(tip.strftime("%Y-%m-%dT%H:%M:%SZ"), CBB) != slate_date(
+        now.strftime("%Y-%m-%dT%H:%M:%SZ"), CBB
+    ):
+        pytest.skip(
+            "Within 65 minutes of the slate-day boundary, a future tip belongs "
+            "to tomorrow's slate while the card cards today. There is no board "
+            "this fixture can build that is both in the future and on today's "
+            "slate, so the case is skipped rather than asserted around."
+        )
+
     payloads = []
     for i in range(games):
         home, away = names[2 * i], names[2 * i + 1]
-        tip = now + timedelta(hours=3 + i)
         payloads.append(
             {
                 "id": f"{i:032x}",

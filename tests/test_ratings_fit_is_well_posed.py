@@ -237,3 +237,72 @@ def test_the_tier_table_never_sees_the_season_it_is_pricing():
         f"A tier table was built over {keys}, which includes the season being "
         "priced."
     )
+
+
+def test_the_schedule_caches_change_no_number():
+    """The optimisation must be invisible in the output, or it is not one.
+
+    `local_teams` and `venue_ids` are pure functions of the schedules and were
+    being recomputed inside `prepare` on every walk-forward day. Measured on the
+    real tables, `local_teams` alone was **3.01 seconds of `prepare`'s 3.09**,
+    and across ~600 days that is an hour of identical work — a backtest taking
+    over two hours instead of ten minutes, every week, unattended.
+
+    Caching it is only legitimate if it changes nothing. A cache that quietly
+    altered a venue classification would move the home-court effect on every
+    game at that venue, and the report would look exactly as it does now.
+
+    So this compares a cold run against a warm one field by field, rather than
+    asserting that the cache exists.
+    """
+    import dataclasses
+    from pathlib import Path
+
+    from cbb_betting_lab.competitions import CBB
+
+    table = Path(__file__).resolve().parents[1] / "data" / "processed" / "cbb_team_games.csv"
+    if not table.is_file():
+        pytest.skip("cbb_team_games.csv is not built here.")
+    try:
+        R._cached_schedule(2026)
+    except FileNotFoundError:
+        pytest.skip("the 2026 schedule is not cached here")
+
+    frame = pd.read_csv(table, low_memory=False)
+    day = "2026-01-13"
+    prices = _slate(2026, day)
+    if prices.empty:
+        pytest.skip("no cached games")
+    history = frame[frame["slate_date"] < day]
+
+    R.clear_caches()
+    cold = R.matchups_for(day=day, history=history, prices=prices, competition=CBB)
+    warm = R.matchups_for(day=day, history=history, prices=prices, competition=CBB)
+
+    assert set(cold) == set(warm)
+    for key in cold:
+        first = dataclasses.asdict(cold[key])
+        second = dataclasses.asdict(warm[key])
+        for field, value in first.items():
+            other = second[field]
+            if value != value and other != other:  # NaN == NaN
+                continue
+            assert value == other, (
+                f"The cached run differs from the cold run on {key}.{field}: "
+                f"{value!r} vs {other!r}. A cache that changes an answer is a "
+                "defect wearing an optimisation's clothes."
+            )
+
+
+def test_clear_caches_really_empties_every_cache():
+    """A cache added to the module and not to `clear_caches` is a cache a test
+    cannot reset, and the next test in the file inherits its contents."""
+    R.clear_caches()
+    caches = [
+        value
+        for name, value in vars(R).items()
+        if name.startswith("_") and name.endswith("_CACHE") and isinstance(value, dict)
+    ]
+    assert caches, "no module-level caches found; this test has stopped measuring"
+    for cache in caches:
+        assert not cache, "clear_caches() left a cache populated"

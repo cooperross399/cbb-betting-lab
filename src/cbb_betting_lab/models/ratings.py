@@ -418,7 +418,43 @@ class PreparedGames:
         )
 
 
-def local_teams(schedules: Mapping[int, pd.DataFrame]) -> dict:
+
+#: `local_teams` and `venue_ids` are pure functions of the schedules and are
+#: called once per slate day by `prepare`. Measured on the real tables:
+#: `local_teams` is **3.01 seconds** of `prepare`'s 3.09, and across ~600
+#: walk-forward days that is **an hour of identical work**. A backtest that
+#: takes two hours instead of ten minutes is not merely slow — the weekly loop
+#: runs it unattended, so the cost is paid every week for ever.
+#:
+#: Keyed on the seasons rather than on the frames, because within a process the
+#: schedule frame for a season is the same cached object every time and a key
+#: built from frame contents would cost more than the call it saves.
+_LOCAL_TEAMS_CACHE: dict[tuple, dict] = {}
+_VENUE_IDS_CACHE: dict[tuple, dict] = {}
+
+
+def _schedule_key(schedules: Mapping[int, "pd.DataFrame"]) -> tuple:
+    """A key that identifies the FRAMES, not merely the seasons they cover.
+
+    **The first version of this keyed on season numbers alone and was wrong.**
+    A caller supplying a synthetic 2026 schedule — which every card test does —
+    got back the cached answer for the *real* 2026 schedule, so quasi-neutral
+    games resolved to the wrong local side, venues misclassified, and the card
+    froze zero opinions. It failed in isolation, not through cross-test
+    pollution, which is the tell that the key itself was the defect rather than
+    the ordering.
+
+    `id()` is safe here only because the cache value keeps a reference to the
+    frames it was built from, so the ids cannot be recycled underneath it. The
+    row count is carried as a cheap second opinion.
+    """
+    return tuple(
+        (int(season), id(frame), len(frame))
+        for season, frame in sorted(schedules.items())
+    )
+
+
+def _local_teams_uncached(schedules: Mapping[int, pd.DataFrame]) -> dict:
     """`game_id -> the participant playing in its own city or arena`, or None.
 
     For an ordinary home game that is the home team by definition. For a
@@ -464,7 +500,7 @@ def _is_local(row: Mapping, team, venues: pd.DataFrame) -> bool:
     )
 
 
-def venue_ids(schedules: Mapping[int, pd.DataFrame]) -> dict:
+def _venue_ids_uncached(schedules: Mapping[int, pd.DataFrame]) -> dict:
     """`game_id -> venue_id`. The team-game table does not carry it."""
     out: dict = {}
     for schedule in schedules.values():
@@ -2451,13 +2487,23 @@ def fit_report(ratings: Ratings, prepared: PreparedGames | None = None) -> str:
 #: appeared — which is why the key carries the day's month rather than the day.
 _SEASON_CACHE: dict[tuple, "Prior"] = {}
 _TIER_CACHE: dict[tuple, "TierTable"] = {}
-_SCHEDULE_CACHE: dict[int, "pd.DataFrame"] = {}
-_CLASSIFIED_CACHE: dict[int, "pd.DataFrame"] = {}
+#: Keyed on (season, raw_dir). **Keying on the season alone was a defect**: a
+#: caller pointing at a different `--raw-dir` — which every card test does —
+#: got back the frame read from whichever directory was consulted first, and
+#: silently priced against another tree's schedule.
+_SCHEDULE_CACHE: dict[tuple, "pd.DataFrame"] = {}
+_CLASSIFIED_CACHE: dict[tuple, "pd.DataFrame"] = {}
+#: The per-season fixture lookup `matchups_for` builds; rebuilding it from
+#: 6,318 schedule rows on every slate day is the same waste in miniature.
+_FIXTURES_CACHE: dict[tuple, dict] = {}
 
 
 def clear_caches() -> None:
     """Drop every memo. Tests that change the cached feeds call this."""
-    for cache in (_SEASON_CACHE, _TIER_CACHE, _SCHEDULE_CACHE, _CLASSIFIED_CACHE):
+    for cache in (
+        _SEASON_CACHE, _TIER_CACHE, _SCHEDULE_CACHE, _CLASSIFIED_CACHE,
+        _LOCAL_TEAMS_CACHE, _VENUE_IDS_CACHE, _FIXTURES_CACHE,
+    ):
         cache.clear()
 
 
@@ -2470,9 +2516,10 @@ def _cached_schedule(season: int, raw_dir: Path | str | None = None) -> "pd.Data
     score: `fit` is handed `history`, which the backtest has already cut to
     games strictly earlier than the day.
     """
-    if season in _SCHEDULE_CACHE:
-        return _SCHEDULE_CACHE[season]
     root = Path(raw_dir) if raw_dir else Path(config.RAW_DIR)
+    key = (int(season), str(root))
+    if key in _SCHEDULE_CACHE:
+        return _SCHEDULE_CACHE[key]
     path = root / CBB.data_dir_segment / "schedules" / f"mbb_schedule_{season}.parquet"
     if not path.is_file():
         raise FileNotFoundError(
@@ -2481,16 +2528,43 @@ def _cached_schedule(season: int, raw_dir: Path | str | None = None) -> "pd.Data
             "worse than declining to price one. Run scripts/fetch_cbb_data.py."
         )
     frame = pd.read_parquet(path)
-    _SCHEDULE_CACHE[season] = frame
+    _SCHEDULE_CACHE[key] = frame
     return frame
 
 
 def _cached_classified(season: int, raw_dir: Path | str | None = None) -> "pd.DataFrame":
-    if season in _CLASSIFIED_CACHE:
-        return _CLASSIFIED_CACHE[season]
+    root = Path(raw_dir) if raw_dir else Path(config.RAW_DIR)
+    key = (int(season), str(root))
+    if key in _CLASSIFIED_CACHE:
+        return _CLASSIFIED_CACHE[key]
     out = classify(_cached_schedule(season, raw_dir))
-    _CLASSIFIED_CACHE[season] = out
+    _CLASSIFIED_CACHE[key] = out
     return out
+
+
+
+def local_teams(schedules: Mapping[int, "pd.DataFrame"]) -> dict:
+    """The local side of every quasi-neutral game, memoised on the seasons.
+
+    See `_LOCAL_TEAMS_CACHE`. `clear_caches()` drops this along with the rest.
+    """
+    key = _schedule_key(schedules)
+    hit = _LOCAL_TEAMS_CACHE.get(key)
+    if hit is None:
+        # The frames are stored beside the answer so their `id()`s stay valid.
+        hit = (tuple(schedules.values()), _local_teams_uncached(schedules))
+        _LOCAL_TEAMS_CACHE[key] = hit
+    return hit[1]
+
+
+def venue_ids(schedules: Mapping[int, "pd.DataFrame"]) -> dict:
+    """Game id to venue id, memoised on the seasons."""
+    key = _schedule_key(schedules)
+    hit = _VENUE_IDS_CACHE.get(key)
+    if hit is None:
+        hit = (tuple(schedules.values()), _venue_ids_uncached(schedules))
+        _VENUE_IDS_CACHE[key] = hit
+    return hit[1]
 
 
 def matchups_for(
@@ -2563,7 +2637,12 @@ def matchups_for(
     # error is a leak, because it uses the season's own conference membership to
     # price that season.
     earlier = tuple(s for s in sorted(schedules) if s < season)
-    tier_key = earlier or (season,)
+    seasons_for_tiers = earlier or (season,)
+    # Same lesson as the schedule cache: the seasons do not identify the
+    # frames, so the key carries the frames' identity too.
+    tier_key = tuple(
+        (int(s), id(schedules[s]), len(schedules[s])) for s in seasons_for_tiers
+    )
     tiers = _TIER_CACHE.get(tier_key)
     if tiers is None:
         # With no earlier season there is nothing honest to build from, and the
@@ -2571,7 +2650,7 @@ def matchups_for(
         # a leak too, and it is the smaller one; it is recorded here rather than
         # hidden because a first-season lab should know which of the two it has.
         tiers = tier_table(
-            {s: schedules[s] for s in tier_key}, tier_key
+            {s: schedules[s] for s in seasons_for_tiers}, seasons_for_tiers
         )
         _TIER_CACHE[tier_key] = tiers
 
@@ -2622,16 +2701,23 @@ def matchups_for(
         competition=competition,
     )
 
-    # Fixture facts for the day, keyed by game id. Who is playing and where.
-    fixtures: dict[int, dict] = {}
-    for row in classified.to_dict("records"):
-        game_id = row.get("id")
-        if game_id is None:
-            continue
-        try:
-            fixtures[int(game_id)] = row
-        except (TypeError, ValueError):
-            continue
+    # Fixture facts, keyed by game id: who is playing and where. Cached per
+    # season — it is a property of the schedule, not of the day, and rebuilding
+    # it from 6,318 rows on each of ~600 walk-forward days is the same waste
+    # `local_teams` was committing on a larger scale.
+    fixture_key = (int(season), str(Path(raw_dir) if raw_dir else config.RAW_DIR))
+    fixtures = _FIXTURES_CACHE.get(fixture_key)
+    if fixtures is None:
+        fixtures = {}
+        for row in classified.to_dict("records"):
+            game_id = row.get("id")
+            if game_id is None:
+                continue
+            try:
+                fixtures[int(game_id)] = row
+            except (TypeError, ValueError):
+                continue
+        _FIXTURES_CACHE[fixture_key] = fixtures
 
     local = local_teams({season: schedule})
     venues = venue_ids({season: schedule})
