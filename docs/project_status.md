@@ -37,7 +37,7 @@ M and the commit of 2026-09-03.
 |--:|:---|:---|:---|
 | 1 | Repo private, CI green on `main`, full suite passes | **done** | `cooperross399/cbb-betting-lab`, private. `Tests` workflow green on every push. **721 tests.** |
 | 2 | Every workflow on a cron, no laptop | **done** | Data refresh, board fetch, card publish and post-slate settlement all live in `CBB Gameday Refresh` (4 crons). `Line Movement` has 4 crons. `Provider Quota` daily. `Weekly Refit and Measure` runs Mondays 11:00 UTC and is green. Probe and purchase are dispatch-only *by design* — a cron on a credit-spending discovery run is a standing order to spend money, and a test enforces their absence. |
-| 3 | Delivery chain verified end to end with a real card | **partly, and the gap is one click** | Links 1 and 2 verified with a real dispatch on 2026-09-01: run 33548634161 published `latest_status.json`, `latest_card_comment.md`, `latest_forward_evidence.md`, `latest_what_we_can_claim.md` and `snapshots/2026-09-01.csv` to `card-feed`, and the card was read. **Link 3 is blocked on Cooper granting the Claude Code GitHub app access to this repository** — `docs/delivery_chain.md`. |
+| 3 | Delivery chain verified end to end with a real card | **done** | All four links. The workflow published to `card-feed` (run 33551726107); `CBB CARD RELAY` (`trig_013PaobEWhpXv7vwN3wVxEXS`) copied it into Drive; the file **`CBB Card CHAIN VERIFICATION 2026-09-03 (safe to delete)`, 8,013 bytes**, was **read back in full** and holds the card verbatim. Not a green run — the bytes were read. The relay refused the first verification attempt as a suspected injection and was right to; `docs/delivery_chain.md`. |
 | 4 | `tests/test_no_secrets_committed.py` passes, no key ever printed | **done** | 16 tests. It fired for real on the committed probe record (102 provider event ids, 32-hex, the same shape as a key) and was fixed by naming the recorded key, never by exempting the directory. |
 
 ### Data and settlement
@@ -79,13 +79,11 @@ M and the commit of 2026-09-03.
 
 ## What is actually waiting on Cooper
 
-**One thing, and it is not the acceptance receipt yet** — that comes when there
-is evidence to sign against.
+**Nothing, until there is evidence to sign an acceptance receipt against.**
 
-**Grant the Claude Code GitHub app access to `cbb-betting-lab`**:
-`https://github.com/settings/installations` → Claude → Repository access → add
-`cbb-betting-lab` → Save. That unblocks link 3 of the delivery chain. The
-routine body is committed and creates unchanged afterwards.
+The GitHub App grant was the one outstanding item and Cooper made it on
+2026-09-03. The delivery chain is verified end to end and the lab needs no
+further input to run.
 
 ## The three numbers worth knowing today
 
