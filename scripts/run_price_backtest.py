@@ -1227,6 +1227,16 @@ def main(argv: list[str] | None = None) -> int:
     # ---- the record --------------------------------------------------------
     ledger = Path(args.ledger) if args.ledger else PB.ledger_path(output_dir)
     looks = PB.looks_from_ledger(ledger)
+    # An absent ledger is not a family of one, and the report must not say it
+    # is: no correction at all makes every interval look tighter than it is.
+    ledger_read = PB.ledger_was_read(ledger)
+    if not ledger_read:
+        print(
+            f"::warning::No experiment ledger at {ledger}. NO family-wise "
+            "correction will be applied and every interval in this run is the "
+            "raw one. That is not a family of one — it is an unknown family.",
+            file=sys.stderr,
+        )
     if not ledger.is_file():
         print(
             f"::warning::{ledger} does not exist, so the family-wise "
@@ -1246,6 +1256,7 @@ def main(argv: list[str] | None = None) -> int:
         ),
         competition=competition,
         looks=looks,
+        ledger_read=ledger_read,
         threshold=float(args.edge_threshold),
         generated_at=datetime.now(timezone.utc)
         .replace(microsecond=0)

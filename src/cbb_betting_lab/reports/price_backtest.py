@@ -752,13 +752,38 @@ def looks_from_ledger(ledger_path: Path | str | None) -> int:
     """The family size for any new claim: the ledger's **cumulative** count.
 
     Never the day's count. *"A search that runs every week is not twelve tests.
-    It is twelve tests a week, forever."* An absent ledger returns 1 and the
-    report says the correction could not be applied, rather than quietly
-    applying none.
+    It is twelve tests a week, forever."*
+
+    An absent ledger returns 1, which applies no correction at all. That is the
+    only safe *arithmetic* — inventing a family size would be worse — but it is
+    NOT a safe thing to print without saying so, which is what
+    `ledger_was_read` exists for. See its docstring.
     """
     if ledger_path is None:
         return 1
     return max(load_ledger(Path(ledger_path)).count, 1)
+
+
+def ledger_was_read(ledger_path: Path | str | None) -> bool:
+    """Whether a ledger actually existed, as distinct from holding one entry.
+
+    **The report said "1 cumulative hypotheses in experiment_ledger.json" for a
+    ledger that was not there.** `looks_from_ledger` returns
+    `max(count, 1)`, so an absent file and a file with a single entry are the
+    same integer, and the renderer stated that integer as a fact about a file
+    it had never opened.
+
+    That is the defect this repository is arranged against, in the one place it
+    does the most damage: a correction of x1.00 does not widen an interval at
+    all, so an absent ledger makes every result look **more** significant than
+    it is, and the sentence claiming otherwise reads like a measurement.
+
+    Caught when a discovery run was pointed at a fresh `--output-dir` and
+    cheerfully reported a family of one.
+    """
+    if ledger_path is None:
+        return False
+    return Path(ledger_path).is_file()
 
 
 @dataclass
@@ -782,6 +807,7 @@ def build_record(
     *,
     competition: Competition = CBB,
     looks: int = 1,
+    ledger_read: bool = True,
     threshold: float = BET_EDGE_THRESHOLD,
     generated_at: str = "",
     calibration: dict | None = None,
@@ -814,6 +840,9 @@ def build_record(
         "edge_threshold": float(threshold),
         "minimum_bets": S.MINIMUM_BETS,
         "looks": int(looks),
+        # Recorded so `render` cannot restate a family size it never read. An
+        # absent ledger and a one-entry ledger are the same integer.
+        "ledger_read": bool(ledger_read),
         "correction_factor": S.bonferroni_factor(int(looks)),
         "wagers_offered": int(len(universe)),
         "wagers_graded": int(len(settled(universe))),
@@ -917,13 +946,23 @@ def render(record: dict) -> str:
     )
     add("")
     looks = int(record.get("looks", 1))
-    add(
-        f"**Family correction: {looks:,} cumulative hypotheses** in the "
-        f"experiment ledger, widening every 95% interval by "
-        f"x{record.get('correction_factor', 1.0):.2f}. That is the ledger's "
-        "cumulative count and never the day's — correcting today's findings "
-        "across today's tests is a lie if more were tested last week."
-    )
+    if record.get("ledger_read", True):
+        add(
+            f"**Family correction: {looks:,} cumulative hypotheses** in the "
+            f"experiment ledger, widening every 95% interval by "
+            f"x{record.get('correction_factor', 1.0):.2f}. That is the ledger's "
+            "cumulative count and never the day's — correcting today's findings "
+            "across today's tests is a lie if more were tested last week."
+        )
+    else:
+        add(
+            "**NO FAMILY CORRECTION WAS APPLIED, because no experiment ledger "
+            "was found.** Every interval below is the raw one. This is not a "
+            "family of one — it is an unknown family, and an unknown family "
+            "corrected by x1.00 makes every result on this page look more "
+            "significant than it is. Read nothing here as corrected until a "
+            "ledger is in place and this run is repeated."
+        )
     add("")
     add(
         f"**Below {record.get('minimum_bets', S.MINIMUM_BETS):,} bets there is "
