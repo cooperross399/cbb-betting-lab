@@ -7,15 +7,27 @@ not the same thing.
 Every row is checkable from the repository without anyone's judgment. A row that
 is not done says so, and says what it is waiting on.
 
-Last updated **2026-09-01**.
+Last updated **2026-09-03**.
 
 ## The headline
 
-**Nothing has been measured against real prices yet, no market is allowlisted,
-nothing is bet, and that is the correct state.** The season opens in 61 days.
-The historical purchase is running as this is written; until it finishes and the
-backtest scores it, this lab has machinery and no findings — which is exactly
-what a lab looks like on the day before its first measurement.
+**No market is allowlisted, nothing is bet, and that is the correct state.**
+The season opens in 59 days.
+
+**The history is bought: 1,821,842 price rows over 19,974 games, four seasons,
+33 books, all at card time (T-60m).** The price backtest is scoring it as this
+is written. Until that finishes, this lab has machinery, a bought population and
+no findings — and the honest word for that is *unmeasured*, not *null*.
+
+**Two defects were found and fixed on 2026-09-03 that would have made the first
+measurement meaningless**, both in the seam between the ratings and the
+backtest, and both found by a report describing its own output rather than by a
+test. The prior's weight was **0.0% on 3 November and 0.0% on 20 February** —
+the November regime deleted — and the tier table was built over the season it
+was pricing, moving 9.3% of teams across a boundary that selects which
+home-court effect applies. A backtest was killed mid-run because its numbers
+would have been about a model that will never ship. `docs/ported_defects.md`
+M and the commit of 2026-09-03.
 
 ## Definition of Done
 
@@ -23,8 +35,8 @@ what a lab looks like on the day before its first measurement.
 
 | # | Item | State | Evidence |
 |--:|:---|:---|:---|
-| 1 | Repo private, CI green on `main`, full suite passes | **done** | `cooperross399/cbb-betting-lab`, private. `Tests` workflow green. 462 tests. |
-| 2 | Every workflow on a cron, no laptop | **partly** | Data refresh, board fetch, card publish and post-slate settlement all live in `CBB Gameday Refresh` (4 crons). `Line Movement` has 4 crons. `Provider Quota` daily. **Weekly refit-and-measure is being built.** Probe and purchase are dispatch-only *by design* — a cron on a credit-spending discovery run is a standing order to spend money, and a test enforces their absence. |
+| 1 | Repo private, CI green on `main`, full suite passes | **done** | `cooperross399/cbb-betting-lab`, private. `Tests` workflow green on every push. **721 tests.** |
+| 2 | Every workflow on a cron, no laptop | **done** | Data refresh, board fetch, card publish and post-slate settlement all live in `CBB Gameday Refresh` (4 crons). `Line Movement` has 4 crons. `Provider Quota` daily. `Weekly Refit and Measure` runs Mondays 11:00 UTC and is green. Probe and purchase are dispatch-only *by design* — a cron on a credit-spending discovery run is a standing order to spend money, and a test enforces their absence. |
 | 3 | Delivery chain verified end to end with a real card | **partly, and the gap is one click** | Links 1 and 2 verified with a real dispatch on 2026-09-01: run 33548634161 published `latest_status.json`, `latest_card_comment.md`, `latest_forward_evidence.md`, `latest_what_we_can_claim.md` and `snapshots/2026-09-01.csv` to `card-feed`, and the card was read. **Link 3 is blocked on Cooper granting the Claude Code GitHub app access to this repository** — `docs/delivery_chain.md`. |
 | 4 | `tests/test_no_secrets_committed.py` passes, no key ever printed | **done** | 16 tests. It fired for real on the committed probe record (102 provider event ids, 32-hex, the same shape as a key) and was fixed by naming the recorded key, never by exempting the directory. |
 
@@ -41,19 +53,19 @@ what a lab looks like on the day before its first measurement.
 | # | Item | State | Evidence |
 |--:|:---|:---|:---|
 | 8 | Retention probe run, report re-renderable from the record | **done** | 2026-09-01, 144 events planned / 102 matched, **77,160 credits** against a 147,020 bound. `data/outputs/cbb_retention_probe.{json,md}`; `scripts/rerender_retention_probe.py` rebuilds the report for free. |
-| 9 | Historical prices bought for every measurable market, store deduped on price identity | **running** | Wave 1 (`core_team`, six seasons) dispatched under a 1,300,000 cap. Dedupe on price identity is pinned by `test_prices_dedupe_on_identity_not_the_row.py`, which caught a real CSV round-trip defect. |
+| 9 | Historical prices bought for every measurable market, store deduped on price identity | **core team markets done; ladders, props and futures not bought** | **1,299,945 credits, 1,821,842 price rows, 19,974 events, 33 books**, seasons 2021-2024, window `card` (T-60m). `moneyline`, `spread`, `total_points`, `team_total`. The cap bound before seasons 2025-26 and before waves 2-4, which is the ordinary case for a purchase deliberately larger than one month's credits; the event order makes every prefix a proportional sample. **The first purchase persisted nothing** — two hand-spelled paths and a store the live buy never writes — and the responses survived by luck inside a sibling cache. `docs/ported_defects.md` L. Dedupe on price identity is pinned by `test_prices_dedupe_on_identity_not_the_row.py`. |
 | 10 | Line-movement capture live, price survival recorded | **done** | `Line Movement`, 4 crons a day year-round, 6 credits a capture. Survival is three-valued — a quote the next capture never covered is `unknown`, not `gone`. |
 
 ### Models and measurement
 
 | # | Item | State |
 |--:|:---|:---|
-| 11 | Walk-forward fits, per tier, November prior, connectivity refusing to price | **being built** |
-| 12 | Price backtest over the full bought population, every market, clustered, corrected, replicated | **waiting on the purchase** |
-| 13 | Market-vs-model regression printed for every candidate | **waiting** |
-| 14 | Calibration measured on selected bets, not only overall | `reports/calibration_on_selected.py` exists; unrun |
-| 15 | Reachability: edge split by whether the price survived | Instrument live and accumulating; no edge to split yet |
-| 16 | Claims / when-this-ends / why-the-model docs, headline reads the sign | **2 of 3 done** — the third is written from the run record and there is no run record yet. `test_the_headline_reads_the_sign.py` already pins the predicate. |
+| 11 | Walk-forward fits, per tier, November prior, connectivity refusing to price | **done** | `models/ratings.py` + `scripts/fit_ratings.py`. Fitted 146 days of 2025-26: **4,719 of 5,415 games priced**, league 108.38 per 100 at 68.39 possessions. Prior weight decays **0.867 (12 Nov) → 0.420 (20 Feb)**, monotone, and is carried on every matchup. Connectivity refuses two teams the schedule graph has not connected — on 5 Nov, 121 components and **0.4% priceable**. **Home advantage is heterogeneous and fitted, not assumed: high_major +12.36, mid_major +7.34, low_major +3.90 per 100 possessions**, 409 venues, shrunk toward the league mean. |
+| 12 | Price backtest over the full bought population, every market, clustered, corrected, replicated | **scoring now** | `scripts/run_price_backtest.py` over all 1,821,842 rows. Replication is `reports/replication.py`, built and tested, waiting on the discovery record. |
+| 13 | Market-vs-model regression printed for every candidate | **built, unrun** | `reports/forecast_skill.py` — regresses outcome on market-implied and on the model's *disagreement*, Brier side by side, and buckets by claimed edge so anti-predictiveness is a table and not only a coefficient. Runs on the backtest's graded bets via `--graded`. |
+| 14 | Calibration measured on selected bets, not only overall | **built, unrun** | `reports/calibration_on_selected.py`. |
+| 15 | Reachability: edge split by whether the price survived | **built; no edge to split yet** | `reachability.py` + `scripts/run_reachability.py`, 41 tests. Three-valued survival, per book and per tier, and it emits **"not reachable"** in those words when an edge lives only in prices that vanished. The store is empty today because it is September, and it says so rather than printing an empty table. |
+| 16 | Claims / when-this-ends / why-the-model docs, headline reads the sign | **2 of 3; the third needs the run record** | `docs/what_we_can_and_cannot_claim.md` now carries a **fenced generated block** the weekly loop re-renders, so the pre-measurement framing survives and the numbers cannot drift from the record. `test_the_headline_reads_the_sign.py` pins the predicate. |
 
 ### Self-operation
 
@@ -61,9 +73,9 @@ what a lab looks like on the day before its first measurement.
 |--:|:---|:---|:---|
 | 17 | Experiment ledger append-only, populated, its correction used by the reports | **done** | 30 pre-registered hypotheses, each with a falsifiable direction. Correction **×1.60**. `save()` raises rather than shrinking. The claims report reads it. |
 | 18 | Promotion criteria pre-registered on disk; demotion one direction only | **done** | `data/manual/promotion_criteria.json`, declared 2026-09-01 before any challenger was measured. There is no `grant()` in `promotion.py` or `staging_provider_policy.py`, and a test sweeps for one. |
-| 19 | The weekly loop runs unattended and re-renders the claims doc itself | **being built** | |
+| 19 | The weekly loop runs unattended and re-renders the claims doc itself | **done** | `Weekly Refit and Measure`, Mondays 11:00 UTC, `contents: read` and no credential — it measures what is already bought and cannot spend. 43 tests. It re-renders the fenced block inside `docs/what_we_can_and_cannot_claim.md`; a missing fence is an error and never an append. |
 | 20 | `CLAUDE.md` has a "Current operating state" a future session can read, contract strings pinned | **done** | `test_contract_strings.py` pins all 14. |
-| 21 | `docs/decision_log.md` and `docs/ported_defects.md` complete | **done** | 16 decisions, 7 defect classes with the regression test for each. |
+| 21 | `docs/decision_log.md` and `docs/ported_defects.md` complete | **done** | 20 decisions, **14 defect classes** (A-N) with the regression test for each. N is the word-ban test family reaching six members, three of them on 2026-09-03. |
 
 ## What is actually waiting on Cooper
 
