@@ -1,6 +1,6 @@
 # NCAA Division I men's basketball — replication on a held-out season
 
-Generated 2026-09-04T07:20:09Z.
+Generated 2026-09-04T07:21:08Z.
 
 **A window that merely fails to contradict is not confirmation.** A cell here replicates only when the held-out season's return carries the **same sign** as the discovery result **and** the held-out season's **own** interval excludes zero after the family-wise correction. A held-out interval that includes zero is **no demonstrated edge** and its state is *did not replicate* — never 'consistent with', never 'directionally in line'. The NHL lab reported a market as having held because a second window with a sample far too small to exclude anything did not contradict the first; an interval spanning zero is equally compatible with the discovery result, with no effect, and with the opposite effect.
 

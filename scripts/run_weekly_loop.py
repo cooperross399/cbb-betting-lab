@@ -152,6 +152,21 @@ RECORD_VERSION = 1
 #: program exists and did not do its job.
 REFIT_SCRIPT = "fit_ratings.py"
 BACKTEST_SCRIPT = "run_price_backtest.py"
+
+#: The season the weekly loop re-scores when no season is named. The current
+#: one: the loop exists to notice drift in what is happening now, and the
+#: full-population figure is a separate, deliberate run that no CI job can
+#: hold. See the block comment where this is used.
+def weekly_backtest_season() -> int:
+    """The season the loop re-scores. Derived from the clock, never pinned.
+
+    A literal here would quietly keep scoring 2027 in 2029.
+    """
+    from datetime import datetime, timezone
+
+    from cbb_betting_lab.season import season_for_slate_date
+
+    return season_for_slate_date(datetime.now(timezone.utc).date().isoformat())
 CLAIMS_SCRIPT = "run_what_we_can_claim.py"
 
 #: The pre-registered search queue. Read, never written — see the module
@@ -1534,6 +1549,22 @@ def main(argv: list[str] | None = None) -> int:
     passthrough = ["--competition", competition.key]
     if args.seasons:
         passthrough += ["--seasons", *args.seasons.split()]
+    else:
+        # THE WEEKLY LOOP SCORES A BOUNDED WINDOW, AND MUST.
+        #
+        # Unbounded, the price backtest scores every season in the store. On the
+        # bought population that is a **measured eight hours** — against this
+        # workflow's 240-minute timeout and GitHub's own six-hour ceiling. A
+        # weekly loop whose measurement step is killed every week is not a
+        # self-running lab; it is a lab that reports degraded for ever and looks
+        # like it is working.
+        #
+        # The weekly job is drift detection: has the current season moved away
+        # from what the last full run measured? Re-deriving four seasons from
+        # scratch every Monday answers a question nobody asked and cannot
+        # finish. The full-population run stays deliberate and occasional, and
+        # `docs/when_this_ends.md` reads it rather than this.
+        passthrough += ["--seasons", str(weekly_backtest_season())]
     steps.append(
         run_script(
             REFIT_SCRIPT,

@@ -161,6 +161,7 @@ from cbb_betting_lab.markets import MARKETS_BY_KEY, PLAYER
 from cbb_betting_lab.providers import historical as H
 from cbb_betting_lab.reports import calibration_on_selected as CAL
 from cbb_betting_lab.reports import card_pricing, gameday_card
+from cbb_betting_lab.reports import forecast_skill as FS
 from cbb_betting_lab.reports import price_backtest as PB
 from cbb_betting_lab.season import clean_text
 from cbb_betting_lab.settlement import Outcome, settle
@@ -1039,6 +1040,18 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--write-graded",
+        default="",
+        help=(
+            "Write the graded bets to this CSV, carrying "
+            "`forecast_skill.SKILL_COLUMNS`. It is what lets the market-vs-model "
+            "regression run over the BOUGHT population rather than only over "
+            "the forward ledger, which does not exist until the season starts. "
+            "Derived data: it rebuilds from the store for free."
+        ),
+    )
+
+    parser.add_argument(
         "--rebuild-report-only",
         action="store_true",
         help=(
@@ -1243,6 +1256,37 @@ def main(argv: list[str] | None = None) -> int:
             "correction is applied across one look. That is a lab that has "
             "tested nothing, which is not what this one is."
         )
+    if args.write_graded:
+        # The graded frame is what `forecast_skill` regresses on. Written from
+        # the SAME `bets` object the record is built from, so the regression and
+        # the ROI table can never describe different populations — which is the
+        # accounting-identity discipline applied one layer out.
+        target = Path(args.write_graded)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        missing = [c for c in FS.SKILL_COLUMNS if c not in bets.columns]
+        if missing:
+            print(
+                f"::error::The graded frame is missing {missing!r}, so it "
+                "cannot be regressed. Nothing was written: a partial frame "
+                "would be silently scored on whatever survived.",
+                file=sys.stderr,
+            )
+            return 2
+        settled_bets = PB.settled(bets)
+        # `book` is carried alongside the declared columns because
+        # `forecast_skill` de-vigs WITHIN a book by default, and it refuses to
+        # run without it rather than pooling every row into one nameless book —
+        # which would pair quotes across books and understate the hold,
+        # sometimes to nothing. The refusal is correct; the fix is the column.
+        columns = list(FS.SKILL_COLUMNS)
+        if "book" in settled_bets.columns and "book" not in columns:
+            columns.append("book")
+        settled_bets[columns].to_csv(target, index=False)
+        print(
+            f"Wrote {len(settled_bets):,} graded bet(s) to {target} for the "
+            "market-vs-model regression."
+        )
+
     margins, totals = key_number_inputs(team_games, game_ids)
 
     record = PB.build_record(
