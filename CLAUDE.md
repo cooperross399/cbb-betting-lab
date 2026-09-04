@@ -209,6 +209,20 @@ the family correction is x1.60 from 30 pre-registered hypotheses.
   on. Only core team markets were bought; ladders, halves, props and futures
   were not.
 
+### The winner's curse, measured
+
+**Overall calibration is not evidence, and this run is why.** Overall the model
+is **0.5 pp underconfident** over 235,859 graded rows — essentially calibrated,
+with gaps that cancel. On the bets it **selected**, it is **9.9 pp
+overconfident** over 85,556, and every one of the ten bins is over-predicted.
+
+It worsens with confidence: at 90-100% predicted the model wins **86.6%
+overall** and **68.8% on what it picked**. It says 93% and wins 69%.
+
+A model is selected into its bets by its own disagreement with the price, so
+its bets are the tail of its own error distribution. This is an independent
+reproduction of the NHL lab's 9-12 pp in a different sport.
+
 ### Four defects the measurement path found, all fixed
 
 1. **An absent experiment ledger was reported as a family of one.**
