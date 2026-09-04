@@ -2554,10 +2554,25 @@ def matchups_for(
             # evidence. It is counted by `prepare` rather than silently dropped.
             continue
 
-    tier_key = tuple(sorted(schedules))
+    # THE TIER TABLE IS BUILT FROM SEASONS STRICTLY EARLIER, which is
+    # `conferences.tier_table`'s own rule and was being broken here. Letting the
+    # priced season in moves **34 of 367 teams (9.3%)** across a tier boundary,
+    # measured by `scripts/fit_ratings.py`. A tier is not a label: it selects
+    # which home-court effect is applied, so a team on the wrong side of a cut
+    # point is a multi-point error on every market on its home games — and the
+    # error is a leak, because it uses the season's own conference membership to
+    # price that season.
+    earlier = tuple(s for s in sorted(schedules) if s < season)
+    tier_key = earlier or (season,)
     tiers = _TIER_CACHE.get(tier_key)
     if tiers is None:
-        tiers = tier_table(schedules, tuple(sorted(schedules)))
+        # With no earlier season there is nothing honest to build from, and the
+        # priced season is used rather than leaving every team unplaced. That is
+        # a leak too, and it is the smaller one; it is recorded here rather than
+        # hidden because a first-season lab should know which of the two it has.
+        tiers = tier_table(
+            {s: schedules[s] for s in tier_key}, tier_key
+        )
         _TIER_CACHE[tier_key] = tiers
 
     prepared = prepare(history, schedules=schedules)
@@ -2582,8 +2597,25 @@ def matchups_for(
     # and validates. Handing it the raw frame raises on a missing column, which
     # is the right failure: a fit that silently skipped the preparation would
     # be fitting on unvalidated possessions.
+    #
+    # AND IT TAKES ONE SEASON, which is the harder half. `fit`'s own contract is
+    # "history filtered to the season being priced", because **a team is not the
+    # team it was last March** — the transfer portal sees to that. Handing it
+    # every season of history put 31,828 team-games of old evidence in the
+    # design matrix on opening night, and the prior's weight collapsed to
+    # **0.0% and stayed there all season**, measured by `scripts/fit_ratings.py`.
+    #
+    # That is not a rounding error, it is the November regime deleted: Cooper's
+    # requirement is that the prior's weight is reported in every price so a
+    # November number can never be presented as a February one, and a card
+    # priced through this seam would have printed 0% on 3 November and 0% on 20
+    # February. The earlier seasons still do their work — they build the PRIOR,
+    # which is exactly the channel they are supposed to reach the fit through.
+    season_rows = prepared.rows
+    if "season" in season_rows.columns:
+        season_rows = season_rows[season_rows["season"] == season]
     ratings = fit(
-        prepared.rows,
+        season_rows,
         prior=prior,
         as_of=day,
         season=season,

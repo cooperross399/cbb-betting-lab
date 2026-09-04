@@ -121,3 +121,119 @@ def test_every_cached_season_fits_from_a_multi_season_prepare(season: int):
         pytest.skip(f"no prepared rows for {season}")
     offence, *_ = R._season_fit(subset, strength=dict(R.DECLARED_PRIOR_STRENGTH))
     assert offence, "the fit returned no team ratings"
+
+
+def _slate(season: int, day: str):
+    """The real games on a real slate day, as a price frame."""
+    import pandas as pd
+
+    from cbb_betting_lab.competitions import CBB
+    from cbb_betting_lab.season import slate_date
+
+    schedule = R._cached_schedule(season)
+    days = schedule["date"].map(
+        lambda x: slate_date(pd.Timestamp(x).tz_convert("UTC").isoformat(), CBB)
+    )
+    today = schedule[days == day]
+    return pd.DataFrame(
+        {
+            "event_id": [f"e{i}" for i in range(len(today))],
+            "game_id": today["id"].values,
+        }
+    )
+
+
+def _november_regime_case():
+    from pathlib import Path
+
+    table = Path(__file__).resolve().parents[1] / "data" / "processed" / "cbb_team_games.csv"
+    if not table.is_file():
+        pytest.skip("cbb_team_games.csv is not built here.")
+    return pd.read_csv(table, low_memory=False)
+
+
+def test_the_seam_does_not_delete_the_november_prior_regime():
+    """The defect that mattered most, and it was mine.
+
+    `ratings.fit`'s contract is *history filtered to the season being priced* —
+    because **a team is not the team it was last March**, and in this sport the
+    transfer portal sees to that. `run_price_backtest.walk_forward` hands the
+    model EVERY season strictly earlier than the day, so a seam that passes its
+    history straight through puts tens of thousands of old team-games in the
+    design matrix on opening night.
+
+    Measured before the fix, by `scripts/fit_ratings.py` on the real 2025-26
+    season: 31,828 team-games in the matrix on 3 November, and the prior's
+    weight **0.0% on 3 November and 0.0% on 20 February** — it did not move all
+    season.
+
+    That is not a rounding error. Cooper's requirement is that the prior's
+    weight is reported in every price *so that a November number can never be
+    presented as if it were a February one*, and a card priced through the seam
+    would have printed 0% on both. The earlier seasons still do their work:
+    they build the PRIOR, which is the channel they are supposed to reach the
+    fit through.
+    """
+    frame = _november_regime_case()
+    try:
+        R._cached_schedule(2026)
+    except FileNotFoundError:
+        pytest.skip("the 2026 schedule is not cached here")
+
+    weights = {}
+    for day in ("2025-11-12", "2026-02-20"):
+        prices = _slate(2026, day)
+        if prices.empty:
+            pytest.skip(f"no cached games on {day}")
+        matchups = R.matchups_for(
+            day=day,
+            # EVERY season, exactly as the backtest passes it.
+            history=frame[frame["slate_date"] < day],
+            prices=prices,
+        )
+        priceable = [m for m in matchups.values() if m.priceable]
+        if not priceable:
+            pytest.skip(f"nothing priceable on {day}")
+        weights[day] = sum(m.prior_weight for m in priceable) / len(priceable)
+
+    assert weights["2025-11-12"] > 0.5, (
+        f"November prior weight is {weights['2025-11-12']:.3f}. In the second "
+        "week of a season almost all of a rating must still be prior; a low "
+        "number here means the fit is treating last season's team as this "
+        "season's."
+    )
+    assert weights["2025-11-12"] > weights["2026-02-20"] + 0.1, (
+        "The prior's weight does not fall between November and February, so a "
+        "November price is indistinguishable from a February one — which is "
+        "the exact thing the prior weight is carried to prevent."
+    )
+
+
+def test_the_tier_table_never_sees_the_season_it_is_pricing():
+    """A tier is not a label — it selects which home-court effect is applied.
+
+    Letting the priced season into `conferences.tier_table` moved **34 of 367
+    teams (9.3%)** across a boundary, measured by `scripts/fit_ratings.py`. A
+    team on the wrong side of a cut point is a multi-point error on every market
+    on its home games, and it is a leak: it uses the season's own conference
+    membership to price that season.
+    """
+    frame = _november_regime_case()
+    try:
+        R._cached_schedule(2026)
+    except FileNotFoundError:
+        pytest.skip("the 2026 schedule is not cached here")
+
+    R.clear_caches()
+    day = "2026-01-13"
+    prices = _slate(2026, day)
+    if prices.empty:
+        pytest.skip("no cached games")
+    R.matchups_for(day=day, history=frame[frame["slate_date"] < day], prices=prices)
+
+    keys = [k for k in R._TIER_CACHE if isinstance(k, tuple)]
+    assert keys, "no tier table was built"
+    assert all(2026 not in key for key in keys), (
+        f"A tier table was built over {keys}, which includes the season being "
+        "priced."
+    )
