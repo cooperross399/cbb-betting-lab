@@ -1136,3 +1136,46 @@ def test_the_outputs_are_competition_prefixed(lab: dict):
     second one to run would silently become the record."""
     assert LOOP.record_path(CBB, lab["outputs"]).name.startswith(f"{CBB.key}_")
     assert LOOP.report_path(CBB, lab["outputs"]).name.startswith(f"{CBB.key}_")
+
+
+def test_the_weekly_backtest_is_bounded_to_a_season(lab: dict):
+    """A weekly loop whose measurement cannot finish is not a self-running lab.
+
+    Unbounded, `run_price_backtest.py` scores every season in the store. On the
+    bought population that was **measured at eight hours** — against this
+    workflow's 240-minute timeout and GitHub's own six-hour ceiling. The step
+    would be killed every single Monday, the loop would report degraded for
+    ever, and the failure would look exactly like a lab that was running.
+
+    So the loop names a season when the caller does not. The weekly job is
+    drift detection; the full-population figure is a separate deliberate run
+    that no CI job can hold.
+    """
+    with_siblings(lab)
+    assert run(lab) == LOOP.EXIT_OK
+
+    record = json.loads(
+        LOOP.record_path(CBB, lab["outputs"]).read_text(encoding="utf-8")
+    )
+    # The command is echoed into the step's `detail`; there is no separate
+    # field for it, and asserting against a field that does not exist would
+    # make this test pass by finding nothing.
+    invocations = [
+        str(step.get("detail", ""))
+        for step in record["steps"]
+        if LOOP.BACKTEST_SCRIPT in str(step.get("detail", ""))
+    ]
+    assert invocations, "the loop did not run the backtest at all"
+    assert any("--seasons" in command for command in invocations), (
+        "The weekly loop runs the price backtest with no season bound, so it "
+        "scores the whole store and is killed by the job timeout every week."
+    )
+
+
+def test_the_weekly_season_is_derived_from_the_clock_not_pinned():
+    """A literal would quietly keep scoring 2027 in 2029."""
+    from datetime import date
+
+    expected = LOOP.weekly_backtest_season()
+    today = date.today()
+    assert expected == (today.year + 1 if today.month >= 7 else today.year)

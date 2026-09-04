@@ -1,6 +1,6 @@
 # NCAA Division I men's basketball — price backtest
 
-Generated 2026-09-04T04:09:30Z.
+Generated 2026-09-04T08:59:19Z.
 
 **Walk-forward only.** Every model that priced a game was built from games strictly earlier than it, and every bet carries the day it was priced through. The stamp is checked rather than the code path: the football lab's compound markets looked good because a distribution loaded once outside the season loop had seen the future.
 
