@@ -1890,6 +1890,58 @@ def _threshold_section(record: Mapping) -> list[str]:
     return lines
 
 
+
+def _pooling_artefact_warning(record: Mapping) -> list[str]:
+    """Say so when the pooled cell claims something no tier claims.
+
+    Three tiers whose intervals each span zero, pooled, can produce an interval
+    that does not — the sample triples while the estimate barely moves. That is
+    arithmetic, not a discovery, and it is exactly why the brief forbids a
+    pooled headline across the whole of Division I: *"High-major, mid-major and
+    low-major are different distributions. Never report a single pooled
+    headline."*
+
+    This run is the case in point. Every tier's disagreement coefficient reads
+    **no demonstrated edge**; pooled reads **demonstrated edge**, in the same
+    words this repository reserves for a profitable return. A reader skimming
+    for the strongest phrase on the page finds it in the one cell the brief
+    says is never the headline.
+
+    So the contradiction is printed where it happens, rather than left for a
+    reader to notice by comparing two tables.
+    """
+    def disagreement_verdict(cell: Mapping) -> str:
+        for coefficient in ((cell.get("fit") or {}).get("coefficients") or []):
+            if str(coefficient.get("name")) == "disagreement":
+                return str(coefficient.get("verdict") or "")
+        return ""
+
+    pooled_verdict = disagreement_verdict(record.get("pooled") or {})
+    if not pooled_verdict or "not enough evidence" in pooled_verdict:
+        return []
+
+    tier_verdicts = [
+        verdict
+        for cell in (record.get("by_tier") or [])
+        if (verdict := disagreement_verdict(cell))
+        and "not enough evidence" not in verdict
+    ]
+    if not tier_verdicts or pooled_verdict in tier_verdicts:
+        return []
+
+    return [
+        f"> **The pooled verdict is `{pooled_verdict}` and no tier says that.** "
+        f"Every tier that cleared its floor reads "
+        f"*{', '.join(sorted(set(tier_verdicts)))}*. Three intervals that each "
+        "span zero can pool into one that does not, because the sample triples "
+        "while the estimate barely moves — that is arithmetic and not a "
+        "discovery. It is the reason this lab does not headline a pooled "
+        "Division I number, and the reason this line is printed here rather "
+        "than left for a reader to find by comparing two tables.",
+        "",
+    ]
+
+
 def render(record: Mapping) -> str:
     """The report, as a pure function of the record. No clock, no network."""
     lines: list[str] = []
@@ -2038,6 +2090,7 @@ def render(record: Mapping) -> str:
     add("")
     add(POOLED_CAVEAT)
     add("")
+    lines.extend(_pooling_artefact_warning(record))
     pooled = record.get("pooled") or {}
     if not pooled or not int(pooled.get("rows", 0)):
         lines.extend(_nothing("Nothing to pool."))
