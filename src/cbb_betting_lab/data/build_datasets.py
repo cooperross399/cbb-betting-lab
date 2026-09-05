@@ -174,14 +174,30 @@ def build_game_segments(season: int, *, raw_dir: Path | None = None) -> pd.DataF
     # The first made FIELD GOAL. A free throw is not a basket, and score_value
     # is non-zero on misses, so both conditions are required.
     made = pbp[is_made_field_goal(pbp)]
-    first = made.groupby("game_id").first()
+
+    # The pick is POSITIONAL — `head(1)` on the play-order sort above — and
+    # not `GroupBy.first()`. `first()` returns the first NON-NULL value per
+    # column, so when the first made basket carries no athlete (an
+    # unattributed play) the scorer column is silently filled from the NEXT
+    # made basket: a real player, a plausible name, and a wrong first-basket
+    # settlement that nothing flags. Measured on the 2025-26 play-by-play
+    # before this change: 3 of 6,275 games had the game's first basket
+    # attributed to the second scorer that way, and 8 of 12,552 team-games
+    # had a team's. A first basket nobody is recorded as scoring stays null
+    # here, and `settlement` refuses both first-basket markets on it rather
+    # than grading them. `tests/test_first_basket_keeps_an_unattributed_scorer_null.py`
+    # reproduces the `first()` behaviour so the fix is known to be load-bearing.
+    first = made.groupby("game_id", sort=False).head(1).set_index("game_id")
 
     # And each TEAM's first basket, which is a different market and a different
     # bet. Storing only the game's first basket makes `player_first_team_basket`
     # settleable for one side and unsettleable for the other — measured at
     # exactly 50% of rows before this was added, which is the shape of a gap
-    # that looks like thin coverage and is really a missing column.
-    per_team = made.groupby(["game_id", "team_id"]).first().reset_index()
+    # that looks like thin coverage and is really a missing column. Same
+    # positional pick, for the same reason. (A made basket with a null
+    # `team_id` would fall out of the grouping and be skipped; measured at 0 of
+    # 330,073 made field goals in 2025-26 and 0 of 316,236 in 2024-25.)
+    per_team = made.groupby(["game_id", "team_id"], sort=False).head(1)
     home_first = per_team[per_team["team_id"] == per_team["home_team_id"]].set_index("game_id")
     away_first = per_team[per_team["team_id"] == per_team["away_team_id"]].set_index("game_id")
 
