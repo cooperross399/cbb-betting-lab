@@ -1,23 +1,4 @@
-# Why the model does or does not have an edge
-
-**The block between the markers below is generated**, by
-`scripts/run_why_the_model.py`, from `data/outputs/cbb_price_backtest.json`,
-`data/outputs/cbb_forecast_skill.json` and the held-out replication record.
-Every figure in it is read from a record rather than typed, and
-`scripts/run_weekly_loop.py` re-splices it every week, so it cannot drift from
-the measurement. The generator refuses to render at all when one of the three
-records is absent — a page that weighs two instruments and reads like an answer
-is worse than no page.
-
-**This heading is deliberately neutral**, and the generated answer below carries
-its own. The file used to be titled *"Why the model does not have an edge"* over
-figures that were typed by hand under a line claiming they were not; a title
-that states the conclusion is a title that outlives the measurement.
-
-Read `docs/what_we_can_and_cannot_claim.md` first. This says what the evidence
-*is*; that says how to read it.
-
-<!-- BEGIN GENERATED: why_the_model -->
+# Why the model does not have a demonstrated edge
 
 Every figure below is read from a record on disk by `scripts/run_why_the_model.py`, never typed. The records, and the moment each stamped itself with:
 
@@ -124,17 +105,3 @@ The held-out test is 2024 (held out), discovered on 2021-2023 and declared in ad
 - **The half-point decomposition was refused, not computed.** The ticket-margin reconstruction agreed with the recorded outcome on 98,660 of 116,891 settled bets (84.4%), below the bar this repository set for using it, so how much of any spread or total figure is half a point at a key number is still open.
 - **9 of 32 cells are below the 200-bet floor declared in advance** and carry a phrase rather than a number: `total_points_h1 / high_major` (184 bets), `moneyline_h1 / mid_major` (184 bets), `alternate_team_total / mid_major` (91 bets), `moneyline_h1 / low_major` (82 bets), `moneyline_h1 / high_major` (54 bets), `alternate_team_total / low_major` (11 bets), `spread / unplaced` (3 bets), `total_points / unplaced` (2 bets), `moneyline / unplaced` (1 bet). A market in that list is not a market judged to have no value; it is a market with no price-based evidence either way.
 - **Nothing here is a forward result.** Every number above is a historical backtest, bet into prices somebody has already seen resolve. The forward ledger is untouched by all of it and is the only evidence that can still grow.
-
-<!-- END GENERATED -->
-
-## Why there is nothing below this line
-
-Every figure about this model lives inside the generated block above, including
-the retraction of a claim an earlier version of this document made. There used
-to be a hand-written note here headed *the figures in this section are
-historical* which then hand-typed the tier's **current** return and corrected
-interval underneath it, so a re-measurement moved the table above and left the
-paragraph below saying what the tier used to read. That note is now rendered
-from the record like everything else, and
-`tests/test_why_the_model.py::test_no_figure_is_typed_outside_the_generated_fence`
-keeps this page free of typed figures.

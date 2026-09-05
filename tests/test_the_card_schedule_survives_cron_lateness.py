@@ -20,13 +20,16 @@ from zoneinfo import ZoneInfo
 
 from cbb_betting_lab.config import RAW_DIR
 from cbb_betting_lab.schedule_contract import (
+    CRON_MINUTE,
     EDT_OFFSET_H,
     EST_OFFSET_H,
     EVENING,
     MORNING,
     OBSERVED_LATENESS_H,
+    SEASON_CRON_MONTHS,
     SLOTS,
     CardSlot,
+    cron_expressions,
     eastern_offset_h,
     landing_et,
     slot_for,
@@ -177,3 +180,109 @@ def test_the_evening_slot_still_earns_its_cron():
         f"{evening.must_precede_et_hour}:00 ET. If that has fallen this far, "
         "the evening slot is no longer earning its cron."
     )
+
+
+# --------------------------------------------------------------------------
+# The crons in the workflow, pinned to the contract that reasons about them
+#
+# `docs/card_cadence.md` said, of the schedule table it prints: *"The test pins
+# the sign on those two instants and the gap as written, so the day the crons
+# move or the lateness changes, the record changes with them or the build goes
+# red."* Half of that was true. The lateness constant was pinned and the DST
+# instants were pinned; **the cron strings in the workflow were pinned to
+# nothing.** Every test in this file above computed its table from
+# `schedule_contract` and none of them had ever read
+# `.github/workflows/cbb-gameday-refresh.yml`, so a cron moved in the workflow
+# left the module, the document and this file all agreeing with each other
+# about a schedule the repository no longer ran.
+#
+# That is the worst shape a schedule check can have: the arithmetic stays
+# correct, the prose stays confident, and the thing being described has moved.
+# --------------------------------------------------------------------------
+
+GAMEDAY_WORKFLOW = (
+    Path(__file__).resolve().parents[1]
+    / ".github"
+    / "workflows"
+    / "cbb-gameday-refresh.yml"
+)
+
+
+def workflow_crons() -> list[str]:
+    """`on.schedule` from the gameday workflow, parsed rather than grepped.
+
+    `on` is the YAML 1.1 boolean `True` once loaded, which is why it is looked
+    up under both spellings: a regex over the text would also match the four
+    cron strings quoted in this file's own comments and in the workflow's
+    header prose, and would then pass while the real `on.schedule` said
+    something else.
+    """
+    import yaml
+
+    document = yaml.safe_load(GAMEDAY_WORKFLOW.read_text(encoding="utf-8"))
+    triggers = document.get("on", document.get(True))
+    assert isinstance(triggers, dict), (
+        f"{GAMEDAY_WORKFLOW.name} declares no `on:` mapping, so it has no "
+        "schedule to pin."
+    )
+    schedule = triggers.get("schedule")
+    assert isinstance(schedule, list) and schedule, (
+        f"{GAMEDAY_WORKFLOW.name} declares no `on.schedule`. The card is a "
+        "scheduled job; a workflow that only runs on dispatch freezes no "
+        "opinion on a day nobody is watching."
+    )
+    return [str(entry["cron"]) for entry in schedule]
+
+
+def test_the_gameday_workflow_crons_are_exactly_the_ones_the_contract_declares():
+    """The pin `docs/card_cadence.md` said existed.
+
+    Equality in both directions. A cron the contract does not declare is a card
+    fired at a time nothing in this file has checked against the lateness; a
+    cron the contract declares and the workflow has dropped is the quieter
+    failure, because a workflow missing its backup trigger looks exactly like a
+    healthy one until the primary is skipped.
+    """
+    assert workflow_crons() == list(cron_expressions()), (
+        f"{GAMEDAY_WORKFLOW.name}'s `on.schedule` is not what "
+        "`schedule_contract.cron_expressions()` declares.\n"
+        f"  workflow: {workflow_crons()}\n"
+        f"  contract: {list(cron_expressions())}\n"
+        "Move the trigger in `schedule_contract` and let the workflow follow, "
+        "so the arithmetic in this file is about the schedule that actually "
+        "runs. Do not edit one of the two to match the other."
+    )
+
+
+def test_every_declared_cron_is_a_trigger_of_a_slot_that_survives_the_lateness():
+    """Each cron string is decomposed back to its hour and put through the same
+    lateness arithmetic the rest of this file uses, so the pin above cannot be
+    satisfied by a contract that declares a time no slot could survive."""
+    hours_by_slot = {
+        slot.name: sorted(slot.cron_hours_utc) for slot in SLOTS
+    }
+    declared = []
+    for expression in cron_expressions():
+        minute, hour, day_of_month, months, day_of_week = expression.split()
+        assert (minute, day_of_month, day_of_week) == (str(CRON_MINUTE), "*", "*"), (
+            f"{expression!r} is not the shape this schedule reasons about: "
+            "every day of every declared month, on the hour."
+        )
+        assert months == SEASON_CRON_MONTHS, (
+            f"{expression!r} runs in months {months}, not the season "
+            f"{SEASON_CRON_MONTHS}."
+        )
+        declared.append(int(hour))
+
+    assert sorted(declared) == sorted(
+        hour for hours in hours_by_slot.values() for hour in hours
+    )
+    for slot in SLOTS:
+        assert slot.holds(EST_OFFSET_H), (
+            f"Slot {slot.name!r} declares crons at {slot.cron_hours_utc} UTC. "
+            f"At the {OBSERVED_LATENESS_H}h worst lateness observed its backup "
+            f"lands {slot.backup_worst_case_landing_et(EST_OFFSET_H):.2f}:00 "
+            f"ET, at or after the {slot.must_precede_et_hour}:00 ET block it "
+            "exists to precede. Move the cron earlier — do not lower the "
+            "lateness constant."
+        )

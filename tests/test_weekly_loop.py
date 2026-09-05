@@ -170,7 +170,7 @@ def with_siblings(lab: dict) -> dict:
     written up front is stale by exactly the amount the loop is checking for,
     which is the check working rather than a nuisance.
     """
-    for name in (LOOP.REFIT_SCRIPT, LOOP.CLAIMS_SCRIPT, LOOP.SKILL_FRAME_SCRIPT, LOOP.FORECAST_SCRIPT):
+    for name in (LOOP.REFIT_SCRIPT, LOOP.CLAIMS_SCRIPT, LOOP.WHY_SCRIPT, LOOP.SKILL_FRAME_SCRIPT, LOOP.FORECAST_SCRIPT):
         stub_script(lab, name)
     # A minimal bought store, so the weekly season resolves to a season the
     # store holds rather than to nothing. The clock is not consulted: the

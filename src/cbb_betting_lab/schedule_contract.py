@@ -129,6 +129,44 @@ EVENING = CardSlot(
 SLOTS: tuple[CardSlot, ...] = (MORNING, EVENING)
 SLOT_NAMES: tuple[str, ...] = tuple(s.name for s in SLOTS)
 
+#: The cron MONTH field every card trigger carries. November to April is the
+#: Division I season: the 2026-27 opener is 2026-11-01 and the championship is
+#: in early April. A card run outside it would fetch an empty board, and an
+#: empty board between April and November is an observation rather than a
+#: fault — but it is an observation the line-movement capture is already
+#: making, four times a day, for six credits.
+#:
+#: It lives here rather than in the workflow alone because
+#: `docs/card_cadence.md` claimed the tests pinned the workflow's cron strings
+#: to this module and **nothing did**. Only the hours were here, and a month
+#: field is half of what a cron says about when a card fires.
+SEASON_CRON_MONTHS = "11,12,1,2,3,4"
+
+#: Minute-of-the-hour for every card trigger. On the hour, and the lateness
+#: arithmetic is done in whole hours because GitHub's own lateness is measured
+#: in hours: a cron at :30 would buy thirty minutes against a delay of five
+#: hours and read as precision this schedule does not have.
+CRON_MINUTE = 0
+
+
+def cron_expressions() -> tuple[str, ...]:
+    """Every cron string the gameday workflow must declare, in slot order.
+
+    Derived from :data:`SLOTS`, so moving a trigger is a one-line change here
+    that turns the build red until the workflow follows.
+    `tests/test_the_card_schedule_survives_cron_lateness.py` compares this
+    against the `on.schedule` of `.github/workflows/cbb-gameday-refresh.yml`
+    and fails on any difference in either direction — a cron the contract does
+    not declare, and a cron the contract declares that the workflow has
+    dropped. The second is the quieter failure: a workflow missing its backup
+    trigger looks exactly like a healthy one until the primary is skipped.
+    """
+    return tuple(
+        f"{CRON_MINUTE} {hour} * {SEASON_CRON_MONTHS} *"
+        for slot in SLOTS
+        for hour in sorted(slot.cron_hours_utc)
+    )
+
 
 def slot_for(name: str) -> CardSlot:
     for slot in SLOTS:
