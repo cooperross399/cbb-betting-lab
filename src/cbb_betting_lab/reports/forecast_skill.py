@@ -2553,9 +2553,9 @@ def _excluded_lines(excluded: Mapping) -> list[str]:
     paragraphs: list[str] = []
     if not excluded.get("reconciles"):
         paragraphs.append(
-            "**The frame-builder's census does not reconcile** — its paired "
-            "and unpairable counts do not add up to the wagers it was handed, "
-            "so nothing in this subsection can be read as complete."
+            "**The frame-builder's census does not reconcile** — its own "
+            "terms do not add up to the wagers it was handed, so nothing in "
+            "this subsection can be read as complete."
         )
     if not rows:
         paragraphs.append(

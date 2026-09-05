@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import runpy
 import sys
+import types
 from pathlib import Path
 
 import pandas as pd
@@ -22,6 +23,64 @@ def _module():
 
 def _load():
     return _module()["build"]
+
+
+def _namespace() -> dict:
+    """The script's own globals — the dict its functions actually close over.
+
+    `runpy.run_path` hands back a **copy**, so assigning into what it returns
+    does not reach `main`. A test that has to drive `main` past a census that
+    does not reconcile needs the real namespace: the three census terms are
+    disjoint and exhaustive over the graded rows, so no pair of input files can
+    produce a census that fails to add up, and the refusal branch would
+    otherwise be unreachable from the outside and unprotected — which is
+    exactly how it survived every test in the suite.
+    """
+    module = types.ModuleType("build_skill_frame_under_test")
+    module.__file__ = str(SCRIPT)
+    # Registered before the exec, not for tidiness: `@dataclass` resolves its
+    # annotations through `sys.modules[cls.__module__]`, and an unregistered
+    # namespace makes the decorator raise while defining `UnpairableCensus`.
+    sys.modules[module.__name__] = module
+    exec(compile(SCRIPT.read_text(encoding="utf-8"), str(SCRIPT), "exec"), module.__dict__)
+    return module.__dict__
+
+
+def _three() -> pd.DataFrame:
+    """One row that pairs, one whose complement is missing, one with no pair key.
+
+    The three census terms in one frame, which is what makes `paired` visibly
+    not `supplied - unpairable`.
+    """
+    return pd.DataFrame({
+        "event_id": ["e1", "e2", "e3"],
+        "slate_date": ["2024-01-13"] * 3,
+        "market": ["total_points"] * 3,
+        "segment": ["game"] * 3,
+        "selection": ["over", "under", "yes"],
+        "line": [140.5, 150.5, 160.5],
+        "american_odds": [-110, -105, 120],
+        "tier": ["mid_major", "high_major", "low_major"],
+        "book": ["fanduel"] * 3,
+        "model_probability": [0.55, 0.53, 0.51],
+        "outcome": ["won", "lost", "won"],
+        FS.SELECTED_COLUMN: [True, False, False],
+    })
+
+
+def _store_for_three() -> pd.DataFrame:
+    """e1 has both sides; e2's `over` is absent; e3 is not a wager `pair_key` keys."""
+    frame = pd.DataFrame([
+        {"event_id": "e1", "market": "total_points", "segment": "game",
+         "selection": "over", "line": 140.5, "book": "fanduel", "american_odds": -110},
+        {"event_id": "e1", "market": "total_points", "segment": "game",
+         "selection": "under", "line": 140.5, "book": "fanduel", "american_odds": -110},
+        {"event_id": "e2", "market": "total_points", "segment": "game",
+         "selection": "under", "line": 150.5, "book": "fanduel", "american_odds": -105},
+    ])
+    frame["player"] = ""
+    frame["snapshot_phase"] = "card"
+    return frame
 
 
 def _graded(n: int = 2) -> pd.DataFrame:
@@ -200,7 +259,11 @@ def test_the_census_numbers_add_up_to_the_rows_supplied():
     for store, expected in ((whole, 0), (partial, 1)):
         frame, census = build(graded, store)
         assert census.unpairable == expected
-        assert census.paired + census.unpairable == census.supplied == len(graded)
+        assert (
+            census.paired + census.unpairable + census.no_pair_key
+            == census.supplied
+            == len(graded)
+        )
         assert census.accounted == census.supplied
         assert census.reconciles is True
         # The frame's scorable rows are exactly the paired ones, so the census
@@ -217,10 +280,11 @@ def test_a_selection_with_no_complement_at_all_is_kept_and_counted_apart():
     A selection outside `FS.COMPLEMENT` has no other side to look for, so it is
     not evidence that a book hung one side only. Folding it into the unpairable
     count would inflate the number the refusal threshold is read against and
-    blame books for a vocabulary gap. It stays in the frame and
-    `forecast_skill.DevigCensus` counts it under `unknown_selection`, which is
-    where a reader already looks; this census records it apart and keeps the
-    identity over the two buckets that are its own.
+    blame books for a vocabulary gap. Folding it into `paired` — which this
+    script did until 2026-09-05 — is the opposite error and just as wrong: a
+    row with no pair key did not pair, it never went looking. So it is its own
+    term. It stays in the frame, and `forecast_skill.DevigCensus` counts it
+    under `unknown_selection`, which is where a reader already looks.
     """
     build = _load()
     graded = _graded()
@@ -237,7 +301,9 @@ def test_a_selection_with_no_complement_at_all_is_kept_and_counted_apart():
     frame, census = build(graded, store)
     assert census.no_pair_key == 1
     assert census.unpairable == 0, "a keyless selection is not a one-sided quote"
-    assert census.paired == 2 and census.supplied == 2 and census.reconciles is True
+    assert census.paired == 1, "a row with no pair key was counted as having paired"
+    assert census.supplied == 2 and census.reconciles is True
+    assert census.accounted == 2
     assert census.refuses is False
     assert set(frame["event_id"]) == {"e1", "e2"}, "the keyless row was dropped"
 
@@ -279,7 +345,7 @@ def test_an_unpairable_share_above_the_threshold_still_refuses(tmp_path, capsys)
     assert f"{module['MAX_UNPAIRABLE_SHARE']:.6%}" in captured.err
     assert "broken join" in captured.err
     # And the census was printed before the refusal, so a reader can see where.
-    assert "Unpairable census — supplied = paired + unpairable" in captured.out
+    assert "Unpairable census — supplied = paired + unpairable + no_pair_key" in captured.out
     assert "total_points" in captured.out and "fanduel" in captured.out
 
 
@@ -337,7 +403,7 @@ def test_a_handful_of_unpairable_rows_is_excluded_counted_and_the_frame_is_writt
     assert record["rows"] and record["rows"][0]["event_id"] == orphan["event_id"]
     assert record["reason"]
 
-    assert "Unpairable census — supplied = paired + unpairable" in out
+    assert "Unpairable census — supplied = paired + unpairable + no_pair_key" in out
     assert f"graded rows supplied  {len(graded):,}" in out
     assert f"unpairable            {1:,}" in out
     assert "reconciles            yes" in out
@@ -392,3 +458,345 @@ def test_a_complete_flagged_frame_is_written_with_both_populations_counted(tmp_p
     assert len(written) == 2 * len(graded)
     assert int(FS.selected_mask(written).sum()) == 1
     assert "2 settled opinion(s), of which 1 are the threshold-selected bets" in out
+
+
+def test_every_census_term_is_counted_off_the_frame_and_none_is_a_residual():
+    """`paired` is the rows that found a complement, not what is left over.
+
+    Until 2026-09-05 `build` set `paired = len(graded) - len(excluded)`, so
+    `supplied = paired + unpairable` held for any two frames whatever and could
+    never have detected the loss it exists to detect — the same defect this lab
+    had just fixed in `OpinionAccounting.count_from`, arriving here by copying
+    the shape of that identity instead of its rule.
+
+    One frame makes the difference visible: three rows, one that pairs, one
+    whose complement is missing, one with no pair key. The residual would call
+    two of them paired. Only one of them found a complement.
+    """
+    build = _load()
+    graded = _three()
+    frame, census = build(graded, _store_for_three())
+
+    assert census.supplied == 3
+    assert census.paired == 1
+    assert census.unpairable == 1
+    assert census.no_pair_key == 1
+    assert census.accounted == 3
+    assert census.reconciles is True
+    # The residual would have said 2, and this is the whole point of the fix.
+    assert census.paired != census.supplied - census.unpairable
+    # Each term names the row a reader can go and look at.
+    assert census.rows[0]["event_id"] == "e2"
+    assert census.by_tier == {"high_major": 1}
+    # e2 is gone; the keyless row is kept, because a vocabulary gap is not a
+    # book hanging one side.
+    scorable = frame[frame["outcome"] != ""]
+    assert sorted(scorable["event_id"]) == ["e1", "e3"]
+    assert len(scorable) == census.paired + census.no_pair_key
+
+
+def test_a_row_that_reached_no_bucket_makes_the_identity_fail_rather_than_absorb():
+    """Empty each term by one in turn. The identity must notice all three.
+
+    This is the test the residual arithmetic could not have: with `paired`
+    derived, a row lost anywhere moved into `paired` and the sum stayed put.
+    Asserted on the census itself, because `build`'s three predicates are
+    exhaustive over its own input by construction and cannot produce the
+    failure — the class is what carries the identity, and the class is what a
+    later caller could set wrongly.
+    """
+    census_class = _module()["UnpairableCensus"]
+    whole = census_class(
+        supplied=10, paired=6, unpairable=3, no_pair_key=1, complements=6, paired_wagers=6
+    )
+    assert whole.accounted == 10
+    assert whole.reconciles is True
+
+    for term in ("paired", "unpairable", "no_pair_key"):
+        short = census_class(
+            supplied=10, paired=6, unpairable=3, no_pair_key=1,
+            complements=6, paired_wagers=6,
+        )
+        setattr(short, term, getattr(short, term) - 1)
+        assert short.accounted == 9
+        assert short.reconciles is False, f"a row lost from `{term}` was absorbed"
+    # And a row counted twice fails just as loudly as a row lost.
+    doubled = census_class(
+        supplied=10, paired=7, unpairable=3, no_pair_key=1, complements=7, paired_wagers=7
+    )
+    assert doubled.reconciles is False
+
+
+def test_a_wager_quoted_two_complements_fails_the_identity_though_the_terms_add_up():
+    """The one comparison in `reconciles` that a mis-bucketing cannot hide from.
+
+    `accounted == supplied` is blind to anything that moves a row between
+    buckets, because the sum does not move. The second comparison is not a
+    rearrangement of the same count: the complement rows the frame actually
+    carries, against the distinct wagers the paired rows asked for. A wager
+    that contributed two complement rows has had its hold counted twice in the
+    de-vig, and the terms above it still add up perfectly.
+    """
+    census_class = _module()["UnpairableCensus"]
+    doubled = census_class(
+        supplied=2, paired=2, unpairable=0, no_pair_key=0, complements=3, paired_wagers=2
+    )
+    assert doubled.accounted == doubled.supplied, "the identity itself is satisfied"
+    assert doubled.reconciles is False, "a doubled complement went unnoticed"
+
+    missing = census_class(
+        supplied=2, paired=2, unpairable=0, no_pair_key=0, complements=1, paired_wagers=2
+    )
+    assert missing.accounted == missing.supplied
+    assert missing.reconciles is False, "a paired wager with no complement went unnoticed"
+
+    # `-1` is "no frame was built", not "zero complements": the cross-check is
+    # not made rather than made and failed.
+    unbuilt = census_class(supplied=2, paired=2, unpairable=0, no_pair_key=0)
+    assert unbuilt.complements == -1 and unbuilt.paired_wagers == -1
+    assert unbuilt.reconciles is True
+
+
+def test_the_frame_carries_one_complement_per_paired_wager_and_the_census_counts_both():
+    """Both sides of the cross-check are read off something real.
+
+    `complements` is the complement block in the returned frame; `paired_wagers`
+    is the distinct wagers the paired rows asked for. They are compared to each
+    other and never to `paired`, because two graded rows that are the same quote
+    filed twice both pair and both want the one complement.
+    """
+    build = _load()
+    graded = _graded()
+    frame, census = build(graded, _store_with_complements(graded))
+    complement_rows = frame[frame["outcome"] == ""]
+    assert census.complements == len(complement_rows) == 2
+    assert census.paired_wagers == 2
+    assert len(frame) == census.paired + census.no_pair_key + census.complements
+    assert census.reconciles is True
+
+    # The same quote filed twice: two paired rows, one wager, one complement —
+    # so comparing `complements` to `paired` would fail on a frame that is fine.
+    twice = pd.concat([graded.head(1), graded.head(1)], ignore_index=True)
+    frame2, census2 = build(twice, _store_with_complements(graded))
+    assert census2.paired == 2
+    assert census2.paired_wagers == 1
+    assert census2.complements == 1
+    assert census2.reconciles is True
+    assert len(frame2) == census2.paired + census2.no_pair_key + census2.complements
+
+    # And on the three-row frame the complement block is the paired row's alone.
+    frame3, census3 = build(_three(), _store_for_three())
+    assert census3.complements == census3.paired_wagers == 1
+    assert census3.complements == len(frame3[frame3["outcome"] == ""])
+
+
+def test_moving_one_row_between_buckets_is_what_the_identity_cannot_see():
+    """State the blindness rather than imply a coverage the arithmetic lacks.
+
+    The three predicates are disjoint and exhaustive, so a row put in the wrong
+    bucket moves a count from one term to another and the sum is unchanged. The
+    identity cannot see that, and the class docstring says so. What does move
+    is `share` — the number the refusal threshold is read against — so a
+    mis-bucketing that inflates `unpairable` is caught by the refusal instead,
+    and one that deflates it is caught by nothing here and only by the tests.
+    """
+    census_class = _module()["UnpairableCensus"]
+    true_census = census_class(
+        supplied=10_000, paired=9_999, unpairable=1, no_pair_key=0,
+        complements=9_999, paired_wagers=9_999,
+    )
+    mis_bucketed = census_class(
+        supplied=10_000, paired=9_998, unpairable=2, no_pair_key=0,
+        complements=9_999, paired_wagers=9_999,
+    )
+    assert true_census.reconciles is True
+    assert mis_bucketed.reconciles is True, "the identity is blind here, by construction"
+    assert mis_bucketed.accounted == true_census.accounted == 10_000
+    assert mis_bucketed.share > true_census.share
+    assert mis_bucketed.share == 2 / 10_000
+
+
+def test_the_refusal_threshold_is_pinned_to_the_number_its_comment_argues_for():
+    """Changing this constant must be a deliberate, visible act.
+
+    The suite otherwise constrains it only to a band — one fixture sits below
+    it, another above — so it could be moved by a factor of five thousand
+    without a single test failing, and the comment arguing for 0.01% would
+    quietly stop describing the code. The two claims that comment makes about
+    the real 566,377-row export are pinned beside it.
+    """
+    module = _module()
+    threshold = module["MAX_UNPAIRABLE_SHARE"]
+    assert threshold == 0.0001, (
+        "MAX_UNPAIRABLE_SHARE is pinned. Changing it changes which broken joins "
+        "this script writes through; change the comment's argument with it."
+    )
+    assert module["UNPAIRABLE_ROWS_NAMED"] == 25
+    # Above the observed quirk with room: 2 unpairable rows in 566,377.
+    assert threshold > 2 / 566_377
+    assert threshold / (2 / 566_377) > 28
+    # Below the narrowest join-shaped break the export can express — the loss
+    # of its smallest single book, 119 rows — which therefore still refuses.
+    assert threshold < 119 / 566_377
+    assert threshold < 292 / 566_377  # and its smallest single market
+
+
+def test_an_unpairable_row_whose_book_is_missing_is_still_counted_in_the_tally():
+    """A breakdown that drops rows stops describing the census it sits under.
+
+    `value_counts` drops the missing value, so `_tally` has to put a cell that
+    is not there under a key of its own. This was reported as dead code on the
+    grounds that `astype(str)` has already spelt NaN `"nan"` — true through
+    pandas 2, false on the 3.0.5 this lab runs, where the cast leaves a missing
+    value missing. So the test is on the property rather than on either
+    mechanism: whatever pandas does with the cast, the tallies total
+    `unpairable` and the row is filed under a name a reader can see.
+    """
+    build = _load()
+    graded = _graded()
+    graded.loc[1, "book"] = float("nan")  # no book recorded on the second row
+    store = pd.DataFrame([
+        {"event_id": "e1", "market": "total_points", "segment": "game",
+         "selection": "over", "line": 140.5, "book": "fanduel", "american_odds": -110},
+        {"event_id": "e1", "market": "total_points", "segment": "game",
+         "selection": "under", "line": 140.5, "book": "fanduel", "american_odds": -110},
+    ])
+    store["player"] = ""
+    store["snapshot_phase"] = "card"
+
+    _, census = build(graded, store)
+    assert census.unpairable == 1
+    assert sum(census.by_book.values()) == census.unpairable, "the row left the tally"
+    assert sum(census.by_market.values()) == census.unpairable
+    assert sum(census.by_tier.values()) == census.unpairable
+    label = _module()["MISSING_LABEL"]
+    assert list(census.by_book) == [label]
+    assert label.strip(), "a missing book must be named, not left blank"
+    assert census.to_json()["by_book"] == {label: 1}
+
+
+def test_main_refuses_a_census_that_does_not_reconcile_and_writes_nothing(tmp_path, capsys):
+    """The refusal branch, exercised — it survived every test in the suite before.
+
+    Nothing a caller can put in the two input files makes the identity fail:
+    `build`'s three predicates are disjoint and exhaustive over its own input,
+    which is exactly why the branch was unreachable from the outside and
+    deleting it whole broke no test. So the census is damaged here instead,
+    once for each comparison the script makes of it — the identity, the
+    complement block, and the rows `main` itself read from the file — and the
+    script must exit non-zero with nothing written every time. The third is the
+    one that reaches what the arithmetic inside `build` cannot: a row lost
+    before the bucketing leaves three terms that still add up to each other.
+    """
+    from cbb_betting_lab.competitions import CBB
+    from cbb_betting_lab.providers import historical as H
+
+    graded = _graded()
+    store = _store_with_complements(graded)
+    graded.to_csv(tmp_path / "cbb_graded_bets.csv", index=False)
+    store.to_csv(H.store_path(CBB, tmp_path, H.CARD_WINDOW), index=False)
+
+    def _run(damage) -> tuple[int, str, str]:
+        ns = _namespace()
+        honest = ns["build"]
+
+        def damaged(graded_frame, store_frame):
+            frame, census = honest(graded_frame, store_frame)
+            damage(census)
+            return frame, census
+
+        ns["build"] = damaged
+        code = ns["main"](["--processed-dir", str(tmp_path)])
+        captured = capsys.readouterr()
+        return code, captured.out, captured.err
+
+    def lose_a_row(census) -> None:
+        census.paired -= 1  # a graded row that reached no bucket at all
+
+    def double_a_complement(census) -> None:
+        census.complements += 1  # one wager's hold counted twice in the de-vig
+
+    def lose_a_row_before_the_census(census) -> None:
+        census.supplied -= 1  # a row lost between the CSV and the bucketing
+        census.paired -= 1  # so the three terms still add up to each other
+
+    damages = (
+        (lose_a_row, "does not reconcile", "1 paired"),
+        (double_a_complement, "does not reconcile", "3 complement"),
+        (lose_a_row_before_the_census, "were read from", "1 graded rows"),
+    )
+    for damage, message, expected in damages:
+        code, out, err = _run(damage)
+        assert code == 1, f"a census that does not reconcile was written anyway: {out}"
+        assert not (tmp_path / "cbb_skill_frame.csv").exists(), "a frame was written"
+        assert not _module()["census_path"](tmp_path / "cbb_skill_frame.csv").exists()
+        assert message in err
+        assert expected in err
+        # The census is printed before the refusal, so a reader sees the terms.
+        assert "Unpairable census — supplied = paired + unpairable + no_pair_key" in out
+
+
+def test_the_written_frame_and_the_printed_line_agree_with_the_census(tmp_path, capsys):
+    """The summary line is read off the census, never as a difference.
+
+    `complements = len(frame) - paired` is a subtraction, and a subtraction is
+    how the identity came to reconcile by construction in the first place. The
+    line must state the census's own three terms, and the frame on disk must
+    hold exactly `paired + no_pair_key + complements` rows.
+    """
+    from cbb_betting_lab.competitions import CBB
+    from cbb_betting_lab.providers import historical as H
+
+    graded = _three()
+    store = pd.concat([_store_for_three()] * 1, ignore_index=True)
+    # Below the refusal threshold this frame is not, so keep every row pairable
+    # except the keyless one, which is not unpairable at all.
+    graded = graded[graded["event_id"] != "e2"].reset_index(drop=True)
+    graded.to_csv(tmp_path / "cbb_graded_bets.csv", index=False)
+    store.to_csv(H.store_path(CBB, tmp_path, H.CARD_WINDOW), index=False)
+
+    ns = _namespace()
+    code = ns["main"](["--processed-dir", str(tmp_path)])
+    out = capsys.readouterr().out
+    assert code == 0, out
+
+    written = pd.read_csv(tmp_path / "cbb_skill_frame.csv")
+    record = json.loads(ns["census_path"](tmp_path / "cbb_skill_frame.csv").read_text())
+    assert record["supplied"] == 2
+    assert record["paired"] == 1
+    assert record["no_pair_key"] == 1
+    assert record["unpairable"] == 0
+    assert record["accounted"] == 2
+    assert record["complements"] == record["paired_wagers"] == 1
+    assert record["reconciles"] is True
+    assert len(written) == record["paired"] + record["no_pair_key"] + record["complements"]
+    assert "3 rows = 2 scorable + 1 complement-only" in out
+    assert "no_pair_key           1" in out
+
+
+def test_one_complement_per_paired_wager_even_when_the_store_holds_it_twice():
+    """The store keeps a quote once per snapshot phase, and a doubled hold is silent.
+
+    `stores.dedupe_prices` keys on the quote **including** `snapshot_phase`, so
+    the same complement legitimately survives it twice. Both rows carry the same
+    pair key, the same book and the same selection, and both would land in the
+    frame as complements — de-vigging that wager against two copies of one side.
+    Nothing in `supplied = paired + unpairable + no_pair_key` moves when that
+    happens, which is why the census counts the complement block as well.
+    """
+    build = _load()
+    graded = _graded(1)
+    store = _store_with_complements(graded)
+    twice = store[store["selection"] == FS.COMPLEMENT[graded.loc[0, "selection"]]].copy()
+    twice["snapshot_phase"] = "open"  # the same quote, a second snapshot phase
+    store = pd.concat([store, twice], ignore_index=True)
+    assert len(store) == 3, "the fixture must offer the complement twice"
+
+    frame, census = build(graded, store)
+    assert census.paired == 1
+    assert census.paired_wagers == 1
+    assert census.complements == 1, "one wager took two complement rows into the frame"
+    assert census.reconciles is True
+    complement_rows = frame[frame["outcome"] == ""]
+    assert len(complement_rows) == 1
+    assert len(frame) == census.paired + census.no_pair_key + census.complements
