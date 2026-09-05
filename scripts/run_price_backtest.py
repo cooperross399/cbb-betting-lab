@@ -553,6 +553,7 @@ def make_price_day(
         frame = prices.copy()
         matchups = call_model(
             model,
+            "the price backtest's per-day pricer (make_price_day)",
             day=day,
             history=history,
             prices=frame,
@@ -1254,13 +1255,22 @@ def main(argv: list[str] | None = None) -> int:
 
     # ---- walk forward ------------------------------------------------------
     accounting = OpinionAccounting(offered=len(wagers))
-    priced = PB.walk_forward(
-        wagers,
-        team_games,
-        price_day=make_price_day(
-            model, competition=competition, accounting=accounting
-        ),
-    )
+    try:
+        priced = PB.walk_forward(
+            wagers,
+            team_games,
+            price_day=make_price_day(
+                model, competition=competition, accounting=accounting
+            ),
+        )
+    except ModelNotWired as exc:
+        # `resolve_model` above catches the model that is not THERE; this
+        # catches the model that is there and does not FIT — one that requires
+        # an argument this script's pricer does not build. Same exit, because
+        # it is the same fault and an operator should not have to read a
+        # traceback to learn which of the two it was.
+        print(f"::error::{exc}", file=sys.stderr)
+        return EXIT_NO_MODEL
     # Checked on the stamp rather than trusted from the code path, because the
     # code path is exactly what was wrong in the lab this guard is ported from.
     PB.assert_walk_forward(priced)

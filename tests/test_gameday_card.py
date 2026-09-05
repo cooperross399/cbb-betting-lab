@@ -1801,6 +1801,51 @@ def test_the_entry_point_passes_the_models_opinion_to_the_card(
     assert "through 2026-02-0" in out and f"through {FIXTURE_DAY}" not in out
 
 
+def test_a_model_the_card_cannot_supply_refuses_instead_of_pricing_without_it(
+    tmp_path, monkeypatch, capsys, no_network, no_credential,
+    fixture_raw_dir, fixture_processed_dir,
+):
+    """The seam refuses rather than under-supplying, and the card refuses with it.
+
+    `price_backtest.call_model` used to filter its arguments by the callee's
+    signature, so a model declaring a parameter this caller does not build was
+    called without it and never told. A player-prop model would have priced
+    every prop off an absent frame and the card would have printed the result
+    like any other day's. The model here is stood in for the shipped one
+    through the same attribute `resolve_model` reads.
+    """
+    from cbb_betting_lab.models import ratings
+
+    def matchups_for(
+        *, day, history, prices, player_games, competition=None, raw_dir=None
+    ):
+        raise AssertionError("the card called a model it could not supply")
+
+    monkeypatch.setattr(ratings, "matchups_for", matchups_for)
+    board = _board_from_the_schedule(FIXTURE_DAY)
+    staged = stage_to_disk(board, tmp_path, FIXTURE_DAY)
+    seen = _capture_run_card(monkeypatch)
+
+    status = run_script(
+        "--card-slot", "morning",
+        "--rehearsal", "--slate-date", FIXTURE_DAY,
+        "--staged-board", str(staged),
+        "--archive-dir", str(tmp_path / "archive"),
+        "--output-dir", str(tmp_path / "outputs"),
+        "--raw-dir", str(fixture_raw_dir),
+        "--processed-dir", str(fixture_processed_dir),
+    )
+    captured = capsys.readouterr()
+
+    assert status == 2
+    assert captured.out.rstrip().endswith(f"decision={GC.Decision.REFUSED.value}")
+    assert "::error::" in captured.err
+    assert "player_games" in captured.err, "the refusal must name the parameter"
+    assert "matchups_for_card" in captured.err, "and the caller that could not build it"
+    assert not seen, "the card was built from a model that was never supplied"
+    assert not (tmp_path / "outputs" / "cbb_gameday_card.md").exists()
+
+
 def test_the_entry_point_refuses_when_the_processed_tables_are_absent(
     tmp_path, monkeypatch, capsys, no_network, no_credential, fixture_raw_dir,
 ):

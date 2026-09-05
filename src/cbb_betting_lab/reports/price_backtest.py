@@ -27,6 +27,60 @@ earlier_fits_identical` is the corrupt-everything-after-a-cut test, on the
 ratings the backtest prices through. (This docstring used to cite a
 `tests/test_price_backtest.py` that never existed.)
 
+**The stamp covers every frame the pricer was allowed to see, not only the team
+history.** It used to be computed from the team games alone and written over
+whatever the pricer had put there, so a pricer that also read a player frame —
+which is exactly what a player-prop model does — could read tonight's minutes
+and tonight's points and still be stamped walk-forward, and the guard would
+pass. Any further table now goes in through ``frames=``, is cut to the day by
+:func:`history_before` exactly as the team history is, and is folded into the
+stamp; a pricer's own ``priced_through`` is kept wherever it is later than the
+caller's, because a table the pricer opened for itself is one the caller cannot
+see and the pricer's own declaration is the only evidence it existed; and a
+pricer that demands an input the caller does not hold is refused rather than
+run. `test_a_pricer_that_read_a_second_frame_cannot_stamp_itself_walk_forward`
+and its two neighbours pin all three.
+
+## Two refusals at the model seam, and why one of them is stricter
+
+The seam refuses in two places and they are about different things, which is
+why they read a signature differently.
+
+:func:`call_model` refuses **an argument the caller cannot supply**. A model
+that requires `player_games` and is called by something that does not build it
+used to be called anyway, without it, and never told — a missing input
+producing a plausible answer. A parameter carrying a default is exempt there,
+and legitimately so: a default is the model author's written statement that the
+model has a defined behaviour without the argument. `raw_dir=None` means "read
+the packaged raw directory".
+
+:func:`walk_forward` refuses **a frame the caller did not cut**, and there a
+default is *not* exempt. `player_games=None` on a pricer is not a statement
+that the pricer prices player props without player games; it is a pricer that
+plainly intends to read that table, holding a parameter nobody filled — and the
+only remaining ways to read it are around this seam, through a closure, an
+attribute or its own `read_csv`, every one of them uncut and unstamped. A
+default can declare that the *model* copes without an argument. It cannot
+declare that the *caller* cut a frame, because only the caller can do that, and
+`frames=` is how it says so. For the same reason `**kwargs` on a pricer is
+refused outright: a signature that accepts anything declares nothing, and the
+`priced_through` stamp is a statement about exactly which tables the pricer was
+allowed to see.
+
+## The check that does not read signatures at all
+
+Both refusals above read a signature, and no signature check can see a pricer
+that never declares the frame — one that closes over it, hangs it off an
+attribute, or opens the CSV itself. :func:`assert_priced_from_the_past` prices
+one day twice, the second time with every row dated on or after that day
+removed from the frames, from the objects the pricer itself holds, and from the
+files under the directory it runs in, and requires the two answers to be
+identical cell for cell. A pricer that read only the past cannot notice; a
+pricer that reached around the seam answers differently the moment the future
+is taken out from underneath it, whatever its signature said. It is the only
+guard here whose evidence is the output rather than a declaration, and its
+docstring says plainly what remains invisible to it.
+
 ## One wager is one bet, at the best price
 
 The NHL lab counted every book's quote on the same selection as an independent
@@ -103,9 +157,15 @@ result and a null result is a claim.
 
 from __future__ import annotations
 
+import contextlib
+import csv
+import functools
 import importlib
 import inspect
-from collections.abc import Callable, Sequence
+import os
+import shutil
+import tempfile
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -157,8 +217,10 @@ BET_COLUMNS: tuple[str, ...] = (
 
 #: Optional, and each one turns a section on rather than being faked when
 #: absent. `survived_to_next_capture` belongs to `reachability.py`;
-#: `priced_through` is stamped by :func:`walk_forward`; `actual` is the settled
-#: quantity and is what the half-point decomposition is checked against.
+#: `priced_through` is stamped by :func:`walk_forward` from every frame the
+#: pricer was allowed to see, and is never lowered below a stamp the pricer set
+#: for itself; `actual` is the settled quantity and is what the half-point
+#: decomposition is checked against.
 OPTIONAL_BET_COLUMNS: tuple[str, ...] = (
     "player",
     "book",
@@ -224,6 +286,16 @@ class BacktestError(RuntimeError):
 
 class WalkForwardLeak(BacktestError):
     """A bet was priced by a model that had seen the game it bet on."""
+
+
+class PricedFromTheFuture(WalkForwardLeak):
+    """A pricer's answer changed when the future was taken out from under it.
+
+    A subclass of :class:`WalkForwardLeak` because it is the same fault caught
+    by different evidence — the stamp says what the pricer was allowed to see,
+    this says what it actually used — and because every handler that already
+    stops a run on a leak should stop on this one without being told again.
+    """
 
 
 # --------------------------------------------------------------------------
@@ -366,11 +438,28 @@ DEFAULT_MODEL = "cbb_betting_lab.models.ratings:matchups_for"
 #: The keyword arguments a model may declare. It is handed the ones it names and
 #: no others, so a model that only wants the day and the history does not have
 #: to accept arguments it will not read.
+#:
+#: This is the vocabulary, not a promise: no single caller builds all of it —
+#: the price backtest's per-day pricer builds four of these five — so a model
+#: that *requires* one is wired to some callers and not others. Which is why
+#: :func:`call_model` checks against what the caller in hand actually supplies
+#: rather than against this tuple.
 MODEL_ARGUMENTS: tuple[str, ...] = ("day", "history", "prices", "competition", "raw_dir")
 
 
 class ModelNotWired(RuntimeError):
     """The named model could not be resolved. No fallback pricer exists."""
+
+
+class ModelArgumentUnsupplied(ModelNotWired):
+    """The model requires an argument the caller does not build.
+
+    A subclass of :class:`ModelNotWired` because it is the same fault seen from
+    the other end — the model and the caller are not wired to each other — and
+    because every entry point that already exits on a wiring fault should exit
+    on this one too, rather than growing a second handler that could be
+    forgotten at one of them.
+    """
 
 
 def resolve_model(spec: str = DEFAULT_MODEL) -> Callable:
@@ -421,22 +510,118 @@ def resolve_model(spec: str = DEFAULT_MODEL) -> Callable:
     return model
 
 
-def call_model(model: Callable, **arguments):
-    """Call a model with the arguments it declares, and no others.
+def model_name(model: Callable) -> str:
+    """`module.qualname` for a model, for refusals that have to name it."""
+    qualname = getattr(model, "__qualname__", None) or getattr(model, "__name__", "")
+    module = getattr(model, "__module__", "")
+    if qualname and module:
+        return f"{module}.{qualname}"
+    return qualname or repr(model)
 
-    A model that only wants the day and the history should not have to accept a
-    price frame it will never read, and a model that takes `**kwargs` gets
-    everything. Filtering here rather than at the model keeps the walk-forward
-    guarantee in one place: `history` is built by :func:`history_before` and is
-    the only view of the past anything downstream is given.
+
+def unsupplied_arguments(model: Callable, provided: Iterable[str]) -> list[str]:
+    """The parameters `model` requires that a caller offering `provided` cannot fill.
+
+    Empty means the pair is wired. A non-empty list is a wiring fault and
+    :func:`call_model` refuses on it; it is a function rather than four lines
+    inside `call_model` so a caller can be checked against a model without
+    calling it, which is the only way to assert the shipped seam still fits its
+    shipped callers without loading a season of data to run it.
+
+    **A parameter with a default is exempt, and that is a real distinction
+    rather than a hole in the check.** A default is the model author's written
+    statement that absence is acceptable and that the model has a defined
+    behaviour without the argument: `raw_dir=None` means "read the packaged raw
+    directory", `competition=CBB` means "this lab". A *required* parameter is
+    the opposite statement — the model cannot produce a number without it. The
+    signature is the one place the author makes either statement, so it is the
+    one place this reads. A model that genuinely needs a table nobody builds
+    yet says so by not defaulting it, and then this refuses instead of handing
+    it `None`.
+
+    Positional-only parameters are counted unsupplied even when the caller has
+    a value of that name: this seam calls by keyword only, so a required
+    positional-only parameter cannot be filled here by any caller.
     """
+    offered = set(provided)
+    try:
+        parameters = inspect.signature(model).parameters
+    except (TypeError, ValueError):
+        # Not introspectable — a builtin, or a C callable. Nothing can be
+        # checked and nothing can be filtered. Refusing here would refuse a
+        # model that is fine; the callee raises in its own words instead.
+        return []
+    unsupplied: list[str] = []
+    for name, parameter in parameters.items():
+        if parameter.default is not inspect.Parameter.empty:
+            continue
+        if parameter.kind in (
+            inspect.Parameter.VAR_POSITIONAL,
+            inspect.Parameter.VAR_KEYWORD,
+        ):
+            # `*args` and `**kwargs` are never required of a caller.
+            continue
+        if parameter.kind is inspect.Parameter.POSITIONAL_ONLY or name not in offered:
+            unsupplied.append(name)
+    return unsupplied
+
+
+def call_model(model: Callable, caller: str, /, **arguments):
+    """Call a model with the arguments it declares — or refuse, naming both.
+
+    Two rules, and the second one is the reason this function exists rather
+    than a bare `model(**arguments)` at each call site:
+
+    1. **An argument the model does not declare is not passed.** A model that
+       only wants the day and the history should not have to accept a price
+       frame it will never read, and a model taking `**kwargs` gets everything.
+       Filtering here rather than at the model keeps the walk-forward guarantee
+       in one place: `history` is built by :func:`history_before` and is the
+       only view of the past anything downstream is given.
+
+    2. **A parameter the model requires and the caller cannot build is a
+       refusal, not a quieter call.** Until 2026-09-05 this function filtered
+       the arguments by the callee's signature and stopped there, so a model
+       declaring `player_games` — as `models.ratings.matchups_for` does, with
+       four call sites and all four in `tests/` — was called without it and
+       never told. It would have priced the day off whatever its default was
+       and returned probabilities that looked like every other day's. That is
+       the shape this lab has spent the week removing: a missing input that
+       produces a plausible answer instead of an error.
+
+    `caller` is positional-only so it can never be shadowed by an argument the
+    model happens to name `caller`, and it has no default because a refusal
+    that cannot say whose call it was sends the reader to the wrong file.
+
+    See :func:`unsupplied_arguments` for why a parameter with a default is
+    exempt from rule 2.
+    """
+    missing = unsupplied_arguments(model, arguments)
+    if missing:
+        raise ModelArgumentUnsupplied(
+            f"{model_name(model)} requires "
+            + ", ".join(repr(name) for name in missing)
+            + f", which {caller} does not build. That caller supplies "
+            + f"{sorted(arguments)}. Nothing was priced: a model handed nothing "
+            "where it asked for a table would price from a substitute and "
+            "report the result in intervals, which is a wrong number wearing "
+            "a right number's clothes. Either build the argument at the caller "
+            "or give the parameter a default, which declares that the model "
+            "has a defined behaviour without it."
+        )
     try:
         parameters = inspect.signature(model).parameters
     except (TypeError, ValueError):
         return model(**arguments)
     if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
         return model(**arguments)
-    return model(**{k: v for k, v in arguments.items() if k in parameters})
+    passable = {
+        name
+        for name, parameter in parameters.items()
+        if parameter.kind
+        in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+    }
+    return model(**{k: v for k, v in arguments.items() if k in passable})
 
 
 def history_before(
@@ -455,6 +640,146 @@ def history_before(
     return games[games[game_day_column].astype(str) < str(day)]
 
 
+#: The keyword arguments :func:`walk_forward` always supplies to a pricer. A
+#: pricer that declares anything else is asking for a frame the caller does not
+#: know about, and the caller cannot stamp what it was never shown.
+PRICER_ARGUMENTS: tuple[str, ...] = ("day", "history", "prices")
+
+
+def latest_day(frame: pd.DataFrame | None, *, day_column: str = "slate_date") -> str:
+    """The latest day present in one frame, or `""` for a frame with no rows.
+
+    One definition, used on **every** frame a pricer is handed, because the
+    stamp has to be the latest day across all of them rather than the latest day
+    of whichever one the caller happened to name first. A blank and the string
+    `"nan"` — what a missing day looks like after a CSV round trip — are not
+    days, and a stamp that read `"nan"` would sort above every real date and
+    fail every run.
+    """
+    if frame is None or len(frame) == 0:
+        return ""
+    if day_column not in getattr(frame, "columns", ()):
+        return ""
+    days = frame[day_column].dropna().astype(str)
+    days = days[(days != "") & (days.str.strip().str.lower() != "nan")]
+    return "" if days.empty else str(days.max())
+
+
+def _stamp_series(priced: pd.DataFrame, floor: str) -> pd.Series:
+    """The pricer's own `priced_through`, never allowed to fall below `floor`.
+
+    A pricer that declares it saw further than the caller cut for it — a player
+    frame it opened itself, say — keeps its own stamp, which is the whole point:
+    the caller cannot see that frame and must not erase the only evidence that
+    it existed. A pricer that declares less than it was handed does not get to
+    lower the stamp, because the stamp describes what the pricer was *allowed*
+    to see, not what it chose to read.
+    """
+    declared = priced["priced_through"]
+    declared = declared.where(declared.notna(), "").astype(str)
+    declared = declared.mask(declared.str.strip().str.lower() == "nan", "")
+    return declared.where(declared > floor, floor)
+
+
+def _accepted(price_day: Callable, names) -> list[str]:
+    """Which of `names` the pricer actually declares.
+
+    A pricer that cannot be introspected gets everything, because there is no
+    signature to filter by. There is deliberately no `**kwargs` branch:
+    :func:`_refuse_undeclared_frames` has already refused a pricer that takes
+    `**kwargs`, so by the time this runs a signature exists and it means
+    something.
+    """
+    try:
+        parameters = inspect.signature(price_day).parameters
+    except (TypeError, ValueError):
+        return list(names)
+    return [name for name in names if name in parameters]
+
+
+def _refuse_undeclared_frames(price_day: Callable, supplied: Iterable[str]) -> None:
+    """Refuse a pricer whose signature reaches past what the caller can cut.
+
+    `walk_forward` can only cut and stamp the frames it holds. Two shapes of
+    signature reach past them, and both are refused.
+
+    **`**kwargs` is refused outright.** A signature that accepts anything
+    declares nothing. The `priced_through` stamp is a statement about exactly
+    which tables the pricer was allowed to see, and a pricer that will accept
+    any table at all has said nothing that statement could rest on. Handing it
+    whatever the caller happens to hold is not the same as knowing what it
+    reads.
+
+    **A parameter that is neither one of** :data:`PRICER_ARGUMENTS` **nor a
+    frame the caller cut is refused whether or not it carries a default.** This
+    is where this refusal is deliberately stricter than :func:`call_model`'s,
+    and the difference is the point of both:
+
+    * :func:`call_model` is about **an argument the caller cannot supply**. A
+      default there is the model author's written statement that the model has
+      a defined behaviour without it — `raw_dir=None` means "read the packaged
+      raw directory" — so absence is a case the author handled and the model
+      still computes what it says it computes.
+    * This is about **a frame the caller did not cut**. `player_games=None` is
+      not a statement that the pricer prices player props without player games;
+      no pricer does. It is a pricer that plainly intends to read that table,
+      left holding a parameter nobody filled — and the remaining ways to read
+      it all go around this seam: a closure, an attribute, its own `read_csv`.
+      Every one of those is uncut and unstamped, which is the leak `frames=`
+      exists to close. A default can declare that the *model* copes without an
+      argument. It cannot declare that the *caller* cut a frame, because only
+      the caller can do that, and `frames=` is how it says so.
+
+    Positional-only parameters are refused unconditionally: this seam calls by
+    keyword, so no caller here can ever fill one. `*args` is ignored, because a
+    keyword-only call puts nothing in it and it is therefore not a way to
+    receive a frame.
+
+    None of this can see a pricer that never declares the frame at all — the
+    closure case has no parameter to inspect, and a callable with no signature
+    is waved through here for want of anything to read.
+    :func:`assert_priced_from_the_past` is the check that reads the output
+    instead, and it is the one that covers those.
+    """
+    offered = set(supplied)
+    try:
+        parameters = inspect.signature(price_day).parameters
+    except (TypeError, ValueError):
+        return
+    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
+        raise BacktestError(
+            "The pricer takes `**kwargs`, so its signature does not say which "
+            "frames it reads, and the `priced_through` stamp is a statement "
+            "about exactly that. A signature that accepts anything declares "
+            "nothing. Declare `day`, `history`, `prices` and each frame handed "
+            "in through `frames=` by name, so the stamp describes something "
+            "the pricer actually said."
+        )
+    wanted = [
+        name
+        for name, parameter in parameters.items()
+        if parameter.kind is not inspect.Parameter.VAR_POSITIONAL
+        and (
+            parameter.kind is inspect.Parameter.POSITIONAL_ONLY
+            or name not in offered
+        )
+    ]
+    if wanted:
+        raise BacktestError(
+            "The pricer declares "
+            + ", ".join(repr(name) for name in wanted)
+            + ", which walk_forward was not given and therefore cannot cut to "
+            "the day being priced. Hand the frame in through `frames=` so it is "
+            "cut strictly before the day and covered by the `priced_through` "
+            "stamp. A frame the caller does not know about is a frame the "
+            "stamp does not describe, and a stamp that describes one of two "
+            "inputs certifies nothing. A default does not exempt it: "
+            "`player_games=None` is not a pricer that works without player "
+            "games, it is a pricer left to find them some other way, and every "
+            "other way is uncut and unstamped."
+        )
+
+
 def walk_forward(
     prices: pd.DataFrame,
     games: pd.DataFrame,
@@ -462,8 +787,10 @@ def walk_forward(
     price_day: Callable[..., pd.DataFrame | None],
     day_column: str = "slate_date",
     game_day_column: str = "slate_date",
+    frames: dict[str, pd.DataFrame] | None = None,
+    frame_day_columns: dict[str, str] | None = None,
 ) -> pd.DataFrame:
-    """Price each slate day from games **strictly earlier** than it.
+    """Price each slate day from rows **strictly earlier** than it.
 
     The pricer never receives the whole table, so it cannot accidentally fit on
     the future — which is the football lab's defect 13, where a distribution
@@ -472,26 +799,88 @@ def walk_forward(
 
     `price_day` is called once per day, in date order, with keyword arguments
     ``day``, ``history`` and ``prices``. It returns the day's priced rows or
-    nothing. Every returned row is stamped with ``priced_through``, the latest
-    game day the pricer was actually allowed to see, and that stamp is what
-    :func:`assert_walk_forward` checks — a report cannot claim to be
-    walk-forward, it has to carry the evidence.
+    nothing.
+
+    **Every frame the pricer was allowed to see is stamped, not just the team
+    history.** `frames` names any further table the pricer reads — a player-game
+    frame is the case this exists for — and each one is cut by
+    :func:`history_before` to the day being priced, handed to the pricer by its
+    name if the pricer declares it, and folded into the stamp. The stamp is the
+    latest day across `games` and every frame in `frames`, and a pricer that
+    returns a ``priced_through`` of its own keeps it wherever it is **later**
+    than that: the caller cannot see a table the pricer opened for itself, so
+    the pricer's own declaration is the only evidence such a table existed and
+    erasing it is how a guard comes to certify one of its two inputs. A pricer
+    that declares an input the caller does not hold is refused outright, by
+    :func:`_refuse_undeclared_frames` — a default does not exempt it and
+    `**kwargs` is refused on sight, for reasons that function sets out.
+
+    That stamp is what :func:`assert_walk_forward` checks — a report cannot
+    claim to be walk-forward, it has to carry the evidence. Neither the stamp
+    nor the refusal can see a pricer that reads a table it never declared;
+    :func:`assert_priced_from_the_past` is the check for that one, and it reads
+    the output rather than the signature.
     """
     require_columns(prices, (day_column, "event_id"), "the price frame")
     if not prices.empty:
         require_columns(games, (game_day_column,), "the games frame")
+    extra = dict(frames or {})
+    clash = sorted(set(extra) & set(PRICER_ARGUMENTS))
+    if clash:
+        raise BacktestError(
+            f"`frames` names {', '.join(repr(c) for c in clash)}, which is "
+            "already one of the arguments every pricer is handed. A second "
+            "frame under the same name would replace the first silently."
+        )
+    columns = {
+        name: str((frame_day_columns or {}).get(name, game_day_column))
+        for name in extra
+    }
+    if not prices.empty:
+        for name, frame in extra.items():
+            # A frame with no day column cannot be cut, and `history_before`
+            # would hand the pricer an empty one every day rather than say so.
+            # A player frame silently emptied is a player model that prices
+            # every night off nothing and looks like a model with no opinions.
+            require_columns(frame, (columns[name],), f"the {name!r} frame")
+    # Which names the pricer may declare does not depend on the day, so this is
+    # asked once, before anything is priced — including on a run with no priced
+    # days at all, where a pricer reaching for a frame nobody cut would
+    # otherwise be discovered only on the first night that had a quote.
+    _refuse_undeclared_frames(price_day, (*PRICER_ARGUMENTS, *extra))
     produced: list[pd.DataFrame] = []
     for day in sorted(str(d) for d in prices[day_column].dropna().unique()):
         history = history_before(games, day, game_day_column=game_day_column)
         day_prices = prices[prices[day_column].astype(str) == day]
-        priced = price_day(day=day, history=history, prices=day_prices)
+        cut = {
+            name: history_before(frame, day, game_day_column=columns[name])
+            for name, frame in extra.items()
+        }
+        # The three core arguments always go, which is the contract every
+        # existing pricer was written against; a named frame goes only to a
+        # pricer that declares it, and is stamped either way — a frame the
+        # pricer never read is still a day it was *allowed* to see, and a stamp
+        # that is too conservative can only be earlier than the day it bet on.
+        priced = price_day(
+            day=day,
+            history=history,
+            prices=day_prices,
+            **{name: cut[name] for name in _accepted(price_day, cut)},
+        )
         if priced is None or len(priced) == 0:
             continue
         priced = pd.DataFrame(priced).copy()
-        through = ""
-        if not history.empty:
-            through = str(history[game_day_column].astype(str).max())
-        priced["priced_through"] = through
+        through = max(
+            [latest_day(history, day_column=game_day_column)]
+            + [
+                latest_day(frame, day_column=columns[name])
+                for name, frame in cut.items()
+            ]
+        )
+        if "priced_through" in priced.columns:
+            priced["priced_through"] = _stamp_series(priced, through)
+        else:
+            priced["priced_through"] = through
         priced[day_column] = day
         unknown = set(priced["event_id"]) - set(day_prices["event_id"])
         if unknown:
@@ -527,6 +916,377 @@ def assert_walk_forward(
             "does not have an edge, it has the answer — and the football lab's "
             "compound markets looked good for exactly this reason."
         )
+
+
+# --------------------------------------------------------------------------
+# The guard that reads the output instead of the signature
+# --------------------------------------------------------------------------
+
+#: Column names a day is looked for under when nobody has said which one. Used
+#: on frames the pricer holds privately and on files on disk, neither of which
+#: come with a caller to name their day column.
+DAY_COLUMNS: tuple[str, ...] = ("slate_date", "game_date", "date")
+
+#: Never copied into the past-only run directory. Copying a `.git` or a `.venv`
+#: to prove a pricer did not read the future takes minutes and proves nothing;
+#: no pricer prices off them.
+SKIPPED_DIRECTORIES: frozenset[str] = frozenset(
+    {".git", ".hg", ".venv", "venv", "node_modules", "__pycache__",
+     ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox"}
+)
+
+
+def _past_only(frame, day: str, *, day_columns: Sequence[str]):
+    """`frame` without rows dated on or after `day`, or `None` if it is not cuttable.
+
+    `None` means "not a dated frame" — not a DataFrame at all, or one with no
+    column from `day_columns`. Such a thing is left exactly as it was: removing
+    rows from a table with no day would remove the wrong ones.
+    """
+    if not isinstance(frame, pd.DataFrame):
+        return None
+    for column in day_columns:
+        if column and column in frame.columns:
+            return frame[frame[column].astype(str) < str(day)]
+    return None
+
+
+def _swap_to_the_past(
+    target, *, day: str, day_columns: Sequence[str], seen: set[int] | None = None
+) -> list[Callable[[], None]]:
+    """Rebind every dated frame `target` can reach to its past-only cut.
+
+    This is what reaches the leaks a signature cannot: a pricer that closed over
+    a player frame, hung one off `self`, bound one into a `functools.partial`,
+    or reads one out of a module-level cache is holding a real object, and this
+    replaces that object with the same table minus the rows dated on or after
+    `day`. It reads no declaration — a closure cell has no name in a signature.
+
+    Returns the callables that put every original back, to be run in reverse.
+    Nothing is swapped where the cut removes no rows, so a pricer holding only
+    past data is not touched at all.
+    """
+    undo: list[Callable[[], None]] = []
+    if target is None:
+        return undo
+    seen = set() if seen is None else seen
+    if id(target) in seen:
+        return undo
+    seen.add(id(target))
+
+    def maybe(value, put: Callable[[object], None]) -> None:
+        past = _past_only(value, day, day_columns=day_columns)
+        if past is None or len(past) == len(value):
+            return
+        try:
+            put(past)
+        except (AttributeError, TypeError, ValueError):
+            return
+        undo.append(functools.partial(put, value))
+
+    for cell in getattr(target, "__closure__", None) or ():
+        try:
+            captured = cell.cell_contents
+        except ValueError:  # an empty cell, from a closure not yet filled
+            continue
+        maybe(captured, functools.partial(setattr, cell, "cell_contents"))
+
+    namespaces = [
+        getattr(target, "__globals__", None),
+        getattr(target, "__kwdefaults__", None),
+        getattr(getattr(target, "__self__", None), "__dict__", None),
+    ]
+    if isinstance(target, functools.partial):
+        namespaces.append(target.keywords)
+    if not inspect.ismodule(target):
+        namespaces.append(getattr(target, "__dict__", None))
+    for namespace in namespaces:
+        if not isinstance(namespace, dict):
+            continue
+        for name, value in list(namespace.items()):
+            maybe(value, functools.partial(namespace.__setitem__, name))
+
+    defaults = getattr(target, "__defaults__", None)
+    if isinstance(defaults, tuple) and defaults:
+        replaced = []
+        for value in defaults:
+            past = _past_only(value, day, day_columns=day_columns)
+            replaced.append(value if past is None or len(past) == len(value) else past)
+        if any(a is not b for a, b in zip(defaults, replaced)):
+            try:
+                target.__defaults__ = tuple(replaced)
+            except (AttributeError, TypeError):
+                pass
+            else:
+                undo.append(
+                    functools.partial(setattr, target, "__defaults__", defaults)
+                )
+
+    onwards = [getattr(target, "__wrapped__", None), getattr(target, "__self__", None)]
+    if isinstance(target, functools.partial):
+        onwards.append(target.func)
+    for further in onwards:
+        undo.extend(
+            _swap_to_the_past(further, day=day, day_columns=day_columns, seen=seen)
+        )
+    return undo
+
+
+def _rewrite_csv(origin: Path, destination: Path, *, day: str, day_columns) -> bool:
+    """Copy one CSV without its rows dated on or after `day`. False if it has no day.
+
+    Rewritten field by field with the `csv` module rather than through pandas,
+    because a pandas round trip changes what the pricer reads — an integer
+    column with a blank becomes floats — and a guard that alters the data it is
+    proving something about proves it about different data.
+    """
+    try:
+        with origin.open(newline="", encoding="utf-8") as handle:
+            rows = list(csv.reader(handle))
+    except (OSError, UnicodeDecodeError, csv.Error):
+        return False
+    if not rows:
+        return False
+    header = rows[0]
+    index = next((header.index(c) for c in day_columns if c in header), None)
+    if index is None:
+        return False
+    kept = [header] + [
+        row
+        for row in rows[1:]
+        if not (len(row) > index and str(row[index]).strip() >= str(day))
+    ]
+    with destination.open("w", newline="", encoding="utf-8") as handle:
+        csv.writer(handle).writerows(kept)
+    return True
+
+
+def _past_only_tree(source: Path, destination: Path, *, day: str, day_columns) -> int:
+    """Copy `source` to `destination`, CSVs stripped of rows dated `day` or later.
+
+    Everything that is not a dated CSV is copied unchanged, so a pricer finds
+    its surroundings where it left them and the only difference between the two
+    runs is the future.
+    """
+    rewritten = 0
+    for root, directories, files in os.walk(source):
+        directories[:] = sorted(d for d in directories if d not in SKIPPED_DIRECTORIES)
+        here = Path(root)
+        target = destination / here.relative_to(source)
+        target.mkdir(parents=True, exist_ok=True)
+        for name in sorted(files):
+            origin = here / name
+            if origin.suffix.lower() == ".csv" and _rewrite_csv(
+                origin, target / name, day=day, day_columns=day_columns
+            ):
+                rewritten += 1
+                continue
+            try:
+                shutil.copy2(origin, target / name)
+            except OSError:
+                continue
+    return rewritten
+
+
+@contextlib.contextmanager
+def _in_directory(where: Path) -> Iterator[None]:
+    """Run the block with `where` as the working directory, and put it back."""
+    previous = Path.cwd()
+    os.chdir(where)
+    try:
+        yield
+    finally:
+        os.chdir(previous)
+
+
+def _reading(priced) -> pd.DataFrame:
+    """One price's output as a frame with a positional index, for comparing."""
+    if priced is None:
+        return pd.DataFrame()
+    return pd.DataFrame(priced).reset_index(drop=True)
+
+
+def _same(left: pd.Series, right: pd.Series) -> pd.Series:
+    """Cell-for-cell equality with two missing values counted as the same."""
+    try:
+        equal = left.eq(right)
+    except (TypeError, ValueError):
+        equal = left.astype(str).eq(right.astype(str))
+    return equal.fillna(False).astype(bool) | (left.isna() & right.isna())
+
+
+def _differences(left: pd.DataFrame, right: pd.DataFrame, *, limit: int = 5):
+    """`(how many cells differ, a few of them in words)` — exactly, no tolerance.
+
+    No tolerance because a tolerance is a place for a leak to hide: a price
+    built from one extra game differs in the last bits and in nothing a human
+    would notice, which is precisely the leak worth catching.
+    """
+    notes: list[str] = []
+    if list(left.columns) != list(right.columns):
+        notes.append(f"columns {list(left.columns)} became {list(right.columns)}")
+    if len(left) != len(right):
+        notes.append(f"{len(left):,} row(s) became {len(right):,}")
+    shared = [column for column in left.columns if column in right.columns]
+    rows = min(len(left), len(right))
+    differing = 0
+    for column in shared:
+        here = left[column].iloc[:rows].reset_index(drop=True)
+        there = right[column].iloc[:rows].reset_index(drop=True)
+        unequal = ~_same(here, there)
+        differing += int(unequal.sum())
+        for position in list(unequal[unequal].index)[: max(0, limit - len(notes))]:
+            notes.append(
+                f"row {position} column {column!r}: "
+                f"{here.iloc[position]!r} became {there.iloc[position]!r}"
+            )
+    if notes and (list(left.columns) != list(right.columns) or len(left) != len(right)):
+        differing = max(differing, 1)
+    return differing, notes[:limit]
+
+
+def assert_priced_from_the_past(
+    price_day: Callable[..., pd.DataFrame | None],
+    *,
+    day: str,
+    frames: dict[str, pd.DataFrame],
+    prices: pd.DataFrame,
+    data_dir: Path | str | None = None,
+    day_columns: Sequence[str] = DAY_COLUMNS,
+    frame_day_columns: dict[str, str] | None = None,
+    reseed: Callable[[], None] | None = None,
+) -> None:
+    """Price `day` twice and refuse if the answer moved when the future did.
+
+    The first price is run with `frames` as given. The second is run with every
+    row dated on or after `day` removed from three places at once:
+
+    * **from every frame in `frames`**, which is what the pricer is handed;
+    * **from every dated frame the pricer itself holds** — a closure cell, an
+      attribute on `self`, a keyword bound into a `functools.partial`, a
+      DataFrame sitting in its module's globals as a cache (see
+      :func:`_swap_to_the_past`);
+    * **from every dated CSV under `data_dir`**, by copying that tree with
+      those rows stripped and running the second price with the copy as the
+      working directory, so a pricer that opens a file by a relative path opens
+      a past-only one.
+
+    Then the two results must be identical cell for cell, exactly, with no
+    tolerance.
+
+    **What this catches that a signature check cannot.** `call_model` and
+    `walk_forward` both refuse by reading a signature, and a signature is a
+    declaration. A pricer that never declares the frame — one that closes over
+    it, reads it off an attribute, or calls `read_csv` itself — declares
+    nothing to read, and both refusals wave it through. This one asks a
+    different question: not *what did you say you would read*, but *does your
+    answer depend on rows you were not allowed to see*. A pricer that read only
+    the past cannot tell the two runs apart and returns the same frame twice.
+    A pricer that reached around the seam answers differently the moment the
+    future is taken out from underneath it, whatever its signature says.
+
+    **What it still cannot catch.** A leak that does not change the answer is
+    invisible here — a pricer that reads tonight's box score and discards it, or
+    one whose use of it cancels out, produces identical output twice and passes.
+    It is invisible to the stamp and to the signature refusals too, and to any
+    other check that is not a reading of the code, because the output is the
+    only evidence this has and the output is the same. So are a pricer that
+    reads an absolute path outside `data_dir`, one that fetches over a network,
+    and one whose future rows were folded at import time into something that is
+    no longer a frame — fitted coefficients, say — and so is not swapped back.
+    This narrows the seam; it does not seal it.
+
+    **`frames` should be what the pricer is handed under** :func:`walk_forward`
+    — already cut, `"history"` included by that name. Then the second run's
+    frame deletion is a no-op and the only variable is what the pricer reached
+    for. Handing it the uncut tables instead is also meaningful, and stricter:
+    the claim becomes "this answer does not depend on any row dated on or after
+    `day`, wherever that row lives", which covers the pricer's own cutting too.
+
+    **Determinism is required, and saying so is the answer to random seeds.**
+    Two prices that differ for a reason nobody wrote down are indistinguishable
+    from the outside from two prices that differ because the future moved, so a
+    pricer that draws random numbers is not exempt — it is asked to start both
+    prices from the same state. `reseed` is where the caller says how
+    (`reseed=lambda: numpy.random.seed(0)`); it is called immediately before
+    each price. Without it a stochastic pricer fails this guard, and the
+    refusal names non-determinism as one of the two readings. `reseed` does not
+    weaken the check: a stochastic pricer that also reads the future still
+    answers differently on the second run.
+
+    `data_dir` defaults to the working directory. Point it at the data root
+    rather than a repository: the tree is copied file by file, and
+    :data:`SKIPPED_DIRECTORIES` is the only thing keeping a stray call out of
+    `.git`.
+    """
+    named = dict(frames or {})
+    _refuse_undeclared_frames(price_day, ("day", "prices", *named))
+
+    first = _reading(
+        _price_once(price_day, day=day, frames=named, prices=prices, reseed=reseed)
+    )
+
+    columns = dict(frame_day_columns or {})
+    cut: dict[str, pd.DataFrame] = {}
+    for name, frame in named.items():
+        wanted = (columns[name],) if name in columns else tuple(day_columns)
+        past = _past_only(frame, day, day_columns=wanted)
+        cut[name] = frame if past is None else past
+
+    root = Path(os.getcwd() if data_dir is None else data_dir).resolve()
+    undo = _swap_to_the_past(price_day, day=day, day_columns=day_columns)
+    try:
+        with tempfile.TemporaryDirectory(prefix="priced-from-the-past-") as holding:
+            elsewhere = Path(holding) / (root.name or "root")
+            rewritten = _past_only_tree(
+                root, elsewhere, day=day, day_columns=day_columns
+            )
+            with _in_directory(elsewhere):
+                second = _reading(
+                    _price_once(
+                        price_day, day=day, frames=cut, prices=prices, reseed=reseed
+                    )
+                )
+    finally:
+        for restore in reversed(undo):
+            restore()
+
+    differing, notes = _differences(first, second)
+    if differing:
+        raise PricedFromTheFuture(
+            f"The pricer answered differently for {day} once every row dated "
+            f"{day} or later was removed from underneath it — "
+            f"{differing:,} cell(s) moved. "
+            + ("; ".join(notes) + ". " if notes else "")
+            + f"The second price ran with {len(cut)} frame(s) cut, "
+            f"{len(undo)} frame(s) the pricer was holding privately swapped for "
+            f"their past-only cut, and {rewritten} dated CSV(s) rewritten under "
+            f"{root}. There are two readings and both are disqualifying. Either "
+            "the pricer read something it was not handed — a closure, an "
+            "attribute, a file it opened itself — in which case the price is "
+            "built on the answer and no signature check would ever have seen "
+            "it; or the pricer is not deterministic, in which case nothing it "
+            "returns can be compared to anything, including to itself. Pass "
+            "`reseed=` to rule the second one out."
+        )
+
+
+def _price_once(
+    price_day: Callable[..., pd.DataFrame | None],
+    *,
+    day: str,
+    frames: dict[str, pd.DataFrame],
+    prices: pd.DataFrame,
+    reseed: Callable[[], None] | None,
+):
+    """One call of the pricer, with the frames it declares. `day` and `prices` always."""
+    if reseed is not None:
+        reseed()
+    return price_day(
+        day=day,
+        prices=prices,
+        **{name: frames[name] for name in _accepted(price_day, frames)},
+    )
 
 
 # --------------------------------------------------------------------------

@@ -101,6 +101,7 @@ from cbb_betting_lab.providers.odds_api import (
 )
 from cbb_betting_lab.reports import card_matchups
 from cbb_betting_lab.reports import gameday_card as GC
+from cbb_betting_lab.reports import price_backtest as PB
 from cbb_betting_lab.schedule_contract import SLOT_NAMES, slot_for
 from cbb_betting_lab.staging_provider_policy import load as load_policy
 
@@ -391,7 +392,11 @@ def main(argv: list[str] | None = None) -> int:
             processed_dir=Path(args.processed_dir),
             raw_dir=Path(args.raw_dir),
         )
-    except card_matchups.InputsAbsent as exc:
+    except (card_matchups.InputsAbsent, PB.ModelNotWired) as exc:
+        # `ModelNotWired` here is the seam refusing rather than under-supplying:
+        # the model requires an argument this caller does not build, so the
+        # card refuses instead of publishing prices the model produced without
+        # an input it asked for.
         print(f"::error::{exc}", file=sys.stderr)
         print(f"decision={GC.Decision.REFUSED.value}")
         return 2

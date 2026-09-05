@@ -563,6 +563,186 @@ def test_the_default_model_resolves(tmp_path):
     module = importlib.import_module(module_name)
     assert callable(getattr(module, attribute))
 
+
+# --------------------------------------------------------------------------
+# The seam under-supplying a model, which used to be silent
+# --------------------------------------------------------------------------
+#
+# `call_model` filtered its arguments by the callee's signature: a model that
+# declared a parameter the caller did not build was called without it and never
+# told. `models.ratings.matchups_for` declares `player_games`, has four call
+# sites, and all four are in `tests/` — no production caller builds it. The
+# rule now is that a *required* parameter the caller cannot build is a refusal,
+# and a parameter with a default is exempt because the default is the author's
+# statement that absence is acceptable. Both halves are asserted below,
+# because a check that refuses everything is as useless as one that refuses
+# nothing.
+
+
+class _RequiresAPlayerFrame:
+    """A model of the shape a player-prop model would have. Never callable here."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def matchups_for(self, *, day, history, prices, competition, player_games):
+        self.calls += 1
+        return {}
+
+
+def _model_arguments_the_backtests_pricer_builds() -> dict:
+    return {
+        "day": DAYS[0],
+        "history": team_games().iloc[0:0],
+        "prices": price_store(team_games()),
+        "competition": CBB,
+    }
+
+
+def test_a_model_requiring_an_argument_the_caller_cannot_build_is_refused():
+    """The seam refuses, naming the parameter and the caller, and does not call.
+
+    Before this, the model was called with the four arguments the caller had
+    and `player_games` fell to whatever the model's default was. A player model
+    would have priced every prop off an absent frame and returned probabilities
+    indistinguishable from the ones it returns when the frame is there.
+    """
+    model = _RequiresAPlayerFrame()
+
+    with pytest.raises(PB.ModelNotWired) as raised:
+        PB.call_model(
+            model.matchups_for,
+            "the price backtest's per-day pricer (make_price_day)",
+            **_model_arguments_the_backtests_pricer_builds(),
+        )
+
+    message = str(raised.value)
+    assert "player_games" in message, message
+    assert "per-day pricer" in message, "a refusal must name whose call it was"
+    assert "['competition', 'day', 'history', 'prices']" in message, (
+        "and must say what the caller does build, so the reader knows which "
+        "side to change"
+    )
+    assert model.calls == 0, "the model was called anyway, under-supplied"
+
+
+def test_a_required_argument_is_refused_even_through_kwargs():
+    """`**kwargs` does not excuse a parameter that was named and not defaulted.
+
+    The old filter short-circuited on `**kwargs` and passed everything, which
+    is right for the arguments the caller has and says nothing about the one it
+    does not.
+    """
+    def player_model(*, day, history, prices, competition, player_games, **rest):
+        raise AssertionError("called without the frame it required")
+
+    with pytest.raises(PB.ModelNotWired) as raised:
+        PB.call_model(
+            player_model,
+            "the price backtest's per-day pricer (make_price_day)",
+            **_model_arguments_the_backtests_pricer_builds(),
+        )
+
+    assert "player_games" in str(raised.value)
+
+
+def test_a_required_positional_only_parameter_cannot_be_filled_and_is_refused():
+    """This seam calls by keyword only, so a positional-only parameter never arrives.
+
+    Its name being in the caller's vocabulary does not make it fillable, and
+    without this branch the refusal would be a bare `TypeError` from Python
+    naming neither the seam nor the caller.
+    """
+    def positional_model(day, /, *, history, prices, competition):
+        raise AssertionError("called with a parameter this seam cannot pass")
+
+    with pytest.raises(PB.ModelNotWired) as raised:
+        PB.call_model(
+            positional_model,
+            "the price backtest's per-day pricer (make_price_day)",
+            **_model_arguments_the_backtests_pricer_builds(),
+        )
+
+    assert "'day'" in str(raised.value)
+
+
+def test_a_declared_argument_with_a_default_is_exempt_and_the_model_still_runs():
+    """A default is a declaration that absence is acceptable. Honour it.
+
+    This is the half of the rule that keeps the check honest: `matchups_for`
+    defaults `raw_dir` and `competition`, the backtest's pricer builds neither
+    `raw_dir` nor `player_games`, and refusing on those would refuse every run
+    the lab makes today.
+    """
+    seen: dict = {}
+    declared_default = "the frame the model reads when nobody hands it one"
+
+    def player_model(
+        *, day, history, prices, competition, player_games=declared_default
+    ):
+        seen["player_games"] = player_games
+        return {"evt-1": "priced"}
+
+    result = PB.call_model(
+        player_model,
+        "the price backtest's per-day pricer (make_price_day)",
+        **_model_arguments_the_backtests_pricer_builds(),
+    )
+
+    assert result == {"evt-1": "priced"}
+    assert "player_games" in seen, "the model was not called"
+    assert seen["player_games"] == declared_default, (
+        "the seam filled the parameter in itself. Exempting a default means "
+        "letting the model's own default stand, not passing None on its behalf "
+        "— which is the silent under-supply this whole check exists to stop"
+    )
+
+
+def test_the_shipped_model_fits_both_of_the_callers_that_ship_with_it():
+    """`matchups_for` requires nothing either production caller fails to build.
+
+    Read off the signature rather than by running it, so this stays a cheap
+    gate on the seam rather than a second copy of the backtest. If a player
+    frame is ever made required without a caller being taught to build it,
+    this is the test that goes red before the card does.
+    """
+    from cbb_betting_lab.models.ratings import matchups_for
+
+    backtest_builds = {"day", "history", "prices", "competition"}
+    card_builds = backtest_builds | {"raw_dir"}
+
+    assert PB.unsupplied_arguments(matchups_for, backtest_builds) == []
+    assert PB.unsupplied_arguments(matchups_for, card_builds) == []
+    assert PB.unsupplied_arguments(matchups_for, {"day"}) == ["history", "prices"], (
+        "the check is reading this signature, not returning empty for everything"
+    )
+
+
+def test_the_backtest_exits_on_a_model_that_does_not_fit_rather_than_pricing(
+    tmp_path, capsys
+):
+    """End to end, through the same `--model` door an operator uses.
+
+    The unit tests above call the seam directly; this one proves the refusal
+    reaches the operator as `::error::` and a non-zero exit with nothing
+    written, rather than as a traceback or, worse, as a report.
+    """
+    lab = Lab(tmp_path).with_tables().with_store()
+    module_name = "cbb_stub_model_requires_players"
+    module = types.ModuleType(module_name)
+    module.matchups_for = _RequiresAPlayerFrame().matchups_for
+    sys.modules[module_name] = module
+
+    code = lab.run("--model", f"{module_name}:matchups_for")
+
+    assert code != 0
+    combined = "".join(capsys.readouterr())
+    assert "::error::" in combined
+    assert "player_games" in combined
+    assert "per-day pricer" in combined
+    assert not lab.report_path.exists(), "a report was written for an unwired model"
+    assert not lab.record_path.exists()
+
 def test_a_model_with_an_opinion_on_nothing_is_a_wiring_fault_until_proven_otherwise(
     tmp_path, capsys
 ):
@@ -674,6 +854,601 @@ def test_every_bet_carries_the_day_it_was_priced_through(scored):
     )
     with pytest.raises(PB.WalkForwardLeak):
         PB.assert_walk_forward(leaked)
+
+
+# --------------------------------------------------------------------------
+# The stamp describes every frame, not only the team history
+#
+# A player-prop pricer reads two tables, not one. The stamp used to be computed
+# from the team games alone and written over whatever the pricer had put there,
+# so a pricer that also read tonight's minutes and tonight's points was stamped
+# walk-forward and passed the guard. These three tests are the difference.
+# --------------------------------------------------------------------------
+
+
+def _walk_prices() -> pd.DataFrame:
+    """One quoted event on each of the three slate days."""
+    return pd.DataFrame(
+        [{"event_id": f"e{index}", "slate_date": day} for index, day in enumerate(DAYS)]
+    )
+
+
+def _walk_games(days=DAYS) -> pd.DataFrame:
+    """A team-games frame with one row on each named day."""
+    return pd.DataFrame([{"slate_date": day, "margin": 3.0} for day in days])
+
+
+def test_a_pricer_that_read_a_second_frame_cannot_stamp_itself_walk_forward():
+    """The stamp a pricer sets for itself survives, so the guard can read it.
+
+    This is the player-prop case. The caller cut the team history; the pricer
+    also read a player frame holding rows dated on the day it is pricing —
+    tonight's minutes, tonight's points — and said so in `priced_through`. The
+    stamp used to be overwritten with the team history's last day, which is
+    strictly earlier than the day being priced, so `assert_walk_forward` was
+    handed evidence about one of the pricer's two inputs and certified the run.
+    """
+    players = pd.DataFrame([{"slate_date": day} for day in DAYS])
+
+    def price_day(*, day, history, prices):
+        frame = prices.copy()
+        # The frame the caller does not know about, read whole — including the
+        # rows dated on the day being priced.
+        frame["priced_through"] = str(players["slate_date"].astype(str).max())
+        return frame
+
+    priced = PB.walk_forward(_walk_prices(), _walk_games(), price_day=price_day)
+
+    assert len(priced) == len(DAYS)
+    assert set(priced["priced_through"]) == {DAYS[-1]}, (
+        "the pricer's own stamp names the last day of the frame it read, and "
+        "the caller must not lower it to the team history's last day"
+    )
+    with pytest.raises(PB.WalkForwardLeak):
+        PB.assert_walk_forward(priced)
+
+
+def test_a_named_frame_is_cut_to_the_day_and_folded_into_the_stamp():
+    """`frames=` is the honest door: cut like the history, and stamped with it.
+
+    The team games here stop on the first day and the player frame runs a day
+    later, so a stamp computed from the team history alone would describe a day
+    on which the pricer had already been shown a player row.
+    """
+    players = pd.DataFrame(
+        [{"slate_date": day, "points": 11} for day in (DAYS[0], DAYS[1])]
+    )
+    seen: list[dict] = []
+
+    def price_day(*, day, history, prices, player_games):
+        column = "slate_date" if "slate_date" in player_games.columns else "game_date"
+        seen.append(
+            {
+                "day": day,
+                "rows": len(player_games),
+                "max": (
+                    ""
+                    if player_games.empty
+                    else str(player_games[column].astype(str).max())
+                ),
+            }
+        )
+        return prices.copy()
+
+    priced = PB.walk_forward(
+        _walk_prices(),
+        _walk_games((DAYS[0],)),
+        price_day=price_day,
+        frames={"player_games": players},
+    )
+
+    assert [call["day"] for call in seen] == sorted(DAYS)
+    for call in seen:
+        assert call["max"] < call["day"] or call["max"] == "", (
+            f"the pricer for {call['day']} was shown player rows up to "
+            f"{call['max']}, which is not strictly earlier"
+        )
+    assert [call["rows"] for call in seen] == [0, 1, 2]
+
+    stamps = dict(zip(priced["slate_date"].astype(str), priced["priced_through"]))
+    assert stamps == {DAYS[0]: "", DAYS[1]: DAYS[0], DAYS[2]: DAYS[1]}, (
+        "the stamp is the latest day across every frame the pricer was handed, "
+        "and the player frame runs a day later than the team games here"
+    )
+    PB.assert_walk_forward(priced)
+
+    # A frame whose day column is named something else is refused rather than
+    # cut to nothing. `history_before` would hand the pricer an empty player
+    # frame every night, and a player model priced off nothing looks exactly
+    # like a player model with no opinions.
+    renamed = players.rename(columns={"slate_date": "game_date"})
+    with pytest.raises(PB.BacktestError) as raised:
+        PB.walk_forward(
+            _walk_prices(),
+            _walk_games((DAYS[0],)),
+            price_day=price_day,
+            frames={"player_games": renamed},
+        )
+    assert "player_games" in str(raised.value)
+
+    seen.clear()
+    named = PB.walk_forward(
+        _walk_prices(),
+        _walk_games((DAYS[0],)),
+        price_day=price_day,
+        frames={"player_games": renamed},
+        frame_day_columns={"player_games": "game_date"},
+    )
+    assert [call["rows"] for call in seen] == [0, 1, 2]
+    assert list(named["priced_through"]) == ["", DAYS[0], DAYS[1]], (
+        "the same frame under its own day column is cut and stamped the same way"
+    )
+
+
+def test_a_pricer_that_demands_a_frame_the_caller_does_not_hold_is_refused():
+    """An input `walk_forward` was never given is one it cannot cut or stamp."""
+
+    def price_day(*, day, history, prices, player_games):
+        return prices.copy()
+
+    with pytest.raises(PB.BacktestError) as raised:
+        PB.walk_forward(_walk_prices(), _walk_games(), price_day=price_day)
+
+    assert "player_games" in str(raised.value)
+
+    # And a named frame may not take the name of an argument every pricer is
+    # already handed: the pricer would receive one of the two and the stamp
+    # would describe the other. The pricer here is a plain one rather than a
+    # `**kwargs` catch-all, because the frame rule now refuses those outright
+    # and this clash must be refused on its own terms.
+    def plain_pricer(*, day, history, prices):
+        return prices.copy()
+
+    for name in PB.PRICER_ARGUMENTS:
+        with pytest.raises(PB.BacktestError) as clash:
+            PB.walk_forward(
+                _walk_prices(),
+                _walk_games(),
+                price_day=plain_pricer,
+                frames={name: _walk_games()},
+            )
+        assert name in str(clash.value)
+
+
+def test_a_pricer_that_reads_only_the_team_history_is_stamped_as_it_always_was():
+    """The existing contract, unchanged: no stamp of its own, no `frames=`.
+
+    And a pricer cannot *lower* the stamp: the stamp describes what it was
+    allowed to see, not what it chose to read, so a blank or an earlier day
+    returned by the pricer leaves the caller's stamp standing.
+    """
+
+    def plain(*, day, history, prices):
+        return prices.copy()
+
+    priced = PB.walk_forward(_walk_prices(), _walk_games(), price_day=plain)
+    stamps = dict(zip(priced["slate_date"].astype(str), priced["priced_through"]))
+    assert stamps == {DAYS[0]: "", DAYS[1]: DAYS[0], DAYS[2]: DAYS[1]}
+    PB.assert_walk_forward(priced)
+
+    def modest(*, day, history, prices):
+        frame = prices.copy()
+        frame["priced_through"] = "" if day == DAYS[2] else "1900-01-01"
+        return frame
+
+    lowered = dict(
+        zip(
+            *[
+                PB.walk_forward(
+                    _walk_prices(), _walk_games(), price_day=modest
+                )[column].astype(str)
+                for column in ("slate_date", "priced_through")
+            ]
+        )
+    )
+    assert lowered == {
+        # Day one: the caller cut nothing, so the pricer's own declaration is
+        # the only evidence there is and it stands.
+        DAYS[0]: "1900-01-01",
+        # Days two and three: a pricer cannot talk the stamp down below the
+        # history it was handed, whether it names an earlier day or none.
+        DAYS[1]: DAYS[0],
+        DAYS[2]: DAYS[1],
+    }
+
+
+# --------------------------------------------------------------------------
+# The default/`**kwargs` bypass both refusals used to share
+#
+# Both refusals keyed on `parameter.default is inspect.Parameter.empty`, so a
+# pricer that declared the second frame WITH a default, or took `**kwargs`,
+# walked through both. For a model ARGUMENT a default is a real declaration and
+# stays exempt. For a FRAME the caller must cut it is not: `player_games=None`
+# is not a pricer that works without player games, it is a pricer left to find
+# them some other way, and every other way is uncut and unstamped.
+# --------------------------------------------------------------------------
+
+
+def test_a_defaulted_frame_does_not_get_a_pricer_past_the_frame_rule():
+    """`player_games=None` is refused, and the same pricer runs once cut."""
+
+    def defaults_the_frame(*, day, history, prices, player_games=None):
+        return prices.copy()
+
+    with pytest.raises(PB.BacktestError) as raised:
+        PB.walk_forward(
+            _walk_prices(), _walk_games(), price_day=defaults_the_frame
+        )
+
+    message = str(raised.value)
+    assert "player_games" in message
+    assert "default does not exempt it" in message, (
+        "the refusal has to say why a default is not enough here, or the next "
+        "reader adds the exemption back"
+    )
+
+    # The honest door still opens: hand the frame in and the same pricer runs,
+    # cut and stamped. A rule that refused this too would refuse every pricer.
+    players = pd.DataFrame([{"slate_date": day} for day in DAYS])
+    priced = PB.walk_forward(
+        _walk_prices(),
+        _walk_games(),
+        price_day=defaults_the_frame,
+        frames={"player_games": players},
+    )
+    assert len(priced) == len(DAYS)
+    PB.assert_walk_forward(priced)
+
+
+def test_a_pricer_that_takes_kwargs_is_refused_because_it_declares_nothing():
+    """A signature that accepts anything says nothing the stamp could rest on."""
+
+    def takes_anything(**kwargs):
+        return kwargs["prices"].copy()
+
+    with pytest.raises(PB.BacktestError) as raised:
+        PB.walk_forward(_walk_prices(), _walk_games(), price_day=takes_anything)
+    assert "**kwargs" in str(raised.value)
+
+    # Naming the three and *also* taking `**kwargs` is the same hole: the extra
+    # frame arrives through the catch-all and nothing declared it.
+    def names_three_and_takes_the_rest(*, day, history, prices, **rest):
+        return prices.copy()
+
+    with pytest.raises(PB.BacktestError) as also:
+        PB.walk_forward(
+            _walk_prices(), _walk_games(), price_day=names_three_and_takes_the_rest
+        )
+    assert "**kwargs" in str(also.value)
+
+    # A positional-only parameter is refused too, even when the caller holds a
+    # frame of that name: this seam calls by keyword and can never fill one.
+    def positional_only(player_games=None, /, *, day, history, prices):
+        return prices.copy()
+
+    with pytest.raises(PB.BacktestError) as positional:
+        PB.walk_forward(
+            _walk_prices(),
+            _walk_games(),
+            price_day=positional_only,
+            frames={"player_games": _walk_games()},
+        )
+    assert "player_games" in str(positional.value)
+
+
+def test_a_default_exempts_a_model_argument_and_never_a_frame():
+    """The two refusals side by side, because the difference is the whole point.
+
+    `call_model` is about an argument the caller cannot supply, and a default
+    there is the model author's statement that the model has a defined
+    behaviour without it. `walk_forward` is about a frame the caller did not
+    cut, and no default can make that statement, because only the caller can
+    cut a frame and `frames=` is how it says it did.
+    """
+    def model_with_a_default(*, day, history, prices, competition, player_games=None):
+        return {"evt-1": player_games}
+
+    # Exempt at the model seam: the model runs, on its own default.
+    assert PB.call_model(
+        model_with_a_default,
+        "the price backtest's per-day pricer (make_price_day)",
+        **_model_arguments_the_backtests_pricer_builds(),
+    ) == {"evt-1": None}
+
+    # Not exempt at the frame seam: the identically-defaulted parameter is a
+    # frame nobody cut, and the pricer is refused before it prices anything.
+    def pricer_with_the_same_default(*, day, history, prices, player_games=None):
+        raise AssertionError("ran with a frame nobody cut to the day")
+
+    with pytest.raises(PB.BacktestError):
+        PB.walk_forward(
+            _walk_prices(), _walk_games(), price_day=pricer_with_the_same_default
+        )
+
+    # And a model taking `**kwargs` is still fine at the model seam: it is
+    # handed everything the caller has, so nothing is silently dropped. It is
+    # only at the frame seam that a catch-all hides which tables were read.
+    def model_taking_anything(**kwargs):
+        return {"evt-1": sorted(kwargs)}
+
+    assert PB.call_model(
+        model_taking_anything,
+        "the price backtest's per-day pricer (make_price_day)",
+    ) == {"evt-1": []}
+
+
+# --------------------------------------------------------------------------
+# The proof that does not read a declaration
+#
+# Everything above reads a signature, and a signature is a declaration. A
+# pricer that closes over a frame, hangs one off an attribute, or opens the CSV
+# itself declares nothing, so no signature check can ever see it.
+# `assert_priced_from_the_past` prices the day twice — the second time with the
+# future removed from the frames, from what the pricer is holding, and from the
+# files under the run directory — and requires the same answer both times.
+# --------------------------------------------------------------------------
+
+
+def _one_days_prices(day=DAYS[1]) -> pd.DataFrame:
+    return pd.DataFrame([{"event_id": "e1", "slate_date": day}])
+
+
+def _history_through(day=DAYS[1]) -> pd.DataFrame:
+    """The team history `walk_forward` would hand a pricer on `day`."""
+    return PB.history_before(_walk_games(), day)
+
+
+def test_a_pricer_that_read_only_what_it_was_handed_prices_the_same_twice(tmp_path):
+    """The honest half. Without this the guard could refuse everything."""
+
+    def honest(*, day, history, prices):
+        frame = prices.copy()
+        frame["model_probability"] = 0.4 + 0.01 * len(history)
+        return frame
+
+    PB.assert_priced_from_the_past(
+        honest,
+        day=DAYS[1],
+        frames={"history": _history_through()},
+        prices=_one_days_prices(),
+        data_dir=tmp_path,
+    )
+
+    # The stricter reading the docstring offers: hand the **uncut** table and
+    # the claim becomes "this answer does not depend on any row dated on or
+    # after the day, wherever that row lives", which covers the pricer's own
+    # cutting too. The same pricer, handed the whole season, fails it.
+    with pytest.raises(PB.PricedFromTheFuture):
+        PB.assert_priced_from_the_past(
+            honest,
+            day=DAYS[1],
+            frames={"history": _walk_games()},
+            prices=_one_days_prices(),
+            data_dir=tmp_path,
+        )
+
+    # And a frame whose day column is not one this guesses at has to be named,
+    # or it is left whole and the guard quietly checks less than it says.
+    renamed = _walk_games().rename(columns={"slate_date": "fixture_day"})
+    with pytest.raises(PB.PricedFromTheFuture):
+        PB.assert_priced_from_the_past(
+            honest,
+            day=DAYS[1],
+            frames={"history": renamed},
+            prices=_one_days_prices(),
+            data_dir=tmp_path,
+            frame_day_columns={"history": "fixture_day"},
+        )
+
+
+def test_a_pricer_that_reads_a_frame_through_a_closure_is_caught_by_its_output(
+    tmp_path,
+):
+    """The blocker. No signature names this frame, so no signature check sees it.
+
+    The pricer declares exactly the three arguments every pricer declares and
+    passes both refusals above and the `priced_through` stamp — it never says
+    it read a player frame, so nothing overwrites or folds anything. It reads
+    tonight's points out of a closure. The only evidence is the answer, and the
+    answer moves when the future is taken out from underneath it.
+    """
+    players = pd.DataFrame(
+        [{"slate_date": day, "points": 10} for day in DAYS]
+    )
+
+    def leaks_through_a_closure(*, day, history, prices):
+        frame = prices.copy()
+        frame["model_probability"] = 0.4 + 0.001 * float(players["points"].sum())
+        return frame
+
+    # It passes the signature refusal and the stamp, which is the point.
+    priced = PB.walk_forward(
+        _walk_prices(), _walk_games(), price_day=leaks_through_a_closure
+    )
+    PB.assert_walk_forward(priced)
+
+    with pytest.raises(PB.PricedFromTheFuture) as raised:
+        PB.assert_priced_from_the_past(
+            leaks_through_a_closure,
+            day=DAYS[1],
+            frames={"history": _history_through()},
+            prices=_one_days_prices(),
+            data_dir=tmp_path,
+        )
+
+    message = str(raised.value)
+    assert "model_probability" in message, "the refusal must name what moved"
+    assert DAYS[1] in message
+    assert isinstance(raised.value, PB.WalkForwardLeak), (
+        "a handler that already stops on a leak must stop on this one"
+    )
+
+    # And the closure is put back exactly as it was: a guard that leaves the
+    # caller's data cut is a guard nobody can run twice.
+    assert len(players) == len(DAYS)
+    assert float(players["points"].sum()) == 30.0
+
+
+def test_a_pricer_that_opens_its_own_file_is_caught_and_one_that_cuts_it_is_not(
+    tmp_path, monkeypatch
+):
+    """`read_csv` is the leak a signature can never see, and the run directory
+    is how the guard reaches it.
+
+    Both pricers here open the same file. The first reads all of it; the second
+    cuts it to the day itself. The guard is about the answer, not the access,
+    so the second one passes — which is what keeps it from being a ban on
+    reading files.
+    """
+    (tmp_path / "player_games.csv").write_text(
+        "slate_date,points\n"
+        + "".join(f"{day},10\n" for day in DAYS),
+        encoding="utf-8",
+    )
+    # A reference table with no day column: copied through unchanged, so a
+    # pricer that reads one is not failed for reading a file at all.
+    (tmp_path / "tiers.csv").write_text("team_id,tier\nt1,high_major\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    def opens_the_whole_file(*, day, history, prices):
+        players = pd.read_csv("player_games.csv")
+        tiers = pd.read_csv("tiers.csv")
+        frame = prices.copy()
+        frame["model_probability"] = (
+            0.4 + 0.001 * float(players["points"].sum()) + 0.0001 * len(tiers)
+        )
+        return frame
+
+    with pytest.raises(PB.PricedFromTheFuture) as raised:
+        PB.assert_priced_from_the_past(
+            opens_the_whole_file,
+            day=DAYS[1],
+            frames={"history": _history_through()},
+            prices=_one_days_prices(),
+        )
+    assert "dated CSV" in str(raised.value)
+
+    def cuts_the_file_to_the_day(*, day, history, prices):
+        players = pd.read_csv("player_games.csv")
+        past = players[players["slate_date"].astype(str) < str(day)]
+        tiers = pd.read_csv("tiers.csv")
+        frame = prices.copy()
+        frame["model_probability"] = (
+            0.4 + 0.001 * float(past["points"].sum()) + 0.0001 * len(tiers)
+        )
+        return frame
+
+    PB.assert_priced_from_the_past(
+        cuts_the_file_to_the_day,
+        day=DAYS[1],
+        frames={"history": _history_through()},
+        prices=_one_days_prices(),
+    )
+
+    # The file on disk is untouched: the rewrite happens in a copy.
+    assert (tmp_path / "player_games.csv").read_text(encoding="utf-8").count("\n") == 4
+
+
+def test_a_stochastic_pricer_is_asked_to_seed_rather_than_waved_through(tmp_path):
+    """Determinism is required, and `reseed` is how a caller declares it.
+
+    Two prices that differ for a reason nobody wrote down cannot be told apart
+    from two prices that differ because the future moved, so the guard refuses
+    and names both readings. `reseed` restores comparability; it does not waive
+    the check, which the third pricer here proves.
+    """
+    import random
+
+    def stochastic(*, day, history, prices):
+        frame = prices.copy()
+        frame["model_probability"] = random.random()
+        return frame
+
+    with pytest.raises(PB.PricedFromTheFuture) as raised:
+        PB.assert_priced_from_the_past(
+            stochastic,
+            day=DAYS[1],
+            frames={"history": _history_through()},
+            prices=_one_days_prices(),
+            data_dir=tmp_path,
+        )
+    assert "not deterministic" in str(raised.value), (
+        "a refusal that only says 'leak' sends the reader hunting for a leak "
+        "that is not there"
+    )
+
+    PB.assert_priced_from_the_past(
+        stochastic,
+        day=DAYS[1],
+        frames={"history": _history_through()},
+        prices=_one_days_prices(),
+        data_dir=tmp_path,
+        reseed=lambda: random.seed(7),
+    )
+
+    # Seeded and still leaking: `reseed` removes the noise, not the check.
+    players = pd.DataFrame([{"slate_date": day, "points": 10} for day in DAYS])
+
+    def seeded_and_leaking(*, day, history, prices):
+        frame = prices.copy()
+        frame["model_probability"] = (
+            random.random() + 0.001 * float(players["points"].sum())
+        )
+        return frame
+
+    with pytest.raises(PB.PricedFromTheFuture):
+        PB.assert_priced_from_the_past(
+            seeded_and_leaking,
+            day=DAYS[1],
+            frames={"history": _history_through()},
+            prices=_one_days_prices(),
+            data_dir=tmp_path,
+            reseed=lambda: random.seed(7),
+        )
+
+
+def test_the_output_guard_holds_the_same_seam_contract_as_walk_forward(tmp_path):
+    """One contract, two guards: a pricer refused by one is refused by the other."""
+
+    def takes_anything(**kwargs):
+        return kwargs["prices"].copy()
+
+    with pytest.raises(PB.BacktestError) as raised:
+        PB.assert_priced_from_the_past(
+            takes_anything,
+            day=DAYS[1],
+            frames={"history": _history_through()},
+            prices=_one_days_prices(),
+            data_dir=tmp_path,
+        )
+    assert "**kwargs" in str(raised.value)
+
+
+def test_the_output_guard_cannot_see_a_leak_that_does_not_change_the_answer(tmp_path):
+    """Written down because the docstring claims it, and a claim needs a test.
+
+    This pricer reads every future row and throws them away. It is a leak by
+    any reading of the code and it is invisible to this guard, to the stamp and
+    to both signature refusals, because the output is the only evidence any of
+    them has and the output does not move. The guard narrows the seam; it does
+    not seal it, and pretending otherwise is how a guard comes to be trusted
+    past what it checks.
+    """
+    players = pd.DataFrame([{"slate_date": day, "points": 10} for day in DAYS])
+
+    def reads_the_future_and_discards_it(*, day, history, prices):
+        _ = float(players["points"].sum())  # read, and deliberately unused
+        frame = prices.copy()
+        frame["model_probability"] = 0.4 + 0.01 * len(history)
+        return frame
+
+    PB.assert_priced_from_the_past(
+        reads_the_future_and_discards_it,
+        day=DAYS[1],
+        frames={"history": _history_through()},
+        prices=_one_days_prices(),
+        data_dir=tmp_path,
+    )
 
 
 def test_the_accounting_identity_reconciles_and_is_printed(scored):
