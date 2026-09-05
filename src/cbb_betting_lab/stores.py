@@ -135,6 +135,22 @@ def dedupe_prices(frame: pd.DataFrame) -> pd.DataFrame:
             f"{PRICE_IDENTITY}. Deduplicating on the whole row is how a store "
             "silently doubles and every interval narrows by root two."
         )
+    # Two rows under one identity are one quote seen twice: a book's main line
+    # and its alternate ladder at the same point, or a literal repeat in the
+    # payload. When they carry two prices the book was offering both, and the
+    # one a bettor could take is the better one — so the survivor is the best
+    # price, not the first parsed. Row order is preserved; only the choice of
+    # which duplicate survives changes. Measured on the 2024 props segment
+    # before this existed: 296 of 504,394 identities carried two prices and
+    # keep="first" held the worse on 189 (0.04%), median 0.70 pp of implied
+    # probability.
+    frame = frame.reset_index(drop=True)
+    if "american_odds" in frame.columns:
+        by_payout = frame.assign(
+            _payout=frame["american_odds"].map(_decimal_payout)
+        ).sort_values("_payout", ascending=False, kind="mergesort", na_position="last")
+        kept = by_payout.drop_duplicates(subset=key, keep="first").index
+        return frame[frame.index.isin(kept)].reset_index(drop=True)
     return frame.drop_duplicates(subset=key, keep="first").reset_index(drop=True)
 
 
