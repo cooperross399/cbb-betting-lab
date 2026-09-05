@@ -30,8 +30,12 @@ exit 2, because `load()` turns every one of them into an allowlist of nothing
 and a gate that reports on an allowlist nobody read has checked nothing. The
 summary ends with one `POLICY GATE VERDICT:` line, built from the exit status,
 and the verdict wording is taken out of every other line before printing:
-market names and receipt notes are text from files the gate does not control,
-and a run that failed may not contain the sentence a run that passed prints.
+market names, receipt notes and the policy file's own `mode` field are text
+from files the gate does not control, and no line of a summary but that one
+spells `POLICY GATE VERDICT` in any casing or punctuation. That is the whole
+of the promise — a scrub of a known wording, not a reader of meaning. A
+paraphrase or a misspelling is not removed, and both are written down in
+`without_a_second_verdict`'s docstring with a test that holds them open.
 No condition stands between a pull request and that verdict — the job carries
 no `if:`, no `needs:` and no `strategy:`, and a check skipped by a condition
 is reported by GitHub as a success. What the gate checks about a signature is exactly this: that

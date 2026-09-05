@@ -41,17 +41,30 @@ belongs and a symlink into nothing each turn into an allowlist of nothing in
 :func:`load`, and a gate reporting on an allowlist nobody read has checked
 nothing. The job summary ends with one verdict line built from the exit
 status, with the verdict wording removed from every other line first, so a
-red run cannot contain the sentence a green run prints — market names and
-receipt notes are text from files the gate does not control. That removal
-matches the LETTERS of the wording rather than the wording, the way
+red run cannot contain the sentence a green run prints — market names,
+receipt notes and the policy file's own `mode` field are text from files the
+gate does not control, and the last of those was printed raw until
+2026-09-05, so one line of JSON wrote a newline and a `|` into the summary as
+a markdown line and a markdown column of its own. That removal matches the
+LETTERS of the wording rather than the wording, the way
 :func:`_signer_is_forbidden` refuses `C.L.A.U.D.E.`, because a literal match
-was walked past by `POLICY-GATE-VERDICT` and by a verdict carrying a `|`; what
-it still cannot see — a misspelling, a paraphrase — is written into the
+was walked past by `POLICY-GATE-VERDICT` and by a verdict carrying a `|`; it
+then repeats to a fixed point and checks its own output, because one pass in
+a fixed order rewrote `POLICY GATE: <the green sentence>` into `POLICY GATE:
+[verdict text removed]` and so wrote the marker it had been asked to remove.
+What it still cannot see — a misspelling, a paraphrase — is written into the
 scrub's own docstring and held open by a test rather than described as
-closed. The checker is also the ONLY writer of that summary: the job summary
-is a per-step file GitHub concatenates, so a sibling step could otherwise put
-a green verdict above the real one in a red run, and no step in the workflow
-may name `GITHUB_STEP_SUMMARY`. No condition stands between a pull request
+closed; neither spells the marker. The checker is also the ONLY writer of
+that summary: the job summary is a per-step file GitHub concatenates, so a
+sibling step could otherwise put a green verdict above the real one in a red
+run, and `GITHUB_STEP_SUMMARY` is a plain environment variable, so a
+job-level or workflow-level `env:` could send the checker's own verdict to a
+file nobody opens. It is named nowhere in the workflow — not in a step, not
+in a job `env:`, not in a workflow `env:`. What that rule does not reach is
+written into its own docstring: what `actions/checkout` and
+`actions/setup-python` do with the same write handle, and a `run:` block in
+the checker's own step that assembles the variable name rather than spelling
+it. No condition stands between a pull request
 and that verdict: the job carries no `if:`, no `needs:` and no `strategy:`,
 because GitHub reports a check skipped by a condition as a success. Exactly
 one job in the whole workflow corpus carries the name that publishes this

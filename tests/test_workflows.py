@@ -1630,15 +1630,26 @@ def strings_within(node: Any) -> Iterator[str]:
         yield str(node)
 
 
+def without_key(node: dict, key: str) -> dict:
+    """`node` without one key.
+
+    So that a scan of a container can exclude the children it hands to a
+    scan of their own, and the three scans below can be shown to cover the
+    whole document between them rather than merely to look thorough.
+    """
+    return {name: value for name, value in node.items() if name != key}
+
+
 def check_only_the_receipt_checker_writes_the_gates_job_summary(path: Path) -> None:
-    """The gate's job summary has exactly one author, and it is the checker.
+    """One author for the gate's job summary: the checker, writing to the
+    file GitHub gave it.
 
     `$GITHUB_STEP_SUMMARY` is a per-STEP file, and GitHub concatenates every
     step's copy into the one summary a reviewer reads. So the scrub inside
     `scripts/check_allowlist_receipts.py` — which takes the verdict wording
     out of every line it prints that is not the verdict — protects only the
     text that script writes. A sibling step in the same job appending
-    `**POLICY GATE VERDICT: green …**` to its own summary file put a green
+    `**POLICY GATE VERDICT: green ...**` to its own summary file put a green
     verdict into the summary of a RED run, above the real one, and nothing in
     the checker could see it, let alone remove it: the checker never reads
     that file. Measured, not reasoned about — the mutation in
@@ -1646,31 +1657,94 @@ def check_only_the_receipt_checker_writes_the_gates_job_summary(path: Path) -> N
     runs both blocks against a failing tree and reads the green sentence out
     of the resulting summary.
 
-    So this rule is about WHO MAY WRITE rather than about what they write:
+    WHAT THIS RULE ENFORCES, exactly, and it is the whole of the sentence
+    above that this rule is entitled to:
 
-      * no step anywhere in the file names `GITHUB_STEP_SUMMARY`, in a `run:`,
-        an `env:`, a `with:` or its own `name:` — the checker writes the
-        summary through the environment GitHub already gives it;
+      * `GITHUB_STEP_SUMMARY` is named NOWHERE in the parsed workflow — not
+        in a step's `run:`, `env:`, `with:` or `name:`, not in a JOB-level
+        `env:` or `defaults:`, and not in a WORKFLOW-level one. The three
+        scans below are a step, a job without its steps, and the workflow
+        without its jobs, which is every mapping in the file between them,
+        and a fourth scan of the whole document catches anything the first
+        three could not reach (a step that is not a mapping, a job that is
+        not a mapping) so that the coverage is a fact and not a claim;
       * the job reporting the check runs the receipt checker in exactly one
         step;
       * and every other step in that job is one of
-        `POLICY_GATE_PERMITTED_ACTIONS`. An action is somebody else's code
-        holding the same write handle, and this job needs two: check out the
-        tree, install the interpreter.
+        `POLICY_GATE_PERMITTED_ACTIONS`.
+
+    The job-level and workflow-level scans are here because the rule used to
+    read only steps, and `env:\n  GITHUB_STEP_SUMMARY: /tmp/elsewhere` at
+    either level is inherited by every step in the job — measured, it passed
+    this rule and every other rule in this file, and it does not add a writer
+    but SILENCES the one there is: the checker appends its verdict to
+    `/tmp/elsewhere`, the job summary a reviewer opens is empty, and a red
+    gate loses the only sentence that says what it found.
+
+    WHAT IT DOES NOT ENFORCE, written down here and held open by
+    `test_the_gaps_the_one_author_rule_still_has_are_the_ones_written_down`:
+
+    1. **What the two permitted actions do.** `actions/checkout` and
+       `actions/setup-python` are somebody else's code running in this job
+       with the same write handle on the same summary file. This rule pins
+       WHICH actions may run, never what they write.
+    2. **A checker step whose own shell reconstructs the variable name.**
+       This scan reads the literal `GITHUB_STEP_SUMMARY` out of the parsed
+       YAML. A `run:` block in the checker's own step that assembles that
+       name out of pieces, or reads it out of `env`, is not seen. Every
+       OTHER `run:` step is refused outright for being neither the checker
+       nor a permitted action, so this gap is one step wide.
     """
     if path.name != POLICY_GATE_WORKFLOW:
         return
     document = load(path)
-    for job_id, job in jobs_of(document).items():
-        for step in steps_of(job):
-            named = [text for text in strings_within(step) if STEP_SUMMARY_VARIABLE in text]
-            assert not named, (
-                f"{path.name}: step {step.get('name') or step.get('uses')!r} in job "
-                f"{job_id!r} names {STEP_SUMMARY_VARIABLE} ({named}). The job summary "
-                "is per-step and concatenated, so a second writer can put a green "
-                "verdict above the real one in a red run, where no scrub in the "
-                "checker can reach it. The checker is the only author."
+
+    def refuse_summary_writer(where: str, node: Any, why: str) -> None:
+        named = [text for text in strings_within(node) if STEP_SUMMARY_VARIABLE in text]
+        assert not named, (
+            f"{path.name}: {where} names {STEP_SUMMARY_VARIABLE} ({named}). {why} "
+            "The job summary is per-step and concatenated, so a second writer puts "
+            "a green verdict above the real one in a red run and a redirected one "
+            "leaves the reviewer no verdict at all — and no scrub inside the "
+            "checker can reach either. The checker is the only author, and it "
+            "writes to the file GitHub hands it."
+        )
+
+    raw_jobs = document.get("jobs") if isinstance(document, dict) else None
+    if isinstance(document, dict):
+        refuse_summary_writer(
+            "the workflow itself, outside `jobs:`",
+            without_key(document, "jobs"),
+            "A workflow-level `env:` is inherited by every step of every job, so it "
+            "redirects the checker's own write without appearing in a single step.",
+        )
+    if isinstance(raw_jobs, dict):
+        for job_id, job in raw_jobs.items():
+            if not isinstance(job, dict):
+                continue
+            refuse_summary_writer(
+                f"job {str(job_id)!r}, outside its `steps:`",
+                without_key(job, "steps"),
+                "A job-level `env:` is inherited by every step in it, so it "
+                "redirects the checker's own write without appearing in a step.",
             )
+            for step in steps_of(job):
+                refuse_summary_writer(
+                    f"step {step.get('name') or step.get('uses')!r} in job {job_id!r}",
+                    step,
+                    "A step names the variable to write it or to redirect it.",
+                )
+    # Everything the three scans above could not reach: a step that is not a
+    # mapping, a job that is not a mapping, a `jobs:` that is not a mapping.
+    # None of those is legal Actions, but "illegal YAML cannot be the vector"
+    # is exactly the kind of reasoning this file exists to replace.
+    refuse_summary_writer(
+        "somewhere in the file the step, job and workflow scans do not reach",
+        document,
+        "This is the catch-all, so the three scans above cover the document "
+        "between them as a fact rather than as a claim.",
+    )
+
     reporting = [
         (job_id, job)
         for job_id, job in jobs_of(document).items()
@@ -2743,6 +2817,14 @@ def gate_block(*lines: str) -> str:
     return mutate(f"        run: {GATE_COMMAND}\n", "        run: |\n" + body)
 
 
+def mkdir(path: Path) -> Path:
+    """`path` as a directory that exists. `workflow()` writes INTO the
+    directory it is handed and does not create it, so a test that wants two
+    mutated copies under one `tmp_path` has to make the parents itself."""
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def workflow(tmp_path: Path, text: str, name: str = TESTS_WORKFLOW) -> Path:
     path = tmp_path / name
     path.write_text(text, encoding="utf-8")
@@ -2752,6 +2834,19 @@ def workflow(tmp_path: Path, text: str, name: str = TESTS_WORKFLOW) -> Path:
 def assert_rejects(check: Callable[[Path], None], path: Path) -> None:
     with pytest.raises(AssertionError):
         check(path)
+
+
+def rejection_message(check: Callable[[Path], None], path: Path) -> str:
+    """The text of the assertion `check` fails `path` with.
+
+    A rule made of several scans, any one of which would refuse the same
+    file, has assertions no mutation can reach: delete one and a broader one
+    still catches it, so the deleted line was never load-bearing. Asking
+    WHICH scan fired makes each of them a thing a test can lose.
+    """
+    with pytest.raises(AssertionError) as raised:
+        check(path)
+    return str(raised.value)
 
 
 @pytest.mark.parametrize("rule", sorted(ALL_CHECKS), ids=sorted(ALL_CHECKS))
@@ -3999,6 +4094,7 @@ def run_policy_gate_for_real(
     event: str = "push",
     base_sha: str = "",
     blocks: tuple[str, ...] | None = None,
+    extra_env: dict[str, str] | None = None,
 ) -> tuple[subprocess.CompletedProcess[str], str]:
     """The gate's run block, verbatim, executed against `tree` with a real
     interpreter and real git. Returns the completed process and the job
@@ -4011,6 +4107,15 @@ def run_policy_gate_for_real(
     else is the one demonstrating what a second writer in the job does. The
     sequence stops at the first block that fails, and the process returned is
     the last one that ran.
+
+    `extra_env` is applied AFTER the runner-file variables, which is where a
+    job-level or workflow-level `env:` lands: GitHub composes the step's
+    environment from the workflow's, then the job's, then the step's, and the
+    runner's own `GITHUB_STEP_SUMMARY` is overridable by all three. It is how
+    `test_a_job_or_workflow_level_env_redirecting_the_job_summary_is_rejected`
+    measures what the redirect actually does before the rule refuses it. The
+    summary returned is always the file the RUNNER made — the one a reviewer
+    opens — and never the decoy.
     """
     assert HARNESS_SHELL, "no bash on PATH: the executed rules cannot run"
     binaries = tree.parent / "bin"
@@ -4029,6 +4134,7 @@ def run_policy_gate_for_real(
         target = tree.parent / name.lower()
         target.write_text("", encoding="utf-8")
         environment[name] = str(target)
+    environment.update(extra_env or {})
     completed = None
     for index, block in enumerate(blocks if blocks is not None else (policy_gate_step()["run"],)):
         script = tree / f"run_block_{index}.sh"
@@ -4359,7 +4465,13 @@ def test_the_summary_variable_is_found_outside_a_run_block(tmp_path: Path) -> No
             ),
         ),
     )
-    assert_rejects(check_only_the_receipt_checker_writes_the_gates_job_summary, mutated)
+    complained = rejection_message(
+        check_only_the_receipt_checker_writes_the_gates_job_summary, mutated
+    )
+    assert "step 'Set up Python'" in complained, (
+        "the rule refused it, but not from the STEP scan — the catch-all at the "
+        f"end would refuse it too, and then the step scan is dead: {complained!r}"
+    )
 
 
 #: Steps that are not the receipt checker and not one of the two actions this
@@ -4396,6 +4508,230 @@ def test_a_step_nobody_wrote_down_in_the_gates_job_is_rejected(
         ((POLICY_GATE_STEP_ANCHOR, POLICY_GATE_EXTRA_STEPS[extra] + POLICY_GATE_STEP_ANCHOR),),
     )
     assert_rejects(check_only_the_receipt_checker_writes_the_gates_job_summary, mutated)
+
+
+#: The two places an `env:` is inherited by every step in the gate's job
+#: without appearing in a single one of them, and the edit that plants it.
+#: Measured before this rule read them: each passed
+#: `check_only_the_receipt_checker_writes_the_gates_job_summary` and every
+#: other rule in this file.
+INHERITED_SUMMARY_REDIRECTS: dict[str, tuple[str, str]] = {
+    "a-job-level-env": (
+        "    runs-on: ubuntu-latest\n",
+        "    env:\n"
+        f"      {STEP_SUMMARY_VARIABLE}: /tmp/elsewhere\n"
+        "    runs-on: ubuntu-latest\n",
+    ),
+    "a-workflow-level-env": (
+        "permissions:\n",
+        f"env:\n  {STEP_SUMMARY_VARIABLE}: /tmp/elsewhere\n\npermissions:\n",
+    ),
+}
+
+
+#: The scan in the rule that is supposed to catch each one, by the words its
+#: message uses. Asserted, so that deleting the job-level scan and leaning on
+#: the catch-all is a change a test refuses.
+INHERITED_SUMMARY_SCANS = {
+    "a-job-level-env": "outside its `steps:`",
+    "a-workflow-level-env": "outside `jobs:`",
+}
+
+
+@pytest.mark.parametrize(
+    "redirect", sorted(INHERITED_SUMMARY_REDIRECTS), ids=sorted(INHERITED_SUMMARY_REDIRECTS)
+)
+def test_a_job_or_workflow_level_env_redirecting_the_job_summary_is_rejected(
+    tmp_path: Path, redirect: str
+) -> None:
+    """An `env:` above the steps sends the verdict somewhere nobody reads.
+
+    The rule used to walk STEPS. GitHub composes a step's environment from
+    the workflow's `env:`, then the job's, then the step's, and
+    `GITHUB_STEP_SUMMARY` is a plain environment variable that all three can
+    set — so one line above the steps redirects the checker's own write while
+    naming no step at all. Measured, both spellings passed this rule and
+    every other rule in this file.
+
+    This is not the sibling-step defect wearing a different keyword. That one
+    ADDS a verdict; this one REMOVES the only one there is: the checker
+    appends its red verdict to `/tmp/elsewhere`, exits non-zero, and the
+    summary a reviewer opens on the failing run is empty. A red gate with no
+    sentence in it is a gate whose finding never reached a person.
+
+    So the first half runs it. The gate's own block is executed against a
+    tree with an unreceipted market, with the redirect applied the way the
+    runner would apply it, and the summary the RUNNER made is read back:
+    empty, while the verdict sits in the decoy. Then the rule refuses the
+    workflow that would have done it, and the gate as written, run the same
+    way, puts the red verdict in front of the reviewer.
+    """
+    root = tmp_path / redirect
+    root.mkdir()
+    tree = policy_checkout(root)
+    write_policy(tree, "spread")
+    decoy = root / "elsewhere"
+    refused, summary = run_policy_gate_for_real(
+        tree, extra_env={STEP_SUMMARY_VARIABLE: str(decoy)}
+    )
+    assert refused.returncode != 0, f"the receipt check did not fail: {refused.stdout}"
+    assert summary == "", (
+        "the redirect no longer empties the summary a reviewer reads, so this case "
+        f"no longer demonstrates what the rule below closes:\n{summary!r}"
+    )
+    assert RED_VERDICT in decoy.read_text(encoding="utf-8"), (
+        "the verdict did not go to the decoy either, so this case is measuring "
+        "nothing"
+    )
+
+    # WHICH scan refuses it, not merely that the rule does. The rule ends with
+    # a catch-all over the whole document, and a catch-all makes every scan
+    # before it deletable without a test noticing — so the scan that belongs
+    # to this level is named here and is a thing this test can lose.
+    complained = rejection_message(
+        check_only_the_receipt_checker_writes_the_gates_job_summary,
+        policy_gate_mutated(
+            mkdir(tmp_path / f"{redirect}-yaml"),
+            (INHERITED_SUMMARY_REDIRECTS[redirect],),
+        ),
+    )
+    assert INHERITED_SUMMARY_SCANS[redirect] in complained, (
+        f"the rule refused {redirect}, but not from the scan that reads that "
+        f"level: expected {INHERITED_SUMMARY_SCANS[redirect]!r} in {complained!r}"
+    )
+
+    control_root = tmp_path / f"{redirect}-control"
+    control_root.mkdir()
+    control = policy_checkout(control_root)
+    write_policy(control, "spread")
+    also_refused, control_summary = run_policy_gate_for_real(control)
+    assert also_refused.returncode != 0, also_refused.stdout
+    assert RED_VERDICT in control_summary, control_summary
+    check_only_the_receipt_checker_writes_the_gates_job_summary(POLICY_GATE_PATH)
+
+
+def test_a_summary_writer_the_step_job_and_workflow_scans_cannot_reach(
+    tmp_path: Path,
+) -> None:
+    """The catch-all, and the mutation that makes it the only rule left.
+
+    The three scans in `check_only_the_receipt_checker_writes_the_gates_job_
+    summary` are a step, a job without its steps, and the workflow without
+    its jobs — every mapping in the file between them, PROVIDED the steps are
+    mappings and the jobs are mappings. `steps_of()` drops a step that is a
+    bare string and `jobs_of()` drops a job that is not a mapping, so a
+    `steps:` list holding a plain scalar is a place none of the three looks.
+
+    GitHub would refuse that workflow. "Illegal Actions cannot be the vector"
+    is exactly the kind of reasoning this file exists to replace, and an
+    assertion no input can reach is not an assertion — so the catch-all scans
+    the whole parsed document, and this is the case that fires it and nothing
+    else.
+    """
+    mutated = policy_gate_mutated(
+        mkdir(tmp_path / "scalar-step"),
+        (
+            (
+                POLICY_GATE_STEP_ANCHOR,
+                f'      - \'echo hi >> "${STEP_SUMMARY_VARIABLE}"\'\n'
+                + POLICY_GATE_STEP_ANCHOR,
+            ),
+        ),
+    )
+    document = load(mutated)
+    scalars = [
+        step
+        for job in (document.get("jobs") or {}).values()
+        for step in (job.get("steps") or [])
+        if not isinstance(step, dict)
+    ]
+    assert scalars, (
+        "the mutation no longer leaves a step that is not a mapping, so it no "
+        "longer reaches past the three scans"
+    )
+    assert not [
+        text
+        for job in jobs_of(document).values()
+        for step in steps_of(job)
+        for text in strings_within(step)
+        if STEP_SUMMARY_VARIABLE in text
+    ], "the step scan can see this one after all, so it is not the catch-all's case"
+    complained = rejection_message(
+        check_only_the_receipt_checker_writes_the_gates_job_summary, mutated
+    )
+    assert "do not reach" in complained, (
+        "the rule refused it, but not from the catch-all, so the catch-all is "
+        f"still an assertion nothing can reach: {complained!r}"
+    )
+
+
+def test_the_gaps_the_one_author_rule_still_has_are_the_ones_written_down(
+    tmp_path: Path,
+) -> None:
+    """What "one author" does NOT enforce, asserted rather than said.
+
+    `check_only_the_receipt_checker_writes_the_gates_job_summary` reads the
+    literal `GITHUB_STEP_SUMMARY` out of the parsed YAML, in every position
+    the document holds — a step, a job outside its steps, the workflow
+    outside its jobs, and a catch-all over the whole document. Two things it
+    cannot see are written into its docstring and held open here, because a
+    limitation recorded only in prose becomes a false claim the day somebody
+    reads the rule instead of the sentence:
+
+    1. **What the two permitted actions do.** `actions/checkout` and
+       `actions/setup-python` run in this job holding the same write handle
+       on the same summary file. The rule pins WHICH actions may run and
+       never what they write, and no rule in this repository could: their
+       code is not in this tree.
+    2. **A checker step whose own shell reconstructs the variable name.**
+       The scan reads a literal. A `run:` block inside the checker's own step
+       that assembles the name out of pieces is not seen. Every OTHER `run:`
+       step is refused outright for being neither the checker nor a permitted
+       action, so the gap is exactly one step wide — the step that already
+       has the file open.
+
+    Both assertions below PASS while the gap is open and go red the day it
+    closes, which is the point: closing one has to be a decision somebody
+    made, not a docstring that quietly stopped being true.
+    """
+    permitted = policy_gate_mutated(mkdir(tmp_path / "actions"), ())
+    document = load(permitted)
+    used = sorted(
+        str(step.get("uses", "")).split("@")[0]
+        for job in jobs_of(document).values()
+        for step in steps_of(job)
+        if step.get("uses")
+    )
+    assert used == sorted(POLICY_GATE_PERMITTED_ACTIONS), (
+        f"the gate runs {used}; the ledger above names {sorted(POLICY_GATE_PERMITTED_ACTIONS)} "
+        "as the third-party code holding the same write handle"
+    )
+    check_only_the_receipt_checker_writes_the_gates_job_summary(permitted)
+
+    # Gap 2, spelled out: the name assembled inside the checker's own block.
+    # `assert_rejects` is deliberately NOT used — this asserts the rule
+    # ACCEPTS it, which is what makes the gap a recorded fact.
+    assembled = policy_gate_mutated(
+        mkdir(tmp_path / "assembled"),
+        (
+            (
+                POLICY_GATE_BLOCK_ANCHOR,
+                POLICY_GATE_BLOCK_ANCHOR
+                + '          NAME="GITHUB_STEP"; NAME="${NAME}_SUMMARY"\n'
+                + '          eval "echo hello >> \\$$NAME"\n',
+            ),
+        ),
+    )
+    named = [
+        text
+        for text in strings_within(load(assembled))
+        if STEP_SUMMARY_VARIABLE in text
+    ]
+    assert not named, (
+        "the assembled spelling now names the variable literally, so it is no "
+        f"longer the gap this ledger records: {named}"
+    )
+    check_only_the_receipt_checker_writes_the_gates_job_summary(assembled)
 
 
 def test_the_policy_gate_as_written_has_one_author_for_its_summary(tmp_path: Path) -> None:
@@ -4780,13 +5116,18 @@ def letters_of(text: str) -> str:
 #: is a line a reader takes for a verdict, whatever it is punctuated with.
 VERDICT_LETTERS = letters_of(POLICY_GATE_VERDICT_MARKER)
 
-#: The only characters outside ASCII that the checker's OWN wording spells:
-#: the em dash in every verdict and the ellipsis `_plain()` truncates with.
+#: The only character outside ASCII that the checker's OWN wording spells:
+#: the em dash in every verdict. It used to hold the ellipsis as well, because
+#: `_plain()` truncated with `\u2026` and so returned non-ASCII from the
+#: function whose first sentence said everything outside printable ASCII
+#: became a space. `_plain()` truncates with `...` now and asserts its own
+#: output is ASCII, so the ellipsis is gone from here too and this set is one
+#: character narrower — which makes the assertion that reads it stricter.
 #: Everything else in a summary came off disk, and a letters-run scrub cannot
 #: see a homoglyph — a Cyrillic capital O is a letter, so it breaks the run
 #: while reading to a human as the `O` of `POLICY`. `_plain()` folds it to a
 #: space, and this set is how a test asks whether it still does.
-SCRIPT_NON_ASCII = frozenset("\u2014\u2026")
+SCRIPT_NON_ASCII = frozenset("\u2014")
 
 
 #: A policy file that PARSES and whose allowlist entries cannot be read. Each
@@ -4870,6 +5211,16 @@ PLANTED_VERDICT_MARKETS = (
     " ".join(GREEN_VERDICT),
     GREEN_VERDICT.replace("POLICY GATE", "POLICY GATE|", 1),
     GREEN_VERDICT.replace("POLICY", "P\u041eLICY", 1),
+    #: And the one the SCRUB ITSELF manufactured. `POLICY GATE: <the green
+    #: sentence>` matches no marker pattern — `green` puts letters between
+    #: the `GATE` and the `VERDICT` — so the marker pattern passed over it,
+    #: and the green-sentence pattern that ran next rewrote the tail to
+    #: `[verdict text removed]`, leaving a line whose letters spell
+    #: `POLICYGATEVERDICT`. One pass in a fixed order produced the marker it
+    #: had just been asked to remove. Neither documented gap covered it: not
+    #: a misspelling, not a paraphrase, but the scrub's own output.
+    "POLICY GATE: " + GREEN_VERDICT.split(": ", 1)[1].rstrip("*"),
+    "POLICY GATE: " + BROKEN_VERDICT.split(": ", 1)[1].rstrip("*"),
 )
 
 
@@ -4894,10 +5245,22 @@ def test_the_gaps_the_verdict_scrub_still_has_are_the_ones_written_down() -> Non
        not touched at all. The scrub removes the sentences this script
        prints; it does not classify meaning.
 
-    Neither is a waiver, and the second half of this test is the boundary
-    that makes them survivable: what gets through cannot SPELL the marker, so
-    the assertion the summary tests make — that no line but the verdict's own
-    spells `POLICY GATE VERDICT` in any casing or punctuation — still holds.
+    A THIRD gap was on that list and is not any more, which is why the list
+    is asserted rather than described: the scrub used to MANUFACTURE the
+    marker. One pass over the patterns in a fixed order turned `POLICY GATE:
+    <the green sentence>` into `POLICY GATE: [verdict text removed]`, whose
+    letters spell `POLICYGATEVERDICT`. It was not a misspelling and not a
+    paraphrase — it was the scrub's own output — so neither written-down gap
+    covered it and the docstring above read as if it were closed. The scrub
+    now repeats to a fixed point and, if the result still matches any
+    pattern, takes the whole line, so the guarantee is a post-condition on
+    what the function RETURNS rather than a claim about what it was given.
+
+    Neither remaining gap is a waiver, and the second half of this test is the
+    boundary that makes them survivable: what gets through cannot SPELL the
+    marker, so the assertion the summary tests make — that no line but the
+    verdict's own spells `POLICY GATE VERDICT` in any casing or punctuation —
+    still holds.
     """
     for respelling in PLANTED_VERDICT_MARKETS[3:]:
         plain = checker._plain(respelling, limit=400)
@@ -4925,6 +5288,69 @@ def test_the_gaps_the_verdict_scrub_still_has_are_the_ones_written_down() -> Non
             f"{surviving!r} both survives the scrub and spells the marker, which "
             "is not a documented gap but a hole"
         )
+
+    # The post-condition, asked of the function directly: whatever it is
+    # handed, what it RETURNS matches none of the patterns it scrubs with.
+    # A single pass could not promise this — it manufactured a match out of
+    # its own replacement text — so it is checked on the output.
+    manufactured = "POLICY GATE: " + GREEN_VERDICT.split(": ", 1)[1].rstrip("*")
+    assert VERDICT_LETTERS in letters_of(
+        checker.VERDICT_MARKER
+    ), "the marker no longer spells itself; this whole ledger is reading nothing"
+    for probe in (
+        manufactured,
+        checker._plain(manufactured, limit=400),
+        "POLICY GATE: " + checker.REDACTION,
+        checker.REDACTION.join(("POLICY GATE ", " ")),
+        GREEN_VERDICT,
+        RED_VERDICT,
+        BROKEN_VERDICT,
+    ):
+        scrubbed = checker.without_a_second_verdict(probe)
+        assert not any(
+            pattern.search(scrubbed) for pattern in checker.VERDICT_PATTERNS
+        ), f"the scrub returned {scrubbed!r}, which still matches a verdict pattern"
+        assert VERDICT_LETTERS not in letters_of(scrubbed), (
+            f"the scrub returned {scrubbed!r} for {probe!r}, and its letters spell "
+            "the marker. A scrub that writes the marker it removes is worse than "
+            "no scrub: the line it produces was not in the file it read."
+        )
+
+    # And the case the fixed point does NOT settle, which is why the
+    # post-condition exists rather than being reasoned away. Each pass peels
+    # one layer off a nest of markers — `POLICY GATE POLICY GATE ... [verdict
+    # text removed]` matches at the innermost layer and nowhere else — so a
+    # line with more layers than `SCRUB_PASSES` is still spelling the marker
+    # when the passes run out. It is taken WHOLE, which is the only answer a
+    # gate is allowed to give: the summary may lose a line of somebody's
+    # market name, and may not carry a verdict this run did not reach.
+    nested = "POLICY GATE " * (checker.SCRUB_PASSES + 1) + checker.VERDICTS[checker.OK]
+    settles = "POLICY GATE " * (checker.SCRUB_PASSES - 1) + checker.VERDICTS[checker.OK]
+    assert checker.without_a_second_verdict(nested) == checker.WHOLE_LINE_REDACTION, (
+        f"{checker.SCRUB_PASSES + 1} nested markers now settle inside "
+        f"{checker.SCRUB_PASSES} passes; find the depth that does not and pin that "
+        "one, or the whole-line fallback is a branch no input reaches"
+    )
+    assert checker.without_a_second_verdict(settles) != checker.WHOLE_LINE_REDACTION, (
+        "the scrub now takes a line whole that it used to settle. That is safe and "
+        "it is not what this says: the fallback is for what does not converge"
+    )
+    for depth in range(0, checker.SCRUB_PASSES + 4):
+        scrubbed = checker.without_a_second_verdict(
+            "POLICY GATE " * depth + checker.VERDICTS[checker.OK]
+        )
+        assert VERDICT_LETTERS not in letters_of(scrubbed), (
+            f"{depth} nested markers survive the scrub still spelling it: {scrubbed!r}"
+        )
+
+    # The two strings the scrub writes may not themselves be scrubbable, or
+    # the fixed point would never be reached and every line would be taken
+    # whole. The script asserts this at import; this is the same question
+    # asked from outside, so a careless edit to either fails here as well.
+    for written in (checker.REDACTION, checker.WHOLE_LINE_REDACTION):
+        assert not any(
+            pattern.search(written) for pattern in checker.VERDICT_PATTERNS
+        ), f"{written!r} is a string the scrub writes and the scrub would match it"
 
 
 def test_the_policy_gate_summary_carries_one_verdict_and_it_is_the_runs_own(
@@ -4995,6 +5421,124 @@ def test_the_policy_gate_summary_carries_one_verdict_and_it_is_the_runs_own(
         line for line in green_summary.splitlines() if POLICY_GATE_VERDICT_MARKER in line
     ] == [GREEN_VERDICT], green_summary
     assert RED_VERDICT not in green_summary, green_summary
+
+
+def test_plain_returns_one_line_of_printable_ascii_whatever_it_is_given() -> None:
+    """`_plain()`'s post-condition, asked of `_plain()`.
+
+    Its first sentence has always been "anything outside printable ASCII
+    becomes a space", and until 2026-09-05 the very next thing it did was
+    truncate with `\u2026` — so the function whose job was to return ASCII
+    returned non-ASCII out of its own wording, on every string longer than
+    `limit`. Harmless in itself (nobody smuggles a verdict through an
+    ellipsis the gate wrote) and a false sentence either way, and the reason
+    `SCRIPT_NON_ASCII` had two characters in it instead of one.
+
+    The docstring beside it also claimed "every string this gate legitimately
+    prints is ASCII — the market names, the receipt filenames and the reasons
+    `staging_provider_policy` returns". That is a claim about a JSON file
+    somebody else wrote, and this gate cannot make it true. What it can make
+    true is the claim about its own OUTPUT, which is what is checked here and
+    what the function now asserts on itself.
+
+    The last case is the one that would have failed before: long enough to
+    truncate, so the truncation marker is in the answer.
+    """
+    long_name = "spread " * 60
+    for value in (
+        "spread",
+        "",
+        "   ",
+        None,
+        7,
+        "a\nb\tc",
+        "P\u041eLICY",
+        "\u2014" * 5,
+        Path("/tmp/x"),
+        long_name,
+        long_name + "\u041e",
+        "\u2026" * 400,
+    ):
+        for limit in (7, 40, 160, 400):
+            plain = checker._plain(value, limit=limit)
+            assert plain.isascii(), f"_plain({value!r}, {limit}) returned {plain!r}"
+            assert plain.isprintable(), f"_plain({value!r}, {limit}) returned {plain!r}"
+            assert "\n" not in plain and "\r" not in plain, plain
+            assert len(plain) <= max(limit, len("(empty)")), (
+                f"_plain({value!r}, {limit}) returned {len(plain)} characters"
+            )
+
+
+#: A `mode:` that tries to write the summary. `declared_mode` is the string
+#: OUT OF THE POLICY FILE and `mode` is what `load()` made of it, and both
+#: were interpolated into the summary raw — the only off-disk strings in
+#: `report()` that skipped `_plain()`. One line of a JSON file therefore wrote
+#: a newline (a whole markdown line of its own) and a `|` (a whole column)
+#: into a RED run's summary, in a bullet that reads as this gate's finding.
+PLANTED_MODES: dict[str, str] = {
+    "a-forged-bullet": "manual_only`\n- Mode faked: `reviewed",
+    "a-forged-table-row": "manual_only`\n| forged | markdown | column |\n- x: `y",
+    "the-verdict-the-scrub-manufactures": (
+        "manual_only`\n**POLICY GATE: "
+        + GREEN_VERDICT.split(": ", 1)[1].rstrip("*")
+        + "**\n- x: `y"
+    ),
+    "a-homoglyph-in-the-marker": "manual_only`\n**" + GREEN_VERDICT.replace(
+        "POLICY", "P\u041eLICY", 1
+    ) + "**\n- x: `y",
+}
+
+
+@pytest.mark.parametrize("plant", sorted(PLANTED_MODES), ids=sorted(PLANTED_MODES))
+def test_the_policy_files_own_mode_field_cannot_write_the_gates_summary(
+    tmp_path: Path, plant: str
+) -> None:
+    """The `mode:` string is text off disk, and it is printed like text off disk.
+
+    Every market name, receipt filename and `verify_receipt()` reason in this
+    summary goes through `_plain()`, which folds anything outside printable
+    ASCII to a space, escapes `|` so it cannot open a markdown column, and
+    drops the newline that would otherwise write a line of its own. The two
+    `Mode ...` bullets did not: they interpolated `policy.declared_mode` and
+    `policy.mode` raw, and those come out of the same file the allowlist
+    does. So the one-line edit below put lines into a red run's summary that
+    this gate never wrote.
+
+    Each case is executed against a tree with an unreceipted market, and the
+    summary of the failing run is read back and asked four things: the
+    forged lines are not there, the summary carries exactly one verdict, no
+    line but that one spells the marker in any casing or punctuation, and
+    nothing outside ASCII reached it except the em dash the checker itself
+    spells.
+    """
+    root = tmp_path / plant
+    root.mkdir()
+    tree = policy_checkout(root)
+    write_policy(tree, "spread", mode=PLANTED_MODES[plant])
+    refused, summary = run_policy_gate_for_real(tree)
+    assert refused.returncode != 0, f"the receipt check did not fail: {refused.stdout}"
+
+    declared = [line for line in summary.splitlines() if line.startswith("- Mode declared")]
+    assert len(declared) == 1, f"the planted mode wrote {len(declared)} bullets: {declared}"
+    for forged in ("- Mode faked:", "| forged |", "- x:"):
+        assert not any(line.startswith(forged) for line in summary.splitlines()), (
+            f"the planted mode forged a line starting {forged!r}:\n{summary}"
+        )
+
+    assert GREEN_VERDICT not in summary, summary
+    assert RED_VERDICT in summary, summary
+    verdicts = [
+        line for line in summary.splitlines() if VERDICT_LETTERS in letters_of(line)
+    ]
+    assert verdicts == [RED_VERDICT], (
+        f"{len(verdicts)} line(s) of the red summary spell "
+        f"{POLICY_GATE_VERDICT_MARKER!r} in some casing or punctuation: {verdicts}"
+    )
+    foreign = sorted(set(summary) - SCRIPT_NON_ASCII - {c for c in summary if c.isascii()})
+    assert not foreign, (
+        f"the red summary carries {foreign}, which came off disk and not out of "
+        "this gate's own wording"
+    )
 
 
 def test_the_policy_gate_says_what_it_checks_about_a_signature_and_claims_no_more(

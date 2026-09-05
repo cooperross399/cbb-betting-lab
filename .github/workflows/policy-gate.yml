@@ -40,10 +40,16 @@
 # ONE VERDICT, FROM THE EXIT STATUS. The job summary ends with exactly one
 # `POLICY GATE VERDICT:` line, built out of the status the checker is about to
 # return, and every other line has the verdict wording taken out of it before
-# printing. Market names, receipt notes and the reasons `verify_receipt()`
-# gives are text out of files this gate does not control: without that, a
-# market NAMED with the sentence a green run prints put a green verdict into
-# the summary of a red one, and a reviewer scrolling the summary read it.
+# printing. Market names, receipt notes, the `mode` field and the reasons
+# `verify_receipt()` gives are text out of files this gate does not control:
+# without that, a market NAMED with the sentence a green run prints put a
+# green verdict into the summary of a red one, and a reviewer scrolling the
+# summary read it. The scrub repeats to a fixed point and checks its own
+# output, because one pass in a fixed order rewrote `POLICY GATE: <the green
+# sentence>` into `POLICY GATE: [verdict text removed]` and manufactured the
+# marker it had been asked to remove. What it cannot see — a misspelling, a
+# paraphrase — is written into `without_a_second_verdict`'s docstring and held
+# open by a test; neither can spell the marker.
 #
 # NO CONDITION STANDS BETWEEN A PULL REQUEST AND THIS VERDICT. The job carries
 # no `if:`, no `needs:`, no `strategy:` and no `continue-on-error`; no step in
@@ -73,10 +79,20 @@
 # reads, so a second step in THIS job that echoed the green sentence into its
 # own copy would put a green verdict above the red one in a failing run —
 # where no scrub inside the checker could reach it, because the checker never
-# sees that text. So the checker is the only writer: no step in this file
-# names GITHUB_STEP_SUMMARY, exactly one step runs the checker, and every
-# other step in the job is `actions/checkout` or `actions/setup-python`. An
-# action is somebody else's code holding the same write handle.
+# sees that text. It is also a plain environment variable, so a job-level or
+# workflow-level `env:` redirects the checker's own write without naming a
+# single step: that one does not add a verdict, it sends the only one there
+# is to a file nobody opens, and a red gate whose summary is empty told the
+# reviewer nothing. So: GITHUB_STEP_SUMMARY is named NOWHERE in this file —
+# not in a step, not in a job `env:`, not in a workflow `env:` — exactly one
+# step runs the checker, and every other step in the job is
+# `actions/checkout` or `actions/setup-python`.
+#
+# What that rule does NOT enforce, in its own docstring and held open by a
+# test: what those two actions do with the same write handle (their code is
+# not in this tree), and a `run:` block inside the checker's own step that
+# assembles the variable name rather than spelling it — every OTHER `run:`
+# step is refused outright, so that gap is one step wide.
 #
 # WHAT THE SIGNATURE CHECK IS, EXACTLY. `signed_by` is a string in a JSON
 # file. Nothing here is cryptographic and no identity is verified: this gate

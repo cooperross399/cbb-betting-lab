@@ -92,19 +92,46 @@ words spaced out, and a planted verdict carrying a `|`, which `_plain()` had
 itself escaped to a backslash and a pipe a moment earlier, so that the
 literal no longer matched. `_plain()` folds everything outside printable
 ASCII to a space for the same reason, since a homoglyph breaks a letter run
-without breaking what a human reads. What the scrub still cannot see — a
-misspelling, a paraphrase — is written down in `without_a_second_verdict`'s
-own docstring and held open by a test, rather than described as closed.
+without breaking what a human reads.
+
+The scrub then MANUFACTURED the marker for one more round. One pass over the
+patterns in a fixed order rewrote a market named `POLICY GATE: <the green
+sentence>` into `POLICY GATE: [verdict text removed]`, whose letters spell
+the marker — a line that was not in the file it read and was not caught by
+either written-down gap, because it was the scrub's own output. So the
+guarantee is a POST-CONDITION now: the passes repeat until the text stops
+changing, and a line that still matches when they run out is replaced whole.
+What `without_a_second_verdict` returns matches none of the patterns it
+scrubs with, whatever it was handed. What it still cannot SEE — a
+misspelling, a paraphrase — is written down in its own docstring and held
+open by a test, rather than described as closed; neither can spell the
+marker, which is what makes them survivable.
+
+AND EVERY OFF-DISK STRING GOES THROUGH `_plain()` FIRST. The `mode` field is
+one: `policy.declared_mode` is the string out of the policy file and
+`policy.mode` is what `load()` made of it, and both were interpolated raw —
+the only strings in `report()` that skipped `_plain()`. So one line of a JSON
+file wrote a newline (a whole markdown line of its own) and a `|` (a whole
+column) into a red run's summary, in a bullet shaped like this gate's own
+finding. They are printed like every other string this gate did not write.
 
 AND ONLY THIS SCRIPT WRITES THAT SUMMARY. `$GITHUB_STEP_SUMMARY` is a
 per-STEP file whose contents are concatenated into one job summary, so a
 sibling step in the gate's job that echoed the green sentence into its own
 summary put a green verdict in front of the reviewer of a red run, and no
-scrub here could reach it: this script never sees that text. The rule
+scrub here could reach it: this script never sees that text. It is also a
+plain environment variable, which a job-level or workflow-level `env:`
+overrides for every step at once — that one does not add a verdict, it takes
+the only one there is somewhere nobody reads. The rule
 `check_only_the_receipt_checker_writes_the_gates_job_summary` in
-`tests/test_workflows.py` is the other half — no step in that job may name
-`GITHUB_STEP_SUMMARY`, and no step in it may be anything but this checker and
-the two actions that check out the tree and install the interpreter.
+`tests/test_workflows.py` is the other half: `GITHUB_STEP_SUMMARY` is named
+NOWHERE in that workflow — not in a step, not in a job-level `env:`, not in a
+workflow-level one — exactly one step runs this checker, and every other step
+in the job is one of the two actions that check out the tree and install the
+interpreter. What that rule does not reach is written into its own docstring:
+what those two actions do with the same write handle, and a `run:` block in
+this checker's own step that assembles the variable name instead of spelling
+it.
 """
 
 from __future__ import annotations
@@ -131,8 +158,11 @@ OK, RED, BROKEN = 0, 1, 2
 #: are spelled. `verdict_line()` builds one line out of the exit status,
 #: `main()` calls it exactly once, and `main()` scrubs `VERDICT_MARKER` out of
 #: every other line before printing — so a run that exits non-zero cannot
-#: contain the sentence a green run prints, whatever a policy file, a receipt
-#: note or a `verify_receipt()` reason tries to plant in the summary. That was
+#: contain the sentence a green run prints, whatever a policy file's market
+#: name or `mode` field, a receipt note or a `verify_receipt()` reason tries
+#: to plant in the summary. It can still contain a PARAPHRASE of it, which is
+#: the gap `without_a_second_verdict` writes down and a test holds open. That
+#: was
 #: a real hole: the verdict used to be prose written on the branch that
 #: produced it, and prose in a job summary is text a reader can be given twice.
 VERDICT_MARKER = "POLICY GATE VERDICT"
@@ -169,15 +199,45 @@ def verdict_line(status: int) -> str:
     """The one line that says how the run ended, built from the exit status.
 
     Not from the branch that ran, and not from anything read off disk: the
-    caller passes the status it is about to return, and there is no other
-    spelling of `VERDICT_MARKER` in anything this script prints.
+    caller passes the status it is about to return. And it is the only line
+    of a run's summary that spells `VERDICT_MARKER` — not because nothing
+    else tries, but because every other line goes through
+    `without_a_second_verdict`, which checks its OWN OUTPUT against the
+    patterns and takes a line whole rather than return one that still
+    matches.
     """
     return f"**{VERDICT_MARKER}: {VERDICTS[status]}.**"
 
 
-#: What a redacted verdict span is replaced with. It spells none of the
-#: fragments below, so a scrub can never manufacture a fresh match.
+#: What a redacted verdict span is replaced with.
+#:
+#: This comment used to read "it spells none of the fragments below, so a
+#: scrub can never manufacture a fresh match", and the second half was false.
+#: `REDACTION` spells none of them ON ITS OWN; joined to the letters already
+#: beside it in the line, it does. A market named `POLICY GATE: <the green
+#: sentence>` matches no marker pattern — `green` puts letters between the
+#: `GATE` and the `VERDICT` — so the marker pattern passes over it, and then
+#: the green-sentence pattern rewrites it to `POLICY GATE: [verdict text
+#: removed]`, whose letters spell `POLICYGATEVERDICT`. One pass in a fixed
+#: order manufactured the marker it had just been asked to remove. What
+#: `without_a_second_verdict` promises now is a property of its RESULT, not
+#: of this string: it re-scrubs to a fixed point and, if the result still
+#: matches any pattern, replaces the line whole.
 REDACTION = "[verdict text removed]"
+
+#: How many times the scrub is re-run before it gives up on converging.
+#: A substitution cannot promise convergence by itself — `REDACTION` is
+#: longer than the shortest span it replaces, so a pass can make a line grow
+#: — and the fixed point is therefore a bounded search with a fallback rather
+#: than a loop that trusts itself to end.
+SCRUB_PASSES = 8
+
+#: What a line becomes when the scrub could not reach a fixed point inside
+#: `SCRUB_PASSES`. It takes the whole line, findings and all: this gate's
+#: guarantee is about what its summary CANNOT say, and a line of a policy
+#: file's text is never worth more than that. Checked against every pattern
+#: at import, so it can never be the thing that spells the marker.
+WHOLE_LINE_REDACTION = "[a line of this run's own findings was removed whole]"
 
 
 def _letters(text: str) -> str:
@@ -207,6 +267,15 @@ VERDICT_PATTERNS = tuple(
     _spelled_out(fragment) for fragment in (VERDICT_MARKER, *VERDICTS.values())
 )
 
+# The two strings the scrub writes may not themselves be scrubbable, or the
+# fixed point below would never be reached and every line would be taken
+# whole. Asserted here rather than read off the page, because both are one
+# careless word away from spelling the marker.
+assert not any(pattern.search(REDACTION) for pattern in VERDICT_PATTERNS), REDACTION
+assert not any(
+    pattern.search(WHOLE_LINE_REDACTION) for pattern in VERDICT_PATTERNS
+), WHOLE_LINE_REDACTION
+
 
 def without_a_second_verdict(line: str) -> str:
     """`line` with every verdict word this script can print taken out of it.
@@ -216,6 +285,27 @@ def without_a_second_verdict(line: str) -> str:
     green sentence is plantable: a market NAMED with it, or a receipt note
     carrying it, is copied into the table of a red run, and the reader sees
     a red gate whose summary says every market is receipted.
+
+    WHAT IT GUARANTEES, and the only thing it guarantees: the string it
+    RETURNS matches none of `VERDICT_PATTERNS`. Not "the input was clean" and
+    not "the wording was found" — the output is checked, and a line that
+    still matches after `SCRUB_PASSES` is replaced by
+    `WHOLE_LINE_REDACTION`, which is checked against the same patterns at
+    import. So no line this function returns can spell the marker, whatever
+    was fed to it.
+
+    That guarantee had to be written as a POST-CONDITION because the earlier
+    version — one pass over `VERDICT_PATTERNS` in a fixed order — could
+    manufacture the marker it existed to remove. A market named `POLICY
+    GATE: <the green sentence>` matches no marker pattern, because `green`
+    puts letters between `GATE` and `VERDICT`; the marker pattern therefore
+    passes over it untouched, and the green-sentence pattern that runs next
+    rewrites the tail to `REDACTION`, leaving `POLICY GATE: [verdict text
+    removed]` — which spells `POLICYGATEVERDICT`. Neither documented gap
+    covered it: it is not a misspelling and not a paraphrase, it is the
+    scrub's own output. Now the passes repeat until the text stops changing
+    (`POLICY GATE: [verdict` is a marker match on the second pass and goes
+    too), and the post-condition catches anything that does not settle.
 
     WHAT THIS STILL LETS THROUGH, written down rather than claimed shut, and
     held open by `test_the_gaps_the_verdict_scrub_still_has_are_the_ones_
@@ -232,13 +322,21 @@ def without_a_second_verdict(line: str) -> str:
        everything that could be read as approval.
 
     Both are the same limit: this is a scrub of a known wording, not a
-    classifier of meaning. What it does guarantee is the assertion the tests
-    make — no line of a run's summary other than `verdict_line()`'s own
-    spells `POLICY GATE VERDICT` in any casing or punctuation.
+    classifier of meaning. Neither can spell the marker, which is why the
+    post-condition above is the assertion the summary tests are allowed to
+    rest on.
     """
-    for pattern in VERDICT_PATTERNS:
-        line = pattern.sub(REDACTION, line)
-    return line
+    text = line
+    for _ in range(SCRUB_PASSES):
+        once = text
+        for pattern in VERDICT_PATTERNS:
+            once = pattern.sub(REDACTION, once)
+        if once == text:
+            break
+        text = once
+    if any(pattern.search(text) for pattern in VERDICT_PATTERNS):
+        return WHOLE_LINE_REDACTION
+    return text
 
 
 def _plain(value: object, limit: int = 160) -> str:
@@ -249,13 +347,26 @@ def _plain(value: object, limit: int = 160) -> str:
     whole line of the job summary; a `|` writes a whole column. Neither may
     be a way to write a sentence a reviewer reads as this gate's finding.
 
-    Anything outside printable ASCII becomes a space. Every string this gate
+    WHAT IT RETURNS, asserted below rather than assumed: a string that is
+    printable ASCII, holds no newline, and is at most `limit` characters
+    long. That is a property of the OUTPUT. It is not a claim about the
+    input, and the sentence here used to make one — "every string this gate
     legitimately prints is ASCII — the market names, the receipt filenames
-    and the reasons `staging_provider_policy` returns — and a homoglyph is
-    the one respelling `without_a_second_verdict` cannot see: a Cyrillic
-    `\u041e` is a letter, so it breaks the letter run the scrub matches while
-    reading to a human as the `O` in `POLICY`. Folding it to a space costs a
-    market name nothing and leaves the marker unspellable.
+    and the reasons `staging_provider_policy` returns". Not one of those
+    three is under this gate's control. A market name is whatever somebody
+    typed into a JSON file, and a name legitimately spelled with a non-ASCII
+    letter is a thing that can exist. What is true is that this gate CHOOSES
+    to render only ASCII and pays for it: such a name is shown with spaces
+    where those characters were, and a reviewer reading the summary sees the
+    gaps rather than the name.
+
+    That cost is accepted because a homoglyph is the one respelling
+    `without_a_second_verdict` cannot see: a Cyrillic `\u041e` is a letter,
+    so it breaks the letter run the scrub matches while reading to a human as
+    the `O` in `POLICY`. Folding it to a space leaves the marker unspellable.
+    The ellipsis this function truncated with was itself outside ASCII, so
+    its own output broke the rule its first sentence stated; it is `...` now,
+    and the assertion below is what stops that from quietly coming back.
     """
     text = "".join(
         character if (character.isascii() and character.isprintable()) else " "
@@ -263,8 +374,13 @@ def _plain(value: object, limit: int = 160) -> str:
     )
     text = text.replace("|", "\\|").replace("`", "'").strip()
     if len(text) > limit:
-        text = text[: limit - 1] + "\u2026"
-    return text or "(empty)"
+        text = text[: max(limit - 3, 0)] + "..."
+    text = text or "(empty)"
+    assert text.isascii() and text.isprintable() and len(text) <= max(limit, 7), (
+        f"_plain() returned {text!r}, which is not the one-line printable ASCII "
+        "its callers paste into a markdown table cell"
+    )
+    return text
 
 
 def _markets_in(payload: object) -> set[str]:
@@ -323,7 +439,7 @@ def unreadable_policy(path: Path) -> str:
     except (OSError, UnicodeError) as exc:
         return (
             f"`{POLICY_RELATIVE}` exists and could not be read "
-            f"({exc.__class__.__name__}: {exc})."
+            f"({exc.__class__.__name__}: {_plain(exc, limit=200)})."
         )
     try:
         payload = json.loads(text)
@@ -359,7 +475,8 @@ def unreadable_policy(path: Path) -> str:
         if not isinstance(market, str) or not market.strip():
             return (
                 f"`{POLICY_RELATIVE}` exists and entry {index} of its "
-                f"`allowlist` carries `market: {market!r}`, which names no "
+                f"`allowlist` carries `market: {_plain(repr(market), limit=80)}`, "
+                "which names no "
                 "market. `load()` keeps only the entries that name one, so "
                 "this entry would be read as no entry at all and the gate "
                 "would check an allowlist shorter than the file's."
@@ -415,14 +532,15 @@ def report(root: Path, base_ref: str) -> tuple[int, list[str]]:
     lines = ["## Policy gate: human acceptance receipts", ""]
     if not manual.is_dir():
         lines.append(
-            f"**Broken gate.** There is no `{manual}` to read. This run checked "
-            "nothing; it is not evidence that the allowlist is receipted."
+            f"**Broken gate.** There is no `{_plain(manual, limit=400)}` to read. "
+            "This run checked nothing; it is not evidence that the allowlist is "
+            "receipted."
         )
         return BROKEN, lines
 
     broken = unreadable_policy(SPP.policy_path(manual))
     if broken:
-        lines.append(f"**Broken gate.** {broken}")
+        lines.append(f"**Broken gate.** {_plain(broken, limit=600)}")
         lines.append("")
         lines.append(
             "This run checked NO allowlist. `load()` reads a policy file it "
@@ -437,8 +555,15 @@ def report(root: Path, base_ref: str) -> tuple[int, list[str]]:
 
     policy = SPP.load(manual)
     lines.append(f"- Policy file: `{POLICY_RELATIVE}`")
-    lines.append(f"- Mode declared in the file: `{policy.declared_mode or 'none'}`")
-    lines.append(f"- Mode in force after `load()`: `{policy.mode}`")
+    # `declared_mode` is the `mode` STRING OUT OF THE POLICY FILE, and `mode`
+    # is what `load()` made of it. Both used to be interpolated raw, and they
+    # were the only off-disk strings in this function that skipped `_plain()`
+    # — so a one-line edit to the policy file wrote a newline and a `|` into
+    # this summary, forging a markdown column or a whole extra bullet that
+    # reads as this gate's own finding. They go through `_plain()` like every
+    # other string this gate did not write.
+    lines.append(f"- Mode declared in the file: `{_plain(policy.declared_mode or 'none')}`")
+    lines.append(f"- Mode in force after `load()`: `{_plain(policy.mode)}`")
     lines.append(f"- Receipts read from: `data/manual/{SPP.RECEIPTS_DIRNAME}/*.json`")
     lines.append("")
     lines.append(f"The card's own reading: {_plain(policy.summary_line(CBB), limit=400)}")
@@ -475,8 +600,9 @@ def report(root: Path, base_ref: str) -> tuple[int, list[str]]:
             base_markets, added_note = base_allowlist(root, base_ref)
         except RuntimeError as exc:
             lines.append(
-                f"**Broken gate.** {exc}. This run did not compare the allowlist "
-                "against the base commit; it is not evidence that nothing was added."
+                f"**Broken gate.** {_plain(exc, limit=400)}. This run did not "
+                "compare the allowlist against the base commit; it is not "
+                "evidence that nothing was added."
             )
             return BROKEN, lines
         added = set(markets) - base_markets
