@@ -283,27 +283,6 @@ def test_every_document_that_promises_the_policy_gate_keeps_its_promise(
         )
 
 
-def test_the_claims_report_renders_the_gate_name_from_the_constant():
-    """The claims report may not carry its own spelling of the name.
-
-    `docs/what_we_can_and_cannot_claim.md` and
-    `data/outputs/cbb_what_we_can_claim.md` are rendered from this module, so
-    a literal here is a fifth copy of the name that a rename can miss. It
-    reads `staging_provider_policy.POLICY_GATE_CHECK` instead.
-    """
-    source = (
-        REPO_ROOT / "src" / "cbb_betting_lab" / "reports" / "what_we_can_claim.py"
-    ).read_text(encoding="utf-8")
-
-    assert "POLICY_GATE_CHECK" in source, (
-        "what_we_can_claim.py does not read the pinned gate name; the rendered "
-        "claims file would keep whatever spelling was typed here."
-    )
-    assert CONTRACTS["Policy gate check name"] not in source, (
-        "what_we_can_claim.py spells the policy gate's name literally. It must "
-        "render staging_provider_policy.POLICY_GATE_CHECK, so that renaming the "
-        "check renames what this report claims about it."
-    )
 
 
 #: The two files the claims report renders into. Both carry the same bullet
@@ -385,4 +364,27 @@ def test_the_rendered_claims_about_the_policy_gate_are_true_of_the_gate(relative
         f"{CONTRACTS['Policy gate workflow file']}'s policy file allowlists "
         f"{sorted(shipped.allowlist)}. The rendered claim is now false, and it "
         "is the claim a human reads before deciding what this lab may say."
+    )
+
+
+def test_the_claims_report_renders_the_gate_name_from_the_constant():
+    """The claims report may not carry its own spelling of the name.
+
+    `docs/what_we_can_and_cannot_claim.md` and
+    `data/outputs/cbb_what_we_can_claim.md` are rendered from this module, so
+    a literal here is a fifth copy of the name that a rename can miss. It
+    reads `staging_provider_policy.POLICY_GATE_CHECK` instead.
+    """
+    source = (
+        REPO_ROOT / "src" / "cbb_betting_lab" / "reports" / "what_we_can_claim.py"
+    ).read_text(encoding="utf-8")
+
+    assert "POLICY_GATE_CHECK" in source, (
+        "what_we_can_claim.py does not read the pinned gate name; the rendered "
+        "claims file would keep whatever spelling was typed here."
+    )
+    assert CONTRACTS["Policy gate check name"] not in source, (
+        "what_we_can_claim.py spells the policy gate's name literally. It must "
+        "render staging_provider_policy.POLICY_GATE_CHECK, so that renaming the "
+        "check renames what this report claims about it."
     )
