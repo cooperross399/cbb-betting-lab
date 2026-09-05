@@ -13,8 +13,10 @@
 # in which a recorded hypothesis was removed, re-dated, re-directed, or had a
 # measured outcome rewritten.
 #
-# Both tracked ledgers are checked: the discovery ledger and the holdout one
-# under data/outputs/holdout/, which the replication run appends to.
+# ONE ledger is checked. A second tracked copy under data/outputs/holdout/
+# was where the replication appended its holdout looks while the backtest read
+# its correction from this one — two files, and the correction understated by
+# the holdout's looks. One cumulative count, because one ledger.
 #
 # This workflow READS and never writes. It holds `contents: read` and accesses
 # the `secrets` context nowhere; tests/test_workflows.py refuses both. A base
@@ -131,7 +133,7 @@ jobs:
           fi
           mkdir -p "${RUNNER_TEMP}/ledger-check"
           : > "${RUNNER_TEMP}/ledger-check/summary.txt"
-          for LEDGER in data/outputs/experiment_ledger.json data/outputs/holdout/experiment_ledger.json; do
+          for LEDGER in data/outputs/experiment_ledger.json; do
             SLUG="$(printf '%s' "${LEDGER}" | tr '/' '_')"
             if git cat-file -e "${BASE}:${LEDGER}" 2>/dev/null; then
               TMP="$(mktemp)"
@@ -160,7 +162,7 @@ jobs:
         # visible: `git diff` is blind to an untracked file the render recreates.
         run: |
           set -euo pipefail
-          git ls-files --error-unmatch -- data/outputs/experiment_ledger.json data/outputs/cbb_experiment_ledger.md data/outputs/holdout/experiment_ledger.json >/dev/null || { echo '::error::A tracked ledger file was deleted. The ledger is append-only; removing the render removes the record.'; exit 1; }
+          git ls-files --error-unmatch -- data/outputs/experiment_ledger.json data/outputs/cbb_experiment_ledger.md >/dev/null || { echo '::error::A tracked ledger file was deleted. The ledger is append-only; removing the render removes the record.'; exit 1; }
           PYTHONPATH=src python scripts/record_experiments.py
           git diff --exit-code -- data/outputs/experiment_ledger.json data/outputs/cbb_experiment_ledger.md
           test -z "$(git status --porcelain -- data/outputs/)" || { git status --porcelain -- data/outputs/; echo '::error::The ledger render left untracked output.'; exit 1; }
@@ -182,5 +184,4 @@ jobs:
           path: |
             ${{ runner.temp }}/ledger-check/
             data/outputs/experiment_ledger.json
-            data/outputs/holdout/experiment_ledger.json
           if-no-files-found: error

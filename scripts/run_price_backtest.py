@@ -1238,7 +1238,12 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_NO_OPINION
 
     # ---- the record --------------------------------------------------------
-    ledger = Path(args.ledger) if args.ledger else PB.ledger_path(output_dir)
+    # ONE LEDGER. It does not follow --output-dir: a holdout run points
+    # --output-dir at data/outputs/holdout/ so its record lands apart, and
+    # "the ledger beside the outputs" then meant a COPY — which the replication
+    # appended its holdout looks to while this read its correction from the
+    # original. One cumulative count, because one ledger.
+    ledger = Path(args.ledger) if args.ledger else PB.ledger_path(OUTPUTS_DIR)
     looks = PB.looks_from_ledger(ledger)
     # An absent ledger is not a family of one, and the report must not say it
     # is: no correction at all makes every interval look tighter than it is.

@@ -339,6 +339,11 @@ class Lab:
             str(self.processed),
             "--output-dir",
             str(self.outputs),
+            # Tests are not looks. The script now defaults --ledger to the
+            # REPOSITORY's ledger — one cumulative count — so a test that ran
+            # it without saying otherwise appended its scratch hypotheses to
+            # the real record. That happened once, and is why this is here.
+            *([] if "--ledger" in argv else ["--ledger", str(self.outputs / "experiment_ledger.json")]),
             *argv,
         ]
         try:
@@ -818,6 +823,8 @@ def test_rebuild_report_only_re_renders_without_the_store_or_the_tables(
         str(empty_processed),
         "--output-dir",
         str(outputs),
+        "--ledger",
+        str(outputs / "experiment_ledger.json"),
         "--rebuild-report-only",
     ]
     try:

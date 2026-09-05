@@ -333,7 +333,11 @@ def test_no_environment_variable_turns_a_shrink_green(tmp_path: Path, monkeypatc
     assert run(tmp_path, THREE, THREE[:2]) == 1
 
 
-@pytest.mark.parametrize("relative", ["data/outputs/experiment_ledger.json", "data/outputs/holdout/experiment_ledger.json"])
+# ONE ledger. This used to parametrize over a second, tracked copy under
+# data/outputs/holdout/ — the copy the replication appended its holdout looks
+# to while the backtest read its correction from the original. Asserting the
+# copy existed enshrined the fork in a test.
+@pytest.mark.parametrize("relative", ["data/outputs/experiment_ledger.json"])
 def test_each_tracked_ledger_passes_against_itself(relative: str, capsys: pytest.CaptureFixture) -> None:
     tracked = _SCRIPT.parents[1] / relative
     assert tracked.is_file(), f"{relative} is missing"

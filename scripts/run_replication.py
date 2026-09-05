@@ -580,6 +580,7 @@ def main(argv: list[str] | None = None) -> int:
     # took. The family-wise correction is the ledger's cumulative count, and
     # there is one cumulative count because there is one ledger.
     ledger_path = Path(args.ledger) if args.ledger else PB.ledger_path(OUTPUTS_DIR)
+    print(f"Experiment ledger: {ledger_path} (every holdout look this run takes is appended there).")
     # Which cells carry a claim is read at the count BEFORE this run appends to
     # it, because the count after depends on how many claims there are and a
     # value cannot be its own input. The count before is the smaller of the two,
