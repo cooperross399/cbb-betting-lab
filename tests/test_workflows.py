@@ -2131,3 +2131,69 @@ def test_the_purchase_rebuild_covers_every_wave() -> None:
         "The rebuild step scopes itself to this run's wave, so the store it "
         "writes omits every other wave the cache holds."
     )
+
+
+# --------------------------------------------------------------------------
+# The ledger guard on a branch's first push.
+# --------------------------------------------------------------------------
+
+ZERO_SHA = "0" * 40
+
+
+def _base_resolution_block() -> str:
+    """The real `run:` text of the guard's base-resolution step, by name."""
+    document = yaml.safe_load((WORKFLOWS_DIR / LEDGER_WORKFLOW).read_text(encoding="utf-8"))
+    for job in document["jobs"].values():
+        for step in steps_of(job):
+            if step.get("name") == "Resolve the base commit, or stop":
+                return step["run"]
+    raise AssertionError("the ledger guard has no 'Resolve the base commit, or stop' step")
+
+
+def _resolve_base(event: str, before: str, failing: set[str], sandbox: Path) -> tuple[int, str]:
+    """Run the real step under stubs with the event's env, and read what it
+    resolved. `GITHUB_OUTPUT` is pointed at a sandbox file because the step
+    appends `sha=...` there and `set -u` would otherwise abort on it."""
+    out = sandbox / "github_output"
+    out.write_text("", encoding="utf-8")
+    prefix = (
+        f"EVENT_NAME={_quote(event)}; PR_BASE_SHA=''; PUSH_BEFORE_SHA={_quote(before)}; "
+        f"GITHUB_OUTPUT={_quote(str(out))}\n"
+    )
+    result = run_block_under_stubs(prefix + _base_resolution_block(), failing, sandbox)
+    assert not result.unmodelled, f"commands reached the shell with no stub: {result.unmodelled}"
+    return result.exit_code, out.read_text(encoding="utf-8")
+
+
+def test_a_first_push_compares_against_main_instead_of_failing() -> None:
+    """A branch's first push carries an all-zeros `before` — there is no
+    previous tip. The guard used to exit 1 there, so every new branch opened
+    with this check red and the PR run green, and a guard that is red on every
+    first push is a guard people learn to ignore (seen on #6, #7 and #8).
+
+    For a new branch the ledger's true base IS main: every commit on it is
+    after main by definition. So the step fetches origin/main and compares
+    against that, and the check runs rather than declining to."""
+    with tempfile.TemporaryDirectory() as directory:
+        code, output = _resolve_base("push", ZERO_SHA, set(), Path(directory))
+    assert code == 0, "the guard still refuses to run on a first push"
+    assert "sha=origin/main" in output, f"expected origin/main as the base, got {output!r}"
+
+
+def test_a_later_push_still_compares_against_its_own_previous_tip() -> None:
+    """The fallback is for the zero SHA only. A real `before` is the right
+    base for a subsequent push and must not be replaced by main."""
+    with tempfile.TemporaryDirectory() as directory:
+        code, output = _resolve_base("push", "a" * 40, set(), Path(directory))
+    assert code == 0
+    assert "sha=" + "a" * 40 in output
+    assert "origin/main" not in output
+
+
+def test_a_first_push_that_cannot_fetch_main_fails_loudly() -> None:
+    """If origin/main cannot be fetched there is no base, and the step must
+    say the check did not run rather than pass by default."""
+    with tempfile.TemporaryDirectory() as directory:
+        code, output = _resolve_base("push", ZERO_SHA, {"git"}, Path(directory))
+    assert code != 0, "a first push with no reachable main resolved a base from nothing"
+    assert "sha=" not in output
