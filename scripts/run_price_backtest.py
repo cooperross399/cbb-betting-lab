@@ -329,6 +329,11 @@ class GradingCensus:
     unsettleable: int = 0
     no_fixture: int = 0
     ambiguous_player: int = 0
+    #: A prop whose player name resolves to nobody on either team's box score
+    #: for that game. Unknown, not a did-not-play: `void` is the book's
+    #: treatment of a listed player who did not enter, and this lab only says
+    #: it about a player it has actually found, marked `did_not_play`.
+    unresolved_player: int = 0
     unreadable_price: int = 0
     errors: dict[str, int] = field(default_factory=dict)
     reasons: dict[str, int] = field(default_factory=dict)
@@ -355,6 +360,12 @@ class GradingCensus:
             out.append(
                 f"  {self.ambiguous_player:,} name a player who matches more "
                 "than one athlete in the game; ambiguity is never a coin flip"
+            )
+        if self.unresolved_player:
+            out.append(
+                f"  {self.unresolved_player:,} name a player who resolves to "
+                "nobody on either team's box score; an unresolved name is "
+                "unknown, not a did-not-play, so it is never a void"
             )
         if self.unreadable_price:
             out.append(
@@ -586,7 +597,10 @@ def player_index(player_games: pd.DataFrame, game_ids: set) -> dict:
 
     Keyed by the game so candidates are already filtered to the two teams that
     played it — the football lab's rule: *a lone candidate on the wrong team is
-    a void, not a match.*
+    not a match.* Did-not-play rows are kept: they are how a resolved player
+    who never entered reaches `settlement._player_guard` and comes back
+    `VOID`. A name with no row at all is unresolved, and `_grade_one` returns
+    `UNSETTLEABLE` for it rather than a void.
     """
     index: dict = {}
     if player_games is None or player_games.empty or not game_ids:
@@ -721,10 +735,19 @@ def _grade_one(
                 "in this game; ambiguity settles nothing and is never a coin flip",
             )
         if not candidates:
+            # A name that fails to RESOLVE is not a player who did not play.
+            # `Outcome.VOID` is the book's treatment of a genuine did-not-play
+            # and is reached only through `settlement._player_guard`, on a
+            # player row this lab actually found and that carries
+            # `did_not_play`. Nothing was found here, and nothing is unknown.
+            census.unresolved_player += 1
             return (
-                Outcome.VOID,
+                Outcome.UNSETTLEABLE,
                 None,
-                f"{name!r} does not appear in this game's box score",
+                f"{name!r} resolves to nobody on either team's box score for "
+                "this game. An unresolved name is unknown, not a did-not-play: "
+                "void needs a player who was found and is recorded as not "
+                "having entered",
             )
         player_row = candidates[0]
 
