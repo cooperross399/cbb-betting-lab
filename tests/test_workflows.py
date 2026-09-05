@@ -123,7 +123,13 @@ POLICY_GATE_JOB_ID = "receipts"
 STEP_SUMMARY_VARIABLE = "GITHUB_STEP_SUMMARY"
 #: The only actions the policy gate's job may run beside the receipt checker.
 #: An action is somebody else's code with a write handle on the job summary,
-#: and the gate's summary has exactly one author.
+#: which is exactly why this tuple pins WHICH actions may run and can say
+#: nothing about what they write: their code is not in this tree. So the
+#: gate's summary has exactly one author among the steps this repository
+#: wrote, and these two are trusted rather than checked. That gap is spelled
+#: out under WHAT IT DOES NOT ENFORCE in the docstring of
+#: `check_only_the_receipt_checker_writes_the_gates_job_summary`, and a test
+#: below holds it open.
 POLICY_GATE_PERMITTED_ACTIONS = ("actions/checkout", "actions/setup-python")
 #: The script the gate's step must actually invoke, spelled as the workflow
 #: spells it. Pinned as a whole first argument, the way the junit gate is.
@@ -4108,10 +4114,17 @@ def run_policy_gate_for_real(
     sequence stops at the first block that fails, and the process returned is
     the last one that ran.
 
-    `extra_env` is applied AFTER the runner-file variables, which is where a
-    job-level or workflow-level `env:` lands: GitHub composes the step's
-    environment from the workflow's, then the job's, then the step's, and the
-    runner's own `GITHUB_STEP_SUMMARY` is overridable by all three. It is how
+    `extra_env` is applied AFTER the runner-file variables, which is the
+    MODEL OF THE RUNNER this harness assumes, not a measurement of one: that
+    GitHub composes the step's environment from the workflow's, then the
+    job's, then the step's, and that the runner's own `GITHUB_STEP_SUMMARY`
+    is overridable by all three. Nothing here has been checked against a real
+    Actions run — no test in this file can reach one — so what the harness
+    demonstrates is what the checker does when the variable IS overridden,
+    and the claim that an `env:` at either level is what overrides it is read
+    off GitHub's documented precedence rather than observed. If that
+    precedence were ever wrong the rule would still be the safe one: it
+    refuses the `env:` either way. It is how
     `test_a_job_or_workflow_level_env_redirecting_the_job_summary_is_rejected`
     measures what the redirect actually does before the rule refuses it. The
     summary returned is always the file the RUNNER made — the one a reviewer
@@ -5401,8 +5414,9 @@ def test_the_policy_gate_summary_carries_one_verdict_and_it_is_the_runs_own(
     )
     # A homoglyph spells the marker to a reader and not to the scrub, so the
     # question it has to be asked is a different one: nothing outside ASCII
-    # reached this summary except the two characters the checker itself
-    # spells.
+    # reached this summary except the one character the checker itself spells,
+    # the em dash of `SCRIPT_NON_ASCII`. It held two until `_plain()` stopped
+    # truncating with an ellipsis.
     foreign = sorted(set(red_summary) - SCRIPT_NON_ASCII - {c for c in red_summary if c.isascii()})
     assert not foreign, (
         f"the red summary carries {foreign} — characters that came off disk and "

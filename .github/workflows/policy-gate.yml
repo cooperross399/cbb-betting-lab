@@ -83,10 +83,14 @@
 # workflow-level `env:` redirects the checker's own write without naming a
 # single step: that one does not add a verdict, it sends the only one there
 # is to a file nobody opens, and a red gate whose summary is empty told the
-# reviewer nothing. So: GITHUB_STEP_SUMMARY is named NOWHERE in this file —
-# not in a step, not in a job `env:`, not in a workflow `env:` — exactly one
-# step runs the checker, and every other step in the job is
-# `actions/checkout` or `actions/setup-python`.
+# reviewer nothing. So: GITHUB_STEP_SUMMARY is named NOWHERE in the PARSED
+# YAML of this file — not in a step, not in a job `env:`, not in a workflow
+# `env:` — exactly one step runs the checker, and every other step in the job
+# is `actions/checkout` or `actions/setup-python`. The rule reads the loaded
+# document and comments are not in it, which is how this paragraph can spell
+# the name freely while the workflow proper spells it nowhere: no `run:`, no
+# `env:`, no `with:`. The checker reaches the file the way a step is meant
+# to, out of its own environment in Python, which is not this file at all.
 #
 # What that rule does NOT enforce, in its own docstring and held open by a
 # test: what those two actions do with the same write handle (their code is

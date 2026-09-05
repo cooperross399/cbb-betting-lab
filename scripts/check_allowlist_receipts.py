@@ -348,8 +348,15 @@ def _plain(value: object, limit: int = 160) -> str:
     be a way to write a sentence a reviewer reads as this gate's finding.
 
     WHAT IT RETURNS, asserted below rather than assumed: a string that is
-    printable ASCII, holds no newline, and is at most `limit` characters
-    long. That is a property of the OUTPUT. It is not a claim about the
+    printable ASCII, holds no newline, and is at most `max(limit, 7)`
+    characters long. The floor of 7 is the bound and not slack in it: the two
+    fixed strings this function can return are returned whatever `limit`
+    says, and both are longer than a small one — `_plain('abcdefghij',
+    limit=2)` is the three-character `'...'` and `_plain('', limit=2)` is the
+    seven-character `'(empty)'`. Every call in this file passes a `limit` of
+    80 or more, and there `max(limit, 7)` is `limit`, which is the bound this
+    sentence used to state of every call. That is a property of the OUTPUT.
+    It is not a claim about the
     input, and the sentence here used to make one — "every string this gate
     legitimately prints is ASCII — the market names, the receipt filenames
     and the reasons `staging_provider_policy` returns". Not one of those
