@@ -127,8 +127,6 @@ the record and writes the markdown, scoring nothing.
 from __future__ import annotations
 
 import argparse
-import importlib
-import inspect
 import sys
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -167,17 +165,16 @@ from cbb_betting_lab.season import clean_text
 from cbb_betting_lab.settlement import Outcome, settle
 
 
-#: Where the model comes from by default. `models/ratings.py` is named in
-#: `gameday_card.opinions_for`'s own docstring as the module that does not exist
-#: yet — *"no rating exists for this game — `models/ratings.py` is not written,
-#: so the model was never asked"* — so this default points at the name the rest
-#: of the repository already uses rather than inventing a second one.
-DEFAULT_MODEL = "cbb_betting_lab.models.ratings:matchups_for"
-
-#: The keyword arguments a model may declare. It is handed the ones it names and
-#: no others, so a model that only wants the day and the history does not have
-#: to accept arguments it will not read.
-MODEL_ARGUMENTS: tuple[str, ...] = ("day", "history", "prices", "competition")
+#: The model seam is the library's, not this script's. `DEFAULT_MODEL`,
+#: `MODEL_ARGUMENTS`, `resolve_model`, `call_model` and `ModelNotWired` live in
+#: `reports/price_backtest.py` so the gameday card prices through exactly the
+#: callable this measurement does; they are re-exported here because
+#: `run_replication.py` and the tests read them off this module.
+DEFAULT_MODEL = PB.DEFAULT_MODEL
+MODEL_ARGUMENTS = PB.MODEL_ARGUMENTS
+ModelNotWired = PB.ModelNotWired
+resolve_model = PB.resolve_model
+call_model = PB.call_model
 
 #: What a run actually reads out of the price store. Every column the wager
 #: identity, the join, the grade or the tier split needs, and nothing else —
@@ -225,10 +222,6 @@ EXIT_NO_OPINION = 4
 
 class NothingToMeasure(RuntimeError):
     """A precondition is absent, so nothing was scored and nothing was written."""
-
-
-class ModelNotWired(RuntimeError):
-    """The named model could not be resolved. No fallback pricer exists."""
 
 
 # --------------------------------------------------------------------------
@@ -383,72 +376,6 @@ class GradingCensus:
 # --------------------------------------------------------------------------
 # Resolving the model
 # --------------------------------------------------------------------------
-
-
-def resolve_model(spec: str) -> Callable:
-    """`module:attribute` -> the callable, or a refusal that names what is missing.
-
-    There is deliberately no fallback. A backtest that silently prices with
-    something other than the model the card runs measures a policy nobody would
-    have run, and it does it while printing intervals.
-    """
-    text = str(spec or "").strip()
-    module_name, separator, attribute = text.partition(":")
-    if not module_name or not separator or not attribute:
-        raise ModelNotWired(
-            f"--model {spec!r} is not a `module:attribute` path. It names the "
-            "callable that returns one matchup per event for a slate day, for "
-            f"example {DEFAULT_MODEL!r}."
-        )
-    try:
-        module = importlib.import_module(module_name)
-    except ImportError as exc:
-        raise ModelNotWired(
-            f"{module_name} could not be imported ({exc}). "
-            + (
-                "`models/ratings.py` is not written yet — `gameday_card` says "
-                "so in its own docstring, and every wager on today's card "
-                "reads 'no opinion' for the same reason. "
-                if module_name.endswith("ratings")
-                else ""
-            )
-            + "Nothing was scored and nothing was written: a backtest with no "
-            "model is an empty report, and an empty report reads as a null "
-            "result."
-        ) from exc
-    try:
-        model = getattr(module, attribute)
-    except AttributeError as exc:
-        raise ModelNotWired(
-            f"{module_name} has no attribute {attribute!r}. It must be a "
-            "callable taking the keyword arguments it declares out of "
-            f"{list(MODEL_ARGUMENTS)} and returning a mapping of event_id to a "
-            "matchup object. "
-            "Nothing was scored and nothing was written: a backtest with no "
-            "model is an empty report, and an empty report reads as a null "
-            "result."
-        ) from exc
-    if not callable(model):
-        raise ModelNotWired(f"{spec} resolved to {type(model).__name__}, not a callable.")
-    return model
-
-
-def call_model(model: Callable, **arguments):
-    """Call a model with the arguments it declares, and no others.
-
-    A model that only wants the day and the history should not have to accept a
-    price frame it will never read, and a model that takes `**kwargs` gets
-    everything. Filtering here rather than at the model keeps the walk-forward
-    guarantee in one place: `history` is built by `walk_forward` and is the only
-    view of the past anything downstream is given.
-    """
-    try:
-        parameters = inspect.signature(model).parameters
-    except (TypeError, ValueError):
-        return model(**arguments)
-    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
-        return model(**arguments)
-    return model(**{k: v for k, v in arguments.items() if k in parameters})
 
 
 # --------------------------------------------------------------------------

@@ -143,6 +143,8 @@ from cbb_betting_lab.gates import (
     TipState,
     availability_note,
     can_be_played,
+    IMMINENT_MINUTES,
+    imminent_note,
     tip_state,
 )
 from cbb_betting_lab.markets import FUTURES, MARKETS_BY_KEY, PLAYER, per_event_provider_keys
@@ -661,9 +663,10 @@ class TipCensus:
         )
         return (
             f"Tip guard, run against each game's own tip: {seen:,} game(s) "
-            f"judged — {parts or 'none'}. Only `upcoming` may carry a stake; "
-            "`unconfirmed` is a tip time this lab could not read and it "
-            "quarantines exactly like a game that has already started."
+            f"judged — {parts or 'none'}. Only `upcoming` may carry a stake. "
+            + imminent_note()
+            + " `unconfirmed` is a tip time this lab could not read and it "
+            "quarantines the same way."
         )
 
 
@@ -1634,10 +1637,10 @@ def _selections_section(run: CardRun) -> list[str]:
     if run.withdrawn_after_pricing:
         lines += [
             f"**{len(run.withdrawn_after_pricing):,} selection(s) were withdrawn "
-            "after pricing** because their game tipped, became imminent, or "
-            "stopped having a readable tip time between the board being read and "
-            "this card being written. Their stake is removed and they are "
-            "counted in the identity below:",
+            "after pricing** because their game tipped, came inside the "
+            f"{IMMINENT_MINUTES}-minute lead, or stopped having a readable tip "
+            "time between the board being read and this card being written. "
+            "Their stake is removed and they are counted in the identity below:",
             "",
         ]
         lines += [f"* {note}" for note in run.tip.withdrawn_after_pricing]
@@ -1865,8 +1868,12 @@ def _what_this_is_not_section(run: CardRun) -> list[str]:
         "never grant one."
         if not run.policy.allowlist
         else "* Every market above was allowlisted by a reviewed policy with a "
-        "human acceptance receipt behind it. Claude may withdraw an allowlist "
-        "and may never grant one."
+        "human acceptance receipt behind it — verified when the policy was "
+        "loaded, not asserted: a receipt file naming the market, citing an "
+        "evidence record whose sha256 still matches the file on disk, signed "
+        "by a person who is not Claude, and dated. A policy with one "
+        "allowlisted market lacking any of that loads manual-only in its "
+        "entirety. Claude may withdraw an allowlist and may never grant one."
     )
     return [
         "## What this card is not",

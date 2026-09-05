@@ -29,6 +29,7 @@ from types import SimpleNamespace
 
 import pandas as pd
 import pytest
+from collections.abc import Mapping
 
 from cbb_betting_lab import forward_evidence
 from cbb_betting_lab.competitions import CBB
@@ -36,6 +37,7 @@ from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.gates import TipState
 from cbb_betting_lab.providers import odds_api, staging
 from cbb_betting_lab.reports import gameday_card as GC
+from cbb_betting_lab.season import season_for_slate_date
 from cbb_betting_lab.reports.card_pricing import BAR_ORDER, Bar, SelectionResult, Wager
 from cbb_betting_lab.staging_provider_policy import (
     MANUAL_ONLY,
@@ -362,7 +364,8 @@ def stage_to_disk(board: GC.Board, tmp_path: Path, day: str) -> Path:
 
 
 def test_the_whole_chain_runs_offline_from_a_staged_board(
-    board_for_today, today, tmp_path, capsys, no_network, no_credential
+    board_for_today, today, tmp_path, capsys, no_network, no_credential,
+    fixture_raw_dir, fixture_processed_dir,
 ):
     """The entry point, over a fixture, with the socket layer closed.
 
@@ -376,7 +379,8 @@ def test_the_whole_chain_runs_offline_from_a_staged_board(
         "--staged-board", str(staged),
         "--archive-dir", str(tmp_path / "archive"),
         "--output-dir", str(tmp_path / "outputs"),
-        "--raw-dir", str(tmp_path / "raw"),
+        "--raw-dir", str(fixture_raw_dir),
+        "--processed-dir", str(fixture_processed_dir),
     )
     out = capsys.readouterr().out
 
@@ -1199,7 +1203,8 @@ def test_the_renderers_mention_regex_is_the_workflows_own():
 
 
 def test_a_rehearsal_labels_itself_and_cannot_reach_the_card_feed(
-    board, day, tmp_path, capsys, no_network, no_credential
+    board, day, tmp_path, capsys, no_network, no_credential,
+    fixture_raw_dir, fixture_processed_dir,
 ):
     """It writes to its own archive, which the workflow neither restores nor
     publishes, and its decision word is its own so a rehearsal's outcome can
@@ -1213,7 +1218,8 @@ def test_a_rehearsal_labels_itself_and_cannot_reach_the_card_feed(
         "--staged-board", str(staged),
         "--archive-dir", str(archive),
         "--output-dir", str(tmp_path / "outputs"),
-        "--raw-dir", str(tmp_path / "raw"),
+        "--raw-dir", str(fixture_raw_dir),
+        "--processed-dir", str(fixture_processed_dir),
     )
     out = capsys.readouterr().out
     card = (tmp_path / "outputs" / "cbb_gameday_card.md").read_text(encoding="utf-8")
@@ -1307,7 +1313,8 @@ class FakeProvider:
 
 
 def test_the_live_path_runs_end_to_end_against_a_provider_that_answers(
-    payloads_for_today, today, tmp_path, monkeypatch, capsys, no_network, no_credential
+    payloads_for_today, today, tmp_path, monkeypatch, capsys, no_network, no_credential,
+    fixture_raw_dir, fixture_processed_dir,
 ):
     """The path the workflow actually takes, with the socket layer closed.
 
@@ -1347,7 +1354,8 @@ def test_the_live_path_runs_end_to_end_against_a_provider_that_answers(
         "--archive-dir", str(tmp_path / "archive"),
         "--output-dir", str(tmp_path / "outputs"),
         "--staging-dir", str(tmp_path / "staging"),
-        "--raw-dir", str(tmp_path / "raw"),
+        "--raw-dir", str(fixture_raw_dir),
+        "--processed-dir", str(fixture_processed_dir),
     )
     out = capsys.readouterr().out
 
@@ -1577,7 +1585,8 @@ def test_the_changed_marker_fires_only_on_a_change(board, day, tmp_path):
 
 
 def test_the_run_records_its_fingerprint_for_the_next_run(
-    board_for_today, today, tmp_path, capsys, no_network, no_credential
+    board_for_today, today, tmp_path, capsys, no_network, no_credential,
+    fixture_raw_dir, fixture_processed_dir,
 ):
     day = today
     staged = stage_to_disk(board_for_today, tmp_path, day)
@@ -1586,7 +1595,8 @@ def test_the_run_records_its_fingerprint_for_the_next_run(
         "--staged-board", str(staged),
         "--archive-dir", str(tmp_path / "archive"),
         "--output-dir", str(tmp_path / "outputs"),
-        "--raw-dir", str(tmp_path / "raw"),
+        "--raw-dir", str(fixture_raw_dir),
+        "--processed-dir", str(fixture_processed_dir),
     )
     capsys.readouterr()
     state = json.loads(
@@ -1659,7 +1669,8 @@ def test_a_state_file_from_another_day_or_slot_is_not_a_card_to_compare_against(
 
 
 def test_a_second_run_of_the_same_slot_compares_against_the_first(
-    board_for_today, today, tmp_path, capsys, no_network, no_credential
+    board_for_today, today, tmp_path, capsys, no_network, no_credential,
+    fixture_raw_dir, fixture_processed_dir,
 ):
     """The check above must not have turned the comparison off altogether.
 
@@ -1673,7 +1684,8 @@ def test_a_second_run_of_the_same_slot_compares_against_the_first(
         "--staged-board", str(staged),
         "--archive-dir", str(tmp_path / "archive"),
         "--output-dir", str(tmp_path / "outputs"),
-        "--raw-dir", str(tmp_path / "raw"),
+        "--raw-dir", str(fixture_raw_dir),
+        "--processed-dir", str(fixture_processed_dir),
     )
     run_script_as_of(today, *argv)
     run_script_as_of(today, *argv)
@@ -1683,6 +1695,274 @@ def test_a_second_run_of_the_same_slot_compares_against_the_first(
     assert "nothing is claimed about whether the selections changed" not in text
     assert "unchanged since the last card for this slate day" in text
     assert GC.SELECTIONS_CHANGED not in text
+
+
+# ---------------------------------------------------------------------------
+# The entry point passes the model's opinion — the wire that was missing
+# ---------------------------------------------------------------------------
+
+#: A slate day inside the tracked real-data sample: 15 of its 400 games tipped
+#: on it, so a board built from the schedule's own spellings joins to games the
+#: model can be asked about. Fixed rather than computed so a change in the
+#: sample that removed the day fails here, in words, rather than passing on an
+#: empty board.
+FIXTURE_DAY = "2026-02-07"
+
+
+def _board_from_the_schedule(day: str, *, games: int = 4) -> GC.Board:
+    """A board for `day`, naming the schedule's own teams, tipping that day."""
+    from conftest import schedule_fixture
+
+    schedule = pd.read_parquet(schedule_fixture(season_for_slate_date(day)))
+    on_day = schedule[schedule["game_date"].astype(str) == day].head(games)
+    assert len(on_day) == games, f"the schedule fixture has fewer than {games} games on {day}"
+    tip = datetime.fromisoformat(f"{day}T19:00:00").replace(tzinfo=CBB.timezone)
+    payloads = [
+        _event(
+            f"evt-{int(row['id'])}",
+            home=str(row["home_display_name"]),
+            away=str(row["away_display_name"]),
+            commence=tip.astimezone(timezone.utc),
+            books=[
+                _book("draftkings", [
+                    {"key": "h2h", "outcomes": [
+                        {"name": str(row["home_display_name"]), "price": -140},
+                        {"name": str(row["away_display_name"]), "price": 120},
+                    ]},
+                    {"key": "spreads", "outcomes": [
+                        {"name": str(row["home_display_name"]), "price": -110, "point": -3.5},
+                        {"name": str(row["away_display_name"]), "price": -110, "point": 3.5},
+                    ]},
+                ]),
+            ],
+        )
+        for _, row in on_day.iterrows()
+    ]
+    return GC.board_from_payloads(payloads, competition=CBB)
+
+
+def _capture_run_card(monkeypatch) -> dict:
+    """Wrap the real `run_card` and record the keyword arguments it was given."""
+    seen: dict = {}
+    original = GC.run_card
+
+    def recording(board, **kwargs):
+        seen.update(kwargs)
+        return original(board, **kwargs)
+
+    monkeypatch.setattr(GC, "run_card", recording)
+    return seen
+
+
+def test_the_entry_point_passes_the_models_opinion_to_the_card(
+    tmp_path, monkeypatch, capsys, no_network, no_credential,
+    fixture_raw_dir, fixture_processed_dir,
+):
+    """`run_card(matchups=...)` is a keyword the script never passed.
+
+    `run_card` defaults `matchups` to None, so for the whole of the build the
+    production card would have priced no opinion on any game, all season, and
+    read as healthy while doing it. Asserted on the call rather than on the
+    prose: the kwarg reaches `run_card` as a non-empty mapping keyed by the
+    board's event ids, built from the tracked real-data sample through the same
+    seam the price backtest prices through.
+    """
+    board = _board_from_the_schedule(FIXTURE_DAY)
+    staged = stage_to_disk(board, tmp_path, FIXTURE_DAY)
+    seen = _capture_run_card(monkeypatch)
+    status = run_script(
+        "--card-slot", "morning",
+        "--rehearsal", "--slate-date", FIXTURE_DAY,
+        "--staged-board", str(staged),
+        "--archive-dir", str(tmp_path / "archive"),
+        "--output-dir", str(tmp_path / "outputs"),
+        "--raw-dir", str(fixture_raw_dir),
+        "--processed-dir", str(fixture_processed_dir),
+    )
+    out = capsys.readouterr().out
+
+    assert status == 0, out
+    assert "matchups" in seen, "run_card was called without the matchups keyword"
+    matchups = seen["matchups"]
+    assert isinstance(matchups, Mapping) and len(matchups) > 0, (
+        f"the entry point passed {matchups!r}; the model was never asked"
+    )
+    assert set(matchups) <= set(board.rows["event_id"].astype(str)), (
+        "a matchup was passed for an event that is not on the board"
+    )
+    assert set(matchups) == set(board.rows["event_id"].astype(str)), (
+        f"{len(board.rows['event_id'].unique())} events on the board, "
+        f"{len(matchups)} matchup(s) built — every schedule-named game must join"
+    )
+    # The card SAYS what the model was asked and what it answered, with the
+    # sample it was fitted on, and the history stops strictly before the day.
+    assert f"asked about {len(matchups)} event(s) on {FIXTURE_DAY}" in out
+    assert f"strictly before {FIXTURE_DAY}" in out
+    assert "through 2026-02-0" in out and f"through {FIXTURE_DAY}" not in out
+
+
+def test_the_entry_point_refuses_when_the_processed_tables_are_absent(
+    tmp_path, monkeypatch, capsys, no_network, no_credential, fixture_raw_dir,
+):
+    """No table, no opinion — and the card says so as a refusal.
+
+    A card with no opinion on anything is indistinguishable from a card whose
+    model was never asked. Rather than publishing that ambiguity as a night of
+    evidence, the run prints `::error::` and `decision=refused`, freezes nothing,
+    and never reaches `run_card`.
+    """
+    board = _board_from_the_schedule(FIXTURE_DAY)
+    staged = stage_to_disk(board, tmp_path, FIXTURE_DAY)
+    empty = tmp_path / "processed"
+    empty.mkdir()
+    seen = _capture_run_card(monkeypatch)
+    status = run_script(
+        "--card-slot", "morning",
+        "--rehearsal", "--slate-date", FIXTURE_DAY,
+        "--staged-board", str(staged),
+        "--archive-dir", str(tmp_path / "archive"),
+        "--output-dir", str(tmp_path / "outputs"),
+        "--raw-dir", str(fixture_raw_dir),
+        "--processed-dir", str(empty),
+    )
+    captured = capsys.readouterr()
+
+    assert status == 2
+    assert captured.out.rstrip().endswith(f"decision={GC.Decision.REFUSED.value}")
+    assert "::error::" in captured.err
+    assert "cbb_team_games.csv" in captured.err and "build_datasets" in captured.err
+    assert "Nothing was priced" in captured.err
+    assert not seen, "run_card was reached with no table to price from"
+    assert not (tmp_path / "archive").exists(), "a refusal froze something"
+    assert not (tmp_path / "outputs" / "cbb_gameday_card.md").exists()
+
+
+def test_the_entry_point_refuses_when_the_schedule_is_absent(
+    tmp_path, monkeypatch, capsys, no_network, no_credential, fixture_processed_dir,
+):
+    """The other input the model cannot do without: with no cached schedule no
+    event can be joined to a game, so the model cannot be asked about any."""
+    board = _board_from_the_schedule(FIXTURE_DAY)
+    staged = stage_to_disk(board, tmp_path, FIXTURE_DAY)
+    seen = _capture_run_card(monkeypatch)
+    status = run_script(
+        "--card-slot", "morning",
+        "--rehearsal", "--slate-date", FIXTURE_DAY,
+        "--staged-board", str(staged),
+        "--archive-dir", str(tmp_path / "archive"),
+        "--output-dir", str(tmp_path / "outputs"),
+        "--raw-dir", str(tmp_path / "raw"),
+        "--processed-dir", str(fixture_processed_dir),
+    )
+    captured = capsys.readouterr()
+
+    assert status == 2
+    assert captured.out.rstrip().endswith(f"decision={GC.Decision.REFUSED.value}")
+    assert "::error::" in captured.err and "No cached schedule" in captured.err
+    assert not seen
+
+
+def test_the_cards_history_is_cut_by_the_same_rule_as_the_backtests(
+    fixture_raw_dir, fixture_processed_dir,
+):
+    """One definition of "strictly earlier", shared, and it excludes the day."""
+    from cbb_betting_lab.reports import card_matchups
+    from cbb_betting_lab.reports import price_backtest as PB
+
+    board = _board_from_the_schedule(FIXTURE_DAY)
+    built = card_matchups.matchups_for_card(
+        board.rows, competition=CBB, day=FIXTURE_DAY,
+        processed_dir=fixture_processed_dir, raw_dir=fixture_raw_dir,
+    )
+    team_games = pd.read_csv(fixture_processed_dir / "cbb_team_games.csv", low_memory=False)
+    expected = PB.history_before(team_games, FIXTURE_DAY)
+
+    assert built.history_rows == len(expected) > 0
+    assert built.priced_through < FIXTURE_DAY
+    assert (team_games["slate_date"].astype(str) == FIXTURE_DAY).any(), (
+        "the sample has no games on the fixture day, so the cut is not being tested"
+    )
+    assert built.model == PB.DEFAULT_MODEL
+    for event_id, matchup in built.matchups.items():
+        assert getattr(matchup, "as_of", FIXTURE_DAY) == FIXTURE_DAY, event_id
+
+
+# ---------------------------------------------------------------------------
+# The tip guard's margin is the lead every measured number rests on
+# ---------------------------------------------------------------------------
+
+
+def _board_tipping_in(now: datetime, minutes: int) -> GC.Board:
+    tip = now + timedelta(minutes=minutes)
+    payload = _event(
+        "evt-lead",
+        home="Duke Blue Devils",
+        away="Kansas Jayhawks",
+        commence=tip,
+        books=[
+            _book("draftkings", [
+                {"key": "h2h", "outcomes": [
+                    {"name": "Duke Blue Devils", "price": -140},
+                    {"name": "Kansas Jayhawks", "price": 120},
+                ]},
+            ]),
+        ],
+    )
+    return GC.board_from_payloads([payload], competition=CBB)
+
+
+def test_a_game_tipping_inside_the_measured_lead_is_not_selectable(tmp_path, now):
+    """59 minutes out is inside T-60, the lead the store was bought at.
+
+    The guard used to read 15 minutes while `schedule_contract.CARD_LEAD_MINUTES`
+    read 60 and was cited only in docstrings — so a game tipping in 16-59
+    minutes could be selected at a price the measurement never covered. With an
+    allowlisted market and a matchup the model prices, the wager reaches the
+    tip bar and is stopped there, its stake removed, and the card says what
+    `imminent` means in the lead's own number.
+    """
+    from cbb_betting_lab.schedule_contract import CARD_LEAD_MINUTES
+    from cbb_betting_lab.season import slate_date
+
+    board = _board_tipping_in(now, 59)
+    day = slate_date(board.rows["commence_time"].iloc[0], CBB)
+    run = GC.run_card(
+        board, competition=CBB, day=day, card_slot="morning",
+        archive_dir=tmp_path / "archive", policy=a_policy("moneyline"),
+        matchups={"evt-lead": a_matchup()}, now=lambda: now,
+    )
+
+    assert run.selections == []
+    assert run.tip.games(TipState.IMMINENT) == 1
+    assert run.tip.games(TipState.UPCOMING) == 0
+    assert run.identity.reconciles(), run.identity.summary_line()
+    assert run.identity.gated >= 1
+    assert run.snapshot_path is None or "evt-lead" not in set(
+        forward_evidence.read_snapshot(run.snapshot_path)["event_id"]
+    ), "an opinion inside the lead was frozen as forward evidence"
+    card = GC.render_card(run)
+    assert f"inside {CARD_LEAD_MINUTES} minutes of the run" in card
+    assert f"T-{CARD_LEAD_MINUTES} lead the historical store was bought at" in card
+    assert "carries no stake" in card
+
+
+def test_a_game_tipping_just_outside_the_measured_lead_is_upcoming(tmp_path, now):
+    """61 minutes out clears the lead and the same wager reaches the later bars."""
+    from cbb_betting_lab.season import slate_date
+
+    board = _board_tipping_in(now, 61)
+    day = slate_date(board.rows["commence_time"].iloc[0], CBB)
+    run = GC.run_card(
+        board, competition=CBB, day=day, card_slot="morning",
+        archive_dir=tmp_path / "archive", policy=a_policy("moneyline"),
+        matchups={"evt-lead": a_matchup()}, now=lambda: now,
+    )
+
+    assert run.tip.games(TipState.UPCOMING) == 1
+    assert run.tip.games(TipState.IMMINENT) == 0
+    assert run.identity.reconciles(), run.identity.summary_line()
+    frozen = forward_evidence.read_snapshot(run.snapshot_path)
+    assert "evt-lead" in set(frozen["event_id"]), "an upcoming game was not frozen"
 
 
 # ---------------------------------------------------------------------------

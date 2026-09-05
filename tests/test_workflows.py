@@ -2830,3 +2830,80 @@ def test_the_secret_name_in_prose_is_not_a_secret_reference(tmp_path: Path) -> N
     reject the real file. A rule that rejects correct work is a rule somebody
     deletes."""
     check_the_required_workflow_holds_no_secret_at_all(WORKFLOWS_DIR / TESTS_WORKFLOW)
+
+
+# --------------------------------------------------------------------------
+# The gameday card has the tables it prices from, because they are built first.
+# --------------------------------------------------------------------------
+
+GAMEDAY_WORKFLOW = "cbb-gameday-refresh.yml"
+
+
+def _card_job_steps() -> list[dict]:
+    path = WORKFLOWS_DIR / GAMEDAY_WORKFLOW
+    assert path.is_file(), f"{GAMEDAY_WORKFLOW} is missing"
+    document = load(path)
+    jobs = jobs_of(document)
+    assert "card" in jobs, f"{GAMEDAY_WORKFLOW} has no `card` job; found {sorted(jobs)}"
+    steps = steps_of(jobs["card"])
+    assert steps, "the card job has no steps"
+    return steps
+
+
+def _step_index_running(steps: list[dict], script: str) -> int:
+    """The index of the ONE step whose run block executes `script`."""
+    hits = [
+        i for i, step in enumerate(steps)
+        if isinstance(step.get("run"), str)
+        and any(script in line for line in commands(step["run"]))
+    ]
+    assert len(hits) == 1, f"{script} is run by {len(hits)} step(s) of the card job; expected exactly one"
+    return hits[0]
+
+
+def test_the_gameday_card_runs_after_the_tables_it_prices_from_are_built() -> None:
+    """`run_gameday_card.py` now refuses without `cbb_team_games.csv`, so the
+    step that builds it must come first in the same job — parsed from the YAML
+    and located by the command it runs, not by a step name. A card step ahead
+    of the build step would refuse every slot of the season."""
+    steps = _card_job_steps()
+    build = _step_index_running(steps, "scripts/build_datasets.py")
+    card = _step_index_running(steps, "scripts/run_gameday_card.py")
+    fetch = _step_index_running(steps, "scripts/fetch_cbb_data.py")
+
+    assert fetch <= build < card, (
+        f"fetch at step {fetch}, build at {build}, card at {card}: the tables are "
+        "not on disk when the card runs"
+    )
+    # Within the one block, the fetch precedes the build.
+    block = commands(steps[build]["run"])
+    fetched = next(i for i, line in enumerate(block) if "fetch_cbb_data.py" in line)
+    built = next(i for i, line in enumerate(block) if "build_datasets.py" in line)
+    assert fetched < built, "the tables are built before the feeds they are built from are fetched"
+
+
+def test_the_gameday_tables_step_builds_the_season_the_card_prices() -> None:
+    """The build names the current season by hoopR's ending-year label, so the
+    schedule the card joins on (`mbb_schedule_2027.parquet` for 2026-27) is
+    fetched. A season list that stopped at 2026 would leave every 2026-27
+    event with no fixture and the model with nothing to price."""
+    steps = _card_job_steps()
+    block = "\n".join(commands(steps[_step_index_running(steps, "scripts/build_datasets.py")]["run"]))
+    assert re.search(r"SEASONS=\"[^\"]*\b2027\b", block), block
+
+
+def test_the_gameday_card_step_reads_the_directory_the_build_step_writes() -> None:
+    """The card step passes no `--processed-dir`, so it reads the default,
+    `data/processed` — which is where `build_datasets.py` writes and where the
+    ledger-restore step already `mkdir -p`s. Pinned so a future `--processed-dir`
+    on one side and not the other is a red build rather than a refused season."""
+    from cbb_betting_lab.config import PROCESSED_DIR, REPO_ROOT
+
+    steps = _card_job_steps()
+    card_block = "\n".join(commands(steps[_step_index_running(steps, "scripts/run_gameday_card.py")]["run"]))
+    build_block = "\n".join(commands(steps[_step_index_running(steps, "scripts/build_datasets.py")]["run"]))
+    default = str(Path(PROCESSED_DIR).relative_to(REPO_ROOT))
+    assert default == "data/processed"
+    if "--processed-dir" in card_block:
+        assert re.search(r"--processed-dir\s+\"?data/processed", card_block), card_block
+    assert "--output-dir" not in build_block or "data/processed" in build_block
