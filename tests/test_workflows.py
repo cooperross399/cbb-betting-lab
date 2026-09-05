@@ -17,10 +17,12 @@ behind a `&&`, a `${{ secrets['X'] }}` bracket accessor, and `python-version:
 Every rule now reads `yaml.safe_load`'s tree, and the shell rules read the
 joined logical lines of each `run:` block through `shlex`.
 
-**The gate rules** apply to the two workflows whose green tick is a claim
+**The gate rules** apply to the three workflows whose green tick is a claim
 about this repository — `tests.yml`, which is the required status check named
-`Tests`, and `ledger-guard.yml` — and they are the reason branch protection
-would mean anything. Until this file nothing pinned that check: the job could
+`Tests`; `ledger-guard.yml`, whose tick says no recorded hypothesis was
+removed; and `policy-gate.yml`, whose tick says every allowlisted market is
+backed by a receipt a person signed — and they are the reason branch
+protection would mean anything. Until this file nothing pinned that check: the job could
 be renamed (a required context that no job reports stays pending forever and
 reads as nothing to merge over), emptied (`echo` in place of `pytest`),
 disabled (`if: false`, `continue-on-error`), narrowed (`-x`, a positional
@@ -73,6 +75,8 @@ enforced here: `Ledger Guard` is not a required context, and
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import re
 import shlex
@@ -96,12 +100,16 @@ WORKFLOWS_DIR = PROJECT_ROOT / ".github" / "workflows"
 REQUIRED_CHECK = "Tests"
 TESTS_WORKFLOW = "tests.yml"
 LEDGER_WORKFLOW = "ledger-guard.yml"
+#: The check that makes "in a pull request whose policy gate is green" a
+#: sentence about something. Held to the gate rules like the other two: it is
+#: not operational, holds no credential, and its tick is a claim.
+POLICY_GATE_WORKFLOW = "policy-gate.yml"
 
 #: The workflows whose run blocks are executed under stubs and held to the
-#: gate rules. The other five are operational: they hold credentials on
+#: gate rules. The other six are operational: they hold credentials on
 #: purpose, keep going on purpose (`continue-on-error` on a report step so the
 #: evidence still uploads), and are covered by the corpus rules only.
-GATE_WORKFLOWS = frozenset({TESTS_WORKFLOW, LEDGER_WORKFLOW})
+GATE_WORKFLOWS = frozenset({TESTS_WORKFLOW, LEDGER_WORKFLOW, POLICY_GATE_WORKFLOW})
 
 #: The junit gate and the ledger gate, by file name. The evidence chain in
 #: tests.yml is pytest -> junit -> this script; every rule about that chain
@@ -1671,9 +1679,14 @@ def test_the_workflow_directory_is_not_empty() -> None:
     assert WORKFLOW_FILES, f"No workflow files under {WORKFLOWS_DIR}; every rule here would pass by having nothing to check"
 
 
-def test_both_gate_workflows_exist() -> None:
+def test_every_gate_workflow_exists() -> None:
     """Absence is never a pass. A deleted tests.yml is not a workflow that
-    passes every rule; it is no required check at all."""
+    passes every rule; it is no required check at all.
+
+    Named `test_both_gate_workflows_exist` while there were two; renamed when
+    `policy-gate.yml` made it three, because a test whose name says `both`
+    over a set of three is a sentence that has stopped being true.
+    """
     present = {p.name for p in GATE_FILES}
     assert present == set(GATE_WORKFLOWS), f"gate workflows missing: {sorted(set(GATE_WORKFLOWS) - present)}"
 
@@ -3591,3 +3604,470 @@ def test_the_gameday_card_step_reads_the_directory_the_build_step_writes() -> No
     if "--processed-dir" in card_block:
         assert re.search(r"--processed-dir\s+\"?data/processed", card_block), card_block
     assert "--output-dir" not in build_block or "data/processed" in build_block
+
+
+# --------------------------------------------------------------------------
+# The policy gate, executed rather than read.
+#
+# `docs/what_we_can_and_cannot_claim.md`, `data/manual/README.md` and
+# `src/cbb_betting_lab/reports/what_we_can_claim.py` all say a market joins the
+# allowlist "in a pull request whose policy gate is green". Until
+# `.github/workflows/policy-gate.yml` existed there was no such gate: nothing
+# under `.github/workflows/` opened a receipt, and a pull request carrying an
+# unreceipted allowlist was green.
+#
+# The rules below are the gate's pin. The first three read the parsed file —
+# its triggers, its permissions, and which command its step actually enters.
+# The rest EXECUTE the gate's own run block, verbatim out of the YAML, against
+# fabricated checkouts on disk: an unreceipted allowlist, a receipt whose
+# evidence has moved underneath it, a receipt signed by Claude, and an
+# allowlist entry the diff adds. A string assertion about a workflow's shell
+# logic proves a spelling is present; these read the exit code.
+# --------------------------------------------------------------------------
+
+POLICY_GATE_PATH = WORKFLOWS_DIR / POLICY_GATE_WORKFLOW
+#: The script the gate's step must actually invoke, spelled as the workflow
+#: spells it. Pinned as a whole first argument, the way the junit gate is.
+RECEIPT_CHECKER = "scripts/check_allowlist_receipts.py"
+#: The paths the gate reads, written as literals rather than imported from
+#: `staging_provider_policy`. The module is what the gate calls; a test that
+#: asked the module where the receipts live could not notice the two of them
+#: agreeing on the wrong directory.
+POLICY_FILE_RELATIVE = "data/manual/staging_provider_policy.json"
+RECEIPTS_RELATIVE = "data/manual/human_acceptance_receipts"
+#: Signers this repository could produce by itself, in the spellings
+#: `staging_provider_policy.FORBIDDEN_SIGNER` is matched against.
+SELF_SIGNATURES = ("Claude", "claude-code", "Claude Opus 5", "C.L.A.U.D.E.")
+
+
+def policy_gate_step() -> dict:
+    """The one step in the policy gate that runs the receipt checker."""
+    steps = steps_running(load(POLICY_GATE_PATH), re.escape(RECEIPT_CHECKER))
+    assert len(steps) == 1, (
+        f"{POLICY_GATE_WORKFLOW} runs {RECEIPT_CHECKER} in {len(steps)} steps; the "
+        "rules below execute one block and would silently stop covering the others"
+    )
+    return steps[0]
+
+
+def policy_checkout(root: Path) -> Path:
+    """A checkout-shaped directory: the data tree the gate reads, plus the
+    real `src/` and `scripts/` so the block runs the tracked script."""
+    tree = root / "checkout"
+    (tree / RECEIPTS_RELATIVE).mkdir(parents=True)
+    (tree / "data" / "outputs").mkdir(parents=True)
+    (tree / "src").symlink_to(PROJECT_ROOT / "src")
+    (tree / "scripts").symlink_to(PROJECT_ROOT / "scripts")
+    return tree
+
+
+def write_policy(tree: Path, *markets: str, mode: str = "reviewed") -> None:
+    (tree / POLICY_FILE_RELATIVE).write_text(
+        json.dumps(
+            {
+                "provider": "the_odds_api",
+                "mode": mode,
+                "allowlist": [
+                    {
+                        "market": market,
+                        "receipt_id": f"r-{market}",
+                        "approved_on": "2026-12-01",
+                        "roi_floor": -0.02,
+                        "evidence_checksum": "",
+                        "minimum_bets": 200,
+                        "note": "synthetic, in a temporary directory, for a test",
+                    }
+                    for market in markets
+                ],
+                "withdrawn": [],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def write_receipt(
+    tree: Path,
+    market: str,
+    *,
+    signed_by: str = "Cooper Ross",
+    evidence: bytes = b'{"roi": -0.031, "bets": 4830}\n',
+    cite_instead: bytes | None = None,
+    delete_evidence: bool = False,
+) -> Path:
+    """A receipt for `market` in `tree`, signed by `signed_by`.
+
+    `cite_instead` cites the sha256 of OTHER bytes than the ones on disk,
+    which is the evidence record that moved underneath a signature.
+    `delete_evidence` writes the receipt and removes the record it cites.
+    """
+    relative = f"data/outputs/{market}_evidence.json"
+    record = tree / relative
+    record.write_bytes(evidence)
+    digest = hashlib.sha256(cite_instead if cite_instead is not None else evidence).hexdigest()
+    if delete_evidence:
+        record.unlink()
+    path = tree / RECEIPTS_RELATIVE / f"r-{market}.json"
+    path.write_text(
+        json.dumps(
+            {
+                "receipt_id": f"r-{market}",
+                "market": market,
+                "evidence": {"path": relative, "sha256": digest},
+                "signed_by": signed_by,
+                "signed_on": "2026-12-01",
+                "note": "synthetic, in a temporary directory, for a test",
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def run_policy_gate_for_real(
+    tree: Path, *, event: str = "push", base_sha: str = ""
+) -> tuple[subprocess.CompletedProcess[str], str]:
+    """The gate's run block, verbatim, executed against `tree` with a real
+    interpreter and real git. Returns the completed process and the job
+    summary the step wrote."""
+    assert HARNESS_SHELL, "no bash on PATH: the executed rules cannot run"
+    binaries = tree.parent / "bin"
+    binaries.mkdir(exist_ok=True)
+    shim = binaries / "python"
+    shim.write_text(f'#!/bin/sh\nexec {shlex.quote(sys.executable)} "$@"\n', encoding="utf-8")
+    shim.chmod(0o755)
+    script = tree / "run_block.sh"
+    script.write_text(policy_gate_step()["run"], encoding="utf-8")
+    environment = {
+        "PATH": f"{binaries}:{os.environ.get('PATH', '/usr/bin:/bin')}",
+        "HOME": str(tree),
+        "LC_ALL": "C",
+        "EVENT_NAME": event,
+        "PR_BASE_SHA": base_sha,
+    }
+    for name in RUNNER_FILE_VARIABLES:
+        target = tree.parent / name.lower()
+        target.write_text("", encoding="utf-8")
+        environment[name] = str(target)
+    completed = subprocess.run(
+        [HARNESS_SHELL, "-e", str(script)],
+        cwd=tree, env=environment, capture_output=True, text=True, timeout=120,
+    )
+    summary = (tree.parent / "github_step_summary").read_text(encoding="utf-8")
+    return completed, summary
+
+
+def commit_policy_tree(tree: Path) -> str:
+    """`git init` plus one commit of the data tree. Returns the commit sha,
+    which is what a pull request's base commit is."""
+    identity = [
+        "-c", "user.name=cbb tests", "-c", "user.email=tests@example.invalid",
+        "-c", "commit.gpgsign=false",
+    ]
+    environment = dict(os.environ, HOME=str(tree.parent), GIT_CONFIG_NOSYSTEM="1", **GIT_IDENTITY)
+    subprocess.run(["git", "init", "-q", "-b", "main", str(tree)], check=True, env=environment)
+    subprocess.run(["git", "-C", str(tree), "add", "data"], check=True, env=environment)
+    subprocess.run(
+        ["git", "-C", str(tree), *identity, "commit", "-q", "-m", "base"],
+        check=True, env=environment,
+    )
+    resolved = subprocess.run(
+        ["git", "-C", str(tree), "rev-parse", "HEAD"],
+        check=True, capture_output=True, text=True, env=environment,
+    )
+    return resolved.stdout.strip()
+
+
+def test_the_policy_gate_fires_on_every_pull_request_and_filters_none_of_them() -> None:
+    """The trigger, pinned. `pull_request` with no `paths:`, no `branches:`
+    and no `types:`.
+
+    The cluster this file closes asked for a gate "on every pull request
+    touching data/manual/staging_provider_policy.json", and the natural
+    spelling of that is a `paths:` filter. `check_no_trigger_is_path_filtered`
+    refuses one, for a reason that applies here exactly: a path-filtered check
+    is not reported on the pull requests it filters out, and the change that
+    defeats a guard rarely touches the guard's own file. So the gate runs on
+    every pull request instead, which is strictly more.
+    """
+    document = load(POLICY_GATE_PATH)
+    pull_request = trigger_config(document, "pull_request")
+    assert pull_request is not False, (
+        f"{POLICY_GATE_WORKFLOW} does not fire on pull_request, so no pull request "
+        "is ever checked and the sentence in the three documents is true of nothing"
+    )
+    if isinstance(pull_request, dict):
+        for key in ("branches", "branches-ignore", "paths", "paths-ignore", "types"):
+            assert key not in pull_request, (
+                f"{POLICY_GATE_WORKFLOW}: pull_request carries `{key}:`; a filtered "
+                "policy gate does not report on the pull requests it filters out"
+            )
+    for event in ("push", "workflow_dispatch"):
+        assert trigger_config(document, event) is not False, (
+            f"{POLICY_GATE_WORKFLOW} does not fire on {event}"
+        )
+    names = {job.get("name") for job in jobs_of(document).values()}
+    assert REQUIRED_CHECK not in names, (
+        f"{POLICY_GATE_WORKFLOW} reports under the required context {REQUIRED_CHECK!r}; "
+        "two jobs under one context makes the context ambiguous"
+    )
+
+
+def test_the_policy_gate_holds_contents_read_and_no_secret_at_all() -> None:
+    """Least privilege, read from the parsed file: `contents: read` at the top,
+    no other `permissions:` mapping anywhere, and the secrets context absent
+    from every line including the comments. A gate that can write can rewrite
+    what it is checking, and this one needs no credential to read a receipt."""
+    document = load(POLICY_GATE_PATH)
+    assert document.get("permissions") == {"contents": "read"}, (
+        f"{POLICY_GATE_WORKFLOW} declares `permissions: {document.get('permissions')!r}`; "
+        "the policy gate reads a JSON file and hashes a record, and needs `contents: read`"
+    )
+    elsewhere = [m.get("permissions") for m in mappings(document) if m is not document and "permissions" in m]
+    assert not elsewhere, f"{POLICY_GATE_WORKFLOW} re-declares permissions at {elsewhere}"
+    for number, line in enumerate(POLICY_GATE_PATH.read_text(encoding="utf-8").splitlines(), start=1):
+        assert not SECRET_REFERENCE.search(line) and not any(
+            SECRETS_WORD.search(e.group(0)) for e in GITHUB_EXPRESSION.finditer(line)
+        ), (
+            f"{POLICY_GATE_WORKFLOW}:{number} reaches the secrets context. This gate "
+            "is given no credential: it reads tracked files and hashes them."
+        )
+    for mapping in mappings(document):
+        environment = mapping.get("env")
+        if isinstance(environment, dict):
+            assert not CREDENTIAL_NAMES.intersection(map(str, environment)), (
+                f"{POLICY_GATE_WORKFLOW} binds a provider credential"
+            )
+
+
+def test_the_policy_gate_step_really_invokes_the_receipt_checker() -> None:
+    """Executed under stubs, every stub succeeding, with the invocations
+    recorded: the step must ENTER a command whose first argument is the
+    tracked checker. `: python scripts/check_allowlist_receipts.py` contains
+    the script and runs nothing, and that is what this rule tells apart."""
+    block = policy_gate_step()["run"]
+    with tempfile.TemporaryDirectory() as directory:
+        result = run_block_under_stubs(
+            block, set(), Path(directory), record_invocations=True,
+            environment={"EVENT_NAME": "pull_request", "PR_BASE_SHA": "0" * 40},
+        )
+    assert result.unmodelled == [], f"the policy gate step could not be modelled: {result.unmodelled}"
+    assert result.exit_code == 0, f"the policy gate step fails with every command succeeding: {result.stderr}"
+    ran = [
+        (word, arguments) for word, arguments in result.invocations
+        if arguments and arguments[0] == RECEIPT_CHECKER
+    ]
+    assert ran, (
+        f"the policy gate step never invoked anything with {RECEIPT_CHECKER} as its "
+        f"first argument. Top-level invocations were {list(result.invocations)}."
+    )
+    assert any("--base-ref" in arguments for _, arguments in ran), (
+        f"the policy gate runs {RECEIPT_CHECKER} without --base-ref, so it never "
+        f"compares the allowlist against the base commit: {list(result.invocations)}"
+    )
+
+
+def test_the_policy_gate_block_stops_when_it_cannot_resolve_the_base_commit() -> None:
+    """A base ref that cannot be read is a hard stop, not a pass. Executed
+    three ways: the checker failing, git failing, and a pull request whose
+    base sha is empty. "The base allowlisted nothing" and "I could not read
+    the base" must never take the same branch."""
+    block = policy_gate_step()["run"]
+    pull_request = {"EVENT_NAME": "pull_request", "PR_BASE_SHA": "0" * 40}
+    with tempfile.TemporaryDirectory() as directory:
+        sandbox = Path(directory)
+        checker_failed = run_block_under_stubs(
+            block, {"python"}, sandbox, record_invocations=True, environment=pull_request,
+        )
+        assert checker_failed.exit_code != 0, "the block exits 0 when the receipt checker fails"
+
+        git_failed = run_block_under_stubs(
+            block, {"git"}, sandbox, record_invocations=True, environment=pull_request,
+        )
+        assert git_failed.exit_code != 0, (
+            "the block exits 0 when git cannot resolve the base commit, so an "
+            "unreadable base reads as a base that allowlisted nothing"
+        )
+        assert not [
+            arguments for _, arguments in git_failed.invocations
+            if arguments and arguments[0] == RECEIPT_CHECKER
+        ], "the checker ran after the base commit could not be resolved"
+
+        no_base = run_block_under_stubs(
+            block, set(), sandbox, record_invocations=True,
+            environment={"EVENT_NAME": "pull_request", "PR_BASE_SHA": ""},
+        )
+        assert no_base.exit_code != 0, (
+            "a pull_request run with an empty base sha exits 0; the comparison "
+            "never happened and nothing said so"
+        )
+
+
+def test_an_unreceipted_allowlist_makes_the_policy_gate_block_exit_non_zero(tmp_path: Path) -> None:
+    """The question the whole gate exists for, executed against real trees.
+
+    An allowlist entry with no receipt beside it must make the block exit
+    non-zero and must name the market and what it lacked; the same tree with
+    a receipt Cooper signed must exit zero. Both run the gate's own run block
+    out of the YAML, so a step that stopped calling the checker fails here.
+    """
+    red_root = tmp_path / "red"
+    red_root.mkdir()
+    red = policy_checkout(red_root)
+    write_policy(red, "spread")
+    refused, summary = run_policy_gate_for_real(red)
+    assert refused.returncode != 0, (
+        f"an allowlisted market with no receipt passed the policy gate: {refused.stdout}"
+    )
+    assert "`spread`" in summary and "lacks" in summary, summary
+    assert "human acceptance receipt" in refused.stderr, refused.stderr
+
+    green_root = tmp_path / "green"
+    green_root.mkdir()
+    green = policy_checkout(green_root)
+    write_policy(green, "spread")
+    write_receipt(green, "spread")
+    accepted, summary = run_policy_gate_for_real(green)
+    assert accepted.returncode == 0, (
+        f"a properly receipted allowlist was refused: {accepted.stdout}\n{accepted.stderr}"
+    )
+    assert "`spread`" in summary and "r-spread.json" in summary, summary
+
+
+def test_the_policy_gate_refuses_an_allowlist_entry_no_receipt_names_even_at_manual_only(
+    tmp_path: Path,
+) -> None:
+    """`load()` verifies receipts only when the file declares a mode other
+    than `manual_only`, so an entry parked in a manual-only allowlist is not
+    checked by the door the card uses — and it is one word away from live.
+    The gate checks it anyway, and this is the case that proves it."""
+    root = tmp_path / "parked"
+    root.mkdir()
+    tree = policy_checkout(root)
+    write_policy(tree, "total_points", mode="manual_only")
+    refused, summary = run_policy_gate_for_real(tree)
+    assert refused.returncode != 0, (
+        "an unreceipted market parked in a manual-only allowlist passed the gate: "
+        f"{refused.stdout}"
+    )
+    assert "`total_points`" in summary, summary
+
+
+def test_the_policy_gate_refuses_a_receipt_whose_evidence_moved_underneath_it(
+    tmp_path: Path,
+) -> None:
+    """The stale-approval case the checksum exists for, both halves.
+
+    `staging_provider_policy`'s own docstring records why the checksum is in
+    a receipt at all: the NHL lab's approval was withdrawn when the evidence
+    it had been signed against moved underneath it, and that lab's gate caught
+    it on its own because the checksum stopped matching. This is the same
+    question asked here, in both of its shapes: a receipt citing a sha256 the
+    record no longer hashes to, and a receipt citing a record that is not on
+    disk at all. Both are red, and the summary says which of the two it was.
+    No figure from that lab is restated here; this test measures exit codes.
+    """
+    moved_root = tmp_path / "moved"
+    moved_root.mkdir()
+    moved = policy_checkout(moved_root)
+    write_policy(moved, "spread")
+    write_receipt(moved, "spread", evidence=b'{"roi": -0.016}\n', cite_instead=b'{"roi": 0.014}\n')
+    refused, summary = run_policy_gate_for_real(moved)
+    assert refused.returncode != 0, f"a receipt whose evidence moved passed the gate: {refused.stdout}"
+    assert "`spread`" in summary and "hashes to" in summary, summary
+
+    absent_root = tmp_path / "absent"
+    absent_root.mkdir()
+    absent = policy_checkout(absent_root)
+    write_policy(absent, "spread")
+    write_receipt(absent, "spread", delete_evidence=True)
+    gone, summary = run_policy_gate_for_real(absent)
+    assert gone.returncode != 0, f"a receipt citing a record that is not there passed: {gone.stdout}"
+    assert "`spread`" in summary and "does not exist" in summary, summary
+
+
+def test_the_policy_gate_cannot_be_satisfied_by_a_receipt_this_repository_could_write(
+    tmp_path: Path,
+) -> None:
+    """Every field of a receipt except one is something a script can produce.
+
+    The policy file, the market name, the evidence record and its sha256 are
+    all machine output; `signed_by` is the whole human stop. So a receipt that
+    is perfect in every other respect and signed by Claude — in any spelling,
+    any casing, punctuated — must be refused, or this gate checks nothing that
+    this repository could not have written for itself. There is no `grant()`
+    and this is the reason there is none.
+    """
+    for index, signature in enumerate(SELF_SIGNATURES):
+        root = tmp_path / f"self-signed-{index}"
+        root.mkdir()
+        tree = policy_checkout(root)
+        write_policy(tree, "spread")
+        write_receipt(tree, "spread", signed_by=signature)
+        refused, summary = run_policy_gate_for_real(tree)
+        assert refused.returncode != 0, (
+            f"a receipt signed {signature!r} satisfied the policy gate: {refused.stdout}"
+        )
+        assert "`spread`" in summary, summary
+        assert "never sign" in summary or "not Claude" in summary, summary
+
+
+def test_the_policy_gate_refuses_an_allowlist_entry_this_change_adds(tmp_path: Path) -> None:
+    """The diff half, against a real git repository.
+
+    Base commit: an empty allowlist. Head: one market added, no receipt. The
+    gate must exit non-zero, and the summary must say which market this change
+    adds rather than only that something is unreceipted — the added market is
+    the sentence a reviewer needs. Then the receipt is added to the same tree
+    and the same comparison goes green, so the rule is "added without a
+    receipt" and not "added at all".
+    """
+    root = tmp_path / "diffed"
+    root.mkdir()
+    tree = policy_checkout(root)
+    write_policy(tree)
+    base = commit_policy_tree(tree)
+
+    write_policy(tree, "moneyline", mode="manual_only")
+    refused, summary = run_policy_gate_for_real(tree, event="pull_request", base_sha=base)
+    assert refused.returncode != 0, (
+        f"an allowlist entry added with no receipt passed the policy gate: {refused.stdout}"
+    )
+    assert "ADDS `moneyline`" in summary, summary
+    assert "this change is what adds it" in summary, summary
+
+    write_receipt(tree, "moneyline")
+    accepted, summary = run_policy_gate_for_real(tree, event="pull_request", base_sha=base)
+    assert accepted.returncode == 0, (
+        f"an addition backed by a receipt in the same tree was refused: "
+        f"{accepted.stdout}\n{accepted.stderr}"
+    )
+    assert "ADDS `moneyline`" in summary, summary
+    assert "r-moneyline.json" in summary, summary
+
+
+def test_the_policy_gate_summary_says_which_markets_it_checked_and_what_it_found(
+    tmp_path: Path,
+) -> None:
+    """The job summary has to be readable on its own.
+
+    A reviewer sees the summary, not the log, and "Policy Gate: failed" is not
+    a finding. Every allowlisted market must appear in it by name with its
+    verdict, whichever way the run went — one market green and one red in the
+    same run, and both named.
+    """
+    root = tmp_path / "mixed"
+    root.mkdir()
+    tree = policy_checkout(root)
+    write_policy(tree, "spread", "total_points")
+    write_receipt(tree, "spread")
+    refused, summary = run_policy_gate_for_real(tree)
+    assert refused.returncode != 0, refused.stdout
+    assert "`spread`" in summary and "r-spread.json" in summary, summary
+    assert "`total_points`" in summary and "lacks" in summary, summary
+    assert POLICY_FILE_RELATIVE in summary and RECEIPTS_RELATIVE in summary, summary
+    assert summary.strip(), "the policy gate wrote no job summary at all"

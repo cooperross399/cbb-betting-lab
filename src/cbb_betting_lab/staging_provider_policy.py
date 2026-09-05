@@ -18,8 +18,26 @@ granting cannot, so it never is.
 
 `withdraw()` exists and is callable by an automated run. `grant()` does not
 exist. Adding a market is editing `data/manual/staging_provider_policy.json`
-with a receipt beside it, in a pull request whose policy gate is green, merged
-by Cooper.
+with a receipt beside it, in a pull request whose **`Policy Gate`** check is
+green, merged by Cooper.
+
+`Policy Gate` is `.github/workflows/policy-gate.yml`, and until 2026-09-05 this
+paragraph named a gate that did not exist: nothing under `.github/workflows/`
+opened a receipt, so a pull request carrying an unreceipted allowlist was
+green and this sentence was true of nothing. The check now runs on every pull
+request — no `paths:` filter, because a filtered check is not reported on the
+pull requests it filters out — and runs
+`scripts/check_allowlist_receipts.py`, which calls :func:`load` exactly as the
+card calls it and then :func:`verify_receipt` on every allowlisted entry one at
+a time, including the entries a `manual_only` file leaves :func:`load` itself
+skipping. It names, in the job summary, every market it checked, the receipt
+behind it or what that market lacked, and which markets the change ADDS. It is
+red until a receipt Cooper signed stands behind every allowlisted market.
+
+It is not a context branch protection requires: measured 2026-09-05, main
+requires `Tests` and nothing else, so a red `Policy Gate` is a fact in the pull
+request rather than a hold on the merge button. Adding the context is a
+repository setting and Cooper's to make.
 
 ## The receipt is checked, not named
 

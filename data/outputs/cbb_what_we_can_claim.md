@@ -23,7 +23,7 @@ The correction is re-applied here at render time rather than copied out of the r
 ## What is in force, and what the card may actually use
 
 - `the_odds_api:cbb` is **manual-only**. No market is allowlisted, the card produces no selection, and that is the correct state for a lab with no signed receipt.
-- **No market is allowlisted, and that is the correct state.** `withdraw()` exists in `staging_provider_policy.py` and `grant()` does not: this lab may take a market away from the card and may never give it one. Adding a market is a receipt Cooper signs, in a pull request whose policy gate is green.
+- **No market is allowlisted, and that is the correct state.** `withdraw()` exists in `staging_provider_policy.py` and `grant()` does not: this lab may take a market away from the card and may never give it one. Adding a market is a receipt Cooper signs, in a pull request whose `Policy Gate` check is green — `.github/workflows/policy-gate.yml`, which runs on every pull request, verifies every allowlisted market against a receipt on disk, and is red while any market lacks one.
 
 Every modelling policy is a **recorded verdict read from disk**, never an assertion in code, so what ships is auditable against the experiment that decided it. A missing verdict file ships nothing — the conservative reading of *no recorded decision* is *no policy in force*.
 

@@ -1,0 +1,118 @@
+# Policy Gate — the check three documents described and no workflow ran.
+#
+# `docs/what_we_can_and_cannot_claim.md`, `data/manual/README.md` and
+# `src/cbb_betting_lab/reports/what_we_can_claim.py` all said a market joins the
+# allowlist "in a pull request whose policy gate is green". Nothing under
+# .github/workflows/ opened a receipt. The MECHANISM was there —
+# `staging_provider_policy.load()` verifies, for every allowlisted market, a
+# receipt that names it, cites an evidence record whose sha256 still matches,
+# is signed by somebody who is not Claude, and is dated, and fails the whole
+# policy closed otherwise — but it ran when the CARD ran: on a schedule, after
+# the merge. A pull request carrying an unreceipted allowlist was green, and
+# the sentence in the three documents was true of nothing. This file is that
+# sentence's other half.
+#
+# WHAT IT CHECKS, on every pull request:
+#
+#   1. `scripts/check_allowlist_receipts.py` calls the same `load()` the card
+#      calls, prints the mode it produces, and then verifies EVERY allowlisted
+#      entry with `verify_receipt()` one market at a time — including when the
+#      file declares `manual_only`, which is the one case `load()` itself skips
+#      and the one word an allowlisted-but-unreceipted entry is away from live.
+#   2. A receipt whose evidence record is absent, or which no longer hashes to
+#      the value the receipt cites, fails there: that is the stale-approval
+#      case the checksum exists for and the one the NHL lab's own gate caught.
+#   3. On a pull request the policy file at the base commit is read with
+#      `git show` and the markets this change ADDS are named in the summary.
+#      An added market with no receipt in this same tree is red by (1); this
+#      is what makes the summary say which market the change was trying to add.
+#
+# NO paths: FILTER, deliberately. The natural spelling of "on every pull
+# request touching data/manual/staging_provider_policy.json" is a `paths:`
+# filter, and tests/test_workflows.py::check_no_trigger_is_path_filtered
+# refuses one for every workflow in this repository: a path-filtered check
+# stays PENDING rather than passing on the pull requests it filters out, and
+# the change that defeats a guard rarely touches the guard's own file. So this
+# runs on every pull request and verifies the receipts every time, which is
+# strictly more than the sentence asked for.
+#
+# LEAST PRIVILEGE. `contents: read`, no secret in any spelling, no credential,
+# nothing installed from the network beyond the interpreter, and no `pip
+# install` at all: `staging_provider_policy` and `competitions` are standard
+# library only, so `PYTHONPATH=src` is the whole setup. The gate reads. It
+# writes no policy, no receipt and no evidence, and there is still no
+# `grant()` for it to call.
+#
+# THIS CHECK IS NOT REQUIRED BY BRANCH PROTECTION. Measured 2026-09-05 by
+# another session with `gh api repos/cooperross399/cbb-betting-lab/branches/
+# main/protection` and recorded in tests/test_workflows.py: main's
+# `required_status_checks.contexts` is exactly `["Tests"]`. So a red
+# `Policy Gate` is a fact in the pull request and not a hold on the merge
+# button, exactly as a red `Ledger Guard` is. Adding this context to
+# protection is a repository setting and a human's to make; nothing in this
+# repository may grant itself one.
+
+name: Policy Gate
+
+on:
+  # Every pull request, and every push, and on demand. No paths: filter and no
+  # branches: filter, for the reason in the header.
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: policy-gate-${{ github.ref }}
+  # A superseded pull-request run is re-done in full by the next one, so
+  # cancelling it loses nothing. A push run is the only run that will ever look
+  # at that commit, so it is never cancelled.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  receipts:
+    name: Policy Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out the full history
+        uses: actions/checkout@v4
+        with:
+          # The base commit's policy file is read with `git show`, so the base
+          # has to be in the clone.
+          fetch-depth: 0
+          # This job reads. A token left in .git/config is blast radius.
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify every allowlisted market against a receipt a person signed
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        # A base ref that cannot be resolved is a HARD STOP, not a pass: "the
+        # base allowlisted nothing" and "I could not read the base" must never
+        # take the same branch. On a push or a dispatch there is no base and
+        # none is invented; the receipt verification is what makes the gate red
+        # and it does not need one.
+        run: |
+          set -euo pipefail
+          BASE=""
+          if [ "${EVENT_NAME}" = "pull_request" ]; then
+            BASE="${PR_BASE_SHA}"
+            if [ -z "${BASE}" ]; then
+              echo "::error::A pull_request run with no base commit. The policy gate did not compare the allowlist against the base, and this is a broken gate, NOT evidence that the allowlist is receipted."
+              exit 1
+            fi
+            if ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+              echo "::error::Cannot resolve the base commit ${BASE}. The policy gate did not compare the allowlist against the base, and this is a broken gate, NOT evidence that the allowlist is receipted."
+              exit 1
+            fi
+          fi
+          PYTHONPATH=src python scripts/check_allowlist_receipts.py --base-ref "${BASE}"

@@ -6,9 +6,25 @@ whole point of a decision living in a file is that a script cannot make it.
 
 | File | Who may write it |
 |:---|:---|
-| `staging_provider_policy.json` | **Cooper**, in a pull request with a signed receipt beside it and a green policy gate. Claude may call `staging_provider_policy.withdraw()` on it — the one exception — because withdrawal can only ever reduce what the card may do. |
+| `staging_provider_policy.json` | **Cooper**, in a pull request with a signed receipt beside it and a green **`Policy Gate`** check. Claude may call `staging_provider_policy.withdraw()` on it — the one exception — because withdrawal can only ever reduce what the card may do. |
 | `human_acceptance_receipts/*` | **Cooper.** Claude drafts a receipt with truthful provenance and never signs one. | A receipt is a JSON object with `market`, `receipt_id`, `evidence` (`{"path", "sha256"}` of a record that exists and hashes to that value; a relative path is read from the repository root), `signed_by` (a person, never Claude) and `signed_on` (`YYYY-MM-DD`). `staging_provider_policy.load()` checks all of it for every allowlisted market and loads the whole policy manual-only when any market lacks one. |
 | `human_acceptance_receipts/superseded/*` | Moved here when a receipt is withdrawn. Kept, never deleted: a superseded receipt is the record of a decision that was really made. |
+
+`Policy Gate` is `.github/workflows/policy-gate.yml`. It runs on every pull
+request — there is no `paths:` filter, because a path-filtered check is not
+reported on the pull requests it filters out — and runs
+`scripts/check_allowlist_receipts.py`, which loads the policy the way the card
+loads it and then verifies every allowlisted market's receipt one at a time,
+including the entries a `manual_only` file leaves `load()` itself skipping. The
+job summary names every market it checked, the receipt behind it or what that
+market lacked, and the markets the change adds. It is red while any allowlisted
+market lacks a receipt, while a cited evidence record is missing or no longer
+hashes to the value the receipt was signed against, or while a receipt is
+signed by Claude in any spelling. Until 2026-09-05 the row above named a gate
+that did not exist: nothing under `.github/workflows/` opened a receipt. It is
+not a context branch protection requires — measured 2026-09-05, main requires
+`Tests` and nothing else — so a red `Policy Gate` is a fact in the pull request
+and not a hold on the merge button.
 
 The policy ships **manual-only**, which means the card reads nothing from
 staging and produces no selection. That is the correct state for a lab with no
