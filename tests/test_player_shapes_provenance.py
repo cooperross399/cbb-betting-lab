@@ -377,3 +377,30 @@ def test_the_loader_needs_a_season_and_offers_no_way_round_the_guard() -> None:
     assert season.kind is inspect.Parameter.KEYWORD_ONLY
     assert season.default is inspect.Parameter.empty
     assert set(signature.parameters) == {"path", "priced_season"}
+
+
+def test_the_census_counts_add_up_rather_than_being_quoted_separately() -> None:
+    """Every row of the window is one of: fitted, or dropped for a named reason.
+
+    The frozen file carries three counts per census, and a reader has no way to
+    tell a real drop from a typo unless they are held against each other. The
+    identity is the accounting one this lab uses everywhere else: what came in
+    equals what was kept plus what was dropped, each term counted on its own
+    rather than one of them derived as the remainder.
+    """
+    document = json.loads(FROZEN.read_text(encoding="utf-8"))
+    censuses = {
+        name: block
+        for name, block in document["input"].items()
+        if isinstance(block, dict) and "rows_in_the_table" in block
+    }
+    assert censuses, "the frozen file carries no census to check"
+    for name, census in censuses.items():
+        assert census["rows"] == (
+            census["rows_in_the_table"] - census["rows_with_no_readable_athlete_id"]
+        ), f"{name}: the kept and dropped counts do not add up to the rows read"
+        assert census["rows"] > 0, f"{name}: no row survived"
+        assert census["rows_with_no_readable_athlete_id"] >= 0
+        assert census["appeared_rows"] + census["did_not_play_rows"] == census["rows"], (
+            f"{name}: appeared and did-not-play do not partition the kept rows"
+        )

@@ -30,6 +30,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from conftest import processed_table  # noqa: E402  (tests/ is on sys.path under pytest)
+
 REPO = Path(__file__).resolve().parents[1]
 FROZEN = REPO / "data" / "processed" / "cbb_player_shapes.json"
 
@@ -101,6 +103,51 @@ def test_the_fitter_refuses_the_priced_season_and_everything_after_it(season: in
 @pytest.mark.parametrize("seasons", [(2019, 2020), (2021, 2022), (2019, 2020, 2021, 2022, 2023)])
 def test_the_fitter_permits_every_season_earlier_than_the_priced_one(seasons) -> None:
     F._check_window(list(seasons), what="a test")
+
+
+def test_the_read_hands_back_no_season_this_lab_is_forbidden_to_fit_on() -> None:
+    """The cut is made during the read, and it is asserted over a real corpus.
+
+    This is the whole claim of the branch: every prop quote in this lab's store
+    is season 2024, and a constant fitted on a window containing it is a
+    constant the model could not have had at sixty minutes to tip.
+
+    Both corpora exercise it and neither skips. The built table holds 2019
+    through 2026, so the permitted window comes back and the forbidden seasons
+    do not. The tracked sample holds 2026 alone, so there is no permitted
+    window in it at all -- and the reader must say so rather than hand back an
+    empty frame that a caller would read as "no rows matched".
+    """
+    table, corpus = processed_table("cbb_player_games.csv")
+    present = {int(s) for s in pd.read_csv(table, usecols=["season"])["season"].unique()}
+    forbidden = {s for s in present if s >= F.PRICE_SEASON}
+    permitted = sorted(present - forbidden)
+    print(f"corpus={corpus} seasons={sorted(present)} permitted={permitted}")
+
+    if permitted:
+        frame = F._load_seasons(table, permitted, what="a test")
+        got = {int(s) for s in frame["season"].unique()}
+        assert got == set(permitted)
+        assert not got & forbidden
+        assert len(frame) == int(
+            pd.read_csv(table, usecols=["season"])["season"].isin(permitted).sum()
+        )
+    else:
+        with pytest.raises(F.FitError) as raised:
+            F._load_seasons(table, [F.PRICE_SEASON - 5], what="a test")
+        assert "are not in" in str(raised.value)
+
+    # Asking for a forbidden season is refused on either corpus, and refused
+    # before the file is opened, so the refusal cannot depend on what is in it.
+    for season in sorted(forbidden) or [F.PRICE_SEASON]:
+        with pytest.raises(F.FitError):
+            F._load_seasons(table, [F.PRICE_SEASON - 3, season], what="a test")
+
+
+def test_asking_the_reader_for_the_priced_season_raises_before_it_opens_the_file() -> None:
+    """The guard fires on the season list, not on what the file turned out to hold."""
+    with pytest.raises(F.FitError):
+        F._load_seasons(Path("/no/such/table.csv"), [2022, 2024], what="a test")
 
 
 def test_a_holdout_inside_the_fit_is_refused() -> None:

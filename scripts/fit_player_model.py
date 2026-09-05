@@ -263,16 +263,30 @@ def _check_window(seasons: Sequence[int], *, what: str) -> None:
 def _load_seasons(path: Path, seasons: Sequence[int], *, what: str) -> pd.DataFrame:
     """Read the player table and hand back only the seasons asked for.
 
-    The guard runs first and the cut happens here, so no later line in this
-    program holds a frame containing a forbidden season. The defect this file is
-    arranged against is a table loaded once, uncut, outside a loop.
+    The guard runs first, and the cut is made **during** the read rather than
+    after it: the file is walked a chunk at a time and each chunk is cut to the
+    permitted seasons before the next is read, so no frame this program keeps
+    has ever held a row from a forbidden one. `pd.read_csv` on the whole table
+    followed by a filter would compute the same answer -- and would put every
+    2024, 2025 and 2026 row in memory beside a program whose entire purpose is
+    never to see them. The defect this file is arranged against is a table
+    loaded once, uncut, outside a loop; the cheapest way not to write it is not
+    to have the uncut table.
+
+    The guard runs a second time on what actually came back, because the
+    interesting failure is not a bad argument but a season column that does not
+    say what the caller assumed.
     """
     _check_window(seasons, what=what)
     wanted = sorted({int(s) for s in seasons})
-    frame = pd.read_csv(path, low_memory=False)
-    frame = frame[frame["season"].isin(wanted)].copy()
-    if frame.empty:
+    kept: list[pd.DataFrame] = []
+    for chunk in pd.read_csv(path, low_memory=False, chunksize=100_000):
+        inside = chunk[chunk["season"].isin(wanted)]
+        if not inside.empty:
+            kept.append(inside)
+    if not kept:
         raise FitError(f"{what}: seasons {wanted} are not in {path}.")
+    frame = pd.concat(kept, ignore_index=True)
     _check_window(sorted(int(s) for s in frame["season"].unique()), what=f"{what} (after the cut)")
     return frame
 
