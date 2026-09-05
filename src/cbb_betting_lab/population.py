@@ -240,12 +240,14 @@ def classify(schedule: pd.DataFrame) -> pd.DataFrame:
     di_ids = division_one_team_ids(schedule)
     venues = home_venues(schedule)
     out = schedule.copy()
-    out["game_state"] = [
-        classify_game(row, di_ids).value for row in out.to_dict("records")
-    ]
-    out["venue_state"] = [
-        classify_venue(row, venues).value for row in out.to_dict("records")
-    ]
+    # One pass over the rows for both classifications. `classify_venue` reads
+    # only the schedule's own fields, so the records built before `game_state`
+    # exists are exactly the ones it would have read after; a second
+    # `to_dict("records")` over a 6,000-row season was a third of a second on
+    # every walk-forward day, spent producing the same rows again.
+    records = out.to_dict("records")
+    out["game_state"] = [classify_game(row, di_ids).value for row in records]
+    out["venue_state"] = [classify_venue(row, venues).value for row in records]
     return out
 
 
