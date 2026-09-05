@@ -170,7 +170,7 @@ def with_siblings(lab: dict) -> dict:
     written up front is stale by exactly the amount the loop is checking for,
     which is the check working rather than a nuisance.
     """
-    for name in (LOOP.REFIT_SCRIPT, LOOP.CLAIMS_SCRIPT):
+    for name in (LOOP.REFIT_SCRIPT, LOOP.CLAIMS_SCRIPT, LOOP.SKILL_FRAME_SCRIPT, LOOP.FORECAST_SCRIPT):
         stub_script(lab, name)
     stub_script(
         lab,
@@ -1179,3 +1179,39 @@ def test_the_weekly_season_is_derived_from_the_clock_not_pinned():
     expected = LOOP.weekly_backtest_season()
     today = date.today()
     assert expected == (today.year + 1 if today.month >= 7 else today.year)
+
+
+def test_the_loop_regresses_market_against_model_every_week(lab: dict):
+    """The brief: *regress outcome on market-implied vs model-implied
+    probability, every week, and print it.* It was built and run by hand and
+    never wired here, so the weekly run measured returns and never asked
+    whether the model knew anything the price did not.
+
+    Three things, in order: the backtest is told to export its graded bets
+    (without which there is nothing to regress on), the de-vig frame is built
+    with each bet's complement, and the regression runs — all before the claims
+    re-render that reads them.
+    """
+    with_siblings(lab)
+    assert run(lab) == LOOP.EXIT_OK
+    record = json.loads(LOOP.record_path(CBB, lab["outputs"]).read_text(encoding="utf-8"))
+    names = [step["name"] for step in record["steps"]]
+    details = {step["name"]: str(step.get("detail", "")) for step in record["steps"]}
+
+    backtest = next(n for n in names if "price backtest" in n)
+    assert "--write-graded" in details[backtest], "the backtest exports no graded bets, so the regression has nothing to read"
+    frame = next(n for n in names if "de-vig frame" in n)
+    forecast = next(n for n in names if "market-implied" in n)
+    claims = next(n for n in names if "claims report" in n)
+    assert names.index(backtest) < names.index(frame) < names.index(forecast) < names.index(claims)
+    assert LOOP.SKILL_FRAME_SCRIPT in details[frame]
+    assert LOOP.FORECAST_SCRIPT in details[forecast]
+
+
+def test_a_missing_forecast_program_degrades_the_week_and_never_looks_like_a_null(lab: dict):
+    """A regression that did not run must not read as a regression that found
+    nothing. The loop's standing rule for a missing sibling applies."""
+    with_siblings(lab)
+    (lab["scripts"] / LOOP.FORECAST_SCRIPT).unlink()
+    assert run(lab) == LOOP.EXIT_DEGRADED
+    assert steps_from(lab)["regress outcome on market-implied vs model-implied, weekly"] == LOOP.MISSING

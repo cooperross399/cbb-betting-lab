@@ -169,6 +169,17 @@ def weekly_backtest_season() -> int:
     return season_for_slate_date(datetime.now(timezone.utc).date().isoformat())
 CLAIMS_SCRIPT = "run_what_we_can_claim.py"
 
+#: The market-vs-model regression, EVERY WEEK. The brief calls it the fastest
+#: honest read on whether anything here is real, and asks for it weekly by
+#: name. It was built and run by hand and never wired into this loop, so the
+#: weekly run measured returns and never asked whether the model knew
+#: anything the price did not. Two programs: the de-vig frame needs each bet's
+#: complement at its own book, which the graded export does not carry.
+GRADED_BETS_FILENAME = "cbb_graded_bets.csv"
+SKILL_FRAME_FILENAME = "cbb_skill_frame.csv"
+SKILL_FRAME_SCRIPT = "build_skill_frame.py"
+FORECAST_SCRIPT = "run_forecast_skill.py"
+
 #: The pre-registered search queue. Read, never written — see the module
 #: docstring. It lives beside `promotion_criteria.json` in `data/manual/`
 #: because it is the same kind of object: a decision recorded before the number
@@ -1588,7 +1599,10 @@ def main(argv: list[str] | None = None) -> int:
     steps.append(
         run_script(
             BACKTEST_SCRIPT,
-            passthrough,
+            # `--write-graded` is what the regression reads. Without it the
+            # backtest writes a return and no rows, and forecast_skill has
+            # nothing to score — which reads as a null result and is not one.
+            passthrough + ["--write-graded", str(processed_dir / GRADED_BETS_FILENAME)],
             scripts_dir=scripts_dir,
             name="re-run the price backtest and replication",
             dry_run=args.dry_run,
@@ -1638,6 +1652,32 @@ def main(argv: list[str] | None = None) -> int:
     # pre-registration it exists to be. The generated claims report is
     # `data/outputs/cbb_what_we_can_claim.md`, which CLAUDE.md pins as the
     # claims output, and that is what is re-rendered from the run record here.
+    steps.append(
+        run_script(
+            SKILL_FRAME_SCRIPT,
+            ["--processed-dir", str(processed_dir)],
+            scripts_dir=scripts_dir,
+            name="build the de-vig frame with each bet's complement",
+            dry_run=args.dry_run,
+            timeout_seconds=timeout_seconds,
+            python=args.python,
+        )
+    )
+    steps.append(
+        run_script(
+            FORECAST_SCRIPT,
+            [
+                "--competition", competition.key,
+                "--graded", str(processed_dir / SKILL_FRAME_FILENAME),
+                "--output-dir", str(output_dir),
+            ],
+            scripts_dir=scripts_dir,
+            name="regress outcome on market-implied vs model-implied, weekly",
+            dry_run=args.dry_run,
+            timeout_seconds=timeout_seconds,
+            python=args.python,
+        )
+    )
     steps.append(
         run_script(
             CLAIMS_SCRIPT,
