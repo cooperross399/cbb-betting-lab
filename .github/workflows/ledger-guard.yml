@@ -79,7 +79,21 @@ jobs:
           set -euo pipefail
           case "${EVENT_NAME}" in
             pull_request) BASE="${PR_BASE_SHA}" ;;
-            push)         BASE="${PUSH_BEFORE_SHA}" ;;
+            push)
+              # A branch's FIRST push carries an all-zeros `before`: there is
+              # no previous tip to compare against. That used to exit 1 here,
+              # so every new branch opened with this check red and the PR run
+              # green — and a guard that is red on every first push is a guard
+              # people learn to ignore. For a new branch the ledger's true base
+              # is main: every commit on the branch is after it by definition.
+              if [ "${PUSH_BEFORE_SHA}" = "0000000000000000000000000000000000000000" ]; then
+                git fetch --no-tags --depth=1 origin main >/dev/null 2>&1 || { echo "::error::Could not fetch origin/main to serve as the base for a first push. The append-only check did not run."; exit 1; }
+                BASE="origin/main"
+                echo "First push of a new branch: comparing against origin/main."
+              else
+                BASE="${PUSH_BEFORE_SHA}"
+              fi
+              ;;
             workflow_dispatch) BASE="origin/main" ;;
             *)
               echo "::error::Unhandled event ${EVENT_NAME}. The append-only check did not run. This is a broken guard, NOT evidence that the ledger is intact."
