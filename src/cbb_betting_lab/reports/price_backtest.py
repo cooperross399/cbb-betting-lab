@@ -27,6 +27,20 @@ earlier_fits_identical` is the corrupt-everything-after-a-cut test, on the
 ratings the backtest prices through. (This docstring used to cite a
 `tests/test_price_backtest.py` that never existed.)
 
+**The stamp covers every frame the pricer was allowed to see, not only the team
+history.** It used to be computed from the team games alone and written over
+whatever the pricer had put there, so a pricer that also read a player frame —
+which is exactly what a player-prop model does — could read tonight's minutes
+and tonight's points and still be stamped walk-forward, and the guard would
+pass. Any further table now goes in through ``frames=``, is cut to the day by
+:func:`history_before` exactly as the team history is, and is folded into the
+stamp; a pricer's own ``priced_through`` is kept wherever it is later than the
+caller's, because a table the pricer opened for itself is one the caller cannot
+see and the pricer's own declaration is the only evidence it existed; and a
+pricer that demands an input the caller does not hold is refused rather than
+run. `test_a_pricer_that_read_a_second_frame_cannot_stamp_itself_walk_forward`
+and its two neighbours pin all three.
+
 ## One wager is one bet, at the best price
 
 The NHL lab counted every book's quote on the same selection as an independent
@@ -157,8 +171,10 @@ BET_COLUMNS: tuple[str, ...] = (
 
 #: Optional, and each one turns a section on rather than being faked when
 #: absent. `survived_to_next_capture` belongs to `reachability.py`;
-#: `priced_through` is stamped by :func:`walk_forward`; `actual` is the settled
-#: quantity and is what the half-point decomposition is checked against.
+#: `priced_through` is stamped by :func:`walk_forward` from every frame the
+#: pricer was allowed to see, and is never lowered below a stamp the pricer set
+#: for itself; `actual` is the settled quantity and is what the half-point
+#: decomposition is checked against.
 OPTIONAL_BET_COLUMNS: tuple[str, ...] = (
     "player",
     "book",
@@ -455,6 +471,93 @@ def history_before(
     return games[games[game_day_column].astype(str) < str(day)]
 
 
+#: The keyword arguments :func:`walk_forward` always supplies to a pricer. A
+#: pricer that declares anything else is asking for a frame the caller does not
+#: know about, and the caller cannot stamp what it was never shown.
+PRICER_ARGUMENTS: tuple[str, ...] = ("day", "history", "prices")
+
+
+def latest_day(frame: pd.DataFrame | None, *, day_column: str = "slate_date") -> str:
+    """The latest day present in one frame, or `""` for a frame with no rows.
+
+    One definition, used on **every** frame a pricer is handed, because the
+    stamp has to be the latest day across all of them rather than the latest day
+    of whichever one the caller happened to name first. A blank and the string
+    `"nan"` — what a missing day looks like after a CSV round trip — are not
+    days, and a stamp that read `"nan"` would sort above every real date and
+    fail every run.
+    """
+    if frame is None or len(frame) == 0:
+        return ""
+    if day_column not in getattr(frame, "columns", ()):
+        return ""
+    days = frame[day_column].dropna().astype(str)
+    days = days[(days != "") & (days.str.strip().str.lower() != "nan")]
+    return "" if days.empty else str(days.max())
+
+
+def _stamp_series(priced: pd.DataFrame, floor: str) -> pd.Series:
+    """The pricer's own `priced_through`, never allowed to fall below `floor`.
+
+    A pricer that declares it saw further than the caller cut for it — a player
+    frame it opened itself, say — keeps its own stamp, which is the whole point:
+    the caller cannot see that frame and must not erase the only evidence that
+    it existed. A pricer that declares less than it was handed does not get to
+    lower the stamp, because the stamp describes what the pricer was *allowed*
+    to see, not what it chose to read.
+    """
+    declared = priced["priced_through"]
+    declared = declared.where(declared.notna(), "").astype(str)
+    declared = declared.mask(declared.str.strip().str.lower() == "nan", "")
+    return declared.where(declared > floor, floor)
+
+
+def _accepted(price_day: Callable, names) -> list[str]:
+    """Which of `names` the pricer actually declares. Same rule as :func:`call_model`."""
+    try:
+        parameters = inspect.signature(price_day).parameters
+    except (TypeError, ValueError):
+        return list(names)
+    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
+        return list(names)
+    return [name for name in names if name in parameters]
+
+
+def _refuse_undeclared_frames(price_day: Callable, supplied: dict) -> None:
+    """Refuse a pricer that asks for an input the caller was never given.
+
+    `walk_forward` can only cut and stamp the frames it holds. A pricer whose
+    signature demands another one is a pricer that would be run against a table
+    nobody cut to the day being priced, and the run would still carry a stamp
+    that described only the frames the caller knew about.
+    """
+    try:
+        parameters = inspect.signature(price_day).parameters
+    except (TypeError, ValueError):
+        return
+    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
+        return
+    wanted = [
+        name
+        for name, parameter in parameters.items()
+        if parameter.default is inspect.Parameter.empty
+        and parameter.kind
+        in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+        and name not in supplied
+    ]
+    if wanted:
+        raise BacktestError(
+            "The pricer requires "
+            + ", ".join(repr(name) for name in wanted)
+            + ", which walk_forward was not given and therefore cannot cut to "
+            "the day being priced. Hand the frame in through `frames=` so it is "
+            "cut strictly before the day and covered by the `priced_through` "
+            "stamp. A frame the caller does not know about is a frame the "
+            "stamp does not describe, and a stamp that describes one of two "
+            "inputs certifies nothing."
+        )
+
+
 def walk_forward(
     prices: pd.DataFrame,
     games: pd.DataFrame,
@@ -462,8 +565,10 @@ def walk_forward(
     price_day: Callable[..., pd.DataFrame | None],
     day_column: str = "slate_date",
     game_day_column: str = "slate_date",
+    frames: dict[str, pd.DataFrame] | None = None,
+    frame_day_columns: dict[str, str] | None = None,
 ) -> pd.DataFrame:
-    """Price each slate day from games **strictly earlier** than it.
+    """Price each slate day from rows **strictly earlier** than it.
 
     The pricer never receives the whole table, so it cannot accidentally fit on
     the future — which is the football lab's defect 13, where a distribution
@@ -472,26 +577,85 @@ def walk_forward(
 
     `price_day` is called once per day, in date order, with keyword arguments
     ``day``, ``history`` and ``prices``. It returns the day's priced rows or
-    nothing. Every returned row is stamped with ``priced_through``, the latest
-    game day the pricer was actually allowed to see, and that stamp is what
-    :func:`assert_walk_forward` checks — a report cannot claim to be
-    walk-forward, it has to carry the evidence.
+    nothing.
+
+    **Every frame the pricer was allowed to see is stamped, not just the team
+    history.** `frames` names any further table the pricer reads — a player-game
+    frame is the case this exists for — and each one is cut by
+    :func:`history_before` to the day being priced, handed to the pricer by its
+    name if the pricer declares it, and folded into the stamp. The stamp is the
+    latest day across `games` and every frame in `frames`, and a pricer that
+    returns a ``priced_through`` of its own keeps it wherever it is **later**
+    than that: the caller cannot see a table the pricer opened for itself, so
+    the pricer's own declaration is the only evidence such a table existed and
+    erasing it is how a guard comes to certify one of its two inputs. A pricer
+    that declares an input the caller does not hold is refused outright.
+
+    That stamp is what :func:`assert_walk_forward` checks — a report cannot
+    claim to be walk-forward, it has to carry the evidence.
     """
     require_columns(prices, (day_column, "event_id"), "the price frame")
     if not prices.empty:
         require_columns(games, (game_day_column,), "the games frame")
+    extra = dict(frames or {})
+    clash = sorted(set(extra) & set(PRICER_ARGUMENTS))
+    if clash:
+        raise BacktestError(
+            f"`frames` names {', '.join(repr(c) for c in clash)}, which is "
+            "already one of the arguments every pricer is handed. A second "
+            "frame under the same name would replace the first silently."
+        )
+    columns = {
+        name: str((frame_day_columns or {}).get(name, game_day_column))
+        for name in extra
+    }
+    if not prices.empty:
+        for name, frame in extra.items():
+            # A frame with no day column cannot be cut, and `history_before`
+            # would hand the pricer an empty one every day rather than say so.
+            # A player frame silently emptied is a player model that prices
+            # every night off nothing and looks like a model with no opinions.
+            require_columns(frame, (columns[name],), f"the {name!r} frame")
     produced: list[pd.DataFrame] = []
     for day in sorted(str(d) for d in prices[day_column].dropna().unique()):
         history = history_before(games, day, game_day_column=game_day_column)
         day_prices = prices[prices[day_column].astype(str) == day]
-        priced = price_day(day=day, history=history, prices=day_prices)
+        cut = {
+            name: history_before(frame, day, game_day_column=columns[name])
+            for name, frame in extra.items()
+        }
+        supplied = {
+            "day": day,
+            "history": history,
+            "prices": day_prices,
+            **cut,
+        }
+        _refuse_undeclared_frames(price_day, supplied)
+        # The three core arguments always go, which is the contract every
+        # existing pricer was written against; a named frame goes only to a
+        # pricer that declares it, and is stamped either way — a frame the
+        # pricer never read is still a day it was *allowed* to see, and a stamp
+        # that is too conservative can only be earlier than the day it bet on.
+        priced = price_day(
+            day=day,
+            history=history,
+            prices=day_prices,
+            **{name: cut[name] for name in _accepted(price_day, cut)},
+        )
         if priced is None or len(priced) == 0:
             continue
         priced = pd.DataFrame(priced).copy()
-        through = ""
-        if not history.empty:
-            through = str(history[game_day_column].astype(str).max())
-        priced["priced_through"] = through
+        through = max(
+            [latest_day(history, day_column=game_day_column)]
+            + [
+                latest_day(frame, day_column=columns[name])
+                for name, frame in cut.items()
+            ]
+        )
+        if "priced_through" in priced.columns:
+            priced["priced_through"] = _stamp_series(priced, through)
+        else:
+            priced["priced_through"] = through
         priced[day_column] = day
         unknown = set(priced["event_id"]) - set(day_prices["event_id"])
         if unknown:

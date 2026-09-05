@@ -676,6 +676,202 @@ def test_every_bet_carries_the_day_it_was_priced_through(scored):
         PB.assert_walk_forward(leaked)
 
 
+# --------------------------------------------------------------------------
+# The stamp describes every frame, not only the team history
+#
+# A player-prop pricer reads two tables, not one. The stamp used to be computed
+# from the team games alone and written over whatever the pricer had put there,
+# so a pricer that also read tonight's minutes and tonight's points was stamped
+# walk-forward and passed the guard. These three tests are the difference.
+# --------------------------------------------------------------------------
+
+
+def _walk_prices() -> pd.DataFrame:
+    """One quoted event on each of the three slate days."""
+    return pd.DataFrame(
+        [{"event_id": f"e{index}", "slate_date": day} for index, day in enumerate(DAYS)]
+    )
+
+
+def _walk_games(days=DAYS) -> pd.DataFrame:
+    """A team-games frame with one row on each named day."""
+    return pd.DataFrame([{"slate_date": day, "margin": 3.0} for day in days])
+
+
+def test_a_pricer_that_read_a_second_frame_cannot_stamp_itself_walk_forward():
+    """The stamp a pricer sets for itself survives, so the guard can read it.
+
+    This is the player-prop case. The caller cut the team history; the pricer
+    also read a player frame holding rows dated on the day it is pricing —
+    tonight's minutes, tonight's points — and said so in `priced_through`. The
+    stamp used to be overwritten with the team history's last day, which is
+    strictly earlier than the day being priced, so `assert_walk_forward` was
+    handed evidence about one of the pricer's two inputs and certified the run.
+    """
+    players = pd.DataFrame([{"slate_date": day} for day in DAYS])
+
+    def price_day(*, day, history, prices):
+        frame = prices.copy()
+        # The frame the caller does not know about, read whole — including the
+        # rows dated on the day being priced.
+        frame["priced_through"] = str(players["slate_date"].astype(str).max())
+        return frame
+
+    priced = PB.walk_forward(_walk_prices(), _walk_games(), price_day=price_day)
+
+    assert len(priced) == len(DAYS)
+    assert set(priced["priced_through"]) == {DAYS[-1]}, (
+        "the pricer's own stamp names the last day of the frame it read, and "
+        "the caller must not lower it to the team history's last day"
+    )
+    with pytest.raises(PB.WalkForwardLeak):
+        PB.assert_walk_forward(priced)
+
+
+def test_a_named_frame_is_cut_to_the_day_and_folded_into_the_stamp():
+    """`frames=` is the honest door: cut like the history, and stamped with it.
+
+    The team games here stop on the first day and the player frame runs a day
+    later, so a stamp computed from the team history alone would describe a day
+    on which the pricer had already been shown a player row.
+    """
+    players = pd.DataFrame(
+        [{"slate_date": day, "points": 11} for day in (DAYS[0], DAYS[1])]
+    )
+    seen: list[dict] = []
+
+    def price_day(*, day, history, prices, player_games):
+        column = "slate_date" if "slate_date" in player_games.columns else "game_date"
+        seen.append(
+            {
+                "day": day,
+                "rows": len(player_games),
+                "max": (
+                    ""
+                    if player_games.empty
+                    else str(player_games[column].astype(str).max())
+                ),
+            }
+        )
+        return prices.copy()
+
+    priced = PB.walk_forward(
+        _walk_prices(),
+        _walk_games((DAYS[0],)),
+        price_day=price_day,
+        frames={"player_games": players},
+    )
+
+    assert [call["day"] for call in seen] == sorted(DAYS)
+    for call in seen:
+        assert call["max"] < call["day"] or call["max"] == "", (
+            f"the pricer for {call['day']} was shown player rows up to "
+            f"{call['max']}, which is not strictly earlier"
+        )
+    assert [call["rows"] for call in seen] == [0, 1, 2]
+
+    stamps = dict(zip(priced["slate_date"].astype(str), priced["priced_through"]))
+    assert stamps == {DAYS[0]: "", DAYS[1]: DAYS[0], DAYS[2]: DAYS[1]}, (
+        "the stamp is the latest day across every frame the pricer was handed, "
+        "and the player frame runs a day later than the team games here"
+    )
+    PB.assert_walk_forward(priced)
+
+    # A frame whose day column is named something else is refused rather than
+    # cut to nothing. `history_before` would hand the pricer an empty player
+    # frame every night, and a player model priced off nothing looks exactly
+    # like a player model with no opinions.
+    renamed = players.rename(columns={"slate_date": "game_date"})
+    with pytest.raises(PB.BacktestError) as raised:
+        PB.walk_forward(
+            _walk_prices(),
+            _walk_games((DAYS[0],)),
+            price_day=price_day,
+            frames={"player_games": renamed},
+        )
+    assert "player_games" in str(raised.value)
+
+    seen.clear()
+    named = PB.walk_forward(
+        _walk_prices(),
+        _walk_games((DAYS[0],)),
+        price_day=price_day,
+        frames={"player_games": renamed},
+        frame_day_columns={"player_games": "game_date"},
+    )
+    assert [call["rows"] for call in seen] == [0, 1, 2]
+    assert list(named["priced_through"]) == ["", DAYS[0], DAYS[1]], (
+        "the same frame under its own day column is cut and stamped the same way"
+    )
+
+
+def test_a_pricer_that_demands_a_frame_the_caller_does_not_hold_is_refused():
+    """An input `walk_forward` was never given is one it cannot cut or stamp."""
+
+    def price_day(*, day, history, prices, player_games):
+        return prices.copy()
+
+    with pytest.raises(PB.BacktestError) as raised:
+        PB.walk_forward(_walk_prices(), _walk_games(), price_day=price_day)
+
+    assert "player_games" in str(raised.value)
+
+    # And a named frame may not take the name of an argument every pricer is
+    # already handed: the pricer would receive one of the two and the stamp
+    # would describe the other.
+    for name in PB.PRICER_ARGUMENTS:
+        with pytest.raises(PB.BacktestError) as clash:
+            PB.walk_forward(
+                _walk_prices(),
+                _walk_games(),
+                price_day=lambda **kwargs: None,
+                frames={name: _walk_games()},
+            )
+        assert name in str(clash.value)
+
+
+def test_a_pricer_that_reads_only_the_team_history_is_stamped_as_it_always_was():
+    """The existing contract, unchanged: no stamp of its own, no `frames=`.
+
+    And a pricer cannot *lower* the stamp: the stamp describes what it was
+    allowed to see, not what it chose to read, so a blank or an earlier day
+    returned by the pricer leaves the caller's stamp standing.
+    """
+
+    def plain(*, day, history, prices):
+        return prices.copy()
+
+    priced = PB.walk_forward(_walk_prices(), _walk_games(), price_day=plain)
+    stamps = dict(zip(priced["slate_date"].astype(str), priced["priced_through"]))
+    assert stamps == {DAYS[0]: "", DAYS[1]: DAYS[0], DAYS[2]: DAYS[1]}
+    PB.assert_walk_forward(priced)
+
+    def modest(*, day, history, prices):
+        frame = prices.copy()
+        frame["priced_through"] = "" if day == DAYS[2] else "1900-01-01"
+        return frame
+
+    lowered = dict(
+        zip(
+            *[
+                PB.walk_forward(
+                    _walk_prices(), _walk_games(), price_day=modest
+                )[column].astype(str)
+                for column in ("slate_date", "priced_through")
+            ]
+        )
+    )
+    assert lowered == {
+        # Day one: the caller cut nothing, so the pricer's own declaration is
+        # the only evidence there is and it stands.
+        DAYS[0]: "1900-01-01",
+        # Days two and three: a pricer cannot talk the stamp down below the
+        # history it was handed, whether it names an earlier day or none.
+        DAYS[1]: DAYS[0],
+        DAYS[2]: DAYS[1],
+    }
+
+
 def test_the_accounting_identity_reconciles_and_is_printed(scored):
     """`offered = unparseable + no opinion + below threshold + bets`.
 
