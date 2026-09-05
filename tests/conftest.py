@@ -1,6 +1,7 @@
 """Suite-wide hooks and the shared real-data corpus.
 
-Two things live here, and both exist because absence used to read as a pass.
+Three things live here, and all three exist because absence used to read as a
+pass.
 
 **The guard manifest at collection.** `pytest_collection_modifyitems` runs
 after collection and before any test, and it stops the run with exit code 1
@@ -14,6 +15,31 @@ asserted from inside the run (tracked by git, defines at least five tests),
 and `scripts/check_test_results.py` is it asserted from the junit afterwards;
 the three copies are held against each other by `test_the_guards_exist`.
 
+**What pytest actually received, not what the command line spells.** Counting
+the items a module contributed is a floor per MODULE, and a `--deselect` of
+exactly one test in a guard leaves that floor intact: measured on
+2026-09-04, `addopts = "--deselect tests/test_no_secrets_committed.py::
+test_no_tracked_file_contains_an_odds_api_key_shape"` in pyproject.toml ran
+as **1235 passed, 1 deselected** out of 1236 collected, the hook below stayed
+quiet, and `scripts/check_test_results.py` printed PASS. So the hook now also
+reads the SELECTION options out of `config` — `--deselect`, `-k`,
+`--ignore`, `--ignore-glob`, the `addopts` pytest resolved from the ini file,
+and `PYTEST_ADDOPTS` in the environment — and stops the run when any of them
+is set. Reading the option values is what makes a `PYTEST_ADD""OPTS` spelled
+from pieces, or an `addopts` buried in a config file, visible: whatever
+assembled it, pytest received it.
+
+**Collection-phase skips.** A `pytest.skip(..., allow_module_level=True)` or
+a module-level `pytest.importorskip` never produces a test item, so
+`pytest_collection_modifyitems` sees a shorter list and nothing else — that
+is defect 7 (a permanent skip on a gitignored table) with the skip moved one
+phase earlier. `pytest_collectreport` is where those arrive, and it records
+them; the run then stops with exit code 1 before any test runs. Measured
+2026-09-04 over a three-module synthetic tree: `python -m pytest -q` alone
+reported `2 passed, 2 skipped` and exit **0**. `tests/test_check_test_results
+.py::test_a_module_level_skip_is_not_a_pass_in_the_run_or_in_the_junit` is
+the observation, run as a subprocess over both shapes.
+
 **The real-data corpus.** `data/processed/*.csv` and `data/raw/cbb/schedules/`
 are gitignored, and every test that read them used to skip when they were
 absent — 80 tests in CI, waiting on data CI can never have.
@@ -26,6 +52,7 @@ which corpus the number is over.
 
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 
@@ -82,6 +109,62 @@ def _in_scope(module: str, config) -> bool:
     return False
 
 
+#: The options that decide WHAT RUNS, read from the config pytest built rather
+#: than from the text of a command line. `deselect` and `keyword` drop tests
+#: that were collected; `ignore` and `ignore_glob` stop them being collected at
+#: all. A blocklist of spellings is defeated by a different spelling; a read of
+#: the resolved option is not.
+SELECTION_OPTIONS: tuple[str, ...] = ("deselect", "keyword", "ignore", "ignore_glob")
+
+
+def _selection_narrowings(config) -> list[str]:
+    """Every narrowing this invocation actually carries, however it was spelled.
+
+    Four option values, the `addopts` pytest resolved out of the ini file, and
+    `PYTEST_ADDOPTS` from the environment. The first four are what pytest
+    received; the last two are read because they are the two places a
+    narrowing can be set without appearing on any command line, and naming
+    them in the message is what makes the failure fixable.
+    """
+    found: list[str] = []
+    for option in SELECTION_OPTIONS:
+        try:
+            value = config.getoption(option)
+        except (ValueError, AttributeError):  # pragma: no cover - option gone
+            continue
+        if value:
+            found.append(f"--{option.replace('_', '-')}={value!r}")
+    inifile_addopts = ""
+    try:
+        inifile_addopts = config.inicfg.get("addopts", "") or ""
+    except AttributeError:  # pragma: no cover - no ini in this invocation
+        inifile_addopts = ""
+    if inifile_addopts:
+        found.append(f"addopts in the ini file = {inifile_addopts!r}")
+    environment_addopts = os.environ.get("PYTEST_ADDOPTS", "")
+    if environment_addopts:
+        found.append(f"PYTEST_ADDOPTS={environment_addopts!r}")
+    return found
+
+
+def pytest_collectreport(report) -> None:
+    """Record a module that skipped itself before it produced a single item.
+
+    `pytest.skip(..., allow_module_level=True)` and a module-level
+    `pytest.importorskip` never reach `pytest_collection_modifyitems` as
+    items, and pytest exits 0 over them. They arrive here, as a CollectReport
+    whose outcome is `skipped`, and the run is stopped in
+    `pytest_collection_modifyitems` once the whole tree has been walked, so
+    the message names every one of them rather than only the first.
+    """
+    if report.skipped:
+        _COLLECTION_SKIPS.append(f"{report.nodeid or '(unnamed module)'}: {report.longrepr}")
+
+
+#: Filled by `pytest_collectreport`, drained by `pytest_collection_modifyitems`.
+_COLLECTION_SKIPS: list[str] = []
+
+
 @pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(session, config, items) -> None:
     """Stop the run if a required guard in scope contributed nothing to it.
@@ -91,11 +174,19 @@ def pytest_collection_modifyitems(session, config, items) -> None:
     the built-in ones by default — measured: without this marker the hook
     saw every `-k`-deselected item still present and let the run through.
     Counted from the items left AFTER deselection, so a `-k`, a
-    `--deselect`, an `--ignore` and a `PYTEST_ADDOPTS` are all visible here
-    as a module that was in scope and contributed zero items. `pytest.exit`
-    with `returncode=1` rather than a failing test, because a failing test
-    is one more thing a `-k` can deselect.
+    `--deselect`, an `--ignore` and a `PYTEST_ADDOPTS` that empty a module
+    are all visible here as a module that was in scope and contributed zero
+    items. `pytest.exit` with `returncode=1` rather than a failing test,
+    because a failing test is one more thing a `-k` can deselect.
+
+    The count is a floor per MODULE, which a `--deselect` of one test in a
+    guard walks straight past, so this hook also reads the narrowing options
+    themselves and the collection-phase skips recorded above. All three
+    reasons are gathered before exiting, so a run that carries more than one
+    is told about all of them.
     """
+    reasons: list[str] = []
+
     contributed: dict[str, int] = {module: 0 for module in REQUIRED_GUARD_MODULES}
     for item in items:
         try:
@@ -109,13 +200,32 @@ def pytest_collection_modifyitems(session, config, items) -> None:
         if count == 0 and _in_scope(module, config)
     )
     if empty:
-        pytest.exit(
+        reasons.append(
             "Required guard modules contributed zero collected tests: "
             f"{empty}. A guard that collects nothing enforces nothing, and a run "
             "that drops one — by rename, -k, --deselect, --ignore, a positional "
-            "path or PYTEST_ADDOPTS — is not a run of this suite.",
-            returncode=1,
+            "path or PYTEST_ADDOPTS — is not a run of this suite."
         )
+
+    narrowings = _selection_narrowings(config)
+    if narrowings:
+        reasons.append(
+            "This invocation narrows the suite: " + "; ".join(narrowings) + ". "
+            "Read from the config pytest built, not from the spelling of a "
+            "command line. A run that chooses which tests to run is not a run "
+            "of this suite, and deselecting one test in a guard leaves every "
+            "per-module count intact."
+        )
+
+    if _COLLECTION_SKIPS:
+        reasons.append(
+            f"{len(_COLLECTION_SKIPS)} module(s) skipped at COLLECTION, before "
+            "contributing a single test. pytest exits 0 over these and no "
+            "per-item hook ever sees them:\n  " + "\n  ".join(_COLLECTION_SKIPS)
+        )
+
+    if reasons:
+        pytest.exit("\n".join(reasons), returncode=1)
 
 
 def processed_table(name: str) -> tuple[Path, str]:
