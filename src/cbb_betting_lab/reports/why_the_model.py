@@ -408,7 +408,12 @@ def printed_interval(row: Mapping) -> S.RoiInterval:
     correction is then switched off (``looks=1``), so
     :meth:`stats.RoiInterval.verdict` reads exactly the two numbers a reader
     sees beside the return — not a wider or narrower pair recomputed from a
-    standard error the reader is never shown.
+    standard error the reader is never shown. `verdict()` reads the sign off
+    that pair, so a bound pair below zero is a demonstrated **deficit** whatever
+    return the record carries beside it; and
+    :func:`verdict_disagreements` refuses a row whose return does not lie
+    between them at all, so the sentence and the figure can never be published
+    contradicting each other.
 
     Constructed rather than re-implemented. A second copy of *"which side of
     zero is this on"* is a copy that drifts, and the direction it drifts in is
@@ -457,18 +462,17 @@ def enough_evidence_of(row: Mapping) -> bool:
     return printed_interval(row).enough_evidence
 
 
-#: Every place in the record that carries a stored verdict, as
-#: (description, row) pairs. Used only to REFUSE a record whose stored reading
-#: disagrees with its own interval — the rendering itself never reads these
-#: strings.
-def _rows_carrying_a_verdict(record: Mapping) -> list[tuple[str, Mapping]]:
+#: Every row in the record that this document prints a number or a verdict
+#: from, as (description, row) pairs. Used only to REFUSE a record that
+#: disagrees with itself — the rendering itself never reads a stored verdict.
+def _rows_of_the_record(record: Mapping) -> list[tuple[str, Mapping]]:
     found: list[tuple[str, Mapping]] = []
     for key in ("tiers", "cells", "pooled", "blind"):
         for index, row in enumerate(record.get(key, []) or []):
-            if isinstance(row, Mapping) and "verdict" in row:
+            if isinstance(row, Mapping):
                 found.append((f"{key}[{index}] {_text(row.get('name'))}".strip(), row))
     every_market = record.get("every_market")
-    if isinstance(every_market, Mapping) and "verdict" in every_market:
+    if isinstance(every_market, Mapping):
         found.append(("every_market", every_market))
     forecast = record.get("forecast")
     if isinstance(forecast, Mapping):
@@ -479,21 +483,62 @@ def _rows_carrying_a_verdict(record: Mapping) -> list[tuple[str, Mapping]]:
             if not isinstance(block, Mapping):
                 continue
             advantage = block.get("advantage_over_raw")
-            if isinstance(advantage, Mapping) and "verdict" in advantage:
+            if isinstance(advantage, Mapping):
                 found.append((f"{label}.advantage_over_raw", advantage))
     return found
 
 
-def verdict_disagreements(record: Mapping) -> list[str]:
-    """Every row whose STORED reading is not the reading of its own interval.
+def _rows_carrying_a_verdict(record: Mapping) -> list[tuple[str, Mapping]]:
+    return [
+        (label, row) for label, row in _rows_of_the_record(record) if "verdict" in row
+    ]
 
-    Empty means the record agrees with itself. A non-empty list is a record
-    that has been edited by hand between the measurement and the document, and
-    :func:`render` refuses it rather than printing either string: printing the
-    stored one publishes the edit, and printing the derived one silently
-    overwrites a disagreement a human should see.
+
+def _rows_carrying_an_interval(record: Mapping) -> list[tuple[str, Mapping]]:
+    """Rows that print a return and a pair of corrected bounds on one line."""
+    return [
+        (label, row)
+        for label, row in _rows_of_the_record(record)
+        if "adjusted_low" in row and "adjusted_high" in row
+    ]
+
+
+def verdict_disagreements(record: Mapping) -> list[str]:
+    """Every row that disagrees with itself, in either of the two ways.
+
+    1. **The return is not inside its own corrected interval.** No estimator
+       produces that row — the interval is built around the estimate — so it is
+       a return typed over one measurement beside bounds left from another.
+       `_figure` prints both on one line, and the interval is what the verdict
+       is a statement about, so a `+5.0%` beside corrected bounds of −9% to −2%
+       would put the words *demonstrated deficit* next to a positive number. It
+       is refused instead. This is the case that survived the derived-verdict
+       fix: the stored string no longer reaches the page, but the stored
+       **return** still does.
+    2. **The stored verdict is not the reading of its own interval**, which is
+       a record edited by hand between the measurement and the document.
+
+    Empty means the record agrees with itself. :func:`render` refuses a
+    non-empty list rather than printing either reading: printing the stored one
+    publishes the edit, and printing the derived one silently overwrites a
+    disagreement a human should see.
     """
     reasons: list[str] = []
+    for label, row in _rows_carrying_an_interval(record):
+        interval = printed_interval(row)
+        if not interval.enough_evidence:
+            # Below the floor `_figure` prints the phrase and no number at all,
+            # so there is no pair on the page to disagree.
+            continue
+        if not interval.return_sits_inside_its_own_interval:
+            reasons.append(
+                f"{label}: the return {_pct(interval.roi)} does not lie "
+                f"between the corrected bounds "
+                f"[{_as_float(row.get('adjusted_low'))}, "
+                f"{_as_float(row.get('adjusted_high'))}] it is printed beside, "
+                "so the two numbers on that line did not come from one "
+                f"measurement — and the bounds read {interval.verdict()!r}."
+            )
     for label, row in _rows_carrying_a_verdict(record):
         stored = _text(row.get("verdict"))
         derived = verdict_of(row)
@@ -1428,9 +1473,11 @@ def render(record: Mapping) -> str:
     disagreements = verdict_disagreements(record)
     if disagreements:
         raise WhyError(
-            "This record's stored verdicts do not agree with its own "
-            "intervals, so it was edited between the measurement and the "
-            "document. Refusing to render either reading:\n  "
+            "This record does not agree with itself — a return outside its "
+            "own corrected interval, or a stored verdict that is not what "
+            "those bounds read. Either way something was edited between the "
+            "measurement and the document. Refusing to render either "
+            "reading:\n  "
             + "\n  ".join(disagreements)
         )
     backtest = record.get("backtest")

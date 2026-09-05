@@ -22,6 +22,7 @@ document against it, so the claim cannot become false again without a red build.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -349,6 +350,87 @@ def test_a_verdict_typed_into_the_forecast_table_never_reaches_the_document(outp
     assert WHY.verdict_of(advantage) == S.DEMONSTRATED_DEFICIT
 
 
+@pytest.mark.parametrize(
+    "roi,adjusted_low,adjusted_high,expected",
+    [
+        # Entirely below zero, with a winning return typed beside it. This is
+        # the pair that used to read "a demonstrated edge".
+        (+0.05, -0.09, -0.02, S.DEMONSTRATED_DEFICIT),
+        # Entirely above zero, with a losing return typed beside it.
+        (-0.05, +0.02, +0.09, S.DEMONSTRATED_EDGE),
+        # Spanning zero. Neither word is available at any return.
+        (+0.05, -0.09, +0.02, S.NO_DEMONSTRATED_EDGE),
+    ],
+)
+def test_the_verdict_is_read_off_the_two_bounds_that_are_printed(
+    roi: float, adjusted_low: float, adjusted_high: float, expected: str
+):
+    """**A verdict is a statement about the interval printed beside it.**
+
+    `printed_interval` hands the corrected bounds in as the interval's own, so
+    the reading is of the pair a reader sees — but the reading itself used to
+    come from the row's `roi`, which is a *different number in the record*. A
+    row carrying `+5.0%` over corrected bounds of −9.0% to −2.0% therefore
+    cleared the correction (zero is outside those bounds) and was then called a
+    demonstrated **edge**, because the sign consulted was the typed return's
+    and not the losing interval's.
+
+    Each case types a return whose sign disagrees with its bounds, so a
+    verdict derived from `roi` gets two of these three wrong.
+    """
+    row = {
+        "name": "mid_major",
+        "tier": "mid_major",
+        "roi": roi,
+        "adjusted_low": adjusted_low,
+        "adjusted_high": adjusted_high,
+        "bets": 50_000,
+        "clusters": 500,
+    }
+
+    assert WHY.verdict_of(row) == expected
+    assert (WHY.demonstrated_edges([row]) == [row]) == (expected == S.DEMONSTRATED_EDGE)
+    assert (WHY.demonstrated_deficits([row]) == [row]) == (
+        expected == S.DEMONSTRATED_DEFICIT
+    )
+    assert WHY._figure(row).endswith(expected), WHY._figure(row)
+
+
+def test_a_return_outside_its_own_corrected_interval_is_refused_not_printed(outputs):
+    """The other half of *"the two must never be printed in disagreement"*.
+
+    Deriving the verdict from the bounds stops the losing interval being called
+    an edge. It does not stop the line reading **+5.0%, corrected −9.0% to
+    −2.0% — demonstrated deficit**, which is a return no estimator could have
+    produced those bounds around: the interval is built around the estimate, so
+    a return outside it is two measurements spliced into one row. There is no
+    honest way to print that line, and no way to choose which of the two
+    numbers to believe, so the render refuses it.
+
+    The stored verdict here is set to what the bounds read, so the only thing
+    this test can be failed by is the new check.
+    """
+    record = build(outputs)
+    row = next(r for r in record["tiers"] if r["enough_evidence"])
+    row["roi"] = +0.05
+    row["adjusted_low"], row["adjusted_high"] = -0.09, -0.02
+    row["verdict"] = S.DEMONSTRATED_DEFICIT
+
+    with pytest.raises(WHY.WhyError) as caught:
+        WHY.render(record)
+    message = str(caught.value)
+    assert "does not lie between" in message, message
+    assert S.DEMONSTRATED_DEFICIT in message
+
+    # The word never attaches to the losing pair even where the refusal is not
+    # reached, and the same row with a coherent return renders and reads as the
+    # deficit it is.
+    assert S.DEMONSTRATED_EDGE not in WHY._figure(row)
+    row["roi"] = -0.055
+    rendered = WHY.render(record)
+    assert "**-5.5%**, corrected -9.0% to -2.0% — demonstrated deficit" in rendered
+
+
 def test_a_sample_size_typed_over_the_floor_never_promotes_a_cell(outputs):
     """`enough_evidence` is derived from the count too. A row hand-flagged as
     having cleared the floor it does not clear would otherwise walk into the
@@ -446,6 +528,57 @@ def test_the_committed_document_carries_the_fence(outputs):
     )
 
 
+#: What the fence guard treats as a figure: **any digit at all**, anywhere
+#: outside the generated block. Not a percent sign — that was the guard's
+#: whole reach, and it is a guard against one spelling rather than against the
+#: thing. `-4.3%` was caught; `-4.3 points`, `86,351 bets`, `0.043`, a
+#: corrected interval written `[-0.100, +0.014]` and a bare `1.60` correction
+#: factor were not, and every one of them is a number about this model that
+#: nothing re-renders.
+#:
+#: A digit is a coarse net, and deliberately: this page's prose is about where
+#: the numbers live, not what they are, so it carries none today and the cost
+#: of the rule is that a future sentence wanting one must put it inside the
+#: fence or argue here for an exception.
+TYPED_FIGURE = re.compile(r"\d")
+
+
+def outside_the_fence(text: str) -> str:
+    """Everything in `text` the generator does not write."""
+    return (
+        text[: text.index(WHY.BEGIN_MARKER)]
+        + text[text.index(WHY.END_MARKER) + len(WHY.END_MARKER) :]
+    )
+
+
+def typed_figures(text: str) -> list[str]:
+    """Lines outside the fence that carry a figure nothing re-renders.
+
+    **What this does not reach**, stated plainly rather than left to be
+    discovered:
+
+    * a figure **spelled in words** — *"the low-major tier lost four and a
+      half percent"* carries no digit and passes here;
+    * a **stale claim with no number in it** — *"the model beats the market in
+      one tier"* is exactly as unre-rendered and exactly as invisible to a
+      regex;
+    * anything **inside** the fence. A figure typed between the markers is a
+      different failure, and a different test catches it:
+      `test_the_committed_document_matches_what_its_committed_record_renders_to`
+      re-renders the record and compares, so the fence's contents are pinned to
+      the record rather than to a spelling.
+
+    So this is a net under one specific and repeated mistake — dropping a
+    number into the prose around a generated block — and not a proof that the
+    prose is true.
+    """
+    return [
+        line
+        for line in outside_the_fence(text).splitlines()
+        if TYPED_FIGURE.search(line)
+    ]
+
+
 def test_no_figure_is_typed_outside_the_generated_fence(outputs):
     """The drift this cluster exists to prevent, in its last hiding place.
 
@@ -454,22 +587,46 @@ def test_no_figure_is_typed_outside_the_generated_fence(outputs):
     corrected interval — `-4.3%, corrected -10.0% to +1.4%` — so a
     re-measurement moved the generated table above it and left the paragraph
     below saying what the tier used to read, under a heading promising it could
-    not. A percent sign outside the fence is a figure nothing re-renders.
+    not. A number outside the fence is a figure nothing re-renders.
     """
-    text = DOC.read_text(encoding="utf-8")
-    outside = (
-        text[: text.index(WHY.BEGIN_MARKER)]
-        + text[text.index(WHY.END_MARKER) + len(WHY.END_MARKER) :]
-    )
-    assert "%" not in outside, (
-        f"{DOC.name} carries a figure outside its generated block: "
-        + repr(
-            [line for line in outside.splitlines() if "%" in line]
-        )
-        + ". Nothing re-renders those lines, so they are typed figures under a "
+    typed = typed_figures(DOC.read_text(encoding="utf-8"))
+
+    assert not typed, (
+        f"{DOC.name} carries a figure outside its generated block: {typed!r}. "
+        "Nothing re-renders those lines, so they are typed figures under a "
         "heading saying there are none. Put the figure inside the fence, where "
         "the generator writes it from the record."
     )
+
+
+def test_the_fence_guard_catches_a_figure_written_without_a_percent_sign():
+    """The guard's own regression test.
+
+    It was `assert "%" not in outside`, which is a test for a **character**
+    rather than for a figure: the same stale sentence rewritten as *"the
+    low-major tier returned -0.043 over 34,720 bets"* sat outside the fence
+    unnoticed, and so did the correction factor, the bet counts and every
+    interval written in decimals. Each line below is the drift the guard was
+    written for, in a spelling the old guard let through.
+    """
+    framing = "# A page\n\nProse with no figures in it.\n\n"
+    fenced = f"{WHY.BEGIN_MARKER}\n\nlow-major -4.3%\n\n{WHY.END_MARKER}\n"
+
+    assert typed_figures(framing + fenced) == []
+
+    for stale in (
+        "The low-major tier returned -0.043 over 34,720 bets.",
+        "Corrected interval: [-0.100, +0.014].",
+        "The family correction is x1.60.",
+        "Measured over 86,351 bets.",
+        "Historically the tier lost 4.3 points of return.",
+    ):
+        assert typed_figures(f"{framing}{fenced}{stale}\n") == [stale], stale
+
+    # And the spelling the old guard did catch is still caught.
+    assert typed_figures(f"{framing}{fenced}The tier reads -4.3%.\n") == [
+        "The tier reads -4.3%."
+    ]
 
 
 def test_the_retraction_reads_its_current_figure_from_the_record(outputs):
@@ -734,31 +891,140 @@ def test_the_committed_record_is_what_the_committed_evidence_produces(outputs):
 # --------------------------------------------------------------------------
 
 
-def test_the_weekly_loop_runs_the_generator_and_splices_the_document():
-    """*"Regenerated by the pipeline"* is a claim about a file that has to be
-    checkable. The loop names the script and passes `--splice-into`, so a
-    document that stops being re-rendered fails here rather than going quiet."""
-    text = LOOP.read_text(encoding="utf-8")
-    assert 'WHY_SCRIPT = "run_why_the_model.py"' in text
+@pytest.fixture
+def lab(tmp_path: Path) -> dict:
+    """A complete, empty lab, built by the weekly loop's own test helpers.
+
+    Imported rather than re-implemented: a second copy of the harness is a
+    copy that drifts from what the loop actually needs, and then this test
+    passes because it stopped exercising the loop rather than because the loop
+    is right. `tests/` is on `sys.path` under pytest, and
+    `test_ratings_fit_is_well_posed.py` imports `test_fit_ratings` the same way.
+    """
+    import test_weekly_loop as WL
+
+    tree = {
+        name: tmp_path / name
+        for name in ("outputs", "processed", "manual", "scripts")
+    }
+    for directory in tree.values():
+        directory.mkdir(parents=True, exist_ok=True)
+    WL.write_ledger(tree["outputs"] / WL.E.LEDGER_FILENAME)
+    (tree["manual"] / WL.promotion.CRITERIA_FILENAME).write_text(
+        (PROJECT_ROOT / "data" / "manual" / WL.promotion.CRITERIA_FILENAME).read_text(
+            encoding="utf-8"
+        ),
+        encoding="utf-8",
+    )
+    WL.staging.save(WL.staging.StagingProviderPolicy(), tree["manual"])
+    return tree
+
+
+def _loop_invocation_of_the_generator(
+    lab: dict, sentinel: Path, *extra: str
+) -> list[str]:
+    """Run the whole weekly loop with every sibling stubbed, and return the
+    argument list the generator was actually invoked with.
+
+    The generator's stub records `sys.argv[1:]` and nothing else, so the
+    sentinel exists **only** if the loop reached a subprocess for it.
+    """
+    import test_weekly_loop as WL
+
+    WL.with_siblings(lab)
+    WL.stub_script(
+        lab,
+        WL.LOOP.WHY_SCRIPT,
+        body=(
+            "import json, pathlib\n"
+            f"pathlib.Path({str(sentinel)!r}).write_text("
+            "json.dumps(sys.argv[1:]), encoding='utf-8')\n"
+        ),
+    )
+    exit_code = WL.run(lab, *extra)
+    assert exit_code in (0, 1), f"the loop crashed rather than reporting: {exit_code}"
+    assert sentinel.is_file(), (
+        "the weekly loop finished without ever running "
+        f"{WL.LOOP.WHY_SCRIPT}. `docs/{Path(WHY.DOC_RELATIVE).name}` says it is "
+        "regenerated every week; nothing regenerated it, so every figure in it "
+        "is as old as the last time somebody ran the script by hand."
+    )
+    return json.loads(sentinel.read_text(encoding="utf-8"))
+
+
+def test_the_weekly_loop_runs_the_generator(lab, tmp_path):
+    """*"Regenerated by the pipeline"* is a claim about a file, so it is
+    checked by **running the pipeline**.
+
+    This test used to be four `assert <string> in LOOP.read_text()` greps over
+    the loop's source. Every one of them is satisfied by a comment: delete the
+    `run_script(WHY_SCRIPT, ...)` call, leave the constant and the words
+    `--splice-into` and `WHY.DOC_RELATIVE` behind in prose, and the document
+    silently stops being re-rendered with the suite green — the pipeline step
+    withdrawn behind a dead reference, which is the same shape as the defect
+    this whole cluster exists to close (a document that said it was generated
+    while nothing generated it).
+
+    So: the real `main()`, every sibling stubbed the way `test_weekly_loop.py`
+    stubs them, and an assertion that the generator was **invoked** and told
+    which document to splice into.
+    """
+    sentinel = tmp_path / "the-generator-ran.json"
+    argv = _loop_invocation_of_the_generator(lab, sentinel)
+
     assert SCRIPT.is_file(), "the loop names a script that is not in the repository"
-    assert "WHY_SCRIPT," in text, "the loop declares the script and never runs it"
-    assert "--splice-into" in text
-    # This line used to read
-    #     assert WHY.DOC_RELATIVE in (LOOP.read_text(...) + str(WHY.DOC_RELATIVE))
-    # — a concatenation that appends the needle to the haystack, so the
-    # membership test was true for every possible loop script and pinned
-    # nothing at all. Both halves of what it meant to say, asserted separately:
-    # the loop resolves the path from the generator's own constant, and it names
-    # the document a reader would search for.
-    assert "WHY.DOC_RELATIVE" in text, (
-        "the loop spells the document path itself instead of resolving it from "
-        "why_the_model.DOC_RELATIVE, so the two can drift apart and the loop "
-        "will re-render a document nothing else is looking at"
+    assert "--splice-into" in argv, (
+        "the loop runs the generator but never asks it to splice, so the "
+        "record is refreshed and the document a human reads is not"
     )
-    assert WHY.DOC_RELATIVE in text, (
-        f"the loop never names {WHY.DOC_RELATIVE}, so nobody reading it can "
-        "tell which document the splice lands in"
+    spliced_into = Path(argv[argv.index("--splice-into") + 1])
+    assert spliced_into == PROJECT_ROOT / WHY.DOC_RELATIVE, (
+        f"the loop splices into {spliced_into}, which is not the document "
+        f"`why_the_model.DOC_RELATIVE` names ({WHY.DOC_RELATIVE}). The two "
+        "having drifted apart means the loop re-renders a page nothing else "
+        "is looking at."
     )
+    assert "--output-dir" in argv and argv[argv.index("--output-dir") + 1] == str(
+        lab["outputs"]
+    ), "the generator was pointed at a different output tree from the run's"
+    assert "--competition" in argv and argv[argv.index("--competition") + 1] == CBB.key
+
+
+def test_the_loop_records_the_generator_step_as_a_step_that_ran(lab, tmp_path):
+    """And it appears in the run record, so a week it did not run is visible.
+
+    A step that silently no-ops is worse than one that fails: the record is
+    what a Monday morning reader checks, and a re-render missing from it is how
+    a stale document goes unnoticed for a season.
+    """
+    import test_weekly_loop as WL
+
+    sentinel = tmp_path / "the-generator-ran.json"
+    _loop_invocation_of_the_generator(lab, sentinel)
+    steps = WL.steps_from(lab)
+
+    named = [name for name in steps if "edge document" in name]
+    assert named, (
+        f"no step in the run record re-renders the edge document: {sorted(steps)}"
+    )
+    for name in named:
+        assert steps[name] == WL.LOOP.OK, f"{name} finished {steps[name]}"
+
+
+def test_the_loop_can_be_pointed_at_another_document_and_says_which(lab, tmp_path):
+    """`--why-doc` exists so a test tree with no `docs/` can run the loop.
+
+    It is asserted here because it is the argument that makes the assertion
+    above meaningful: the default is not a hardcoded string that happens to
+    match, it is a resolved path that a flag can move.
+    """
+    elsewhere = tmp_path / "somewhere_else.md"
+    sentinel = tmp_path / "the-generator-ran.json"
+    argv = _loop_invocation_of_the_generator(
+        lab, sentinel, "--why-doc", str(elsewhere)
+    )
+
+    assert Path(argv[argv.index("--splice-into") + 1]) == elsewhere
 
 
 def test_the_splice_refuses_a_document_with_no_fence(tmp_path):

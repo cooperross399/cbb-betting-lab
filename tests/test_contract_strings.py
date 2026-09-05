@@ -44,6 +44,18 @@ CONTRACTS = {
     "Changed-selections marker": "Selections changed",
 }
 
+#: Contract strings pinned here that `CLAUDE.md`'s table does not carry a row
+#: for **yet**. A path a program writes to is a contract string in every sense
+#: that matters — it is what a reader opens and what the weekly loop splices —
+#: and the pin is what stops it moving in silence. The table row is a
+#: documentation change, so it is proposed rather than made here; when it
+#: lands, move the entry up into `CONTRACTS` and this dict empties again.
+#: `test_the_contract_table_has_no_rows_this_test_does_not_pin` accepts the row
+#: the day it appears, and the value is checked against the code either way.
+PENDING_CONTRACTS = {
+    "Edge document": "docs/why_the_model_does_or_does_not_have_an_edge.md",
+}
+
 
 def _table_rows() -> dict[str, str]:
     """Parse the contract table out of CLAUDE.md."""
@@ -75,7 +87,7 @@ def test_claude_md_records_every_contract_string(name: str, value: str):
 
 def test_the_contract_table_has_no_rows_this_test_does_not_pin():
     """A new contract string must arrive with its pin, not without one."""
-    unpinned = set(_table_rows()) - set(CONTRACTS)
+    unpinned = set(_table_rows()) - set(CONTRACTS) - set(PENDING_CONTRACTS)
 
     assert not unpinned, (
         f"CLAUDE.md declares contract strings this test does not pin: "
@@ -125,3 +137,56 @@ def test_the_accumulating_note_never_softens():
             f"The accumulating note has acquired {softener!r}. It is a "
             "statement of what the card is, not a temporary disclaimer."
         )
+
+
+def test_the_edge_document_is_the_path_the_generator_writes():
+    """The document `run_why_the_model.py` regenerates, pinned by name.
+
+    `why_the_model.DOC_RELATIVE` was a bare module constant that nothing
+    checked. Everything downstream — the weekly loop's `--splice-into`, the
+    test that compares the committed document against a fresh render, the fence
+    guard — resolves the path *from that constant*, so pointing it at
+    `docs/scratch.md` moved all of them together and left the suite green with
+    the real document unregenerated for ever. A generated document nothing
+    regenerates is the exact failure this cluster exists to prevent, arrived at
+    from the other end.
+
+    Pinned to the literal string here, the way every other contract string in
+    this repository is pinned, so the rename has to be made twice and read once.
+    """
+    from cbb_betting_lab.reports import why_the_model as WHY
+
+    expected = PENDING_CONTRACTS["Edge document"]
+
+    assert WHY.DOC_RELATIVE == expected, (
+        f"why_the_model.DOC_RELATIVE is {WHY.DOC_RELATIVE!r}; this test says "
+        f"{expected!r}. Everything that re-renders the edge document resolves "
+        "its path from that constant, so moving it silently retires the "
+        "document rather than renaming it."
+    )
+    document = REPO_ROOT / expected
+    assert document.is_file(), (
+        f"{expected} is not in the repository. The weekly loop splices into it "
+        "every week and a missing fence is an error, so an absent file is a "
+        "step that will fail every Monday."
+    )
+    assert WHY.doc_path() == document, (
+        "doc_path() does not resolve to the pinned path, so the generator "
+        "and this pin are describing different files."
+    )
+
+
+def test_the_edge_document_pin_matches_the_contract_table_if_it_has_the_row():
+    """The handoff: the day CLAUDE.md gains the row, its value must agree.
+
+    Until then this asserts nothing about CLAUDE.md, which is the point — the
+    row is a documentation change proposed alongside this pin, not made by it.
+    """
+    rows = _table_rows()
+    for name, value in PENDING_CONTRACTS.items():
+        if name in rows:
+            assert rows[name] == value, (
+                f"CLAUDE.md says {name} is {rows[name]!r} and this test says "
+                f"{value!r}. Move the entry into CONTRACTS and delete it from "
+                "PENDING_CONTRACTS once the row is there."
+            )
