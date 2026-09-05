@@ -15,16 +15,56 @@ The reasoning is in `docs/card_cadence.md`.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 #: Worst lateness observed on Cooper's repositories since 2026-08-27, in hours.
 #: Measured, not documented behaviour. Every deadline is checked against
 #: `nominal + this`, never against nominal.
 OBSERVED_LATENESS_H = 5.3
 
-#: Eastern standard time offset. The college basketball season runs almost
-#: entirely in EST; DST begins 2027-03-14, near the end, and moves every landing
-#: an hour *earlier* in ET, which is the safe direction.
+#: Eastern standard time offset, UTC-5. The college basketball season runs
+#: almost entirely in EST, and every figure in `docs/card_cadence.md`'s table
+#: is an EST figure.
 EST_OFFSET_H = -5
+
+#: Eastern daylight time offset, UTC-4, from 2027-03-14 (02:00 EST, 07:00 UTC)
+#: to the end of the season. THE SIGN MATTERS AND THIS FILE HAD IT BACKWARDS:
+#: it used to say DST moves every landing an hour *earlier* in ET, "the safe
+#: direction". A cron is fixed in UTC, so when the offset shrinks from -5 to -4
+#: the same instant reads an hour LATER on an Eastern clock — 10:00 UTC is
+#: 05:00 EST on 2027-03-13 and 06:00 EDT on 2027-03-14. Later is the unsafe
+#: direction, toward the first tip, and at the worst observed lateness it moves
+#: the morning backup from 10:18 ET to 11:18 ET, past its 11:00 ET block. The
+#: morning primary (10:18 ET) and both evening triggers still hold. That gap is
+#: recorded rather than chased — the crons were not moved for it — and
+#: `tests/test_the_card_schedule_survives_cron_lateness.py` pins the sign on
+#: those two instants and the gap as written.
+EDT_OFFSET_H = -4
+
+EASTERN = ZoneInfo("America/New_York")
+
+
+def eastern_offset_h(instant: datetime) -> float:
+    """The Eastern UTC offset in hours at `instant`, read from the tz database
+    rather than from a constant, so the DST direction is measured here and
+    never asserted. `instant` must be timezone-aware."""
+    if instant.tzinfo is None or instant.utcoffset() is None:
+        raise ValueError("eastern_offset_h needs an aware datetime; a naive one has no instant")
+    offset = instant.astimezone(EASTERN).utcoffset()
+    assert offset is not None
+    return offset.total_seconds() / 3600
+
+
+def landing_et(cron_hour_utc: float, day: date, lateness_h: float = 0.0) -> float:
+    """The Eastern wall-clock hour at which a cron fixed at `cron_hour_utc`
+    lands on `day`, `lateness_h` hours late. The offset is the one in force at
+    the landing instant, so a run fired after the 07:00 UTC switch on
+    2027-03-14 is already an EDT landing."""
+    fired = datetime(day.year, day.month, day.day, tzinfo=timezone.utc) + timedelta(
+        hours=cron_hour_utc + lateness_h
+    )
+    return (cron_hour_utc + lateness_h + eastern_offset_h(fired)) % 24
 
 #: A game tipping inside this many minutes of a run is not carded by it.
 #: This is the lead the historical store was bought at (T-60,
@@ -50,18 +90,20 @@ class CardSlot:
     must_precede_et_hour: int
     what: str
 
-    def worst_case_landing_et(self) -> float:
-        """The latest ET hour this slot can land, at observed worst lateness."""
+    def worst_case_landing_et(self, offset_h: float = EST_OFFSET_H) -> float:
+        """The latest ET hour this slot can land, at observed worst lateness.
+        `offset_h` is the Eastern offset in force: EST for the season's bulk,
+        `EDT_OFFSET_H` from 2027-03-14, which lands an hour later."""
         primary = min(self.cron_hours_utc)
-        return (primary + OBSERVED_LATENESS_H + EST_OFFSET_H) % 24
+        return (primary + OBSERVED_LATENESS_H + offset_h) % 24
 
-    def backup_worst_case_landing_et(self) -> float:
+    def backup_worst_case_landing_et(self, offset_h: float = EST_OFFSET_H) -> float:
         backup = max(self.cron_hours_utc)
-        return (backup + OBSERVED_LATENESS_H + EST_OFFSET_H) % 24
+        return (backup + OBSERVED_LATENESS_H + offset_h) % 24
 
-    def holds(self) -> bool:
+    def holds(self, offset_h: float = EST_OFFSET_H) -> bool:
         """True when even the backup trigger lands before its block starts."""
-        return self.backup_worst_case_landing_et() < self.must_precede_et_hour
+        return self.backup_worst_case_landing_et(offset_h) < self.must_precede_et_hour
 
 
 #: 11:00 ET is the earliest tip in a full season (3 games); 12:00 ET is the

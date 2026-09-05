@@ -203,6 +203,11 @@ SAFE_SHELLS = frozenset({"bash", "sh"})
 #: The only `if:` a step in the evidence chain may carry: it WIDENS when the
 #: step runs. Every other expression can evaluate false.
 PERMITTED_CHAIN_CONDITION = "always()"
+#: GitHub's ceiling on `timeout-minutes` for a job. A larger value parses and
+#: is silently reduced to this, so `historical-purchase.yml` declaring 1440
+#: promised itself a day and was always going to be killed at six hours. The
+#: parser accepts it; only this rule refuses it.
+GITHUB_JOB_TIMEOUT_CEILING_MINUTES = 360
 #: The runner family the executed rules model. GitHub's default shell is
 #: `bash -e {0}` on Linux and `pwsh` on Windows, with no `shell:` key
 #: appearing anywhere — so the runner IS a shell declaration.
@@ -582,6 +587,7 @@ def run_block_under_stubs(
     *,
     present_dirs: tuple[str, ...] = (),
     record_invocations: bool = False,
+    environment: dict[str, str] | None = None,
 ) -> BlockRun:
     """Execute one run block with every command replaced by a stub.
 
@@ -589,7 +595,9 @@ def run_block_under_stubs(
     all of them; an empty set means none. Nothing real executes: PATH is an
     empty directory inside the sandbox, the working directory is the sandbox,
     and the environment is built from scratch. `present_dirs` are created in
-    the sandbox first, for rules that need a directory to exist.
+    the sandbox first, for rules that need a directory to exist. `environment`
+    adds variables the block reads under a `:-` default, which the harness
+    otherwise leaves unset; it may not name PATH.
 
     A `:` is appended after the block. Without it a block that ends in a
     failing command exits non-zero whatever it did with the failure, so `set
@@ -625,6 +633,7 @@ def run_block_under_stubs(
 
     script = sandbox / "run_block.sh"
     script.write_text(preamble + block + "\n:\n", encoding="utf-8")
+    environment_override = environment
     environment = {
         "PATH": str(empty_path_dir),
         "LC_ALL": "C",
@@ -634,8 +643,11 @@ def run_block_under_stubs(
     }
     for name in RUNNER_FILE_VARIABLES:
         target = sandbox / name.lower()
-        target.touch()
+        target.write_text("", encoding="utf-8")
         environment[name] = str(target)
+    for name, value in (environment_override or {}).items():
+        assert name != "PATH", "a block under stubs runs with an empty PATH and nothing else"
+        environment[name] = value
     for name in referenced_variables(block):
         environment.setdefault(name, "__harness__")
 
@@ -921,7 +933,7 @@ def required_check_jobs(paths: list[Path]) -> list[tuple[str, str, dict]]:
 def missing_subjects(paths: list[Path]) -> list[str]:
     """Which of the things the loop-shaped rules iterate over are absent from
     the whole corpus. A loop over nothing passes."""
-    found = {"pytest": 0, "gate": 0, "checkout": 0, "python-version": 0, "upload": 0, "required-check": 0}
+    found = {"pytest": 0, "gate": 0, "checkout": 0, "python-version": 0, "upload": 0, "required-check": 0, "timeout-minutes": 0}
     for path in paths:
         document = load(path)
         found["pytest"] += sum(1 for _ in pytest_lines(document))
@@ -929,6 +941,7 @@ def missing_subjects(paths: list[Path]) -> list[str]:
         found["checkout"] += sum(1 for _ in steps_using(document, "actions/checkout"))
         found["upload"] += sum(1 for _ in steps_using(document, "actions/upload-artifact"))
         found["python-version"] += sum(1 for m in mappings(document) if "python-version" in m)
+        found["timeout-minutes"] += sum(1 for job in jobs_of(document).values() if "timeout-minutes" in job)
     found["required-check"] += len(required_check_jobs(paths))
     return sorted(subject for subject, count in found.items() if count == 0)
 
@@ -1100,6 +1113,24 @@ def check_every_script_a_workflow_runs_exists(path: Path) -> None:
     assert not missing, f"{path.name} names scripts that do not exist: {missing}"
 
 
+def check_job_timeouts_are_within_githubs_ceiling(path: Path) -> None:
+    """Every `timeout-minutes` is a positive integer no larger than the
+    ceiling GitHub enforces. An absent one is GitHub's default (the ceiling
+    itself) and is allowed."""
+    for job_id, job in jobs_of(load(path)).items():
+        if "timeout-minutes" not in job:
+            continue
+        declared = job["timeout-minutes"]
+        assert isinstance(declared, int) and not isinstance(declared, bool) and declared > 0, (
+            f"{path.name}: job {job_id!r} declares `timeout-minutes: {declared!r}`, which is not a positive integer"
+        )
+        assert declared <= GITHUB_JOB_TIMEOUT_CEILING_MINUTES, (
+            f"{path.name}: job {job_id!r} declares `timeout-minutes: {declared}`; GitHub caps a job at "
+            f"{GITHUB_JOB_TIMEOUT_CEILING_MINUTES} and applies the cap silently, so this line promises "
+            "time the run will never get"
+        )
+
+
 def check_python_version_is_pinned_to_an_exact_minor(path: Path) -> None:
     for mapping in mappings(load(path)):
         version = mapping.get("python-version")
@@ -1123,6 +1154,7 @@ CORPUS_CHECKS: dict[str, Callable[[Path], None]] = {
     "credit_spending_workflows_carry_no_cron": check_credit_spending_workflows_carry_no_cron,
     "every_script_a_workflow_runs_exists": check_every_script_a_workflow_runs_exists,
     "python_version_is_pinned_to_an_exact_minor": check_python_version_is_pinned_to_an_exact_minor,
+    "job_timeouts_are_within_githubs_ceiling": check_job_timeouts_are_within_githubs_ceiling,
 }
 
 
@@ -1707,6 +1739,269 @@ def test_the_purchase_workflow_builds_the_store_it_uploads() -> None:
 
 
 # --------------------------------------------------------------------------
+# The gameday workflow's fault paths, executed rather than read.
+#
+# The gameday workflow is operational: it keeps `continue-on-error` and `||
+# true` on purpose, so the gate rules do not apply to it. These tests take
+# three of its run blocks — restore, card, publish — render the `${{ }}`
+# context GitHub would, and execute them: under stubs, where the question is
+# which exit code the block reaches its end with; and, for the restore step,
+# against a real scratch remote, where the question is whether an absent
+# branch and a failed fetch are told apart.
+# --------------------------------------------------------------------------
+
+GAMEDAY_WORKFLOW = "cbb-gameday-refresh.yml"
+#: `${{ expr }}`, which GitHub substitutes before bash ever sees the block. Bash
+#: reads an unrendered one as a bad substitution, so the harness renders them
+#: first, and refuses an expression it was not given a value for.
+EXPRESSION = re.compile(r"\$\{\{\s*(.*?)\s*\}\}")
+#: The one line of the restore step that names the real remote. The real-git
+#: test replaces exactly this line with a scratch path and nothing else, so a
+#: change to how the remote is spelled is a change this test sees.
+RESTORE_REMOTE_LINE = 'REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}"'
+#: What the `${{ }}` context holds on a real scheduled morning run, as far as
+#: these three blocks read it. Outcomes are supplied per case.
+GAMEDAY_CONTEXT: dict[str, str] = {
+    "github.repository": "owner/repository",
+    "github.server_url": "https://github.com",
+    "github.run_id": "1",
+    "inputs.rehearsal_slate_date": "",
+    "inputs.rehearsal_slate_date || ''": "",
+    "inputs.credit_cap || '40000'": "40000",
+    "steps.identity.outputs.day": "2026-11-02",
+    "steps.identity.outputs.slot": "morning",
+    "steps.identity.outputs.trigger": "schedule",
+    "steps.card.outputs.decision || 'degraded'": "blocked",
+}
+
+
+def rendered(block: str, values: dict[str, str] | None = None) -> str:
+    context = {**GAMEDAY_CONTEXT, **(values or {})}
+
+    def substitute(match: re.Match[str]) -> str:
+        expression = match.group(1)
+        assert expression in context, f"the block reads `${{{{ {expression} }}}}` and this test gave it no value"
+        return context[expression]
+
+    text = EXPRESSION.sub(substitute, block)
+    assert "${{" not in text, text
+    return text
+
+
+def gameday_step(step_id: str) -> str:
+    document = load(WORKFLOWS_DIR / GAMEDAY_WORKFLOW)
+    for step in steps_of(jobs_of(document)["card"]):
+        if step.get("id") == step_id:
+            assert isinstance(step.get("run"), str), f"step {step_id!r} has no run block"
+            return step["run"]
+    raise AssertionError(f"{GAMEDAY_WORKFLOW} has no step with id {step_id!r} in the card job")
+
+
+def runner_file(sandbox: Path, name: str) -> str:
+    return (sandbox / name.lower()).read_text(encoding="utf-8")
+
+
+def test_a_failing_card_command_fails_the_card_step(tmp_path: Path) -> None:
+    """The defect: the card ran as `python ... | tee card_run.txt` under `set
+    -eu`, so the step's status was tee's and a card exiting 1 read green. The
+    health step reads this step's outcome, so the run was then stamped clean.
+    Executed: with only the card command failing the block must not reach its
+    end, and the decision output must not have been written."""
+    block = rendered(gameday_step("card"))
+    assert ENABLES_PIPEFAIL.search(commands(block)[0]), "the card step does not open with `set -o pipefail`"
+    environment = {"CBB_ODDS_API_KEY": "set"}
+
+    clean = run_block_under_stubs(block, set(), tmp_path, environment=environment)
+    assert clean.exit_code == 0 and clean.unmodelled == [], clean
+    assert "decision=" in runner_file(tmp_path, "GITHUB_OUTPUT")
+
+    card_failed = run_block_under_stubs(block, {"python"}, tmp_path, environment=environment)
+    assert "python" in card_failed.any_failures, "the card command was never invoked, so nothing was tested"
+    assert card_failed.exit_code != 0, (
+        "the card command failed and the step still exited 0: tee's status stood in for the card's"
+    )
+    assert "decision=" not in runner_file(tmp_path, "GITHUB_OUTPUT"), (
+        "a failed card still wrote a decision, so the publish step would stamp the feed with it"
+    )
+
+    tee_failed = run_block_under_stubs(block, {"tee"}, tmp_path, environment=environment)
+    assert tee_failed.exit_code != 0, "a failed tee lost the card's log and the step still read green"
+
+    without_credential = run_block_under_stubs(block, set(), tmp_path)
+    assert without_credential.exit_code != 0 and without_credential.any_failures == [], (
+        "the card step ran the card without its credential name bound"
+    )
+
+
+def test_a_failed_feed_fetch_fails_the_restore_step(tmp_path: Path) -> None:
+    """The defect: `if ! git fetch ...; then echo 'No card-feed branch'; exit 0`
+    read every failure as an absent branch. Executed with git failing, the
+    block must exit non-zero, record `feed=unreachable`, and write the
+    refusal into the step summary — and never claim the branch is absent."""
+    block = rendered(gameday_step("restore"))
+
+    failed = run_block_under_stubs(block, {"git"}, tmp_path)
+    assert "git" in failed.any_failures, "git was never invoked, so nothing was tested"
+    assert failed.unmodelled == [], failed
+    assert failed.exit_code != 0, "the feed fetch failed and the restore step still exited 0"
+    output = runner_file(tmp_path, "GITHUB_OUTPUT")
+    assert "feed=unreachable" in output and "feed=absent" not in output and "feed=restored" not in output, output
+    assert "Not published" in runner_file(tmp_path, "GITHUB_STEP_SUMMARY")
+
+    everything = run_block_under_stubs(block, None, tmp_path)
+    assert everything.exit_code != 0
+
+
+def scratch_remote(root: Path) -> str:
+    """A real, empty bare repository, addressed by the `file://` transport the
+    shallow fetch needs (a plain path ignores `--depth`)."""
+    remote = root / "remote.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True)
+    return remote.as_uri()
+
+
+def push_card_feed(root: Path, ledger: str, snapshots: dict[str, str]) -> None:
+    """A real orphan commit on refs/heads/card-feed in the scratch remote,
+    built with the same plumbing the publish step uses."""
+    remote = root / "remote.git"
+
+    def blob(text: str) -> str:
+        return subprocess.run(
+            ["git", "-C", str(remote), "hash-object", "-w", "--stdin"],
+            input=text, capture_output=True, text=True, check=True,
+        ).stdout.strip()
+
+    def tree(entries: str) -> str:
+        return subprocess.run(
+            ["git", "-C", str(remote), "mktree"], input=entries, capture_output=True, text=True, check=True
+        ).stdout.strip()
+
+    snapshot_tree = tree("".join(f"100644 blob {blob(body)}\t{name}\n" for name, body in snapshots.items()))
+    root_tree = tree(f"100644 blob {blob(ledger)}\tforward_evidence.csv\n040000 tree {snapshot_tree}\tsnapshots\n")
+    commit = subprocess.run(
+        ["git", "-C", str(remote), "commit-tree", root_tree, "-m", "tip"], capture_output=True, text=True, check=True
+    ).stdout.strip()
+    subprocess.run(["git", "-C", str(remote), "update-ref", "refs/heads/card-feed", commit], check=True)
+
+
+def run_restore_for_real(root: Path, remote_url: str) -> tuple[subprocess.CompletedProcess[str], Path]:
+    """The restore block, with its remote line and nothing else replaced,
+    executed with real git inside a fresh checkout-shaped directory."""
+    block = gameday_step("restore")
+    assert block.count(RESTORE_REMOTE_LINE) == 1, "the restore step no longer names its remote on the one line this test replaces"
+    block = rendered(block.replace(RESTORE_REMOTE_LINE, f'REMOTE="{remote_url}"'))
+    workspace = root / "workspace"
+    if workspace.exists():
+        shutil.rmtree(workspace)
+    workspace.mkdir()
+    subprocess.run(["git", "init", "-q", str(workspace)], check=True)
+    script = workspace / "run_block.sh"
+    script.write_text(block, encoding="utf-8")
+    environment = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(workspace), "LC_ALL": "C", "GH_TOKEN": "unused"}
+    for name in RUNNER_FILE_VARIABLES:
+        target = workspace / name.lower()
+        target.write_text("", encoding="utf-8")
+        environment[name] = str(target)
+    assert HARNESS_SHELL
+    completed = subprocess.run(
+        [HARNESS_SHELL, "-e", str(script)], cwd=workspace, env=environment, capture_output=True, text=True, timeout=120
+    )
+    return completed, workspace
+
+
+def test_the_restore_step_tells_an_absent_branch_from_a_failed_fetch(tmp_path: Path) -> None:
+    """Against a real remote in all three states. Absent: the legitimate
+    first run, exit 0 and `feed=absent`. Present: the ledger and every
+    snapshot come back byte for byte and `feed=restored`. Unreachable: exit
+    non-zero, `feed=unreachable`, the refusal in the summary, and nothing on
+    disk that could be mistaken for a restored feed."""
+    remote = scratch_remote(tmp_path)
+
+    absent, workspace = run_restore_for_real(tmp_path, remote)
+    assert absent.returncode == 0, absent.stderr
+    assert "feed=absent" in runner_file(workspace, "GITHUB_OUTPUT")
+    assert not (workspace / "data/processed/cbb_forward_evidence.csv").exists()
+    assert runner_file(workspace, "GITHUB_STEP_SUMMARY") == ""
+
+    ledger = "snapshot_date,game_id,edge\n2026-11-01,401,0.01\n2026-11-01,402,-0.02\n"
+    snapshots = {"2026-11-01.csv": "game_id,price\n401,-110\n", "2026-11-02.csv": "game_id,price\n402,+105\n"}
+    push_card_feed(tmp_path, ledger, snapshots)
+    present, workspace = run_restore_for_real(tmp_path, remote)
+    assert present.returncode == 0, present.stderr
+    assert "feed=restored" in runner_file(workspace, "GITHUB_OUTPUT")
+    assert (workspace / "data/processed/cbb_forward_evidence.csv").read_text(encoding="utf-8") == ledger
+    for name, body in snapshots.items():
+        assert (workspace / "data/archive/priced_snapshots" / name).read_text(encoding="utf-8") == body
+    assert "Ledger restored: 2 rows." in present.stdout
+
+    unreachable, workspace = run_restore_for_real(tmp_path, (tmp_path / "no-such-remote.git").as_uri())
+    assert unreachable.returncode != 0, "an unreachable remote was read as an absent branch"
+    output = runner_file(workspace, "GITHUB_OUTPUT")
+    assert "feed=unreachable" in output and "feed=absent" not in output, output
+    assert "Not published" in runner_file(workspace, "GITHUB_STEP_SUMMARY")
+    assert not (workspace / "data/processed/cbb_forward_evidence.csv").exists()
+    assert "No card-feed branch" not in unreachable.stdout + unreachable.stderr
+
+
+PUBLISH_OUTCOMES = {
+    "restore failed": ("failure", "skipped", "true"),
+    "run died before restore": ("skipped", "skipped", "true"),
+    "restore cancelled": ("cancelled", "skipped", "unknown"),
+    "restore failed, health unreadable": ("failure", "skipped", "unknown"),
+}
+
+
+def run_publish(tmp_path: Path, restore: str, card: str, degraded: str, failing: set[str]) -> BlockRun:
+    block = rendered(
+        gameday_step("publish"),
+        {
+            "steps.restore.outcome": restore,
+            "steps.card.outcome": card,
+            "steps.health.outputs.degraded || 'unknown'": degraded,
+        },
+    )
+    return run_block_under_stubs(block, failing, tmp_path)
+
+
+def test_a_clean_run_with_a_restored_feed_publishes(tmp_path: Path) -> None:
+    """The control: the publish block runs to its end under stubs, and git is
+    reached — so a refusal below is the refusal and not an accident."""
+    clean = run_publish(tmp_path, "success", "success", "false", set())
+    assert clean.exit_code == 0 and clean.unmodelled == [], clean
+    reached = run_publish(tmp_path, "success", "success", "false", {"git"})
+    assert "git" in reached.any_failures, "git was never reached on a clean run, so the refusal tests below prove nothing"
+
+
+def test_the_deliberate_fault_path_still_publishes(tmp_path: Path) -> None:
+    """Restore succeeded, the card failed, health says degraded: the fault
+    card is published, stamped degraded. This is the path the `if: failure()`
+    step exists for and it must stay open."""
+    fault = run_publish(tmp_path, "success", "failure", "true", set())
+    assert fault.exit_code == 0, fault
+    assert "Not published" not in runner_file(tmp_path, "GITHUB_STEP_SUMMARY")
+
+
+@pytest.mark.parametrize("case", sorted(PUBLISH_OUTCOMES), ids=sorted(PUBLISH_OUTCOMES))
+def test_a_run_that_did_not_restore_the_feed_never_reaches_publish(tmp_path: Path, case: str) -> None:
+    """The defect's second half: a fetch failure upstream must not reach the
+    push. With git failing, `any_failures` is empty only if no git command
+    was invoked at all — the refusal came first."""
+    restore, card, degraded = PUBLISH_OUTCOMES[case]
+    refused = run_publish(tmp_path, restore, card, degraded, {"git"})
+    assert refused.unmodelled == [], refused
+    assert refused.exit_code != 0, f"{case}: the publish step ran to its end without a restored feed"
+    assert refused.any_failures == [], f"{case}: git was invoked before the refusal: {refused.any_failures}"
+    assert "Not published" in runner_file(tmp_path, "GITHUB_STEP_SUMMARY"), f"{case}: the summary does not say why"
+
+
+def test_a_failed_card_never_publishes_as_clean(tmp_path: Path) -> None:
+    """Health derives `degraded` from the card outcome; the publish step reads
+    the same fact again. If the two ever disagree, nothing is pushed."""
+    disagreement = run_publish(tmp_path, "success", "failure", "false", {"git"})
+    assert disagreement.exit_code != 0 and disagreement.any_failures == [], disagreement
+
+
+# --------------------------------------------------------------------------
 # The self-regression suite: every rule watched failing.
 # --------------------------------------------------------------------------
 
@@ -1724,6 +2019,7 @@ jobs:
   tests:
     name: Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
@@ -1763,6 +2059,7 @@ jobs:
 TRIGGER_BLOCK = '"on":\n  push:\n    branches: [main]\n  pull_request:\n'
 PERMISSIONS_BLOCK = "permissions:\n  contents: read\n"
 JOB_HEADER = "  tests:\n    name: Tests\n    runs-on: ubuntu-latest\n"
+TIMEOUT_LINE = "    timeout-minutes: 30\n"
 PYTHON_VERSION_LINE = "python-version: '3.12'"
 PERSIST_LINE = "          persist-credentials: false\n"
 COMPILE_LINE = "python -m compileall -q -f src scripts"
@@ -1825,6 +2122,7 @@ PROOFS = {
     "credit_spending_workflows_carry_no_cron": "test_a_cron_on_a_spending_workflow_is_rejected",
     "every_script_a_workflow_runs_exists": "test_a_missing_script_is_rejected",
     "python_version_is_pinned_to_an_exact_minor": "test_an_unpinned_python_version_is_rejected",
+    "job_timeouts_are_within_githubs_ceiling": "test_a_timeout_above_githubs_ceiling_is_rejected",
     "no_step_or_job_continues_on_error": "test_continue_on_error_is_rejected",
     "no_gate_workflow_binds_a_credential": "test_an_env_bound_credential_is_rejected",
     "permissions_are_read_only": "test_write_permissions_on_a_gate_are_rejected",
@@ -1992,6 +2290,21 @@ def test_a_missing_script_is_rejected(tmp_path: Path) -> None:
 @pytest.mark.parametrize("version", ["3.10", "'3.x'", "'latest'", "'3'", "'3.12.1'", "3"])
 def test_an_unpinned_python_version_is_rejected(tmp_path: Path, version: str) -> None:
     assert_rejects(check_python_version_is_pinned_to_an_exact_minor, workflow(tmp_path, mutate(PYTHON_VERSION_LINE, f"python-version: {version}")))
+
+
+@pytest.mark.parametrize("declared", ["1440", "361", "0", "-30", "'360'", "abc", "true"])
+def test_a_timeout_above_githubs_ceiling_is_rejected(tmp_path: Path, declared: str) -> None:
+    assert_rejects(
+        check_job_timeouts_are_within_githubs_ceiling,
+        workflow(tmp_path, mutate(TIMEOUT_LINE, f"    timeout-minutes: {declared}\n")),
+    )
+
+
+@pytest.mark.parametrize("declared", ["360", "30", "1"])
+def test_a_timeout_within_githubs_ceiling_is_accepted(tmp_path: Path, declared: str) -> None:
+    check_job_timeouts_are_within_githubs_ceiling(
+        workflow(tmp_path, mutate(TIMEOUT_LINE, f"    timeout-minutes: {declared}\n"), "ok.yml")
+    )
 
 
 def test_continue_on_error_is_rejected(tmp_path: Path) -> None:
@@ -2344,7 +2657,7 @@ def test_a_missing_gate_workflow_is_a_failure_not_an_empty_parametrisation() -> 
 
 def test_a_workflow_with_none_of_the_subjects_reports_them_missing(tmp_path: Path) -> None:
     hollow = 'name: Hollow\n"on": [push]\npermissions:\n  contents: read\njobs:\n  nothing:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Do nothing\n        run: "true"\n'
-    assert missing_subjects([workflow(tmp_path, hollow)]) == ["checkout", "gate", "pytest", "python-version", "required-check", "upload"]
+    assert missing_subjects([workflow(tmp_path, hollow)]) == ["checkout", "gate", "pytest", "python-version", "required-check", "timeout-minutes", "upload"]
     assert missing_subjects([workflow(tmp_path, GOOD_WORKFLOW, "good.yml")]) == []
 
 

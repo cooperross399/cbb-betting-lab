@@ -53,8 +53,8 @@ the backup stands down when the primary has already published that slot cleanly.
 crons **4.5 to 5.3 hours late since 2026-08-27**. Every deadline here is checked
 against `nominal + OBSERVED_LATENESS_H`, not against nominal.
 
-The season runs almost entirely in EST (UTC−5); DST begins 2027-03-14, near the
-end. Taking the worst observed lateness of 5.3 hours:
+The season runs almost entirely in EST (UTC−5). Taking the worst observed
+lateness of 5.3 hours, in EST:
 
 | Slot | Nominal | Worst-case fire | In ET | Precedes |
 |:---|:---|:---|:---|:---|
@@ -66,6 +66,22 @@ end. Taking the worst observed lateness of 5.3 hours:
 Even at maximum observed lateness, both slots land before the games they exist
 to cover. At the *nominal* time they land hours earlier, which is the ordinary
 case and costs nothing.
+
+**From 2027-03-14 every figure above is an hour later, and one of them stops
+holding.** DST begins that day and the offset moves from UTC−5 to UTC−4. A cron
+is fixed in UTC, so the same instant reads an hour *later* on an Eastern clock:
+10:00 UTC is 05:00 EST on the 13th and 06:00 EDT on the 14th. An earlier
+version of `schedule_contract.py` said the opposite — "earlier, the safe
+direction" — and had the sign backwards. In EDT at 5.3 hours late the morning
+primary lands 10:18 ET and still precedes the 11:00 ET first tip; the morning
+**backup** lands **11:18 ET**, 18 minutes after it; the evening pair land 17:18
+and 18:18 ET and still precede the 19:00 ET block. That is a recorded gap, not
+a moved cron. It bites only when the primary was dropped **and** GitHub is at
+its worst observed lateness **and** a game tips at 11:00 ET, in the last three
+weeks of the season; moving the crons an hour earlier for it would card every
+day of the season earlier, with less information. The test pins the sign on
+those two instants and the gap as written, so the day the crons move or the
+lateness changes, the record changes with them or the build goes red.
 
 **A slot that fires late has not failed.** The tip guard quarantines whatever
 has already started, per game, and the run reports the coverage it achieved.

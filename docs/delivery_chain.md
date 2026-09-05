@@ -95,10 +95,20 @@ scratch repository, creates a real `card-feed` ref with a crafted status file,
 and runs the actual shell. The brief is explicit that *"string assertions about
 shell logic in a workflow file are near-worthless."*
 
-**Never publish the absence of evidence.** The publish runs `if: always()`, so a
-run that died before the restore step holds no ledger. It carries the branch
-copy forward instead, with a warning, rather than replacing a season of evidence
-with a commit that omits it.
+**Never publish the absence of evidence.** The publish runs `if: always()`, but
+the first thing it does is read the restore step's outcome: a run whose restore
+step did not succeed — the remote could not be asked for `card-feed`, or the run
+died before asking — holds no history to publish on top of, so it publishes
+nothing, fails the step, and says so in the run summary. *"No commit for today"*
+then means exactly what the reader was told it means. The restore step itself
+tells an **absent** branch (`git ls-remote --exit-code` exit 2, the legitimate
+first run) from a **failed** fetch (any other status); it used to read both as
+"no branch yet" and carry on, which would have let a transient fault
+fast-forward a one-day tree over the season's. Where the restore succeeded and a
+later step lost a local file, the branch copy is carried forward with a warning
+rather than dropped. `tests/test_workflows.py` executes the restore block under
+stubs with git failing and against a real scratch remote in all three states,
+and the publish block with every combination of restore and card outcome.
 
 ---
 
