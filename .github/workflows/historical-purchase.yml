@@ -104,13 +104,27 @@ jobs:
       # step below uploaded nothing. The responses survived only because the
       # sibling `cbb-data-v1` cache happens to cover the whole of
       # `data/raw/cbb`. Derived from the module now, never spelled by hand.
+      # THE RESTORE IS NOT SCOPED TO THIS RUN'S WAVE, AND MUST NOT BE. The
+      # first version restored `cbb-bought-<window>-<wave>-` first, which HIT
+      # for a wave bought before and shadowed the any-wave fallback — so a
+      # rebuild dispatched as core_team restored only core_team's responses,
+      # rebuilt "all waves" from a disk that held one, and reported 2,946,929
+      # rows while the props cache held the complete surviving set. Defect U's
+      # fix (`--waves all` in the rebuild) was defeated one layer up.
+      #
+      # Now the key is unique per run (always a miss, so the post-step always
+      # SAVES) and the only restore key is the any-wave prefix, which
+      # actions/cache resolves to the MOST RECENTLY CREATED match — i.e. the
+      # last run of any wave, whose cache already accumulated every run before
+      # it. Every run therefore starts from the whole surviving set and adds
+      # its own. The early artifact upload after Buy is the 90-day backup for
+      # the day this cache is evicted.
       - name: Restore the bought responses
         uses: actions/cache@v4
         with:
           path: data/raw/cbb/historical_purchase/${{ inputs.window }}
-          key: cbb-bought-${{ inputs.window }}-${{ inputs.waves }}-${{ github.run_id }}
+          key: cbb-bought-${{ inputs.window }}-${{ github.run_id }}
           restore-keys: |
-            cbb-bought-${{ inputs.window }}-${{ inputs.waves }}-
             cbb-bought-${{ inputs.window }}-
 
       # DID THE RESPONSES SURVIVE? The first purchase persisted them only by

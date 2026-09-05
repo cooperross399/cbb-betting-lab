@@ -2197,3 +2197,35 @@ def test_a_first_push_that_cannot_fetch_main_fails_loudly() -> None:
         code, output = _resolve_base("push", ZERO_SHA, {"git"}, Path(directory))
     assert code != 0, "a first push with no reachable main resolved a base from nothing"
     assert "sha=" not in output
+
+
+def test_the_purchase_restores_the_latest_cache_of_any_wave() -> None:
+    """The cache restore must not be scoped to this run's wave.
+
+    A wave-scoped first restore key HIT for a wave bought before and shadowed
+    the any-wave fallback, so a rebuild dispatched as `core_team` restored only
+    core_team's responses and rebuilt "all waves" from a disk that held one —
+    2,946,929 rows reported while the props cache held the complete surviving
+    set. The rebuild's `--waves all` was defeated one layer up.
+
+    So: the key is unique per run (always a miss, so the post-step always
+    saves), and the ONLY restore key is the any-wave prefix, which resolves to
+    the most recently created cache — the last run of any wave, which already
+    accumulated everything before it.
+    """
+    document = yaml.safe_load((WORKFLOWS_DIR / "historical-purchase.yml").read_text(encoding="utf-8"))
+    restores = [
+        step for job in document["jobs"].values() for step in steps_of(job)
+        if str(step.get("uses", "")).startswith("actions/cache")
+        and "historical_purchase" in str((step.get("with") or {}).get("path", ""))
+    ]
+    assert len(restores) == 1, f"expected one response-cache restore step, found {len(restores)}"
+    with_ = restores[0]["with"]
+    assert "github.run_id" in with_["key"], "the save key must be unique per run so every run saves"
+    assert "inputs.waves" not in with_["key"], "the key must not be wave-scoped"
+    restore_keys = [k.strip() for k in str(with_.get("restore-keys", "")).splitlines() if k.strip()]
+    assert restore_keys, "no restore-keys: a run would start from an empty cache every time"
+    assert all("inputs.waves" not in k for k in restore_keys), (
+        f"a wave-scoped restore key {restore_keys!r} hits before the any-wave one "
+        "and shadows it — the exact defect this test pins"
+    )
