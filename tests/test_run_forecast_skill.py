@@ -42,6 +42,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from cbb_betting_lab import stats as S
 from cbb_betting_lab.competitions import CBB
 from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.experiment_ledger import LEDGER_FILENAME as EXPERIMENT_LEDGER
@@ -84,6 +85,12 @@ def settled_ledger(
     expected result and the one every wiring assertion here is written against.
     `kind="agrees"` makes the model's probability **equal** the de-vigged price
     on every row, which is the not-identified case.
+    `kind="anti"` makes the home side win with probability
+    `fair - 0.5 x (model - fair)`, so the bigger the model's claimed edge the
+    worse the bet — the same data-generating process
+    `test_forecast_skill.graded_frame` uses for its `anti` fixture, and the only
+    one that drives the script's realised-return line, which is printed only
+    when the return actually falls across the claimed-edge buckets.
     """
     rng = np.random.default_rng(seed)
     rows: list[dict] = []
@@ -97,7 +104,12 @@ def settled_ledger(
                 if kind == "agrees"
                 else float(np.clip(fair + rng.normal(0.0, 0.06), 0.02, 0.98))
             )
-            home_won = float(rng.random()) < fair
+            realised = (
+                float(np.clip(fair - 0.5 * (model - fair), 0.02, 0.98))
+                if kind == "anti"
+                else fair
+            )
+            home_won = float(rng.random()) < realised
             for selection, side_line, raw, probability, won in (
                 ("home", line, fair * OVERROUND, model, home_won),
                 ("away", -line, (1.0 - fair) * OVERROUND, 1.0 - model, not home_won),
@@ -541,3 +553,189 @@ def test_a_bucket_is_named_the_same_way_on_stdout_as_in_the_report(scored):
         label = FS.bucket_label(bucket["low"], bucket["high"])
         assert f"claimed {label}:" in output or not bucket["enough"], label
         assert f"| {label} |" in report, label
+
+
+# ---------------------------------------------------------------------------
+# The realised-return line: reached by a real run, and both of its branches
+# ---------------------------------------------------------------------------
+
+#: How many hypotheses the fixture ledger declares, and therefore how many looks
+#: the family-wise correction is taken over. Named so the assertions below read
+#: the same number the run corrects by.
+ANTI_LOOKS = 24
+
+#: Enough games that two claimed-edge buckets clear `stats.MINIMUM_BETS` at the
+#: **ends** of the range. At 120 games only the two lowest buckets cleared it,
+#: the comparison ran between them, the return did not fall across those two,
+#: and the line under test was never printed — which is exactly how it went
+#: untested.
+ANTI_GAMES = 400
+
+
+def script_namespace() -> dict:
+    """The script's module namespace, without running `main`.
+
+    `runpy.run_path` under any `run_name` but `__main__` executes the module
+    and stops at the `if __name__ == "__main__"` guard, which is how a printing
+    helper gets called directly with a record built to reach one branch.
+    """
+    return runpy.run_path(str(SCRIPT), run_name="run_forecast_skill_under_test")
+
+
+def test_the_realised_return_line_is_reached_by_a_real_run_and_carries_its_verdict(
+    tmp_path,
+):
+    """The anti-predictive return line, printed by the script, end to end.
+
+    Added 2026-09-05: the line existed and no test executed it. The end-to-end
+    fixture is `kind="noise"`, whose realised return does not fall across the
+    claimed-edge buckets, so the branch was never entered — a console line that
+    could have printed anything at all.
+
+    What it must print, for each of the two buckets it compares: the point
+    estimate, the settled bet count, the clustering that produced the interval,
+    the raw 95% interval, the **family-corrected** interval labelled apart from
+    it with the look count it was corrected over, and the verdict in the
+    reserved words. An interval printed without its verdict is a verdict the
+    reader supplies.
+    """
+    lab = Lab(tmp_path).with_ledger(kind="anti", games=ANTI_GAMES)
+    lab.with_experiment_ledger(ANTI_LOOKS)
+    exit_code, output = lab.run()
+    assert exit_code == 0, output
+
+    lines = [line for line in output.splitlines() if "realised return" in line]
+    assert lines, (
+        "the anti-predictive return line was not reached by this run; the "
+        "branch prints only when the return falls across the claimed-edge "
+        f"buckets, so the fixture must produce that shape. Output:\n{output}"
+    )
+
+    pooled = lab.record()["pooled"]["anti_predictive_return"]
+    assert pooled["measurable"] and pooled["falls_at_the_top"], pooled
+    assert pooled["looks"] == ANTI_LOOKS, (
+        "the correction must come from the experiment ledger's cumulative "
+        f"count, not from the day's; got {pooled}"
+    )
+
+    verdicts = {
+        S.NO_DEMONSTRATED_EDGE,
+        S.DEMONSTRATED_EDGE,
+        S.DEMONSTRATED_DEFICIT,
+    }
+    for line in lines:
+        assert line.count("settled wagers across") == 2, line
+        assert line.count("95% interval [") == 2, (
+            f"both buckets must print the raw interval; got {line}"
+        )
+        assert line.count("family-corrected [") == 2, (
+            "both buckets must print the family-corrected interval beside the "
+            f"raw one; got {line}"
+        )
+        assert line.count(f"across {ANTI_LOOKS:,} looks") == 3, (
+            "each bucket's correction and the comparison itself must say how "
+            f"many looks it was taken over; got {line}"
+        )
+        # Anchored on the em dash that closes each interval, because
+        # `no demonstrated edge` contains `demonstrated edge` and a bare
+        # substring count would call one verdict two.
+        assert sum(line.count(f"looks — {word}") for word in verdicts) == 2, (
+            "every printed interval carries its verdict in the reserved "
+            f"words; got {line}"
+        )
+        assert "the family-corrected intervals" in line, (
+            f"the comparison must say which intervals it read; got {line}"
+        )
+
+    # The corrected interval is genuinely wider than the raw one, so the two
+    # printed pairs are two numbers and not the same number twice.
+    for end in ("lowest_bucket", "highest_bucket"):
+        bucket = pooled[end]
+        assert bucket["roi_adjusted_low"] < bucket["roi_low"], bucket
+        assert bucket["roi_adjusted_high"] > bucket["roi_high"], bucket
+        assert bucket["verdict"], bucket
+
+
+def test_the_realised_return_line_claims_a_fall_only_on_disjoint_corrected_intervals():
+    """Both branches of the line, on the same shape with only the intervals moved.
+
+    The real run above lands in the *not demonstrated* branch, which is the
+    honest answer on that data and leaves the other branch unexecuted. These two
+    records differ only in the corrected bounds, so the sentence the line is
+    permitted to print is the only thing that can change.
+    """
+    printer = script_namespace()["print_buckets"]
+
+    def record(*, adjusted_high: float) -> dict:
+        def bucket(low, high, roi, ci, adjusted):
+            return {
+                "low": low,
+                "high": high,
+                "rows": 400,
+                "roi": roi,
+                "roi_low": ci[0],
+                "roi_high": ci[1],
+                "roi_adjusted_low": adjusted[0],
+                "roi_adjusted_high": adjusted[1],
+                "looks": 12,
+                "bets": 400,
+                "clusters": 90,
+                "cluster_unit": "day",
+                "verdict": S.NO_DEMONSTRATED_EDGE,
+            }
+
+        return {
+            "by_tier": [],
+            "pooled": {
+                "label": "all",
+                "buckets": [
+                    {
+                        "low": 0.0,
+                        "high": 0.02,
+                        "rows": 400,
+                        "games": 90,
+                        "enough": True,
+                        "model_implied": 0.5,
+                        "market_implied": 0.5,
+                        "realised": 0.5,
+                        "wilson_low": 0.45,
+                        "wilson_high": 0.55,
+                        "gap_to_model": 0.0,
+                    }
+                ],
+                "anti_predictive_return": {
+                    "measurable": True,
+                    "falls_at_the_top": True,
+                    "return_falls_by": 0.15,
+                    "looks": 12,
+                    "demonstrated": adjusted_high < -0.02,
+                    "demonstrated_before_correction": True,
+                    "lowest_bucket": bucket(
+                        0.0, 0.02, 0.06, (0.02, 0.10), (-0.02, 0.14)
+                    ),
+                    "highest_bucket": bucket(
+                        0.20, float("inf"), -0.09, (-0.14, -0.04),
+                        (-0.20, adjusted_high),
+                    ),
+                },
+            },
+        }
+
+    demonstrated = io.StringIO()
+    with contextlib.redirect_stdout(demonstrated):
+        printer(record(adjusted_high=-0.05))
+    shown = demonstrated.getvalue()
+    assert "! realised return" in shown, shown
+    assert "the family-corrected intervals do not overlap across 12 looks" in shown
+    assert "raising the threshold is the wrong response" in shown
+    assert shown.count(S.NO_DEMONSTRATED_EDGE) == 2, shown
+
+    overlapping = io.StringIO()
+    with contextlib.redirect_stdout(overlapping):
+        printer(record(adjusted_high=0.02))
+    hedged = overlapping.getvalue()
+    assert ". realised return" in hedged, hedged
+    assert "the family-corrected intervals overlap across 12 looks" in hedged
+    assert "the fall is not demonstrated" in hedged
+    assert "raising the threshold is the wrong response" not in hedged
+    assert hedged.count(S.NO_DEMONSTRATED_EDGE) == 2, hedged

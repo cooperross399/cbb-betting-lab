@@ -403,6 +403,27 @@ def print_brier(record: Mapping) -> None:
             )
 
 
+def _return_cell(bucket: Mapping) -> str:
+    """One claimed-edge bucket's realised return, printed the only allowed way.
+
+    Point estimate, sample size, the clustering that produced the interval, the
+    raw 95% interval, the **family-corrected** interval beside it, and the
+    verdict — `stats.RoiInterval.verdict()`, read off the corrected interval,
+    so a bucket spanning zero prints `no demonstrated edge` in exactly those
+    words. Until 2026-09-05 this line printed the raw interval alone and no
+    verdict at all, which left the reader to supply one.
+    """
+    looks = int(bucket.get("looks", 1) or 1)
+    return (
+        f"{bucket['roi']:+.1%} over {bucket['bets']:,} settled wagers across "
+        f"{bucket['clusters']:,} {bucket['cluster_unit']}s, 95% interval "
+        f"[{bucket['roi_low']:+.1%}, {bucket['roi_high']:+.1%}], "
+        f"family-corrected [{bucket['roi_adjusted_low']:+.1%}, "
+        f"{bucket['roi_adjusted_high']:+.1%}] across {looks:,} "
+        f"look{'' if looks == 1 else 's'} — {bucket['verdict']}"
+    )
+
+
 def print_buckets(record: Mapping) -> None:
     """Anti-predictiveness as a shape rather than as a minus sign."""
     print("")
@@ -433,13 +454,40 @@ def print_buckets(record: Mapping) -> None:
                 f"over {bucket['rows']:,} wagers in {bucket['games']:,} games "
                 f"({bucket['gap_to_model'] * 100:+.1f} pp against the model)"
             )
-        shape = measured.get("anti_predictive") or {}
-        if shape.get("measurable") and shape.get("worse_at_the_top"):
+        # Two lines, because they are two quantities. A widening shortfall is
+        # overconfidence — the winner's curse, near-guaranteed by the model's
+        # own selection. Anti-predictiveness is the realised return falling,
+        # and only that supports "raising the threshold is the wrong response".
+        curse = measured.get("overconfidence") or {}
+        if curse.get("measurable") and curse.get("widens_with_claimed_edge"):
             print(
-                f"    ! the shortfall widens by "
-                f"{shape['shortfall_widens_by'] * 100:.1f} pp from the lowest "
-                "claimed-edge bucket to the highest — the biggest claimed edges "
-                "do worst, and raising the threshold is the wrong response."
+                f"    ! overconfidence widens by "
+                f"{curse['overconfidence_widens_by'] * 100:.1f} pp from the "
+                "lowest claimed-edge bucket to the highest — the model "
+                "over-estimates most where it claims most. That is the "
+                "winner's curse, not yet anti-predictiveness."
+            )
+        shape = measured.get("anti_predictive_return") or {}
+        if shape.get("measurable") and shape.get("falls_at_the_top"):
+            low = shape["lowest_bucket"]
+            high = shape["highest_bucket"]
+            demonstrated = shape.get("demonstrated")
+            looks = int(shape.get("looks", 1) or 1)
+            print(
+                f"    {'!' if demonstrated else '.'} realised return "
+                f"{_return_cell(low)} in the lowest claimed-edge bucket "
+                f"against {_return_cell(high)} in the highest — "
+                + (
+                    "the family-corrected intervals do not overlap across "
+                    f"{looks:,} look{'' if looks == 1 else 's'}, so the "
+                    "biggest claimed edges did worst and raising the "
+                    "threshold is the wrong response."
+                    if demonstrated
+                    else "the family-corrected intervals overlap across "
+                    f"{looks:,} look{'' if looks == 1 else 's'}, so the fall "
+                    "is not demonstrated and no threshold conclusion rests "
+                    "on it."
+                )
             )
 
 
