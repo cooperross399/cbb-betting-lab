@@ -4,14 +4,15 @@
 
 College basketball's large sample makes this **more** urgent, not less. A bigger n narrows every interval, including the intervals of the hypotheses that are wrong. Sample size buys power, never innocence.
 
-**30 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.60** before it means what it says.
+**62 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.71** before it means what it says.
 
 **Alpha budget: 6 new hypotheses a week**, declared 2026-09-01. Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state — re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise.
 
-**30 discovery, 0 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
+**30 discovery, 32 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
 
 | Search | Hypotheses |
 |:---|---:|
+| replication | 32 |
 | ladders_and_halves | 11 |
 | core_team_markets | 4 |
 | conference_tier | 4 |
@@ -52,6 +53,38 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | 28 | schedule_states | altitude: ROI with the adjustment exceeds ROI without it | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-01 | pending |
 | 29 | schedule_states | conference tournament fatigue (four games in four days): ROI with the adjustment exceeds ROI without it | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-01 | pending |
 | 30 | reachability | ROI among prices that SURVIVED to the next capture exceeds ROI among those that did not | discovery | lower | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-01 | pending |
+| 31 | replication | alternate_spread / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 32 | replication | alternate_total_points / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 33 | replication | moneyline / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 34 | replication | moneyline_h1 / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 35 | replication | spread / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 36 | replication | spread_h1 / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 37 | replication | team_total / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 38 | replication | total_points / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 39 | replication | total_points_h1 / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 40 | replication | alternate_spread / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 41 | replication | alternate_team_total / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 42 | replication | alternate_total_points / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 43 | replication | moneyline / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 44 | replication | moneyline_h1 / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 45 | replication | spread / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 46 | replication | spread_h1 / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 47 | replication | team_total / mid_major: the discovery result holds on a season it was not selected on | holdout | lower | — | 2025, 2026 | 2026-09-05 | pending |
+| 48 | replication | total_points / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 49 | replication | total_points_h1 / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 50 | replication | alternate_spread / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 51 | replication | alternate_team_total / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 52 | replication | alternate_total_points / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 53 | replication | moneyline / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 54 | replication | moneyline_h1 / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 55 | replication | spread / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 56 | replication | spread_h1 / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 57 | replication | team_total / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 58 | replication | total_points / low_major: the discovery result holds on a season it was not selected on | holdout | lower | — | 2025, 2026 | 2026-09-05 | pending |
+| 59 | replication | total_points_h1 / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 60 | replication | moneyline / unplaced: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 61 | replication | spread / unplaced: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
+| 62 | replication | total_points / unplaced: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-05 | pending |
 
 The correction is Bonferroni on the cumulative count — conservative on purpose. Holm and Benjamini-Hochberg need every p-value in hand at once, and this lab's tests arrive one week at a time over a season. A correction that can be computed incrementally and is slightly too wide beats one that is exactly right and cannot be computed until the season is over.
 

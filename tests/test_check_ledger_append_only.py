@@ -47,6 +47,17 @@ assert _spec is not None and _spec.loader is not None
 check = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(check)
 
+#: The recorder's own pre-registered constant, loaded rather than counted by
+#: hand. The tracked ledger has grown past it — the replication appends its
+#: holdout looks straight to the file — so "what the recorder can restore" and
+#: "what the reports correct against" are two different numbers and neither may
+#: be typed into a test.
+_RECORDER = Path(__file__).resolve().parents[1] / "scripts" / "record_experiments.py"
+_recorder_spec = importlib.util.spec_from_file_location("record_experiments", _RECORDER)
+assert _recorder_spec is not None and _recorder_spec.loader is not None
+_recorder = importlib.util.module_from_spec(_recorder_spec)
+_recorder_spec.loader.exec_module(_recorder)
+
 from cbb_betting_lab import experiment_ledger  # noqa: E402
 
 
@@ -127,14 +138,23 @@ def test_a_count_decrease_fails(tmp_path: Path, capsys: pytest.CaptureFixture) -
 
 
 def test_the_reproduction_on_this_lab_is_caught(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
-    """The audit's reproduction: the tracked ledger with twelve entries removed."""
+    """The audit's reproduction: the tracked ledger with twelve entries removed.
+
+    The tracked ledger held 30 when this was first run and holds 62 since the
+    replication of 2026-09-05 appended its 32 holdout looks, so the counts are
+    read off the file rather than typed and only the SIZE of the edit — twelve
+    entries deleted, which is what the audit reproduced — is fixed here.
+    """
     tracked = _SCRIPT.parents[1] / "data" / "outputs" / "experiment_ledger.json"
     base = json.loads(tracked.read_text(encoding="utf-8"))["hypotheses"]
-    assert len(base) == 30, "the tracked ledger has moved; re-measure this reproduction"
-    head = base[:18]
+    assert len(base) == 62, (
+        f"the tracked ledger holds {len(base)} entries, not 62; re-measure this "
+        "reproduction against the file rather than editing the number"
+    )
+    head = base[:-12]
     assert run(tmp_path, base, head) == 1
     err = capsys.readouterr().err
-    assert "falls from 30 entries to 18" in err
+    assert f"falls from {len(base)} entries to {len(head)}" in err
     assert err.count("removed from the ledger") == 12
 
 
@@ -442,16 +462,29 @@ def test_the_old_re_read_fired_on_an_in_process_shrink_and_missed_the_committed_
 
 
 def test_the_recorder_self_heals_a_ledger_that_was_cut_on_disk(tmp_path: Path) -> None:
-    """Re-running the recorder after a hand edit RESTORES the ledger.
+    """Re-running the recorder RESTORES the ledger — as far as its own
+    pre-registered constant reaches, and not one entry further.
 
     `ExperimentLedger.record()` skips a key it already holds and appends the
-    rest, so the recorder puts every hypothesis in `HYPOTHESES` back. That is
-    why "delete twelve of thirty and re-run the recorder" never produced the
-    x1.46 four files used to quote: the count comes back to thirty and the
-    printed correction is x1.60. Run here against the tracked ledger, cut to
-    eighteen in a temporary directory — the recorder's `record`/`save` path
-    is unchanged since 02e75b7, so this is the same behaviour the old prose
-    described wrongly.
+    rest, so the recorder puts every hypothesis in `record_experiments.HYPOTHESES`
+    back. That is why "delete twelve of thirty and re-run the recorder" never
+    produced the x1.46 four files used to quote: the count comes back to the
+    size of that constant and the printed correction is x1.60.
+
+    **The tracked ledger no longer holds thirty.** The full-store run of
+    2026-09-05 put every discovery cell to the held-out seasons and recorded
+    32 holdout looks — `data/outputs/holdout/cbb_replication.json` carries
+    `ledger.holdout_looks_recorded` — so the tracked ledger holds 62 and the
+    factor the reports apply is x1.71. Every count below is read off disk
+    rather than typed, and only the SIZE of the cut — eighteen entries left,
+    which is what the audit reproduced — is fixed here.
+
+    The gap between the two counts is what the second half asserts. The
+    recorder heals what it pre-registered and CANNOT heal a holdout look,
+    because it has never heard of one: a ledger cut on disk and re-recorded
+    comes back SHORT of what the reports corrected against. That is why the
+    append-only gate is `Ledger Guard` diffing against the PR base and never
+    the recorder re-running.
     """
     import os
     import subprocess
@@ -459,10 +492,16 @@ def test_the_recorder_self_heals_a_ledger_that_was_cut_on_disk(tmp_path: Path) -
 
     repo = Path(__file__).resolve().parents[1]
     tracked = json.loads((repo / "data" / "outputs" / "experiment_ledger.json").read_text(encoding="utf-8"))
-    assert len(tracked["hypotheses"]) == 30, (
-        f"the tracked ledger holds {len(tracked['hypotheses'])} entries, not 30; "
+    assert len(tracked["hypotheses"]) == 62, (
+        f"the tracked ledger holds {len(tracked['hypotheses'])} entries, not 62; "
         "this test's arithmetic is quoted in four other files and needs re-deriving"
     )
+    pre_registered = len(_recorder.HYPOTHESES)
+    assert pre_registered < len(tracked["hypotheses"]), (
+        "the recorder's constant now carries every tracked entry, so this test "
+        "no longer measures the gap it exists to measure"
+    )
+
     cut = dict(tracked)
     cut["hypotheses"] = tracked["hypotheses"][:18]
     (tmp_path / experiment_ledger.LEDGER_FILENAME).write_text(json.dumps(cut, indent=2) + "\n", encoding="utf-8")
@@ -473,10 +512,29 @@ def test_the_recorder_self_heals_a_ledger_that_was_cut_on_disk(tmp_path: Path) -
         env={**os.environ, "PYTHONPATH": str(repo / "src")},
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert "18 distinct hypotheses before, 30 after (12 new)" in completed.stdout, completed.stdout
-    assert "x1.60" in completed.stdout, completed.stdout
     restored = json.loads((tmp_path / experiment_ledger.LEDGER_FILENAME).read_text(encoding="utf-8"))
-    assert len(restored["hypotheses"]) == 30
+
+    healed = experiment_ledger.load(tmp_path / experiment_ledger.LEDGER_FILENAME)
+    assert (
+        f"18 distinct hypotheses before, {pre_registered} after "
+        f"({pre_registered - 18} new)"
+    ) in completed.stdout, completed.stdout
+    assert f"x{healed.correction_factor():.2f}" in completed.stdout, completed.stdout
+    assert len(restored["hypotheses"]) == pre_registered
+
+    # And what it could not heal: the holdout looks the replication appended.
+    # They are not in the recorder's constant, so a cut ledger comes back
+    # short of the family the reports corrected against.
+    assert len(restored["hypotheses"]) < len(tracked["hypotheses"])
+    assert not [h for h in restored["hypotheses"] if h.get("stage") == "holdout"], (
+        "the recorder restored a holdout look, which it cannot know about; "
+        "re-derive the two counts above from the ledger and the replication record"
+    )
+    whole = experiment_ledger.load(repo / "data" / "outputs" / "experiment_ledger.json")
+    assert healed.correction_factor() < whole.correction_factor(), (
+        "healing a cut ledger left the correction as strict as the tracked one, "
+        "so the shortfall this test is about has stopped existing"
+    )
 
 
 def test_save_refuses_to_write_below_the_floor_the_caller_loaded(tmp_path: Path) -> None:

@@ -481,6 +481,422 @@
       "predicted_direction": "lower",
       "stage": "discovery",
       "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "alternate_spread / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "alternate_total_points / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "moneyline / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "moneyline_h1 / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "spread / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "spread_h1 / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "team_total / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "total_points / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "total_points_h1 / high_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "alternate_spread / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "alternate_team_total / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "alternate_total_points / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "moneyline / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "moneyline_h1 / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "spread / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "spread_h1 / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "team_total / mid_major: the discovery result holds on a season it was not selected on",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "total_points / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "total_points_h1 / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "alternate_spread / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "alternate_team_total / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "alternate_total_points / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "moneyline / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "moneyline_h1 / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "spread / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "spread_h1 / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "team_total / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "total_points / low_major: the discovery result holds on a season it was not selected on",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "total_points_h1 / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "moneyline / unplaced: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "spread / unplaced: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "replication",
+      "name": "total_points / unplaced: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided)",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "either",
+      "stage": "holdout",
+      "realised_direction": ""
     }
   ]
 }
