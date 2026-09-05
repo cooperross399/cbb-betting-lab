@@ -83,6 +83,28 @@ line before printing. Market names, receipt notes and `verify_receipt()`
 reasons are text from files this gate does not control; before that scrub, a
 market could be NAMED with the sentence a green run prints and a reviewer
 reading a red run's summary would find a green verdict inside it.
+
+The scrub matches the LETTERS of the wording, not the wording — the same
+shape `staging_provider_policy._signer_is_forbidden` uses to refuse
+`C.L.A.U.D.E.` — because the first version matched literal fragments and
+three respellings walked straight through it: `POLICY-GATE-VERDICT`, the same
+words spaced out, and a planted verdict carrying a `|`, which `_plain()` had
+itself escaped to a backslash and a pipe a moment earlier, so that the
+literal no longer matched. `_plain()` folds everything outside printable
+ASCII to a space for the same reason, since a homoglyph breaks a letter run
+without breaking what a human reads. What the scrub still cannot see — a
+misspelling, a paraphrase — is written down in `without_a_second_verdict`'s
+own docstring and held open by a test, rather than described as closed.
+
+AND ONLY THIS SCRIPT WRITES THAT SUMMARY. `$GITHUB_STEP_SUMMARY` is a
+per-STEP file whose contents are concatenated into one job summary, so a
+sibling step in the gate's job that echoed the green sentence into its own
+summary put a green verdict in front of the reviewer of a red run, and no
+scrub here could reach it: this script never sees that text. The rule
+`check_only_the_receipt_checker_writes_the_gates_job_summary` in
+`tests/test_workflows.py` is the other half — no step in that job may name
+`GITHUB_STEP_SUMMARY`, and no step in it may be anything but this checker and
+the two actions that check out the tree and install the interpreter.
 """
 
 from __future__ import annotations
@@ -153,6 +175,39 @@ def verdict_line(status: int) -> str:
     return f"**{VERDICT_MARKER}: {VERDICTS[status]}.**"
 
 
+#: What a redacted verdict span is replaced with. It spells none of the
+#: fragments below, so a scrub can never manufacture a fresh match.
+REDACTION = "[verdict text removed]"
+
+
+def _letters(text: str) -> str:
+    """`text` with everything that is not a letter dropped."""
+    return "".join(character for character in text if character.isalpha())
+
+
+def _spelled_out(fragment: str) -> re.Pattern[str]:
+    """A pattern matching any span whose LETTERS spell `fragment`'s letters.
+
+    The shape `staging_provider_policy._signer_is_forbidden` already uses to
+    refuse `C.L.A.U.D.E.`: the letters in order, any case, any run of
+    non-letters between them. A scrub that matched the literal string was
+    defeated by every respelling of the same sentence — `POLICY-GATE-VERDICT`,
+    `P O L I C Y  G A T E  V E R D I C T`, and, worst of the three, a planted
+    verdict carrying a `|`, because `_plain()` escapes that to `\\|` and the
+    literal no longer matched the text this script had just made.
+    """
+    letters = _letters(fragment)
+    assert letters, "a verdict fragment with no letters cannot be scrubbed"
+    return re.compile("[^A-Za-z]*".join(re.escape(c) for c in letters), re.IGNORECASE)
+
+
+#: The scrub, compiled once: the marker and every verdict sentence, each
+#: matched by the letters that spell it.
+VERDICT_PATTERNS = tuple(
+    _spelled_out(fragment) for fragment in (VERDICT_MARKER, *VERDICTS.values())
+)
+
+
 def without_a_second_verdict(line: str) -> str:
     """`line` with every verdict word this script can print taken out of it.
 
@@ -161,9 +216,28 @@ def without_a_second_verdict(line: str) -> str:
     green sentence is plantable: a market NAMED with it, or a receipt note
     carrying it, is copied into the table of a red run, and the reader sees
     a red gate whose summary says every market is receipted.
+
+    WHAT THIS STILL LETS THROUGH, written down rather than claimed shut, and
+    held open by `test_the_gaps_the_verdict_scrub_still_has_are_the_ones_
+    written_down` in `tests/test_workflows.py` so that the day one closes,
+    the sentence has to be re-read rather than quietly becoming false:
+
+    1. **A misspelling.** The scrub matches the letters of the marker, so
+       `POLICY GATE VERDCT` and `POLICY GATE VERD1CT` spell something else
+       and survive. They no longer match the marker a reader searches for
+       either, which is the whole of the mitigation.
+    2. **A paraphrase.** `_plain()` output saying "this gate found every
+       market receipted" carries none of the pinned wording and is not
+       touched. The scrub removes THE SENTENCES THIS SCRIPT PRINTS, never
+       everything that could be read as approval.
+
+    Both are the same limit: this is a scrub of a known wording, not a
+    classifier of meaning. What it does guarantee is the assertion the tests
+    make — no line of a run's summary other than `verdict_line()`'s own
+    spells `POLICY GATE VERDICT` in any casing or punctuation.
     """
-    for fragment in (VERDICT_MARKER, *VERDICTS.values()):
-        line = re.sub(re.escape(fragment), "[verdict text removed]", line, flags=re.IGNORECASE)
+    for pattern in VERDICT_PATTERNS:
+        line = pattern.sub(REDACTION, line)
     return line
 
 
@@ -174,11 +248,22 @@ def _plain(value: object, limit: int = 160) -> str:
     from files this gate does not control. A newline in one of them writes a
     whole line of the job summary; a `|` writes a whole column. Neither may
     be a way to write a sentence a reviewer reads as this gate's finding.
+
+    Anything outside printable ASCII becomes a space. Every string this gate
+    legitimately prints is ASCII — the market names, the receipt filenames
+    and the reasons `staging_provider_policy` returns — and a homoglyph is
+    the one respelling `without_a_second_verdict` cannot see: a Cyrillic
+    `\u041e` is a letter, so it breaks the letter run the scrub matches while
+    reading to a human as the `O` in `POLICY`. Folding it to a space costs a
+    market name nothing and leaves the marker unspellable.
     """
-    text = "".join(character if character.isprintable() else " " for character in str(value))
+    text = "".join(
+        character if (character.isascii() and character.isprintable()) else " "
+        for character in str(value)
+    )
     text = text.replace("|", "\\|").replace("`", "'").strip()
     if len(text) > limit:
-        text = text[: limit - 1] + "…"
+        text = text[: limit - 1] + "\u2026"
     return text or "(empty)"
 
 

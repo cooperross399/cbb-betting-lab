@@ -42,10 +42,20 @@ belongs and a symlink into nothing each turn into an allowlist of nothing in
 nothing. The job summary ends with one verdict line built from the exit
 status, with the verdict wording removed from every other line first, so a
 red run cannot contain the sentence a green run prints — market names and
-receipt notes are text from files the gate does not control. No condition
-stands between a pull request and that verdict: the job carries no `if:`, no
-`needs:` and no `strategy:`, because GitHub reports a check skipped by a
-condition as a success.
+receipt notes are text from files the gate does not control. That removal
+matches the LETTERS of the wording rather than the wording, the way
+:func:`_signer_is_forbidden` refuses `C.L.A.U.D.E.`, because a literal match
+was walked past by `POLICY-GATE-VERDICT` and by a verdict carrying a `|`; what
+it still cannot see — a misspelling, a paraphrase — is written into the
+scrub's own docstring and held open by a test rather than described as
+closed. The checker is also the ONLY writer of that summary: the job summary
+is a per-step file GitHub concatenates, so a sibling step could otherwise put
+a green verdict above the real one in a red run, and no step in the workflow
+may name `GITHUB_STEP_SUMMARY`. No condition stands between a pull request
+and that verdict: the job carries no `if:`, no `needs:` and no `strategy:`,
+because GitHub reports a check skipped by a condition as a success. Exactly
+one job in the whole workflow corpus carries the name that publishes this
+check, since a context is a job `name:` and nothing scopes it to a file.
 
 What it checks about the signature is what :func:`_signer_is_forbidden`
 checks and nothing more: that `signed_by` is not one of the spellings of

@@ -56,6 +56,28 @@
 # and `check_the_policy_gate_runs_unconditionally` now pins it here, with a
 # case for every spelling above.
 #
+# ONE JOB IN THE WHOLE REPOSITORY REPORTS THIS NAME. A check context is a
+# job's `name:` and nothing scopes that name to a file, so "exactly one job is
+# called `Policy Gate`" is a question about every workflow in
+# .github/workflows/ and not about this one. Asked of this file alone — which
+# is how it was asked until 2026-09-05 — any other workflow could carry a job
+# named `Policy Gate` whose only step is `true`, publish a second and always
+# green check under the context five documents here promise, and leave the
+# whole suite passing; a reviewer would then read whichever of the two ticks
+# they happened to look at. `test_exactly_one_job_in_the_corpus_reports_the_
+# policy_gate_check` asks it of the corpus, the way the required `Tests`
+# context has always been asked.
+#
+# ONE AUTHOR FOR THE JOB SUMMARY. `$GITHUB_STEP_SUMMARY` is a per-STEP file
+# and GitHub concatenates every step's copy into the one summary a reviewer
+# reads, so a second step in THIS job that echoed the green sentence into its
+# own copy would put a green verdict above the red one in a failing run —
+# where no scrub inside the checker could reach it, because the checker never
+# sees that text. So the checker is the only writer: no step in this file
+# names GITHUB_STEP_SUMMARY, exactly one step runs the checker, and every
+# other step in the job is `actions/checkout` or `actions/setup-python`. An
+# action is somebody else's code holding the same write handle.
+#
 # WHAT THE SIGNATURE CHECK IS, EXACTLY. `signed_by` is a string in a JSON
 # file. Nothing here is cryptographic and no identity is verified: this gate
 # refuses the spellings of Claude it recognises — any value whose letters
