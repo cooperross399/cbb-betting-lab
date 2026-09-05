@@ -1201,6 +1201,53 @@ def _bets(count: int) -> str:
     return "bet" if count == 1 else "bets"
 
 
+def _why_it_no_longer_holds(current: Mapping) -> str:
+    """Which of the two things moved, read off the row rather than assumed.
+
+    This paragraph used to be one fixed sentence: *"Nothing about the model
+    changed. The population did."* On 2026-09-04 that happened to be true. On
+    2026-09-05 it stopped being true and the sentence would still have printed
+    — the player-prop pre-registration took the family from 62 hypotheses to
+    95, and low-major crossed zero on a record whose population, model and
+    store were byte-identical to the day before. A generated document that
+    states a cause it cannot read is the same defect as one that types a
+    figure it cannot re-derive.
+
+    So the branch is taken from the row. If the **uncorrected** interval still
+    excludes zero, the measurement did not move and the correction did. If it
+    includes zero on its own, something upstream moved and this function does
+    not guess what, because the record it reads cannot tell it.
+    """
+    # The UNCORRECTED pair, explicitly: `printed_interval` defaults to the
+    # corrected bounds — the pair on the page — and reading those here would
+    # ask whether the corrected interval excludes zero, which is the question
+    # this branch was reached by already answering no to.
+    raw = printed_interval(current, bounds=("low", "high"))
+    looks = _as_int(current.get("looks")) or 1
+    if not (raw.low <= 0.0 <= raw.high):
+        return (
+            "**The measurement did not move; the search did.** The uncorrected "
+            f"95% interval is {_pct(current.get('low'))} to "
+            f"{_pct(current.get('high'))} and still excludes zero. What widens "
+            f"it across is the family-wise correction over {looks:,} "
+            "cumulative hypotheses — "
+            f"x{S.bonferroni_factor(looks):.4f} — every one of which "
+            "this lab wrote down before it was tested. An interval is paid for "
+            "by the whole search that produced it, including the parts of that "
+            "search that have not run yet, and this is one interval paying. A "
+            "claim that dissolves once the search is counted in full was never "
+            "worth the width it was first printed at."
+        )
+    return (
+        "**The measurement itself moved.** The uncorrected 95% interval is "
+        f"{_pct(current.get('low'))} to {_pct(current.get('high'))} and "
+        "includes zero before any family correction is applied, so this is not "
+        "the correction widening a surviving result. What changed upstream — "
+        "the population, the model, the store — is not something the record "
+        "this document reads can say, and it does not guess."
+    )
+
+
 def _figure(claim: Mapping) -> str:
     """One cell as a sentence, **always with its sample size**.
 
@@ -1374,16 +1421,7 @@ def _retraction_lines(record: Mapping) -> list[str]:
             f"**It no longer holds.** On today's record {label} reads "
             f"{_figure(current)}."
         )
-        lines += [
-            "",
-            "Nothing about the model changed. The population did: the markets "
-            "added since are one season deep and thin, which widens every "
-            "interval they enter. A finding that survives on the narrower "
-            "population and dissolves when the wider one is measured was "
-            "fragile to the population all along, and the earlier wording did "
-            "not say so because at the time there was nothing to say it "
-            "against.",
-        ]
+        lines += ["", _why_it_no_longer_holds(current)]
     return lines
 
 

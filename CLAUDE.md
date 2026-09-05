@@ -183,40 +183,63 @@ The store is core team 2021–2026 complete, ladders and halves on 609 events,
 props on 3,223 events; a second ladders wave of 1,199,926 credits was lost
 before persistence (defects S–W) and is not re-bought.
 
-Every interval below is quoted **as the record carries it**: the backtest ran
-while the experiment ledger held 30 hypotheses, so its stored bounds are
-widened by **x1.60**. The ledger now holds **62** — 30 discovery entries and
-the 32 holdout looks the replication appended — and the generated reports
-re-apply **x1.71** at render time, which is why the same tier reads wider in
+**Which correction these figures carry.** The ledger holds **95 distinct
+hypotheses** — 30 discovery entries, the 32 holdout looks the replication
+appended, and the **33 player-prop hypotheses pre-registered on 2026-09-05
+before that model existed** — so every interval is widened by **x1.7689**. The
+records on disk were written when the ledger held 30 and carry stored bounds at
+x1.60; the generated reports re-apply the current factor at render time, which
+is the reading below and the reading in
 `docs/what_we_can_and_cannot_claim.md` and
 `docs/why_the_model_does_or_does_not_have_an_edge.md`. The correction may only
-ever get stricter.
+ever get stricter, and it just did.
 
-| Cut | Bets | ROI | Corrected (x1.60) | Verdict |
+| Cut | Bets | ROI | Corrected (x1.7689, 95 hypotheses) | Verdict |
 |:---|---:|---:|:---|:---|
-| high-major | 43,228 | -3.2% | -7.6% to +1.2% | no demonstrated edge |
-| mid-major | 88,344 | -4.3% | -7.8% to -0.8% | demonstrated deficit |
-| low-major | 59,475 | -4.0% | -7.7% to -0.3% | demonstrated deficit |
+| high-major | 43,228 | -3.2% | -8.1% to +1.6% | no demonstrated edge |
+| mid-major | 88,344 | -4.3% | -8.2% to -0.4% | demonstrated deficit |
+| low-major | 59,475 | -4.0% | -8.1% to +0.0% | no demonstrated edge |
+
+**Two published verdicts moved when those 33 hypotheses were registered, and
+both moved the same way.** At x1.7095 — the factor before the registration —
+**low-major** read a demonstrated deficit at -8.0% to -0.1%; it crosses zero at
+the 85th hypothesis and reads **no demonstrated edge** at x1.7689. The
+replication's held-out **`total_points` / mid-major** cell, -6.4% over 8,214
+bets, read a demonstrated deficit at -12.5% to -0.2% and reads **no
+demonstrated edge** at -12.7% to +0.0%; it crosses at the **95th**, which is
+this registration's last entry. Seven blind null-baseline sides lose a
+demonstrated-deficit reading too, taking the blind deficits from 79 of 190 to
+72. Nothing anywhere becomes an edge. Mid-major survives with room: it would
+take 411 hypotheses to widen it across. **This is the pre-registration working,
+not a reason to have skipped it** — an interval is paid for by the whole search
+that produced it, including the parts that have not run yet.
 
 **There is no pooled row here on purpose.** A pooled all-of-Division-I headline
 is banned in this repository; the pooled figure is computed so
 `docs/when_this_ends.md` can apply the stopping rule to it, and never so it can
 be quoted on its own.
 
-**A CLAIM IN THIS FILE WAS RETRACTED, AND THE FULL STORE RESTORED HALF OF IT.**
-Measured on the core team markets alone, before the alternate ladders and the
-halves entered the population, this file called low-major *the only tier whose
-interval excludes zero, and it excludes zero on the losing side*. On
-2026-09-04's partial store the same tier read **no demonstrated edge** and the
-claim was withdrawn. On the full store low-major is a **demonstrated deficit**
-again — 59,475 bets, -4.0%, corrected -7.7% to -0.3% — so the **sign** survives
-and the **exclusivity does not**: mid-major excludes zero as well. No figure
-from the superseded run is reprinted here; its record is not committed, and a
-number nobody can re-read is a number this file may not carry. Nothing about the
-model changed either time; the population did. The retraction itself is now
-generated: `reports/why_the_model.py` chooses *still holds* or *no longer holds*
-from `verdict_of(current)` and nothing else, so it cannot become a stale
-paragraph again.
+**A CLAIM IN THIS FILE WAS RETRACTED, RESTORED, AND WITHDRAWN AGAIN — AND THE
+THIRD TIME NOTHING WAS MEASURED.** Measured on the core team markets alone,
+before the alternate ladders and the halves entered the population, this file
+called low-major *the only tier whose interval excludes zero, and it excludes
+zero on the losing side*. On 2026-09-04's partial store the same tier read **no
+demonstrated edge** and the claim was withdrawn. On the full store it was a
+**demonstrated deficit** again. It is now **no demonstrated edge** — 59,475
+bets, -4.0%, corrected -8.1% to +0.0% — on a record whose population, model and
+store did not change at all. What changed is the family: 62 hypotheses became
+95. The uncorrected interval still excludes zero at -6.3% to -1.7%, so this is
+the search being counted in full and not the measurement moving. The
+*exclusivity* the original wording claimed has not been true since the full
+store either: mid-major excludes zero and low-major no longer does, which is the
+opposite arrangement to the one retracted. No figure from the superseded run is
+reprinted here; its record is not committed, and a number nobody can re-read is
+a number this file may not carry. The retraction is generated:
+`reports/why_the_model.py` chooses *still holds* or *no longer holds* from
+`verdict_of(current)` and nothing else, and since 2026-09-05 it also derives
+**which** of the two things moved from the uncorrected interval, because the
+sentence it used to print — *"Nothing about the model changed. The population
+did"* — would have been a false cause today.
 
 - **The lab's own thesis is contradicted.** Softness was expected at the
   low-major end. By point estimate the worst measured tier is **mid-major**
@@ -224,7 +247,8 @@ paragraph again.
 - **The model does not beat blind betting on return, and it loses to the vig.**
   The claim that it beat every blind rule was checked and is FALSE: of the
   190 blind sides clearing the 200-bet floor, **61 return more than
-  their own tier's model**, and 13 of those carry a demonstrated deficit — mid-major
+  their own tier's model**, and 10 of those carry a demonstrated deficit at
+  x1.7689 (13 at the x1.60 the record stores) — mid-major
   `always the underdog` on moneyline returns -2.0% over 14,091 bets against the
   model's -4.3%. The spread is wide in both directions: the worst blind side is
   `low_major / player_threes / always over` at **-40.0%** over 227 bets, the best
@@ -233,17 +257,21 @@ paragraph again.
   correction. The evidence that the model carries information is the Brier score
   against the base rate, not the return against blind rules.
 - **The model loses to the market on Brier in every tier, with the vig left
-  in**, per tier and never pooled: high-major **-0.01663**, corrected -0.02147
-  to -0.01179 over 62,163 rows; mid-major **-0.00962**, corrected -0.01286 to
-  -0.00638 over 137,296 rows; low-major **-0.00776**, corrected -0.01072 to
-  -0.00479 over 94,182 rows. In high-major its Brier is worse than the **base
-  rate** (0.25118 against 0.25000) — beaten by predicting the league mean.
+  in**, per tier and never pooled: high-major **-0.01663**, corrected -0.02197
+  to -0.01129 over 62,163 rows; mid-major **-0.00962**, corrected -0.01319 to
+  -0.00604 over 137,296 rows; low-major **-0.00776**, corrected -0.01103 to
+  -0.00449 over 94,182 rows. All three are demonstrated deficits at x1.7689 and
+  none of them moved when the family grew. In high-major its Brier is worse than
+  the **base rate** (0.25118 against 0.25000) — beaten by predicting the league
+  mean.
 - **The skill measure shows nothing.** The disagreement coefficient over every
   opinion (293,661 wagers) is **no demonstrated edge** in all three tiers:
-  high +0.088 corrected -0.033 to +0.208; mid +0.122 corrected -0.015 to
-  +0.259; low +0.046 corrected -0.130 to +0.223. On the **selected** bets only
-  (110,316) high-major reads +0.239 corrected +0.030 to +0.449 — that is the
-  winner's-curse comparison, never the skill measure.
+  high +0.088 corrected -0.045 to +0.220; mid +0.122 corrected -0.029 to
+  +0.273; low +0.046 corrected -0.148 to +0.241. On the **selected** bets only
+  (110,316) high-major reads +0.239 corrected +0.009 to +0.470 — that is the
+  winner's-curse comparison, never the skill measure, and the 33 player-prop
+  hypotheses moved its lower bound from +0.030 to +0.009 without changing what
+  it is.
 - **Anti-predictiveness is a shape.** Return by claimed-edge bucket is **not
   measurable** on this record (0 usable buckets of 8 populated). Overconfidence
   by bucket is: high-major runs **+13.4 pp** in the smallest claimed-edge
@@ -421,7 +449,13 @@ this table.
 - **Cluster every interval by game and by day.** One game supplies many
   correlated bets; a 200-game slate is not 800 independent observations.
 - **Family-wise correction from the experiment ledger's cumulative count**, not
-  the day's, reported beside the raw figure.
+  the day's, reported beside the raw figure. **A hypothesis is registered before
+  the thing it tests is built**, and what that costs the intervals already
+  published is computed and published with it.
+- **A quantity exempted from the correction can never become a finding.** The
+  seven descriptive-only declarations pay nothing because none of them is a
+  claim about edge; `record()`, `save()` and `Ledger Guard` all refuse to let
+  one be promoted afterwards, which is the only reason the exemption is honest.
 - **"Conditioned on what, known when?"** on every adjustment. Hindsight leaks
   look exactly like edges.
 - **A soft number you cannot bet is not an edge.** Edge is measured against a
@@ -481,7 +515,7 @@ guards made the suite greener and nothing said so.
 | Contract strings | `tests/test_contract_strings.py` | — |
 | The required check `Tests` | `tests/test_workflows.py`: parsed YAML — `if:`, `needs:` and `strategy:` all refused on the required job, and `if:` on any other job in the file, because GitHub reports a **conditionally-skipped required check as Success**; the suite line's arguments a WHITELIST (`-q`, `-rs`, one `--junit-xml=` under the runner temp) rather than a blocklist that let `--version` through; the gate line pinned as a whole command and then EXECUTED under stubs with the invoked command words read back | the six operational workflows keep their deliberate `continue-on-error`, `\|\| true` and `if-no-files-found: warn`; a nested `bash -c`; `cd` before pytest; the pin is exact, so `python3` for `python` is refused too |
 | Zero skips, every guard ran | `scripts/check_test_results.py` on the junit CI writes — per TEST, comparing each required guard's `def test_*` against the testcases recorded, and refusing evidence older than the marker the suite step writes; `tests/conftest.py` at collection, which stops the run on a collection-phase skip, on any narrowing pytest actually received (`--deselect`, `-k`, `--ignore`, `--ignore-glob`, the ini `addopts`, `PYTEST_ADDOPTS`), and on any tracked `tests/test_*.py` that collected nothing | a non-strict `xfail` marker; a waiver keyed on a token no sweep arm draws; **a test deleted outright** — the declaration goes with it, and `MINIMUM_TESTS = 5` is the only floor left |
-| Ledger append-only | `save(floor=…)` at runtime; `Ledger Guard` diffing THE one tracked ledger, `data/outputs/experiment_ledger.json`, against the PR base, keyed on `(search, name, seasons, stage)`; `pending` may be filled in once, nothing else moves. The tracked render `cbb_experiment_ledger.md` is not compared key by key — it is rebuilt from the JSON in the same workflow and any diff is a failure | an appended hypothesis is taken on trust; the same span written in two orders is two keys; `Ledger Guard` is not a context main's protection requires, so its red does not block the merge |
+| Ledger append-only | `save(floor=…)` at runtime; `Ledger Guard` diffing THE one tracked ledger, `data/outputs/experiment_ledger.json`, against the PR base, keyed on `(search, name, seasons, stage)`; `pending` may be filled in once, nothing else moves. The tracked render `cbb_experiment_ledger.md` is not compared key by key — it is rebuilt from the JSON in the same workflow and any diff is a failure. **Descriptive-only declarations are diffed too**, keyed on `(search, name)`: one may not be removed or rewritten, and no head hypothesis may carry a name either side declared — read off the BASE as well as the head, so deleting the declaration and adding the hypothesis in one commit is still caught. `record()` and `save()` refuse the same two edits in process | an appended hypothesis is taken on trust; the same span written in two orders is two keys; `Ledger Guard` is not a context main's protection requires, so its red does not block the merge |
 | Real-data tests run in CI | `tests/fixtures/real_data/` — 400 games of 2025-26 and every row of three schedules, cut by `scripts/build_test_fixtures.py`; the full tables when built | the CI numbers are over the sample, and every printed number says so |
 
 **A population guard for a scraped page does not exist because no scraper

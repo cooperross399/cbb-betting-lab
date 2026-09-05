@@ -27,11 +27,22 @@ and the finding is a loss.
 family-corrected one **as the record that holds it carries it** — the price
 backtest and the forecast-skill regression both ran while the experiment ledger
 held 30 hypotheses, so their stored bounds are widened by **×1.60**. The ledger
-now holds **62**, and `docs/what_we_can_and_cannot_claim.md` and
-`docs/why_the_model_does_or_does_not_have_an_edge.md` re-apply **×1.71** at
+now holds **95**, and `docs/what_we_can_and_cannot_claim.md` and
+`docs/why_the_model_does_or_does_not_have_an_edge.md` re-apply **×1.7689** at
 render time, so the same tier reads **wider** there. That is the intended
 direction: the correction may only ever get stricter, and neither document is
 copying the other.
+
+**And on 2026-09-05 it got stricter, which changed a verdict this file carries.**
+Registering the player-prop model's 33 hypotheses before that model existed took
+the family from 62 to 95 and the factor from ×1.7095 to ×1.7689. At the wider
+factor **low-major tier ROI is no longer a demonstrated deficit**: -4.0% over
+59,475 bets, corrected -8.1% to +0.0%, crossing zero at the 85th hypothesis. So
+is the replication's held-out `total_points` / mid-major cell, -6.4% over 8,214
+bets, corrected -12.7% to +0.0%, which crosses at the **95th** — the last entry
+of that registration. **Mid-major survives** at -4.3%, corrected -8.2% to
+-0.4%, and would need 411 hypotheses to widen across. Nothing became an edge.
+Decision 43 records the call and the arithmetic.
 
 **Two defects were found and fixed on 2026-09-03 that would have made the first
 measurement meaningless**, both in the seam between the ratings and the
@@ -85,11 +96,11 @@ M and the commit of 2026-09-03.
 
 | # | Item | State | Evidence |
 |--:|:---|:---|:---|
-| 17 | Experiment ledger append-only, populated, its correction used by the reports | **done** | **62 distinct hypotheses**: 30 pre-registered discovery entries, each with a falsifiable direction, plus **32 holdout looks** the replication of 2026-09-05 appended, because putting a discovery finding to the holdout **is** a second look and is counted as one. Correction **×1.71**, up from ×1.60 at 30. `save(floor=…)` raises rather than shrinking, and `Ledger Guard` diffs the tracked file against the PR base — the recorder cannot heal a cut ledger past its own 30-entry constant, which `test_check_ledger_append_only.py` measures rather than assumes. The claims report reads the ledger and re-applies the factor at render time. |
+| 17 | Experiment ledger append-only, populated, its correction used by the reports | **done** | **95 distinct hypotheses**: 30 pre-registered discovery entries, each with a falsifiable direction; **32 holdout looks** the replication of 2026-09-05 appended, because putting a discovery finding to the holdout **is** a second look and is counted as one; and **33 player-prop hypotheses** registered the same day *before that model existed* — ten priceable markets × three tiers against the de-vigged two-sided fair price, plus one per tier against an identity-blind role-prior control. Correction **×1.7689**, up from ×1.7095 at 62 and ×1.60 at 30, and decision 43 records which two published verdicts that move cost. `save(floor=…)` raises rather than shrinking, and `Ledger Guard` diffs the tracked file against the PR base — the recorder cannot heal a cut ledger past its own pre-registered constant, which `test_check_ledger_append_only.py` measures rather than assumes. Seven quantities are declared **descriptive-only**: they are excluded from the count on the grounds that none can be a finding, and `record()`, `save()` and `Ledger Guard` all refuse to promote one afterwards, which is what makes the exclusion honest. The claims report reads the ledger and re-applies the factor at render time. |
 | 18 | Promotion criteria pre-registered on disk; demotion one direction only | **done** | `data/manual/promotion_criteria.json`, declared 2026-09-01 before any challenger was measured. There is no `grant()` in `promotion.py` or `staging_provider_policy.py`, and a test sweeps for one. |
 | 19 | The weekly loop runs unattended and re-renders the claims doc itself | **done** | `Weekly Refit and Measure`, Mondays 11:00 UTC, `contents: read` and no credential — it measures what is already bought and cannot spend. 43 tests. It re-renders the fenced block inside `docs/what_we_can_and_cannot_claim.md`; a missing fence is an error and never an append. |
 | 20 | `CLAUDE.md` has a "Current operating state" a future session can read, contract strings pinned | **done** | `test_contract_strings.py` pins all 14. |
-| 21 | `docs/decision_log.md` and `docs/ported_defects.md` complete | **done** | 44 decisions, **28 defect classes** (A-AB) with the regression test for each. S-W are the ladders-and-halves rebuild that died before persistence and cost 1,199,926 credits; decision 27 is Cooper's call not to re-buy it, with the number attached. |
+| 21 | `docs/decision_log.md` and `docs/ported_defects.md` complete | **done** | 47 decisions, **28 defect classes** (A-AB) with the regression test for each. S-W are the ladders-and-halves rebuild that died before persistence and cost 1,199,926 credits; decision 27 is Cooper's call not to re-buy it, with the number attached. |
 
 ## What is actually waiting on Cooper
 

@@ -4,6 +4,50 @@
     "declared_on": "2026-09-01",
     "rationale": "Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state \u2014 re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise."
   },
+  "descriptive_only": [
+    {
+      "search": "player_props_diagnostics",
+      "name": "the over/under split within every priced cell",
+      "declared_on": "2026-09-05",
+      "rationale": "A mandatory disclosure, never netted: a cell that is +4% on overs and -4% on unders is a side bias, not an edge. Reading either half on its own doubles the cells without doubling the family, which is the subgroup search this ledger exists to price."
+    },
+    {
+      "search": "player_props_diagnostics",
+      "name": "calibration by |z| bucket",
+      "declared_on": "2026-09-05",
+      "rationale": "z = (line - mu)/sd IS the edge statistic. The design refuses to gate on it, because deleting the wagers where model and book most disagree makes the reported calibration true by construction. Printing it as a diagnostic is safe; reading a good bucket as a result is the same selection wearing a different hat."
+    },
+    {
+      "search": "player_props_diagnostics",
+      "name": "mean(actual)/mean(mu) per cell, and its matched non-quoted comparison",
+      "declared_on": "2026-09-05",
+      "rationale": "It reads settled outcomes, so it cannot run at T-60 and it deletes the cells where the answer was bad \u2014 which makes the Bonferroni correction anticonservative rather than conservative. It has no power to refuse anything and no standing to be a finding. The matched non-quoted arm exists to say what the ratio MEANS (level drift versus selection-by-being-quoted), not to score the model."
+    },
+    {
+      "search": "player_props_diagnostics",
+      "name": "the refusal census, per tier and per reason",
+      "declared_on": "2026-09-05",
+      "rationale": "A count of what the model declined to price, R1 through R5, with a missing entry (no opinion) counted separately from a refusal. It describes coverage. It is not a claim about returns, and the per-tier name-resolution rate inside it is a stop condition \u2014 the run halts if it moves more than 2pp across tiers \u2014 never a result."
+    },
+    {
+      "search": "player_props_diagnostics",
+      "name": "the minutes-projection R-squared and residual SD",
+      "declared_on": "2026-09-05",
+      "rationale": "A fit statistic on an input, not a return on a wager. The minutes model is explicitly unable to know whether a player will play, so a flattering R-squared here would say nothing about edge and everything about how predictable rotation minutes are."
+    },
+    {
+      "search": "player_props_diagnostics",
+      "name": "the robustness row for minutes half-life in {2, 3, 4, 5}",
+      "declared_on": "2026-09-05",
+      "rationale": "Half-life 4 is DECLARED, not selected: the fit-window curve is flat within 1% from 2 to 5. Printing the four is robustness. Picking the best of four after the fact is a four-way search reported as one number, and it is precisely how the rival design spent a holdout season on a 0.08% difference."
+    },
+    {
+      "search": "player_props_diagnostics",
+      "name": "every unapplied diagnostic column (pace ratio, opponent allowance)",
+      "declared_on": "2026-09-05",
+      "rationale": "Computed and stored, never applied to a price. They exist so a later session inherits the evidence rather than the temptation, and the bar to admit one was declared in advance: more than 2% of held-out RMSE, fitted on seasons strictly earlier than the validation season. Measured today at 0.13-0.29%. A column that priced nothing cannot have earned anything."
+    }
+  ],
   "hypotheses": [
     {
       "search": "core_team_markets",
@@ -896,6 +940,402 @@
       "outcome": "pending",
       "predicted_direction": "either",
       "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_points / high_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_points / mid_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_points / low_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_rebounds / high_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_rebounds / mid_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_rebounds / low_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_assists / high_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_assists / mid_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_assists / low_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_threes / high_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_threes / mid_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_threes / low_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_pra / high_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_pra / mid_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_pra / low_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_steals / high_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_steals / mid_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_steals / low_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_turnovers / high_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_turnovers / mid_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_turnovers / low_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_points_rebounds / high_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_points_rebounds / mid_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_points_rebounds / low_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_points_assists / high_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_points_assists / mid_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_points_assists / low_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_rebounds_assists / high_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_rebounds_assists / mid_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_devig",
+      "name": "player_rebounds_assists / low_major: the model's mean log loss is below the de-vigged two-sided fair price's",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_role_prior",
+      "name": "high_major: the full model's mean log loss is below the identity-blind role-prior control's, pooled across the ten priceable markets",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_role_prior",
+      "name": "mid_major: the full model's mean log loss is below the identity-blind role-prior control's, pooled across the ten priceable markets",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "player_props_vs_role_prior",
+      "name": "low_major: the full model's mean log loss is below the identity-blind role-prior control's, pooled across the ten priceable markets",
+      "tested_on": "2026-09-05",
+      "seasons": [
+        2024
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
       "realised_direction": ""
     }
   ]

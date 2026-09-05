@@ -140,15 +140,16 @@ def test_a_count_decrease_fails(tmp_path: Path, capsys: pytest.CaptureFixture) -
 def test_the_reproduction_on_this_lab_is_caught(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
     """The audit's reproduction: the tracked ledger with twelve entries removed.
 
-    The tracked ledger held 30 when this was first run and holds 62 since the
-    replication of 2026-09-05 appended its 32 holdout looks, so the counts are
-    read off the file rather than typed and only the SIZE of the edit — twelve
-    entries deleted, which is what the audit reproduced — is fixed here.
+    The tracked ledger held 30 when this was first run, 62 once the replication
+    of 2026-09-05 appended its 32 holdout looks, and 95 since the player-prop
+    pre-registration of the same day added 33 more. The counts are read off the
+    file rather than typed and only the SIZE of the edit — twelve entries
+    deleted, which is what the audit reproduced — is fixed here.
     """
     tracked = _SCRIPT.parents[1] / "data" / "outputs" / "experiment_ledger.json"
     base = json.loads(tracked.read_text(encoding="utf-8"))["hypotheses"]
-    assert len(base) == 62, (
-        f"the tracked ledger holds {len(base)} entries, not 62; re-measure this "
+    assert len(base) == 95, (
+        f"the tracked ledger holds {len(base)} entries, not 95; re-measure this "
         "reproduction against the file rather than editing the number"
     )
     head = base[:-12]
@@ -474,10 +475,11 @@ def test_the_recorder_self_heals_a_ledger_that_was_cut_on_disk(tmp_path: Path) -
     **The tracked ledger no longer holds thirty.** The full-store run of
     2026-09-05 put every discovery cell to the held-out seasons and recorded
     32 holdout looks — `data/outputs/holdout/cbb_replication.json` carries
-    `ledger.holdout_looks_recorded` — so the tracked ledger holds 62 and the
-    factor the reports apply is x1.71. Every count below is read off disk
-    rather than typed, and only the SIZE of the cut — eighteen entries left,
-    which is what the audit reproduced — is fixed here.
+    `ledger.holdout_looks_recorded` — and the player-prop pre-registration of
+    the same day added 33 more, so the tracked ledger holds 95 and the factor
+    the reports apply is x1.77. Every count below is read off disk rather than
+    typed, and only the SIZE of the cut — eighteen entries left, which is what
+    the audit reproduced — is fixed here.
 
     The gap between the two counts is what the second half asserts. The
     recorder heals what it pre-registered and CANNOT heal a holdout look,
@@ -492,8 +494,8 @@ def test_the_recorder_self_heals_a_ledger_that_was_cut_on_disk(tmp_path: Path) -
 
     repo = Path(__file__).resolve().parents[1]
     tracked = json.loads((repo / "data" / "outputs" / "experiment_ledger.json").read_text(encoding="utf-8"))
-    assert len(tracked["hypotheses"]) == 62, (
-        f"the tracked ledger holds {len(tracked['hypotheses'])} entries, not 62; "
+    assert len(tracked["hypotheses"]) == 95, (
+        f"the tracked ledger holds {len(tracked['hypotheses'])} entries, not 95; "
         "this test's arithmetic is quoted in four other files and needs re-deriving"
     )
     pre_registered = len(_recorder.HYPOTHESES)

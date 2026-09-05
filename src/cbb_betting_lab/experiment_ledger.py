@@ -24,7 +24,10 @@ interval and a better story. Sample size buys *power*, never *innocence*.
 
 ## What this file adds to the football lab's version
 
-Three things, each because the football lab recorded a defect that this closes.
+Four things. The first three are each because the football lab recorded a
+defect that this closes; the fourth is because the player-prop pre-registration
+of 2026-09-05 needed to declare seven quantities as descriptive-only and there
+was nowhere honest to put them.
 
 1. **A predicted direction is mandatory.** The football lab's pre-registered
    subgroup search wrote three of its twelve hypotheses with no predicted
@@ -42,6 +45,19 @@ Three things, each because the football lab recorded a defect that this closes.
 3. **Discovery and holdout are separated in advance**, on the hypothesis
    itself, so a result found in discovery cannot quietly be reported as though
    it had been validated. The holdout is not looked at until discovery closes.
+
+4. **Descriptive-only is a declaration with a gate behind it.** A run prints
+   numbers that are not tests of anything — an over/under split, a refusal
+   census, an unapplied diagnostic column — and correcting for those would
+   widen every real interval in exchange for no protection at all. So they are
+   exempt, and :class:`DescriptiveOnly` records the exemption **in the ledger**
+   rather than in a design document nobody diffs. What makes that a trade
+   instead of a loophole is that it runs both ways: `record()` raises
+   :class:`PromotionRefused` on a hypothesis carrying a declared name, `save()`
+   refuses to drop a declaration, and `scripts/check_ledger_append_only.py`
+   sees both at the diff. A number that paid no correction may not become a
+   finding once it turns out flattering, and that is the only moment anybody
+   would ever want it to.
 
 ## Why append-only, and how it is enforced (and how it was not)
 
@@ -133,6 +149,17 @@ class DirectionRequired(ValueError):
     """Raised when a hypothesis is recorded without a falsifiable direction."""
 
 
+class PromotionRefused(ValueError):
+    """Raised when a quantity declared descriptive-only is recorded as a test.
+
+    The whole worth of a descriptive-only declaration is that it costs nothing
+    *and* buys nothing. A number that pays no correction may not later be read
+    as a finding, because the correction the finding would need was never paid
+    — and the moment to notice that is when somebody writes the hypothesis, not
+    when the report quotes it.
+    """
+
+
 @dataclass(frozen=True)
 class Hypothesis:
     """One thing that was put to the data, once.
@@ -201,6 +228,48 @@ class Hypothesis:
 
 
 @dataclass(frozen=True)
+class DescriptiveOnly:
+    """A quantity that will be computed and printed but never read as a finding.
+
+    Some of what a run prints is not a test of anything. The over/under split
+    inside a cell is a mandatory disclosure; a refusal census is a description
+    of what the model declined to price; an unapplied diagnostic column exists
+    so a later session inherits the evidence rather than the temptation. None
+    of them is a claim about edge, so none of them spends a degree of freedom,
+    and correcting for them would widen every real interval in exchange for
+    nothing.
+
+    That exemption is only honest while it holds in both directions, which is
+    what this class is for. A declaration recorded here **cannot** be recorded
+    as a :class:`Hypothesis`: :meth:`ExperimentLedger.record` raises
+    :class:`PromotionRefused` on a matching ``(search, name)``. Reading a
+    descriptive number as a finding afterwards is exactly the move the family
+    correction exists to stop — it is a look that was never counted, promoted
+    once the number turned out to be flattering — and a promise in a design
+    document is not a guard.
+
+    It is a declaration, not a measurement, so it carries no direction, no
+    stage and no outcome. Those fields would be lies here: there is nothing
+    for it to be right or wrong about.
+    """
+
+    search: str
+    name: str
+    declared_on: str
+    rationale: str = ""
+
+    def key(self) -> tuple[str, str]:
+        """What makes two declarations the same quantity.
+
+        Deliberately NOT the hypothesis key: no seasons and no stage. A
+        descriptive number re-printed on another season or against the holdout
+        is the same descriptive number, and — more to the point — a hypothesis
+        must not be able to slip past the refusal by changing its seasons.
+        """
+        return (self.search, self.name)
+
+
+@dataclass(frozen=True)
 class AlphaBudget:
     """How many new hypotheses a week the search may spend.
 
@@ -219,11 +288,24 @@ class AlphaBudget:
 class ExperimentLedger:
     hypotheses: list[Hypothesis] = field(default_factory=list)
     budget: AlphaBudget = field(default_factory=AlphaBudget)
+    #: Quantities declared descriptive-only. They are NOT in `count` and do not
+    #: widen anything; see :class:`DescriptiveOnly` for why that is only honest
+    #: because `record()` refuses to promote one.
+    descriptive_only: list[DescriptiveOnly] = field(default_factory=list)
 
     @property
     def count(self) -> int:
-        """Distinct hypotheses ever tested. The family size for any new claim."""
+        """Distinct hypotheses ever tested. The family size for any new claim.
+
+        Descriptive-only declarations are excluded on purpose: they cannot
+        produce a finding, so they cannot produce a false one, so making every
+        real interval wider on their account would be a cost with no protection
+        bought. `record()` is what keeps that trade honest.
+        """
         return len({h.key() for h in self.hypotheses})
+
+    def descriptive_only_keys(self) -> set[tuple[str, str]]:
+        return {d.key() for d in self.descriptive_only}
 
     def correction_factor(self, *, extra: int = 0) -> float:
         """How much wider a 95% interval has to be, given everything ever tested.
@@ -241,7 +323,28 @@ class ExperimentLedger:
         return NormalDist().inv_cdf(1 - (ALPHA / families) / 2) / 1.96
 
     def record(self, *hypotheses: Hypothesis) -> int:
-        """Add hypotheses. Returns how many were new."""
+        """Add hypotheses. Returns how many were new.
+
+        Raises :class:`PromotionRefused` for a hypothesis whose
+        ``(search, name)`` was declared descriptive-only. That is the guard
+        that makes the descriptive-only exemption a trade rather than a
+        loophole: a quantity exempted from the correction on the grounds that
+        it can never be a finding cannot afterwards become one.
+        """
+        exempt = self.descriptive_only_keys()
+        for entry in hypotheses:
+            if (entry.search, entry.name) in exempt:
+                raise PromotionRefused(
+                    f"{entry.name!r} in search {entry.search!r} was declared "
+                    "descriptive-only, so it paid no family correction and may "
+                    "not now be recorded as a hypothesis. Promoting it would "
+                    "read a look nobody counted as a finding — which is the "
+                    "move the correction exists to stop, and it is always "
+                    "tempting for exactly the numbers that came out well. If "
+                    "the quantity really is a test, it has to be pre-registered "
+                    "as one BEFORE it is measured, under a name that was never "
+                    "declared descriptive-only."
+                )
         seen = {h.key() for h in self.hypotheses}
         added = 0
         for entry in hypotheses:
@@ -249,6 +352,32 @@ class ExperimentLedger:
                 continue
             seen.add(entry.key())
             self.hypotheses.append(entry)
+            added += 1
+        return added
+
+    def declare(self, *descriptive: DescriptiveOnly) -> int:
+        """Declare quantities as descriptive-only. Returns how many were new.
+
+        Refuses a name already recorded as a hypothesis, for the same reason in
+        the other direction: a test that has been put to the data cannot be
+        reclassified as a description afterwards, which would drop it out of
+        the family and narrow every interval already quoted against it.
+        """
+        recorded = {(h.search, h.name) for h in self.hypotheses}
+        seen = self.descriptive_only_keys()
+        added = 0
+        for entry in descriptive:
+            if entry.key() in recorded:
+                raise PromotionRefused(
+                    f"{entry.name!r} in search {entry.search!r} is already "
+                    "recorded as a hypothesis. It cannot be re-declared "
+                    "descriptive-only: that would take a counted look back out "
+                    "of the family and narrow every interval quoted against it."
+                )
+            if entry.key() in seen:
+                continue
+            seen.add(entry.key())
+            self.descriptive_only.append(entry)
             added += 1
         return added
 
@@ -301,6 +430,18 @@ def load(path: Path) -> ExperimentLedger:
             declared_on=str(budget_payload.get("declared_on", "")),
             rationale=str(budget_payload.get("rationale", "")),
         ),
+        # Absent in a ledger written before the field existed, which is a
+        # ledger that declared nothing descriptive-only rather than one whose
+        # declarations were lost.
+        descriptive_only=[
+            DescriptiveOnly(
+                search=str(d.get("search", "")),
+                name=str(d.get("name", "")),
+                declared_on=str(d.get("declared_on", "")),
+                rationale=str(d.get("rationale", "")),
+            )
+            for d in payload.get("descriptive_only", []) or []
+        ],
     )
 
 
@@ -345,6 +486,19 @@ def save(ledger: ExperimentLedger, path: Path, *, floor: int) -> Path:
                 f"{len(existing.hypotheses)} entries on disk to "
                 f"{len(ledger.hypotheses)}. It is append-only."
             )
+        # A descriptive-only declaration is append-only for the same reason a
+        # hypothesis is, and for one more: it is the ONLY thing stopping the
+        # quantity it names from being recorded as a test after the number is
+        # seen. Delete the declaration and the refusal in `record()` has
+        # nothing to refuse.
+        if len(ledger.descriptive_only) < len(existing.descriptive_only):
+            raise ValueError(
+                f"The descriptive-only declarations would fall from "
+                f"{len(existing.descriptive_only)} on disk to "
+                f"{len(ledger.descriptive_only)}. They are append-only: each "
+                "one is what stops the quantity it names from being promoted "
+                "to a finding it never paid a correction for."
+            )
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(
         json.dumps(
@@ -354,6 +508,15 @@ def save(ledger: ExperimentLedger, path: Path, *, floor: int) -> Path:
                     "declared_on": ledger.budget.declared_on,
                     "rationale": ledger.budget.rationale,
                 },
+                "descriptive_only": [
+                    {
+                        "search": d.search,
+                        "name": d.name,
+                        "declared_on": d.declared_on,
+                        "rationale": d.rationale,
+                    }
+                    for d in ledger.descriptive_only
+                ],
                 "hypotheses": [
                     {
                         "search": h.search,
@@ -374,6 +537,18 @@ def save(ledger: ExperimentLedger, path: Path, *, floor: int) -> Path:
         encoding="utf-8",
     )
     return target
+
+
+def _md(text: str) -> str:
+    """One markdown table cell.
+
+    A pipe inside a cell ends the cell. `calibration by |z| bucket` is a real
+    declared quantity — |z| is the edge statistic and naming it any other way
+    would be a euphemism — and unescaped it silently split its row into extra
+    columns, so the rendered table showed a different rationale beside a
+    different name.
+    """
+    return str(text).replace("|", "\\|")
 
 
 def render(ledger: ExperimentLedger) -> str:
@@ -437,7 +612,7 @@ def render(ledger: ExperimentLedger) -> str:
     add("| Search | Hypotheses |")
     add("|:---|---:|")
     for search, n in sorted(ledger.by_search().items(), key=lambda kv: -kv[1]):
-        add(f"| {search} | {n} |")
+        add(f"| {_md(search)} | {n} |")
     add("")
     add("| # | Search | Hypothesis | Stage | Predicted | Realised | Seasons | Tested | Outcome |")
     add("|---:|:---|:---|:---|:---|:---|:---|:---|:---|")
@@ -447,11 +622,39 @@ def render(ledger: ExperimentLedger) -> str:
         if h.reversed_prediction():
             realised = f"**{realised} (reversed)**"
         add(
-            f"| {i} | {h.search} | {h.name} | {h.stage} | "
-            f"{h.predicted_direction} | {realised} | {seasons} | {h.tested_on} | "
-            f"{h.outcome} |"
+            f"| {i} | {_md(h.search)} | {_md(h.name)} | {_md(h.stage)} | "
+            f"{_md(h.predicted_direction)} | {realised} | {seasons} | "
+            f"{_md(h.tested_on)} | {_md(h.outcome)} |"
         )
     add("")
+    if ledger.descriptive_only:
+        add(
+            f"## {len(ledger.descriptive_only)} quantities declared "
+            "descriptive-only"
+        )
+        add("")
+        add(
+            "**These cost no hypotheses and may never be reported as a "
+            "finding.** They are computed and printed because a run that hides "
+            "its own diagnostics is worse than one that shows them, and they "
+            "pay no family correction because none of them is a claim about "
+            "edge. That exemption is enforced rather than promised: "
+            "`ExperimentLedger.record()` raises `PromotionRefused` on a "
+            "hypothesis carrying one of these names, and `save()` refuses to "
+            "drop a declaration — because deleting the declaration is how the "
+            "refusal would be got around. Promoting one after the fact would "
+            "read a look nobody counted as a result, and the temptation to do "
+            "it arrives with exactly the numbers that came out well."
+        )
+        add("")
+        add("| Search | Quantity | Declared | Why it can never be a finding |")
+        add("|:---|:---|:---|:---|")
+        for d in ledger.descriptive_only:
+            add(
+                f"| {_md(d.search)} | {_md(d.name)} | "
+                f"{_md(d.declared_on) or '—'} | {_md(d.rationale)} |"
+            )
+        add("")
     add(
         "The correction is Bonferroni on the cumulative count — conservative on "
         "purpose. Holm and Benjamini-Hochberg need every p-value in hand at "
