@@ -571,7 +571,15 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     # ---- the holdout is a second look, counted before it is taken ----------
-    ledger_path = Path(args.ledger) if args.ledger else PB.ledger_path(output_dir)
+    # ONE LEDGER. It does not follow --output-dir. A holdout run points
+    # --output-dir at data/outputs/holdout/ so its discovery record and report
+    # land apart from the main ones — and "the ledger beside the outputs" then
+    # meant a COPY of the ledger, which this run appended its holdout looks to
+    # while the next backtest read its correction from the original. Two
+    # files, and the correction understated by exactly the looks the holdout
+    # took. The family-wise correction is the ledger's cumulative count, and
+    # there is one cumulative count because there is one ledger.
+    ledger_path = Path(args.ledger) if args.ledger else PB.ledger_path(OUTPUTS_DIR)
     # Which cells carry a claim is read at the count BEFORE this run appends to
     # it, because the count after depends on how many claims there are and a
     # value cannot be its own input. The count before is the smaller of the two,
