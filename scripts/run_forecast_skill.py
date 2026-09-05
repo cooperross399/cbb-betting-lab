@@ -39,6 +39,18 @@ defaulting it: the football lab's backtest read a missing settlement column as a
 zero, reported zero bets, and had that read as "the model never disagrees enough
 with the market" when its price columns had never been built.
 
+## Two populations, and which one is printed as the answer
+
+The regression's population is **every settled wager the model had an opinion
+on**. When the frame carries the backtest's boolean `selected` column, the rows
+it marks — the threshold-selected bets — are measured apart and printed
+**beside** the whole, labelled as the winner's-curse comparison. They are not
+the skill measure: a model is selected into its bets by its own disagreement
+with the price, so a regression of outcome on that disagreement over the bets
+alone has the curse built into its coefficient. Until 2026-09-05 the backtest's
+export was the bets and nothing else, and this script fitted them as if they
+were everything.
+
 The ledger files its day under `snapshot_date` — the day the opinion was frozen,
 which for a card frozen at T-minus-tip **is** the slate day. That rename happens
 here, in one place, with this sentence beside it, rather than by teaching the
@@ -254,6 +266,70 @@ def print_disagreement_first(record: Mapping) -> None:
         print(
             "  pooled (never the headline — three tiers are three "
             "distributions): "
+            f"{_coefficient_line(FS.coefficient(pooled, 'disagreement'))}"
+        )
+    print(
+        f"  Population of every line above: {FS.ALL_OPINIONS_LABEL} — "
+        f"{FS.ALL_OPINIONS_ROLE}."
+    )
+
+
+def print_populations(record: Mapping) -> None:
+    """Both populations with their counts, before any number from either."""
+    populations = record.get("populations") or {}
+    whole = populations.get("all_opinions") or {}
+    subset = populations.get("selected") or {}
+    print("")
+    print("TWO POPULATIONS — WHICH ONE IS THE SKILL MEASURE")
+    print(
+        f"  {FS.ALL_OPINIONS_LABEL}: {int(whole.get('rows', 0)):,} scorable "
+        f"wagers in {int(whole.get('games', 0)):,} games — {FS.ALL_OPINIONS_ROLE}"
+    )
+    if subset.get("available"):
+        print(
+            f"  {FS.SELECTED_LABEL}: {int(subset.get('rows', 0)):,} scorable "
+            f"wagers in {int(subset.get('games', 0)):,} games — {FS.SELECTED_ROLE}"
+        )
+    else:
+        print(
+            f"  {FS.SELECTED_LABEL}: not supplied (no `{FS.SELECTED_COLUMN}` "
+            "column in the frame) — every number below is over every opinion"
+        )
+
+
+def print_selected_beside(record: Mapping) -> None:
+    """The threshold-selected subset, after the whole, named as what it is."""
+    selected = record.get("selected") or {}
+    if not selected.get("available"):
+        return
+    print("")
+    print(
+        "THE THRESHOLD-SELECTED BETS, BESIDE IT — THE WINNER'S-CURSE "
+        "COMPARISON, NOT THE SKILL MEASURE"
+    )
+    print(
+        f"  {int(selected.get('rows', 0)):,} scorable wagers the model's own "
+        "disagreement with the price selected. A coefficient here is fitted on "
+        "the tail of"
+    )
+    print("  the model's error distribution and says what the selection cost.")
+    for measured in selected.get("by_tier") or []:
+        fitted = measured.get("fit") or {}
+        if not fitted.get("fitted"):
+            print(
+                f"  {measured.get('label', '')} ({FS.SELECTED_LABEL}): not fitted — "
+                f"{fitted.get('reason', FS.NOTHING_TO_MEASURE)}"
+            )
+            continue
+        print(
+            f"  {measured.get('label', '')} ({FS.SELECTED_LABEL}): "
+            f"{_coefficient_line(FS.coefficient(fitted, 'disagreement'))}"
+        )
+    pooled = (selected.get("pooled") or {}).get("fit") or {}
+    if pooled.get("fitted"):
+        print(
+            f"  every tier pooled ({FS.SELECTED_LABEL}; a pooled subset is never "
+            "the headline either): "
             f"{_coefficient_line(FS.coefficient(pooled, 'disagreement'))}"
         )
 
@@ -549,6 +625,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return EXIT_NOTHING_TO_MEASURE
 
     print_census(record)
+    print_populations(record)
 
     scored = int((record.get("population_census") or {}).get("scored", 0))
     if not scored:
@@ -595,6 +672,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     print_market_coefficient(record)
     print_brier(record)
     print_buckets(record)
+    print_selected_beside(record)
 
     print("")
     print(f"Wrote {record_path}")

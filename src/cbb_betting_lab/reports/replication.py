@@ -146,6 +146,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from cbb_betting_lab import experiment_ledger as E
 from cbb_betting_lab import stats as S
 from cbb_betting_lab.competitions import CBB, Competition
 from cbb_betting_lab.forward_evidence import SETTLEMENT_AMBIGUOUS_MARKETS
@@ -695,8 +696,16 @@ def build_record(
                     holdout_row
                     and int(holdout_row.get("bets", 0)) >= int(criteria.minimum_bets)
                 ),
+                # The same value `run_replication.record_holdout_looks` wrote
+                # to the ledger for this cell: the discovery sign where
+                # discovery claimed, the two-sided look where it did not. The
+                # record and the ledger must not name one look two ways.
                 "predicted_direction": (
-                    "higher" if claim["sign"] > 0 else "lower" if claim["sign"] < 0 else ""
+                    "higher"
+                    if claim["claims"] and claim["sign"] > 0
+                    else "lower"
+                    if claim["claims"] and claim["sign"] < 0
+                    else E.TWO_SIDED
                 ),
                 "realised_direction": (
                     ""

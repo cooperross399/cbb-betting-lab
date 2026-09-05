@@ -47,6 +47,7 @@ testing that two fixtures agree.
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 import importlib.util
 import io
 import json
@@ -1006,9 +1007,11 @@ def test_the_holdout_is_counted_in_the_ledger_before_it_is_taken(tmp_path):
     not a prediction — and the direction recorded is the sign of the discovery
     result, which is the one thing a replication predicts.
 
-    Cells with nothing to replicate spend no degree of freedom and are not
-    recorded, the same line `scripts/record_experiments.py` draws around
-    retention probing.
+    A cell the discovery window claimed nothing in is STILL a look — the
+    replication reads its held-out interval to say whether something was found
+    on the holdout — so it is recorded too, as a two-sided hypothesis with no
+    sign to carry. Until 2026-09-05 such cells were skipped and the family
+    correction was short by exactly those looks.
     """
     script = load_script()
     ledger_path = tmp_path / LEDGER_FILENAME
@@ -1022,19 +1025,102 @@ def test_the_holdout_is_counted_in_the_ledger_before_it_is_taken(tmp_path):
         claims, seasons=[2024], ledger_path=ledger_path, tested_on="2026-09-03"
     )
 
-    assert (added, planned) == (2, 2), "a cell with no claim spends no degree of freedom"
+    assert (added, planned) == (3, 3), "every cell scored on the holdout is a look"
     ledger = E.load(ledger_path)
-    assert ledger.by_stage()["holdout"] == 2
+    assert ledger.by_stage()["holdout"] == 3
     directions = {h.name.split(":")[0]: h.predicted_direction for h in ledger.hypotheses}
     assert directions["moneyline / low_major"] == "higher"
     assert directions["spread / high_major"] == "lower"
+    # The unclaimed cell's discovery sign was +1 and must NOT be carried in: a
+    # sign that did not survive its correction is not a prediction.
+    assert directions["total_points / low_major"] == E.TWO_SIDED
 
     # Re-running must not inflate the correction, or nobody will re-run anything.
     again, _ = script.record_holdout_looks(
         claims, seasons=[2024], ledger_path=ledger_path, tested_on="2026-09-03"
     )
     assert again == 0
-    assert E.load(ledger_path).count == 2
+    assert E.load(ledger_path).count == 3
+
+
+def test_every_cell_scored_on_the_holdout_is_a_recorded_look_not_only_the_claimed_ones(tmp_path):
+    """N discovery cells of which K claimed -> N holdout hypotheses, not K.
+
+    `replication.build_record` scores EVERY discovery cell on the held-out
+    seasons. `record_holdout_looks` used to append one hypothesis only
+    `if claim.get("claims") and claim.get("sign")`, so the ledger held K looks
+    while N were taken and the correction on every held-out interval was
+    computed across too small a family. The claimed cells carry the discovery
+    sign; the rest are two-sided; the key `(search, name, seasons, stage)` is
+    distinct per cell so no two cells collapse into one entry.
+    """
+    script = load_script()
+    ledger_path = tmp_path / LEDGER_FILENAME
+    markets = ["moneyline", "spread", "total_points", "team_total"]
+    tiers = ["high_major", "mid_major", "low_major"]
+    cells = [(m, t) for m in markets for t in tiers]  # N = 12
+    n_cells = len(cells)
+    claimed = {("moneyline", "low_major"): 1, ("spread", "mid_major"): -1}  # K = 2
+    claims = [
+        {
+            "market": m,
+            "tier": t,
+            "claims": (m, t) in claimed,
+            # Every cell has a sign — an ROI is never exactly zero — so the
+            # filter under test cannot be satisfied by an absent sign alone.
+            "sign": claimed.get((m, t), 1),
+        }
+        for m, t in cells
+    ]
+    assert sum(c["claims"] for c in claims) == 2 < n_cells
+
+    added, planned = script.record_holdout_looks(
+        claims, seasons=[2024], ledger_path=ledger_path, tested_on="2026-09-05"
+    )
+
+    assert (added, planned) == (n_cells, n_cells), (
+        f"{planned} holdout hypotheses recorded for {n_cells} cells scored — the "
+        "family correction undercounts by every unrecorded look"
+    )
+    ledger = E.load(ledger_path)
+    assert ledger.count == n_cells
+    assert ledger.by_stage()["holdout"] == n_cells
+    assert ledger.by_stage()["discovery"] == 0
+    assert len({h.key() for h in ledger.hypotheses}) == n_cells, "two cells share a key"
+    by_cell = {h.name.split(":")[0]: h for h in ledger.hypotheses}
+    assert by_cell["moneyline / low_major"].predicted_direction == "higher"
+    assert by_cell["spread / mid_major"].predicted_direction == "lower"
+    unclaimed = [h for name, h in by_cell.items() if tuple(name.split(" / ")) not in claimed]
+    assert len(unclaimed) == n_cells - 2
+    assert {h.predicted_direction for h in unclaimed} == {E.TWO_SIDED}
+    assert all(h.stage == "holdout" for h in ledger.hypotheses)
+    # A two-sided look can fail but never reverse; a directed one can.
+    for h in unclaimed:
+        assert not dataclasses.replace(h, realised_direction="lower").reversed_prediction()
+    assert dataclasses.replace(
+        by_cell["moneyline / low_major"], realised_direction="lower"
+    ).reversed_prediction()
+
+    # The ledger's own correction now widens across N looks, not K.
+    assert S.bonferroni_factor(ledger.count) > S.bonferroni_factor(2)
+
+
+def test_a_two_sided_look_is_admitted_at_the_holdout_stage_only():
+    """The discovery stage still refuses a cut written without a direction."""
+    E.Hypothesis(
+        search="s", name="n", tested_on="d", seasons=(2024,), outcome="pending",
+        predicted_direction=E.TWO_SIDED, stage="holdout",
+    )
+    with pytest.raises(E.DirectionRequired):
+        E.Hypothesis(
+            search="s", name="n", tested_on="d", seasons=(2024,), outcome="pending",
+            predicted_direction=E.TWO_SIDED, stage="discovery",
+        )
+    with pytest.raises(E.DirectionRequired):
+        E.Hypothesis(
+            search="s", name="n", tested_on="d", seasons=(2024,), outcome="pending",
+            predicted_direction="", stage="holdout",
+        )
 
 
 def test_rebuild_report_only_re_renders_without_the_store_or_the_tables(

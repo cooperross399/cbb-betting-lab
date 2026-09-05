@@ -49,6 +49,7 @@ from cbb_betting_lab.competitions import CBB
 from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.forward_evidence import profit_units
 from cbb_betting_lab.reports import forecast_skill as FS
+from cbb_betting_lab.reports import price_backtest as PB
 from cbb_betting_lab.selection import FULL_GAME
 from cbb_betting_lab.stores import _decimal_payout as decimal_payout
 
@@ -910,6 +911,119 @@ def test_every_tier_is_measured_and_the_pooled_row_carries_its_caveat(noise):
     assert "This is never the headline" in report
     for label in labels:
         assert f"### {label}" in report
+
+
+def _with_selected(frame: pd.DataFrame, *, threshold: float = PB.BET_EDGE_THRESHOLD) -> pd.DataFrame:
+    """Stamp the flag the way the backtest does: `bet_mask` over `add_edge`."""
+    edged = PB.add_edge(frame)
+    return frame.assign(**{FS.SELECTED_COLUMN: PB.bet_mask(edged, threshold=threshold).to_numpy()})
+
+
+def test_the_record_carries_both_populations_with_their_counts():
+    """Every opinion is the skill measure; the selected bets sit beside it, counted.
+
+    The selection is made by the model's disagreement with the price, and
+    fitting outcome on that disagreement over the selected rows alone bakes the
+    winner's curse into the coefficient. So the record names two populations,
+    the primary `by_tier`/`pooled`/`raw_market_fit` are fitted over EVERY
+    scorable opinion, and the selected subset is measured apart with its own
+    count — strictly smaller here, because the fixture's disagreement is noise
+    around the price and most rows fall below the threshold.
+    """
+    frame = _with_selected(graded_frame("anti"))
+    assert 0 < int(frame[FS.SELECTED_COLUMN].sum()) < len(frame), "the fixture must select a strict subset"
+    record = FS.build_record(FS.SkillInputs(graded=frame, pair_scope="book"), competition=CBB)
+
+    populations = record["populations"]
+    whole, subset = populations["all_opinions"], populations["selected"]
+    assert whole["label"] == FS.ALL_OPINIONS_LABEL
+    assert whole["role"] == FS.ALL_OPINIONS_ROLE
+    assert subset["label"] == FS.SELECTED_LABEL
+    assert subset["role"] == FS.SELECTED_ROLE
+    assert "not the skill measure" in subset["role"]
+    assert subset["available"] is True
+
+    scored = record["population_census"]["scored"]
+    assert whole["rows"] == record["pooled"]["rows"] == scored > 0
+    # The subset is the scorable rows the flag marks — no more, no fewer.
+    priced, _ = FS.devig(frame, scope="book")
+    scorable, _ = FS.scorable(priced)
+    expected_selected = int(FS.selected_mask(scorable).sum())
+    assert subset["rows"] == record["selected"]["rows"] == record["selected"]["pooled"]["rows"] == expected_selected
+    assert 0 < subset["rows"] < whole["rows"]
+
+    # The primary cells are fitted over every opinion, and say so.
+    assert record["population_label"] == FS.ALL_OPINIONS_LABEL
+    assert record["pooled"]["population"] == FS.ALL_OPINIONS_LABEL
+    assert record["by_tier"], "the tier breakdown applies to the all-opinions fit"
+    for measured in record["by_tier"]:
+        assert measured["population"] == FS.ALL_OPINIONS_LABEL
+    assert sum(m["rows"] for m in record["by_tier"]) + record["rows_without_a_tier"] == whole["rows"]
+    assert record["raw_market_fit"]["rows"] == whole["rows"]
+    # The selected cells say what they are, per tier and pooled, with counts.
+    for measured in list(record["selected"]["by_tier"]) + [record["selected"]["pooled"]]:
+        assert measured["population"] == FS.SELECTED_LABEL
+        assert measured["rows"] >= 0
+    assert sum(m["rows"] for m in record["selected"]["by_tier"]) == subset["rows"]
+    # A selected bucket table has nothing below the threshold by construction:
+    # that is the tautology this split exists to expose, not to hide.
+    below = [
+        b for b in record["selected"]["pooled"]["buckets"]
+        if b["high"] <= PB.BET_EDGE_THRESHOLD and b.get("rows")
+    ]
+    assert below == [], below
+    above = [b for b in record["pooled"]["buckets"] if b["high"] <= 0 and b.get("rows")]
+    assert above, "the all-opinions table must keep the wagers the model disliked as its control group"
+
+
+def test_the_report_says_which_population_every_number_belongs_to():
+    frame = _with_selected(graded_frame("anti"))
+    record = FS.build_record(FS.SkillInputs(graded=frame, pair_scope="book"), competition=CBB)
+    report = FS.render(record)
+
+    assert "## Two populations, and which one is the skill measure" in report
+    assert f"**{FS.ALL_OPINIONS_LABEL}**" in report
+    assert FS.SELECTED_LABEL in report
+    assert "the winner's-curse comparison, not the skill measure" in report
+    # The skill measure comes first, the comparison after it, labelled.
+    tiers = report.index("## Per conference tier")
+    pooled = report.index("## Pooled")
+    beside = report.index("## The threshold-selected bets, beside it")
+    raw = report.index("## The same fit without the de-vig")
+    assert tiers < pooled < beside < raw
+    # Every fitted cell carries a population line with its own count.
+    population_lines = [l for l in report.splitlines() if l.startswith("*Population: **")]
+    cells = len(record["by_tier"]) + 1 + len(record["selected"]["by_tier"]) + 1
+    assert len(population_lines) == cells, (len(population_lines), cells)
+    for line in population_lines:
+        assert "scorable wagers" in line
+        assert FS.ALL_OPINIONS_LABEL in line or FS.SELECTED_LABEL in line
+    whole = record["populations"]["all_opinions"]["rows"]
+    subset = record["populations"]["selected"]["rows"]
+    assert f"{subset:,} of {whole:,} scorable wagers" in report
+    # The threshold section reads the all-opinions fit, in words.
+    assert f"pooled disagreement coefficient over **{FS.ALL_OPINIONS_LABEL}**" in report
+
+
+def test_a_frame_without_the_selected_flag_reports_the_subset_as_not_supplied():
+    """The forward ledger carries no flag; the subset is then absent, never inferred."""
+    frame = graded_frame("noise")
+    assert FS.SELECTED_COLUMN not in frame.columns
+    record = FS.build_record(FS.SkillInputs(graded=frame, pair_scope="book"), competition=CBB)
+    assert record["populations"]["selected"]["available"] is False
+    assert record["populations"]["selected"]["rows"] == 0
+    assert record["selected"]["available"] is False
+    assert FS.SELECTED_COLUMN in record["selected"]["reason"]
+    assert record["selected"]["by_tier"] == []
+    assert record["populations"]["all_opinions"]["rows"] == record["pooled"]["rows"] > 0
+    report = FS.render(record)
+    assert "not supplied" in report
+    assert f"Every number in this report belongs to **{FS.ALL_OPINIONS_LABEL}**" in report
+
+
+def test_an_unreadable_selected_flag_is_not_a_bet():
+    frame = pd.DataFrame({FS.SELECTED_COLUMN: [True, False, "True", "false", "1", "0", "", None, "maybe"]})
+    assert FS.selected_mask(frame).tolist() == [True, False, True, False, True, False, False, False, False]
 
 
 def test_nothing_to_measure_is_said_in_words_rather_than_shown_as_an_empty_table():

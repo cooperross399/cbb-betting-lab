@@ -64,11 +64,21 @@ would be a fourth opportunity.
 precisely so that *"putting a discovery finding to the holdout is a second look,
 and the whole design collapses if it is not counted as one."* So this script
 appends one `stage="holdout"` hypothesis per (market, tier) cell it is about to
-test — with `predicted_direction` taken from the **sign of the discovery
-result**, which is a genuinely falsifiable prediction and the only one a
-replication makes — and only then reads the ledger's cumulative count. The
+test — **every cell the discovery record measured, because every one of them is
+scored on the holdout** — and only then reads the ledger's cumulative count. The
 correction applied to the held-out intervals therefore already includes this
 run's own looks.
+
+Where the discovery window claimed, `predicted_direction` is the **sign of the
+discovery result**, which is a genuinely falsifiable prediction and the only one
+a replication makes. Where it did not, the look is still taken — `replication`
+reads that cell's held-out interval to say whether something was *found on the
+holdout* — so it is recorded as a two-sided look
+(`experiment_ledger.TWO_SIDED`). Until 2026-09-05 those cells were skipped, on
+the argument that there was no hypothesis to put to them; but a look that reads
+an interval is a look whether or not a sign was carried in, and a run over 32
+cells with 5 claims recorded 5 looks while taking 32. The family correction was
+short by exactly the looks nobody wrote down.
 
 They are recorded **before** the scoring, not after, which is the only ordering
 under which a pre-registered direction means anything. The ledger has no update
@@ -268,16 +278,22 @@ def record_holdout_looks(
 ) -> tuple[int, int]:
     """Append one holdout hypothesis per cell about to be tested. Returns (new, total).
 
-    `predicted_direction` is the **sign of the discovery result**, which is the
-    one prediction a replication actually makes and is falsifiable in exactly
-    the way `experiment_ledger.DirectionRequired` insists on: a cell that comes
-    back the other way is a reversal, and a reversal is a result.
+    **One per cell the discovery record measured, not one per cell it
+    claimed.** `replication.build_record` scores every discovery cell on the
+    held-out season and reads every one of those intervals, so every one of them
+    is a look; the ledger has to hold as many looks as were taken or the family
+    correction undercounts. It did, until 2026-09-05: this function filtered on
+    `claims and sign`, so a run over N cells with K claims recorded K and took N.
 
-    Cells the discovery window demonstrated nothing in are skipped. There is no
-    hypothesis to put to the holdout there, and recording one would inflate the
-    correction without buying any protection — the same line
-    `scripts/record_experiments.py` draws around retention probing and
-    settlement validation.
+    Where discovery claimed, `predicted_direction` is the **sign of the
+    discovery result** — the one prediction a replication actually makes, and
+    falsifiable in exactly the way `experiment_ledger.DirectionRequired` insists
+    on: a cell that comes back the other way is a reversal, and a reversal is a
+    result. Where it did not, there is no sign to carry, and the look is
+    recorded as **two-sided** (`experiment_ledger.TWO_SIDED`): it can fail — an
+    interval including zero — but cannot reverse. That value is admitted at the
+    holdout stage only; the discovery stage still refuses a cut written
+    without a direction.
     """
     ledger = E.load(Path(ledger_path))
     loaded = len(ledger.hypotheses)
@@ -285,22 +301,41 @@ def record_holdout_looks(
         E.Hypothesis(
             search=SEARCH,
             name=(
-                f"{claim['market']} / {claim['tier']}: the discovery result "
-                "holds on a season it was not selected on"
+                f"{claim['market']} / {claim['tier']}: "
+                + (
+                    "the discovery result holds on a season it was not selected on"
+                    if claim.get("claims") and claim.get("sign")
+                    else "the held-out return differs from zero in a cell the "
+                    "discovery window claimed nothing in (two-sided)"
+                )
             ),
             tested_on=str(tested_on),
             seasons=tuple(int(s) for s in seasons),
             outcome="pending",
-            predicted_direction="higher" if claim["sign"] > 0 else "lower",
+            predicted_direction=holdout_direction(claim),
             stage="holdout",
         )
         for claim in claims
-        if claim.get("claims") and claim.get("sign")
     ]
     added = ledger.record(*hypotheses)
     if added:
         E.save(ledger, Path(ledger_path), floor=loaded)
     return added, len(hypotheses)
+
+
+def holdout_direction(claim: Mapping) -> str:
+    """The direction a held-out look is recorded under.
+
+    The discovery sign when discovery claimed; otherwise the two-sided look.
+    A claim whose sign is zero cannot have survived its correction, but the
+    branch is written rather than assumed so a zero can never be filed as
+    `lower`.
+    """
+    if claim.get("claims") and int(claim.get("sign", 0) or 0) > 0:
+        return "higher"
+    if claim.get("claims") and int(claim.get("sign", 0) or 0) < 0:
+        return "lower"
+    return E.TWO_SIDED
 
 
 # --------------------------------------------------------------------------

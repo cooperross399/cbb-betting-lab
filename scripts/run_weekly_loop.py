@@ -192,8 +192,10 @@ CLAIMS_SCRIPT = "run_what_we_can_claim.py"
 #: honest read on whether anything here is real, and asks for it weekly by
 #: name. It was built and run by hand and never wired into this loop, so the
 #: weekly run measured returns and never asked whether the model knew
-#: anything the price did not. Two programs: the de-vig frame needs each bet's
-#: complement at its own book, which the graded export does not carry.
+#: anything the price did not. Two programs: the de-vig frame needs each
+#: wager's complement at its own book, which the graded export does not carry.
+#: The export is EVERY settled opinion with the bets flagged `selected` — not
+#: the bets alone, which would hand the regression the winner's-curse slice.
 GRADED_BETS_FILENAME = "cbb_graded_bets.csv"
 SKILL_FRAME_FILENAME = "cbb_skill_frame.csv"
 SKILL_FRAME_SCRIPT = "build_skill_frame.py"
@@ -772,7 +774,7 @@ def verify_walk_forward(path: Path | None) -> tuple[Step, dict]:
             name="re-verify walk-forward",
             status=OK,
             detail=(
-                f"{len(frame):,} graded bets, every one priced only on games "
+                f"{len(frame):,} graded wagers, every one priced only on games "
                 "strictly earlier than the day it bet on."
             ),
         ),
@@ -1267,7 +1269,7 @@ def _measurement_section(record: dict) -> list[str]:
     if walk.get("verified"):
         lines += [
             f"- Walk-forward: re-verified over **{int(walk.get('rows', 0)):,}** "
-            "graded bets, every one priced only on games strictly earlier than "
+            "graded wagers, every one priced only on games strictly earlier than "
             "the day it bet on.",
             "",
         ]

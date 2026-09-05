@@ -34,6 +34,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import re
 import runpy
 import sys
 import types
@@ -48,6 +49,7 @@ from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.experiment_ledger import LEDGER_FILENAME
 from cbb_betting_lab.population import VenueState
 from cbb_betting_lab.providers import historical as H
+from cbb_betting_lab.reports import forecast_skill as FS
 from cbb_betting_lab.reports import price_backtest as PB
 from cbb_betting_lab.selection import FULL_GAME
 from cbb_betting_lab.stats import MINIMUM_BETS
@@ -295,6 +297,7 @@ class Lab:
         self.games = team_games()
         self.record_path = PB.record_path(CBB, self.outputs)
         self.report_path = PB.report_path(CBB, self.outputs)
+        self.graded_path = self.processed / "cbb_graded_bets.csv"
 
     def with_tables(self) -> "Lab":
         self.games.to_csv(self.processed / "cbb_team_games.csv", index=False)
@@ -388,7 +391,7 @@ def scored(tmp_path_factory) -> Scored:
 
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(buffer):
-        exit_code = lab.run("--model", spec)
+        exit_code = lab.run("--model", spec, "--write-graded", str(lab.graded_path))
     return Scored(
         exit_code=exit_code,
         stdout=buffer.getvalue(),
@@ -781,6 +784,88 @@ def test_the_half_point_split_is_reported_and_its_convention_verified(scored):
     keys = scored.record["key_numbers"]["margin"]
     assert keys["n"] > 0
     assert keys["numbers"], "key numbers are measured from the games, never a list"
+
+
+def _accounting_count(stdout: str, label: str) -> int:
+    """One count off the printed accounting identity, e.g. `no opinion 0`."""
+    match = re.search(rf"^\s*{re.escape(label)}\s+([\d,]+)\s*$", stdout, flags=re.MULTILINE)
+    assert match, f"the accounting line {label!r} was not printed:\n{stdout}"
+    return int(match.group(1).replace(",", ""))
+
+
+def test_the_graded_export_is_every_settled_opinion_with_the_bets_flagged(scored):
+    """`--write-graded` writes the population the regression runs over, not the bets.
+
+    Until 2026-09-05 it wrote `PB.settled(bets)`: the rows the model's own
+    disagreement with the price selected, and nothing else. `forecast_skill`
+    then regressed outcome on that same disagreement over that slice, which
+    bakes the winner's curse into the coefficient and empties every
+    claimed-edge bucket below the threshold by construction. The frame is now
+    every settled wager the model had an opinion on, with a boolean `selected`
+    marking the bets, so the whole and the subset can be told apart and both
+    can be counted.
+
+    The stub model has an opinion on every wager it is shown, the fixture's
+    lines are all half-points and no full game ends level, so on this fixture
+    the settled opinions ARE the graded wagers — read off the record, which is
+    built from the same `universe`, and off the printed accounting identity,
+    which is built independently of the export.
+    """
+    assert scored.exit_code == 0, scored.stdout
+    assert scored.lab.graded_path.is_file(), "the export was not written"
+    frame = pd.read_csv(scored.lab.graded_path)
+
+    assert "selected" in frame.columns
+    assert frame["selected"].dtype == bool, frame["selected"].dtype
+    assert set(frame["selected"].unique()) <= {True, False}
+    for column in FS.SKILL_COLUMNS:
+        assert column in frame.columns, column
+    assert "book" in frame.columns, "the de-vig pairs within a book and needs the column"
+
+    # Every row is a settled opinion: a probability and a won-or-lost outcome.
+    assert frame["model_probability"].notna().all()
+    assert set(frame["outcome"].str.lower().unique()) <= {"won", "lost"}
+
+    bets_graded = int(scored.record["bets_graded"])
+    wagers_graded = int(scored.record["wagers_graded"])
+    assert bets_graded > 0
+    # At least as many rows as bets — and on this fixture strictly more,
+    # because the ladder is wide enough that rungs fall below the threshold.
+    assert len(frame) >= bets_graded
+    assert len(frame) > bets_graded, (
+        f"{len(frame)} rows for {bets_graded} bets: the export is still the bets"
+    )
+    # Exactly the bets are flagged: the same predicate `bets_from` used.
+    assert int(frame["selected"].sum()) == bets_graded
+    # And the whole is the settled-opinion count. The accounting identity
+    # printed by the run says the model declined nothing, so every graded
+    # wager carries an opinion and the two counts must be equal.
+    assert _accounting_count(scored.stdout, "no opinion") == 0
+    assert _accounting_count(scored.stdout, "unparseable") == 0
+    assert len(frame) == wagers_graded, (
+        f"{len(frame)} rows exported against {wagers_graded} graded wagers with an "
+        "opinion — the export is not the settled-opinion population"
+    )
+    # The run says which population it wrote, and in words.
+    assert re.search(
+        rf"Wrote {len(frame):,} settled opinion\(s\) .* {bets_graded:,} of them are the "
+        r"threshold-selected bets",
+        scored.stdout,
+    ), scored.stdout
+
+
+def test_the_selected_flag_agrees_with_the_bets_predicate_row_by_row(scored):
+    """`selected` is `PB.bet_mask`, not a second definition of a bet.
+
+    Recomputing the edge from the exported columns with the repository's one
+    edge function and applying the declared threshold must reproduce the flag
+    on every row, or the export and the ROI table are two different cuts.
+    """
+    frame = pd.read_csv(scored.lab.graded_path)
+    threshold = float(scored.record["edge_threshold"])
+    recomputed = PB.bet_mask(PB.add_edge(frame), threshold=threshold)
+    assert recomputed.tolist() == frame["selected"].tolist()
+    assert int(recomputed.sum()) == int(scored.record["bets_graded"])
 
 
 def test_calibration_is_measured_on_the_bets_that_were_selected(scored):
