@@ -68,6 +68,21 @@ file with an empty policy, which is the correct fail-closed answer for the
 CARD and the wrong REPORT for a gate, because it printed the same sentence as
 a repository that allowlists nothing. An absent policy file, and a policy file
 that parses and allowlists nothing, remain the ordinary green case.
+
+A policy file that PARSES and whose ALLOWLIST ENTRIES cannot be read is the
+same broken gate wearing valid JSON, and is `2` as well: an allowlist of bare
+strings, an entry with no `market`, a directory where the policy file belongs,
+a symlink pointing at nothing. `load()` keeps only the entries it can read as
+objects that name a market, so each of those quietly becomes an allowlist of
+nothing — which is the exact shape of the defect above, one layer in.
+
+ONE VERDICT, WRITTEN FROM THE EXIT STATUS. The summary ends with exactly one
+`POLICY GATE VERDICT:` line, built by `verdict_line()` out of the status
+`main()` is about to return, and `main()` scrubs that marker from every other
+line before printing. Market names, receipt notes and `verify_receipt()`
+reasons are text from files this gate does not control; before that scrub, a
+market could be NAMED with the sentence a green run prints and a reviewer
+reading a red run's summary would find a green verdict inside it.
 """
 
 from __future__ import annotations
@@ -75,6 +90,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -88,6 +104,82 @@ from cbb_betting_lab.competitions import CBB
 POLICY_RELATIVE = f"data/manual/{SPP.POLICY_FILENAME}"
 
 OK, RED, BROKEN = 0, 1, 2
+
+#: The words the run's ANSWER is spelled with, and the only place any of them
+#: are spelled. `verdict_line()` builds one line out of the exit status,
+#: `main()` calls it exactly once, and `main()` scrubs `VERDICT_MARKER` out of
+#: every other line before printing — so a run that exits non-zero cannot
+#: contain the sentence a green run prints, whatever a policy file, a receipt
+#: note or a `verify_receipt()` reason tries to plant in the summary. That was
+#: a real hole: the verdict used to be prose written on the branch that
+#: produced it, and prose in a job summary is text a reader can be given twice.
+VERDICT_MARKER = "POLICY GATE VERDICT"
+VERDICTS = {
+    OK: (
+        "green — no allowlisted market in this tree lacks a receipt this gate "
+        "accepted"
+    ),
+    RED: (
+        "red — an allowlisted market in this tree has no receipt this gate "
+        "accepted"
+    ),
+    BROKEN: (
+        "broken — this gate did not run and checked no allowlist at all, which "
+        "is not evidence that any market is receipted"
+    ),
+}
+
+#: Said on BOTH verdicts, from one place, because an overclaim beside a green
+#: tick is the more dangerous one.
+SIGNATURE_NOTE = (
+    "What this gate checks about a signature, exactly: that `signed_by` is not "
+    "one of the spellings of Claude it knows to refuse — any value whose "
+    "letters spell `claude`, whatever the case and whatever the punctuation "
+    "between them. That is the whole of it. Nothing here is cryptographic and "
+    "no identity is verified, so this gate cannot tell a real signature from a "
+    "forged one and does not claim to: whether the person named actually "
+    "signed a receipt is decided by the human reviewing this pull request, "
+    "not here."
+)
+
+
+def verdict_line(status: int) -> str:
+    """The one line that says how the run ended, built from the exit status.
+
+    Not from the branch that ran, and not from anything read off disk: the
+    caller passes the status it is about to return, and there is no other
+    spelling of `VERDICT_MARKER` in anything this script prints.
+    """
+    return f"**{VERDICT_MARKER}: {VERDICTS[status]}.**"
+
+
+def without_a_second_verdict(line: str) -> str:
+    """`line` with every verdict word this script can print taken out of it.
+
+    Applied to EXPLANATION lines only, so that the one verdict a run prints
+    is the one `verdict_line()` built from its exit status. Without this the
+    green sentence is plantable: a market NAMED with it, or a receipt note
+    carrying it, is copied into the table of a red run, and the reader sees
+    a red gate whose summary says every market is receipted.
+    """
+    for fragment in (VERDICT_MARKER, *VERDICTS.values()):
+        line = re.sub(re.escape(fragment), "[verdict text removed]", line, flags=re.IGNORECASE)
+    return line
+
+
+def _plain(value: object, limit: int = 160) -> str:
+    """A value read off disk, made safe to put in one markdown table cell.
+
+    Market names, receipt filenames and `verify_receipt()` reasons are text
+    from files this gate does not control. A newline in one of them writes a
+    whole line of the job summary; a `|` writes a whole column. Neither may
+    be a way to write a sentence a reviewer reads as this gate's finding.
+    """
+    text = "".join(character if character.isprintable() else " " for character in str(value))
+    text = text.replace("|", "\\|").replace("`", "'").strip()
+    if len(text) > limit:
+        text = text[: limit - 1] + "…"
+    return text or "(empty)"
 
 
 def _markets_in(payload: object) -> set[str]:
@@ -116,9 +208,31 @@ def unreadable_policy(path: Path) -> str:
     for the card, which must fail closed, and wrong for this report, which
     would otherwise print "no market is allowlisted" over a policy file
     nobody could read.
+
+    "Cannot be parsed" is not only "is not JSON". A policy file whose
+    ALLOWLIST ENTRIES cannot be read is the same broken gate wearing valid
+    JSON: `load()` and `_markets_in()` both keep only the entries that are
+    objects carrying a `market`, so an allowlist of bare strings, or an entry
+    with no `market` key, silently becomes an allowlist of nothing and takes
+    the green "nothing to check" branch. Every one of those is exit 2 here.
+    So is a DIRECTORY where the policy file belongs, and a symlink pointing
+    at nothing: both are a path that exists and holds no policy anyone read.
     """
-    if not path.is_file():
+    if path.is_symlink() and not path.exists():
+        return (
+            f"`{POLICY_RELATIVE}` is a symlink that points at nothing, so there "
+            "is a policy file in this tree that no allowlist could be read from."
+        )
+    if not path.exists():
         return ""
+    if not path.is_file():
+        return (
+            f"`{POLICY_RELATIVE}` exists and is not a regular file (it is a "
+            f"{'directory' if path.is_dir() else 'special file'}), so no "
+            "allowlist was read from it. A directory where the policy file "
+            "belongs is a gate that could not run, not a repository that "
+            "allowlists nothing."
+        )
     try:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeError) as exc:
@@ -147,6 +261,24 @@ def unreadable_policy(path: Path) -> str:
             f"{type(listed).__name__} rather than a list, so every entry in it "
             "would be read as no entry at all."
         )
+    for index, item in enumerate(listed or []):
+        if not isinstance(item, dict):
+            return (
+                f"`{POLICY_RELATIVE}` exists and entry {index} of its "
+                f"`allowlist` is a {type(item).__name__}, not an object. "
+                "`load()` keeps only the entries it can read as objects, so "
+                "this entry would vanish and the gate would report an "
+                "allowlist nobody wrote."
+            )
+        market = item.get("market")
+        if not isinstance(market, str) or not market.strip():
+            return (
+                f"`{POLICY_RELATIVE}` exists and entry {index} of its "
+                f"`allowlist` carries `market: {market!r}`, which names no "
+                "market. `load()` keeps only the entries that name one, so "
+                "this entry would be read as no entry at all and the gate "
+                "would check an allowlist shorter than the file's."
+            )
     return ""
 
 
@@ -186,7 +318,14 @@ def base_allowlist(root: Path, ref: str) -> tuple[set[str], str]:
 
 
 def report(root: Path, base_ref: str) -> tuple[int, list[str]]:
-    """The verdict and the lines that explain it, in markdown."""
+    """The status, and the lines that EXPLAIN it, in markdown.
+
+    These lines are the finding and never the verdict. The verdict is one
+    line, `verdict_line(status)`, and `main()` is the only caller that writes
+    it — out of the status this function returns, after scrubbing
+    `VERDICT_MARKER` from everything here. A branch cannot print a verdict
+    other than the one it returns, because no branch here prints a verdict.
+    """
     manual = root / "data" / "manual"
     lines = ["## Policy gate: human acceptance receipts", ""]
     if not manual.is_dir():
@@ -217,7 +356,7 @@ def report(root: Path, base_ref: str) -> tuple[int, list[str]]:
     lines.append(f"- Mode in force after `load()`: `{policy.mode}`")
     lines.append(f"- Receipts read from: `data/manual/{SPP.RECEIPTS_DIRNAME}/*.json`")
     lines.append("")
-    lines.append(f"The card's own reading: {policy.summary_line(CBB)}")
+    lines.append(f"The card's own reading: {_plain(policy.summary_line(CBB), limit=400)}")
     lines.append("")
 
     markets = sorted(policy.allowlist)
@@ -239,9 +378,9 @@ def report(root: Path, base_ref: str) -> tuple[int, list[str]]:
         receipt, reason = SPP.verify_receipt(policy.allowlist[market], manual)
         if receipt is None:
             failures[market] = reason
-            lines.append(f"| `{market}` | — | **RED** — lacks {reason} |")
+            lines.append(f"| `{_plain(market)}` | — | **RED** — lacks {_plain(reason)} |")
         else:
-            lines.append(f"| `{market}` | `{Path(receipt).name}` | green |")
+            lines.append(f"| `{_plain(market)}` | `{_plain(Path(receipt).name)}` | green |")
     lines.append("")
 
     added_note = ""
@@ -258,11 +397,11 @@ def report(root: Path, base_ref: str) -> tuple[int, list[str]]:
         added = set(markets) - base_markets
         lines.append("### What this change adds")
         lines.append("")
-        lines.append(f"- {added_note}")
+        lines.append(f"- {_plain(added_note, limit=400)}")
         if added:
             lines.append(
                 "- This change ADDS "
-                + ", ".join(f"`{m}`" for m in sorted(added))
+                + ", ".join(f"`{_plain(m)}`" for m in sorted(added))
                 + " to the allowlist."
             )
         else:
@@ -276,11 +415,11 @@ def report(root: Path, base_ref: str) -> tuple[int, list[str]]:
         )
 
     if failures:
-        lines.append("### Verdict")
+        lines.append("### What each allowlisted market lacked")
         lines.append("")
         for market in sorted(failures):
             note = " — and this change is what adds it" if market in added else ""
-            lines.append(f"- **`{market}`** lacks {failures[market]}{note}.")
+            lines.append(f"- **`{_plain(market)}`** lacks {_plain(failures[market])}{note}.")
         lines.append("")
         lines.append(
             "A market reaches the card only behind a receipt that names the "
@@ -289,31 +428,22 @@ def report(root: Path, base_ref: str) -> tuple[int, list[str]]:
             "`signed_by`, and carries a date."
         )
         lines.append("")
-        lines.append(
-            "What this gate checks about that signature, exactly: that "
-            "`signed_by` is not one of the spellings of Claude it knows to "
-            "refuse — any value whose letters spell `claude`, whatever the case "
-            "and whatever the punctuation between them. That is the whole of it. "
-            "Nothing here is cryptographic and no identity is verified, so this "
-            "gate cannot tell a real signature from a forged one and does not "
-            "claim to: whether the person named actually signed this receipt is "
-            "decided by the human reviewing this pull request, not here."
-        )
+        lines.append(SIGNATURE_NOTE)
         return RED, lines
 
-    lines.append("### Verdict")
+    lines.append("### What was checked")
     lines.append("")
     if markets:
         lines.append(
-            f"- Every one of the {len(markets)} allowlisted market(s) is backed by "
-            "a receipt naming it, citing an evidence record that still hashes to "
+            f"- Each of the {len(markets)} allowlisted market(s) was matched to a "
+            "receipt naming it, citing an evidence record that still hashes to "
             "the cited value, carrying a `signed_by` that is not one of the "
-            "spellings of Claude this gate refuses, and dated. Whether the "
-            "signer is who the receipt says is decided by the human reviewing "
-            "this pull request, not by this check."
+            "spellings of Claude this gate refuses, and dated."
         )
     else:
-        lines.append("- Nothing is allowlisted, so there is nothing to receipt.")
+        lines.append("- Nothing is allowlisted, so there was nothing to receipt.")
+    lines.append("")
+    lines.append(SIGNATURE_NOTE)
     return OK, lines
 
 
@@ -337,7 +467,16 @@ def main(argv: list[str] | None = None) -> int:
 
     root = Path(args.repo_root).resolve() if args.repo_root else Path.cwd().resolve()
     status, lines = report(root, args.base_ref.strip())
-    body = "\n".join(lines).rstrip() + "\n"
+    # The verdict is written HERE, once, out of the status, and nothing else
+    # printed by this run may spell the marker it is written with. A market
+    # name, a receipt note or a `verify_receipt()` reason is text from a file
+    # this gate does not control, and a reader who finds two verdicts in one
+    # summary has been handed the wrong one.
+    explained = [without_a_second_verdict(line) for line in lines]
+    body = (
+        "\n".join([*explained, "", "### Verdict", "", verdict_line(status)]).rstrip()
+        + "\n"
+    )
 
     summary = os.environ.get("GITHUB_STEP_SUMMARY", "")
     if summary:

@@ -104,6 +104,13 @@ LEDGER_WORKFLOW = "ledger-guard.yml"
 #: sentence about something. Held to the gate rules like the other two: it is
 #: not operational, holds no credential, and its tick is a claim.
 POLICY_GATE_WORKFLOW = "policy-gate.yml"
+#: The context the policy gate reports under, spelled the way GitHub spells
+#: it: a check is reported under its JOB's `name:`. Written as a literal
+#: rather than imported, the way `REQUIRED_CHECK` is; `tests/
+#: test_contract_strings.py` is what holds this spelling, CLAUDE.md's contract
+#: table and `staging_provider_policy.POLICY_GATE_CHECK` to each other, and a
+#: rename that misses any of them fails there and here rather than silently.
+POLICY_GATE_CHECK = "Policy Gate"
 
 #: The workflows whose run blocks are executed under stubs and held to the
 #: gate rules. The other six are operational: they hold credentials on
@@ -1459,6 +1466,87 @@ def check_the_required_check_is_pinned(path: Path) -> None:
     assert trigger_config(document, "push") is not False, f"{path.name} does not fire on push"
 
 
+def check_the_policy_gate_runs_unconditionally(path: Path) -> None:
+    """Nothing may stand between a pull request and this gate's verdict.
+
+    GitHub reports a check SKIPPED BY A CONDITION as **Success** — the same
+    fact `check_the_required_check_is_pinned` was written for, and the policy
+    gate had none of that protection. Measured against this rule's absence,
+    every one of these left the whole suite green and the gate never running:
+
+      * `if: false` on the job that reports the check;
+      * `if: ${{ false }}` on the step that runs the receipt checker, which
+        leaves the JOB green and the verdict unwritten — worse than a skipped
+        job, because the check reports Success on its own;
+      * `if: github.event_name == 'workflow_dispatch'` on the job, which is a
+        gate that runs only when somebody asks for it;
+      * `needs: prep` on the job with a `prep` that carries `if: false`, or
+        that simply fails: `needs:` is `if: false` reworded and it is one
+        line.
+
+    So: exactly one job carries the gate's name, and it carries no `if:`, no
+    `needs:`, no `strategy:` (a matrix renames the reported context to
+    `Policy Gate (…)`, which is the pinned name reporting under a name
+    nothing promises), no `uses:` and no `continue-on-error`. No step in it
+    carries an `if:` at all — not even `always()`, which is a condition
+    somebody can edit later. And no OTHER job in the file carries an `if:`,
+    because a conditional neighbour is harmless only until a `needs:` points
+    at it.
+    """
+    if path.name != POLICY_GATE_WORKFLOW:
+        return
+    document = load(path)
+    all_jobs = jobs_of(document)
+    reporting = {
+        job_id: job for job_id, job in all_jobs.items() if job.get("name") == POLICY_GATE_CHECK
+    }
+    assert len(reporting) == 1, (
+        f"{path.name}: {len(reporting)} jobs carry `name: {POLICY_GATE_CHECK}` "
+        f"({sorted(reporting)}). Zero means the check every promise in this "
+        "repository names never reports; two makes the context ambiguous."
+    )
+    job_id, job = next(iter(reporting.items()))
+    assert "if" not in job, (
+        f"{path.name}: the job reporting {POLICY_GATE_CHECK!r} carries "
+        f"`if: {_condition(job)}`. A check skipped by a condition is reported as "
+        "Success, so this one line is a gate that never runs and a green tick."
+    )
+    assert "needs" not in job, (
+        f"{path.name}: the job reporting {POLICY_GATE_CHECK!r} carries "
+        f"`needs: {job.get('needs')!r}`. A job it waits on can be skipped by its "
+        "own `if:` or simply fail, and the gate is then skipped into Success."
+    )
+    assert "strategy" not in job, (
+        f"{path.name}: the job reporting {POLICY_GATE_CHECK!r} runs a matrix; the "
+        f"context becomes `{POLICY_GATE_CHECK} (…)` and the name five sentences "
+        "in this repository promise never reports."
+    )
+    assert "uses" not in job, (
+        f"{path.name}: the job reporting {POLICY_GATE_CHECK!r} delegates to a "
+        "reusable workflow, whose steps and conditions are not in this file"
+    )
+    assert "continue-on-error" not in job, (
+        f"{path.name}: the job reporting {POLICY_GATE_CHECK!r} continues on error, "
+        "so the verdict it computes is not the verdict it reports"
+    )
+    for step in steps_of(job):
+        assert _condition(step) is None, (
+            f"{path.name}: the step {step.get('name')!r} in the gate's job carries "
+            f"`if: {_condition(step)}`. A false condition on the verifying step "
+            "leaves the JOB green with nothing verified, which reports Success "
+            "without even being skipped."
+        )
+    conditional = {
+        other_id: _condition(other)
+        for other_id, other in all_jobs.items()
+        if other_id != job_id and _condition(other) is not None
+    }
+    assert not conditional, (
+        f"{path.name}: {conditional} carry an `if:`. A conditional job beside the "
+        "gate is one `needs:` away from skipping the gate into a green tick."
+    )
+
+
 def check_the_suite_line_carries_only_whitelisted_arguments(path: Path) -> None:
     """The suite line's arguments, against a WHITELIST, and the junit pinned.
 
@@ -1661,6 +1749,7 @@ GATE_CHECKS: dict[str, Callable[[Path], None]] = {
     "no_condition_disables_the_chain": check_no_condition_disables_the_chain,
     "the_byte_compile_step_fails_on_a_missing_directory": check_the_byte_compile_step_fails_on_a_missing_directory,
     "the_required_check_is_pinned": check_the_required_check_is_pinned,
+    "the_policy_gate_runs_unconditionally": check_the_policy_gate_runs_unconditionally,
     "the_suite_line_carries_only_whitelisted_arguments": check_the_suite_line_carries_only_whitelisted_arguments,
     "the_gate_line_is_pinned_as_a_whole_command": check_the_gate_line_is_pinned_as_a_whole_command,
     "the_gate_step_really_runs_the_gate": check_the_gate_step_really_runs_the_gate,
@@ -2521,6 +2610,7 @@ PROOFS = {
     "no_condition_disables_the_chain": "test_a_condition_on_the_chain_is_rejected",
     "the_byte_compile_step_fails_on_a_missing_directory": "test_a_byte_compile_step_that_tolerates_a_missing_directory_is_rejected",
     "the_required_check_is_pinned": "test_a_renamed_or_hollowed_required_check_is_rejected",
+    "the_policy_gate_runs_unconditionally": "test_a_condition_that_skips_the_policy_gate_is_rejected",
     "the_suite_line_carries_only_whitelisted_arguments": "test_an_argument_that_is_not_on_the_whitelist_is_rejected",
     "the_gate_line_is_pinned_as_a_whole_command": "test_a_gate_line_that_only_contains_the_gate_is_rejected",
     "the_gate_step_really_runs_the_gate": "test_a_gate_step_that_never_invokes_the_gate_is_rejected",
@@ -3817,6 +3907,90 @@ def test_the_policy_gate_fires_on_every_pull_request_and_filters_none_of_them() 
     )
 
 
+#: Anchors in the REAL policy gate, mutated on disk copies below. Spelled
+#: here rather than in a fabricated control workflow so that a rewrite of the
+#: gate which moves them fails loudly instead of mutating nothing.
+POLICY_GATE_JOB_ANCHOR = "    runs-on: ubuntu-latest\n    timeout-minutes: 10\n"
+POLICY_GATE_STEP_ANCHOR = (
+    "      - name: Verify every allowlisted market against a receipt a person signed\n"
+)
+POLICY_GATE_JOBS_ANCHOR = "jobs:\n"
+#: A neighbour job that never runs. Harmless on its own until a `needs:`
+#: points at it, which is the next line down.
+SKIPPED_NEIGHBOUR = (
+    "  prep:\n    runs-on: ubuntu-latest\n    if: false\n    steps:\n      - run: 'true'\n"
+)
+
+POLICY_GATE_DEFEATS: dict[str, tuple[tuple[str, str], ...]] = {
+    "if-false-on-the-job": ((POLICY_GATE_JOB_ANCHOR, POLICY_GATE_JOB_ANCHOR + "    if: false\n"),),
+    "if-false-on-the-verifying-step": (
+        (POLICY_GATE_STEP_ANCHOR, POLICY_GATE_STEP_ANCHOR + "        if: ${{ false }}\n"),
+    ),
+    "dispatch-only-on-the-job": (
+        (
+            POLICY_GATE_JOB_ANCHOR,
+            POLICY_GATE_JOB_ANCHOR + "    if: github.event_name == 'workflow_dispatch'\n",
+        ),
+    ),
+    "needs-on-the-job": ((POLICY_GATE_JOB_ANCHOR, POLICY_GATE_JOB_ANCHOR + "    needs: prep\n"),),
+    "a-skipped-neighbour": (
+        (POLICY_GATE_JOBS_ANCHOR, POLICY_GATE_JOBS_ANCHOR + SKIPPED_NEIGHBOUR),
+    ),
+    "needs-a-skipped-neighbour": (
+        (POLICY_GATE_JOBS_ANCHOR, POLICY_GATE_JOBS_ANCHOR + SKIPPED_NEIGHBOUR),
+        (POLICY_GATE_JOB_ANCHOR, POLICY_GATE_JOB_ANCHOR + "    needs: prep\n"),
+    ),
+    "a-matrix-that-renames-the-context": (
+        (
+            POLICY_GATE_JOB_ANCHOR,
+            POLICY_GATE_JOB_ANCHOR + "    strategy:\n      matrix:\n        python: ['3.12']\n",
+        ),
+    ),
+    "always-on-the-verifying-step": (
+        (POLICY_GATE_STEP_ANCHOR, POLICY_GATE_STEP_ANCHOR + "        if: always()\n"),
+    ),
+    "continue-on-error-on-the-job": (
+        (POLICY_GATE_JOB_ANCHOR, POLICY_GATE_JOB_ANCHOR + "    continue-on-error: true\n"),
+    ),
+}
+
+
+def policy_gate_mutated(tmp_path: Path, edits: tuple[tuple[str, str], ...]) -> Path:
+    """The real gate on disk, with `edits` applied, written where the rule
+    will read it under its own name."""
+    text = POLICY_GATE_PATH.read_text(encoding="utf-8")
+    for anchor, replacement in edits:
+        assert anchor in text, f"anchor no longer in {POLICY_GATE_WORKFLOW}: {anchor!r}"
+        text = text.replace(anchor, replacement, 1)
+    return workflow(tmp_path, text, POLICY_GATE_WORKFLOW)
+
+
+@pytest.mark.parametrize("defeat", sorted(POLICY_GATE_DEFEATS), ids=sorted(POLICY_GATE_DEFEATS))
+def test_a_condition_that_skips_the_policy_gate_is_rejected(tmp_path: Path, defeat: str) -> None:
+    """One `if:` line, and the gate never runs while the suite stays green.
+
+    GitHub reports a check skipped by a CONDITION as **Success**. That is the
+    defect `check_the_required_check_is_pinned` exists for on `Tests`, and
+    until this rule the policy gate had none of it: measured, each spelling
+    below passed every other rule in this file. `needs:` is the same defeat
+    with a different keyword — a job that waits on a job which can be skipped
+    is a job that can be skipped — and a matrix is the same verdict reported
+    under a name no promise in this repository makes.
+    """
+    assert_rejects(
+        check_the_policy_gate_runs_unconditionally,
+        policy_gate_mutated(tmp_path, POLICY_GATE_DEFEATS[defeat]),
+    )
+
+
+def test_the_policy_gate_as_written_carries_no_condition(tmp_path: Path) -> None:
+    """The control for the rule above: the gate on disk, copied unedited,
+    passes. Without this the rejections could all be coming from a mutation
+    that broke the YAML rather than from the condition it added."""
+    check_the_policy_gate_runs_unconditionally(policy_gate_mutated(tmp_path, ()))
+    check_the_policy_gate_runs_unconditionally(POLICY_GATE_PATH)
+
+
 def test_the_policy_gate_holds_contents_read_and_no_secret_at_all() -> None:
     """Least privilege, read from the parsed file: `contents: read` at the top,
     no other `permissions:` mapping anywhere, and the secrets context absent
@@ -4143,6 +4317,139 @@ def test_the_policy_gate_stops_on_a_policy_file_it_cannot_be_parsed(tmp_path: Pa
         "summary, which is the defect: a reader cannot tell a gate that "
         "checked nothing from a repository that has nothing to check"
     )
+
+
+#: The verdict a reader takes the answer from, spelled here exactly as
+#: `scripts/check_allowlist_receipts.py` builds it. One line, produced once,
+#: out of the exit status.
+POLICY_GATE_VERDICT_MARKER = "POLICY GATE VERDICT"
+GREEN_VERDICT = (
+    f"**{POLICY_GATE_VERDICT_MARKER}: green — no allowlisted market in this tree "
+    "lacks a receipt this gate accepted.**"
+)
+RED_VERDICT = (
+    f"**{POLICY_GATE_VERDICT_MARKER}: red — an allowlisted market in this tree "
+    "has no receipt this gate accepted.**"
+)
+BROKEN_VERDICT = (
+    f"**{POLICY_GATE_VERDICT_MARKER}: broken — this gate did not run and checked "
+    "no allowlist at all, which is not evidence that any market is receipted.**"
+)
+
+
+#: A policy file that PARSES and whose allowlist entries cannot be read. Each
+#: of these is a broken gate wearing valid JSON: `load()` and the checker's
+#: own `_markets_in()` keep only the entries that are objects naming a
+#: market, so each one quietly becomes an allowlist of nothing and took the
+#: green "nothing to check" branch — the same defect as a truncated file, one
+#: layer in. `None` means "do not write a file"; the case builds the path
+#: itself.
+UNREADABLE_ALLOWLISTS: dict[str, str | None] = {
+    "an-allowlist-of-bare-strings": (
+        '{"provider": "the_odds_api", "mode": "reviewed", "allowlist": ["spread"]}'
+    ),
+    "an-entry-with-no-market-key": (
+        '{"provider": "the_odds_api", "mode": "reviewed", '
+        '"allowlist": [{"receipt_id": "r-spread"}]}'
+    ),
+    "an-entry-whose-market-is-not-a-string": (
+        '{"provider": "the_odds_api", "mode": "reviewed", '
+        '"allowlist": [{"market": 7, "receipt_id": "r-7"}]}'
+    ),
+    "an-entry-whose-market-is-blank": (
+        '{"provider": "the_odds_api", "mode": "reviewed", '
+        '"allowlist": [{"market": "   ", "receipt_id": "r-blank"}]}'
+    ),
+    "a-directory-where-the-policy-file-belongs": None,
+    "a-symlink-pointing-at-nothing": None,
+}
+
+
+@pytest.mark.parametrize("case", sorted(UNREADABLE_ALLOWLISTS), ids=sorted(UNREADABLE_ALLOWLISTS))
+def test_the_policy_gate_stops_on_an_allowlist_it_cannot_read(tmp_path: Path, case: str) -> None:
+    """Parsing is not reading. Each of these exits 2, not 0.
+
+    The previous fix caught the file that is not JSON and stopped there. A
+    policy file that parses perfectly and whose ENTRIES cannot be read reaches
+    the same place by a different road: every one of these made `load()`
+    produce an empty allowlist, so the gate printed the sentence a repository
+    with nothing allowlisted prints and exited 0 over a policy file whose
+    allowlist nobody read. A directory where the file belongs, and a symlink
+    into nothing, are the same thing again — `is_file()` was False for both
+    and both read as "no policy file at all".
+    """
+    root = tmp_path / "case"
+    root.mkdir()
+    tree = policy_checkout(root)
+    written = UNREADABLE_ALLOWLISTS[case]
+    if written is not None:
+        (tree / POLICY_FILE_RELATIVE).write_text(written + "\n", encoding="utf-8")
+    elif case == "a-directory-where-the-policy-file-belongs":
+        (tree / POLICY_FILE_RELATIVE).mkdir()
+    else:
+        (tree / POLICY_FILE_RELATIVE).symlink_to(tree / "no" / "such" / "policy.json")
+
+    broke, summary = run_policy_gate_for_real(tree)
+    assert broke.returncode == COULD_NOT_RUN, (
+        f"{case} exited {broke.returncode}, not {COULD_NOT_RUN}. The gate read no "
+        f"allowlist and reported the status of a run that had:\n{broke.stdout}"
+    )
+    assert "Broken gate" in summary, summary
+    assert "No market is allowlisted" not in summary, (
+        f"{case} printed the sentence a repository with no allowlist prints. "
+        f"An allowlist nobody could read is not an empty one:\n{summary}"
+    )
+    assert BROKEN_VERDICT in summary, summary
+    assert GREEN_VERDICT not in summary and RED_VERDICT not in summary, summary
+
+
+def test_the_policy_gate_summary_carries_one_verdict_and_it_is_the_runs_own(
+    tmp_path: Path,
+) -> None:
+    """A red run may not contain the sentence a green run prints.
+
+    The summary is the artefact a reviewer reads, and until this rule its
+    verdict was prose written on whichever branch produced it — while the
+    market names, receipt filenames and `verify_receipt()` reasons printed
+    beside it come out of files the gate does not control. So a market NAMED
+    with the green verdict put that sentence into the summary of a failing
+    run, and a reader scrolling a red gate found a green verdict inside it.
+
+    Now there is one verdict line, built from the exit status after the
+    explanation lines have had every verdict word taken out of them. This
+    plants the green verdict as a market name, and as a market name carrying
+    a newline (which would otherwise write a line of markdown of its own),
+    and asserts the summary of the red run it causes contains the green
+    sentence nowhere and exactly one verdict line.
+    """
+    red_root = tmp_path / "planted"
+    red_root.mkdir()
+    red = policy_checkout(red_root)
+    write_policy(red, GREEN_VERDICT, f"spread\n{GREEN_VERDICT}", "| green |")
+    refused, red_summary = run_policy_gate_for_real(red)
+    assert refused.returncode != 0, refused.stdout
+    assert GREEN_VERDICT not in red_summary, (
+        "a market named with the green verdict put it into the summary of a red "
+        f"run:\n{red_summary}"
+    )
+    assert RED_VERDICT in red_summary, red_summary
+    planted = [line for line in red_summary.splitlines() if POLICY_GATE_VERDICT_MARKER in line]
+    assert planted == [RED_VERDICT], (
+        f"the red summary carries {len(planted)} verdict line(s), and a reader "
+        f"handed two verdicts has been handed the wrong one: {planted}"
+    )
+
+    green_root = tmp_path / "green"
+    green_root.mkdir()
+    green = policy_checkout(green_root)
+    write_policy(green, "spread")
+    write_receipt(green, "spread")
+    accepted, green_summary = run_policy_gate_for_real(green)
+    assert accepted.returncode == 0, f"{accepted.stdout}\n{accepted.stderr}"
+    assert [
+        line for line in green_summary.splitlines() if POLICY_GATE_VERDICT_MARKER in line
+    ] == [GREEN_VERDICT], green_summary
+    assert RED_VERDICT not in green_summary, green_summary
 
 
 def test_the_policy_gate_says_what_it_checks_about_a_signature_and_claims_no_more(

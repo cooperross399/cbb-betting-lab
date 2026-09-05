@@ -27,12 +27,34 @@
 #      An added market with no receipt in this same tree is red by (1); this
 #      is what makes the summary say which market the change was trying to add.
 #
-# EXIT 2 IS NOT A PASS. A policy file that exists and cannot be parsed — a
-# corrupt or truncated one — exits 2 and says the gate did not run. `load()`
-# answers such a file with an empty policy, which is the right fail-closed
-# answer for the CARD and the wrong report from a gate, because it is also
-# what a repository that allowlists nothing looks like. An absent policy file,
-# and one that parses and allowlists nothing, stay the ordinary green case.
+# EXIT 2 IS NOT A PASS. A policy file that exists and cannot be READ — a
+# corrupt or truncated one, one whose allowlist is not a list, one whose
+# entries are bare strings or name no market, a directory where the file
+# belongs, a symlink into nothing — exits 2 and says the gate did not run.
+# `load()` answers every one of those with an empty policy, which is the right
+# fail-closed answer for the CARD and the wrong report from a gate, because it
+# is also what a repository that allowlists nothing looks like. An absent
+# policy file, and one that parses and allowlists nothing, stay the ordinary
+# green case.
+#
+# ONE VERDICT, FROM THE EXIT STATUS. The job summary ends with exactly one
+# `POLICY GATE VERDICT:` line, built out of the status the checker is about to
+# return, and every other line has the verdict wording taken out of it before
+# printing. Market names, receipt notes and the reasons `verify_receipt()`
+# gives are text out of files this gate does not control: without that, a
+# market NAMED with the sentence a green run prints put a green verdict into
+# the summary of a red one, and a reviewer scrolling the summary read it.
+#
+# NO CONDITION STANDS BETWEEN A PULL REQUEST AND THIS VERDICT. The job carries
+# no `if:`, no `needs:`, no `strategy:` and no `continue-on-error`; no step in
+# it carries an `if:` at all; and no other job in this file carries one either.
+# GitHub reports a check SKIPPED BY A CONDITION as **Success**, so `if: false`
+# on the job, `if: ${{ false }}` on the verifying step, an event test that
+# leaves it running only on demand, or a `needs:` pointing at a neighbour that
+# skips, would each leave this check green having verified nothing. That is
+# the same defect `tests/test_workflows.py` pins on the required `Tests` job,
+# and `check_the_policy_gate_runs_unconditionally` now pins it here, with a
+# case for every spelling above.
 #
 # WHAT THE SIGNATURE CHECK IS, EXACTLY. `signed_by` is a string in a JSON
 # file. Nothing here is cryptographic and no identity is verified: this gate

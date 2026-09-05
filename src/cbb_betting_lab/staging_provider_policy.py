@@ -33,8 +33,19 @@ a time, including the entries a `manual_only` file leaves :func:`load` itself
 skipping. It names, in the job summary, every market it checked, the receipt
 behind it or what that market lacked, and which markets the change ADDS. It is
 red until a receipt stands behind every allowlisted market, and it exits `2`
-rather than `0` on a policy file that exists and cannot be parsed, because
-"nothing to check" and "I could not check" must not share a branch.
+rather than `0` on a policy file that exists and cannot be read, because
+"nothing to check" and "I could not check" must not share a branch. That
+covers more than a file that is not JSON: an allowlist that is not a list, an
+entry that is a bare string or names no market, a directory where the file
+belongs and a symlink into nothing each turn into an allowlist of nothing in
+:func:`load`, and a gate reporting on an allowlist nobody read has checked
+nothing. The job summary ends with one verdict line built from the exit
+status, with the verdict wording removed from every other line first, so a
+red run cannot contain the sentence a green run prints — market names and
+receipt notes are text from files the gate does not control. No condition
+stands between a pull request and that verdict: the job carries no `if:`, no
+`needs:` and no `strategy:`, because GitHub reports a check skipped by a
+condition as a success.
 
 What it checks about the signature is what :func:`_signer_is_forbidden`
 checks and nothing more: that `signed_by` is not one of the spellings of

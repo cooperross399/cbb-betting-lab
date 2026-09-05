@@ -21,9 +21,20 @@ market lacked, and the markets the change adds. It is red while any allowlisted
 market lacks a receipt, while a cited evidence record is missing or no longer
 hashes to the value the receipt was signed against, or while a receipt is
 signed by Claude in any spelling. A policy file that exists and cannot be
-parsed exits 2 and reports a gate that did not run, which is not the same
+read exits 2 and reports a gate that did not run, which is not the same
 result as a repository that allowlists nothing and no longer prints the same
-sentence as one. What the gate checks about a signature is exactly this: that
+sentence as one. "Cannot be read" is wider than "is not JSON": an allowlist
+that is not a list, an entry that is a bare string, an entry naming no
+market, a directory where the file belongs and a symlink into nothing are all
+exit 2, because `load()` turns every one of them into an allowlist of nothing
+and a gate that reports on an allowlist nobody read has checked nothing. The
+summary ends with one `POLICY GATE VERDICT:` line, built from the exit status,
+and the verdict wording is taken out of every other line before printing:
+market names and receipt notes are text from files the gate does not control,
+and a run that failed may not contain the sentence a run that passed prints.
+No condition stands between a pull request and that verdict — the job carries
+no `if:`, no `needs:` and no `strategy:`, and a check skipped by a condition
+is reported by GitHub as a success. What the gate checks about a signature is exactly this: that
 `signed_by` is not one of the spellings of Claude it refuses. Nothing here is
 cryptographic and no identity is verified, so whether the person named
 actually signed is decided by whoever reviews the pull request. Until
