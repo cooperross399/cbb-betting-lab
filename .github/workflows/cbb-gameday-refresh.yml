@@ -40,6 +40,14 @@ name: CBB Gameday Refresh
 # recomputes that table from the constant and fails if a slot stops preceding
 # its block.
 #
+# THOSE ARE EST FIGURES. A cron is fixed in UTC, so when DST begins on
+# 2027-03-14 and the offset moves from UTC-5 to UTC-4 every landing reads an
+# hour LATER on an Eastern clock (10:00 UTC is 05:00 EST on the 13th and 06:00
+# EDT on the 14th). From that date the morning backup's worst case is 11:18 ET,
+# 18 minutes after the first tip; the morning primary (10:18 ET) and both
+# evening triggers still hold. `schedule_contract` records that gap and the
+# same test pins the sign on those two instants. The crons were not moved.
+#
 # THREE GAMES A SEASON TIP BEFORE THE MORNING BACKUP'S WORST-CASE LANDING —
 # 0.05% of the slate, and one of them is the 2026-27 opener in Rome at 09:30 ET
 # on 2026-11-01. That is a coverage gap, recorded rather than chased: moving
@@ -242,16 +250,57 @@ jobs:
         # to parse — and that is exactly how the football lab's first rehearsal
         # died, on the branch state its first real run would have had. Defect
         # 16 in `docs/ported_defects.md`.
+        #
+        # "THE BRANCH DOES NOT EXIST" AND "THE FETCH FAILED" ARE DIFFERENT
+        # FACTS. This step used to read every fetch failure as the first: a
+        # transient network or token fault printed "No card-feed branch",
+        # exited 0, and the run carried on holding NO ledger and NO snapshots.
+        # Settlement then wrote a fresh ledger, the card froze the day into a
+        # lone snapshot, and the publish step — whose own fetch succeeded a
+        # minute later — committed that tree on top of the tip as an ordinary
+        # fast-forward. A season of frozen opinions replaced by one day's, on a
+        # green run. So the ref is asked for BY NAME first: `git ls-remote
+        # --exit-code` exits 2 when the ref is absent (the legitimate first
+        # run) and anything else when the remote could not be asked, and only
+        # the 2 may mean "no branch yet". Any other status fails this step, so
+        # the card never runs without its history, and the publish step reads
+        # this step's outcome and refuses. `tests/test_workflows.py` executes
+        # this block under stubs with git failing, and for real against a
+        # scratch remote in all three states.
+        id: restore
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
           mkdir -p data/processed data/archive/priced_snapshots
           REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}"
-          if ! git fetch --depth=1 "$REMOTE" +refs/heads/card-feed:refs/card-feed-tip 2>/dev/null; then
-            echo "::warning::No card-feed branch. If this is not the first run, the season's ledger is gone."
-            exit 0
-          fi
+          LISTED=0
+          git ls-remote --exit-code "$REMOTE" refs/heads/card-feed >/dev/null 2>&1 || LISTED=$?
+          case "$LISTED" in
+            0) ;;
+            2)
+              echo "feed=absent" >> "$GITHUB_OUTPUT"
+              echo "::warning::The remote has no card-feed branch (git ls-remote exit 2). If this is not the first run, the season's ledger is gone."
+              exit 0
+              ;;
+            *)
+              echo "feed=unreachable" >> "$GITHUB_OUTPUT"
+              echo "::error::Could not ask the remote whether card-feed exists (git ls-remote exit $LISTED). That is a fetch failure, not an absent branch: this run holds no history and will publish nothing."
+              {
+                echo "## Not published"
+                echo
+                echo "The card-feed branch could not be read (\`git ls-remote\` exit $LISTED). A run that cannot read the feed does not write it: a tree built without the season's ledger and snapshots would replace them. No opinion was frozen and nothing was pushed; the feed's tip stands."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+              ;;
+          esac
+          git fetch --depth=1 "$REMOTE" +refs/heads/card-feed:refs/card-feed-tip 2>/dev/null || {
+            echo "feed=unreachable" >> "$GITHUB_OUTPUT"
+            echo "::error::card-feed exists but could not be fetched. This run holds no history and will publish nothing."
+            printf '## Not published\n\nThe card-feed branch exists but could not be fetched. No opinion was frozen and nothing was pushed; the tip stands.\n' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          }
+          echo "feed=restored" >> "$GITHUB_OUTPUT"
           TMP=$(mktemp)
           if git show refs/card-feed-tip:forward_evidence.csv > "$TMP" 2>/dev/null && [ -s "$TMP" ]; then
             mv "$TMP" data/processed/cbb_forward_evidence.csv
@@ -319,7 +368,16 @@ jobs:
           PYTHONPATH: src
           CBB_ODDS_API_KEY: ${{ secrets.CBB_ODDS_API_KEY }}
         run: |
-          set -eu
+          # `pipefail`, because the card is piped through `tee` and without it
+          # this step's status was tee's: a card that exited 1 read green, the
+          # health step (which reads THIS step's outcome) called the run clean,
+          # and the feed was stamped clean over whatever the renderer had left
+          # on disk. With it a failing card fails the step, the `if: failure()`
+          # step below writes the fault card, health reads degraded and the
+          # publish step stamps the feed degraded. That path is deliberate; a
+          # swallowed exit code is not. `tests/test_workflows.py` executes this
+          # block under stubs with the card command failing.
+          set -euo pipefail
           # The credential is read from the environment and never passed as an
           # argument: a process list is world-readable on a shared machine and
           # a CI log echoes commands. Nothing below prints it, compares it, or
@@ -382,6 +440,9 @@ jobs:
           fi
           if [ "${{ steps.card.outcome }}" != "success" ]; then
             echo "The board fetch or the card render failed. No price was invented and no opinion was frozen." >> run_degraded.txt
+          fi
+          if [ "${{ steps.restore.outcome }}" != "success" ]; then
+            echo "The card-feed branch was not restored (restore step outcome: ${{ steps.restore.outcome }}), so this run held no history and published nothing." >> run_degraded.txt
           fi
           if [ -s run_degraded.txt ]; then
             echo "degraded=true" >> "$GITHUB_OUTPUT"
@@ -446,10 +507,13 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish to the card-feed branch
-        # EVERY RUN PUBLISHES, including a broken one, which is why this is
-        # `if: always()`. The reader is told that "no commit for today" means
-        # the workflow did not finish, and that only stays true if a finished
-        # run always leaves one.
+        # EVERY RUN THAT READ THE FEED PUBLISHES, including a broken one, which
+        # is why this is `if: always()`. The reader is told that "no commit for
+        # today" means the workflow did not finish, and that only stays true if
+        # a finished run always leaves one. The one exception is the first
+        # check inside: a run whose restore step did not succeed did not read
+        # the feed, holds nothing to publish on top of, and refuses — and that
+        # run IS one that did not finish, so the reader's rule still holds.
         #
         # NEVER ON A REHEARSAL. Publishing a rehearsal would stamp the feed
         # with the rehearsed day and slot, and the already-published guard
@@ -463,6 +527,7 @@ jobs:
         #
         # Every push parents on the tip that was just fetched, so it is always
         # a fast-forward and never a force.
+        id: publish
         if: always() && inputs.rehearsal_slate_date == ''
         env:
           GH_TOKEN: ${{ github.token }}
@@ -476,6 +541,29 @@ jobs:
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           SLATE="${{ inputs.rehearsal_slate_date || '' }}"
           [ -n "$SLATE" ] || SLATE="$DAY"
+
+          # A RUN THAT COULD NOT READ THE FEED DOES NOT WRITE IT. The restore
+          # step fails when the remote could not be asked for card-feed (as
+          # opposed to answering that it does not exist yet), and a run that
+          # died before that step holds nothing either. The tree below is
+          # built from local files, so publishing here would publish the
+          # absence of evidence with a fault card on top. Refused, before any
+          # git call, and the summary says why. The deliberate fault path —
+          # restore succeeded, the card failed — still publishes, stamped
+          # degraded. `tests/test_workflows.py` executes both paths.
+          if [ "${{ steps.restore.outcome }}" != "success" ]; then
+            echo "::error::The card-feed branch was not restored this run (restore step outcome: ${{ steps.restore.outcome }}). Nothing was published; the feed's tip stands, and 'no commit for today' means exactly this."
+            printf '## Not published\n\nThe restore step did not succeed (outcome: %s), so this run holds no history to publish on top of. Nothing was pushed to card-feed.\n' "${{ steps.restore.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          # A FAILED CARD NEVER PUBLISHES AS CLEAN. The health step derives
+          # `degraded` from the card step's outcome; this reads the same fact
+          # again at the point of writing, so no later edit to the health step
+          # can turn a failed card into a clean feed.
+          if [ "${{ steps.card.outcome }}" != "success" ] && [ "$DEGRADED" = "false" ]; then
+            echo "::error::The card step did not succeed (outcome: ${{ steps.card.outcome }}) but the health step reported a clean run. Refusing to publish a failed card as clean."
+            exit 1
+          fi
 
           git fetch --depth=1 "$REMOTE" +refs/heads/card-feed:refs/card-feed-tip 2>/dev/null || true
           PARENT=""

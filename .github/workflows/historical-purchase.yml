@@ -71,7 +71,16 @@ jobs:
   buy:
     name: Historical Purchase
     runs-on: ubuntu-latest
-    timeout-minutes: 1440
+    # GITHUB CAPS A JOB AT 360 MINUTES and applies the cap silently to any
+    # larger value, so the 1440 this line used to declare was never honoured:
+    # every run of this workflow was going to be killed at six hours whatever
+    # the YAML said. The purchase is budgeted in credits, not minutes — the cap
+    # is checked against the measured running total before every request and
+    # every response is cached raw as it arrives — so a wave that outlives the
+    # job is finished by dispatching it again, which resumes from the cache and
+    # re-buys nothing. `docs/credit_cost.md` says the same, and
+    # `tests/test_workflows.py` refuses a timeout above the cap in any job.
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
