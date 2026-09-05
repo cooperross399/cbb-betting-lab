@@ -73,13 +73,27 @@ Both refusals above read a signature, and no signature check can see a pricer
 that never declares the frame — one that closes over it, hangs it off an
 attribute, or opens the CSV itself. :func:`assert_priced_from_the_past` prices
 one day twice, the second time with every row dated on or after that day
-removed from the frames, from the objects the pricer itself holds, and from the
-files under the directory it runs in, and requires the two answers to be
-identical cell for cell. A pricer that read only the past cannot notice; a
-pricer that reached around the seam answers differently the moment the future
-is taken out from underneath it, whatever its signature said. It is the only
-guard here whose evidence is the output rather than a declaration, and its
-docstring says plainly what remains invisible to it.
+removed from the frames, from the **named places** the pricer might be holding
+a frame in, and from the dated CSVs a **relative** path reaches under the
+directory it runs in, and requires the two answers to be identical cell for
+cell. A pricer that read only the past cannot notice; a pricer that reached
+around the seam answers differently the moment the future is taken out from
+underneath it, whatever its signature said. It is the only guard here whose
+evidence is the output rather than a declaration.
+
+**It is a list of places, not a sweep of the object graph, and the difference
+is written down rather than glossed.** A frame one container, one attribute or
+one closure past those places — `box[0]`, `self.tables["players"]`, an
+`lru_cache` — is not reached; nor is a `Series` carved out of a frame, a file
+opened by an absolute path, or a dated table that is not a CSV. Walking
+arbitrary objects to find frames has no bound, and a guard that tries to be
+total and is not is worse than one that says what it covers, so
+`test_the_gaps_this_output_guard_still_has_are_the_ones_written_down` asserts
+every one of those still gets through — the shape
+`tests/test_no_secrets_committed.py` uses for the same problem — and
+`test_a_frame_held_in_each_place_the_swap_reaches_is_caught_there` holds one
+pricer against each place that IS covered, so no arm of the swap can be dropped
+in silence.
 
 ## One wager is one bet, at the best price
 
@@ -739,7 +753,7 @@ def _refuse_undeclared_frames(price_day: Callable, supplied: Iterable[str]) -> N
     closure case has no parameter to inspect, and a callable with no signature
     is waved through here for want of anything to read.
     :func:`assert_priced_from_the_past` is the check that reads the output
-    instead, and it is the one that covers those.
+    instead. It reaches most of those and not all of them, and it lists which.
     """
     offered = set(supplied)
     try:
@@ -818,8 +832,9 @@ def walk_forward(
     That stamp is what :func:`assert_walk_forward` checks — a report cannot
     claim to be walk-forward, it has to carry the evidence. Neither the stamp
     nor the refusal can see a pricer that reads a table it never declared;
-    :func:`assert_priced_from_the_past` is the check for that one, and it reads
-    the output rather than the signature.
+    :func:`assert_priced_from_the_past` is the check that goes after that one,
+    reading the output rather than the signature — as far as the places its own
+    docstring lists, which is not everywhere.
     """
     require_columns(prices, (day_column, "event_id"), "the price frame")
     if not prices.empty:
@@ -951,16 +966,57 @@ def _past_only(frame, day: str, *, day_columns: Sequence[str]):
     return None
 
 
+def _slot_names(klass) -> tuple[str, ...]:
+    """The `__slots__` `klass` declares, as a tuple. `()` when it declares none."""
+    declared = klass.__dict__.get("__slots__", ())
+    if isinstance(declared, str):
+        return (declared,)
+    try:
+        return tuple(str(name) for name in declared)
+    except TypeError:
+        return ()
+
+
 def _swap_to_the_past(
     target, *, day: str, day_columns: Sequence[str], seen: set[int] | None = None
 ) -> list[Callable[[], None]]:
-    """Rebind every dated frame `target` can reach to its past-only cut.
+    """Rebind the dated frames `target` holds **in the places listed below**.
 
     This is what reaches the leaks a signature cannot: a pricer that closed over
     a player frame, hung one off `self`, bound one into a `functools.partial`,
     or reads one out of a module-level cache is holding a real object, and this
     replaces that object with the same table minus the rows dated on or after
     `day`. It reads no declaration — a closure cell has no name in a signature.
+
+    **The places, by name, because this is not "everywhere".** A frame is
+    rebound when it is the whole value of one of these:
+
+    * a cell of ``target.__closure__``;
+    * a value in ``target.__globals__``, in ``target.__kwdefaults__``, or — for
+      anything that is not a module — in ``target.__dict__``;
+    * a keyword bound into a :class:`functools.partial`;
+    * an entry of ``target.__defaults__``;
+    * an attribute in the ``__dict__`` of any class on ``type(target).__mro__``
+      short of `object`, an attribute in a ``__slots__`` any of those classes
+      declares, and a value in the ``__globals__`` of the ``__call__`` that
+      class defines — the places a pricer written as a callable object keeps
+      what a function pricer keeps in its own ``__dict__`` and globals;
+
+    and then that same list again on ``target.__wrapped__``, on
+    ``target.__self__`` and on a partial's ``func``.
+
+    **One level of indirection is one level too far.** The value has to *be*
+    the frame. A frame inside a list, a dict or another object — ``box[0]``,
+    ``self.tables["players"]``, ``self.bundle.frame`` — is not rebound, because
+    nothing here descends into a container or into a plain attribute holder.
+    Neither is a frame reached through a second closure (a pricer closing over
+    a helper that closes over the frame), nor one held in a C-level cache such
+    as :func:`functools.lru_cache`'s, nor a ``Series`` or numpy array carved
+    out of a frame — :func:`_past_only` cuts DataFrames and returns `None` for
+    everything else, and `None` means "left exactly as it was". Every one of
+    those leaks and passes :func:`assert_priced_from_the_past`;
+    `test_the_gaps_this_output_guard_still_has_are_the_ones_written_down` holds
+    each of them open, so this list cannot drift away from the code.
 
     Returns the callables that put every original back, to be run in reverse.
     Nothing is swapped where the cut removes no rows, so a pricer holding only
@@ -994,7 +1050,6 @@ def _swap_to_the_past(
     namespaces = [
         getattr(target, "__globals__", None),
         getattr(target, "__kwdefaults__", None),
-        getattr(getattr(target, "__self__", None), "__dict__", None),
     ]
     if isinstance(target, functools.partial):
         namespaces.append(target.keywords)
@@ -1022,6 +1077,33 @@ def _swap_to_the_past(
                     functools.partial(setattr, target, "__defaults__", defaults)
                 )
 
+    # A pricer written as a callable object keeps in its class body and in its
+    # module what a function pricer keeps in its own `__dict__` and
+    # `__globals__`, and an instance reaches neither: `instance.__dict__` holds
+    # no class attribute and only functions carry `__globals__`. Both are
+    # named places on the class, so both are walked. A frame one level past
+    # either of them — in a container, or on a nested object — still is not.
+    if not inspect.isroutine(target) and not inspect.ismodule(target):
+        for klass in getattr(type(target), "__mro__", ())[:-1]:  # `object` holds none
+            for name, value in list(vars(klass).items()):
+                maybe(value, functools.partial(setattr, klass, name))
+            # `__slots__` is the same place as `__dict__` — an attribute whose
+            # value IS the frame — reached differently: a slotted instance has
+            # no `__dict__` at all, so the arm above would find nothing.
+            for name in _slot_names(klass):
+                maybe(
+                    getattr(target, name, None),
+                    functools.partial(setattr, target, name),
+                )
+            call_globals = getattr(vars(klass).get("__call__"), "__globals__", None)
+            if isinstance(call_globals, dict):
+                for name, value in list(call_globals.items()):
+                    maybe(value, functools.partial(call_globals.__setitem__, name))
+
+    # `__self__` is recursed into rather than read directly: the recursion
+    # walks the instance's own `__dict__` on the arm above, so a second
+    # `__self__.__dict__` entry in `namespaces` was a duplicate no mutation of
+    # either half could ever be caught by.
     onwards = [getattr(target, "__wrapped__", None), getattr(target, "__self__", None)]
     if isinstance(target, functools.partial):
         onwards.append(target.func)
@@ -1162,14 +1244,17 @@ def assert_priced_from_the_past(
     row dated on or after `day` removed from three places at once:
 
     * **from every frame in `frames`**, which is what the pricer is handed;
-    * **from every dated frame the pricer itself holds** — a closure cell, an
-      attribute on `self`, a keyword bound into a `functools.partial`, a
-      DataFrame sitting in its module's globals as a cache (see
-      :func:`_swap_to_the_past`);
+    * **from the dated frames the pricer holds in the places**
+      :func:`_swap_to_the_past` **names** — a closure cell, an attribute on
+      `self` or on its class, a keyword bound into a `functools.partial`, a
+      DataFrame sitting in its module's globals as a cache. That is a list of
+      places, not "everywhere": a frame one container, one attribute or one
+      closure further away is not rebound, and that docstring says which;
     * **from every dated CSV under `data_dir`**, by copying that tree with
       those rows stripped and running the second price with the copy as the
-      working directory, so a pricer that opens a file by a relative path opens
-      a past-only one.
+      working directory, so a pricer that opens a file by a **relative** path
+      opens a past-only one. A CSV with no column from `day_columns` is copied
+      through whole, and so is every file that is not a CSV.
 
     Then the two results must be identical cell for cell, exactly, with no
     tolerance.
@@ -1185,15 +1270,35 @@ def assert_priced_from_the_past(
     A pricer that reached around the seam answers differently the moment the
     future is taken out from underneath it, whatever its signature says.
 
-    **What it still cannot catch.** A leak that does not change the answer is
-    invisible here — a pricer that reads tonight's box score and discards it, or
-    one whose use of it cancels out, produces identical output twice and passes.
-    It is invisible to the stamp and to the signature refusals too, and to any
-    other check that is not a reading of the code, because the output is the
-    only evidence this has and the output is the same. So are a pricer that
-    reads an absolute path outside `data_dir`, one that fetches over a network,
-    and one whose future rows were folded at import time into something that is
-    no longer a frame — fitted coefficients, say — and so is not swapped back.
+    **What it still cannot catch**, listed because a guard trusted past what it
+    checks is worse than no guard. Every one of these is a real leak that
+    passes, and
+    `test_the_gaps_this_output_guard_still_has_are_the_ones_written_down`
+    asserts each of them open so this list cannot quietly go stale:
+
+    * **A leak that does not change the answer.** A pricer that reads tonight's
+      box score and discards it, or whose use of it cancels out, returns the
+      same frame twice. It is invisible to the stamp and to both signature
+      refusals as well, and to any check that is not a reading of the code,
+      because the output is the only evidence this has and the output is the
+      same.
+    * **A frame one level of indirection away** from the places
+      :func:`_swap_to_the_past` walks: inside a list or a dict, behind
+      `self.bundle.frame`, two closures deep, or in a `functools.lru_cache`.
+    * **A `Series` or numpy array carved out of a future frame.** The cut is a
+      DataFrame operation; :func:`_past_only` returns `None` for anything else
+      and `None` means "left alone".
+    * **A file opened by an ABSOLUTE path** — whether or not it points inside
+      `data_dir`. The second price runs in a copy of the tree and only a
+      relative path finds the copy. (This paragraph used to say "outside
+      `data_dir`", which drew the line in the wrong place.)
+    * **A dated file the tree copy does not rewrite**: a CSV whose day column
+      is not in `day_columns`, and anything that is not a CSV at all — a
+      parquet included, which is what this lab's own tables are.
+    * **A network fetch**, and **future rows folded at import time into
+      something that is no longer a frame** — fitted coefficients, say — which
+      no swap puts back.
+
     This narrows the seam; it does not seal it.
 
     **`frames` should be what the pricer is handed under** :func:`walk_forward`

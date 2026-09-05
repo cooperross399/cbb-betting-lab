@@ -32,6 +32,8 @@ exercises the resolution path rather than reaching around it.
 from __future__ import annotations
 
 import contextlib
+import functools
+import inspect
 import io
 import json
 import re
@@ -1448,6 +1450,508 @@ def test_the_output_guard_cannot_see_a_leak_that_does_not_change_the_answer(tmp_
         frames={"history": _history_through()},
         prices=_one_days_prices(),
         data_dir=tmp_path,
+    )
+
+
+# --------------------------------------------------------------------------
+# Every place the swap reaches, and every place it does not
+#
+# `_swap_to_the_past` rebinds the frames a pricer holds in a LIST of named
+# places, and a list like that needs pinning from both ends.
+#
+# Each place needs a test, or the arm that reaches it can be deleted and the
+# suite stays green. Measured on the ten arms this file shipped with: nine of
+# them survived being dropped one at a time, and only the `__closure__` arm was
+# held by anything. An arm nothing holds is an arm a later change removes
+# without knowing it removed a check.
+#
+# And each place the list does NOT reach has to be written down as a passing
+# assertion, or the docstring drifts into claiming more than the code does —
+# which is exactly what it did: it said "every dated frame `target` can reach",
+# and a frame one container, one attribute or one closure further away was
+# never touched.
+# --------------------------------------------------------------------------
+
+
+#: Read by the `__globals__` case and by nothing else. It sits at module level
+#: on purpose: this module's globals ARE the `__globals__` of a pricer defined
+#: in it, which is the namespace that arm walks and the only way to exercise it.
+A_PLAYER_FRAME_IN_THIS_MODULES_GLOBALS = pd.DataFrame(
+    [{"slate_date": day, "points": 10} for day in DAYS]
+)
+
+#: What a pricer returns when it has read all three days of that frame, and
+#: what it returns when it has read only the one day before `DAYS[1]`. Every
+#: case below prices `0.4 + 0.001 × the points it managed to see`, so these two
+#: numbers are how a test tells a leak from an honest answer without trusting
+#: the guard it is testing.
+FROM_ALL_THREE_DAYS = 0.4 + 0.001 * 30.0
+FROM_THE_ONE_ALLOWED_DAY = 0.4 + 0.001 * 10.0
+
+
+def _tonights_players() -> pd.DataFrame:
+    """A player table carrying every day, tonight's included."""
+    return pd.DataFrame([{"slate_date": day, "points": 10} for day in DAYS])
+
+
+def _priced_from(points) -> float:
+    return 0.4 + 0.001 * float(points)
+
+
+def _three_declared_arguments() -> inspect.Signature:
+    """`(*, day, history, prices)`, set as `__signature__` on some cases below.
+
+    This is not a trick played on the frame rule; it is the shape the frame
+    rule cannot see, and the reason the output guard exists. A pricer that
+    declares three arguments and keeps a fourth frame as a default has told
+    `walk_forward` nothing about it — `inspect.signature` reports what the
+    object says it takes — so the refusal has nothing to refuse and only the
+    answer gives the frame away.
+    """
+    return inspect.Signature(
+        [
+            inspect.Parameter(name, inspect.Parameter.KEYWORD_ONLY)
+            for name in ("day", "history", "prices")
+        ]
+    )
+
+
+def _in_a_closure():
+    players = _tonights_players()
+
+    def pricer(*, day, history, prices):
+        frame = prices.copy()
+        frame["model_probability"] = _priced_from(players["points"].sum())
+        return frame
+
+    return pricer
+
+
+def _in_the_modules_globals():
+    def pricer(*, day, history, prices):
+        frame = prices.copy()
+        frame["model_probability"] = _priced_from(
+            A_PLAYER_FRAME_IN_THIS_MODULES_GLOBALS["points"].sum()
+        )
+        return frame
+
+    return pricer
+
+
+def _in_a_keyword_only_default():
+    def pricer(*, day, history, prices, players=_tonights_players()):
+        frame = prices.copy()
+        frame["model_probability"] = _priced_from(players["points"].sum())
+        return frame
+
+    pricer.__signature__ = _three_declared_arguments()
+    return pricer
+
+
+def _in_a_positional_default():
+    def pricer(day=None, history=None, prices=None, players=_tonights_players()):
+        frame = prices.copy()
+        frame["model_probability"] = _priced_from(players["points"].sum())
+        return frame
+
+    pricer.__signature__ = _three_declared_arguments()
+    return pricer
+
+
+def _on_a_callable_objects_instance():
+    class Pricer:
+        def __init__(self):
+            self.players = _tonights_players()
+
+        def __call__(self, *, day, history, prices):
+            frame = prices.copy()
+            frame["model_probability"] = _priced_from(self.players["points"].sum())
+            return frame
+
+    return Pricer()
+
+
+def _on_a_callable_objects_class():
+    class Pricer:
+        players = _tonights_players()
+
+        def __call__(self, *, day, history, prices):
+            frame = prices.copy()
+            frame["model_probability"] = _priced_from(self.players["points"].sum())
+            return frame
+
+    return Pricer()
+
+
+def _on_a_callable_objects_slot():
+    class Pricer:
+        __slots__ = ("players",)
+
+        def __init__(self):
+            self.players = _tonights_players()
+
+        def __call__(self, *, day, history, prices):
+            frame = prices.copy()
+            frame["model_probability"] = _priced_from(self.players["points"].sum())
+            return frame
+
+    return Pricer()
+
+
+def _in_the_globals_of_a_callable_objects_call():
+    class Pricer:
+        def __call__(self, *, day, history, prices):
+            frame = prices.copy()
+            frame["model_probability"] = _priced_from(
+                A_PLAYER_FRAME_IN_THIS_MODULES_GLOBALS["points"].sum()
+            )
+            return frame
+
+    return Pricer()
+
+
+def _in_a_partials_keywords():
+    def pricer(*, day, history, prices, players):
+        frame = prices.copy()
+        frame["model_probability"] = _priced_from(players["points"].sum())
+        return frame
+
+    bound = functools.partial(pricer, players=_tonights_players())
+    bound.__signature__ = _three_declared_arguments()
+    return bound
+
+
+def _behind_a_partials_func():
+    return functools.partial(_in_a_closure())
+
+
+def _behind_a_wrappers_wrapped():
+    inner = _in_a_closure()
+
+    @functools.wraps(inner)
+    def wrapper(*, day, history, prices):
+        return inner(day=day, history=history, prices=prices)
+
+    return wrapper
+
+
+def _on_a_bound_methods_self():
+    class Holder:
+        def __init__(self):
+            self.players = _tonights_players()
+
+        def price(self, *, day, history, prices):
+            frame = prices.copy()
+            frame["model_probability"] = _priced_from(self.players["points"].sum())
+            return frame
+
+    return Holder().price
+
+
+#: One pricer per place `_swap_to_the_past` reaches, keyed by the place. Every
+#: one of them holds the same table in a different spot, and each is reachable
+#: through exactly one arm, so dropping that arm turns exactly this case red.
+SWAP_REACHES = {
+    "__closure__": _in_a_closure,
+    "__globals__": _in_the_modules_globals,
+    "__kwdefaults__": _in_a_keyword_only_default,
+    "__defaults__": _in_a_positional_default,
+    "__dict__": _on_a_callable_objects_instance,
+    "the class __dict__ up the MRO": _on_a_callable_objects_class,
+    "a __slots__ attribute": _on_a_callable_objects_slot,
+    "the __globals__ of __call__": _in_the_globals_of_a_callable_objects_call,
+    "a partial's keywords": _in_a_partials_keywords,
+    "a partial's func": _behind_a_partials_func,
+    "__wrapped__": _behind_a_wrappers_wrapped,
+    "__self__": _on_a_bound_methods_self,
+}
+
+
+@pytest.mark.parametrize("place", list(SWAP_REACHES))
+def test_a_frame_held_in_each_place_the_swap_reaches_is_caught_there(place, tmp_path):
+    """One case per arm of `_swap_to_the_past`, so no arm can be dropped quietly.
+
+    Each pricer here reads all three days out of a different hiding place and
+    declares nothing: it passes both signature refusals and the `priced_through`
+    stamp. The output guard has to refuse it, and it can only do that if the
+    arm that reaches that particular place is still there.
+    """
+    pricer = SWAP_REACHES[place]()
+
+    # It really is a leak: run on its own, it answers with all three days.
+    priced = pricer(
+        day=DAYS[1], history=_history_through(), prices=_one_days_prices()
+    )
+    assert float(priced["model_probability"].iloc[0]) == pytest.approx(
+        FROM_ALL_THREE_DAYS
+    ), f"the {place} case stopped reading the future; it proves nothing now"
+    assert FROM_ALL_THREE_DAYS != FROM_THE_ONE_ALLOWED_DAY
+
+    with pytest.raises(PB.PricedFromTheFuture):
+        PB.assert_priced_from_the_past(
+            pricer,
+            day=DAYS[1],
+            frames={"history": _history_through()},
+            prices=_one_days_prices(),
+            data_dir=tmp_path,
+        )
+
+
+def _a_leak_this_guard_does_not_see(pricer, *, note: str, data_dir=None) -> None:
+    """Assert `pricer` reads the future and the guard says nothing.
+
+    Red means the gap closed, which is good news and still a failure: the entry
+    has to move out of the ledger, out of both docstrings that name it, and
+    into `SWAP_REACHES` where the arm that closed it gets held open.
+    """
+    priced = pricer(
+        day=DAYS[1], history=_history_through(), prices=_one_days_prices()
+    )
+    assert float(priced["model_probability"].iloc[0]) == pytest.approx(
+        FROM_ALL_THREE_DAYS
+    ), f"{note}: this case no longer reads the future, so it proves nothing"
+    try:
+        PB.assert_priced_from_the_past(
+            pricer,
+            day=DAYS[1],
+            frames={"history": _history_through()},
+            prices=_one_days_prices(),
+            data_dir=data_dir,
+        )
+    except PB.PricedFromTheFuture:
+        raise AssertionError(
+            f"{note} is now CAUGHT. That is an improvement and it makes this "
+            "ledger wrong: move the entry out of this test, out of the lists "
+            "in `_swap_to_the_past` and `assert_priced_from_the_past`, and "
+            "give it a case in `SWAP_REACHES` so the new arm cannot be dropped."
+        ) from None
+
+
+def test_the_gaps_this_output_guard_still_has_are_the_ones_written_down(
+    tmp_path, monkeypatch
+):
+    """What still gets through, asserted open rather than hoped shut.
+
+    A limitation recorded as a passing assertion goes red the day it is closed
+    and has to be re-read; a limitation recorded only in a docstring quietly
+    becomes a false claim. This module's own docstring is the worked example:
+    it said `_swap_to_the_past` rebinds *"every dated frame `target` can
+    reach"*, and every case below was measured reaching one and passing.
+
+    None of these is a waiver. Each is a real leak — the pricer answers with
+    all three days, `_a_leak_this_guard_does_not_see` checks that first — that
+    this guard does not notice.
+
+    1. **A frame inside a container.** `box[0]`, `{"all": frame}`. The closure
+       cell holds a list or a dict, `_past_only` returns `None` for it, and
+       nothing descends into it.
+    2. **A frame two closures away.** The pricer closes over a helper; the
+       helper closes over the frame. The swap reads the pricer's own cells and
+       does not recurse into what they hold.
+    3. **A frame behind a nested attribute.** `self.bundle.frame`,
+       `self.tables["players"]`. `__dict__` is walked one level; the value has
+       to BE the frame.
+    4. **A frame in a `functools.lru_cache`.** The cached table lives in the C
+       structure the wrapper owns, which none of the dunders walked reaches.
+    5. **A `Series` or numpy array carved out of a future frame.**
+       `_past_only` cuts DataFrames and returns `None` for everything else, and
+       `None` means "left exactly as it was".
+    6. **An absolute path, whether or not it points into `data_dir`.** The
+       second price runs inside a *copy* of the tree and only the relative path
+       is rewritten; an absolute path names the original, uncut. The docstring
+       used to say "outside `data_dir`", which drew the boundary in the wrong
+       place.
+    7. **A CSV whose day column is not one of `DAY_COLUMNS`.**
+       `_rewrite_csv` returns False and the file is copied through whole. The
+       docstring never said so.
+    8. **A dated file that is not a CSV.** A parquet — which is what this lab's
+       own fixtures are — is copied byte for byte.
+
+    A ninth gap has a test of its own rather than an entry here, because it is
+    not about reach: a leak that does not change the answer is invisible to a
+    guard whose only evidence is the answer. See
+    `test_the_output_guard_cannot_see_a_leak_that_does_not_change_the_answer`.
+    """
+    monkeypatch.chdir(tmp_path)
+
+    box = [_tonights_players()]
+
+    def through_a_list(*, day, history, prices):
+        frame = prices.copy()
+        frame["model_probability"] = _priced_from(box[0]["points"].sum())
+        return frame
+
+    _a_leak_this_guard_does_not_see(through_a_list, note="a frame inside a list")
+
+    shelf = {"all": _tonights_players()}
+
+    def through_a_dict(*, day, history, prices):
+        frame = prices.copy()
+        frame["model_probability"] = _priced_from(shelf["all"]["points"].sum())
+        return frame
+
+    _a_leak_this_guard_does_not_see(through_a_dict, note="a frame inside a dict")
+
+    def build_two_closures():
+        players = _tonights_players()
+
+        def helper():
+            return players["points"].sum()
+
+        def pricer(*, day, history, prices):
+            frame = prices.copy()
+            frame["model_probability"] = _priced_from(helper())
+            return frame
+
+        return pricer
+
+    two_deep = build_two_closures()
+    _a_leak_this_guard_does_not_see(two_deep, note="a frame two closures away")
+    # ...and the frame IS sitting in a cell, one hop past the cells that get
+    # read: this is a depth limit, not an inability to see closures at all.
+    helper_cell = two_deep.__closure__[0].cell_contents
+    assert isinstance(helper_cell.__closure__[0].cell_contents, pd.DataFrame)
+
+    class Bundle:
+        def __init__(self):
+            self.frame = _tonights_players()
+
+    class NestedAttribute:
+        def __init__(self):
+            self.bundle = Bundle()
+            self.tables = {"players": _tonights_players()}
+
+        def __call__(self, *, day, history, prices):
+            frame = prices.copy()
+            frame["model_probability"] = _priced_from(
+                self.bundle.frame["points"].sum()
+            )
+            return frame
+
+    nested = NestedAttribute()
+    _a_leak_this_guard_does_not_see(nested, note="a frame behind `self.bundle.frame`")
+
+    class TableDict:
+        def __init__(self):
+            self.tables = {"players": _tonights_players()}
+
+        def __call__(self, *, day, history, prices):
+            frame = prices.copy()
+            frame["model_probability"] = _priced_from(
+                self.tables["players"]["points"].sum()
+            )
+            return frame
+
+    _a_leak_this_guard_does_not_see(
+        TableDict(), note="a frame behind `self.tables['players']`"
+    )
+
+    @functools.lru_cache(maxsize=None)
+    def load_players():
+        return _tonights_players()
+
+    load_players()  # warm it, so the frame lives in the cache and not in a cell
+
+    def through_a_cache(*, day, history, prices):
+        frame = prices.copy()
+        frame["model_probability"] = _priced_from(load_players()["points"].sum())
+        return frame
+
+    _a_leak_this_guard_does_not_see(
+        through_a_cache, note="a frame in an `lru_cache`"
+    )
+
+    points = _tonights_players()["points"]
+    as_an_array = points.to_numpy()
+
+    def through_a_series(*, day, history, prices):
+        frame = prices.copy()
+        frame["model_probability"] = _priced_from(points.sum())
+        return frame
+
+    def through_an_array(*, day, history, prices):
+        frame = prices.copy()
+        frame["model_probability"] = _priced_from(as_an_array.sum())
+        return frame
+
+    _a_leak_this_guard_does_not_see(
+        through_a_series, note="a Series carved out of a future frame"
+    )
+    _a_leak_this_guard_does_not_see(
+        through_an_array, note="a numpy array carved out of a future frame"
+    )
+    # ...and the reason, stated where a reader can check it: the cut is a
+    # DataFrame operation and says so by returning None for anything else.
+    assert PB._past_only(points, DAYS[1], day_columns=PB.DAY_COLUMNS) is None
+    assert PB._past_only(as_an_array, DAYS[1], day_columns=PB.DAY_COLUMNS) is None
+
+    dated = tmp_path / "player_games.csv"
+    dated.write_text(
+        "slate_date,points\n" + "".join(f"{day},10\n" for day in DAYS),
+        encoding="utf-8",
+    )
+    absolute = str(dated.resolve())
+
+    def by_absolute_path(*, day, history, prices):
+        players = pd.read_csv(absolute)
+        frame = prices.copy()
+        frame["model_probability"] = _priced_from(players["points"].sum())
+        return frame
+
+    _a_leak_this_guard_does_not_see(
+        by_absolute_path, note="an absolute path INTO `data_dir`"
+    )
+    # The same file by its relative name is caught, which is the whole of the
+    # difference: the rewrite happens in a copy and only a relative path finds
+    # the copy. The old docstring said the escape was a path "outside
+    # `data_dir`"; the line is absolute versus relative, not in versus out.
+    def by_relative_path(*, day, history, prices):
+        players = pd.read_csv("player_games.csv")
+        frame = prices.copy()
+        frame["model_probability"] = _priced_from(players["points"].sum())
+        return frame
+
+    with pytest.raises(PB.PricedFromTheFuture):
+        PB.assert_priced_from_the_past(
+            by_relative_path,
+            day=DAYS[1],
+            frames={"history": _history_through()},
+            prices=_one_days_prices(),
+        )
+
+    (tmp_path / "minutes.csv").write_text(
+        "fixture_day,minutes\n" + "".join(f"{day},10\n" for day in DAYS),
+        encoding="utf-8",
+    )
+
+    def an_unguessed_day_column(*, day, history, prices):
+        players = pd.read_csv("minutes.csv")
+        frame = prices.copy()
+        frame["model_probability"] = _priced_from(players["minutes"].sum())
+        return frame
+
+    _a_leak_this_guard_does_not_see(
+        an_unguessed_day_column,
+        note="a CSV whose day column is not in `DAY_COLUMNS`",
+    )
+    assert "fixture_day" not in PB.DAY_COLUMNS
+    assert not PB._rewrite_csv(
+        tmp_path / "minutes.csv",
+        tmp_path / "copy.csv",
+        day=DAYS[1],
+        day_columns=PB.DAY_COLUMNS,
+    ), "the rewrite now finds this day column; move the entry to `SWAP_REACHES`"
+
+    _tonights_players().to_parquet(tmp_path / "player_games.parquet")
+
+    def a_dated_parquet(*, day, history, prices):
+        players = pd.read_parquet("player_games.parquet")
+        frame = prices.copy()
+        frame["model_probability"] = _priced_from(players["points"].sum())
+        return frame
+
+    _a_leak_this_guard_does_not_see(
+        a_dated_parquet, note="a dated parquet under `data_dir`"
     )
 
 
