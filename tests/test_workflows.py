@@ -4071,3 +4071,122 @@ def test_the_policy_gate_summary_says_which_markets_it_checked_and_what_it_found
     assert "`total_points`" in summary and "lacks" in summary, summary
     assert POLICY_FILE_RELATIVE in summary and RECEIPTS_RELATIVE in summary, summary
     assert summary.strip(), "the policy gate wrote no job summary at all"
+
+
+#: The exit status the checker's own docstring reserves for "I could not run".
+#: `0` receipted, `1` unreceipted, `2` could-not-run — and `2` is not a pass.
+COULD_NOT_RUN = 2
+
+
+def test_the_policy_gate_stops_on_a_policy_file_it_cannot_be_parsed(tmp_path: Path) -> None:
+    """A corrupt policy file is a gate that did not run, not an empty allowlist.
+
+    `staging_provider_policy.load()` answers a policy file it cannot parse
+    with an empty policy. That is the right answer for the CARD — it fails
+    closed and reads nothing from staging — and the wrong report from a gate:
+    a truncated file printed the same sentence as a repository that
+    allowlists nothing, and exit 0 said the allowlist had been checked when
+    no allowlist had been read at all. The checker's docstring already
+    reserved `2` for could-not-run; this is the case taking that branch.
+
+    The three trees below are the whole distinction: a file that is there and
+    unparseable, a file that is not there, and a file that parses and
+    allowlists nothing. The first is `2`; the other two are the ordinary
+    green case and must stay green.
+    """
+    corrupt_root = tmp_path / "corrupt"
+    corrupt_root.mkdir()
+    corrupt = policy_checkout(corrupt_root)
+    # A write that stopped half way: valid JSON up to the point it ends.
+    (corrupt / POLICY_FILE_RELATIVE).write_text(
+        '{\n  "provider": "the_odds_api",\n  "mode": "reviewed",\n  "allowlist": [{"mark',
+        encoding="utf-8",
+    )
+    broke, broken_summary = run_policy_gate_for_real(corrupt)
+    assert broke.returncode == COULD_NOT_RUN, (
+        f"an unparseable policy file exited {broke.returncode}, not "
+        f"{COULD_NOT_RUN}. The gate read no allowlist and said so with the "
+        f"status of a run that had: {broke.stdout}"
+    )
+    assert "Broken gate" in broken_summary, broken_summary
+    assert POLICY_FILE_RELATIVE in broken_summary, broken_summary
+    assert "No market is allowlisted" not in broken_summary, (
+        "a policy file nobody could parse reported the sentence a repository "
+        f"with no allowlist reports:\n{broken_summary}"
+    )
+    assert "could not run" in broke.stderr, broke.stderr
+
+    absent_root = tmp_path / "absent"
+    absent_root.mkdir()
+    absent = policy_checkout(absent_root)
+    green, absent_summary = run_policy_gate_for_real(absent)
+    assert green.returncode == 0, (
+        f"a checkout with no policy file at all was not green: {green.stdout}"
+    )
+    assert "No market is allowlisted" in absent_summary, absent_summary
+    assert "Broken gate" not in absent_summary, absent_summary
+
+    empty_root = tmp_path / "empty"
+    empty_root.mkdir()
+    empty = policy_checkout(empty_root)
+    write_policy(empty, mode="manual_only")
+    parsed, empty_summary = run_policy_gate_for_real(empty)
+    assert parsed.returncode == 0, (
+        f"a policy file that parses and allowlists nothing was not green: "
+        f"{parsed.stdout}\n{parsed.stderr}"
+    )
+    assert "No market is allowlisted" in empty_summary, empty_summary
+    assert "Broken gate" not in empty_summary, empty_summary
+
+    assert broken_summary != absent_summary, (
+        "the unreadable policy file and the absent one produced the same "
+        "summary, which is the defect: a reader cannot tell a gate that "
+        "checked nothing from a repository that has nothing to check"
+    )
+
+
+def test_the_policy_gate_says_what_it_checks_about_a_signature_and_claims_no_more(
+    tmp_path: Path,
+) -> None:
+    """The gate may not tell a reviewer it enforces something it cannot.
+
+    It used to print that this repository "can write the policy file and can
+    never write the signature". That is a claim about who is able to sign,
+    and no check here can make it true: `signed_by` is a string in a JSON
+    file, nothing is cryptographic, and all this gate does is refuse the
+    spellings of Claude it recognises. Anyone able to edit the policy file is
+    able to type a name into a receipt beside it. So the summary must say
+    what it checks — the refused spellings — and hand the question of whether
+    the signer is real to the human reviewing the pull request, on BOTH
+    verdicts: an overclaim next to a green tick is the more dangerous one.
+    """
+    red_root = tmp_path / "red"
+    red_root.mkdir()
+    red = policy_checkout(red_root)
+    write_policy(red, "spread")
+    write_receipt(red, "spread", signed_by=SELF_SIGNATURES[0])
+    refused, red_summary = run_policy_gate_for_real(red)
+    assert refused.returncode != 0, refused.stdout
+
+    green_root = tmp_path / "green"
+    green_root.mkdir()
+    green = policy_checkout(green_root)
+    write_policy(green, "spread")
+    write_receipt(green, "spread")
+    accepted, green_summary = run_policy_gate_for_real(green)
+    assert accepted.returncode == 0, f"{accepted.stdout}\n{accepted.stderr}"
+
+    for verdict, summary in (("red", red_summary), ("green", green_summary)):
+        assert "spellings of Claude" in summary, (
+            f"the {verdict} verdict does not say what the gate actually checks "
+            f"about a signature:\n{summary}"
+        )
+        assert "the human reviewing this pull request" in summary, (
+            f"the {verdict} verdict does not say who decides the signer is "
+            f"real:\n{summary}"
+        )
+        assert "can never write the signature" not in summary, (
+            f"the {verdict} verdict claims this repository cannot write a "
+            f"signature. The gate cannot enforce that:\n{summary}"
+        )
+    assert "cannot tell a real signature from a forged one" in red_summary, red_summary

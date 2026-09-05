@@ -42,17 +42,32 @@ WHAT THIS SCRIPT ASKS, in the order it asks it.
    sentence a human reads before deciding whether to merge.
 
 WHAT IT CANNOT BE TALKED OUT OF. There is no `--force`, no allowlist-of-
-allowlists and no environment waiver. A receipt signed by Claude in any
-spelling is refused by `staging_provider_policy._signer_is_forbidden`, so the
-one thing this repository could always have produced by itself — a JSON file
-saying the market is fine — is the one thing that can never satisfy this gate.
-This script writes nothing: not the policy, not a receipt, not the evidence.
-There is still no `grant()`.
+allowlists and no environment waiver. A receipt whose `signed_by` reads as
+Claude in any spelling is refused by
+`staging_provider_policy._signer_is_forbidden`, so the one thing this
+repository could always have produced by itself — a JSON file saying the
+market is fine, signed with its own name — is the one thing that can never
+satisfy this gate. This script writes nothing: not the policy, not a receipt,
+not the evidence. There is still no `grant()`.
+
+WHAT IT CANNOT DO. It cannot tell a real signature from a forged one. Nothing
+here is cryptographic and no identity is checked: `signed_by` is a string in a
+JSON file, and all this gate can say about it is that it is not one of the
+spellings of Claude it knows to refuse. Whether the person named actually
+signed is decided by the human reviewing the pull request, and the summary
+this script prints says so in those words rather than claiming an enforcement
+it does not have.
 
 EXIT STATUS. `0` when every allowlisted market is receipted, `1` when one is
 not, and `2` when the check could not be run at all — an unreadable base ref,
-a manual directory that is not there. `2` is not a pass: "I could not check"
-and "there was nothing to check" must never take the same branch.
+a manual directory that is not there, a policy file that exists and cannot be
+parsed. `2` is not a pass: "I could not check" and "there was nothing to
+check" must never take the same branch. That last case is the one this script
+got wrong until 2026-09-05: `load()` answers a corrupt or truncated policy
+file with an empty policy, which is the correct fail-closed answer for the
+CARD and the wrong REPORT for a gate, because it printed the same sentence as
+a repository that allowlists nothing. An absent policy file, and a policy file
+that parses and allowlists nothing, remain the ordinary green case.
 """
 
 from __future__ import annotations
@@ -89,6 +104,50 @@ def _markets_in(payload: object) -> set[str]:
         if isinstance(item, dict) and item.get("market"):
             found.add(str(item["market"]))
     return found
+
+
+def unreadable_policy(path: Path) -> str:
+    """Why the policy file on disk cannot be read as a policy, or `""`.
+
+    An ABSENT file is not unreadable. A repository with no policy file
+    allowlists nothing, which is this lab's shipping state and a green run.
+    A file that is THERE and cannot be parsed is a gate that did not run:
+    `staging_provider_policy.load()` answers it with an empty policy — right
+    for the card, which must fail closed, and wrong for this report, which
+    would otherwise print "no market is allowlisted" over a policy file
+    nobody could read.
+    """
+    if not path.is_file():
+        return ""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        return (
+            f"`{POLICY_RELATIVE}` exists and could not be read "
+            f"({exc.__class__.__name__}: {exc})."
+        )
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError as exc:
+        return (
+            f"`{POLICY_RELATIVE}` exists and is not parseable JSON "
+            f"(line {exc.lineno}, column {exc.colno}: {exc.msg}). A corrupt or "
+            "truncated policy file is a file whose allowlist nobody read."
+        )
+    if not isinstance(payload, dict):
+        return (
+            f"`{POLICY_RELATIVE}` exists and parses to a "
+            f"{type(payload).__name__}, not a JSON object, so it declares no "
+            "mode and no allowlist that could be checked."
+        )
+    listed = payload.get("allowlist", [])
+    if listed is not None and not isinstance(listed, list):
+        return (
+            f"`{POLICY_RELATIVE}` exists and its `allowlist` is a "
+            f"{type(listed).__name__} rather than a list, so every entry in it "
+            "would be read as no entry at all."
+        )
+    return ""
 
 
 def base_allowlist(root: Path, ref: str) -> tuple[set[str], str]:
@@ -134,6 +193,21 @@ def report(root: Path, base_ref: str) -> tuple[int, list[str]]:
         lines.append(
             f"**Broken gate.** There is no `{manual}` to read. This run checked "
             "nothing; it is not evidence that the allowlist is receipted."
+        )
+        return BROKEN, lines
+
+    broken = unreadable_policy(SPP.policy_path(manual))
+    if broken:
+        lines.append(f"**Broken gate.** {broken}")
+        lines.append("")
+        lines.append(
+            "This run checked NO allowlist. `load()` reads a policy file it "
+            "cannot parse as manual-only with an empty allowlist — the right "
+            "answer for the card, which must fail closed and read nothing from "
+            "staging, and the wrong report from a gate, because it is also what "
+            "a repository that allowlists nothing looks like. The two are not "
+            "the same and this run is the first, not the second: it is not "
+            "evidence that every allowlisted market is receipted."
         )
         return BROKEN, lines
 
@@ -209,12 +283,21 @@ def report(root: Path, base_ref: str) -> tuple[int, list[str]]:
             lines.append(f"- **`{market}`** lacks {failures[market]}{note}.")
         lines.append("")
         lines.append(
-            "A market reaches the card only behind a receipt a person signed: one "
-            "that names the market, cites an evidence record that exists and still "
-            "hashes to the value the receipt was signed against, carries a signer "
-            "who is not Claude, and carries a date. This repository can write the "
-            "policy file and can never write the signature, which is the whole "
-            "point of the file."
+            "A market reaches the card only behind a receipt that names the "
+            "market, cites an evidence record that exists and still hashes to "
+            "the value the receipt was signed against, carries a non-empty "
+            "`signed_by`, and carries a date."
+        )
+        lines.append("")
+        lines.append(
+            "What this gate checks about that signature, exactly: that "
+            "`signed_by` is not one of the spellings of Claude it knows to "
+            "refuse — any value whose letters spell `claude`, whatever the case "
+            "and whatever the punctuation between them. That is the whole of it. "
+            "Nothing here is cryptographic and no identity is verified, so this "
+            "gate cannot tell a real signature from a forged one and does not "
+            "claim to: whether the person named actually signed this receipt is "
+            "decided by the human reviewing this pull request, not here."
         )
         return RED, lines
 
@@ -224,7 +307,10 @@ def report(root: Path, base_ref: str) -> tuple[int, list[str]]:
         lines.append(
             f"- Every one of the {len(markets)} allowlisted market(s) is backed by "
             "a receipt naming it, citing an evidence record that still hashes to "
-            "the cited value, signed by a person who is not Claude, and dated."
+            "the cited value, carrying a `signed_by` that is not one of the "
+            "spellings of Claude this gate refuses, and dated. Whether the "
+            "signer is who the receipt says is decided by the human reviewing "
+            "this pull request, not by this check."
         )
     else:
         lines.append("- Nothing is allowlisted, so there is nothing to receipt.")

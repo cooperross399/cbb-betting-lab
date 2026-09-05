@@ -20,8 +20,15 @@ job summary names every market it checked, the receipt behind it or what that
 market lacked, and the markets the change adds. It is red while any allowlisted
 market lacks a receipt, while a cited evidence record is missing or no longer
 hashes to the value the receipt was signed against, or while a receipt is
-signed by Claude in any spelling. Until 2026-09-05 the row above named a gate
-that did not exist: nothing under `.github/workflows/` opened a receipt. It is
+signed by Claude in any spelling. A policy file that exists and cannot be
+parsed exits 2 and reports a gate that did not run, which is not the same
+result as a repository that allowlists nothing and no longer prints the same
+sentence as one. What the gate checks about a signature is exactly this: that
+`signed_by` is not one of the spellings of Claude it refuses. Nothing here is
+cryptographic and no identity is verified, so whether the person named
+actually signed is decided by whoever reviews the pull request. Until
+2026-09-05 the row above named a gate that did not exist: nothing under
+`.github/workflows/` opened a receipt. It is
 not a context branch protection requires — measured 2026-09-05, main requires
 `Tests` and nothing else — so a red `Policy Gate` is a fact in the pull request
 and not a hold on the merge button.

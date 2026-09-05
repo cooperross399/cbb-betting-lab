@@ -27,6 +27,21 @@
 #      An added market with no receipt in this same tree is red by (1); this
 #      is what makes the summary say which market the change was trying to add.
 #
+# EXIT 2 IS NOT A PASS. A policy file that exists and cannot be parsed — a
+# corrupt or truncated one — exits 2 and says the gate did not run. `load()`
+# answers such a file with an empty policy, which is the right fail-closed
+# answer for the CARD and the wrong report from a gate, because it is also
+# what a repository that allowlists nothing looks like. An absent policy file,
+# and one that parses and allowlists nothing, stay the ordinary green case.
+#
+# WHAT THE SIGNATURE CHECK IS, EXACTLY. `signed_by` is a string in a JSON
+# file. Nothing here is cryptographic and no identity is verified: this gate
+# refuses the spellings of Claude it recognises — any value whose letters
+# spell `claude`, whatever the case and punctuation — and that is the whole of
+# it. Whether the person named actually signed is decided by the human
+# reviewing the pull request, and the job summary says so in those words
+# rather than claiming an enforcement this check does not have.
+#
 # NO paths: FILTER, deliberately. The natural spelling of "on every pull
 # request touching data/manual/staging_provider_policy.json" is a `paths:`
 # filter, and tests/test_workflows.py::check_no_trigger_is_path_filtered

@@ -1784,10 +1784,10 @@ def render(record: Mapping) -> str:
             "`withdraw()` exists in `staging_provider_policy.py` and `grant()` "
             "does not: this lab may take a market away from the card and may "
             "never give it one. Adding a market is a receipt Cooper signs, in a "
-            "pull request whose `Policy Gate` check is green — "
-            "`.github/workflows/policy-gate.yml`, which runs on every pull "
-            "request, verifies every allowlisted market against a receipt on "
-            "disk, and is red while any market lacks one."
+            f"pull request whose `{policy_module.POLICY_GATE_CHECK}` check is "
+            f"green — `{policy_module.POLICY_GATE_WORKFLOW}`, which runs on "
+            "every pull request, verifies every allowlisted market against a "
+            "receipt on disk, and is red while any market lacks one."
         )
     if _as_int(policy.get("withdrawn")):
         add(

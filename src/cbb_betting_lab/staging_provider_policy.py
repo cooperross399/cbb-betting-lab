@@ -32,7 +32,15 @@ card calls it and then :func:`verify_receipt` on every allowlisted entry one at
 a time, including the entries a `manual_only` file leaves :func:`load` itself
 skipping. It names, in the job summary, every market it checked, the receipt
 behind it or what that market lacked, and which markets the change ADDS. It is
-red until a receipt Cooper signed stands behind every allowlisted market.
+red until a receipt stands behind every allowlisted market, and it exits `2`
+rather than `0` on a policy file that exists and cannot be parsed, because
+"nothing to check" and "I could not check" must not share a branch.
+
+What it checks about the signature is what :func:`_signer_is_forbidden`
+checks and nothing more: that `signed_by` is not one of the spellings of
+Claude it refuses. Nothing there is cryptographic and no identity is
+verified, so whether the signer is really Cooper is the judgement of whoever
+reviews the pull request rather than a thing this gate can enforce.
 
 It is not a context branch protection requires: measured 2026-09-05, main
 requires `Tests` and nothing else, so a red `Policy Gate` is a fact in the pull
@@ -89,6 +97,17 @@ from cbb_betting_lab.config import MANUAL_DIR
 
 POLICY_FILENAME = "staging_provider_policy.json"
 RECEIPTS_DIRNAME = "human_acceptance_receipts"
+
+#: The check every sentence in this repository promises, spelled exactly as
+#: GitHub reports it. It is a CONTRACT STRING: `CLAUDE.md`'s contract table
+#: holds it and `tests/test_contract_strings.py` pins the table against this
+#: constant, against the workflow's own `name:` and its job's `name:`, and
+#: against every document that promises the gate. Renaming the workflow
+#: without renaming the references is therefore a red build rather than four
+#: sentences about a check that no longer reports.
+POLICY_GATE_CHECK = "Policy Gate"
+#: The file that declares that check.
+POLICY_GATE_WORKFLOW = ".github/workflows/policy-gate.yml"
 
 #: The default, and the state this lab expects to stay in. Manual-only means
 #: the card reads nothing from staging and produces no selection.
