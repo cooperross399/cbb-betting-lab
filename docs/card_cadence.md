@@ -79,9 +79,10 @@ and 18:18 ET and still precede the 19:00 ET block. That is a recorded gap, not
 a moved cron. It bites only when the primary was dropped **and** GitHub is at
 its worst observed lateness **and** a game tips at 11:00 ET, in the last three
 weeks of the season; moving the crons an hour earlier for it would card every
-day of the season earlier, with less information. The test pins the sign on
-those two instants and the gap as written, so the day the crons move or the
-lateness changes, the record changes with them or the build goes red.
+day of the season earlier, with less information.
+`tests/test_the_card_schedule_survives_cron_lateness.py` pins the sign on those
+two instants and the gap as written, so the day the lateness constant changes,
+the record changes with it or the build goes red.
 
 **A slot that fires late has not failed.** The tip guard quarantines whatever
 has already started, per game, and the run reports the coverage it achieved.
@@ -92,6 +93,21 @@ is rare rather than routine.
 from `OBSERVED_LATENESS_H` and the real schedule and fails if a slot's worst
 case stops preceding its block — so raising the lateness constant when GitHub
 gets worse is a one-line change that proves itself.
+
+**And the crons themselves are pinned, which they were not.** This document
+used to say the test went red *"the day the crons move"*. Nothing read the
+workflow: every check here computed its table from `schedule_contract` and none
+of them had ever opened `.github/workflows/cbb-gameday-refresh.yml`, so a cron
+moved in the workflow left the module, this document and the whole test file
+agreeing with each other about a schedule the repository no longer ran — the
+arithmetic still correct, the prose still confident, and the thing being
+described somewhere else. `schedule_contract.cron_expressions()` now derives
+the four cron strings from the slots, `SEASON_CRON_MONTHS` holds the month
+field the slots never carried, and
+`test_the_gameday_workflow_crons_are_exactly_the_ones_the_contract_declares`
+compares them against the workflow's parsed `on.schedule` — in both directions,
+because a workflow that has *dropped* its backup trigger looks exactly like a
+healthy one until the primary is skipped.
 
 ## What the second card is not
 

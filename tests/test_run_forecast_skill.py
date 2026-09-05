@@ -540,6 +540,75 @@ def test_a_graded_frame_with_the_flag_prints_the_selected_subset_beside_the_whol
     assert f"{subset['rows']:,} of {whole['rows']:,} scorable wagers" in report
 
 
+def test_the_frame_builders_census_is_read_beside_the_frame_and_stated(tmp_path):
+    """The frame is a subset of the graded set, and the run has to say by how much.
+
+    `scripts/build_skill_frame.py` excludes every graded wager whose own book
+    hung one side only and writes `<frame>__unpairable.json` beside the frame.
+    Nothing in the frame itself records the exclusion, so without reading that
+    file this script would print the frame's length as the graded population
+    and be wrong by however many rows were dropped — silently, which is the
+    one thing the old blanket refusal was right about.
+    """
+    from cbb_betting_lab.reports import price_backtest as PB
+
+    frame = settled_ledger().rename(columns={"snapshot_date": "slate_date"})
+    edged = PB.add_edge(frame)
+    frame[FS.SELECTED_COLUMN] = PB.bet_mask(edged).to_numpy()
+    graded_path = tmp_path / "cbb_skill_frame.csv"
+    frame.to_csv(graded_path, index=False)
+    (tmp_path / "cbb_skill_frame__unpairable.json").write_text(
+        json.dumps(
+            {
+                "supplied": len(frame) + 2,
+                "paired": len(frame),
+                "unpairable": 2,
+                "unpairable_selected": 1,
+                "share": 2 / (len(frame) + 2),
+                "reconciles": True,
+                "reason": "their own book hung only one side of the wager",
+                "by_market": {"team_total": 1, "alternate_spread": 1},
+                "by_book": {"draftkings": 1, "betmgm": 1},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    lab = Lab(tmp_path).with_experiment_ledger(24)
+    exit_code, output = lab.run("--graded", str(graded_path))
+    assert exit_code == 0, output
+
+    excluded = lab.record()["populations"]["excluded_unpairable"]
+    assert excluded["available"] is True
+    assert excluded["rows"] == 2
+    assert excluded["supplied"] == len(frame) + 2
+    assert excluded["reconciles"] is True
+    # Stated on stdout, in the section that states the populations.
+    assert "TWO POPULATIONS" in output
+    assert f"{FS.UNPAIRABLE_LABEL}: 2 of {len(frame) + 2:,} graded wagers" in output
+    assert "counts of the subset that remained" in output
+    assert output.index("TWO POPULATIONS") < output.index(FS.UNPAIRABLE_LABEL)
+    # And in the written report.
+    assert "2 graded wager(s) are in neither population above" in lab.report()
+
+
+def test_a_frame_with_no_census_beside_it_says_not_supplied_never_none(tmp_path):
+    """Absent is not zero, and a run must not turn one into the other.
+
+    The forward ledger has no frame-builder and no census. Printing "none
+    excluded" for it would state a quantity nobody counted, which is exactly
+    the residual-arithmetic error the price backtest's accounting identity was
+    rewritten to stop making.
+    """
+    lab = Lab(tmp_path).with_ledger().with_experiment_ledger(24)
+    exit_code, output = lab.run()
+    assert exit_code == 0, output
+    assert lab.record()["populations"]["excluded_unpairable"]["available"] is False
+    assert f"{FS.UNPAIRABLE_LABEL}: not supplied" in output
+    assert "unknown rather than yes" in output
+    assert FS.UNPAIRABLE_NOT_SUPPLIED in lab.report()
+
+
 def test_a_bucket_is_named_the_same_way_on_stdout_as_in_the_report(scored):
     """One name per row. `-inf% to -10%` on a console and `below -10%` in a
     report is two names for one bucket, and a reader comparing them is

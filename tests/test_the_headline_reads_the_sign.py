@@ -59,6 +59,59 @@ def test_below_the_declared_floor_the_verdict_is_never_a_number(roi: float):
     assert not thin.survives_correction
 
 
+@pytest.mark.parametrize(
+    "roi,low,high,expected",
+    [
+        # Entirely below zero, carrying a winning return.
+        (+0.05, -0.09, -0.02, DEMONSTRATED_DEFICIT),
+        # Entirely above zero, carrying a losing return.
+        (-0.05, +0.02, +0.09, DEMONSTRATED_EDGE),
+        # Spanning zero: neither word, at any return.
+        (+0.05, -0.09, +0.02, NO_DEMONSTRATED_EDGE),
+    ],
+)
+def test_the_sign_read_is_the_intervals_and_not_the_returns(
+    roi: float, low: float, high: float, expected: str
+):
+    """*Which* sign `verdict()` reads, on the rows where the two differ.
+
+    An interval is built around its estimate, so on every result an estimator
+    produced `roi` and the bounds sit on the same side of zero and either
+    reading gives the same answer. They come apart on a row assembled from two
+    measurements — a return refreshed and bounds left behind, or a figure typed
+    into a record — and there the interval wins, because the interval is the
+    pair a report prints beside the sentence and the sentence is a claim about
+    it. Reading `roi` instead put the words *demonstrated edge* on a corrected
+    interval of −9% to −2%.
+    """
+    result = RoiInterval(roi=roi, low=low, high=high, bets=50_000, clusters=12_000)
+
+    assert result.verdict() == expected
+    assert result.survives_correction == (expected != NO_DEMONSTRATED_EDGE)
+
+
+def test_a_return_outside_its_own_interval_is_detectable_rather_than_averaged():
+    """The row above is not merely awkward to describe — it is impossible.
+
+    No estimator puts an estimate outside the interval it centres, so a report
+    that finds this False is holding a row spliced from two measurements and
+    must refuse it rather than pick which number to print.
+    """
+    assert RoiInterval(
+        roi=+0.05, low=-0.09, high=-0.02, bets=50_000, clusters=12_000
+    ).return_sits_inside_its_own_interval is False
+    assert RoiInterval(
+        roi=-0.055, low=-0.09, high=-0.02, bets=50_000, clusters=12_000
+    ).return_sits_inside_its_own_interval is True
+    # The correction widens the interval, so a return can only ever fall back
+    # inside it — the property reads the corrected bounds, which are the ones
+    # printed.
+    assert RoiInterval(
+        roi=+0.05, low=+0.01, high=+0.09, bets=50_000, clusters=12_000,
+        standard_error=0.0204, looks=40,
+    ).return_sits_inside_its_own_interval is True
+
+
 def test_the_family_correction_can_turn_an_edge_into_no_demonstrated_edge():
     """Testing many markets must widen the interval, not be optional."""
     one_look = RoiInterval(

@@ -131,6 +131,7 @@ from cbb_betting_lab.competitions import (
 from cbb_betting_lab.config import MANUAL_DIR, OUTPUTS_DIR, PROCESSED_DIR
 from cbb_betting_lab.reports import price_backtest as PB
 from cbb_betting_lab.reports import what_we_can_claim as WC
+from cbb_betting_lab.reports import why_the_model as WHY
 
 #: Bumped whenever the run record's shape changes, so a stale record fails
 #: loudly at re-render rather than rendering a report with holes in it. The same
@@ -187,6 +188,16 @@ def weekly_backtest_season(processed_dir: Path) -> int | None:
 
 
 CLAIMS_SCRIPT = "run_what_we_can_claim.py"
+
+#: The edge document, re-rendered from the three measurement records beside the
+#: claims report and for the same reason.
+#: `docs/why_the_model_does_or_does_not_have_an_edge.md` claimed on its own
+#: third line to be **generated from the run record** and no generator existed;
+#: every figure in it had been typed. This step is what makes that sentence
+#: true. It refuses rather than rendering around a missing record, so a week
+#: with no forecast-skill run leaves the document saying what it last truthfully
+#: said and marks this step degraded.
+WHY_SCRIPT = "run_why_the_model.py"
 
 #: The market-vs-model regression, EVERY WEEK. The brief calls it the fastest
 #: honest read on whether anything here is real, and asks for it weekly by
@@ -1448,6 +1459,15 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--why-doc",
+        default="",
+        help=(
+            "The hand-written edge document whose fenced block this loop "
+            "re-renders. Empty means the repository's own "
+            "docs/why_the_model_does_or_does_not_have_an_edge.md."
+        ),
+    )
+    parser.add_argument(
         "--scripts-dir",
         default=str(Path(__file__).resolve().parent),
         help="Where the sibling scripts this loop drives live.",
@@ -1506,6 +1526,11 @@ def main(argv: list[str] | None = None) -> int:
     # tree that has no docs/ directory.
     claims_doc = Path(args.claims_doc) if args.claims_doc else (
         Path(__file__).resolve().parents[1] / "docs" / "what_we_can_and_cannot_claim.md"
+    )
+    # The edge document, whose fenced block this loop re-renders for the same
+    # reason. `--why-doc ''` turns that splice off for a test tree with no docs/.
+    why_doc = Path(args.why_doc) if args.why_doc else (
+        Path(__file__).resolve().parents[1] / WHY.DOC_RELATIVE
     )
     processed_dir = Path(args.processed_dir)
     manual_dir = Path(args.manual_dir)
@@ -1722,6 +1747,26 @@ def main(argv: list[str] | None = None) -> int:
             ],
             scripts_dir=scripts_dir,
             name="re-render the claims report from its run record",
+            dry_run=args.dry_run,
+            timeout_seconds=timeout_seconds,
+            python=args.python,
+        )
+    )
+    steps.append(
+        run_script(
+            WHY_SCRIPT,
+            [
+                "--competition", competition.key,
+                "--output-dir", str(output_dir),
+                # The same splice, for the same reason: the document's framing
+                # says what the page is and which page to read first, and only
+                # the measured block moves. A missing fence fails this step
+                # rather than appending, so a document that looks updated and
+                # is not cannot be produced.
+                "--splice-into", str(why_doc),
+            ],
+            scripts_dir=scripts_dir,
+            name="re-render the edge document from the measurement records",
             dry_run=args.dry_run,
             timeout_seconds=timeout_seconds,
             python=args.python,

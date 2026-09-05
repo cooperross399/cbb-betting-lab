@@ -137,6 +137,19 @@ class RoiInterval:
             return False
         return not (self.adjusted_low <= 0.0 <= self.adjusted_high)
 
+    @property
+    def return_sits_inside_its_own_interval(self) -> bool:
+        """Whether `roi` lies between the two bounds printed beside it.
+
+        False is not a rounding matter — it is a row that cannot have come out
+        of any estimator, because the interval is built around the estimate. It
+        is what a hand-edited or half-refreshed record looks like: a return
+        typed over one measurement and bounds left from another. A reader is
+        shown both numbers on one line, so a report that finds this False must
+        refuse rather than choose which of the two to believe.
+        """
+        return self.adjusted_low <= self.roi <= self.adjusted_high
+
     def verdict(self) -> str:
         """The one sentence this result is permitted to be described by.
 
@@ -146,6 +159,13 @@ class RoiInterval:
         tested measured + survives-correction + replicated and never looked at
         which side of zero the number sat on. The one document whose job is to
         stop a number being misread must not be the thing misreading it.
+
+        **Which sign it reads is the corrected interval's**, because that pair
+        is what a report prints beside this sentence. Reading `roi` instead is
+        indistinguishable on real data and wrong on exactly the rows that
+        matter: a record carrying a typed `+5%` over corrected bounds of −9% to
+        −2% would be handed the words *demonstrated edge* over an interval
+        lying entirely on the losing side of zero.
         """
         if not self.enough_evidence:
             return (
@@ -154,7 +174,16 @@ class RoiInterval:
             )
         if not self.survives_correction:
             return NO_DEMONSTRATED_EDGE
-        return DEMONSTRATED_EDGE if self.roi > 0 else DEMONSTRATED_DEFICIT
+        # **The sign is read off the bounds, not off `roi`.** The two agree for
+        # every interval an estimator produced, because the interval is centred
+        # on the estimate — so this is the same answer on real data and a
+        # different one on a row where the return and its bounds disagree. There
+        # the bounds win: they are the pair the verdict is a statement about,
+        # and `adjusted_high < 0` is a demonstrated *deficit* however positive
+        # the number typed beside it. `return_sits_inside_its_own_interval`
+        # exists so a report can refuse such a row outright rather than print
+        # a sentence and a figure that contradict each other.
+        return DEMONSTRATED_EDGE if self.adjusted_low > 0.0 else DEMONSTRATED_DEFICIT
 
     def line(self) -> str:
         return (

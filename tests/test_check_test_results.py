@@ -27,6 +27,7 @@ Every fixture is built in tmp_path. This test reads no junit.xml from disk.
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import os
 import re
@@ -556,6 +557,34 @@ def test_the_marker_argument_is_spelled_exactly_one_way() -> None:
     assert gate.main(["check_test_results.py", "a", "--older-than", "b"]) == 2
     assert gate.main(["check_test_results.py", "a", "--newer-than", "b", "c"]) == 2
 
+def _without_its_last_test(source: str) -> str:
+    """`source` with its last top-level test removed, decorator included.
+
+    This used to cut at `source.rindex("def test_")`, which assumed the last
+    test in tests/test_contract_strings.py carries no decorator — a property of
+    somebody else's file that nothing stated and nothing enforced. A sibling
+    session appended a parametrized test there, the cut landed BELOW its
+    `@pytest.mark.parametrize`, the truncated file stopped parsing,
+    `test_functions_declared_in` returned None and CI went red on
+    `assert kept is not None`. It was green locally for both of us, because
+    only CI runs the whole suite.
+
+    Cutting from the decorator makes the fixture independent of what anyone
+    appends to that file, which is the property it needed all along.
+    """
+    tree = ast.parse(source)
+    tests = [
+        node
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name.startswith("test_")
+    ]
+    assert len(tests) > 1, "the victim file must define more than one test"
+    last = tests[-1]
+    first_line = min([last.lineno] + [d.lineno for d in last.decorator_list])
+    return "\n".join(source.splitlines()[: first_line - 1]) + "\n"
+
+
 
 def test_the_gaps_the_per_test_floor_still_has_are_written_down(tmp_path: Path) -> None:
     """What the floor per test does NOT reach, asserted open and measured.
@@ -589,7 +618,7 @@ def test_the_gaps_the_per_test_floor_still_has_are_written_down(tmp_path: Path) 
         target = shorter / module
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text((REPO / module).read_text(encoding="utf-8"), encoding="utf-8")
-    (shorter / victim).write_text(source[: source.rindex("def test_")], encoding="utf-8")
+    (shorter / victim).write_text(_without_its_last_test(source), encoding="utf-8")
     kept = gate.test_functions_declared_in(shorter / victim)
     assert kept is not None and len(kept) == len(declared) - 1
     thinned = [c for c in full_run() if f'name="{declared[-1]}"' not in c]
