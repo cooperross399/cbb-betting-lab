@@ -47,6 +47,10 @@ on:
         description: "0 = no limit. Use to buy a deliberate sample."
         type: string
         default: "0"
+      merge_artifact_runs:
+        description: "Space-separated run ids whose raw-response artifacts are merged into the cache before the rebuild. For a lineage the cache chain never restored."
+        type: string
+        default: ""
       live:
         description: "Actually spend credits. Unchecked = dry run."
         type: boolean
@@ -131,6 +135,41 @@ jobs:
       # accident, inside the sibling `data/raw/cbb` cache. This step answers
       # "is the cache empty or did staging fail" before anything else runs,
       # because those are different faults with the same symptom.
+      # A LINEAGE THE CACHE CHAIN NEVER RESTORED CAN BE MERGED FROM ITS ARTIFACT.
+      # The any-wave restore key resolves to ONE cache — the latest — and a run
+      # that saved before another run started is a separate lineage the chain
+      # never sees again: the 609-event ladders run (33902269994) survived only
+      # in its own cache and its 90-day artifact while every later run
+      # restored the props lineage. Naming that run here downloads its raw
+      # responses on top of the restored cache, so this run's post-save holds
+      # the union and every later run inherits it. Filenames are event+chunk
+      # fingerprints, so a collision is the same response twice.
+      - name: Merge prior runs' raw-response artifacts into the cache
+        if: inputs.merge_artifact_runs != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUNS: ${{ inputs.merge_artifact_runs }}
+          DEST: data/raw/cbb/historical_purchase/${{ inputs.window }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$DEST"
+          for run_id in $RUNS; do
+            tmp=$(mktemp -d)
+            # Every raw-cache artifact of that run, whatever wave named it.
+            gh run download "$run_id" -R "${{ github.repository }}" -p 'historical-cache-*' -D "$tmp"
+            # upload-artifact strips the common ancestor: each artifact's root
+            # IS the card/ directory's contents.
+            n=0
+            for root in "$tmp"/*/; do
+              [ -d "$root" ] || continue
+              cp -Rn "$root". "$DEST"/
+              n=$((n + $(find "$root" -name '*.json' | wc -l)))
+            done
+            echo "merged $n responses from run $run_id"
+            rm -rf "$tmp"
+          done
+          echo "cache now holds $(find "$DEST" -name '*.json' | wc -l) responses; slate listings: $(ls "$DEST/slates" 2>/dev/null | wc -l)"
+
       - name: What is actually in the response cache
         run: |
           DIR="data/raw/cbb/historical_purchase/${{ inputs.window }}"
