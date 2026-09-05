@@ -143,7 +143,9 @@ from cbb_betting_lab.competitions import (
     competition_for,
 )
 from cbb_betting_lab.config import OUTPUTS_DIR, PROCESSED_DIR
-from cbb_betting_lab.forward_evidence import normalise_person, profit_units
+from cbb_betting_lab.forward_evidence import profit_units
+from cbb_betting_lab.providers.player_names import PlayerIndex
+from cbb_betting_lab.providers.player_names import build_index as build_player_index
 
 # Three names from `forward_evidence` that are private and are imported rather
 # than copied, deliberately. `_ROW_FOR_SELECTION` and `_SEGMENT_SETTLED` encode
@@ -554,6 +556,7 @@ def make_price_day(
         frame = prices.copy()
         matchups = call_model(
             model,
+            "the price backtest's per-day pricer (make_price_day)",
             day=day,
             history=history,
             prices=frame,
@@ -671,8 +674,8 @@ def fixture_index(
     return bundles
 
 
-def player_index(player_games: pd.DataFrame, game_ids: set) -> dict:
-    """`(game_id, normalised name)` -> the athlete rows carrying it.
+def player_index(player_games: pd.DataFrame, game_ids: set) -> PlayerIndex:
+    """Every athlete in these games, under every reading of his name.
 
     Keyed by the game so candidates are already filtered to the two teams that
     played it — the football lab's rule: *a lone candidate on the wrong team is
@@ -680,18 +683,13 @@ def player_index(player_games: pd.DataFrame, game_ids: set) -> dict:
     who never entered reaches `settlement._player_guard` and comes back
     `VOID`. A name with no row at all is unresolved, and `_grade_one` returns
     `UNSETTLEABLE` for it rather than a void.
+
+    The readings come from `providers.player_names`. This used to key on one
+    normalised form, and one form left **763 of 9,584 (game, player) pairs
+    carrying a prop unreadable — 7.96%**, measured 2026-09-05 against the card
+    price store.
     """
-    index: dict = {}
-    if player_games is None or player_games.empty or not game_ids:
-        return index
-    wanted = player_games[player_games["game_id"].isin(game_ids)]
-    for record in wanted.to_dict("records"):
-        game_id = _as_int(record.get("game_id"))
-        name = normalise_person(record.get("athlete_display_name"))
-        if game_id is None or not name:
-            continue
-        index.setdefault((game_id, name), []).append(record)
-    return index
+    return build_player_index(player_games, game_ids)
 
 
 def grade(
@@ -804,7 +802,7 @@ def _grade_one(
     player_row = None
     name = clean_text(record.get("player"))
     if name:
-        candidates = players.get((game_id, normalise_person(name)), [])
+        candidates = players.candidates(game_id, name)
         if len(candidates) > 1:
             census.ambiguous_player += 1
             return (
@@ -1299,13 +1297,22 @@ def main(argv: list[str] | None = None) -> int:
 
     # ---- walk forward ------------------------------------------------------
     accounting = OpinionAccounting(offered=len(wagers))
-    priced = PB.walk_forward(
-        wagers,
-        team_games,
-        price_day=make_price_day(
-            model, competition=competition, accounting=accounting
-        ),
-    )
+    try:
+        priced = PB.walk_forward(
+            wagers,
+            team_games,
+            price_day=make_price_day(
+                model, competition=competition, accounting=accounting
+            ),
+        )
+    except ModelNotWired as exc:
+        # `resolve_model` above catches the model that is not THERE; this
+        # catches the model that is there and does not FIT — one that requires
+        # an argument this script's pricer does not build. Same exit, because
+        # it is the same fault and an operator should not have to read a
+        # traceback to learn which of the two it was.
+        print(f"::error::{exc}", file=sys.stderr)
+        return EXIT_NO_MODEL
     # Checked on the stamp rather than trusted from the code path, because the
     # code path is exactly what was wrong in the lab this guard is ported from.
     PB.assert_walk_forward(priced)

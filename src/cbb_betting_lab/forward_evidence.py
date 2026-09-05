@@ -159,8 +159,6 @@ the gate's own words. **That is not a pass, an avoid, or a no-value call.**
 from __future__ import annotations
 
 import json
-import re
-import unicodedata
 from collections.abc import Callable, Iterable, Mapping
 from typing import ClassVar
 from dataclasses import dataclass, field
@@ -175,6 +173,7 @@ from cbb_betting_lab import season, stats, stores
 from cbb_betting_lab.competitions import CBB, Competition
 from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.config import DATA_DIR
+from cbb_betting_lab.providers import player_names
 from cbb_betting_lab.selection import (
     AWAY,
     AWAY_OVER,
@@ -676,29 +675,25 @@ def read_snapshot_strictly(path: Path | str) -> pd.DataFrame:
 # --------------------------------------------------------------------------
 
 
-_PERSON_PUNCT = re.compile(r"[^a-z0-9 ]+")
-_PERSON_SPACE = re.compile(r"\s+")
-#: Generational suffixes appear on one side of this join and not the other.
-_PERSON_SUFFIXES = frozenset({"jr", "sr", "ii", "iii", "iv", "v"})
-
-
 def normalise_person(name: object) -> str:
-    """A player's name reduced to identity, for candidate lookup only.
+    """A player's name reduced to identity — one reading of it.
 
-    Deliberately separate from `providers.team_names.normalise`, which expands
-    `st` to `saint` and strips `college` — right for schools and wrong for
-    people. Conservative in the same direction as its sibling: this only ever
-    produces a *candidate list*, and the decision made from that list is the
-    conservative one — more than one candidate is ambiguous and settles nothing.
+    Delegates to `providers.player_names.normalise`, which is where this rule
+    now lives alongside the rest of the vocabulary. It used to be this module's
+    whole answer to a player name: fold accents, punctuate to spaces, drop the
+    generational suffix. Measured 2026-09-05 over 9,584 (game, player) pairs
+    carrying a prop, that single reading left **763 of them — 7.96% —
+    unreadable**, because the provider also hangs a team tag on a name
+    (`Blake Hinson (PITT)`), writes an initialism apart or together
+    (`KJ Adams` for `K.J. Adams Jr.`), and drops apostrophes ESPN keeps
+    (`Kelel Ware` for `Kel'el Ware`).
+
+    Kept as a name because callers and tests use it for identity comparison.
+    The JOIN is not made on it — `player_names.PlayerIndex` matches on every
+    reading, which is what `team_names.variants` does for schools and for the
+    same reason.
     """
-    text = str(name or "")
-    if not text or text.strip().lower() == "nan":
-        return ""
-    text = unicodedata.normalize("NFKD", text)
-    text = "".join(c for c in text if not unicodedata.combining(c))
-    text = _PERSON_PUNCT.sub(" ", text.casefold())
-    words = [w for w in text.split() if w not in _PERSON_SUFFIXES]
-    return _PERSON_SPACE.sub(" ", " ".join(words)).strip()
+    return player_names.normalise(name)
 
 
 @dataclass
@@ -913,23 +908,17 @@ def _build_fixture_index(
     return _FixtureIndex(by_pair, by_team_day, game)
 
 
-def _build_player_index(player_games: pd.DataFrame, game_ids: set) -> dict:
-    """`(game_id, normalised name)` -> the athlete rows carrying it.
+def _build_player_index(
+    player_games: pd.DataFrame, game_ids: set
+) -> player_names.PlayerIndex:
+    """Every athlete in these games, under every reading of his name.
 
     Keyed by the game so candidates are already filtered to the two teams that
     played it, which is the football lab's rule: *a lone candidate on the wrong
-    team is a void, not a match.*
+    team is a void, not a match.* The readings come from
+    `providers.player_names`, which is `providers.team_names` for people.
     """
-    index: dict = {}
-    if player_games is None or player_games.empty or not game_ids:
-        return index
-    wanted = player_games[player_games["game_id"].isin(game_ids)]
-    for record in wanted.to_dict("records"):
-        key = (record.get("game_id"), normalise_person(record.get("athlete_display_name")))
-        if not key[1]:
-            continue
-        index.setdefault(key, []).append(record)
-    return index
+    return player_names.build_index(player_games, game_ids)
 
 
 def _ledger_days(ledger_path: Path) -> set[str]:
@@ -1205,7 +1194,7 @@ def _settle_row(
 
     player_row = None
     if row.player:
-        candidates = players.get((game_id, normalise_person(row.player)), [])
+        candidates = players.candidates(game_id, row.player)
         if len(candidates) > 1:
             result.rows_unsettleable += 1
             result.rows_ambiguous_player += 1
