@@ -99,7 +99,7 @@ The overall figure is not evidence about a betting policy. Nothing stakes money 
 
 ## The held-out test
 
-The held-out test is 2025, 2026 (held out), discovered on 2021-2024 and **not declared in advance**, which is what a held-out test is for. It graded 71,778 held-out bets over 9,776 games against 119,275 on the discovery seasons, across 32 cells:
+The held-out test is 2025, 2026 (held out), discovered on 2021-2024 and **not declared in advance** — the seasons held out were chosen after the discovery numbers had been seen, so this is a second look at the data rather than a pre-registered test. It graded 71,778 held-out bets over 9,776 games against 119,275 on the discovery seasons, across 32 cells:
 
 - did not replicate: **0** of 32
 - not enough evidence: **3** of 32

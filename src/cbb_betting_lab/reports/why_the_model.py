@@ -1678,9 +1678,12 @@ def _replication_lines(record: Mapping) -> list[str]:
     counts = block.get("counts")
     counts = counts if isinstance(counts, Mapping) else {}
     declared = (
-        f"declared in advance on {_text(block.get('declared_on'))}"
+        f"**declared in advance** on {_text(block.get('declared_on'))}, "
+        "which is what a held-out test is for"
         if block.get("declared_in_advance")
-        else "**not declared in advance**, which is what a held-out test is for"
+        else "**not declared in advance** — the seasons held out were chosen "
+        "after the discovery numbers had been seen, so this is a second look "
+        "at the data rather than a pre-registered test"
     )
     lines = [
         f"The held-out test is {_text(block.get('test_label')) or 'unlabelled'}, "

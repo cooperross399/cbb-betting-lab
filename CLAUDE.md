@@ -221,10 +221,17 @@ paragraph again.
 - **The lab's own thesis is contradicted.** Softness was expected at the
   low-major end. By point estimate the worst measured tier is **mid-major**
   (-4.3% over 88,344 bets).
-- **The model beats blind betting and loses to the vig.** The worst blind side
-  clearing the 200-bet floor is `low_major / player_threes / always over` at
-  **-40.0%** over 227 bets; all 3 measured tiers return more than every blind
-  rule. Information, and not enough of it.
+- **The model does not beat blind betting on return, and it loses to the vig.**
+  The claim that it beat every blind rule was checked and is FALSE: of the
+  190 blind sides clearing the 200-bet floor, **61 return more than
+  their own tier's model**, and 13 of those carry a demonstrated deficit — mid-major
+  `always the underdog` on moneyline returns -2.0% over 14,091 bets against the
+  model's -4.3%. The spread is wide in both directions: the worst blind side is
+  `low_major / player_threes / always over` at **-40.0%** over 227 bets, the best
+  is +20.7% over 345. **No blind side demonstrates an edge either (0 of
+  190)** — every positive one has an interval spanning zero after the
+  correction. The evidence that the model carries information is the Brier score
+  against the base rate, not the return against blind rules.
 - **The model loses to the market on Brier in every tier, with the vig left
   in**, per tier and never pooled: high-major **-0.01663**, corrected -0.02147
   to -0.01179 over 62,163 rows; mid-major **-0.00962**, corrected -0.01286 to
