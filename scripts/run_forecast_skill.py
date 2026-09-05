@@ -98,6 +98,7 @@ hand-edited generated file survives exactly one re-run.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
@@ -274,11 +275,48 @@ def print_disagreement_first(record: Mapping) -> None:
     )
 
 
+UNPAIRABLE_CENSUS_SUFFIX = "__unpairable.json"
+
+
+def load_unpairable_census(graded_path: Path) -> dict | None:
+    """The frame-builder's census, if it wrote one beside the frame.
+
+    `scripts/build_skill_frame.py` excludes every graded wager whose own book
+    hung one side only — a quote with no hold cannot be de-vigged — and writes
+    what it excluded to this file. Nothing in the frame itself records that,
+    so without this the report would state the frame's length as the graded
+    population and be wrong by however many rows were dropped.
+
+    Absent is **not** zero. `None` comes back, the record marks the census as
+    not supplied, and the report says so in those words: a frame from the
+    forward ledger or from any other producer carries no census, and printing
+    "0 excluded" for it would be a measurement nobody made.
+    """
+    target = Path(f"{Path(graded_path).with_suffix('')}{UNPAIRABLE_CENSUS_SUFFIX}")
+    if not target.is_file():
+        return None
+    try:
+        payload = json.loads(target.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        print(
+            f"::warning::{target} exists and could not be read ({exc}). The "
+            "report will say the census was not supplied rather than assume "
+            "nothing was excluded.",
+            file=sys.stderr,
+        )
+        return None
+    if not isinstance(payload, dict):
+        return None
+    print(f"Reading {target} — the frame-builder's unpairable census")
+    return payload
+
+
 def print_populations(record: Mapping) -> None:
     """Both populations with their counts, before any number from either."""
     populations = record.get("populations") or {}
     whole = populations.get("all_opinions") or {}
     subset = populations.get("selected") or {}
+    excluded = populations.get("excluded_unpairable") or {}
     print("")
     print("TWO POPULATIONS — WHICH ONE IS THE SKILL MEASURE")
     print(
@@ -294,6 +332,26 @@ def print_populations(record: Mapping) -> None:
         print(
             f"  {FS.SELECTED_LABEL}: not supplied (no `{FS.SELECTED_COLUMN}` "
             "column in the frame) — every number below is over every opinion"
+        )
+    if not excluded.get("available"):
+        print(
+            f"  {FS.UNPAIRABLE_LABEL}: not supplied — no census was written "
+            "beside this frame, so whether it is the whole graded set is "
+            "unknown rather than yes"
+        )
+    elif int(excluded.get("rows", 0)):
+        print(
+            f"  {FS.UNPAIRABLE_LABEL}: {int(excluded.get('rows', 0)):,} of "
+            f"{int(excluded.get('supplied', 0)):,} graded wagers "
+            f"({float(excluded.get('share', 0.0)):.6%}) — "
+            f"{excluded.get('reason') or FS.UNPAIRABLE_ROLE}. Both counts "
+            "above are counts of the subset that remained."
+        )
+    else:
+        print(
+            f"  {FS.UNPAIRABLE_LABEL}: none — all "
+            f"{int(excluded.get('supplied', 0)):,} graded wagers paired, so "
+            "the frame is the whole graded set"
         )
 
 
@@ -660,6 +718,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 season_label=season_label(graded),
                 pair_scope=args.pair_scope,
                 edge_threshold=float(args.edge_threshold),
+                unpairable=load_unpairable_census(graded_path),
             ),
             competition=competition,
             looks=looks,

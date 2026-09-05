@@ -1295,6 +1295,122 @@ def test_the_record_carries_both_populations_with_their_counts():
     assert above, "the all-opinions table must keep the wagers the model disliked as its control group"
 
 
+def test_the_record_and_report_state_the_wagers_excluded_before_the_frame():
+    """The frame is a subset of the graded set, and the report has to say so.
+
+    `build_skill_frame.py` excludes every graded wager whose own book hung one
+    side only — no hold, no fair price, nothing to de-vig — and writes a census
+    of what it dropped. Nothing in the frame records that, so a reader given
+    only the two population counts would take the larger for the graded set.
+    The count, the share, the reason and where it fell all reach the report.
+    """
+    frame = _with_selected(graded_frame("anti"))
+    census = {
+        "supplied": len(frame) + 3,
+        "paired": len(frame),
+        "unpairable": 3,
+        "unpairable_selected": 1,
+        "share": 3 / (len(frame) + 3),
+        "reconciles": True,
+        "reason": "their own book hung only one side of the wager",
+        "by_market": {"team_total": 2, "alternate_spread": 1},
+        "by_book": {"draftkings": 2, "betmgm": 1},
+    }
+    record = FS.build_record(
+        FS.SkillInputs(graded=frame, pair_scope="book", unpairable=census), competition=CBB
+    )
+    excluded = record["populations"]["excluded_unpairable"]
+    assert excluded["available"] is True
+    assert excluded["rows"] == 3
+    assert excluded["supplied"] == len(frame) + 3
+    assert excluded["paired"] == len(frame)
+    assert excluded["selected_rows"] == 1
+    assert excluded["reconciles"] is True
+    assert excluded["label"] == FS.UNPAIRABLE_LABEL
+    assert excluded["by_book"] == {"draftkings": 2, "betmgm": 1}
+    # The excluded rows are in neither population, and the record says so.
+    whole = record["populations"]["all_opinions"]
+    assert whole["rows"] < excluded["supplied"]
+
+    report = FS.render(record)
+    assert "## Two populations, and which one is the skill measure" in report
+    assert "3 graded wager(s) are in neither population above" in report
+    assert f"{len(frame) + 3:,} graded wagers" in report
+    assert "their own book hung only one side of the wager" in report
+    assert "team_total (2)" in report and "betmgm (1)" in report
+    assert f"1 had been marked as {FS.SELECTED_LABEL}" in report
+    # The exclusion is stated in the section that states the populations, not
+    # somewhere a reader of the counts would never reach.
+    section = report.index("## Two populations, and which one is the skill measure")
+    assert section < report.index("3 graded wager(s) are in neither population above")
+
+
+def test_a_frame_with_no_census_says_not_supplied_rather_than_none():
+    """Absent is not zero. "Nothing was excluded" is a measurement nobody made.
+
+    The forward ledger carries no census, and defaulting the count to zero
+    would print a claim about a quantity that was never counted — the same
+    error as deriving an accounting bucket by subtraction and calling the sum
+    a reconciliation.
+    """
+    frame = _with_selected(graded_frame("anti"))
+    record = FS.build_record(FS.SkillInputs(graded=frame, pair_scope="book"), competition=CBB)
+    excluded = record["populations"]["excluded_unpairable"]
+    assert excluded["available"] is False
+    assert excluded["rows"] == 0
+    report = FS.render(record)
+    assert FS.UNPAIRABLE_NOT_SUPPLIED in report
+    assert "are in neither population above" not in report
+
+
+def test_a_census_that_excluded_nothing_says_the_frame_is_the_whole_graded_set():
+    frame = _with_selected(graded_frame("anti"))
+    census = {
+        "supplied": len(frame),
+        "paired": len(frame),
+        "unpairable": 0,
+        "share": 0.0,
+        "reconciles": True,
+        "reason": "their own book hung only one side of the wager",
+    }
+    record = FS.build_record(
+        FS.SkillInputs(graded=frame, pair_scope="book", unpairable=census), competition=CBB
+    )
+    excluded = record["populations"]["excluded_unpairable"]
+    assert excluded["available"] is True and excluded["rows"] == 0
+    report = FS.render(record)
+    assert "**Nothing was excluded before this frame was built.**" in report
+    assert f"All {len(frame):,} graded wagers found a complement" in report
+    assert FS.UNPAIRABLE_NOT_SUPPLIED not in report
+
+
+def test_a_census_that_does_not_reconcile_is_said_so_before_its_numbers():
+    """A census whose own terms do not add up cannot vouch for the frame.
+
+    `supplied = paired + unpairable` is the whole claim the census makes. When
+    it fails, the numbers under it are not a smaller truth — they are of
+    unknown completeness, and the report says that above them rather than
+    printing them as if they were counted.
+    """
+    frame = _with_selected(graded_frame("anti"))
+    census = {
+        "supplied": len(frame) + 9,
+        "paired": len(frame),
+        "unpairable": 3,
+        "share": 3 / (len(frame) + 9),
+        "reconciles": False,
+        "reason": "their own book hung only one side of the wager",
+    }
+    record = FS.build_record(
+        FS.SkillInputs(graded=frame, pair_scope="book", unpairable=census), competition=CBB
+    )
+    assert record["populations"]["excluded_unpairable"]["reconciles"] is False
+    report = FS.render(record)
+    warning = "**The frame-builder's census does not reconcile**"
+    assert warning in report
+    assert report.index(warning) < report.index("3 graded wager(s) are in neither population")
+
+
 def test_the_report_says_which_population_every_number_belongs_to():
     frame = _with_selected(graded_frame("anti"))
     record = FS.build_record(FS.SkillInputs(graded=frame, pair_scope="book"), competition=CBB)
@@ -1424,10 +1540,14 @@ def test_a_record_from_the_previous_shape_is_refused_and_named_as_older(tmp_path
     `anti_predictive_return` left `RECORD_VERSION` at 2, so this guard could not
     fire and a reader could not tell the two shapes apart.
     """
-    assert FS.RECORD_VERSION == 3, (
-        "the record's shape changed when `anti_predictive` was split in two "
-        "and every bucket gained its corrected interval and its verdict; the "
-        "version must move with the shape or the staleness guard is decoration"
+    assert FS.RECORD_VERSION == 4, (
+        "the record's shape changed twice and the version moved with it both "
+        "times: when `anti_predictive` was split into overconfidence and "
+        "anti-predictive return with a corrected interval and a verdict on "
+        "every bucket (2 -> 3), and when `populations` gained "
+        "`excluded_unpairable` — the graded wagers the frame-builder dropped "
+        "because their book hung one side only (3 -> 4). The version must move "
+        "with the shape or the staleness guard is decoration"
     )
     stale = _version_2_shaped(anti)
     path = tmp_path / "stale.json"
@@ -1446,6 +1566,21 @@ def test_a_record_from_the_previous_shape_is_refused_and_named_as_older(tmp_path
     headline = "Realised return by claimed edge — the anti-predictive statistic."
     assert headline in FS.render(anti)
     assert headline not in FS.render(stale)
+
+    # The version-3 shape is refused for the same reason and it is the same
+    # class of harm: its `populations` block carries no `excluded_unpairable`,
+    # so re-rendering it prints "no census was supplied" over a run that had
+    # one, and the reader is told the frame's provenance is unknown when it was
+    # measured and recorded.
+    version_3 = json.loads(json.dumps(anti, default=str))
+    version_3["record_version"] = 3
+    version_3["populations"].pop("excluded_unpairable")
+    path_3 = tmp_path / "version_3.json"
+    path_3.write_text(json.dumps(version_3, default=str), encoding="utf-8")
+    with pytest.raises(FS.ForecastSkillError) as raised_3:
+        FS.read_record(path_3)
+    assert "version 3 record" in str(raised_3.value)
+    assert FS.UNPAIRABLE_NOT_SUPPLIED in FS.render(version_3)
 
 
 def test_the_disagreement_coefficient_survives_the_de_vig_choice(anti):
