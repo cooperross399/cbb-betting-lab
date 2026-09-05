@@ -96,7 +96,12 @@ jobs:
         env:
           PYTHONPATH: src
           CBB_ODDS_API_KEY: ${{ secrets.CBB_ODDS_API_KEY }}
-        run: python scripts/check_provider_quota.py | tee -a "$GITHUB_STEP_SUMMARY"
+        run: |
+          # `pipefail`: `tee` is the last command of the pipeline and succeeds
+          # whatever the quota check found. The probe below spends against
+          # this reading, so a swallowed failure here is spent credits.
+          set -euo pipefail
+          python scripts/check_provider_quota.py | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Probe
         env:
@@ -121,7 +126,12 @@ jobs:
         env:
           PYTHONPATH: src
           CBB_ODDS_API_KEY: ${{ secrets.CBB_ODDS_API_KEY }}
-        run: python scripts/check_provider_quota.py | tee -a "$GITHUB_STEP_SUMMARY"
+        run: |
+          # `pipefail`: `tee` is the last command of the pipeline and succeeds
+          # whatever the quota check found. The probe below spends against
+          # this reading, so a swallowed failure here is spent credits.
+          set -euo pipefail
+          python scripts/check_provider_quota.py | tee -a "$GITHUB_STEP_SUMMARY"
 
       # The record is the expensive artifact, not the report. Everything the
       # report says must be derivable from it, and it is uploaded even when a

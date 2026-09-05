@@ -40,6 +40,10 @@ jobs:
           PYTHONPATH: src
           CBB_ODDS_API_KEY: ${{ secrets.CBB_ODDS_API_KEY }}
         run: |
+          # `pipefail`: the last command of the pipeline below is `tee`, which
+          # succeeds whatever the quota check found, so without it a check
+          # that could not reach the provider reported the quota as read.
+          set -o pipefail
           if [ -z "${CBB_ODDS_API_KEY}" ]; then
             echo "::error::CBB_ODDS_API_KEY is not set."
             exit 1

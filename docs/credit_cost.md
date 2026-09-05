@@ -101,6 +101,18 @@ retention probe runs first. Buying a market the archive does not retain, or
 retains too thinly to measure against, spends real credits on rows no join will
 ever find.
 
+## The wall the runner puts up, and why it is not a budget
+
+GitHub caps a job at **360 minutes**. A `timeout-minutes` above that is
+accepted by the parser and silently reduced to it, and the purchase workflow
+declared 1440 for its first runs without ever being granted more than six
+hours. Nothing in the arithmetic above depends on how long a run lasts: the cap
+is a **credit** cap, checked against the measured running total before every
+request, and every response is cached raw the moment it arrives. A wave that
+outlives the job is finished by dispatching it again; the re-dispatch resumes
+from the cache and re-buys nothing. The budget is credits, and the runner's six
+hours only decides how many dispatches a wave takes.
+
 ## The arithmetic that is deliberately absent
 
 **What a season of forward evidence costs is not estimated here**, because it
