@@ -247,6 +247,78 @@ def test_pooled_vmr_is_allowed_to_come_out_below_one() -> None:
     assert vmr < 1.0
 
 
+def test_pooled_vmr_ignores_cells_of_one_rather_than_charging_them_a_variance() -> None:
+    """A cell with one observation has a mean and no variance.
+
+    Counted as if it had one, it contributes a squared residual of zero against
+    its own mean and eats a degree of freedom, which drags every dispersion
+    downward -- and hardest on exactly the players with the fewest repeated
+    minute counts, who are the bench players a book quotes at the shortest lines.
+    Built here so the singletons are wildly off the pooled mean: if they were
+    being counted at all, the answer would move.
+    """
+    rng = np.random.default_rng(53)
+    paired = np.repeat(np.arange(3000), 4)
+    singletons = np.arange(3000, 3000 + 20_000)
+    frame = pd.DataFrame(
+        {
+            "cell": np.concatenate([paired, singletons]),
+            "x": np.concatenate(
+                [
+                    rng.poisson(3.0, size=paired.size).astype(float),
+                    np.full(singletons.size, 300.0),
+                ]
+            ),
+        }
+    )
+    vmr, rows, cells = F.pooled_vmr(frame, "x", ["cell"])
+    assert rows == paired.size, "the singleton cells were counted as observations"
+    assert cells == 3000
+    assert vmr == pytest.approx(1.0, abs=0.05)
+
+
+def test_the_role_prior_is_minutes_weighted_and_not_an_average_of_rates() -> None:
+    """A four-minute night must not weigh what a thirty-four-minute night says.
+
+    The two differ whenever minutes and rate are correlated, which is the whole
+    reason the table is indexed by minutes in the first place. Built so they
+    differ by a factor of three: one long efficient night against nine short
+    barren ones.
+    """
+    rows = 10
+    frame = pd.DataFrame(
+        {
+            "bucket": np.zeros(rows, dtype=int),
+            "minutes": np.array([36.0] + [4.0] * 9),
+            "points": np.array([36.0] + [0.0] * 9),
+        }
+    )
+    for market in F.RATE_MARKETS:
+        frame[market] = frame["points"]
+    tables, counts, _ = F.role_priors(frame)
+    minutes_weighted = 36.0 / (36.0 + 9 * 4.0)
+    average_of_rates = (1.0 + 9 * 0.0) / 10.0
+    assert minutes_weighted == pytest.approx(0.5)
+    assert average_of_rates == pytest.approx(0.1)
+    assert tables["points"][0] == pytest.approx(minutes_weighted)
+    assert counts[0] == rows
+
+
+def test_non_finite_values_are_written_as_null_and_never_as_a_nan_token() -> None:
+    """`json.dumps` writes a bare `NaN`, which is not JSON.
+
+    A bucket with no rows is an absence, and it has to survive the round trip as
+    one. A `NaN` token parses in Python and is rejected by a strict reader in any
+    other language, so the file would be readable exactly where nobody was
+    checking it.
+    """
+    cleaned = F.jsonable(
+        {"a": float("nan"), "b": [float("inf"), 1.0], "c": {"d": float("-inf")}, "e": np.float64(2.5)}
+    )
+    assert cleaned == {"a": None, "b": [None, 1.0], "c": {"d": None}, "e": 2.5}
+    assert json.loads(json.dumps(cleaned, allow_nan=False)) == cleaned
+
+
 def test_the_credibility_fit_recovers_a_known_k() -> None:
     """Synthetic players with a known process and prior variance.
 
@@ -353,7 +425,7 @@ def test_the_fit_populations_are_never_screened_on_the_game_being_fitted() -> No
     priced = F.priced_population(trailing)
     corrupted = trailing.copy()
     for column in ("points", "rebounds", "assists", "steals", "turnovers", "threes", "twos", "ones",
-                   "points_events"):
+                   "points_events", "minutes"):
         corrupted[column] = 999.0
     corrupted_priced = F.priced_population(corrupted)
     assert set(priced.index) == set(corrupted_priced.index)
@@ -434,6 +506,11 @@ def test_the_credibility_gate_reports_the_range_it_could_actually_run_on() -> No
         assert bank["k"] is None and bank["rows"] == 0, market
         assert entry["banks_actually_checked"] == 3, market
         assert entry["spread_across_checked_banks"] <= F.K_STABILITY_MAX_SPREAD, market
+    # Pinned, because every "passes the gate" above is only as strong as the
+    # gate. The design declared 2x in advance; widening it after seeing the
+    # spreads is how a market that failed becomes a market that passed.
+    assert F.K_STABILITY_MAX_SPREAD == 2.0
+    assert F.K_STABILITY_BANDS[0] == (10.0, 60.0)
 
 
 def test_a_market_whose_k_is_unstable_is_recorded_unfittable_rather_than_averaged() -> None:
