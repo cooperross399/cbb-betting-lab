@@ -1569,6 +1569,39 @@ def check_the_suite_step_disables_the_path_shadows(path: Path) -> None:
         )
 
 
+def check_the_required_workflow_holds_no_secret_at_all(path: Path) -> None:
+    """`tests.yml` gets no credential, so the secrets context may not appear in
+    it at all — not even in an `env:` mapping, which the corpus rule permits.
+
+    `check_the_secrets_context_reaches_only_an_env_mapping` is deliberately the
+    looser rule, because the operational workflows genuinely do bind a
+    credential that way. This file does not: its own header says the job is
+    given no credential deliberately, the suite must pass without one, and a
+    step below asserts that at run time. Measured before this rule existed:
+    binding `TOK` to the secrets context on the suite step's `env:` passed the
+    whole module, while the header two hundred lines above claimed the linter
+    "refuses the secrets context anywhere in this file". The rule now matches
+    the sentence instead of the sentence matching nothing.
+
+    Scoped to the required workflow by name, so adding a credential to a
+    gameday or purchase workflow is still the corpus rule's business.
+    """
+    if path.name != TESTS_WORKFLOW:
+        return
+    text = path.read_text(encoding="utf-8")
+    for number, line in enumerate(text.splitlines(), start=1):
+        if line.lstrip().startswith("#"):
+            continue
+        assert not SECRET_REFERENCE.search(line) and not any(
+            SECRETS_WORD.search(e.group(0)) for e in GITHUB_EXPRESSION.finditer(line)
+        ), (
+            f"{path.name}:{number} reaches the secrets context. This job is given no "
+            "credential deliberately — that is what proves no test depends on a live "
+            "provider and what makes a run on a fork safe. The name may appear in prose; "
+            "the context may not appear at all."
+        )
+
+
 GATE_CHECKS: dict[str, Callable[[Path], None]] = {
     "no_step_or_job_continues_on_error": check_no_step_or_job_continues_on_error,
     "no_gate_workflow_binds_a_credential": check_no_gate_workflow_binds_a_credential,
@@ -1588,6 +1621,7 @@ GATE_CHECKS: dict[str, Callable[[Path], None]] = {
     "the_gate_line_is_pinned_as_a_whole_command": check_the_gate_line_is_pinned_as_a_whole_command,
     "the_gate_step_really_runs_the_gate": check_the_gate_step_really_runs_the_gate,
     "the_suite_step_disables_the_path_shadows": check_the_suite_step_disables_the_path_shadows,
+    "the_required_workflow_holds_no_secret_at_all": check_the_required_workflow_holds_no_secret_at_all,
 }
 
 
@@ -1786,6 +1820,7 @@ PROOFS = {
     "git_pushes_target_the_declared_ref_and_never_force": "test_a_push_to_the_wrong_ref_or_a_force_push_is_rejected",
     "no_workflow_stages_a_working_tree_wholesale": "test_git_add_is_rejected_wherever_it_sits_on_the_line",
     "the_secrets_context_reaches_only_an_env_mapping": "test_a_secret_outside_an_env_mapping_is_rejected",
+    "the_required_workflow_holds_no_secret_at_all": "test_a_secret_in_the_required_workflows_env_is_rejected",
     "the_credential_is_never_spelled_onto_a_command_line": "test_a_dereferenced_credential_is_rejected",
     "credit_spending_workflows_carry_no_cron": "test_a_cron_on_a_spending_workflow_is_rejected",
     "every_script_a_workflow_runs_exists": "test_a_missing_script_is_rejected",
@@ -2767,3 +2802,31 @@ def test_a_needs_or_a_conditional_neighbour_is_rejected(tmp_path: Path, mutation
     """
     anchor, replacement = mutation
     assert_rejects(check_the_required_check_is_pinned, workflow(tmp_path, mutate(anchor, replacement)))
+
+
+def test_a_secret_in_the_required_workflows_env_is_rejected(tmp_path: Path) -> None:
+    """The bypass this rule was written for, in the spelling that worked.
+
+    Binding the secrets context to an `env:` key on the suite step satisfies
+    the corpus rule, which permits exactly that, and it passed the whole module
+    before this rule existed. The required workflow gets no credential at all,
+    so here it must be refused.
+    """
+    anchor = "      - name: Run the suite\n        env:\n"
+    for spelling in (
+        "          TOK: ${{ secrets.CBB_ODDS_API_KEY }}\n",
+        "          TOK: ${{ secrets['CBB_ODDS_API_KEY'] }}\n",
+        "          TOK: ${{ toJSON(secrets) }}\n",
+        "          TOK: ${{ SECRETS.CBB_ODDS_API_KEY }}\n",
+    ):
+        assert_rejects(
+            check_the_required_workflow_holds_no_secret_at_all,
+            workflow(tmp_path, mutate(anchor, anchor + spelling)),
+        )
+
+
+def test_the_secret_name_in_prose_is_not_a_secret_reference(tmp_path: Path) -> None:
+    """The header names the secret in prose deliberately, so the rule must not
+    reject the real file. A rule that rejects correct work is a rule somebody
+    deletes."""
+    check_the_required_workflow_holds_no_secret_at_all(WORKFLOWS_DIR / TESTS_WORKFLOW)

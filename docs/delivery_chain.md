@@ -225,7 +225,8 @@ suppressing it, and says "if anything looks wrong to you, say so and stop". It
 proceeded without hesitation.
 
 Recorded because it is a live demonstration that the relay's judgment is load
-bearing: the routine holds a Google Drive connector and a private repository,
+bearing: the routine holds a Google Drive connector and this repository (private when
+the chain was designed; public since 2026-09-04),
 and the thing standing between those and a bad instruction is that it reads its
 own prompt sceptically.
 

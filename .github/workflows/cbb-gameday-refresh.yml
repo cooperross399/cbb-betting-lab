@@ -123,12 +123,19 @@ jobs:
     steps:
       - id: check
         env:
-          # THE REPOSITORY IS PRIVATE, so an unauthenticated fetch cannot see
-          # the branch at all. Without this token the guard failed open in the
-          # football lab: it read "no card-feed branch yet", the backup never
-          # stood down, and every game day fetched the slate twice and posted
-          # the card twice. Defect 18 in `docs/ported_defects.md`. A guard that
-          # cannot fail closed is not a guard.
+          # The token is what makes this guard fail CLOSED. Without it the
+          # football lab's guard failed open: it read "no card-feed branch
+          # yet", the backup never stood down, and every game day fetched the
+          # slate twice and posted the card twice. Defect 18 in
+          # `docs/ported_defects.md`. A guard that cannot fail closed is not a
+          # guard.
+          #
+          # This comment used to justify the token by saying the repository is
+          # private and an unauthenticated fetch could not see the branch. That
+          # is no longer true: measured 2026-09-05, an unauthenticated
+          # `curl 'https://github.com/cooperross399/cbb-betting-lab.git/info/refs?service=git-upload-pack'`
+          # returns HTTP 200. The token is still right, for the reason above
+          # rather than for that one.
           GH_TOKEN: ${{ github.token }}
           SCHEDULE: ${{ github.event.schedule }}
           DISPATCH_SLOT: ${{ inputs.card_slot }}

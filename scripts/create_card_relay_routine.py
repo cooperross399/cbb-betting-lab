@@ -63,7 +63,7 @@ ENVIRONMENT_ID = "env_01K3AkKFBnT5QXEA8EZ3SDGN"
 #: exists precisely to precede an 11:00 ET tip.
 CRON = "37 9,15,16,22 * 11,12,1,2,3,4 *"
 
-PROMPT = """You are a RELAY, not a reader. Your entire job is to copy the current college basketball card out of a private repository and into Google Drive, where Cooper's "CBB CARD" scheduled task in the regular Claude app reads it. Cooper does not read your output; he reads that task. So do not summarise, interpret, rank, score, or comment on the card, do not send a push notification, and do not send an email. Copy it and stop.
+PROMPT = """You are a RELAY, not a reader. Your entire job is to copy the current college basketball card out of a repository and into Google Drive, where Cooper's "CBB CARD" scheduled task in the regular Claude app reads it. Cooper does not read your output; he reads that task. So do not summarise, interpret, rank, score, or comment on the card, do not send a push notification, and do not send an email. Copy it and stop.
 
 The repository cooperross399/cbb-betting-lab is checked out for you. Never place a bet, never edit any repository file, never alter the card's content in any way.
 
