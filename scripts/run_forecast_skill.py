@@ -106,6 +106,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from cbb_betting_lab import restatement as RESTATEMENT
 from cbb_betting_lab import stats as S
 from cbb_betting_lab import stores
 from cbb_betting_lab.competitions import (
@@ -588,8 +589,19 @@ def print_census(record: Mapping) -> None:
 # --------------------------------------------------------------------------
 
 
-def rebuild_report_only(*, record_path: Path, report_path: Path) -> int:
-    """Re-render the markdown from the record. Fits nothing, spends nothing."""
+def rebuild_report_only(
+    *, record_path: Path, report_path: Path, ledger: Path | None = None
+) -> int:
+    """Re-render the markdown from the record. Fits nothing, spends nothing.
+
+    **It re-reads the experiment ledger and restates every reading at today's
+    cumulative count.** Replaying the correction the record stores is what let
+    this lab hold three different corrections across its own documents at once,
+    and a re-render — the operation run most often and trusted most — was the
+    thing repeating the oldest of them. Restating costs no fit and no table:
+    every corrected bound here is a stored estimate and a stored standard error
+    apart from being recomputed.
+    """
     if not record_path.is_file():
         print(
             f"::error::{record_path} does not exist, so there is no record to "
@@ -604,7 +616,11 @@ def rebuild_report_only(*, record_path: Path, report_path: Path) -> int:
     except FS.ForecastSkillError as exc:
         print(f"::error::{exc}", file=sys.stderr)
         return EXIT_NOTHING_TO_MEASURE
-    FS.write_report(record, report_path)
+    correction = RESTATEMENT.current(ledger)
+    was = int(record.get("looks", 1) or 1)
+    # One-directional: a re-render may only ever widen. See `restatement.widened`.
+    stated = RESTATEMENT.widened(was, correction)
+    FS.write_report(record, report_path, looks=stated)
     print(f"Wrote {report_path} from {record_path}.")
     print(
         "The run being rendered scored "
@@ -612,6 +628,24 @@ def rebuild_report_only(*, record_path: Path, report_path: Path) -> int:
         "graded wagers, generated "
         f"{record.get('generated_at') or 'at an unrecorded time'}."
     )
+    if not correction.found:
+        print(
+            f"::warning::No experiment ledger at {ledger}, so every reading "
+            f"below stands at the {was:,} hypotheses this run was fitted at. "
+            "An absent ledger is an unknown family, never an empty one."
+        )
+    elif stated != was:
+        print(
+            f"Readings restated at {stated:,} cumulative hypotheses "
+            f"(x{S.bonferroni_factor(stated):.4f}); the run was fitted at {was:,} "
+            f"(x{float(record.get('correction_factor', 1.0)):.4f}). The record "
+            "keeps what it measured."
+        )
+    else:
+        print(
+            f"The ledger holds {correction.looks:,} hypotheses, so "
+            "nothing needed restating."
+        )
     print("Nothing was re-fitted, no table was read and no credit was spent.")
     return EXIT_OK
 
@@ -682,7 +716,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     report_path = FS.report_path(competition, output_dir)
 
     if args.rebuild_report_only:
-        return rebuild_report_only(record_path=record_path, report_path=report_path)
+        return rebuild_report_only(
+            record_path=record_path,
+            report_path=report_path,
+            ledger=Path(args.ledger) if args.ledger else FS.ledger_path(output_dir),
+        )
 
     from_ledger = not str(args.graded).strip()
     graded_path = (

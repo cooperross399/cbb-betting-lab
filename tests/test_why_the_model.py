@@ -31,6 +31,7 @@ from pathlib import Path
 
 import pytest
 
+from cbb_betting_lab import restatement as RESTATEMENT
 from cbb_betting_lab import stats as S
 from cbb_betting_lab.competitions import CBB
 from cbb_betting_lab.reports import forecast_skill as FS
@@ -1298,10 +1299,25 @@ def test_the_status_row_for_the_regression_carries_the_measured_per_tier_figures
     """The other half of the same row: having removed the wrong figure, the
     right ones have to be there and have to match the record. Read from
     `cbb_forecast_skill.json`, so the day the regression is re-run and this row
-    is not rewritten, this fails."""
+    is not rewritten, this fails.
+
+    **Compared at the experiment ledger's count, not at the record's.** This
+    test used to read `adjusted_low`/`adjusted_high` straight off the record,
+    which pinned row 13 to the correction the fit happened to be scored under —
+    x1.6041 over 30 hypotheses — and so required the row to stay stale as the
+    ledger grew past it. That is the defect decision 46 closes, in the guard
+    that was supposed to catch it. The bounds are re-derived here the way every
+    report now re-derives them: same point estimate, same standard error, the
+    ledger's cumulative count at read time.
+    """
     payload = json.loads(
         FS.record_path(CBB, OUTPUTS).read_text(encoding="utf-8")
     )
+    looks = RESTATEMENT.widened(
+        int(payload.get("looks", 1) or 1),
+        RESTATEMENT.current(RESTATEMENT.ledger_path(OUTPUTS)),
+    )
+    payload = FS.restated(payload, looks=looks, record_name="cbb_forecast_skill.json")
     text = STATUS.read_text(encoding="utf-8")
     measured = [
         tier for tier in payload["by_tier"]
@@ -1310,6 +1326,10 @@ def test_the_status_row_for_the_regression_carries_the_measured_per_tier_figures
     assert len(measured) == 3, [t["label"] for t in measured]
     for tier in measured:
         raw = tier["brier"]["advantage_over_raw"]
+        assert int(raw["looks"]) == looks, (
+            "the restatement did not reach this cell, so the comparison below "
+            "is against the record's own correction after all"
+        )
         printed = (
             f"{raw['value']:.5f}, corrected "
             f"{raw['adjusted_low']:.5f} to {raw['adjusted_high']:.5f}"

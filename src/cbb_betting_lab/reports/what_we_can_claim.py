@@ -1315,6 +1315,26 @@ def build_record(
 
     replication_file = replication_path(competition, outputs)
     replication_payload = _read_json(replication_file)
+    # **Re-judged at `looks`, exactly like every interval below.** A replication
+    # state is a claim about a family-corrected interval, and the record stores
+    # the state it reached under the correction its run held. Reading that state
+    # straight off the record would print a judgement at a narrower correction
+    # than the tables on this same page carry — the defect
+    # `cbb_betting_lab.restatement` exists to close, arriving through the one
+    # field on this page that is a word rather than a number.
+    if (
+        isinstance(replication_payload, Mapping)
+        and replication_payload.get("markets")
+        # Only a record this repository's replication module wrote can be
+        # re-judged; anything else is read as it stands.
+        and _as_int(replication_payload.get("record_version"))
+        == replication_report.RECORD_VERSION
+    ):
+        replication_payload = replication_report.restated(
+            replication_payload,
+            looks=looks,
+            record_name=replication_report.record_file_name(replication_payload),
+        )
     states = replication_states(replication_payload)
     test_label = _text(replication_payload.get("test_label"))
 

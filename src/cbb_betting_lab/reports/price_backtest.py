@@ -105,12 +105,13 @@ from __future__ import annotations
 
 import importlib
 import inspect
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import pandas as pd
 
+from cbb_betting_lab import restatement as RESTATEMENT
 from cbb_betting_lab import stats as S
 from cbb_betting_lab import stores
 from cbb_betting_lab.competitions import CBB, Competition
@@ -1160,6 +1161,10 @@ def render(record: dict) -> str:
             "ledger is in place and this run is repeated."
         )
     add("")
+    provenance = RESTATEMENT.provenance_paragraph(record)
+    if provenance:
+        add(provenance)
+        add("")
     add(
         f"**Below {record.get('minimum_bets', S.MINIMUM_BETS):,} bets there is "
         "no number**, only the words *not enough evidence*. That floor was "
@@ -1383,8 +1388,39 @@ def read_record(path: Path) -> dict:
     return payload
 
 
-def write_report(record: dict, path: Path) -> Path:
+def restated(record: Mapping, *, looks: int, record_name: str = "") -> dict:
+    """The record with every interval and every verdict re-derived at `looks`.
+
+    Every corrected quantity this report prints is a stored point estimate and
+    a stored standard error away from being recomputed, so restating the whole
+    record costs no store, no table and no credit — it is the same free
+    re-render `--rebuild-report-only` already promised, told the truth about
+    how many hypotheses have been tested since. See
+    :mod:`cbb_betting_lab.restatement` for why the record itself is left alone.
+    """
+    return RESTATEMENT.restated(record, looks=looks, record_name=record_name)
+
+
+def write_report(record: dict, path: Path, *, looks: int | None = None) -> Path:
+    """Render the report. With `looks`, state its verdicts at that family size.
+
+    `looks` is the experiment ledger's count **at render time**. Passing it is
+    what stops a December correction being quoted in March, and passing the
+    record's own count is a no-op, so an unchanged ledger re-renders to the
+    same bytes.
+    """
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(render(record), encoding="utf-8")
+    payload = (
+        record
+        if looks is None
+        else restated(record, looks=looks, record_name=record_path_name(record))
+    )
+    target.write_text(render(payload), encoding="utf-8")
     return target
+
+
+def record_path_name(record: Mapping) -> str:
+    """The record file a restated report points a reader back at."""
+    key = str(record.get("competition", CBB.key)) or CBB.key
+    return f"{key}_price_backtest.json"

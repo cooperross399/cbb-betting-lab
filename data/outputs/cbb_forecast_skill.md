@@ -71,9 +71,9 @@ The hold this de-vig removed, measured over 293,661 two-sided pairs: median **1.
 
 | Term | Null | Coefficient | 95% interval | Family-corrected | Rows | Clusters | Reading |
 |:---|---:|---:|:---|:---|---:|---:|:---|
-| intercept | 0 | +0.001 | -0.019 to +0.021 | -0.031 to +0.033 | 62,163 | 719 days | contains zero |
-| market_implied | 1 | +1.013 | +0.973 to +1.054 | +0.948 to +1.078 | 62,163 | 719 days | contains 1.0 — the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable |
-| disagreement | 0 | +0.088 | +0.013 to +0.163 | -0.033 to +0.208 | 62,163 | 6,268 games | no demonstrated edge |
+| intercept | 0 | +0.001 | -0.019 to +0.021 | -0.034 to +0.036 | 62,163 | 719 days | contains zero |
+| market_implied | 1 | +1.013 | +0.973 to +1.054 | +0.942 to +1.085 | 62,163 | 719 days | contains 1.0 — the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable |
+| disagreement | 0 | +0.088 | +0.013 to +0.163 | -0.045 to +0.220 | 62,163 | 6,268 games | no demonstrated edge |
 
 **The model knows nothing the price does not.** The interval on the disagreement includes zero, so none of the claimed edge is demonstrably realised.
 
@@ -88,8 +88,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23455 | 62,163 |
 | the base rate (50.0% of these wagers won) | 0.25000 | 62,163 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.01686 over 62,163 wagers across 6,268 games, 95% interval -0.01987 to -0.01384, family-corrected -0.02169 to -0.01202 — demonstrated deficit.
-- **against the raw, handicapped market:** the model's Brier advantage is -0.01663 over 62,163 wagers across 6,268 games, 95% interval -0.01965 to -0.01361, family-corrected -0.02147 to -0.01179 — demonstrated deficit.
+- **against the de-vigged market:** the model's Brier advantage is -0.01686 over 62,163 wagers across 6,268 games, 95% interval -0.01987 to -0.01384, family-corrected -0.02219 to -0.01153 — demonstrated deficit.
+- **against the raw, handicapped market:** the model's Brier advantage is -0.01663 over 62,163 wagers across 6,268 games, 95% interval -0.01965 to -0.01361, family-corrected -0.02197 to -0.01129 — demonstrated deficit.
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -122,9 +122,9 @@ A bucket below 30 wagers prints its count and no frequency — the point estimat
 
 | Term | Null | Coefficient | 95% interval | Family-corrected | Rows | Clusters | Reading |
 |:---|---:|---:|:---|:---|---:|---:|:---|
-| intercept | 0 | -0.044 | -0.063 to -0.025 | -0.074 to -0.013 | 137,296 | 740 days | excludes zero, below it — a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model |
-| market_implied | 1 | +1.104 | +1.065 to +1.142 | +1.042 to +1.166 | 137,296 | 740 days | excludes 1.0 (over-responsive) — the de-vigged price is not calibrated on this population, so read the disagreement coefficient only after understanding why |
-| disagreement | 0 | +0.122 | +0.036 to +0.207 | -0.015 to +0.259 | 137,296 | 740 days | no demonstrated edge |
+| intercept | 0 | -0.044 | -0.063 to -0.025 | -0.077 to -0.010 | 137,296 | 740 days | excludes zero, below it — a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model |
+| market_implied | 1 | +1.104 | +1.065 to +1.142 | +1.036 to +1.172 | 137,296 | 740 days | excludes 1.0 (over-responsive) — the de-vigged price is not calibrated on this population, so read the disagreement coefficient only after understanding why |
+| disagreement | 0 | +0.122 | +0.036 to +0.207 | -0.029 to +0.273 | 137,296 | 740 days | no demonstrated edge |
 
 **The model knows nothing the price does not.** The interval on the disagreement includes zero, so none of the claimed edge is demonstrably realised.
 
@@ -139,8 +139,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23282 | 137,296 |
 | the base rate (50.0% of these wagers won) | 0.25000 | 137,296 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.00971 over 137,296 wagers across 11,728 games, 95% interval -0.01172 to -0.00770, family-corrected -0.01293 to -0.00648 — demonstrated deficit.
-- **against the raw, handicapped market:** the model's Brier advantage is -0.00962 over 137,296 wagers across 11,728 games, 95% interval -0.01164 to -0.00760, family-corrected -0.01286 to -0.00638 — demonstrated deficit.
+- **against the de-vigged market:** the model's Brier advantage is -0.00971 over 137,296 wagers across 11,728 games, 95% interval -0.01172 to -0.00770, family-corrected -0.01327 to -0.00615 — demonstrated deficit.
+- **against the raw, handicapped market:** the model's Brier advantage is -0.00962 over 137,296 wagers across 11,728 games, 95% interval -0.01164 to -0.00760, family-corrected -0.01319 to -0.00604 — demonstrated deficit.
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -173,9 +173,9 @@ A bucket below 30 wagers prints its count and no frequency — the point estimat
 
 | Term | Null | Coefficient | 95% interval | Family-corrected | Rows | Clusters | Reading |
 |:---|---:|---:|:---|:---|---:|---:|:---|
-| intercept | 0 | -0.021 | -0.046 to +0.004 | -0.061 to +0.019 | 94,182 | 9,084 games | contains zero |
-| market_implied | 1 | +1.057 | +1.007 to +1.108 | +0.977 to +1.138 | 94,182 | 9,084 games | contains 1.0 — the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable |
-| disagreement | 0 | +0.046 | -0.064 to +0.156 | -0.130 to +0.223 | 94,182 | 645 days | no demonstrated edge |
+| intercept | 0 | -0.021 | -0.046 to +0.004 | -0.065 to +0.023 | 94,182 | 9,084 games | contains zero |
+| market_implied | 1 | +1.057 | +1.007 to +1.108 | +0.969 to +1.146 | 94,182 | 9,084 games | contains 1.0 — the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable |
+| disagreement | 0 | +0.046 | -0.064 to +0.156 | -0.148 to +0.241 | 94,182 | 645 days | no demonstrated edge |
 
 **The model knows nothing the price does not.** The interval on the disagreement includes zero, so none of the claimed edge is demonstrably realised.
 
@@ -190,8 +190,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23806 | 94,182 |
 | the base rate (50.0% of these wagers won) | 0.25000 | 94,182 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.00801 over 94,182 wagers across 645 days, 95% interval -0.00985 to -0.00617, family-corrected -0.01096 to -0.00506 — demonstrated deficit.
-- **against the raw, handicapped market:** the model's Brier advantage is -0.00776 over 94,182 wagers across 645 days, 95% interval -0.00961 to -0.00591, family-corrected -0.01072 to -0.00479 — demonstrated deficit.
+- **against the de-vigged market:** the model's Brier advantage is -0.00801 over 94,182 wagers across 645 days, 95% interval -0.00985 to -0.00617, family-corrected -0.01126 to -0.00475 — demonstrated deficit.
+- **against the raw, handicapped market:** the model's Brier advantage is -0.00776 over 94,182 wagers across 645 days, 95% interval -0.00961 to -0.00591, family-corrected -0.01103 to -0.00449 — demonstrated deficit.
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -241,8 +241,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.21818 | 20 |
 | the base rate (50.0% of these wagers won) | 0.25000 | 20 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.08451 over 20 wagers across 2 games, 95% interval -0.27866 to +0.10965, family-corrected -0.39595 to +0.22694 — not enough evidence (20 bets, below the 200 declared in advance).
-- **against the raw, handicapped market:** the model's Brier advantage is -0.08603 over 20 wagers across 2 games, 95% interval -0.28132 to +0.10925, family-corrected -0.39929 to +0.22722 — not enough evidence (20 bets, below the 200 declared in advance).
+- **against the de-vigged market:** the model's Brier advantage is -0.08451 over 20 wagers across 2 games, 95% interval -0.27866 to +0.10965, family-corrected -0.42795 to +0.25893 — not enough evidence (20 bets, below the 200 declared in advance).
+- **against the raw, handicapped market:** the model's Brier advantage is -0.08603 over 20 wagers across 2 games, 95% interval -0.28132 to +0.10925, family-corrected -0.43147 to +0.25940 — not enough evidence (20 bets, below the 200 declared in advance).
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -279,9 +279,9 @@ A bucket below 30 wagers prints its count and no frequency — the point estimat
 
 | Term | Null | Coefficient | 95% interval | Family-corrected | Rows | Clusters | Reading |
 |:---|---:|---:|:---|:---|---:|---:|:---|
-| intercept | 0 | -0.027 | -0.039 to -0.015 | -0.047 to -0.008 | 293,661 | 27,082 games | excludes zero, below it — a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model |
-| market_implied | 1 | +1.071 | +1.046 to +1.095 | +1.031 to +1.110 | 293,661 | 27,082 games | excludes 1.0 (over-responsive) — the de-vigged price is not calibrated on this population, so read the disagreement coefficient only after understanding why |
-| disagreement | 0 | +0.094 | +0.044 to +0.144 | +0.014 to +0.175 | 293,661 | 27,082 games | demonstrated edge |
+| intercept | 0 | -0.027 | -0.039 to -0.015 | -0.049 to -0.006 | 293,661 | 27,082 games | excludes zero, below it — a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model |
+| market_implied | 1 | +1.071 | +1.046 to +1.095 | +1.027 to +1.114 | 293,661 | 27,082 games | excludes 1.0 (over-responsive) — the de-vigged price is not calibrated on this population, so read the disagreement coefficient only after understanding why |
+| disagreement | 0 | +0.094 | +0.044 to +0.144 | +0.005 to +0.183 | 293,661 | 27,082 games | demonstrated edge |
 
 **9% of each point of claimed edge is realised.** The interval excludes zero on the winning side. That is a necessary condition for a real edge and not a sufficient one: `price_backtest.py` decides whether a policy would have made money, and `reachability` decides whether the price could have been taken.
 
@@ -296,8 +296,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23487 | 293,661 |
 | the base rate (50.0% of these wagers won) | 0.25000 | 293,661 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.01068 over 293,661 wagers across 27,082 games, 95% interval -0.01195 to -0.00941, family-corrected -0.01272 to -0.00865 — demonstrated deficit.
-- **against the raw, handicapped market:** the model's Brier advantage is -0.01051 over 293,661 wagers across 27,082 games, 95% interval -0.01178 to -0.00924, family-corrected -0.01255 to -0.00847 — demonstrated deficit.
+- **against the de-vigged market:** the model's Brier advantage is -0.01068 over 293,661 wagers across 27,082 games, 95% interval -0.01195 to -0.00941, family-corrected -0.01292 to -0.00844 — demonstrated deficit.
+- **against the raw, handicapped market:** the model's Brier advantage is -0.01051 over 293,661 wagers across 27,082 games, 95% interval -0.01178 to -0.00924, family-corrected -0.01276 to -0.00826 — demonstrated deficit.
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -334,9 +334,9 @@ A bucket below 30 wagers prints its count and no frequency — the point estimat
 
 | Term | Null | Coefficient | 95% interval | Family-corrected | Rows | Clusters | Reading |
 |:---|---:|---:|:---|:---|---:|---:|:---|
-| intercept | 0 | -0.026 | -0.050 to -0.002 | -0.065 to +0.013 | 24,600 | 6,122 games | contains zero |
-| market_implied | 1 | +1.008 | +0.964 to +1.052 | +0.937 to +1.079 | 24,600 | 718 days | contains 1.0 — the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable |
-| disagreement | 0 | +0.239 | +0.109 to +0.370 | +0.030 to +0.449 | 24,600 | 718 days | demonstrated edge |
+| intercept | 0 | -0.026 | -0.050 to -0.002 | -0.069 to +0.017 | 24,600 | 6,122 games | contains zero |
+| market_implied | 1 | +1.008 | +0.964 to +1.052 | +0.930 to +1.086 | 24,600 | 718 days | contains 1.0 — the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable |
+| disagreement | 0 | +0.239 | +0.109 to +0.370 | +0.009 to +0.470 | 24,600 | 718 days | demonstrated edge |
 
 **24% of each point of claimed edge is realised.** The interval excludes zero on the winning side. That is a necessary condition for a real edge and not a sufficient one: `price_backtest.py` decides whether a policy would have made money, and `reachability` decides whether the price could have been taken.
 
@@ -351,8 +351,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23410 | 24,600 |
 | the base rate (48.3% of these wagers won) | 0.24970 | 24,600 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.02024 over 24,600 wagers across 6,122 games, 95% interval -0.02414 to -0.01635, family-corrected -0.02649 to -0.01399 — demonstrated deficit.
-- **against the raw, handicapped market:** the model's Brier advantage is -0.02011 over 24,600 wagers across 6,122 games, 95% interval -0.02346 to -0.01676, family-corrected -0.02549 to -0.01474 — demonstrated deficit.
+- **against the de-vigged market:** the model's Brier advantage is -0.02024 over 24,600 wagers across 6,122 games, 95% interval -0.02414 to -0.01635, family-corrected -0.02713 to -0.01335 — demonstrated deficit.
+- **against the raw, handicapped market:** the model's Brier advantage is -0.02011 over 24,600 wagers across 6,122 games, 95% interval -0.02346 to -0.01676, family-corrected -0.02604 to -0.01418 — demonstrated deficit.
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -385,9 +385,9 @@ A bucket below 30 wagers prints its count and no frequency — the point estimat
 
 | Term | Null | Coefficient | 95% interval | Family-corrected | Rows | Clusters | Reading |
 |:---|---:|---:|:---|:---|---:|---:|:---|
-| intercept | 0 | -0.062 | -0.086 to -0.039 | -0.100 to -0.024 | 51,053 | 11,315 games | excludes zero, below it — a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model |
-| market_implied | 1 | +1.096 | +1.055 to +1.137 | +1.030 to +1.162 | 51,053 | 11,315 games | excludes 1.0 (over-responsive) — the de-vigged price is not calibrated on this population, so read the disagreement coefficient only after understanding why |
-| disagreement | 0 | +0.267 | +0.130 to +0.404 | +0.048 to +0.486 | 51,053 | 740 days | demonstrated edge |
+| intercept | 0 | -0.062 | -0.086 to -0.039 | -0.104 to -0.020 | 51,053 | 11,315 games | excludes zero, below it — a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model |
+| market_implied | 1 | +1.096 | +1.055 to +1.137 | +1.023 to +1.169 | 51,053 | 11,315 games | excludes 1.0 (over-responsive) — the de-vigged price is not calibrated on this population, so read the disagreement coefficient only after understanding why |
+| disagreement | 0 | +0.267 | +0.130 to +0.404 | +0.025 to +0.509 | 51,053 | 740 days | demonstrated edge |
 
 **27% of each point of claimed edge is realised.** The interval excludes zero on the winning side. That is a necessary condition for a real edge and not a sufficient one: `price_backtest.py` decides whether a policy would have made money, and `reachability` decides whether the price could have been taken.
 
@@ -402,8 +402,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23163 | 51,053 |
 | the base rate (47.3% of these wagers won) | 0.24929 | 51,053 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.01222 over 51,053 wagers across 11,315 games, 95% interval -0.01498 to -0.00946, family-corrected -0.01665 to -0.00779 — demonstrated deficit.
-- **against the raw, handicapped market:** the model's Brier advantage is -0.01233 over 51,053 wagers across 11,315 games, 95% interval -0.01461 to -0.01005, family-corrected -0.01599 to -0.00867 — demonstrated deficit.
+- **against the de-vigged market:** the model's Brier advantage is -0.01222 over 51,053 wagers across 11,315 games, 95% interval -0.01498 to -0.00946, family-corrected -0.01710 to -0.00734 — demonstrated deficit.
+- **against the raw, handicapped market:** the model's Brier advantage is -0.01233 over 51,053 wagers across 11,315 games, 95% interval -0.01461 to -0.01005, family-corrected -0.01636 to -0.00830 — demonstrated deficit.
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -436,9 +436,9 @@ A bucket below 30 wagers prints its count and no frequency — the point estimat
 
 | Term | Null | Coefficient | 95% interval | Family-corrected | Rows | Clusters | Reading |
 |:---|---:|---:|:---|:---|---:|---:|:---|
-| intercept | 0 | -0.036 | -0.064 to -0.009 | -0.081 to +0.008 | 34,657 | 8,702 games | contains zero |
-| market_implied | 1 | +1.055 | +0.998 to +1.112 | +0.963 to +1.146 | 34,657 | 8,702 games | contains 1.0 — the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable |
-| disagreement | 0 | +0.177 | -0.003 to +0.358 | -0.112 to +0.467 | 34,657 | 644 days | no demonstrated edge |
+| intercept | 0 | -0.036 | -0.064 to -0.009 | -0.085 to +0.013 | 34,657 | 8,702 games | contains zero |
+| market_implied | 1 | +1.055 | +0.998 to +1.112 | +0.954 to +1.156 | 34,657 | 8,702 games | contains 1.0 — the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable |
+| disagreement | 0 | +0.177 | -0.003 to +0.358 | -0.142 to +0.497 | 34,657 | 644 days | no demonstrated edge |
 
 **The model knows nothing the price does not.** The interval on the disagreement includes zero, so none of the claimed edge is demonstrably realised.
 
@@ -453,8 +453,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23580 | 34,657 |
 | the base rate (46.3% of these wagers won) | 0.24861 | 34,657 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.01019 over 34,657 wagers across 644 days, 95% interval -0.01270 to -0.00767, family-corrected -0.01422 to -0.00615 — demonstrated deficit.
-- **against the raw, handicapped market:** the model's Brier advantage is -0.00991 over 34,657 wagers across 644 days, 95% interval -0.01191 to -0.00790, family-corrected -0.01312 to -0.00669 — demonstrated deficit.
+- **against the de-vigged market:** the model's Brier advantage is -0.01019 over 34,657 wagers across 644 days, 95% interval -0.01270 to -0.00767, family-corrected -0.01463 to -0.00574 — demonstrated deficit.
+- **against the raw, handicapped market:** the model's Brier advantage is -0.00991 over 34,657 wagers across 644 days, 95% interval -0.01191 to -0.00790, family-corrected -0.01345 to -0.00636 — demonstrated deficit.
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -504,8 +504,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23900 | 6 |
 | the base rate (16.7% of these wagers won) | 0.13889 | 6 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.14294 over 6 wagers across 2 games, 95% interval -0.38981 to +0.10394, family-corrected -0.53895 to +0.25307 — not enough evidence (6 bets, below the 200 declared in advance).
-- **against the raw, handicapped market:** the model's Brier advantage is -0.13092 over 6 wagers across 2 games, 95% interval -0.36990 to +0.10806, family-corrected -0.51426 to +0.25242 — not enough evidence (6 bets, below the 200 declared in advance).
+- **against the de-vigged market:** the model's Brier advantage is -0.14294 over 6 wagers across 2 games, 95% interval -0.38981 to +0.10394, family-corrected -0.57964 to +0.29376 — not enough evidence (6 bets, below the 200 declared in advance).
+- **against the raw, handicapped market:** the model's Brier advantage is -0.13092 over 6 wagers across 2 games, 95% interval -0.36990 to +0.10806, family-corrected -0.55365 to +0.29181 — not enough evidence (6 bets, below the 200 declared in advance).
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -538,9 +538,9 @@ A bucket below 30 wagers prints its count and no frequency — the point estimat
 
 | Term | Null | Coefficient | 95% interval | Family-corrected | Rows | Clusters | Reading |
 |:---|---:|---:|:---|:---|---:|---:|:---|
-| intercept | 0 | -0.046 | -0.060 to -0.031 | -0.069 to -0.022 | 110,316 | 26,141 games | excludes zero, below it — a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model |
-| market_implied | 1 | +1.062 | +1.035 to +1.089 | +1.018 to +1.106 | 110,316 | 26,141 games | excludes 1.0 (over-responsive) — the de-vigged price is not calibrated on this population, so read the disagreement coefficient only after understanding why |
-| disagreement | 0 | +0.235 | +0.154 to +0.316 | +0.105 to +0.364 | 110,316 | 791 days | demonstrated edge |
+| intercept | 0 | -0.046 | -0.060 to -0.031 | -0.071 to -0.020 | 110,316 | 26,141 games | excludes zero, below it — a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model |
+| market_implied | 1 | +1.062 | +1.035 to +1.089 | +1.014 to +1.110 | 110,316 | 26,141 games | excludes 1.0 (over-responsive) — the de-vigged price is not calibrated on this population, so read the disagreement coefficient only after understanding why |
+| disagreement | 0 | +0.235 | +0.154 to +0.316 | +0.092 to +0.378 | 110,316 | 791 days | demonstrated edge |
 
 **23% of each point of claimed edge is realised.** The interval excludes zero on the winning side. That is a necessary condition for a real edge and not a sufficient one: `price_backtest.py` decides whether a policy would have made money, and `reachability` decides whether the price could have been taken.
 
@@ -555,8 +555,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23349 | 110,316 |
 | the base rate (47.2% of these wagers won) | 0.24922 | 110,316 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.01338 over 110,316 wagers across 26,141 games, 95% interval -0.01510 to -0.01165, family-corrected -0.01614 to -0.01061 — demonstrated deficit.
-- **against the raw, handicapped market:** the model's Brier advantage is -0.01331 over 110,316 wagers across 26,141 games, 95% interval -0.01474 to -0.01188, family-corrected -0.01560 to -0.01102 — demonstrated deficit.
+- **against the de-vigged market:** the model's Brier advantage is -0.01338 over 110,316 wagers across 26,141 games, 95% interval -0.01510 to -0.01165, family-corrected -0.01642 to -0.01033 — demonstrated deficit.
+- **against the raw, handicapped market:** the model's Brier advantage is -0.01331 over 110,316 wagers across 26,141 games, 95% interval -0.01474 to -0.01188, family-corrected -0.01584 to -0.01078 — demonstrated deficit.
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -611,7 +611,9 @@ The threshold `price_backtest.BET_EDGE_THRESHOLD` declares in advance is 2%, and
 
 ## How this report is corrected, and what it cannot say
 
-**Family correction: 30 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.60. That is the ledger's cumulative count and never the day's — correcting today's findings across today's tests is a lie if more were tested last week.
+**Family correction: 95 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.77. That is the ledger's cumulative count and never the day's — correcting today's findings across today's tests is a lie if more were tested last week.
+
+**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 30 cumulative hypotheses (x1.6041), and `cbb_forecast_skill.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 95 hypotheses (x1.7689), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
 
 **Below 200 scored wagers or 30 clusters there is no number**, only the words *not enough evidence*. Both floors were declared in advance. The cluster floor is there because a cluster-robust sandwich is downward biased with few clusters, and this repository's standing failure mode is an interval that is too narrow.
 

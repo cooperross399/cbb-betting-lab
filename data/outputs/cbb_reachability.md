@@ -1,6 +1,6 @@
 # NCAA Division I men's basketball — reachability
 
-Generated 2026-09-03T23:53:02+00:00.
+Generated 2026-09-05T22:37:50+00:00.
 
 **A soft number you cannot bet is not an edge.** This report does not ask whether a price would have won; `price_backtest.py` asks that. It asks whether the price was still on the board when a human reached for it, and it reports the return of the prices that survived apart from the return of the prices that did not.
 
@@ -12,7 +12,7 @@ Generated 2026-09-03T23:53:02+00:00.
 
 **Limits are not observable from this instrument.** The provider serves a price and a book; it does not serve the maximum stake that book would accept on a Thursday low-major total. A quote that survived to the next capture is evidence that the *number* was still there, and it is not evidence that a stake of any size would have been taken. The brief names trivial limits and vanishing prices together; this report measures only the second, and a surviving price at a trivial limit is still not a bet.
 
-**Family correction: 30 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.60. That is the ledger's cumulative count and never the day's.
+**Family correction: 95 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.77. That is the ledger's cumulative count and never the day's.
 
 **Below 200 bets there is no number**, only the words *not enough evidence*. That floor was declared before any price was captured.
 

@@ -187,12 +187,32 @@ before persistence (defects S–W) and is not re-bought.
 hypotheses** — 30 discovery entries, the 32 holdout looks the replication
 appended, and the **33 player-prop hypotheses pre-registered on 2026-09-05
 before that model existed** — so every interval is widened by **x1.7689**. The
-records on disk were written when the ledger held 30 and carry stored bounds at
-x1.60; the generated reports re-apply the current factor at render time, which
-is the reading below and the reading in
+records on disk keep the correction each was scored under — the price backtest,
+the forecast-skill fit and the ratings fit at 30 hypotheses (x1.6041),
+`holdout/cbb_replication.json` at 62 (x1.7095) — and they are **not** rewritten:
+a record is the evidence of what was measured. Every generated report re-reads
+the ledger when it renders and re-derives its verdicts at the cumulative count
+it finds there, naming both counts on the page when they differ (decision 46).
+That is the reading below, and the reading in
 `docs/what_we_can_and_cannot_claim.md` and
 `docs/why_the_model_does_or_does_not_have_an_edge.md`. The correction may only
-ever get stricter, and it just did.
+ever get stricter, and it just did — so a re-render can retract a claim and can
+never manufacture one.
+
+**WHEN THE LEDGER GROWS, RE-RENDER. It is free, and the suite will not go green
+until you have.** Registering a hypothesis widens every interval this lab has
+ever published, so every report goes stale the moment it lands. Each generated
+report is brought current by running its own script with
+`--rebuild-report-only` — `run_price_backtest.py` (once per output directory:
+the default, `core_team_only/`, `holdout/`), `run_replication.py`,
+`run_forecast_skill.py`, `fit_ratings.py` — plus `run_what_we_can_claim.py`,
+`run_why_the_model.py --splice-into`, `run_forward_evidence.py` and
+`run_reachability.py`. None of those reads a price table, touches the network
+or spends a credit; they re-read the ledger and re-derive the verdicts from the
+run's own estimates. `docs/project_status.md` and **this file** have no
+generator and are re-derived by hand.
+`tests/test_no_report_states_a_stale_correction.py` fails until both halves are
+done, and names the file and the number it is waiting for.
 
 | Cut | Bets | ROI | Corrected (x1.7689, 95 hypotheses) | Verdict |
 |:---|---:|---:|:---|:---|
@@ -201,15 +221,25 @@ ever get stricter, and it just did.
 | low-major | 59,475 | -4.0% | -8.1% to +0.0% | no demonstrated edge |
 
 **Two published verdicts moved when those 33 hypotheses were registered, and
-both moved the same way.** At x1.7095 — the factor before the registration —
-**low-major** read a demonstrated deficit at -8.0% to -0.1%; it crosses zero at
-the 85th hypothesis and reads **no demonstrated edge** at x1.7689. The
-replication's held-out **`total_points` / mid-major** cell, -6.4% over 8,214
-bets, read a demonstrated deficit at -12.5% to -0.2% and reads **no
-demonstrated edge** at -12.7% to +0.0%; it crosses at the **95th**, which is
-this registration's last entry. Seven blind null-baseline sides lose a
+both moved the same way.** At the 62 hypotheses in force before the
+registration (x1.7095) **low-major** read a demonstrated deficit at -8.0% to
+-0.1%; it crosses zero at the 85th hypothesis and reads **no demonstrated
+edge** at -8.1% to +0.0% at today's 95 (x1.7689). The replication's held-out
+**`total_points` / mid-major** cell, -6.4% over 8,214 bets, read a demonstrated
+deficit at -12.5% to -0.2% at those same 62 hypotheses and reads **no
+demonstrated edge** at -12.7% to +0.0% at 95; it crosses at the **95th**, which
+is this registration's last entry. Seven blind null-baseline sides lose a
 demonstrated-deficit reading too, taking the blind deficits from 79 of 190 to
-72. Nothing anywhere becomes an edge. Mid-major survives with room: it would
+72 on the full store, from 70 of 189 to 63 on the held-out backtest and from 28
+of 48 to 27 on the core-team cut. **Seven on each of the first two, and not the
+same seven.** The held-out cut has no `spread / low-major / always the
+favourite` deficit to lose — that side reads no demonstrated edge there at 62
+and at 95, on 673 held-out bets against 1,320 — and it loses `total_points /
+high-major / always the underdog` instead, which the full store keeps at both
+counts. A swap, not an eighth: the registration commit's message said the
+held-out backtest *"loses seven and gains"* that side, which reads as eight,
+and counted from the committed records at both factors it is seven, 70 - 63.
+Nothing anywhere becomes an edge. Mid-major survives with room: it would
 take 411 hypotheses to widen it across. **This is the pre-registration working,
 not a reason to have skipped it** — an interval is paid for by the whole search
 that produced it, including the parts that have not run yet.
@@ -269,9 +299,16 @@ did"* — would have been a false cause today.
   high +0.088 corrected -0.045 to +0.220; mid +0.122 corrected -0.029 to
   +0.273; low +0.046 corrected -0.148 to +0.241. On the **selected** bets only
   (110,316) high-major reads +0.239 corrected +0.009 to +0.470 — that is the
-  winner's-curse comparison, never the skill measure, and the 33 player-prop
-  hypotheses moved its lower bound from +0.030 to +0.009 without changing what
-  it is.
+  winner's-curse comparison, never the skill measure. **Two registrations moved
+  that lower bound, not one.** The fit was scored while the ledger held 30 and
+  its stored bound is +0.030; the replication's 32 held-out cell tests took it
+  to +0.016 at 62, and the 33 player-prop hypotheses took it from +0.016 to
+  +0.009 at 95. This file previously credited the whole 30-to-95 move to the
+  player props alone, which is the same mistake in attribution that the
+  restatement machinery closes in arithmetic: a bound belongs to the whole
+  search, and each registration owns only its own step of it. The coefficient
+  still excludes zero at 95 and would need 156 cumulative hypotheses to cross,
+  so none of the three changes what it is.
 - **Anti-predictiveness is a shape.** Return by claimed-edge bucket is **not
   measurable** on this record (0 usable buckets of 8 populated). Overconfidence
   by bucket is: high-major runs **+13.4 pp** in the smallest claimed-edge

@@ -147,6 +147,7 @@ from pathlib import Path
 import pandas as pd
 
 from cbb_betting_lab import experiment_ledger as E
+from cbb_betting_lab import restatement as RESTATEMENT
 from cbb_betting_lab import stats as S
 from cbb_betting_lab.competitions import CBB, Competition
 from cbb_betting_lab.forward_evidence import SETTLEMENT_AMBIGUOUS_MARKETS
@@ -966,6 +967,10 @@ def render(record: Mapping) -> str:
         "**is** a second look and is counted as one."
     )
     add("")
+    provenance = RESTATEMENT.provenance_paragraph(record)
+    if provenance:
+        add(provenance)
+        add("")
     criteria = record.get("criteria") or {}
     add(
         f"**Below {minimum_bets:,} held-out bets there is no number**, only the "
@@ -1317,8 +1322,142 @@ def read_record(path: Path) -> dict:
     return payload
 
 
-def write_report(record: Mapping, path: Path) -> Path:
+#: Keys a per-season detail carries that are not part of its held-out interval.
+#: `build_record` writes ``{"season", "state", "why"}`` and then merges the
+#: cell over it, so stripping these three recovers the cell exactly.
+_SEASON_DETAIL_KEYS: frozenset[str] = frozenset({"season", "state", "why"})
+
+
+def _criteria_from_record(record: Mapping) -> Criteria:
+    """The pre-registered bar, read back off the record it was recorded in.
+
+    Read back rather than re-loaded from `data/manual/promotion_criteria.json`:
+    a restatement re-judges the same run under a wider correction, and a run
+    re-judged against a bar that has moved since is not the same test. Only the
+    correction is allowed to change.
+    """
+    stored = record.get("criteria") or {}
+    return Criteria(
+        roi_margin_points=float(stored.get("roi_margin_points", 0.0) or 0.0),
+        require_interval_excludes_zero=bool(
+            stored.get("require_interval_excludes_zero", True)
+        ),
+        minimum_bets=int(stored.get("minimum_bets", S.MINIMUM_BETS) or S.MINIMUM_BETS),
+        must_clear_every_season=bool(stored.get("must_clear_every_season", True)),
+        demotion_roi_floor=0.0,
+        demotion_minimum_bets=0,
+        declared_on=str(stored.get("declared_on", "")),
+    )
+
+
+def restated(record: Mapping, *, looks: int, record_name: str = "") -> dict:
+    """The record with every interval, verdict **and state** re-judged at `looks`.
+
+    A replication carries more than intervals: each cell's state is a judgement
+    made by :func:`judge_cell` over a discovery interval and a held-out one, and
+    both of those move when the family size does. So restating here is not a
+    matter of re-deriving bounds — it is running the same judge again over the
+    same stored measurements under the wider correction, which is what
+    `build_record` would have produced had it run today.
+
+    Nothing is re-scored. Every quantity the judge reads — the point estimate,
+    the standard error, the bet count, the cluster count and the discovery sign
+    — is already in the record; only the correction applied to them changes.
+    That matters here more than anywhere else, because a state is the strongest
+    word this lab prints: `total_points / mid_major` on the held-out window was
+    a *demonstrated deficit* at 62 hypotheses and is `no demonstrated edge` at
+    95, and its state has to move with it or the report says two things at
+    once.
+    """
+    criteria = _criteria_from_record(record)
+    moved = RESTATEMENT.restate_tree(record, looks=looks)
+
+    markets: list[dict] = []
+    for row in moved.get("markets") or []:
+        claim = dict(row.get("discovery") or {})
+        if not claim:
+            # Nothing to re-judge from. A row carrying no discovery interval was
+            # not written by `build_record`, and re-judging it would replace a
+            # state this module cannot rebuild with `untestable` — losing a
+            # recorded judgement rather than restating one. Left exactly as it
+            # was found, which is the only honest answer.
+            markets.append(dict(row))
+            continue
+        interval = interval_at(claim, looks=looks)
+        claim["claims"] = bool(interval.survives_correction)
+        claim["verdict"] = interval.verdict()
+        claim["enough_evidence"] = bool(interval.enough_evidence)
+        claim["sign"] = _sign(interval.roi)
+        seasons_detail: list[dict] = []
+        for detail in row.get("seasons") or []:
+            cell = {
+                k: v for k, v in dict(detail).items() if k not in _SEASON_DETAIL_KEYS
+            }
+            state, why = judge_cell(claim, cell or None, criteria=criteria)
+            rebuilt = {"season": int(detail.get("season", 0)), "state": state, "why": why}
+            rebuilt.update(cell)
+            seasons_detail.append(rebuilt)
+        holdout_row = dict(row.get("holdout") or {})
+        holdout_interval = (
+            interval_at(holdout_row, looks=looks) if holdout_row else None
+        )
+        out = dict(row)
+        out["discovery"] = claim
+        out["seasons"] = seasons_detail
+        out["state"] = combine_seasons([d["state"] for d in seasons_detail])
+        out["why"] = "; ".join(f"{d['season']}: {d['why']}" for d in seasons_detail)
+        out["found_on_the_holdout"] = bool(
+            not claim.get("claims")
+            and any(
+                int(d.get("bets", 0)) >= int(criteria.minimum_bets)
+                and interval_at(d, looks=looks).survives_correction
+                for d in seasons_detail
+                if d.get("bets")
+            )
+        )
+        out["realised_direction"] = (
+            ""
+            if holdout_interval is None
+            else "higher"
+            if _sign(holdout_interval.roi) > 0
+            else "lower"
+            if _sign(holdout_interval.roi) < 0
+            else ""
+        )
+        markets.append(out)
+
+    moved["markets"] = markets
+    counts = {state: 0 for state in STATES}
+    for row in markets:
+        counts[row["state"]] = counts.get(row["state"], 0) + 1
+    moved["counts"] = counts
+    stamped = RESTATEMENT.stamp(moved, looks=looks, record_name=record_name)
+    ledger = dict(stamped.get("ledger") or {})
+    if ledger:
+        ledger["cumulative_hypotheses"] = int(looks)
+        stamped["ledger"] = ledger
+    return stamped
+
+
+def record_file_name(record: Mapping) -> str:
+    """The record file a restated report points a reader back at."""
+    key = str(record.get("competition", CBB.key)) or CBB.key
+    return f"{key}_{REPORT_STEM}.json"
+
+
+def write_report(record: Mapping, path: Path, *, looks: int | None = None) -> Path:
+    """Render the report. With `looks`, re-judge it at that family size.
+
+    `looks` is the experiment ledger's count **at render time**. Passing the
+    record's own count is a no-op, so an unchanged ledger re-renders to the
+    same bytes.
+    """
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(render(record), encoding="utf-8")
+    payload = (
+        record
+        if looks is None
+        else restated(record, looks=looks, record_name=record_file_name(record))
+    )
+    target.write_text(render(payload), encoding="utf-8")
     return target

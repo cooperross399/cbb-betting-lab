@@ -98,6 +98,7 @@ from cbb_betting_lab.config import REPO_ROOT
 from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.reports import forecast_skill as FS
 from cbb_betting_lab.reports import price_backtest as PB
+from cbb_betting_lab.reports import replication as REPLICATION
 from cbb_betting_lab.reports import what_we_can_claim as WC
 
 #: Bumped whenever the record's shape changes, so a stale record fails loudly at
@@ -882,6 +883,22 @@ def build_record(
 
     correction = WC.correction_from_ledger(WC.experiment_ledger_path(outputs))
     looks = correction.looks
+
+    # The replication's state counts are judgements about family-corrected
+    # intervals, made under whatever correction that run held. Re-judged here at
+    # the ledger's count so this document's counts and its tables are stated at
+    # one correction rather than two. Nothing is re-scored: see
+    # `cbb_betting_lab.restatement`.
+    if (
+        isinstance(replication, Mapping)
+        and replication.get("markets")
+        and _as_int(replication.get("record_version")) == REPLICATION.RECORD_VERSION
+    ):
+        replication = REPLICATION.restated(
+            replication,
+            looks=looks,
+            record_name=REPLICATION.record_file_name(replication),
+        )
 
     backtest_path = paths["price backtest"]
     tier_rows = _rows(backtest, "by_tier", label="price backtest", path=backtest_path)
