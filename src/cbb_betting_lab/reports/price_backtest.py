@@ -19,9 +19,13 @@ a pricer the whole table. It walks slate days in order and calls
 games **strictly earlier** than the day being priced, stamps every returned row
 with the ``priced_through`` day it was actually built from, and
 :func:`assert_walk_forward` raises if any row's ``priced_through`` is not
-strictly earlier than the day it bet on. `tests/test_price_backtest.py` corrupts
-every game after a cut date and asserts the output is unchanged — the same shape
-of test the football lab wrote for its ratings after paying for the lesson.
+strictly earlier than the day it bet on. `tests/test_run_price_backtest.py`
+pins both halves — `test_the_pricer_only_ever_sees_games_strictly_earlier_than_
+the_day` and `test_every_bet_carries_the_day_it_was_priced_through` — and
+`tests/test_fit_ratings.py::test_corrupting_every_game_after_a_cut_leaves_the_
+earlier_fits_identical` is the corrupt-everything-after-a-cut test, on the
+ratings the backtest prices through. (This docstring used to cite a
+`tests/test_price_backtest.py` that never existed.)
 
 ## One wager is one bet, at the best price
 

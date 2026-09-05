@@ -103,10 +103,11 @@ def test_the_experiment_ledger_filename_matches_the_module():
 
 
 def test_the_workflow_file_named_in_the_contract_is_the_one_on_disk():
-    """Skipped until the workflow exists; failing once it does is the point."""
+    """The workflow exists and carries the name and the branch. This used to
+    skip when the file was absent, which would have read as a pass the day the
+    workflow was deleted."""
     path = REPO_ROOT / CONTRACTS["Workflow file"]
-    if not path.is_file():
-        pytest.skip("the gameday workflow is not written yet")
+    assert path.is_file(), f"{CONTRACTS['Workflow file']} is missing"
     text = path.read_text(encoding="utf-8")
 
     assert f'name: {CONTRACTS["Workflow name"]}' in text

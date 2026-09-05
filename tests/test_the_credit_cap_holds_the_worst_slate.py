@@ -12,7 +12,11 @@ Two separate guards came out of that, and this file is the first:
    drops the late ones — the West Coast, low-major end of the board this lab
    exists to look at — and forward evidence cannot be re-made.
 2. The **spend** is enforced against the measured running total, not the
-   estimate. That is `test_the_spend_guard_uses_the_measured_total.py`.
+   estimate. That is `tests/test_retention_probe.py` —
+   `test_the_cap_refuses_a_request_that_would_breach_it` and
+   `test_the_measured_total_and_not_the_estimate_is_what_was_reported` (this
+   docstring used to name a `test_the_spend_guard_uses_the_measured_total.py`
+   that never existed).
 """
 
 from __future__ import annotations
@@ -55,8 +59,7 @@ def test_the_regions_are_the_ones_cooper_can_actually_open():
 def test_the_generated_arithmetic_agrees_with_the_registry():
     """CI regenerates the cost file; this checks the two have not drifted."""
     path = Path(OUTPUTS_DIR) / CBB.output_name("credit_cost", ".json")
-    if not path.is_file():
-        pytest.skip("credit cost not generated in this environment")
+    assert path.is_file(), f"{path.name} is tracked under data/outputs; its absence is a broken checkout, not a pass"
     record = json.loads(path.read_text(encoding="utf-8"))
     assert record["per_event_cost_pessimistic"] == (
         len(M.per_event_provider_keys()) * REGIONS

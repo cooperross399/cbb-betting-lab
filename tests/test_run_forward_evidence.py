@@ -38,10 +38,7 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-pytest.importorskip(
-    "cbb_betting_lab.settlement",
-    reason="settlement.py is the module under the script; the integration is real.",
-)
+import cbb_betting_lab.settlement  # noqa: E402,F401  (an ImportError here is a failure, never a skip)
 
 from cbb_betting_lab import forward_evidence as fe  # noqa: E402
 from cbb_betting_lab import season  # noqa: E402

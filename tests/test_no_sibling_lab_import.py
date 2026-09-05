@@ -38,38 +38,87 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SIBLING_PACKAGES = ("epl_betting_lab", "football_betting_lab", "ncaaf_betting_lab", "nhl_betting_lab",)
 
 
-def _python_files() -> list[Path]:
+SCAN_ROOTS = (PROJECT_ROOT / "src", PROJECT_ROOT / "scripts", PROJECT_ROOT / "tests")
+
+
+def _python_files(roots: tuple[Path, ...] = SCAN_ROOTS) -> list[Path]:
+    """Every module under `roots`, and never an empty root.
+
+    A root that yields nothing is a moved tree, and a scan over nothing finds
+    nothing — the fail-open shape this suite exists to refuse.
+    """
     keep: list[Path] = []
-    for root in (PROJECT_ROOT / "src", PROJECT_ROOT / "scripts", PROJECT_ROOT / "tests"):
-        if root.is_dir():
-            keep.extend(
-                p for p in root.rglob("*.py")
-                if ".venv" not in p.parts and p.name != Path(__file__).name
-            )
+    for root in roots:
+        here = [
+            p for p in root.rglob("*.py")
+            if ".venv" not in p.parts and p.name != Path(__file__).name
+        ] if root.is_dir() else []
+        assert here, f"{root} contributed no Python files to the sibling-import scan"
+        keep.extend(here)
     return keep
+
+
+def _imports_in(path: Path) -> list[str]:
+    """Every sibling-lab import in one module, or an AssertionError naming
+    the file when it does not parse. This used to `continue` on a
+    SyntaxError, so an unparseable module was a module that imported nothing."""
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except SyntaxError as exc:
+        raise AssertionError(f"{path} does not parse, so it cannot be scanned: {exc}") from exc
+    offenders: list[str] = []
+    for node in ast.walk(tree):
+        names: list[str] = []
+        if isinstance(node, ast.Import):
+            names = [a.name for a in node.names]
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            names = [node.module]
+        for name in names:
+            if name.split(".")[0] in SIBLING_PACKAGES:
+                offenders.append(f"{path.name}:{node.lineno}: imports {name}")
+    return offenders
 
 
 def test_no_module_imports_a_sibling_lab() -> None:
     offenders: list[str] = []
     for path in _python_files():
-        try:
-            tree = ast.parse(path.read_text(encoding="utf-8"))
-        except SyntaxError:
-            continue
-        for node in ast.walk(tree):
-            names: list[str] = []
-            if isinstance(node, ast.Import):
-                names = [a.name for a in node.names]
-            elif isinstance(node, ast.ImportFrom) and node.module:
-                names = [node.module]
-            for name in names:
-                if name.split(".")[0] in SIBLING_PACKAGES:
-                    offenders.append(f"{path.name}:{node.lineno}: imports {name}")
+        offenders.extend(_imports_in(path))
     assert not offenders, (
         "This lab imports a sibling lab. Machinery is shared by PORTING it "
         "here, visibly, never by coupling two repositories:\n  "
         + "\n  ".join(offenders)
     )
+
+
+def test_the_scan_reads_a_non_empty_tree(tmp_path: Path) -> None:
+    """Absence is never a pass: an empty or missing root is a red build."""
+    assert len(_python_files()) > 50
+    with pytest.raises(AssertionError, match="contributed no Python files"):
+        _python_files(roots=(tmp_path,))
+    with pytest.raises(AssertionError, match="contributed no Python files"):
+        _python_files(roots=(PROJECT_ROOT / "src", tmp_path / "gone"))
+
+
+def test_a_planted_sibling_import_is_found(tmp_path: Path) -> None:
+    """The guard watched firing, for every spelling of an import."""
+    for source in (
+        "import nhl_betting_lab\n",
+        "from football_betting_lab.stats import interval\n",
+        "import epl_betting_lab.config as c\n",
+        "from ncaaf_betting_lab import leagues\n",
+    ):
+        planted = tmp_path / "planted.py"
+        planted.write_text(source, encoding="utf-8")
+        assert _imports_in(planted), f"{source!r} was not found"
+    planted.write_text("from cbb_betting_lab import config\nimport nhl_stats_unrelated\n", encoding="utf-8")
+    assert _imports_in(planted) == []
+
+
+def test_an_unparseable_module_is_a_failure_naming_the_file(tmp_path: Path) -> None:
+    broken = tmp_path / "broken.py"
+    broken.write_text("import nhl_betting_lab\ndef f(:\n", encoding="utf-8")
+    with pytest.raises(AssertionError, match="does not parse"):
+        _imports_in(broken)
 
 
 @pytest.mark.parametrize("package", SIBLING_PACKAGES)

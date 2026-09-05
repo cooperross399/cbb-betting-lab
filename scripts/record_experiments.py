@@ -211,8 +211,12 @@ def main(argv: list[str] | None = None) -> int:
     path = Path(args.output_dir) / E.LEDGER_FILENAME
     ledger = E.load(path)
     before = ledger.count
+    # The entry count as loaded, handed to save() as the floor it may not
+    # write below. save() used to re-read the file instead, which compared
+    # this object's count with itself; see its docstring.
+    loaded = len(ledger.hypotheses)
     added = ledger.record(*HYPOTHESES)
-    E.save(ledger, path)
+    E.save(ledger, path, floor=loaded)
 
     print(
         f"Experiment ledger: {before} distinct hypotheses before, "

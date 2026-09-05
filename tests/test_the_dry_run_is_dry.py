@@ -98,29 +98,31 @@ def test_the_default_path_opens_no_socket(
     assert isinstance(status, int)
 
 
-def test_the_probe_is_dry_even_with_a_cache(no_network, no_credential):
+def test_the_probe_is_dry_even_with_a_cache(
+    no_network, no_credential, fixture_raw_dir, fixture_processed_dir, capsys
+):
     """The stronger case: a probe that CAN build its sample still must not
-    request anything without --live."""
-    raw = REPO / "data" / "raw" / "cbb" / "schedules"
-    if not any(raw.glob("mbb_schedule_*.parquet")):
-        pytest.skip("No cached schedule locally; the empty-cache case covers CI.")
-    status = run_script("run_retention_probe.py")
-    assert status == 0
-
-
-def test_the_probe_says_so_in_the_words_the_reader_expects(capsys, no_network, no_credential):
-    raw = REPO / "data" / "raw" / "cbb" / "schedules"
-    if not any(raw.glob("mbb_schedule_*.parquet")):
-        pytest.skip("No cached schedule locally.")
-    run_script("run_retention_probe.py")
-    assert "no credit was spent" in capsys.readouterr().out
+    request anything without --live. The sample is built from the tracked
+    schedule fixtures and the processed table (the full one when built, the
+    tracked sample when not), so this runs in CI rather than skipping there."""
+    status = run_script(
+        "run_retention_probe.py",
+        "--raw-dir", str(fixture_raw_dir),
+        "--processed-dir", str(fixture_processed_dir),
+    )
+    out = capsys.readouterr().out
+    assert status == 0, out
+    assert "Plan:" in out, "the probe did not build a sample, so this is the empty-cache case again"
+    assert "no credit was spent" in out
 
 
 def test_live_is_spelled_the_same_way_in_every_spending_script():
     """One flag name across every entry point that can spend. A script whose
     override were `--real` or `--go` would be one a hurried operator could
     trigger while believing they were doing something else."""
-    for path in sorted(SCRIPTS.glob("*.py")):
+    scripts = sorted(SCRIPTS.glob("*.py"))
+    assert len(scripts) > 5, f"{len(scripts)} scripts under {SCRIPTS}; a moved directory is not a pass"
+    for path in scripts:
         text = path.read_text()
         if "credit" not in text.lower() and "odds" not in text.lower():
             continue

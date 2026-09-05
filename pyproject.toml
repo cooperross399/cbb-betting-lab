@@ -14,3 +14,8 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+# A strict xfail writes an xpass into the junit as a <failure>, which
+# scripts/check_test_results.py refuses. Non-strict, an xpass is recorded as a
+# plain pass that no reader of the XML can tell from a real one. This sets the
+# DEFAULT only: a marker with strict=False overrides it per test.
+xfail_strict = true

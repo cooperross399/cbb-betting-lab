@@ -257,9 +257,16 @@ def day(now) -> str:
     return slate_date(_iso(now + timedelta(hours=6)), CBB)
 
 
+#: The day the "today" tests card: a week out in the competition's calendar,
+#: pinned into the script by `run_script_as_of`. Every tip on the board is
+#: then in the future whatever the wall clock reads, so the fixture below
+#: never has to skip.
+PINNED_TODAY = (datetime.now(CBB.timezone) + timedelta(days=7)).date().isoformat()
+
+
 @pytest.fixture()
 def today() -> str:
-    return datetime.now(CBB.timezone).date().isoformat()
+    return PINNED_TODAY
 
 
 @pytest.fixture()
@@ -276,12 +283,7 @@ def payloads_for_today(today) -> list[dict]:
     the evening.
     """
     at = datetime.fromisoformat(f"{today}T23:45:00").replace(tzinfo=CBB.timezone)
-    if at <= datetime.now(CBB.timezone) + timedelta(minutes=30):
-        pytest.skip(
-            "There is no future time left on today's Eastern slate day. The "
-            "same path is covered deterministically by the tests that call "
-            "run_card directly on a fixed clock."
-        )
+    assert at > datetime.now(CBB.timezone) + timedelta(hours=24), "the pinned day is not in the future"
     return board_payloads(at.astimezone(timezone.utc) - timedelta(hours=6))
 
 
@@ -323,6 +325,29 @@ def run_script(*argv: str) -> int:
         sys.argv = saved
 
 
+def run_script_as_of(today_: str, *argv: str) -> int:
+    """The script's `main`, with its notion of "today" pinned to `today_`.
+
+    The script reads the wall clock for the one thing it refuses to take from
+    an argument — which day is today — and the tests that exercise the real,
+    non-rehearsal path used to build a board tipping at 23:45 Eastern today
+    and SKIP inside the last 45 minutes of the Eastern day, when no such tip
+    exists. A skip keyed on the time of day is a red build once a night under
+    the junit gate. Loading the script as a module and replacing `_today` is
+    the seam: every other clock on the path (the tip guard, the freeze stamp)
+    keeps reading the real time, which is earlier than every tip on a board
+    built a week out, so nothing about the card's decisions changes.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("_run_gameday_card_as_of", SCRIPT)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module._today = lambda competition: today_
+    return int(module.main(list(argv)) or 0)
+
+
 def stage_to_disk(board: GC.Board, tmp_path: Path, day: str) -> Path:
     staging_dir = tmp_path / "staging"
     target = staging.staging_path(
@@ -346,7 +371,7 @@ def test_the_whole_chain_runs_offline_from_a_staged_board(
     itself rather than a helper, because the workflow runs the script.
     """
     staged = stage_to_disk(board_for_today, tmp_path, today)
-    status = run_script(
+    status = run_script_as_of(today,
         "--card-slot", "morning",
         "--staged-board", str(staged),
         "--archive-dir", str(tmp_path / "archive"),
@@ -1315,7 +1340,7 @@ def test_the_live_path_runs_end_to_end_against_a_provider_that_answers(
             return {}
 
     monkeypatch.setattr(odds_api, "OddsApiProvider", AnsweringProvider)
-    status = run_script(
+    status = run_script_as_of(today,
         "--live",
         "--card-slot", "morning",
         "--credit-cap", "40000",
@@ -1485,15 +1510,14 @@ def test_a_missing_schedule_cache_leaves_every_game_unplaced_and_says_so(
     assert "No cached schedule" in placement.note
 
 
-def test_tiers_come_from_seasons_strictly_before_the_one_being_priced():
+def test_tiers_come_from_seasons_strictly_before_the_one_being_priced(fixture_raw_dir):
     """A team's tier in November 2026 is what its 2025-26 non-conference record
-    said, not what its 2026-27 record will say."""
-    raw = REPO / "data" / "raw"
-    if not any((raw / CBB.data_dir_segment / "schedules").glob("mbb_schedule_*.parquet")):
-        pytest.skip("No cached schedule locally; the empty-cache case covers CI.")
+    said, not what its 2026-27 record will say. Over the tracked schedule
+    fixtures (2024-25, 2025-26, 2026-27), so it runs in CI rather than
+    skipping there."""
     placement = GC.place_games(
         GC.board_from_payloads([], competition=CBB),
-        competition=CBB, day="2027-01-12", raw_dir=raw,
+        competition=CBB, day="2027-01-12", raw_dir=fixture_raw_dir,
     )
 
     assert placement.table is not None
@@ -1557,7 +1581,7 @@ def test_the_run_records_its_fingerprint_for_the_next_run(
 ):
     day = today
     staged = stage_to_disk(board_for_today, tmp_path, day)
-    run_script(
+    run_script_as_of(today,
         "--card-slot", "morning",
         "--staged-board", str(staged),
         "--archive-dir", str(tmp_path / "archive"),
@@ -1651,8 +1675,8 @@ def test_a_second_run_of_the_same_slot_compares_against_the_first(
         "--output-dir", str(tmp_path / "outputs"),
         "--raw-dir", str(tmp_path / "raw"),
     )
-    run_script(*argv)
-    run_script(*argv)
+    run_script_as_of(today, *argv)
+    run_script_as_of(today, *argv)
     capsys.readouterr()
     text = (tmp_path / "outputs" / "cbb_gameday_card.md").read_text(encoding="utf-8")
 

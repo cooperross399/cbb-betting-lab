@@ -16,9 +16,9 @@ or corrupted:
 * a headline reading "positive" over a replicated loss, which is exactly what
   the NHL lab shipped at −6.6%.
 
-`settlement.py` is written in parallel, so the module is imported through
-`importorskip` — the integration is real, and this file is still runnable
-before its sibling lands.
+`settlement.py` used to be imported through `importorskip` while it was being
+written in parallel. It has landed, and a skip that fires when a module fails
+to import is a pass over a broken integration — so it is a plain import now.
 """
 
 from __future__ import annotations
@@ -29,10 +29,7 @@ from datetime import datetime, timezone
 import pandas as pd
 import pytest
 
-pytest.importorskip(
-    "cbb_betting_lab.settlement",
-    reason="settlement.py is written in parallel; the integration below is real.",
-)
+import cbb_betting_lab.settlement  # noqa: E402,F401  (an ImportError here is a failure, never a skip)
 
 from cbb_betting_lab import forward_evidence as fe  # noqa: E402
 from cbb_betting_lab import stats, stores  # noqa: E402

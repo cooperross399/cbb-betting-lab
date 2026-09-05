@@ -79,7 +79,11 @@ from the opening Monday to the last day of March.
 
 This program measures both conventions on the same days and prints them side by
 side. It does not change `models/ratings.py`: that module is not this task's to
-edit, the finding is recorded here and in `tests/test_prior_weight_decays.py`,
+edit, the finding is recorded here, in `tests/test_fit_ratings.py` (the decay
+tests and `test_the_seam_does_not_cut_its_history_to_the_priced_season`) and
+in `tests/test_ratings_fit_is_well_posed.py::test_the_seam_does_not_delete_the_
+november_prior_regime` — this used to cite a `test_prior_weight_decays.py` that
+never existed —
 and the sibling-lab rule about not silently repairing something that holds
 measured numbers applies with the same force inside this repository.
 

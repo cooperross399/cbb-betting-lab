@@ -13,6 +13,8 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+
+from conftest import schedule_fixture
 from zoneinfo import ZoneInfo
 
 from cbb_betting_lab.config import RAW_DIR
@@ -75,10 +77,8 @@ def test_the_uncardable_share_is_tiny_and_named_rather_than_zero():
     chasing it. The tip guard quarantines these games correctly and the run
     reports the coverage it achieved. **It is a coverage gap, not a fault.**
     """
-    path = Path(RAW_DIR) / "cbb" / "schedules" / "mbb_schedule_2026.parquet"
-    if not path.is_file():
-        pytest.skip("schedule not cached")
-    frame = pd.read_parquet(path, columns=["date"])
+    frame = pd.read_parquet(schedule_fixture(2026), columns=["date"])
+    assert len(frame) > 6_000
     hours = (
         pd.to_datetime(frame["date"], utc=True)
         .dt.tz_convert(ZoneInfo("America/New_York"))
@@ -95,10 +95,8 @@ def test_the_uncardable_share_is_tiny_and_named_rather_than_zero():
 
 
 def test_the_evening_slot_still_earns_its_cron():
-    path = Path(RAW_DIR) / "cbb" / "schedules" / "mbb_schedule_2026.parquet"
-    if not path.is_file():
-        pytest.skip("schedule not cached")
-    frame = pd.read_parquet(path, columns=["date"])
+    frame = pd.read_parquet(schedule_fixture(2026), columns=["date"])
+    assert len(frame) > 6_000
     hours = (
         pd.to_datetime(frame["date"], utc=True)
         .dt.tz_convert(ZoneInfo("America/New_York"))

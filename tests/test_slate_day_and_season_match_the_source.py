@@ -5,9 +5,9 @@ in the NHL lab and cost weeks. Both are cheap to get wrong and silent when
 wrong: a season label that is off by one makes every filter miss, and a date
 that is off by one drops the late games and keeps the early ones.
 
-These tests read the real hoopR schedule when it is cached and fall back to
-pinned literals from it when it is not, so CI proves the convention without a
-network call and a local run proves it against the bytes.
+The pinned literals are checked everywhere; the every-row check reads the
+tracked schedule fixture — every game of both seasons, trimmed to the columns
+this lab reads — so it runs in CI too rather than skipping there.
 """
 
 from __future__ import annotations
@@ -77,12 +77,12 @@ def test_no_boundary_hour_is_silently_reintroduced():
 
 
 @pytest.mark.parametrize("season", sorted(SOURCE_SEASON_SPANS))
-def test_against_the_real_schedule_when_it_is_cached(season: int):
-    """When the parquet is on disk, check every row rather than three literals."""
-    path = Path(RAW_DIR) / "cbb" / "schedules" / f"mbb_schedule_{season}.parquet"
-    if not path.is_file():
-        pytest.skip(f"{path.name} is not cached; the pinned literals stand in.")
-    frame = pd.read_parquet(path, columns=["season", "date"])
+def test_against_the_real_schedule(season: int):
+    """Every row of the season, from the tracked schedule fixture."""
+    from conftest import schedule_fixture
+
+    frame = pd.read_parquet(schedule_fixture(season), columns=["season", "date"])
+    assert len(frame) > 1_000, f"{len(frame)} rows is not a season"
     days = frame["date"].map(
         lambda x: slate_date(pd.Timestamp(x).tz_convert("UTC").isoformat(), CBB)
     )
