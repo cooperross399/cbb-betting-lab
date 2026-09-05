@@ -310,7 +310,7 @@ from cbb_betting_lab.stores import _decimal_payout as decimal_payout
 #: `render`, so re-rendering one would print a bucket section with the
 #: anti-predictive paragraph missing entirely and nothing would look wrong.
 #: That is exactly what :func:`read_record` refuses.
-RECORD_VERSION = 3
+RECORD_VERSION = 4
 
 #: The output stem. Competition-prefixed by `Competition.output_name`, so this
 #: lab's record could never be overwritten by another's.
@@ -374,6 +374,31 @@ ALL_OPINIONS_LABEL = "every settled wager the model had an opinion on"
 SELECTED_LABEL = "the threshold-selected bets only"
 ALL_OPINIONS_ROLE = "the skill measure"
 SELECTED_ROLE = "the winner's-curse comparison, not the skill measure"
+
+#: The graded rows that never reached either population, because the frame
+#: handed to this module had already excluded them. `build_skill_frame.py`
+#: pairs every graded wager with the SAME book's quote on the other side, and a
+#: book that hung one side only supplies no hold — the wager cannot be
+#: de-vigged and excluding it is the only honest arithmetic available. That
+#: exclusion happens **upstream of this module**, so nothing in this file can
+#: see it in the frame: the row is simply not there, and the frame's length is
+#: therefore not a count of the graded set.
+#:
+#: So the builder writes a census beside the frame and this report states it
+#: wherever it states a population. Without it a reader would take the frame's
+#: length on trust, which is exactly the habit the two-populations section
+#: exists to break.
+UNPAIRABLE_LABEL = "graded wagers excluded before the frame was built"
+UNPAIRABLE_ROLE = (
+    "in neither population — no complement at their own book, so no hold and "
+    "no fair price"
+)
+UNPAIRABLE_NOT_SUPPLIED = (
+    "No census of excluded wagers was supplied with this frame, so this report "
+    "cannot say whether the frame is the whole graded set or a subset of it. "
+    "`scripts/build_skill_frame.py` writes that census beside the frame it "
+    "builds; a frame from anywhere else carries none."
+)
 
 #: The de-vig. One method, declared, and stated in the report every time.
 DEVIG_METHOD = "multiplicative"
@@ -1818,6 +1843,53 @@ class SkillInputs:
     snapshot_phase: str = ""
     pair_scope: str = PAIR_SCOPES[0]
     edge_threshold: float = BET_EDGE_THRESHOLD
+    #: The frame-builder's unpairable census, as written beside the frame, or
+    #: `None` when the frame came from somewhere that writes no census. It is
+    #: the ONLY way this module can know that rows were excluded upstream, and
+    #: the report says "not supplied" rather than "none" when it is absent —
+    #: the two are different claims and only one of them is a measurement.
+    unpairable: Mapping | None = None
+
+
+def _excluded_unpairable(census: Mapping | None) -> dict:
+    """The frame-builder's census, as the record carries it.
+
+    `available` is False when no census was supplied, and the report then says
+    so in words. It is never defaulted to zero: "no rows were excluded" and
+    "nobody counted" are different claims, and printing the first when the
+    second is true is the whole class of error this file argues against.
+    """
+    if not census:
+        return {
+            "label": UNPAIRABLE_LABEL,
+            "role": UNPAIRABLE_ROLE,
+            "available": False,
+            "rows": 0,
+            "supplied": 0,
+            "paired": 0,
+            "share": 0.0,
+            "selected_rows": 0,
+            "reason": "",
+            "by_market": {},
+            "by_book": {},
+            "reconciles": False,
+        }
+    supplied = int(census.get("supplied", 0))
+    rows = int(census.get("unpairable", 0))
+    return {
+        "label": UNPAIRABLE_LABEL,
+        "role": UNPAIRABLE_ROLE,
+        "available": True,
+        "rows": rows,
+        "supplied": supplied,
+        "paired": int(census.get("paired", 0)),
+        "share": float(census.get("share", 0.0)),
+        "selected_rows": int(census.get("unpairable_selected", 0)),
+        "reason": str(census.get("reason", "")),
+        "by_market": dict(census.get("by_market") or {}),
+        "by_book": dict(census.get("by_book") or {}),
+        "reconciles": bool(census.get("reconciles", False)),
+    }
 
 
 def build_record(
@@ -1908,6 +1980,10 @@ def build_record(
                 "games": int(selected["games"]),
                 "days": int(selected["days"]),
             },
+            # Neither population, and that is the point: these rows were
+            # dropped before this module saw the frame, so the frame's length
+            # is not the graded set and only this census can say so.
+            "excluded_unpairable": _excluded_unpairable(inputs.unpairable),
         },
         "by_tier": tiers,
         "rows_without_a_tier": int(len(population)) - tiered_rows,
@@ -2458,11 +2534,79 @@ def _pooling_artefact_warning(record: Mapping) -> list[str]:
     ]
 
 
+def _excluded_lines(excluded: Mapping) -> list[str]:
+    """What the frame does not contain, stated where the populations are stated.
+
+    A reader who is told two population counts and nothing else will take the
+    larger of them for the graded set. It is not: `build_skill_frame.py`
+    excludes every graded wager whose own book hung one side only, because a
+    one-sided quote holds no vig and no fair price can be taken from it. The
+    count is small and the exclusion is correct; **saying nothing about it** is
+    the part that would not be.
+    """
+    if not excluded.get("available"):
+        return [UNPAIRABLE_NOT_SUPPLIED, ""]
+    rows = int(excluded.get("rows", 0))
+    supplied = int(excluded.get("supplied", 0))
+    paired = int(excluded.get("paired", 0))
+    reason = str(excluded.get("reason") or UNPAIRABLE_ROLE)
+    paragraphs: list[str] = []
+    if not excluded.get("reconciles"):
+        paragraphs.append(
+            "**The frame-builder's census does not reconcile** — its paired "
+            "and unpairable counts do not add up to the wagers it was handed, "
+            "so nothing in this subsection can be read as complete."
+        )
+    if not rows:
+        paragraphs.append(
+            f"**Nothing was excluded before this frame was built.** All "
+            f"{supplied:,} graded wagers found a complement at their own book, "
+            "so the frame is the whole graded set."
+        )
+    else:
+        paragraphs.append(
+            f"**{rows:,} graded wager(s) are in neither population above.** "
+            f"The frame was built from {supplied:,} graded wagers, {paired:,} "
+            f"of them paired, and the other {rows:,} "
+            f"({float(excluded.get('share', 0.0)):.6%}) were excluded because "
+            f"{reason}. Excluding them is the only honest arithmetic available "
+            "— there is no hold in a one-sided quote to de-vig — but every "
+            "count above is therefore a count of a **subset** of the graded "
+            "set, not of the graded set itself."
+        )
+        where = []
+        for what, key in (("market", "by_market"), ("book", "by_book")):
+            tally = excluded.get(key) or {}
+            if tally:
+                named = ", ".join(
+                    f"{name} ({int(count):,})"
+                    for name, count in sorted(
+                        tally.items(), key=lambda kv: (-kv[1], kv[0])
+                    )
+                )
+                where.append(f"by {what}: {named}")
+        if where:
+            paragraphs.append("They fell " + "; ".join(where) + ".")
+        selected_rows = int(excluded.get("selected_rows", 0))
+        if selected_rows:
+            paragraphs.append(
+                f"Of the {rows:,} excluded, {selected_rows:,} had been marked "
+                f"as {SELECTED_LABEL}, so that comparison is short by the same "
+                "number."
+            )
+    out: list[str] = []
+    for paragraph in paragraphs:
+        out.append(paragraph)
+        out.append("")
+    return out
+
+
 def _populations_section(record: Mapping) -> list[str]:
     """The two populations, named and counted, before any number from either."""
     populations = record.get("populations") or {}
     whole = populations.get("all_opinions") or {}
     subset = populations.get("selected") or {}
+    excluded = populations.get("excluded_unpairable") or {}
     lines: list[str] = []
     add = lines.append
     add("## Two populations, and which one is the skill measure")
@@ -2499,7 +2643,19 @@ def _populations_section(record: Mapping) -> list[str]:
             f"| {subset.get('label', SELECTED_LABEL)} | "
             f"{subset.get('role', SELECTED_ROLE)} | not supplied | — | — |"
         )
+    if excluded.get("available"):
+        add(
+            f"| {excluded.get('label', UNPAIRABLE_LABEL)} | "
+            f"{excluded.get('role', UNPAIRABLE_ROLE)} | "
+            f"{int(excluded.get('rows', 0)):,} | — | — |"
+        )
+    else:
+        add(
+            f"| {UNPAIRABLE_LABEL} | {UNPAIRABLE_ROLE} | not supplied | "
+            "— | — |"
+        )
     add("")
+    lines.extend(_excluded_lines(excluded))
     if subset.get("available"):
         add(
             f"The selected subset is {int(subset.get('rows', 0)):,} of "
