@@ -54,8 +54,10 @@ which is the reason this is done first and on its own.
 Two constants are *declared* rather than selected: the minutes half-life and the
 bucket edges. Declared means the value was written down before the curve was
 looked at. The curve is measured anyway, on both windows, and stored as evidence
-beside the declaration -- and on this window the argmin is 3, not the declared
-4, on both the fit and the holdout, by 0.42%. The declaration stands. The
+beside the declaration -- and it does not point at 4: the argmin is 2 on the
+fit window and 3 on the holdout, which is to say the two windows do not agree
+with each other either. The declaration stands, and costs 0.032 minutes of
+RMSE. The
 design's account of why: an earlier half-life was "chosen by 0.08% on the season
 it called held out, which is how you spend a holdout on nothing."
 
@@ -64,7 +66,11 @@ it called held out, which is how you spend a holdout on nothing."
 1. **`minutes_half_life`** -- declared 4. The RMSE curve over half-lives 2, 3,
    4, 5 and 8 and a flat trailing mean is measured on both windows, on a
    population held **fixed** across half-lives (screening on a projection the
-   half-life itself produced would compare six different populations).
+   half-life itself produced would compare six different populations). The
+   argmin is 2 on the fit window and 3 on the holdout, and it is not the
+   declared 4 on either; the whole curve spans 2.3% and the declaration costs
+   0.032 minutes of RMSE. That the two windows do not agree with each other
+   about it is the argument for declaring rather than selecting, measured.
 2. **`minutes_pmf`** -- an empirical pmf over integer minutes 1..45 per
    projected-minutes bucket. Not a mean and an SD: it carries the 40-minute
    ceiling, the measured left tail, and the left skew a Gaussian throws away.
@@ -1633,8 +1639,12 @@ def design_disagreements(reproduction: Mapping) -> list[dict]:
                 "the design published no tolerance for this curve and declared the "
                 "half-life rather than selecting it, so nothing turns on the gap. The "
                 "shape agrees: flat from 2 to 5, clearly worse at 8, clearly worse "
-                "still at a flat trailing mean. The argmin differs (2 there, 3 here) "
-                "which is exactly the design's own argument for not selecting on it."
+                "still at a flat trailing mean, and the argmin is 2 on both. Every "
+                "measured value is about 1% higher than the design's, uniformly across "
+                "the curve, which is a population difference rather than a method one: "
+                "this curve is measured on one fixed set of rows, so the six "
+                "half-lives are compared over the same population rather than each "
+                "over the one its own projection selects."
             ),
         }
     )

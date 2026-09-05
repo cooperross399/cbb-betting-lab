@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-05T19:47:11+00:00",
+  "generated_at": "2026-09-05T20:02:45+00:00",
   "generated_by": "scripts/fit_player_model.py",
   "never_runs_at_price_time": true,
   "price_season_floor": 2024,
@@ -2706,7 +2706,7 @@
       "gap": 0.12210062729843418,
       "tolerance": null,
       "agrees": null,
-      "consequence": "the design published no tolerance for this curve and declared the half-life rather than selecting it, so nothing turns on the gap. The shape agrees: flat from 2 to 5, clearly worse at 8, clearly worse still at a flat trailing mean. The argmin differs (2 there, 3 here) which is exactly the design's own argument for not selecting on it."
+      "consequence": "the design published no tolerance for this curve and declared the half-life rather than selecting it, so nothing turns on the gap. The shape agrees: flat from 2 to 5, clearly worse at 8, clearly worse still at a flat trailing mean, and the argmin is 2 on both. Every measured value is about 1% higher than the design's, uniformly across the curve, which is a population difference rather than a method one: this curve is measured on one fixed set of rows, so the six half-lives are compared over the same population rather than each over the one its own projection selects."
     }
   ],
   "caveats": [
