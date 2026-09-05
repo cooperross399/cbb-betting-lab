@@ -170,10 +170,15 @@ jobs:
         # is the only one allowed to write them. This fetch takes a copy and
         # writes nothing back — the whole point of `contents: read`.
         #
-        # THE REPOSITORY IS PRIVATE, so an unauthenticated fetch cannot see the
-        # branch at all and would report "no ledger" on a season of evidence.
-        # That is the football lab's defect 18 in another costume: a guard that
-        # cannot fail closed is not a guard.
+        # An unauthenticated fetch reporting "no ledger" on a season of
+        # evidence is the football lab's defect 18 in another costume: a guard
+        # that cannot fail closed is not a guard. The authenticated fetch is
+        # what keeps a missing ledger distinguishable from an unreadable one.
+        #
+        # This comment used to say the repository is private and an
+        # unauthenticated fetch could not see the branch. Measured 2026-09-05,
+        # that is false: the repository is public and an unauthenticated
+        # request to its `info/refs` returns HTTP 200.
         #
         # TEMP-THEN-MOVE. `git show X > file` creates the file even when the
         # show fails, and a zero-byte CSV is a ledger pandas refuses to parse.

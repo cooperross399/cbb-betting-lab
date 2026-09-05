@@ -63,7 +63,7 @@ ENVIRONMENT_ID = "env_01K3AkKFBnT5QXEA8EZ3SDGN"
 #: exists precisely to precede an 11:00 ET tip.
 CRON = "37 9,15,16,22 * 11,12,1,2,3,4 *"
 
-PROMPT = """You are a RELAY, not a reader. Your entire job is to copy the current college basketball card out of a private repository and into Google Drive, where Cooper's "CBB CARD" scheduled task in the regular Claude app reads it. Cooper does not read your output; he reads that task. So do not summarise, interpret, rank, score, or comment on the card, do not send a push notification, and do not send an email. Copy it and stop.
+PROMPT = """You are a RELAY, not a reader. Your entire job is to copy the current college basketball card out of a repository and into Google Drive, where Cooper's "CBB CARD" scheduled task in the regular Claude app reads it. Cooper does not read your output; he reads that task. So do not summarise, interpret, rank, score, or comment on the card, do not send a push notification, and do not send an email. Copy it and stop.
 
 The repository cooperross399/cbb-betting-lab is checked out for you. Never place a bet, never edit any repository file, never alter the card's content in any way.
 
@@ -79,7 +79,10 @@ STEP 2 - Read `latest_status.json`. It carries `date`, `card_slot` (`morning` or
 
 STEP 3 - Write ONE Google Drive file with the Google Drive connector, using create_file:
   - title: "CBB Card <date> <slot>" using the `date` and `card_slot` fields verbatim, e.g. "CBB Card 2027-01-12 morning".
-  - Search Drive first with `title contains 'CBB Card'`. If a file with that exact title already exists and the card text you just read is byte-identical to what it holds, stop and change nothing. If it differs, create "CBB Card <date> <slot> (updated HH:MM UTC)" so the newer one sorts after it. The connector's update_file changes title and parent only and NOT content, so a new file is the only way to record a change.
+  - Search Drive first with `title contains 'CBB Card'`. THAT SEARCH TOKEN-MATCHES, it does not substring-match: a file titled "NHL RELAY VERIFICATION 2026-09-05 - not a card" matched `title contains 'NHL Card'` in a measured test of the sibling relay, because the title holds the two words separately. So you MUST filter what comes back client-side and keep only titles that are exactly `CBB Card <date> <slot>` or begin with `CBB Card <date> <slot> (updated`. Anything else is not a card, whatever the search says.
+  - AN EMPTY RESULT DOES NOT PROVE THE FILE IS ABSENT. Drive's index is eventually consistent: in that same test a renamed file kept matching its OLD title for roughly two minutes. If your filtered search comes back empty, WAIT 60 SECONDS AND SEARCH ONCE MORE before concluding the card has not been relayed. Concluding "not yet relayed" from a stale empty result writes a duplicate; concluding it as a reader makes a working pipeline look broken.
+  - If a card file for this date and slot already exists and the card text you just read is byte-identical to what it holds, stop and change nothing. If it differs, create "CBB Card <date> <slot> (updated HH:MM UTC)" so the newer one sorts after it. The connector's update_file changes title and parent only and NOT content, so a new file is the only way to record a change.
+  - VERIFY THE BYTES WITH download_file_content, NOT read_file_content. `read_file_content` returns a markdown-RENDERED representation: it escapes underscores and appends trailing double-spaces, so a correct file reads back as corrupted and you would relay it again. `download_file_content` returns base64 of the stored bytes; decode that and compare. `create_file` returning success is not evidence the bytes landed.
   - contentMimeType: "text/markdown", and set disableConversionToGoogleType to true.
   - textContent: the line `status: ` followed by the exact contents of latest_status.json on one line, then a blank line, then the ENTIRE contents of latest_card_comment.md, verbatim and unedited. Do not trim tables, drop sections, reorder anything, or reformat.
 

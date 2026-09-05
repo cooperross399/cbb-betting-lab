@@ -51,17 +51,34 @@ what make the surviving one unlikely to be chance. A ledger that can shrink is
 a ledger that will, one honest-seeming commit at a time, and the correction it
 reports afterwards is smaller than the truth.
 
-This section used to be titled "Why append-only, enforced", and until
-2026-09-04 it was not. `save()` refused to shrink the ledger by re-reading the
-file it was about to overwrite, and every caller loads from that file, mutates,
-and saves back to it — so the comparison was the same count against itself.
-Reproduced on this lab's tracked ledger: twelve of thirty hypotheses deleted by
-hand, `scripts/record_experiments.py` re-run, the printed correction fell from
-x1.60 to x1.46, and nothing raised. Three things enforce it now: `save()`
-takes the count the caller LOADED as a required `floor`;
-`scripts/check_ledger_append_only.py` compares the ledger on a PR's head
-against its base, keyed on `Hypothesis.key()`, in the `Ledger Guard` workflow;
-and `tests/test_check_ledger_append_only.py` holds both to the reproduction.
+This section used to be titled "Why append-only, enforced", and it described a
+reproduction that does not happen. **That description was wrong, and correcting
+it is the point of this paragraph.** It said `save()`'s re-read of the file
+"could never fire" and that deleting twelve of thirty hypotheses and re-running
+the recorder dropped the correction from x1.60 to x1.46. Re-measured on
+2026-09-04, on the tracked 30-entry ledger, against `save()` exactly as it
+stood on 02e75b7:
+
+- The old re-read **does** fire on an in-process shrink. Load 30, delete twelve
+  in memory, save back to the same path: `ValueError: The experiment ledger
+  would fall from 30 entries to 18.` The file still held 30 at comparison time.
+- The recorder **self-heals**. Cut the tracked ledger to 18 entries on disk and
+  run `scripts/record_experiments.py` at 02e75b7: it prints *"18 distinct
+  hypotheses before, 30 after (12 new)"* and *"x1.60"*, because `record()`
+  re-adds every hypothesis in `HYPOTHESES`. The correction never fell.
+- The arithmetic did not match the edit either. `correction_factor` is x1.46 at
+  **12** hypotheses and x1.53 at 18, and deleting twelve of thirty leaves 18.
+
+What the old code really could not see is a ledger **edited on disk and
+committed**: `save()` is never called on that path, so no runtime guard is
+reached, and every report then reads the shorter file and quotes the smaller
+correction. Three things enforce it now: `save()` takes the count the caller
+LOADED as a required `floor`, which the re-read cannot supply when a caller
+writes to a path that does not yet exist; `scripts/check_ledger_append_only.py`
+compares the ledger on a PR's head against its base, keyed on
+`Hypothesis.key()`, in the `Ledger Guard` workflow, which is the layer that
+sees a committed edit; and `tests/test_check_ledger_append_only.py` runs the
+old comparison itself and pins both what it caught and what it did not.
 
 ## What this is not
 
@@ -290,25 +307,24 @@ def load(path: Path) -> ExperimentLedger:
 def save(ledger: ExperimentLedger, path: Path, *, floor: int) -> Path:
     """Write the ledger, refusing to shrink it below `floor`.
 
-    `floor` is the entry count the caller LOADED, before it mutated anything,
-    and it is required rather than defaulted because the previous signature
-    was a guard that could not fire. It re-read the file it was about to
-    overwrite and compared the in-memory count against that — and every
-    caller in this repository loads the ledger from `path`, mutates it, and
-    saves it back to `path`, so the two counts were the same object's count
-    twice. Reproduced on this lab: twelve of thirty tracked hypotheses
-    deleted by hand, the recorder re-run, the printed correction fell from
-    x1.60 to x1.46, and this function raised nothing. The comparison has to be
-    against a number the caller held BEFORE the edit, which only the caller
-    can supply.
+    `floor` is the entry count the caller LOADED, before it mutated anything.
 
-    The re-read is kept as a second net for the one shape it can see — a
-    caller that loaded from one path and saves to another — and
-    `scripts/check_ledger_append_only.py` is the third, at the PR diff. The
-    tempting edit is to drop the tests that failed because they were
-    "exploratory"; the failed tests are precisely what make a surviving one
-    unlikely to be chance. This raises rather than warns, because a warning
-    in a workflow log is not a guard.
+    This docstring used to say the previous signature "could not fire", and
+    that was false. Measured 2026-09-04 against `save()` as it stood on
+    02e75b7: load the tracked 30-entry ledger, delete twelve in memory, save
+    back to the same path, and the re-read raised — the file still held 30
+    when it was compared. What the re-read cannot see is a save to a path
+    that does not yet hold the ledger, where there is nothing to re-read; and
+    it is never reached at all by a ledger edited on disk and committed,
+    which is the layer `scripts/check_ledger_append_only.py` covers at the PR
+    diff. `floor` is required rather than defaulted so the caller cannot
+    quietly stop supplying the one number the re-read cannot reconstruct.
+
+    Both comparisons are kept: the floor first, then the re-read, because
+    they fail on different edits. The tempting edit is to drop the tests that
+    failed because they were "exploratory"; the failed tests are precisely
+    what make a surviving one unlikely to be chance. This raises rather than
+    warns, because a warning in a workflow log is not a guard.
     """
     target = Path(path)
     if floor < 0:

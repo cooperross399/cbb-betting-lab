@@ -3,8 +3,15 @@
 Create a scheduled task in **regular Claude** (not Claude Code) and paste the
 prompt below into it. That is the entire setup step, and it is the only part of
 this lab that cannot be built from here — a chat-side task cannot be created
-from Claude Code, and it cannot clone a private repository, which is why the
-cloud relay exists to put the card somewhere the reader can reach.
+from Claude Code, which is why the cloud relay exists to put the card somewhere
+the reader can reach.
+
+The second half of that reason no longer holds and the design has not been
+revisited: this said the task "cannot clone a private repository". The
+repository became public on 2026-09-04, and measured 2026-09-05 an
+unauthenticated request to its `info/refs` returns HTTP 200 — so a chat-side
+task could now read the card directly. Whether the relay should stay is a
+decision for Cooper, not an inference from this paragraph.
 
 ## When to set it
 
@@ -63,8 +70,10 @@ do not judge it, and you never place or recommend a bet of your own.
 ## Why it reads Drive and not the repository
 
 Establishing what the reader can actually reach came before designing anything
-else. A chat-side scheduled task cannot clone `cooperross399/cbb-betting-lab`
-because it is private, and the EPL lab lost a live run to exactly that: it *"fell
+else. A chat-side scheduled task could not clone `cooperross399/cbb-betting-lab`
+when this was written, because the repository was private then; it is public
+now (measured 2026-09-05). The reasoning below is kept because it is why the
+chain has the shape it has, not because the premise still holds. Historically, the EPL lab lost a live run to exactly that: it *"fell
 through to a web fetch and an unauthenticated clone that a private repo can only
 refuse. It read as an access problem and was a branch problem."*
 

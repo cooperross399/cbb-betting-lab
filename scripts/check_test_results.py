@@ -1,15 +1,33 @@
 #!/usr/bin/env python3
 """Fail the build on a skip, an xfail, an empty run, or a missing guard module.
 
-    python scripts/check_test_results.py "$RUNNER_TEMP/junit.xml"
+    python scripts/check_test_results.py "$RUNNER_TEMP/junit.xml" \
+        --newer-than "$RUNNER_TEMP/suite_started_at"
 
 `python -m pytest -q` exits 0 on a SKIP and on an XFAIL. Green then means "the
-suite did not object" rather than "the suite passed". Measured on this lab on
-2026-09-04: a clean clone — which is what CI is — ran the suite as **647
-passed, 80 skipped, exit 0**, every skip waiting on a gitignored table, and the
-workflow's tick was green. Eighty tests that had never once run on the machine
-whose tick the lab reads, and no line anywhere said so. This script is what
-closes that.
+suite did not object" rather than "the suite passed". The evidence is this
+repository's own history rather than a local reconstruction of it: at 02e75b7
+— the parent of the commit that added the tracked real-data sample — the
+`Tests` run (Actions run 33914235441, job 101157576290) logged **648 passed,
+80 skipped** and concluded SUCCESS. Cloning 02e75b7 and running
+`PYTHONPATH=src python -m pytest -q -rs` reproduces both counts at exit 0, and
+`-rs` names the reason for each: an absent gitignored table under
+data/processed/, or an uncached schedule parquet. Eighty tests had never once
+run on the machine whose tick the lab reads, and no line anywhere said so.
+This script is what closes that. Both numbers are quoted with the commit and
+the run that produced them because a bare count here would go stale in a day
+and nothing would notice.
+
+`--newer-than` is the freshness half. `pytest --version`, `-h` and `--help`
+all exit 0 and write NO junit, so a junit sitting at the gated path from any
+other source — a tracked file, a leftover, one planted by an earlier step —
+would be read as this run's evidence. The suite step touches the marker
+immediately before invoking pytest; a report older than it did not come from
+this run, and an absent marker means the suite step never got that far. Both
+are refusals, because neither is a run of the suite.
+`tests/test_workflows.py` is the other half: it whitelists the arguments the
+suite line may carry, so the argument that produces no junit cannot be there
+in the first place.
 
 A zero-collection run is NOT that case: pytest returns 5 and the step's shell
 catches it. The empty-evidence checks below earn their place for a different
@@ -33,9 +51,22 @@ makes the build GREENER, and pytest has no way to say so. Counting what ran is
 the only way a deletion reads as red instead of as a smaller green. It is one
 of three layers: `tests/test_the_guards_exist.py` asserts each module is
 tracked and defines tests, `tests/conftest.py` stops the run at collection when
-one contributed nothing, and this script reads the evidence file afterwards —
-so a `-k`, a `--deselect`, a `PYTEST_ADDOPTS` or a rename that gets past one
-layer has two more to get past.
+one contributed nothing or when the invocation carries a narrowing, and this
+script reads the evidence file afterwards — so a `-k`, a `--deselect`, a
+`PYTEST_ADDOPTS` or a rename that gets past one layer has two more to get past.
+
+THE FLOOR IS PER TEST, NOT PER MODULE. Requiring a module to contribute at
+least one testcase is a floor a single `--deselect` steps straight over.
+Measured on a clone of 133dabd (the commit this branch sits on) with one line
+added to pyproject.toml — `addopts = "--deselect
+tests/test_no_secrets_committed.py::
+test_no_tracked_file_contains_an_odds_api_key_shape"` — the suite ran with
+EXACTLY ONE test deselected out of the whole collection, the collection hook
+stayed quiet, and this script printed PASS. So every `def test_*` each
+required module DECLARES, read with `ast`, must appear among the testcase
+names the XML records for it: the name itself, or the name with a
+parametrisation suffix. A test that was declared and did not run is now a red
+build, whatever dropped it.
 
 No integer is quoted for the size of that drop. It is whatever
 `pytest --collect-only -q <the two files>` reports today, and an absolute
@@ -43,7 +74,9 @@ written here goes stale inside a session.
 
 Standard library only, and nothing from src/: the workflow step invokes this
 with no PYTHONPATH, and the gate has to still run and still report when the
-package itself is broken.
+package itself is broken. `ast` is stdlib and is what reads the declarations;
+it never imports the module, so a guard whose imports are broken is still
+counted rather than silently excused.
 
 One thing this file cannot see: a NON-STRICT xpass. pytest writes it into the
 XML as an ordinary passing testcase carrying no marker at all. A strict xpass
@@ -56,10 +89,15 @@ the markers; this script cannot be it.
 
 from __future__ import annotations
 
+import ast
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from xml.etree.ElementTree import Element
+
+#: The tree the required guards are read from. The workflow step runs this
+#: from the repository root, and the script sits one level down.
+REPO = Path(__file__).resolve().parents[1]
 
 #: Every module that must show up in the evidence AND must have contributed at
 #: least one testcase. Checked against the classnames the XML actually records,
@@ -91,6 +129,36 @@ def module_key(module: str) -> str:
     return module.removesuffix(".py").replace("/", ".")
 
 
+def test_functions_declared_in(path: Path) -> list[str] | None:
+    """Every `def test_*` the module declares, at module level or in a class.
+
+    `None` when the file cannot be read or does not parse, which is a problem
+    reported by the caller rather than a zero: a guard this script cannot read
+    is a guard it cannot vouch for. `ast` and never an import — the gate has
+    to work when the package it sits beside is broken.
+    """
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (OSError, SyntaxError, ValueError):
+        return None
+    return [
+        node.name
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name.startswith("test_")
+    ]
+
+
+def _ran(declared: str, recorded: set[str]) -> bool:
+    """Whether a declared function shows up in the recorded testcase names.
+
+    pytest writes a parametrised test as `name[id]`, so the match is the name
+    itself or the name followed by `[`. Never a bare prefix: `test_a` must not
+    be satisfied by `test_a_and_b`.
+    """
+    return any(name == declared or name.startswith(declared + "[") for name in recorded)
+
+
 def _describe(case: Element, child: Element) -> str:
     ident = f"{case.get('classname', '')}::{case.get('name', '')}".strip(":")
     kind = child.get("type") or child.tag
@@ -98,13 +166,42 @@ def _describe(case: Element, child: Element) -> str:
     return f"{ident or '(unnamed testcase)'} [{kind}] {message}"
 
 
-def check(path: Path) -> tuple[list[str], str]:
+def check(
+    path: Path, *, source_root: Path = REPO, newer_than: Path | None = None
+) -> tuple[list[str], str]:
     """Return (reasons this run is not a pass, one-line summary of what ran).
 
     An empty reason list is the only thing that counts as a pass. Every early
     return here is a case where the evidence itself is missing or unreadable,
     and those return no summary because nothing was verified.
+
+    `source_root` is the tree the required guards' declarations are read from.
+    It is the repository in CI; the tests pass a tree of their own so the XML
+    shapes can be exercised without a checkout behind them.
+
+    `newer_than` is a marker the suite step writes immediately before pytest.
+    The evidence must be at least as new as it; evidence that predates the
+    step, or a marker that is not there at all, is not this run's evidence.
     """
+    if newer_than is not None:
+        marker = Path(newer_than)
+        try:
+            marked_at = marker.stat().st_mtime
+        except OSError as exc:
+            return ([f"the freshness marker {marker} could not be read ({exc}). "
+                     "The step that writes it never reached pytest, so there is "
+                     "no run for this evidence to belong to."], "")
+        try:
+            written_at = Path(path).stat().st_mtime
+        except OSError as exc:
+            return ([f"{path} could not be stat'd ({exc}) against the freshness "
+                     "marker. Absent evidence is never a pass."], "")
+        if written_at < marked_at:
+            return ([f"{path} was last written at {written_at} and the suite step "
+                     f"started at {marked_at}. This evidence predates the run it "
+                     "is being read as, so it came from somewhere else — a "
+                     "tracked file, a leftover, or an earlier step."], "")
+
     try:
         root = ET.parse(path).getroot()
     except FileNotFoundError:
@@ -193,13 +290,36 @@ def check(path: Path) -> tuple[list[str], str]:
         key = module_key(module)
         # `key + "."` and not startswith(key) alone: `tests.test_workflows_v2`
         # must not be allowed to stand in for `tests.test_workflows`.
-        count = sum(
-            1 for case in cases
+        recorded_here = [
+            case for case in cases
             if (case.get("classname") or "") == key
             or (case.get("classname") or "").startswith(key + ".")
-        )
+        ]
+        count = len(recorded_here)
         per_module[module] = count
         if count:
+            # The per-TEST floor. A module that contributed SOMETHING can
+            # still have lost a single test to a --deselect, and that is the
+            # shape this catches.
+            declared = test_functions_declared_in(Path(source_root) / module)
+            if declared is None:
+                problems.append(
+                    f"{module} recorded {count} testcase(s) but its source could "
+                    f"not be read or parsed under {source_root}. A guard whose "
+                    "declarations cannot be counted is a guard whose absence "
+                    "cannot be seen."
+                )
+                continue
+            names = {case.get("name") or "" for case in recorded_here}
+            missing = [name for name in declared if not _ran(name, names)]
+            if missing:
+                problems.append(
+                    f"{module} declares {len(declared)} test function(s) and the "
+                    f"evidence records {count} testcase(s), but {len(missing)} "
+                    "declared test(s) never ran: " + ", ".join(sorted(missing)) +
+                    ". A per-module floor is cleared by a module that lost one "
+                    "test; this is the floor per test."
+                )
             continue
         if key in seen:
             problems.append(
@@ -227,12 +347,19 @@ def check(path: Path) -> tuple[list[str], str]:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 2:
-        print(f"usage: {argv[0] if argv else 'check_test_results.py'} <junit.xml>", file=sys.stderr)
+    usage = (
+        f"usage: {argv[0] if argv else 'check_test_results.py'} <junit.xml> "
+        "[--newer-than <marker>]"
+    )
+    if len(argv) == 2:
+        path, newer_than = Path(argv[1]), None
+    elif len(argv) == 4 and argv[2] == "--newer-than":
+        path, newer_than = Path(argv[1]), Path(argv[3])
+    else:
+        print(usage, file=sys.stderr)
         return 2
 
-    path = Path(argv[1])
-    problems, summary = check(path)
+    problems, summary = check(path, newer_than=newer_than)
 
     if problems:
         print(f"FAIL {path}: this run does not count as a pass.", file=sys.stderr)
