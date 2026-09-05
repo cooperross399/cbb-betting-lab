@@ -36,6 +36,7 @@ from cbb_betting_lab.experiment_ledger import (
     save as save_ledger,
 )
 from cbb_betting_lab.reports import price_backtest
+from cbb_betting_lab.reports import replication
 from cbb_betting_lab.reports import what_we_can_claim as WC
 
 
@@ -71,7 +72,16 @@ def _cell(
     }
 
 
-def _write_backtest(outputs: Path, cells: list[dict]) -> Path:
+def _write_backtest(
+    outputs: Path, cells: list[dict], *, generated_at: str = ""
+) -> Path:
+    """The price-backtest record on disk.
+
+    `generated_at` is optional and defaults to the empty stamp every existing
+    caller was already writing. It is settable because the freshness check
+    below reads exactly that field: a backtest that has been re-run carries a
+    later stamp, and that is the whole signal.
+    """
     outputs.mkdir(parents=True, exist_ok=True)
     target = price_backtest.record_path(CBB, outputs)
     target.write_text(
@@ -79,6 +89,7 @@ def _write_backtest(outputs: Path, cells: list[dict]) -> Path:
             {
                 "record_version": price_backtest.RECORD_VERSION,
                 "competition": CBB.key,
+                "generated_at": generated_at,
                 "by_market_and_tier": cells,
                 "pooled": [],
             }
@@ -669,3 +680,286 @@ def test_a_suspect_settlement_row_never_prints_the_verdict_it_would_have_had(
     # The numbers themselves are still in that row, with their sample size.
     assert "+9.9%" in row
     assert "9,000" in row
+
+
+# ---------------------------------------------------------------------------
+# A record that can tell it is stale
+#
+# The defect, verbatim from the committed document on 2026-09-04: line 8 said
+# "**Nothing in this repository has a demonstrated edge, because nothing has
+# been measured against real prices yet.**" and the provenance list said
+# "Price backtest: `data/outputs/cbb_price_backtest.json` — **not found**",
+# while that record sat committed beside it with `generated_at` 2026-09-04,
+# 118,050 graded bets and one demonstrated deficit in it. The run record had
+# `backtest: {"found": false}` and had been written the day before the backtest
+# ran, so the markdown was a faithful rendering of it and `--check` — which
+# compared the markdown against nothing else — exited zero.
+#
+# Every test here starts from a green `--check` and then moves the evidence.
+# ---------------------------------------------------------------------------
+
+
+PAST = "2020-01-01T00:00:00Z"
+LATER = "2031-01-01T00:00:00Z"
+
+
+def _publish(tmp_path: Path) -> tuple[Path, Path, Path]:
+    """Build, write the record, write the report. A green `--check` starts here."""
+    outputs = tmp_path / "outputs"
+    record = _build(tmp_path)
+    record_target = WC.write_record(record, WC.record_path(CBB, outputs))
+    report_target = WC.write_report(record, WC.report_path(CBB, outputs))
+    return outputs, record_target, report_target
+
+
+def _still_matches_its_own_record(record_target: Path, report_target: Path) -> bool:
+    """What the OLD `--check` asked, and the only thing it asked.
+
+    Asserted true in the tests below at the moment they expect a failure, so
+    each of them proves the new question is doing the work rather than riding
+    on the old one.
+    """
+    return WC.render(WC.read_record(record_target)) == report_target.read_text(
+        encoding="utf-8"
+    )
+
+
+def test_a_record_newer_than_every_input_it_read_passes_the_check(tmp_path: Path):
+    """The honest case, and it must stay quiet or nobody keeps the check."""
+    _write_backtest(tmp_path / "outputs", [_cell()], generated_at=PAST)
+    _publish(tmp_path)
+
+    result = _run_script("--check", cwd=tmp_path)
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_a_record_that_says_absent_fails_when_the_evidence_is_now_on_disk(
+    tmp_path: Path,
+):
+    """**The committed defect.** `backtest: {"found": false}`, backtest on disk."""
+    outputs, record_target, report_target = _publish(tmp_path)
+    assert _run_script("--check", cwd=tmp_path).returncode == 0
+    backtest_file = _write_backtest(outputs, [_cell()], generated_at=LATER)
+
+    result = _run_script("--check", cwd=tmp_path)
+
+    assert result.returncode == 1, result.stdout
+    # The old question still answers "fine", which is exactly how this shipped.
+    assert _still_matches_its_own_record(record_target, report_target)
+    # The message names the file and both timestamps.
+    written_at = json.loads(record_target.read_text(encoding="utf-8"))["generated_at"]
+    assert str(backtest_file) in result.stderr
+    assert LATER in result.stderr
+    assert written_at in result.stderr
+
+
+def test_a_record_fails_when_evidence_it_read_has_since_vanished(tmp_path: Path):
+    """A document quoting a measurement that is no longer on disk."""
+    outputs, record_target, report_target = _publish(tmp_path)
+    _write_backtest(outputs, [_cell()], generated_at=PAST)
+    _publish(tmp_path)
+    assert _run_script("--check", cwd=tmp_path).returncode == 0
+    price_backtest.record_path(CBB, outputs).unlink()
+
+    result = _run_script("--check", cwd=tmp_path)
+
+    assert result.returncode == 1, result.stdout
+    assert _still_matches_its_own_record(record_target, report_target)
+    assert "is not on disk now" in result.stderr
+
+
+def test_a_record_fails_when_an_input_it_read_has_been_regenerated(tmp_path: Path):
+    """Same cells, later stamp. The numbers are identical and the record is not
+    the one that read them, which is what a re-measured season looks like the
+    moment before it changes a number."""
+    outputs = tmp_path / "outputs"
+    _write_backtest(outputs, [_cell()], generated_at=PAST)
+    _, record_target, report_target = _publish(tmp_path)
+    assert _run_script("--check", cwd=tmp_path).returncode == 0
+
+    _write_backtest(outputs, [_cell()], generated_at=LATER)
+
+    result = _run_script("--check", cwd=tmp_path)
+
+    assert result.returncode == 1, result.stdout
+    assert _still_matches_its_own_record(record_target, report_target)
+    assert PAST in result.stderr and LATER in result.stderr
+
+
+def test_a_record_that_never_wrote_down_what_it_read_cannot_pass_the_check(
+    tmp_path: Path,
+):
+    """The shape of the record committed on 2026-09-04.
+
+    It cannot answer "are you older than the evidence", and *"could not check"*
+    is reported as a failure rather than as a pass. A check that reads an
+    unanswerable question as an answer of "fine" is the defect, not the fix.
+    """
+    outputs = tmp_path / "outputs"
+    _write_backtest(outputs, [_cell()], generated_at=PAST)
+    _, record_target, _ = _publish(tmp_path)
+    record = json.loads(record_target.read_text(encoding="utf-8"))
+    record.pop("evidence_inputs")
+    record_target.write_text(json.dumps(record, indent=2), encoding="utf-8")
+
+    assert WC.stale_inputs(record)
+    assert _run_script("--check", cwd=tmp_path).returncode == 1
+
+
+def test_the_record_writes_down_every_evidence_file_it_opened(tmp_path: Path):
+    """Path, presence and stamp, for each one. That triple is what makes the
+    check possible; a record carrying two thirds of it is a record that can
+    still be silently out of date about the third."""
+    outputs = tmp_path / "outputs"
+    _write_backtest(outputs, [_cell()], generated_at=PAST)
+    record = _build(tmp_path)
+
+    inputs = {(i["label"], i["path"]): i for i in record["evidence_inputs"]}
+    assert {label for label, _ in inputs} == {
+        "Experiment ledger",
+        "Price backtest",
+        "Forward-evidence ledger",
+        "Replication record",
+    }
+    for item in inputs.values():
+        assert set(item) == {"label", "path", "found", "generated_at"}
+    backtest_entry = inputs[
+        ("Price backtest", str(price_backtest.record_path(CBB, outputs)))
+    ]
+    assert backtest_entry["found"] is True
+    assert backtest_entry["generated_at"] == PAST
+    assert WC.stale_inputs(record) == []
+
+
+# ---------------------------------------------------------------------------
+# The replication record, read from where the script actually writes it
+#
+# `replication_path` built its own path under `--output-dir`, and
+# `scripts/run_replication.py` writes under ITS `--output-dir`, which a holdout
+# run points at `data/outputs/holdout/`. So a real replication over the
+# held-out 2024 season sat committed at
+# `data/outputs/holdout/cbb_replication.json` while this document reported that
+# no held-out test had been run — a test that ran, reported as a test that did
+# not.
+# ---------------------------------------------------------------------------
+
+
+def _replication_record(target: Path, *, state: str = "replicated") -> Path:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        json.dumps(
+            {
+                "test_label": "2024 (held out)",
+                "markets": [
+                    {"market": "spread", "tier": "low_major", "state": state}
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return target
+
+
+def test_the_paths_searched_are_the_ones_the_replication_script_writes():
+    """Derived from `replication.record_path` — the function
+    `scripts/run_replication.py` itself calls — rather than re-spelled here. A
+    second literal is how the reader and the writer drifted apart."""
+    outputs = Path("/tmp/x")
+
+    assert WC.replication_paths(CBB, outputs) == [
+        replication.record_path(CBB, outputs),
+        replication.record_path(CBB, outputs / WC.HOLDOUT_DIRNAME),
+    ]
+    assert [p.name for p in WC.replication_paths(CBB, outputs)] == [
+        "cbb_replication.json",
+        "cbb_replication.json",
+    ]
+    assert WC.replication_paths(CBB, outputs)[1].parent.name == "holdout"
+
+
+def test_a_replication_record_where_the_holdout_run_writes_it_is_read(
+    tmp_path: Path,
+):
+    """`--output-dir data/outputs/holdout/`, which is the invocation both
+    `run_replication.py` and `run_price_backtest.py` document in comments."""
+    outputs = tmp_path / "outputs"
+    _write_backtest(outputs, [_cell(roi=0.06)])
+    target = _replication_record(
+        replication.record_path(CBB, outputs / WC.HOLDOUT_DIRNAME)
+    )
+
+    record = _build(tmp_path)
+    rendered = WC.render(record)
+
+    assert record["replication"]["found"] is True
+    assert record["replication"]["path"] == str(target)
+    assert record["replication"]["test_label"] == "2024 (held out)"
+    assert record["replication"]["states"] == [
+        {"market": "spread", "tier": "low_major", "state": "replicated"}
+    ]
+    claim = record["claims"][0]
+    assert claim["replication"] == "replicated"
+    assert claim["replicated"] is True
+    assert f"- Replication record: `{target}` — read" in rendered
+
+
+def test_a_replication_record_at_the_default_output_dir_is_still_read(
+    tmp_path: Path,
+):
+    """`run_replication.py --output-dir` defaults to `data/outputs`, so that
+    path is not dropped in favour of the holdout one."""
+    outputs = tmp_path / "outputs"
+    _write_backtest(outputs, [_cell(roi=0.06)])
+    target = _replication_record(replication.record_path(CBB, outputs))
+
+    record = _build(tmp_path)
+
+    assert record["replication"]["path"] == str(target)
+    assert record["claims"][0]["replicated"] is True
+
+
+def test_an_absent_replication_record_is_reported_absent_and_never_as_a_failure(
+    tmp_path: Path,
+):
+    """The absence must keep saying *no held-out test has been run*. It is not
+    a market that failed to replicate, and the sibling labs have printed the
+    second while meaning the first."""
+    outputs = tmp_path / "outputs"
+    _write_backtest(outputs, [_cell(roi=0.06)])
+
+    record = _build(tmp_path)
+    rendered = WC.render(record)
+
+    assert record["replication"]["found"] is False
+    assert record["replication"]["states"] == []
+    assert record["replication"]["test_label"] == ""
+    claim = record["claims"][0]
+    assert claim["replication"] == ""
+    assert claim["replicated"] is False
+    assert (
+        f"- Replication record: `{replication.record_path(CBB, outputs)}` — "
+        "**not found**, so this document says nothing about it" in rendered
+    )
+    lowered = rendered.casefold()
+    assert "failed to replicate" not in lowered
+    assert "did not replicate" not in lowered
+
+
+def test_a_replication_record_that_appears_later_fails_the_check(tmp_path: Path):
+    """Both candidate paths are watched, not only the one this run resolved to.
+    A holdout run writing the other one is precisely the appearance that left
+    the committed document saying no held-out test had been run."""
+    outputs = tmp_path / "outputs"
+    _write_backtest(outputs, [_cell(roi=0.06)], generated_at=PAST)
+    _publish(tmp_path)
+    assert _run_script("--check", cwd=tmp_path).returncode == 0
+
+    _replication_record(
+        replication.record_path(CBB, outputs / WC.HOLDOUT_DIRNAME)
+    )
+
+    result = _run_script("--check", cwd=tmp_path)
+
+    assert result.returncode == 1, result.stdout
+    assert "holdout" in result.stderr

@@ -92,6 +92,30 @@ rule, applied here for the same reason: improving a sentence must never cost a
 re-run, and a report that can only be produced by re-running the measurement is
 a report nobody improves. The workflow re-renders this document every game day,
 free, offline, from records other steps wrote.
+
+## The defect purity alone does not catch: **a record cannot know it is stale**
+
+Purity buys one guarantee — the markdown always matches its record — and it was
+read as buying a second one it does not. On 2026-09-04 this document said, on
+its own line 8, *"nothing in this repository has a demonstrated edge, because
+nothing has been measured against real prices yet"*, and named
+`data/outputs/cbb_price_backtest.json` as **not found**, while that record sat
+committed beside it holding 118,050 graded bets and one demonstrated deficit.
+Both statements were faithful renderings of a run record written the day before
+the backtest ran. `--check` compared the markdown against that record, found
+them identical, and exited zero: **the comparison was internally consistent and
+externally false.**
+
+So the record now writes down, for every evidence file it read,
+:func:`build_record`'s answer to three questions — *which path, was it there,
+and what did it stamp itself with* — in ``record["evidence_inputs"]``. And
+:func:`stale_inputs` re-asks those questions of the disk. A file that has
+appeared, a file that has vanished, and a file that has been regenerated since
+are each a reason this document is no longer about the evidence it names, and
+`scripts/run_what_we_can_claim.py --check` fails on any of them. A record that
+cannot tell it is out of date is a document that goes on making a retracted
+claim in a confident voice, which is the failure this whole module exists to
+prevent and had been committing about itself.
 """
 
 from __future__ import annotations
@@ -118,24 +142,45 @@ from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.experiment_ledger import LEDGER_FILENAME as EXPERIMENT_LEDGER_FILENAME
 from cbb_betting_lab.experiment_ledger import load as load_experiment_ledger
 from cbb_betting_lab.reports import price_backtest as backtest
+from cbb_betting_lab.reports import replication as replication_report
 
 
 #: Bumped whenever the record's shape changes, so a stale record fails loudly at
 #: re-render rather than rendering a report with holes in it. Same discipline as
 #: `price_backtest.RECORD_VERSION` and for the same reason.
-RECORD_VERSION = 1
+#:
+#: **2** adds `evidence_inputs`, without which `--check` cannot tell that the
+#: record is older than the evidence it claims to have read. A version-1 record
+#: renders the same markdown it always did and is exactly as unable to notice
+#: that it is stale, so it is refused rather than re-rendered.
+RECORD_VERSION = 2
 
 #: The stem both outputs share. `competition.output_name` prefixes it, so the
 #: markdown lands at `data/outputs/cbb_what_we_can_claim.md` — a contract string
 #: in `CLAUDE.md`, pinned by `tests/test_contract_strings.py`.
 REPORT_STEM = "what_we_can_claim"
 
-#: An optional record written by a replication run over a held-out season. It
-#: does not exist yet and nothing in this repository has replicated anything;
-#: when it does exist it is read from here. **Its absence is reported as "no
-#: held-out test has been run", never as a market having failed one** — those
-#: are different claims and the sibling labs have confused them before.
+#: The stem of the record a replication run writes. Pinned equal to
+#: `replication.REPORT_STEM` by `tests/test_replication.py`; the *paths* below
+#: are built by calling `replication.record_path` rather than by re-spelling
+#: this stem, so there is one function that knows how that file is named and it
+#: is the one the writing script calls.
+#:
+#: **Its absence is reported as "no held-out test has been run", never as a
+#: market having failed one** — those are different claims and the sibling labs
+#: have confused them before.
 REPLICATION_STEM = "replication"
+
+#: Where a holdout run's outputs land. `scripts/run_replication.py` and
+#: `scripts/run_price_backtest.py` both say so in comments: a holdout run points
+#: `--output-dir` at `data/outputs/holdout/` so its discovery record and its
+#: replication record land apart from the main ones. This module looked only in
+#: `data/outputs/`, so `data/outputs/holdout/cbb_replication.json` — a real
+#: replication over the held-out 2024 season, committed — was reported as **no
+#: held-out test has been run** for as long as it existed. Reporting a test that
+#: ran as a test that did not is the same substitution as reporting a broken
+#: instrument as a null result, and this file exists to not make it.
+HOLDOUT_DIRNAME = "holdout"
 
 #: What the measured section says when there is nothing in it. In words, because
 #: an empty table reads as a null result and a null result is a claim.
@@ -215,8 +260,41 @@ def report_path(competition: Competition, output_dir: Path) -> Path:
     return Path(output_dir) / competition.output_name(REPORT_STEM, ".md")
 
 
+def replication_paths(competition: Competition, output_dir: Path) -> list[Path]:
+    """Every path a replication run writes its record to, in resolution order.
+
+    Both are built by :func:`replication.record_path` — the function
+    `scripts/run_replication.py` itself calls to decide where to write — so a
+    rename of that file moves the writer and both readers together. A second
+    literal spelled here is how the two drifted in the first place.
+
+    Two, not one, because the script's `--output-dir` takes two values in
+    practice: its own default, `data/outputs/`, and the `data/outputs/holdout/`
+    a holdout run points it at so its records land apart from the main ones. The
+    default comes first, so a record written by a plain run is what a plain run
+    reads back.
+    """
+    outputs = Path(output_dir)
+    return [
+        replication_report.record_path(competition, outputs),
+        replication_report.record_path(competition, outputs / HOLDOUT_DIRNAME),
+    ]
+
+
 def replication_path(competition: Competition, output_dir: Path) -> Path:
-    return Path(output_dir) / competition.output_name(REPLICATION_STEM, ".json")
+    """The replication record on disk, or where a plain run would write one.
+
+    When no record exists anywhere this returns the **default** path rather than
+    the holdout one, because that is the file a reader is told is missing and
+    the file the next `scripts/run_replication.py` with no `--output-dir` will
+    create. An absence is still reported as an absence — as *"no held-out test
+    has been run"*, never as a market having failed one.
+    """
+    candidates = replication_paths(competition, output_dir)
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return candidates[0]
 
 
 def experiment_ledger_path(output_dir: Path) -> Path:
@@ -296,6 +374,144 @@ def _repo_relative(path: Path) -> str:
         return str(target.resolve().relative_to(Path(REPO_ROOT).resolve()))
     except ValueError:
         return str(target)
+
+
+def _absolute(stored: str) -> Path:
+    """The inverse of :func:`_repo_relative`, for a path read back out of a record."""
+    target = Path(stored)
+    return target if target.is_absolute() else Path(REPO_ROOT) / target
+
+
+def _generated_at(path: Path) -> str:
+    """The `generated_at` a measurement record stamped itself with, or "".
+
+    Read from the file's own contents, never from its modification time. A
+    fresh `git clone` stamps every file with the moment of the clone, so an
+    mtime comparison would call every record in CI stale and a check that cries
+    wolf is a check somebody adds `|| true` to. A file with no `generated_at` —
+    the experiment ledger, the forward-evidence CSV — is therefore watched for
+    appearing and disappearing only, and :func:`stale_inputs` says so.
+    """
+    return _text(_read_json(path).get("generated_at"))
+
+
+def _moment(stamp: str) -> datetime | None:
+    """An ISO-8601 instant, or None. `Z` and `+00:00` are the same instant.
+
+    The records in this repository disagree about which they write —
+    `price_backtest` ends its stamp with `Z` and this module writes
+    `+00:00` — so a comparison that could not read both would silently never
+    fire, which is the quietest possible way for this check to be absent.
+    """
+    text = _text(stamp)
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+def _evidence_input(label: str, path: Path) -> dict:
+    """One evidence file as this run found it: which path, present, stamped when."""
+    target = Path(path)
+    return {
+        "label": label,
+        "path": _repo_relative(target),
+        "found": target.is_file(),
+        "generated_at": _generated_at(target),
+    }
+
+
+def stale_inputs(record: Mapping) -> list[str]:
+    """Every reason this record is no longer about the evidence it names.
+
+    Empty means the record is still true of the disk. Anything else is a
+    sentence naming the file, what it was when the record read it, and what it
+    is now — both timestamps, because *"the backtest is newer"* is an assertion
+    and *"the backtest was generated at 2026-09-04T19:59:28+00:00 and this
+    record was written at 2026-09-03T22:46:14+00:00"* is a fact the reader can
+    check.
+
+    Three ways a record goes stale, and all three had happened at once to the
+    committed one:
+
+    * an input that **was absent and is now present** — the record says this
+      document read no such evidence and the evidence is sitting beside it;
+    * an input that **was present and is now absent** — the document is quoting
+      a measurement that is no longer on disk;
+    * an input that has been **regenerated** since, either because its
+      `generated_at` changed or because it is newer than the record itself.
+
+    A record from before `evidence_inputs` existed is stale by definition here:
+    it cannot answer the question, and *"could not check"* is reported as a
+    failure rather than as a pass. A check that treats an unanswerable question
+    as an answer of "fine" is the shape of the defect, not the fix for it.
+    """
+    written_at = _text(record.get("generated_at")) or "an unrecorded time"
+    written = _moment(record.get("generated_at"))
+    inputs = record.get("evidence_inputs")
+    if not isinstance(inputs, Sequence) or isinstance(inputs, (str, bytes)) or not inputs:
+        return [
+            "This claims record does not record which evidence files it read, "
+            f"so nothing can tell whether it is older than they are. It was "
+            f"written at {written_at}. Re-render it with "
+            "`scripts/run_what_we_can_claim.py`: a record that cannot know it "
+            "is stale is a document that goes on making a retracted claim."
+        ]
+
+    reasons: list[str] = []
+    for item in inputs:
+        if not isinstance(item, Mapping):
+            continue
+        stored = _text(item.get("path"))
+        if not stored:
+            continue
+        label = _text(item.get("label")) or stored
+        target = _absolute(stored)
+        found_then = bool(item.get("found"))
+        found_now = target.is_file()
+        stamped_then = _text(item.get("generated_at")) or "an unrecorded time"
+
+        if found_now and not found_then:
+            stamped_now = _generated_at(target) or "an unrecorded time"
+            reasons.append(
+                f"{label}: `{stored}` was ABSENT when this claims record was "
+                f"written at {written_at}, and it is on disk now, generated at "
+                f"{stamped_now}. Every sentence this document says about it "
+                "says that there is no such evidence."
+            )
+            continue
+        if found_then and not found_now:
+            reasons.append(
+                f"{label}: `{stored}` was read when this claims record was "
+                f"written at {written_at}, stamped {stamped_then}, and is not "
+                "on disk now. This document is quoting a measurement that no "
+                "longer exists."
+            )
+            continue
+        if not found_now:
+            # Absent then, absent now. Nothing to say, and nothing to check:
+            # a file with no `generated_at` is watched for exactly this.
+            continue
+
+        stamped_now = _generated_at(target)
+        if stamped_now and stamped_now != stamped_then:
+            reasons.append(
+                f"{label}: `{stored}` was generated at {stamped_now}; this "
+                f"claims record read the version generated at {stamped_then} "
+                f"and was itself written at {written_at}."
+            )
+            continue
+        moment = _moment(stamped_now)
+        if moment is not None and written is not None and moment > written:
+            reasons.append(
+                f"{label}: `{stored}` was generated at {stamped_now}, which is "
+                f"after this claims record was written at {written_at}. A "
+                "document cannot have read evidence that did not exist yet."
+            )
+    return reasons
 
 
 # ---------------------------------------------------------------------------
@@ -1077,7 +1293,11 @@ def build_record(
     * the **forward-evidence ledger**, for the frozen-then-settled measurement,
       through `forward_evidence.report_payload` so the two documents cannot
       disagree about a number they both print;
-    * an optional **replication record**, absent today;
+    * an optional **replication record**, from wherever
+      `scripts/run_replication.py` last wrote one — a holdout run points
+      its `--output-dir` at `data/outputs/holdout/`, and reading only the
+      default directory reported a held-out season that HAD been scored as
+      one that had not;
     * every recorded **verdict**, and the **staging provider policy**.
 
     A file that is missing is reported as missing. A file that is present and
@@ -1089,7 +1309,8 @@ def build_record(
     processed = Path(processed_dir) if processed_dir else Path(PROCESSED_DIR)
     moment = now or datetime.now(timezone.utc)
 
-    correction = correction_from_ledger(experiment_ledger_path(outputs))
+    ledger_record_file = experiment_ledger_path(outputs)
+    correction = correction_from_ledger(ledger_record_file)
     looks = correction.looks
 
     replication_file = replication_path(competition, outputs)
@@ -1189,6 +1410,22 @@ def build_record(
         "correction": correction.as_dict(),
         "claims": claims,
         "pooled": pooled_rows,
+        # Every file this run opened, as it found it. `stale_inputs` re-asks
+        # the disk these exact questions, which is the only way `--check` can
+        # tell that the document is older than the evidence it names.
+        # `replication_paths` and not `replication_file`, because the one this
+        # run resolved to is the only one a later check would look at, and a
+        # holdout run writing the *other* candidate is exactly the appearance
+        # this check exists to catch.
+        "evidence_inputs": [
+            _evidence_input("Experiment ledger", ledger_record_file),
+            _evidence_input("Price backtest", backtest_file),
+            _evidence_input("Forward-evidence ledger", ledger_file),
+        ]
+        + [
+            _evidence_input("Replication record", candidate)
+            for candidate in replication_paths(competition, outputs)
+        ],
         "unmeasured": unmeasured_markets(claims, processed_dir=processed_dir),
         "deferred": deferred_groups(),
         "gated": gated_markets(),
