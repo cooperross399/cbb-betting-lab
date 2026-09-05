@@ -553,6 +553,294 @@ def test_a_figure_with_no_interval_beside_it_is_refused_rather_than_printed(outp
         WHY.render(record)
 
 
+def test_deleting_both_printed_bounds_is_not_a_way_past_the_check(outputs):
+    """**Keeping the other pair used to answer for the pair on the page.**
+
+    The refusal above tested *"carries a claim and no pair at all"*, so a row
+    that dropped `adjusted_low` and `adjusted_high` and kept `low` and `high`
+    was carrying an interval as far as the check was concerned. It is not the
+    interval anybody sees. `_figure` prints the **corrected** pair and
+    `verdict_of` reads the sign off it, so the row publishes
+
+        24,691 bets, **+99.0%**, corrected unbounded to unbounded
+
+    with the uncorrected bounds it kept qualifying nothing on the page. The
+    condition now names `PRINTED_BOUNDS`, so some other pair does not answer
+    for it.
+    """
+    record = build(outputs)
+    row = next(r for r in record["tiers"] if r["enough_evidence"])
+    row["roi"] = +0.99
+    del row["adjusted_low"]
+    del row["adjusted_high"]
+    row["low"], row["high"] = +0.80, +1.18
+    row["verdict"] = WHY.verdict_of(row)
+
+    whole, half, absent = WHY._bound_pairs_carried(row)
+    assert whole == [("low", "high")] and not half, (
+        "the row must still carry one whole pair, or this test is passing on "
+        "the half-interval refusal instead of the one it is about"
+    )
+    assert WHY.PRINTED_BOUNDS in absent
+    # What would be published, spelled out rather than described.
+    printed = WHY._figure(row)
+    assert "**+99.0%**" in printed and "corrected unbounded to unbounded" in printed
+
+    reasons = WHY.verdict_disagreements(record)
+    mine = [r for r in reasons if r.startswith("tiers[")]
+    assert len(mine) == 1, mine
+    assert "`adjusted_low`/`adjusted_high`" in mine[0], mine[0]
+    assert "neither of" in mine[0], mine[0]
+    assert "`low`/`high`" in mine[0], mine[0]
+    with pytest.raises(WHY.WhyError):
+        WHY.render(record)
+
+    # Restored, the same record renders — so the refusal is about the two
+    # missing keys and not about this row being unrenderable some other way.
+    row["adjusted_low"], row["adjusted_high"] = +0.80, +1.18
+    row["verdict"] = WHY.verdict_of(row)
+    assert "**+99.0%**, corrected +80.0% to +118.0%" in WHY.render(record)
+
+
+def test_the_three_lists_partition_the_bound_vocabulary(outputs):
+    """Every pair is in exactly one of `whole`, `half`, `absent`.
+
+    The defeat above existed because a pair could be in neither list, so
+    *"does this row carry an interval"* was the only question a caller could
+    ask. A fourth state — or a pair silently dropped from the classification —
+    puts that question back.
+    """
+    record = build(outputs)
+    rows = [row for _, row in WHY._rows_of_the_record(record)]
+    rows += [
+        {},
+        {"low": 0.0},
+        {"adjusted_high": 0.0},
+        {"low": 0.0, "high": 0.0},
+        {"adjusted_low": 0.0, "adjusted_high": 0.0, "low": 0.0, "high": 0.0},
+    ]
+    for row in rows:
+        whole, half, absent = WHY._bound_pairs_carried(row)
+        together = whole + half + absent
+        assert sorted(together) == sorted(WHY.INTERVAL_BOUND_KEYS), together
+        assert len(together) == len(set(together)) == len(WHY.INTERVAL_BOUND_KEYS)
+
+    assert WHY._bound_pairs_carried({}) == ([], [], list(WHY.INTERVAL_BOUND_KEYS))
+
+
+def test_a_blind_baseline_below_the_floor_prints_no_number_and_decides_nothing(outputs):
+    """**The one number on the page nothing had checked.**
+
+    `_blind_lines` printed a bolded return for every row the record carried,
+    with no floor test of its own — while refusal 3 of
+    `verdict_disagreements` skips below-floor rows on the stated grounds that
+    below the floor there is no number on the page. The two together published
+    an unchecked figure.
+
+    Worse, `worst_blind` was the maximum over every row, and the sentence it
+    decides is this document's *the model carries information* verdict. One
+    40-bet baseline carrying a large return turns *"All 3 measured tiers
+    return more than every one of them"* into *"**No measured tier returns
+    more than all of them**, which is a worse result than the model being
+    merely unprofitable"* — the strongest negative statement in the file,
+    reached by a row that clears nothing.
+    """
+    record = build(outputs)
+    before = WHY.render(record)
+    flipped = "No measured tier returns more than all of them"
+    assert "return more than every one of them" in before
+    assert flipped not in before
+
+    thin = {
+        "name": "always the favourite",
+        "market": "moneyline",
+        "tier": "high_major",
+        "bets": 40,
+        "clusters": 9,
+        "cluster_unit": "game",
+        "roi": +0.99,
+        "low": +0.80,
+        "high": +1.18,
+        "adjusted_low": +0.80,
+        "adjusted_high": +1.18,
+        "looks": 1,
+    }
+    thin["enough_evidence"] = WHY.enough_evidence_of(thin)
+    thin["verdict"] = WHY.verdict_of(thin)
+    assert thin["enough_evidence"] is False
+    record["blind"].append(thin)
+
+    # The row really would have decided the sentence: it is the largest return
+    # in the section by a distance, and the only one above zero.
+    assert max(b["roi"] for b in record["blind"]) == pytest.approx(+0.99)
+    assert max(b["roi"] for b in record["blind"] if WHY.enough_evidence_of(b)) < 0
+
+    assert WHY.verdict_disagreements(record) == [], (
+        "the planted row must leave the record self-consistent, or this test "
+        "passes on a refusal rather than on the floor rule"
+    )
+    after = WHY.render(record)
+    assert "+99.0%" not in after
+    assert flipped not in after, (
+        "a 40-bet baseline decided this document's strongest negative "
+        "sentence"
+    )
+    assert "return more than every one of them" in after
+    # Named, with the phrase — not dropped, which would be a document that
+    # does not admit what its own record holds.
+    assert (
+        "- `high_major / moneyline / always the favourite`: not enough "
+        "evidence (40 bets, below the 200 declared in advance)"
+    ) in after
+
+
+def test_no_row_below_the_floor_prints_a_number_in_any_of_the_three_places(outputs):
+    """The module docstring's rule 1, over all three printers it names.
+
+    `_figure` obeyed it. `_blind_lines` and the forecast advantage column did
+    not, and both are places a reader meets a figure read off a row. A thin
+    row is planted in each with a return no other line in the document
+    carries, and the rendered text is read back for it.
+    """
+    record = build(outputs)
+
+    tier = next(t for t in record["tiers"] if t["enough_evidence"])
+    tier["bets"] = 40
+    tier["roi"] = +0.777
+    tier["low"] = tier["adjusted_low"] = +0.60
+    tier["high"] = tier["adjusted_high"] = +0.95
+    tier["enough_evidence"] = WHY.enough_evidence_of(tier)
+    tier["verdict"] = WHY.verdict_of(tier)
+
+    blind = dict(record["blind"][0])
+    blind["bets"] = 40
+    blind["roi"] = +0.888
+    blind["low"] = blind["adjusted_low"] = +0.70
+    blind["high"] = blind["adjusted_high"] = +0.99
+    blind["enough_evidence"] = WHY.enough_evidence_of(blind)
+    blind["verdict"] = WHY.verdict_of(blind)
+    record["blind"].append(blind)
+
+    forecast_tier = next(
+        t
+        for t in record["forecast"]["tiers"]
+        if t["rows"] >= S.MINIMUM_BETS and t.get("advantage_over_raw")
+    )
+    advantage = forecast_tier["advantage_over_raw"]
+    advantage["rows"] = 40
+    advantage["value"] = +0.09999
+    advantage["low"] = advantage["adjusted_low"] = +0.08
+    advantage["high"] = advantage["adjusted_high"] = +0.11
+    advantage["enough_evidence"] = WHY.enough_evidence_of(advantage)
+    advantage["verdict"] = WHY.verdict_of(advantage)
+    assert forecast_tier["rows"] >= S.MINIMUM_BETS, (
+        "the tier must still be in the forecast table, or its advantage cell "
+        "is never rendered and this leg tests nothing"
+    )
+
+    assert WHY.verdict_disagreements(record) == [], (
+        "every planted row must leave the record self-consistent, or this "
+        "test passes on a refusal rather than on the floor rule"
+    )
+    rendered = WHY.render(record)
+    for number in ("+77.7%", "+88.8%", "+0.09999"):
+        assert number not in rendered, (
+            f"{number} is printed for a 40-bet row, below the "
+            f"{S.MINIMUM_BETS:,} declared in advance"
+        )
+    phrase = (
+        f"not enough evidence (40 bets, below the {S.MINIMUM_BETS:,} "
+        "declared in advance)"
+    )
+    assert rendered.count(phrase) >= 3, rendered.count(phrase)
+    assert "no number below the floor declared in advance" in rendered
+
+
+def test_the_gaps_this_guard_still_has_are_the_ones_written_down(outputs):
+    """What `verdict_disagreements` still lets through, asserted **open**.
+
+    A limitation recorded as a passing assertion goes red the day it is closed
+    and has to be re-read; a limitation recorded only in a docstring quietly
+    becomes a false claim — which is how the sentence *"Every row of the
+    record is examined. There is no opt-in."* came to stand over a function
+    with two ways past it. None of these is a waiver.
+
+    1. Refusal 3 does not run below the floor, so a thin row may carry a
+       return outside its own bounds. It is not free to close: the committed
+       record itself holds such rows, because `stats.roi_interval` returns
+       `±inf` for a single-cluster cell, JSON cannot carry an infinity, and
+       `interval_from_row` reads the stored null back as `0.0`. Nothing below
+       the floor is printed as a number, which is what makes it survivable.
+    2. The population is the sections `_rows_of_the_record` names. A section
+       that exists only in a record edited on disk is examined by nothing here
+       — and printed by nothing either, because `render` reads by name.
+    3. Only bounds, returns and verdicts are compared. Every other number the
+       document prints is checked against nothing by this function.
+    """
+    doc = WHY.verdict_disagreements.__doc__ or ""
+    ledger = doc.split("## What still gets through", 1)
+    assert len(ledger) == 2, "the guard's docstring no longer writes its gaps down"
+    assert re.findall(r"^ {4}(\d+)\. ", ledger[1], re.M) == ["1", "2", "3"], (
+        "the written-down list changed; every gap below is asserted open, so "
+        "one of them has been closed or a new one added without a case here"
+    )
+
+    # Gap 1, and the measurement behind leaving it open.
+    committed = build(outputs)
+    incoherent = [
+        label
+        for label, row in WHY._rows_of_the_record(committed)
+        for pair in WHY._bound_pairs_carried(row)[0]
+        if not WHY.printed_interval(row, bounds=pair).enough_evidence
+        and not WHY.printed_interval(
+            row, bounds=pair
+        ).return_sits_inside_its_own_interval
+    ]
+    assert incoherent, (
+        "no thin row of the committed record has a return outside its stored "
+        "bounds any more, so gap 1 may be closeable — re-measure before "
+        "deleting the skip"
+    )
+
+    record = build(outputs)
+    row = next(r for r in record["tiers"] if r["enough_evidence"])
+    row["bets"] = 40
+    row["roi"] = +0.99
+    row["low"] = row["adjusted_low"] = -0.09
+    row["high"] = row["adjusted_high"] = -0.02
+    row["enough_evidence"] = WHY.enough_evidence_of(row)
+    row["verdict"] = WHY.verdict_of(row)
+    assert [r for r in WHY.verdict_disagreements(record) if r.startswith("tiers[")] == []
+    assert "+99.0%" not in WHY.render(record)
+
+    # Gap 2: a section the generator never writes.
+    record = build(outputs)
+    record["invented"] = [
+        {
+            "name": "planted",
+            "market": "moneyline",
+            "tier": "high_major",
+            "bets": 24691,
+            "clusters": 900,
+            "roi": +0.99,
+            "low": -0.09,
+            "high": -0.02,
+            "adjusted_low": -0.09,
+            "adjusted_high": -0.02,
+            "enough_evidence": True,
+            "verdict": S.DEMONSTRATED_EDGE,
+        }
+    ]
+    assert WHY.verdict_disagreements(record) == []
+    assert "+99.0%" not in WHY.render(record)
+
+    # Gap 3: a number that is neither a bound, a return, nor a verdict.
+    record = build(outputs)
+    record["backtest"]["calibration"]["overall"]["points"] = 9.0
+    assert WHY.verdict_disagreements(record) == []
+    assert "**900.0 pp overconfident**" in WHY.render(record)
+
+
 def test_the_bound_keys_this_guard_knows_about_are_the_ones_the_record_writes(outputs):
     """`INTERVAL_BOUND_KEYS` is the whole vocabulary, and it is derived, not
     trusted.
@@ -596,11 +884,19 @@ def test_every_row_of_the_record_that_carries_a_figure_is_walked(outputs):
     from that list, or a section added to the record and not added to it, is a
     corner of the document nothing checks, and it looks like nothing at all.
     So the record is descended in full here and every mapping in it that
-    carries a bound or a verdict must come back from the walk — matched by
+    carries a bound or a claim must come back from the walk — matched by
     identity, so a walk that rebuilds rows instead of yielding them fails too.
+
+    **A claim, not just a verdict.** This used to look for a bound key or the
+    word `verdict`, which left a mapping carrying only `roi` or `value`
+    outside the population it derives — and a return with nothing beside it is
+    precisely the row refusal 2 exists for, so a section of them was neither
+    walked nor missed. The definition is now the bound keys plus
+    `CLAIM_KEYS`, the same vocabulary `verdict_disagreements` reads.
     """
     record = build(outputs)
     bound_keys = {key for pair in WHY.INTERVAL_BOUND_KEYS for key in pair}
+    claim_keys = set(WHY.CLAIM_KEYS)
     walked = {id(row) for _, row in WHY._rows_of_the_record(record)}
     carrying: list[str] = []
     carrying_ids: set[int] = set()
@@ -608,7 +904,7 @@ def test_every_row_of_the_record_that_carries_a_figure_is_walked(outputs):
 
     def descend(node: object, path: str) -> None:
         if isinstance(node, Mapping):
-            if bound_keys & set(node) or "verdict" in node:
+            if (bound_keys | claim_keys) & set(node):
                 carrying.append(path)
                 carrying_ids.add(id(node))
                 if id(node) not in walked:
@@ -623,7 +919,7 @@ def test_every_row_of_the_record_that_carries_a_figure_is_walked(outputs):
 
     assert carrying, "the record carries no figures at all, so nothing was checked"
     assert not missed, (
-        f"{len(missed)} of {len(carrying)} rows carrying a bound or a verdict "
+        f"{len(missed)} of {len(carrying)} rows carrying a bound or a claim "
         f"are never reached by `_rows_of_the_record`: {sorted(missed)[:8]}. "
         "Every check in `verdict_disagreements` runs over that walk, so a row "
         "it does not reach can hold any pair of numbers it likes."
