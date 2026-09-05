@@ -1745,12 +1745,22 @@ def rebuild_from_cache(
     cache_dir: Path,
     indexes: Mapping[int, team_names.TeamIndex],
     chunk_size: int = MARKET_CHUNK_SIZE,
+    segments: Sequence[PlanSegment] | None = None,
 ) -> tuple[list[dict], dict[str, int], list[RP.ProbeEvent]]:
-    """Re-stage every cached response for a plan. **Touches no network.**
+    """Re-stage cached responses for a plan, or for some of its segments.
 
-    This is rule 4's payoff: the vocabulary mapping can be corrected, extended
-    or argued about for ever, and re-running it costs nothing. Returns the
-    rows, the census, and the events that had at least one cached response.
+    **Touches no network.** This is rule 4's payoff: the vocabulary mapping can
+    be corrected, extended or argued about for ever, and re-running it costs
+    nothing. Returns the rows, the census, and the events that had at least one
+    cached response.
+
+    **`segments` exists because holding a whole wave in memory killed a
+    runner.** Every staged row is a Python dict, and a 1.2M-credit wave stages
+    4.8M of them; rebuilding that in one call on a 7GB runner was OOM-killed
+    two minutes in, and because persistence sat after the rebuild, the run's
+    responses were lost with it. Callers stream one segment at a time — a
+    wave-season, a few hundred thousand rows — and append each before touching
+    the next, so peak memory is one segment and not the plan.
     """
     cache_root = Path(cache_dir)
     rows: list[dict] = []
@@ -1758,7 +1768,8 @@ def rebuild_from_cache(
     reached: list[RP.ProbeEvent] = []
     listings: dict[str, list[dict]] = {}
 
-    for segment in plan.segments:
+    chosen = list(segments) if segments is not None else list(plan.segments)
+    for segment in chosen:
         if not segment.buyable:
             continue
         index = indexes.get(int(segment.season))
