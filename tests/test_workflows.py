@@ -2030,10 +2030,29 @@ def push_card_feed(root: Path, ledger: str, snapshots: dict[str, str]) -> None:
 
     snapshot_tree = tree("".join(f"100644 blob {blob(body)}\t{name}\n" for name, body in snapshots.items()))
     root_tree = tree(f"100644 blob {blob(ledger)}\tforward_evidence.csv\n040000 tree {snapshot_tree}\tsnapshots\n")
+    # `commit-tree` refuses without a committer identity, and a CI runner has no
+    # global git config — the identity travels in the environment so the test does
+    # not depend on whose machine it runs on, and does not write anyone's config.
     commit = subprocess.run(
-        ["git", "-C", str(remote), "commit-tree", root_tree, "-m", "tip"], capture_output=True, text=True, check=True
+        ["git", "-C", str(remote), "commit-tree", root_tree, "-m", "tip"],
+        capture_output=True,
+        text=True,
+        check=True,
+        env={**os.environ, **GIT_IDENTITY},
     ).stdout.strip()
     subprocess.run(["git", "-C", str(remote), "update-ref", "refs/heads/card-feed", commit], check=True)
+
+
+#: A committer for the throwaway remotes these tests build. Never a real
+#: identity, never written to a config file: a test that needs `git config
+#: --global` to have been run is a test that passes on a laptop and fails on a
+#: runner, which is exactly what happened.
+GIT_IDENTITY = {
+    "GIT_AUTHOR_NAME": "cbb tests",
+    "GIT_AUTHOR_EMAIL": "tests@example.invalid",
+    "GIT_COMMITTER_NAME": "cbb tests",
+    "GIT_COMMITTER_EMAIL": "tests@example.invalid",
+}
 
 
 def run_restore_for_real(root: Path, remote_url: str) -> tuple[subprocess.CompletedProcess[str], Path]:
