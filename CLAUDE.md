@@ -176,56 +176,105 @@ what a market costs, not a reason not to know what a school is called.*
 
 ### The measurement, and it is decisive
 
-**2026-09-04, on the expanded store: 2,233,844 quotes, 13 markets, 118,050
-graded bets, 32 market-and-tier cells. Not one shows a demonstrated edge.**
-The accounting identity reconciles at 436,920 of 436,920 offered; the family
-correction is x1.60 from 30 pre-registered hypotheses.
+**2026-09-05, on the rebuilt full store: 925,831 wagers offered, 191,053 graded
+bets over 26,591 games and 791 days of seasons 2021-2026, 32 market-and-tier
+cells. 0 shows a demonstrated edge; 3 show a demonstrated deficit.**
+The store is core team 2021–2026 complete, ladders and halves on 609 events,
+props on 3,223 events; a second ladders wave of 1,199,926 credits was lost
+before persistence (defects S–W) and is not re-bought.
 
-| Cut | Bets | ROI | Corrected | Verdict |
+Every interval below is quoted **as the record carries it**: the backtest ran
+while the experiment ledger held 30 hypotheses, so its stored bounds are
+widened by **x1.60**. The ledger now holds **62** — 30 discovery entries and
+the 32 holdout looks the replication appended — and the generated reports
+re-apply **x1.71** at render time, which is why the same tier reads wider in
+`docs/what_we_can_and_cannot_claim.md` and
+`docs/why_the_model_does_or_does_not_have_an_edge.md`. The correction may only
+ever get stricter.
+
+| Cut | Bets | ROI | Corrected (x1.60) | Verdict |
 |:---|---:|---:|:---|:---|
-| high-major | 24,691 | -3.1% | -10.0% to +3.8% | no demonstrated edge |
-| mid-major | 58,633 | -4.1% | -9.0% to +0.9% | no demonstrated edge |
-| low-major | 34,720 | -4.3% | -10.0% to +1.4% | no demonstrated edge |
-| pooled | 118,050 | -3.9% | -7.2% to -0.7% | demonstrated deficit |
+| high-major | 43,228 | -3.2% | -7.6% to +1.2% | no demonstrated edge |
+| mid-major | 88,344 | -4.3% | -7.8% to -0.8% | demonstrated deficit |
+| low-major | 59,475 | -4.0% | -7.7% to -0.3% | demonstrated deficit |
 
-**A CLAIM IN THIS FILE WAS RETRACTED BY THE RE-MEASUREMENT.** The core-team-only
-run had low-major at -3.9% corrected -7.4% to -0.3%, and this file called it
-*the only tier whose interval excludes zero*. Adding the alternate ladders and
-the halves — one season deep and thin, which widens every interval they enter —
-takes the same tier to **no demonstrated edge**. Nothing about the model
-changed; the population did. **A deficit that dissolves when a fifth market is
-added was fragile to the population all along.** The direction survives:
-low-major is the worst tier by point estimate in both runs, and the lab was
-built expecting it to be the best.
+**There is no pooled row here on purpose.** A pooled all-of-Division-I headline
+is banned in this repository; the pooled figure is computed so
+`docs/when_this_ends.md` can apply the stopping rule to it, and never so it can
+be quoted on its own.
+
+**A CLAIM IN THIS FILE WAS RETRACTED, AND THE FULL STORE RESTORED HALF OF IT.**
+Measured on the core team markets alone, before the alternate ladders and the
+halves entered the population, this file called low-major *the only tier whose
+interval excludes zero, and it excludes zero on the losing side*. On
+2026-09-04's partial store the same tier read **no demonstrated edge** and the
+claim was withdrawn. On the full store low-major is a **demonstrated deficit**
+again — 59,475 bets, -4.0%, corrected -7.7% to -0.3% — so the **sign** survives
+and the **exclusivity does not**: mid-major excludes zero as well. No figure
+from the superseded run is reprinted here; its record is not committed, and a
+number nobody can re-read is a number this file may not carry. Nothing about the
+model changed either time; the population did. The retraction itself is now
+generated: `reports/why_the_model.py` chooses *still holds* or *no longer holds*
+from `verdict_of(current)` and nothing else, so it cannot become a stale
+paragraph again.
 
 - **The lab's own thesis is contradicted.** Softness was expected at the
-  low-major end. It is the worst tier in both measurements.
-- **The model beats blind betting and loses to the vig.** Blind sides run to
-  -13.9%; the model's -3.9% beats every one. Information, and not enough of it.
+  low-major end. By point estimate the worst measured tier is **mid-major**
+  (-4.3% over 88,344 bets).
+- **The model does not beat blind betting on return, and it loses to the vig.**
+  The claim that it beat every blind rule was checked and is FALSE: of the
+  190 blind sides clearing the 200-bet floor, **61 return more than
+  their own tier's model**, and 13 of those carry a demonstrated deficit — mid-major
+  `always the underdog` on moneyline returns -2.0% over 14,091 bets against the
+  model's -4.3%. The spread is wide in both directions: the worst blind side is
+  `low_major / player_threes / always over` at **-40.0%** over 227 bets, the best
+  is +20.7% over 345. **No blind side demonstrates an edge either (0 of
+  190)** — every positive one has an interval spanning zero after the
+  correction. The evidence that the model carries information is the Brier score
+  against the base rate, not the return against blind rules.
 - **The model loses to the market on Brier in every tier, with the vig left
-  in.** Pooled advantage **-0.01312 [-0.01468, -0.01156]**. In high-major its
-  Brier is worse than the **base rate** — beaten by predicting the league mean.
-- **Anti-predictiveness is a shape.** The shortfall widens **11.8pp** from the
-  smallest claimed-edge bucket to the largest, so **raising the threshold makes
-  it worse** — the move a disappointing backtest invites.
-- **Replication: 0 replicated / 0 failed / 0 reversed / 5 nothing to
-  replicate.** When a holdout cell returned -12.1% with an interval excluding
-  zero, the module refused to call it a replication: *"a NEW DISCOVERY made on
-  the only clean season this lab had"*. That cell's holdout is burned.
+  in**, per tier and never pooled: high-major **-0.01663**, corrected -0.02147
+  to -0.01179 over 62,163 rows; mid-major **-0.00962**, corrected -0.01286 to
+  -0.00638 over 137,296 rows; low-major **-0.00776**, corrected -0.01072 to
+  -0.00479 over 94,182 rows. In high-major its Brier is worse than the **base
+  rate** (0.25118 against 0.25000) — beaten by predicting the league mean.
+- **The skill measure shows nothing.** The disagreement coefficient over every
+  opinion (293,661 wagers) is **no demonstrated edge** in all three tiers:
+  high +0.088 corrected -0.033 to +0.208; mid +0.122 corrected -0.015 to
+  +0.259; low +0.046 corrected -0.130 to +0.223. On the **selected** bets only
+  (110,316) high-major reads +0.239 corrected +0.030 to +0.449 — that is the
+  winner's-curse comparison, never the skill measure.
+- **Anti-predictiveness is a shape.** Return by claimed-edge bucket is **not
+  measurable** on this record (0 usable buckets of 8 populated). Overconfidence
+  by bucket is: high-major runs **+13.4 pp** in the smallest claimed-edge
+  bucket (24,416 rows) to **-18.3 pp** in the largest (11,232), so **raising the
+  threshold makes it worse** — the move a disappointing backtest invites.
+- **Replication: 0 replicated / 0 did not replicate / 0 reversed / 3 not enough
+  evidence / 9 nothing to replicate / 20 untestable**, over 32 cells; 71,778
+  held-out bets on 2025 and 2026 against 119,275 on 2021-2024. **This is not the
+  split declared on 2026-09-03** (discovery [2021, 2022, 2023], holdout [2024]),
+  so it is a **second look at the data rather than a pre-registered test** and
+  every state in that count reads as one. `mid_major / team_total` is flagged
+  *"a NEW DISCOVERY MADE ON THE HOLDOUT, not a replication"* — -6.6% over 4,968
+  held-out bets where discovery demonstrated nothing. That cell's holdout is
+  burned.
 - **Not measured, and the reports say so.** The half-point decomposition was
-  **refused** (ticket-margin verified at 83.8% against a 99% bar).
-  Reachability has no in-season store to split on. Props and futures are
-  unbought; futures cannot be bought at all — no historical bulk endpoint.
+  **refused**: the ticket-margin reconstruction agreed with the recorded outcome
+  on 162,340 of 189,381 scorable bets (**85.7%**), below the 99% bar.
+  Reachability has no in-season store to split on. Futures cannot be bought at
+  all — no historical bulk endpoint.
 
 ### The winner's curse, measured
 
 **Overall calibration is not evidence, and this run is why.** Overall the model
-is **0.5 pp underconfident** over 235,859 graded rows — essentially calibrated,
-with gaps that cancel. On the bets it **selected**, it is **9.9 pp
-overconfident** over 85,556, and every one of the ten bins is over-predicted.
+is **0.4 pp underconfident** over 566,370 graded rows — essentially calibrated,
+with gaps that cancel, and only five of ten bins over-predicted. On the bets it
+**selected**, it is **10.4 pp overconfident** over 189,381, and **every one of
+the ten bins is over-predicted**.
 
-It worsens with confidence: at 90-100% predicted the model wins **86.6%
-overall** and **68.8% on what it picked**. It says 93% and wins 69%.
+It worsens with confidence: in the 90-100% band the model says 93.9% and wins
+**90.4%** over 12,475 rows overall, and says 94.2% and wins **80.9%** over 3,103
+rows on what it picked.
 
 A model is selected into its bets by its own disagreement with the price, so
 its bets are the tail of its own error distribution. This is an independent
