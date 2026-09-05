@@ -110,6 +110,27 @@ rather than dropped. `tests/test_workflows.py` executes the restore block under
 stubs with git failing and against a real scratch remote in all three states,
 and the publish block with every combination of restore and card outcome.
 
+**A refusal is a verdict, not a fault.** `scripts/run_gameday_card.py` exits `0`
+when it ran clean, `1` when it ran and the run is degraded (or it refused for
+want of quota), and `2` when it refused deliberately — and every one of those
+prints `decision=<word>` before returning. All three are successful runs of the
+card step: the card was rendered, the word is published, and the feed carries
+it. Only a card that never reached a verdict fails the step — a traceback
+(Python's own exit `1`, with no `decision=` line behind it), a killed process,
+an exit code the script does not define — because the fault path overwrites the
+rendered card with a fault card, and a refusal must not be handed to it. The
+status alone cannot tell an exception from a degraded run, since both exit `1`,
+so the step reads the pair: a status the script defines AND a decision word it
+printed. The word is recorded whenever the card printed one, the fault path
+included. `tee` is in that pipeline and its status is never the step's — that
+was the original defect in one direction (a card exiting 1 read green because
+the pipeline reported tee's 0) and the overcorrection in the other. Because a
+degraded card now leaves the step successful, the health step reads the card's
+own `degraded=` line rather than inferring health from the step's outcome;
+anything but a literal `false` is degraded, and `"unknown"` counts as degraded.
+`tests/test_workflows.py` executes the card block against a card of each exit
+code, including one killed by a signal.
+
 ---
 
 ## Link 3 — `CBB CARD RELAY`, a Claude Code cloud routine

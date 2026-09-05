@@ -197,7 +197,16 @@ jobs:
         env:
           PYTHONPATH: src
           CBB_ODDS_API_KEY: ${{ secrets.CBB_ODDS_API_KEY }}
-        run: python scripts/check_provider_quota.py | tee -a "$GITHUB_STEP_SUMMARY"
+        run: |
+          # `pipefail`, because a pipeline's status is its LAST command's and
+          # the last command here is `tee`, which succeeds whatever the quota
+          # check found. Without it a quota check that could not reach the
+          # provider — or that read a balance far below the cap — reported
+          # green, and the Buy step below then spent against a number nobody
+          # had actually read. The purchase is the expensive thing in this
+          # repository; a swallowed exit code in front of it costs credits.
+          set -euo pipefail
+          python scripts/check_provider_quota.py | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Buy
         env:
@@ -266,7 +275,12 @@ jobs:
         env:
           PYTHONPATH: src
           CBB_ODDS_API_KEY: ${{ secrets.CBB_ODDS_API_KEY }}
-        run: python scripts/check_provider_quota.py | tee -a "$GITHUB_STEP_SUMMARY"
+        run: |
+          # `pipefail` for the same reason as Quota before: this is the only
+          # reading of what the run actually spent, and `tee` exiting 0 over a
+          # failed reading reported a spend nobody measured.
+          set -euo pipefail
+          python scripts/check_provider_quota.py | tee -a "$GITHUB_STEP_SUMMARY"
 
       # The price store and the raw cache are the bought goods. Both are
       # uploaded even when a step failed: a purchase that spent a million

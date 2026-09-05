@@ -143,6 +143,10 @@ DISABLES_ERREXIT = re.compile(r"\bset\b[^;&|]*\+(?:[a-z]*e[a-z]*\b|o\s+(?:errexi
 ENABLES_PIPEFAIL = re.compile(r"^\s*set\b[^;&|]*-[a-zA-Z]*o\s+pipefail\b")
 DISABLES_PIPEFAIL = re.compile(r"\bset\b[^;&|]*\+o?\s*pipefail\b")
 PIPELINE = re.compile(r"(?<!\|)\|(?!\|)")
+#: A script piped into `tee`, whose status is tee's unless the block sets
+#: pipefail. Continuations are joined before this is applied, so the flags
+#: between the script and the pipe do not hide it.
+SCRIPT_THROUGH_TEE = re.compile(r"\bpython\b[^|]*\|\s*tee\b")
 #: A pipeline with no pipe character: `<(cmd)` runs in a subshell whose status
 #: nothing propagates. A construct ban, labelled as one.
 PROCESS_SUBSTITUTION = re.compile(r"[<>]\(")
@@ -1801,36 +1805,184 @@ def runner_file(sandbox: Path, name: str) -> str:
     return (sandbox / name.lower()).read_text(encoding="utf-8")
 
 
-def test_a_failing_card_command_fails_the_card_step(tmp_path: Path) -> None:
-    """The defect: the card ran as `python ... | tee card_run.txt` under `set
-    -eu`, so the step's status was tee's and a card exiting 1 read green. The
-    health step reads this step's outcome, so the run was then stamped clean.
-    Executed: with only the card command failing the block must not reach its
-    end, and the decision output must not have been written."""
+#: What a card prints on its way to a verdict, shortened to the lines the step
+#: reads. The real script prints `degraded=` and then `decision=` as its last
+#: two lines; a refusal prints `decision=refused` and no `degraded=` line.
+CARD_CLEAN = "Froze 412 wager(s) offered.\ndegraded=false\ndecision=no-selections\n"
+CARD_DEGRADED = "::warning::the board was stale\ndegraded=true\ndecision=no-selections\n"
+CARD_REFUSED = "::error::Refusing to start.\ndecision=refused\n"
+CARD_TRACEBACK = "Traceback (most recent call last):\n  ValueError: the identity does not reconcile\n"
+
+
+def run_card_step(
+    root: Path, *, prints: str, status: int | str, tee_fails: bool = False
+) -> tuple[subprocess.CompletedProcess[str], Path]:
+    """The card block, executed against a card of known stdout and known exit
+    status, with the real `tee`, `grep` and `tail` behind it.
+
+    The stub harness cannot ask this question: its `tee` never reads its
+    stdin, so the card's own `printf` dies of SIGPIPE and every card it models
+    exits 141 whatever the stub was told to return. The exit code IS the
+    contract here, so the card is faked and everything else is real.
+
+    `status` is the number the card exits with; `"killed"` is the runner's OOM
+    killer taking it (SIGKILL, 137), which no `return` can model.
+    """
     block = rendered(gameday_step("card"))
-    assert ENABLES_PIPEFAIL.search(commands(block)[0]), "the card step does not open with `set -o pipefail`"
-    environment = {"CBB_ODDS_API_KEY": "set"}
-
-    clean = run_block_under_stubs(block, set(), tmp_path, environment=environment)
-    assert clean.exit_code == 0 and clean.unmodelled == [], clean
-    assert "decision=" in runner_file(tmp_path, "GITHUB_OUTPUT")
-
-    card_failed = run_block_under_stubs(block, {"python"}, tmp_path, environment=environment)
-    assert "python" in card_failed.any_failures, "the card command was never invoked, so nothing was tested"
-    assert card_failed.exit_code != 0, (
-        "the card command failed and the step still exited 0: tee's status stood in for the card's"
+    workspace = root / "card-workspace"
+    if workspace.exists():
+        shutil.rmtree(workspace)
+    workspace.mkdir()
+    # `exec sh -c 'kill -KILL $$'`, not `kill $BASHPID`: the pipeline element
+    # has to die of the signal itself for the status to be a real 137, and
+    # `BASHPID` does not exist in the bash 3.2 some of these machines carry.
+    ending = "exec sh -c 'kill -KILL $$'" if status == "killed" else f"return {status}"
+    preamble = ["python() {", "  printf '%s' " + _quote(prints), "  " + ending, "}"]
+    if tee_fails:
+        # A tee that writes everything it was given and then reports a
+        # failure: the transcript survives and tee's status describes tee.
+        preamble.append('tee() { command tee "$@"; return 1; }')
+    script = workspace / "run_block.sh"
+    script.write_text("\n".join(preamble) + "\n" + block, encoding="utf-8")
+    environment = {
+        "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+        "HOME": str(workspace),
+        "LC_ALL": "C",
+        "CBB_ODDS_API_KEY": "set",
+    }
+    for name in RUNNER_FILE_VARIABLES:
+        target = workspace / name.lower()
+        target.write_text("", encoding="utf-8")
+        environment[name] = str(target)
+    assert HARNESS_SHELL
+    completed = subprocess.run(
+        [HARNESS_SHELL, "-e", str(script)], cwd=workspace, env=environment,
+        capture_output=True, text=True, timeout=60,
     )
-    assert "decision=" not in runner_file(tmp_path, "GITHUB_OUTPUT"), (
-        "a failed card still wrote a decision, so the publish step would stamp the feed with it"
-    )
+    return completed, workspace
 
-    tee_failed = run_block_under_stubs(block, {"tee"}, tmp_path, environment=environment)
-    assert tee_failed.exit_code != 0, "a failed tee lost the card's log and the step still read green"
+
+def test_the_card_step_models_every_command_and_refuses_without_its_credential(tmp_path: Path) -> None:
+    """Two questions the stub harness can still answer about the card block:
+    that every command in it is modelled — a block with an unmodelled command
+    was never executed by anything — and that with no credential bound it
+    exits before invoking a single command."""
+    block = rendered(gameday_step("card"))
+    assert ENABLES_PIPEFAIL.search(commands(block)[0]), (
+        "the card step does not open with `set -o pipefail`; without it the pipeline's "
+        "status is tee's and the card's own exit code is unreadable"
+    )
+    modelled = run_block_under_stubs(block, set(), tmp_path, environment={"CBB_ODDS_API_KEY": "set"})
+    assert modelled.unmodelled == [], modelled
 
     without_credential = run_block_under_stubs(block, set(), tmp_path)
     assert without_credential.exit_code != 0 and without_credential.any_failures == [], (
         "the card step ran the card without its credential name bound"
     )
+
+
+def test_a_refused_or_degraded_card_is_not_a_failed_card_step(tmp_path: Path) -> None:
+    """The rejected fix's defect: `set -euo pipefail` alone turned the card's
+    DELIBERATE non-zero exits into a fault. `run_gameday_card.py` returns 2 on
+    a refusal and `return 1 if run.is_degraded else 0` on its last line — both
+    are runs that reached a verdict, rendered a card and are meant to be
+    published stamped with the word they printed. Failing the step on either
+    hands the run to the `if: failure()` step, which overwrites that card with
+    a fault card, and loses the `decision=` word on the way.
+
+    So: exit 0, 1 and 2 with a decision word behind them all leave the step
+    successful, and each publishes the word the card actually printed."""
+    for status, prints, decision, health in (
+        (0, CARD_CLEAN, "no-selections", "false"),
+        (1, CARD_DEGRADED, "no-selections", "true"),
+        (2, CARD_REFUSED, "refused", "unknown"),
+    ):
+        completed, workspace = run_card_step(tmp_path, prints=prints, status=status)
+        output = runner_file(workspace, "GITHUB_OUTPUT")
+        assert completed.returncode == 0, (
+            f"a card that exited {status} after printing decision={decision} failed the step: "
+            f"{completed.stdout}{completed.stderr}"
+        )
+        assert f"decision={decision}\n" in output, f"exit {status}: {output!r}"
+        assert f"card_degraded={health}\n" in output, f"exit {status}: {output!r}"
+
+
+def test_a_card_that_could_not_run_fails_the_card_step(tmp_path: Path) -> None:
+    """The other half of the contract, and the half the old test pinned
+    backwards. A card that never reached a verdict is a fault: a traceback
+    (Python's own exit 1, with no `decision=` line behind it — the status
+    alone cannot tell it from a degraded run, which also exits 1), a killed
+    process, an exit code the script does not define. Each one must fail the
+    step, and the decision word must survive whenever the card printed one:
+    what it decided before it died is evidence, not noise."""
+    crashed, workspace = run_card_step(tmp_path, prints=CARD_TRACEBACK, status=1)
+    assert crashed.returncode != 0, "a card that printed no decision passed as a verdict"
+    assert "decision=" not in runner_file(workspace, "GITHUB_OUTPUT"), (
+        "a card that printed no decision word had one invented for it"
+    )
+
+    killed, workspace = run_card_step(tmp_path, prints=CARD_CLEAN, status="killed")
+    assert killed.returncode != 0, "a killed card (SIGKILL, 137) read green"
+    assert "decision=no-selections\n" in runner_file(workspace, "GITHUB_OUTPUT"), (
+        "the card printed a decision and being killed erased it"
+    )
+
+    undefined, workspace = run_card_step(tmp_path, prints=CARD_CLEAN, status=3)
+    assert undefined.returncode != 0, "an exit code the card script does not define read green"
+
+
+def test_the_card_step_never_reports_tees_status(tmp_path: Path) -> None:
+    """The original defect and its overcorrection, from the same block. Both
+    directions: a failing `tee` does not fail a card that reached a verdict,
+    and a succeeding `tee` does not green a card that did not. `PIPESTATUS`,
+    not the pipeline's own status, is what this step reads."""
+    survived, workspace = run_card_step(tmp_path, prints=CARD_CLEAN, status=0, tee_fails=True)
+    assert survived.returncode == 0, (
+        "tee failed over a card that returned a decision and the step reported tee's status: "
+        f"{survived.stdout}{survived.stderr}"
+    )
+    assert "decision=no-selections\n" in runner_file(workspace, "GITHUB_OUTPUT")
+
+    still_a_fault, workspace = run_card_step(tmp_path, prints=CARD_TRACEBACK, status=1, tee_fails=True)
+    assert still_a_fault.returncode != 0, "a crashed card read green because tee was blamed instead"
+
+
+def run_health(tmp_path: Path, *, card_degraded: str, card: str = "success") -> BlockRun:
+    """The health block, executed with the card rendered and every other step
+    successful, so the only variable is what the card said about itself."""
+    outputs = tmp_path / "data/outputs"
+    outputs.mkdir(parents=True, exist_ok=True)
+    (outputs / "cbb_gameday_card.md").write_text("# CBB card\n", encoding="utf-8")
+    block = rendered(
+        gameday_step("health"),
+        {
+            "steps.feeds.outcome": "success",
+            "steps.settle.outcome": "success",
+            "steps.card.outcome": card,
+            "steps.restore.outcome": "success",
+            "steps.card.outputs.card_degraded": card_degraded,
+        },
+    )
+    return run_block_under_stubs(block, set(), tmp_path)
+
+
+def test_a_card_that_reported_itself_degraded_makes_the_run_degraded(tmp_path: Path) -> None:
+    """A degraded card now leaves the card step SUCCESSFUL, which is right —
+    it reached a verdict — so the health step can no longer learn about it
+    from that step's outcome alone. It reads the card's own `degraded=` line
+    instead. Without this the feed carried `degraded: "false"` over a card
+    that said it was degraded, and the already-published guard let that card
+    stand instead of letting the next slot replace it."""
+    clean = run_health(tmp_path, card_degraded="false")
+    assert clean.exit_code == 0 and clean.unmodelled == [], clean
+    assert "degraded=false\n" in runner_file(tmp_path, "GITHUB_OUTPUT"), runner_file(tmp_path, "GITHUB_OUTPUT")
+
+    for reported in ("true", "unknown", ""):
+        degraded = run_health(tmp_path, card_degraded=reported)
+        assert degraded.exit_code == 0 and degraded.unmodelled == [], degraded
+        assert "degraded=true\n" in runner_file(tmp_path, "GITHUB_OUTPUT"), (
+            f"the card reported its health as {reported!r} and the run was stamped clean"
+        )
 
 
 def test_a_failed_feed_fetch_fails_the_restore_step(tmp_path: Path) -> None:
@@ -1941,6 +2093,74 @@ def test_the_restore_step_tells_an_absent_branch_from_a_failed_fetch(tmp_path: P
     assert "Not published" in runner_file(workspace, "GITHUB_STEP_SUMMARY")
     assert not (workspace / "data/processed/cbb_forward_evidence.csv").exists()
     assert "No card-feed branch" not in unreachable.stdout + unreachable.stderr
+
+
+def test_an_unreachable_remote_leaves_gits_own_message_in_the_log(tmp_path: Path) -> None:
+    """`2>&1` into /dev/null made the `feed=unreachable` path undiagnosable:
+    the run said it could not ask the remote and never said why, so a DNS
+    failure, an expired token and a 500 read identically — on the one run
+    that ever takes this path. git's own message must reach the log."""
+    remote = (tmp_path / "no-such-remote.git").as_uri()
+    unreachable, _ = run_restore_for_real(tmp_path, remote)
+    assert unreachable.returncode != 0
+    logged = unreachable.stdout + unreachable.stderr
+    assert "no-such-remote.git" in logged, (
+        f"the restore step refused without saying what git said: {logged!r}"
+    )
+    assert "does not appear to be a git repository" in logged or "Could not read from remote" in logged, logged
+
+
+def test_the_restore_step_blanks_a_credential_out_of_the_message_it_replays(tmp_path: Path) -> None:
+    """The message git writes is replayed, and the remote it names carries the
+    token. git strips the userinfo out of the URL it prints; this proves the
+    step does not depend on it doing so. Executed: the block's own redaction
+    lines, over a message that does carry one."""
+    redactions = [line for line in commands(gameday_step("restore")) if line.startswith("sed ")]
+    assert len(redactions) == 2, (
+        f"the restore step replays git's error on {len(redactions)} path(s), not the two that fail: {redactions}"
+    )
+    carrier = tmp_path / "git_error.txt"
+    carrier.write_text(
+        "fatal: unable to access 'https://x-access-token:notatoken@github.com/o/r/': 500\n", encoding="utf-8"
+    )
+    assert HARNESS_SHELL
+    for line in redactions:
+        replayed = subprocess.run(
+            [HARNESS_SHELL, "-c", f'GIT_ERROR="$1"\n{line}\n', "sh", str(carrier)],
+            capture_output=True, text=True, timeout=30,
+        )
+        assert replayed.returncode == 0, replayed.stderr
+        printed = replayed.stdout + replayed.stderr
+        assert "notatoken" not in printed, f"the replayed message carries the credential: {printed!r}"
+        assert "x-access-token:***@github.com" in printed, printed
+        assert "500" in printed, f"the redaction ate the diagnosis: {printed!r}"
+
+
+def test_no_workflow_pipes_a_script_through_tee_without_pipefail() -> None:
+    """A pipeline's status is its LAST command's, and `tee` succeeds whatever
+    the script in front of it did. That was the card defect; the same shape
+    stood in front of the purchase, where the swallowed exit code is a quota
+    reading nobody read before spending against it."""
+    piping: list[str] = []
+    offenders: list[str] = []
+    for path in WORKFLOW_FILES:
+        for name, block in run_blocks(load(path)):
+            lines = [without_quoted_spans(line) for line in commands(block)]
+            if not any(SCRIPT_THROUGH_TEE.search(line) for line in lines):
+                continue
+            piping.append(f"{path.name}: {name!r}")
+            if not ENABLES_PIPEFAIL.search(lines[0]):
+                offenders.append(f"{path.name}: {name!r} does not open with `set -o pipefail`")
+            for line in lines:
+                if DISABLES_PIPEFAIL.search(line):
+                    offenders.append(f"{path.name}: {name!r} turns pipefail back off: {line!r}")
+    assert len(piping) >= 6, (
+        f"only {len(piping)} run block(s) pipe a script through tee ({piping}); this rule "
+        "was written over six of them — the card, both quota readings on either side of the "
+        "purchase, the quota check, and both on either side of the probe — and a rule that "
+        "matches nothing reports green over everything"
+    )
+    assert not offenders, offenders
 
 
 PUBLISH_OUTCOMES = {
