@@ -47,14 +47,32 @@ CONTRACTS = {
 #: Contract strings pinned here that `CLAUDE.md`'s table does not carry a row
 #: for **yet**. A path a program writes to is a contract string in every sense
 #: that matters — it is what a reader opens and what the weekly loop splices —
-#: and the pin is what stops it moving in silence. The table row is a
-#: documentation change, so it is proposed rather than made here; when it
-#: lands, move the entry up into `CONTRACTS` and this dict empties again.
-#: `test_the_contract_table_has_no_rows_this_test_does_not_pin` accepts the row
-#: the day it appears, and the value is checked against the code either way.
+#: and the pin is what stops it moving in silence.
+#:
+#: **This dict is weaker than `CONTRACTS` and the difference is written down
+#: rather than glossed.** A name in `CONTRACTS` must appear in CLAUDE.md's
+#: table with a matching value, checked by
+#: `test_claude_md_records_every_contract_string`. A name here is exempt from
+#: that: it is pinned to the *code* and to nothing in the documentation, so it
+#: could sit here for ever with the table never gaining the row. That is a real
+#: gap in the table guard, and the two tests below are what stop it widening —
+#: `test_the_contract_strings_pending_a_table_row_are_the_ones_written_down`
+#: fixes the exact set, so a second string cannot be parked here to dodge the
+#: table, and `test_every_pending_contract_string_is_pinned_to_code_by_name`
+#: requires each entry to be a literal some other test asserts the code
+#: against.
+#:
+#: It is not in `CONTRACTS` because moving it there means adding a row to
+#: `CLAUDE.md`, and this branch does not edit `CLAUDE.md`. When that row lands,
+#: move the entry up and this dict empties again — the exact-set test goes red
+#: on the day it does, which is the reminder to delete this comment with it.
 PENDING_CONTRACTS = {
     "Edge document": "docs/why_the_model_does_or_does_not_have_an_edge.md",
 }
+
+#: The names allowed to sit in `PENDING_CONTRACTS`. Written out separately from
+#: the dict so that parking a string there is two edits and one of them is here.
+CONTRACT_STRINGS_AWAITING_A_TABLE_ROW = {"Edge document"}
 
 
 def _table_rows() -> dict[str, str]:
@@ -93,6 +111,57 @@ def test_the_contract_table_has_no_rows_this_test_does_not_pin():
         f"CLAUDE.md declares contract strings this test does not pin: "
         f"{sorted(unpinned)}. An unpinned contract is a rename waiting to happen."
     )
+
+
+def test_the_contract_strings_pending_a_table_row_are_the_ones_written_down():
+    """The gap in the table guard, asserted at its exact size.
+
+    `test_the_contract_table_has_no_rows_this_test_does_not_pin` subtracts
+    `PENDING_CONTRACTS` from what it demands a pin for, and
+    `test_claude_md_records_every_contract_string` never runs over it at all.
+    So `PENDING_CONTRACTS` is the one place in this file where a contract
+    string can live without CLAUDE.md carrying it — a hole exactly as wide as
+    this dict and no wider. Fixing the set is what keeps it that wide: a second
+    string parked here to avoid writing the table row fails this test rather
+    than passing quietly.
+
+    Nothing here is a waiver. The day the row lands in CLAUDE.md, the entry
+    moves into `CONTRACTS`, both sets shrink, and this test goes red to be
+    re-read — which is the point of writing a gap down as an assertion instead
+    of as a sentence.
+    """
+    assert set(PENDING_CONTRACTS) == CONTRACT_STRINGS_AWAITING_A_TABLE_ROW, (
+        f"`PENDING_CONTRACTS` holds {sorted(PENDING_CONTRACTS)} and the names "
+        f"written down as awaiting a row are "
+        f"{sorted(CONTRACT_STRINGS_AWAITING_A_TABLE_ROW)}. A contract string "
+        "belongs in `CONTRACTS` with a row in CLAUDE.md's table; parking it "
+        "here exempts it from the table guard, and the exemption is a list "
+        "somebody reads, not a category anything can join."
+    )
+    assert not set(PENDING_CONTRACTS) & set(CONTRACTS), (
+        "a name in both dicts is pinned to two values that nothing compares"
+    )
+
+
+def test_every_pending_contract_string_is_pinned_to_code_by_name():
+    """A pending entry buys an exemption from the table, not from being pinned.
+
+    Each one must be asserted against the code somewhere in this file by its
+    literal value — `Edge document` against `why_the_model.DOC_RELATIVE` in
+    `test_the_edge_document_is_the_path_the_generator_writes`. Without that it
+    would be a string pinned to nothing at all, which is worse than not being
+    listed: it would read as a contract that something checks.
+    """
+    source = Path(__file__).read_text(encoding="utf-8")
+    for name, value in PENDING_CONTRACTS.items():
+        assert source.count(f'PENDING_CONTRACTS["{name}"]') >= 1, (
+            f"{name!r} is listed in `PENDING_CONTRACTS` and no test in this "
+            f"file reads `PENDING_CONTRACTS[{name!r}]` to check the code "
+            "against it. It is exempt from the table guard and pinned to "
+            "nothing, so it is a rename waiting to happen wearing the word "
+            "'pinned'."
+        )
+        assert value, f"{name!r} is pinned to an empty string"
 
 
 def test_the_credential_name_matches_the_provider_module():

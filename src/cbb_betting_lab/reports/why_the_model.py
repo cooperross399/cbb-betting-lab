@@ -401,7 +401,30 @@ def interval_from_row(row: Mapping, *, looks: int) -> S.RoiInterval:
     )
 
 
-def printed_interval(row: Mapping) -> S.RoiInterval:
+#: The bound-key pairs a row of this record can carry, as ``(low, high)``.
+#:
+#: **This is the record's whole bound vocabulary, not a filter over it.**
+#: :func:`cell` and :func:`_advantage` are the only two constructors that
+#: produce a row this document prints, and both write all four of these keys;
+#: nothing else in the record names a bound.
+#: ``test_the_bound_keys_this_guard_knows_about_are_the_ones_the_record_writes``
+#: derives the expected set from what those constructors actually emit, so
+#: dropping a pair from this tuple — the one-line way to narrow the check in
+#: :func:`verdict_disagreements` — turns that test red instead of quietly
+#: exempting every row that carries only the dropped pair.
+INTERVAL_BOUND_KEYS: tuple[tuple[str, str], ...] = (
+    ("adjusted_low", "adjusted_high"),
+    ("low", "high"),
+)
+
+#: The bounds :func:`printed_interval` reads when it is not told otherwise:
+#: the corrected pair, which is the pair `_figure` prints.
+PRINTED_BOUNDS: tuple[str, str] = INTERVAL_BOUND_KEYS[0]
+
+
+def printed_interval(
+    row: Mapping, *, bounds: tuple[str, str] = PRINTED_BOUNDS
+) -> S.RoiInterval:
     """The interval this document is about to PRINT, as a `RoiInterval`.
 
     The corrected bounds are handed in as the interval's own bounds and the
@@ -423,15 +446,29 @@ def printed_interval(row: Mapping) -> S.RoiInterval:
     A row from the forecast section names its return `value` and its sample
     `rows`; a backtest cell names them `roi` and `bets`. Both are accepted so
     that one derivation covers every verdict this document prints.
+
+    `bounds` names which of :data:`INTERVAL_BOUND_KEYS` to read. It defaults to
+    the corrected pair — the pair on the page — and is moved only by
+    :func:`verdict_disagreements`, which checks the uncorrected pair too so
+    that a row cannot escape the coherence check by carrying its stale numbers
+    under the other two names.
+
+    **A bound the row does not carry reads 0.0, and that is a lie the caller
+    must not be allowed to publish**: a row with `adjusted_low=+0.02` and no
+    `adjusted_high` becomes the interval `[+0.02, 0.0]`, which excludes zero
+    above and reads *demonstrated edge* over an arbitrary return. That is why
+    :func:`verdict_disagreements` refuses a half-carried pair outright rather
+    than reasoning about the interval it fabricates.
     """
+    low_key, high_key = bounds
     roi = _as_float(row.get("roi"))
     if roi is None:
         roi = _as_float(row.get("value"))
     bets = _as_int(row.get("bets")) or _as_int(row.get("rows"))
     return S.RoiInterval(
         roi=roi or 0.0,
-        low=_as_float(row.get("adjusted_low")) or 0.0,
-        high=_as_float(row.get("adjusted_high")) or 0.0,
+        low=_as_float(row.get(low_key)) or 0.0,
+        high=_as_float(row.get(high_key)) or 0.0,
         bets=bets,
         clusters=_as_int(row.get("clusters")),
         standard_error=0.0,
@@ -462,10 +499,21 @@ def enough_evidence_of(row: Mapping) -> bool:
     return printed_interval(row).enough_evidence
 
 
-#: Every row in the record that this document prints a number or a verdict
-#: from, as (description, row) pairs. Used only to REFUSE a record that
-#: disagrees with itself — the rendering itself never reads a stored verdict.
 def _rows_of_the_record(record: Mapping) -> list[tuple[str, Mapping]]:
+    """Every row in the record that carries a figure, as `(label, row)` pairs.
+
+    Used only to REFUSE a record that disagrees with itself — the rendering
+    itself never reads a stored verdict.
+
+    **This walk is the population :func:`verdict_disagreements` checks, and it
+    is checked in turn.**
+    ``test_every_row_of_the_record_that_carries_a_figure_is_walked`` descends
+    the whole record looking for any mapping that carries a bound key or a
+    verdict, and asserts that every one of them comes back from here — by
+    identity, so a section this walk does not reach is a red test rather than a
+    silently unchecked corner. Deleting `"blind"` from the tuple below, or
+    adding a section to the record and not adding it here, fails that test.
+    """
     found: list[tuple[str, Mapping]] = []
     for key in ("tiers", "cells", "pooled", "blind"):
         for index, row in enumerate(record.get(key, []) or []):
@@ -488,35 +536,72 @@ def _rows_of_the_record(record: Mapping) -> list[tuple[str, Mapping]]:
     return found
 
 
-def _rows_carrying_a_verdict(record: Mapping) -> list[tuple[str, Mapping]]:
-    return [
-        (label, row) for label, row in _rows_of_the_record(record) if "verdict" in row
-    ]
+#: The keys by which a row announces it is making a claim a reader will act
+#: on: a return that gets printed, or a verdict beside it. A row carrying one
+#: of these and no interval at all is refused rather than examined — see
+#: :func:`verdict_disagreements`.
+CLAIM_KEYS: tuple[str, ...] = ("roi", "value", "verdict")
 
 
-def _rows_carrying_an_interval(record: Mapping) -> list[tuple[str, Mapping]]:
-    """Rows that print a return and a pair of corrected bounds on one line."""
-    return [
-        (label, row)
-        for label, row in _rows_of_the_record(record)
-        if "adjusted_low" in row and "adjusted_high" in row
-    ]
+def _bound_pairs_carried(
+    row: Mapping,
+) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+    """`(whole, half)` — the bound pairs this row carries, and the maimed ones.
+
+    A pair is *half* carried when one of its two keys is present and the other
+    is not. That is not a lesser version of an interval; it is a row that will
+    be read as an interval with a fabricated 0.0 on the missing side.
+    """
+    whole: list[tuple[str, str]] = []
+    half: list[tuple[str, str]] = []
+    for pair in INTERVAL_BOUND_KEYS:
+        present = [key for key in pair if key in row]
+        if len(present) == 2:
+            whole.append(pair)
+        elif present:
+            half.append(pair)
+    return whole, half
 
 
 def verdict_disagreements(record: Mapping) -> list[str]:
-    """Every row that disagrees with itself, in either of the two ways.
+    """Every row that disagrees with itself, in any of the four ways.
 
-    1. **The return is not inside its own corrected interval.** No estimator
-       produces that row — the interval is built around the estimate — so it is
-       a return typed over one measurement beside bounds left from another.
-       `_figure` prints both on one line, and the interval is what the verdict
-       is a statement about, so a `+5.0%` beside corrected bounds of −9% to −2%
-       would put the words *demonstrated deficit* next to a positive number. It
-       is refused instead. This is the case that survived the derived-verdict
-       fix: the stored string no longer reaches the page, but the stored
-       **return** still does.
-    2. **The stored verdict is not the reading of its own interval**, which is
-       a record edited by hand between the measurement and the document.
+    **Every row of the record is examined. There is no opt-in.** This check
+    used to run over `_rows_carrying_an_interval(record)` — the rows carrying
+    *both* of `adjusted_low` and `adjusted_high` — which made carrying the keys
+    the condition for being checked, so the way past the check was to not carry
+    them. Deleting one key from one row of the committed record published
+
+        high-major 24,691 bets, **+99.0%**, corrected +2.0% to unbounded —
+        demonstrated edge
+
+    in the headline of a document whose entire subject is whether that
+    sentence may be said: `[+0.02, missing]` is read as `[+0.02, 0.0]`, which
+    excludes zero above, and the return beside it was never compared to
+    anything. Rows are now taken from :func:`_rows_of_the_record` whole and
+    each is classified by the bound keys it actually carries.
+
+    The four refusals:
+
+    1. **A half-carried bound pair.** `adjusted_low` without `adjusted_high`
+       (or the reverse) is the defeat above. There is no interval to read, and
+       the one that gets fabricated in its place is the flattering one.
+    2. **A claim with no interval at all.** A row carrying a return or a
+       verdict and no bound of either pair prints `**+99.0%**, corrected
+       unbounded to unbounded` — a figure with nothing qualifying it, which is
+       the typed-figure defect this whole document exists to prevent. Refused
+       rather than passed through.
+    3. **The return is not inside its own interval.** No estimator produces
+       that row — the interval is built around the estimate — so it is a return
+       typed over one measurement beside bounds left from another. `_figure`
+       prints both on one line, so a `+5.0%` beside corrected bounds of −9% to
+       −2% would put the words *demonstrated deficit* next to a positive
+       number. Checked against **both** pairs the row carries, so stale numbers
+       cannot hide under `low`/`high` while `adjusted_low`/`adjusted_high` are
+       kept coherent.
+    4. **The stored verdict, or `enough_evidence`, is not the reading of its
+       own interval**, which is a record edited by hand between the
+       measurement and the document.
 
     Empty means the record agrees with itself. :func:`render` refuses a
     non-empty list rather than printing either reading: printing the stored one
@@ -524,32 +609,57 @@ def verdict_disagreements(record: Mapping) -> list[str]:
     disagreement a human should see.
     """
     reasons: list[str] = []
-    for label, row in _rows_carrying_an_interval(record):
-        interval = printed_interval(row)
-        if not interval.enough_evidence:
-            # Below the floor `_figure` prints the phrase and no number at all,
-            # so there is no pair on the page to disagree.
-            continue
-        if not interval.return_sits_inside_its_own_interval:
-            reasons.append(
-                f"{label}: the return {_pct(interval.roi)} does not lie "
-                f"between the corrected bounds "
-                f"[{_as_float(row.get('adjusted_low'))}, "
-                f"{_as_float(row.get('adjusted_high'))}] it is printed beside, "
-                "so the two numbers on that line did not come from one "
-                f"measurement — and the bounds read {interval.verdict()!r}."
+    for label, row in _rows_of_the_record(record):
+        whole, half = _bound_pairs_carried(row)
+        claims = [key for key in CLAIM_KEYS if key in row]
+
+        for low_key, high_key in half:
+            carried, missing = (
+                (low_key, high_key) if low_key in row else (high_key, low_key)
             )
-    for label, row in _rows_carrying_a_verdict(record):
-        stored = _text(row.get("verdict"))
-        derived = verdict_of(row)
-        if stored != derived:
             reasons.append(
-                f"{label}: the record stores the verdict {stored!r}, and the "
-                f"corrected interval it is printed beside "
-                f"[{_as_float(row.get('adjusted_low'))}, "
-                f"{_as_float(row.get('adjusted_high'))}] over "
-                f"{printed_interval(row).bets:,} reads {derived!r}."
+                f"{label}: carries `{carried}` and no `{missing}`. Half an "
+                "interval is not an interval — the missing bound is read as "
+                "0.0, which is a bound no measurement produced and the one "
+                "that most easily excludes zero."
             )
+
+        if claims and not whole and not half:
+            reasons.append(
+                f"{label}: carries {', '.join(f'`{key}`' for key in claims)} "
+                "and no interval of any kind. A return printed with no bounds "
+                "beside it, or a verdict with no interval to be a statement "
+                "about, is a figure with nothing qualifying it."
+            )
+
+        for pair in whole:
+            interval = printed_interval(row, bounds=pair)
+            if not interval.enough_evidence:
+                # Below the floor `_figure` prints the phrase and no number at
+                # all, so there is no pair on the page to disagree.
+                continue
+            if not interval.return_sits_inside_its_own_interval:
+                reasons.append(
+                    f"{label}: the return {_pct(interval.roi)} does not lie "
+                    f"between the bounds "
+                    f"[{_as_float(row.get(pair[0]))}, "
+                    f"{_as_float(row.get(pair[1]))}] it carries under "
+                    f"`{pair[0]}`/`{pair[1]}`, so the two numbers on that line "
+                    "did not come from one measurement — and those bounds read "
+                    f"{interval.verdict()!r}."
+                )
+
+        if "verdict" in row:
+            stored = _text(row.get("verdict"))
+            derived = verdict_of(row)
+            if stored != derived:
+                reasons.append(
+                    f"{label}: the record stores the verdict {stored!r}, and "
+                    f"the corrected interval it is printed beside "
+                    f"[{_as_float(row.get('adjusted_low'))}, "
+                    f"{_as_float(row.get('adjusted_high'))}] over "
+                    f"{printed_interval(row).bets:,} reads {derived!r}."
+                )
         if "enough_evidence" in row:
             stored_enough = bool(row.get("enough_evidence"))
             derived_enough = enough_evidence_of(row)
@@ -1474,10 +1584,11 @@ def render(record: Mapping) -> str:
     if disagreements:
         raise WhyError(
             "This record does not agree with itself — a return outside its "
-            "own corrected interval, or a stored verdict that is not what "
-            "those bounds read. Either way something was edited between the "
-            "measurement and the document. Refusing to render either "
-            "reading:\n  "
+            "own interval, a bound missing from the pair it belongs to, a "
+            "figure with no interval beside it at all, or a stored verdict "
+            "that is not what those bounds read. Every one of them is "
+            "something edited between the measurement and the document. "
+            "Refusing to render either reading:\n  "
             + "\n  ".join(disagreements)
         )
     backtest = record.get("backtest")

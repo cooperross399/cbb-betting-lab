@@ -26,6 +26,7 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import pytest
@@ -429,6 +430,214 @@ def test_a_return_outside_its_own_corrected_interval_is_refused_not_printed(outp
     row["roi"] = -0.055
     rendered = WHY.render(record)
     assert "**-5.5%**, corrected -9.0% to -2.0% — demonstrated deficit" in rendered
+
+
+def test_half_an_interval_cannot_fabricate_an_edge_by_being_half_an_interval(outputs):
+    """**The check used to be opt-in, and the opt-out was one deleted key.**
+
+    `verdict_disagreements` ran over the rows carrying *both* `adjusted_low`
+    and `adjusted_high`, so carrying the keys was the condition for being
+    checked and not carrying them was the way past. Deleting `adjusted_high`
+    from one row of the committed record — and nothing else — published this
+    in the headline of the document whose entire subject is whether the
+    sentence may be said:
+
+        high-major 24,691 bets, **+99.0%**, corrected +2.0% to unbounded —
+        demonstrated edge
+
+    A missing bound reads as `0.0`, so `[+0.02, missing]` excludes zero
+    *above*; the return beside it was compared to nothing at all, because the
+    row had opted itself out of the only comparison. The verdict check did not
+    catch it either: the stored string and the fabricated interval agreed.
+
+    Rows are now taken whole and classified by what they carry, so this row is
+    refused twice over — for the maimed pair, and for the return sitting
+    outside the `low`/`high` pair it still carries.
+    """
+    record = build(outputs)
+    row = next(r for r in record["tiers"] if r["enough_evidence"])
+    row["roi"] = +0.99
+    row["adjusted_low"] = +0.02
+    del row["adjusted_high"]
+    row["verdict"] = S.DEMONSTRATED_EDGE
+    assert WHY.verdict_of(row) == S.DEMONSTRATED_EDGE, (
+        "the fabricated interval must still read as an edge, or this test is "
+        "passing because the row stopped being dangerous rather than because "
+        "the record is refused"
+    )
+
+    with pytest.raises(WHY.WhyError) as caught:
+        WHY.render(record)
+    message = str(caught.value)
+    assert "adjusted_high" in message, message
+    assert "Half an interval is not an interval" in message, message
+    # Refused twice: the maimed corrected pair, and the return sitting outside
+    # the uncorrected pair the row still carries. The second is what stops a
+    # row keeping `adjusted_low`/`adjusted_high` coherent while `low`/`high`
+    # hold numbers from another measurement, so it is asserted here rather
+    # than left as a side effect.
+    assert "`low`/`high`" in message, message
+    assert "+99.0% does not lie between" in message, message
+
+    # And with the bound restored to a pair no measurement disagrees with, the
+    # same record renders — so the refusal is about the missing key and not
+    # about this row being unrenderable for some other reason.
+    row["roi"], row["adjusted_low"], row["adjusted_high"] = -0.055, -0.09, -0.02
+    row["verdict"] = S.DEMONSTRATED_DEFICIT
+    assert "+99.0%" not in WHY.render(record)
+
+
+def test_stale_numbers_cannot_hide_under_the_uncorrected_bounds(outputs):
+    """Both pairs a row carries are checked, not just the pair on the page.
+
+    `_figure` prints `adjusted_low`/`adjusted_high`, so a coherence check that
+    reads only those leaves `low`/`high` free to hold numbers from a different
+    measurement — and they are the pair the corrected bounds are *recomputed
+    from* on the next re-render, at which point the incoherence moves onto the
+    page and nothing about the record changed to announce it.
+
+    Here the printed pair agrees with the return and the uncorrected pair does
+    not, so this row is refused by the `low`/`high` reading alone. A
+    `printed_interval` that ignored the bounds it was handed and always read
+    the corrected pair would pass it.
+    """
+    record = build(outputs)
+    row = next(r for r in record["tiers"] if r["enough_evidence"])
+    row["roi"] = -0.055
+    row["adjusted_low"], row["adjusted_high"] = -0.09, -0.02
+    row["low"], row["high"] = +0.30, +0.40
+    row["verdict"] = S.DEMONSTRATED_DEFICIT
+
+    printed = WHY.printed_interval(row)
+    assert printed.return_sits_inside_its_own_interval, (
+        "the pair on the page must agree with the return, or this test is "
+        "passing on the check it is not about"
+    )
+
+    reasons = WHY.verdict_disagreements(record)
+    mine = [r for r in reasons if r.startswith("tiers[")]
+    assert len(mine) == 1, mine
+    assert "`low`/`high`" in mine[0], mine[0]
+    assert "-5.5% does not lie between" in mine[0], mine[0]
+    with pytest.raises(WHY.WhyError):
+        WHY.render(record)
+
+
+def test_a_figure_with_no_interval_beside_it_is_refused_rather_than_printed(outputs):
+    """A return and a verdict, and nothing qualifying either.
+
+    Stripping all four bound keys leaves a row that prints `**+99.0%**,
+    corrected unbounded to unbounded`, and the stored verdict agrees with the
+    empty interval's reading, so every other check on the record passes it.
+    That is the typed-figure defect this whole document exists to prevent,
+    arrived at by deletion instead of by typing. A row carrying a claim must
+    carry an interval to justify it.
+    """
+    record = build(outputs)
+    row = next(r for r in record["tiers"] if r["enough_evidence"])
+    row["roi"] = +0.99
+    for key in ("low", "high", "adjusted_low", "adjusted_high"):
+        del row[key]
+    row["verdict"] = WHY.verdict_of(row)
+    assert row["verdict"] == S.NO_DEMONSTRATED_EDGE, (
+        "the stored verdict is set to what the empty interval reads on "
+        "purpose, so the only check that can refuse this row is the new one"
+    )
+
+    reasons = WHY.verdict_disagreements(record)
+    mine = [r for r in reasons if r.startswith("tiers[")]
+    assert len(mine) == 1, mine
+    assert "no interval of any kind" in mine[0], mine[0]
+    assert "`roi`" in mine[0] and "`verdict`" in mine[0], mine[0]
+    with pytest.raises(WHY.WhyError):
+        WHY.render(record)
+
+
+def test_the_bound_keys_this_guard_knows_about_are_the_ones_the_record_writes(outputs):
+    """`INTERVAL_BOUND_KEYS` is the whole vocabulary, and it is derived, not
+    trusted.
+
+    The rows examined are now every row of the record, so the one remaining
+    place a check could be narrowed by a one-line edit is this tuple: drop
+    `("low", "high")` and every row carrying only that pair stops being
+    compared to its own return. The expectation here is read off the record the
+    generator actually wrote — every key in it that names a bound — so the
+    narrowing is red rather than silent.
+    """
+    record = build(outputs)
+    written = {
+        key
+        for _, row in WHY._rows_of_the_record(record)
+        for key in row
+        if key.endswith("low") or key.endswith("high")
+    }
+    known = {key for pair in WHY.INTERVAL_BOUND_KEYS for key in pair}
+
+    assert written, "no row of the record names a bound at all"
+    assert known == written, (
+        f"`INTERVAL_BOUND_KEYS` knows about {sorted(known)} and the record "
+        f"writes {sorted(written)}. A bound key the record writes and this "
+        "tuple does not name is a pair no coherence check ever reads; a key "
+        "this tuple names and the record does not write is a check that has "
+        "quietly stopped applying to anything."
+    )
+    for low_key, high_key in WHY.INTERVAL_BOUND_KEYS:
+        assert low_key.endswith("low") and high_key.endswith("high"), (
+            f"({low_key}, {high_key}) is not a (low, high) pair, and "
+            "`_bound_pairs_carried` reads it in that order"
+        )
+
+
+def test_every_row_of_the_record_that_carries_a_figure_is_walked(outputs):
+    """The population the coherence check runs over is derived from the record.
+
+    `_rows_of_the_record` names its sections — `tiers`, `cells`, `pooled`,
+    `blind`, `every_market`, the forecast's advantage blocks. A name dropped
+    from that list, or a section added to the record and not added to it, is a
+    corner of the document nothing checks, and it looks like nothing at all.
+    So the record is descended in full here and every mapping in it that
+    carries a bound or a verdict must come back from the walk — matched by
+    identity, so a walk that rebuilds rows instead of yielding them fails too.
+    """
+    record = build(outputs)
+    bound_keys = {key for pair in WHY.INTERVAL_BOUND_KEYS for key in pair}
+    walked = {id(row) for _, row in WHY._rows_of_the_record(record)}
+    carrying: list[str] = []
+    carrying_ids: set[int] = set()
+    missed: list[str] = []
+
+    def descend(node: object, path: str) -> None:
+        if isinstance(node, Mapping):
+            if bound_keys & set(node) or "verdict" in node:
+                carrying.append(path)
+                carrying_ids.add(id(node))
+                if id(node) not in walked:
+                    missed.append(path)
+            for key, value in node.items():
+                descend(value, f"{path}.{key}" if path else str(key))
+        elif isinstance(node, Sequence) and not isinstance(node, (str, bytes)):
+            for index, value in enumerate(node):
+                descend(value, f"{path}[{index}]")
+
+    descend(record, "")
+
+    assert carrying, "the record carries no figures at all, so nothing was checked"
+    assert not missed, (
+        f"{len(missed)} of {len(carrying)} rows carrying a bound or a verdict "
+        f"are never reached by `_rows_of_the_record`: {sorted(missed)[:8]}. "
+        "Every check in `verdict_disagreements` runs over that walk, so a row "
+        "it does not reach can hold any pair of numbers it likes."
+    )
+    # The record reaches `every_market` by two paths — its own key and the last
+    # entry of `pooled` — so the two are compared as sets of rows, not as
+    # counts of paths. Equality in the other direction matters too: a walk
+    # yielding a row that carries no figure at all is a walk that has started
+    # examining something the document does not print.
+    assert walked == carrying_ids, (
+        f"the walk yields {len(walked)} distinct rows and {len(carrying_ids)} "
+        "in the record carry a figure; a row yielded that carries none means "
+        "the two are no longer the same population"
+    )
 
 
 def test_a_sample_size_typed_over_the_floor_never_promotes_a_cell(outputs):
@@ -928,13 +1137,30 @@ def _loop_invocation_of_the_generator(
 
     The generator's stub records `sys.argv[1:]` and nothing else, so the
     sentinel exists **only** if the loop reached a subprocess for it.
+
+    **The stub is installed under this file's own name for the generator, not
+    under whatever `run_weekly_loop.WHY_SCRIPT` happens to say.** It used to be
+    the constant, which made every test below a test that *something* ran:
+    repoint `WHY_SCRIPT` at `run_price_backtest.py` and the stub follows it
+    there, the sentinel is written by the wrong program, the argument
+    assertions pass, and the edge document stops being regenerated with the
+    suite green. `SCRIPT` is the path the rest of this file executes for real —
+    it is the program that writes the record and splices the document — so
+    stubbing *it* is what makes the sentinel evidence about identity and not
+    just about activity.
     """
     import test_weekly_loop as WL
 
+    assert WL.LOOP.WHY_SCRIPT == SCRIPT.name, (
+        f"the weekly loop runs `{WL.LOOP.WHY_SCRIPT}` for the edge document "
+        f"and the generator this file pins is `{SCRIPT.name}`. The loop is "
+        "re-rendering something else, so `docs/"
+        f"{Path(WHY.DOC_RELATIVE).name}` is regenerated by nothing."
+    )
     WL.with_siblings(lab)
     WL.stub_script(
         lab,
-        WL.LOOP.WHY_SCRIPT,
+        SCRIPT.name,
         body=(
             "import json, pathlib\n"
             f"pathlib.Path({str(sentinel)!r}).write_text("
@@ -944,10 +1170,10 @@ def _loop_invocation_of_the_generator(
     exit_code = WL.run(lab, *extra)
     assert exit_code in (0, 1), f"the loop crashed rather than reporting: {exit_code}"
     assert sentinel.is_file(), (
-        "the weekly loop finished without ever running "
-        f"{WL.LOOP.WHY_SCRIPT}. `docs/{Path(WHY.DOC_RELATIVE).name}` says it is "
-        "regenerated every week; nothing regenerated it, so every figure in it "
-        "is as old as the last time somebody ran the script by hand."
+        f"the weekly loop finished without ever running `{SCRIPT.name}`. "
+        f"`docs/{Path(WHY.DOC_RELATIVE).name}` says it is regenerated every "
+        "week; nothing regenerated it, so every figure in it is as old as the "
+        "last time somebody ran the script by hand."
     )
     return json.loads(sentinel.read_text(encoding="utf-8"))
 
@@ -969,10 +1195,31 @@ def test_the_weekly_loop_runs_the_generator(lab, tmp_path):
     stubs them, and an assertion that the generator was **invoked** and told
     which document to splice into.
     """
+    import test_weekly_loop as WL
+
     sentinel = tmp_path / "the-generator-ran.json"
     argv = _loop_invocation_of_the_generator(lab, sentinel)
 
     assert SCRIPT.is_file(), "the loop names a script that is not in the repository"
+
+    # The identity check, made structural rather than by name: the script the
+    # loop names must be one that can actually splice this document. A constant
+    # repointed at a program with no `splice` — or at one splicing a different
+    # document — is caught here even if it happened to be named plausibly.
+    sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+    try:
+        generator = __import__(Path(WL.LOOP.WHY_SCRIPT).stem)
+    finally:
+        sys.path.pop(0)
+    assert hasattr(generator, "splice"), (
+        f"`{WL.LOOP.WHY_SCRIPT}` has no `splice`, so whatever the loop is "
+        "running every week, it is not the program that rewrites the fenced "
+        "body of the edge document"
+    )
+    assert generator.WHY.DOC_RELATIVE == WHY.DOC_RELATIVE, (
+        "the script the loop runs resolves the edge document from a different "
+        "module than this test does"
+    )
     assert "--splice-into" in argv, (
         "the loop runs the generator but never asks it to splice, so the "
         "record is refreshed and the document a human reads is not"
