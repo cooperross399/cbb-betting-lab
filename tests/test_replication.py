@@ -813,6 +813,11 @@ def run_script(*argv: str) -> tuple[int, str]:
     module = load_script()
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(buffer):
+        # Tests are not looks: give the script a ledger under its own outputs
+        # rather than the repository's one, which it now defaults to.
+        argv = list(argv)
+        if "--ledger" not in argv and "--output-dir" in argv:
+            argv += ["--ledger", str(Path(argv[argv.index("--output-dir") + 1]) / "experiment_ledger.json")]
         code = module.main(list(argv))
     return int(code), buffer.getvalue()
 
