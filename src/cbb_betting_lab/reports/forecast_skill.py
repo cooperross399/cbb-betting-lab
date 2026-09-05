@@ -2543,6 +2543,11 @@ def _excluded_lines(excluded: Mapping) -> list[str]:
     one-sided quote holds no vig and no fair price can be taken from it. The
     count is small and the exclusion is correct; **saying nothing about it** is
     the part that would not be.
+
+    The census this reads has THREE terms — `supplied = paired + unpairable +
+    no_pair_key` — and this paragraph names all three. It named two until
+    2026-09-05, which made `supplied - paired` read as the exclusion when a
+    third term was sitting between them.
     """
     if not excluded.get("available"):
         return [UNPAIRABLE_NOT_SUPPLIED, ""]
@@ -2566,8 +2571,10 @@ def _excluded_lines(excluded: Mapping) -> list[str]:
     else:
         paragraphs.append(
             f"**{rows:,} graded wager(s) are in neither population above.** "
-            f"The frame was built from {supplied:,} graded wagers, {paired:,} "
-            f"of them paired, and the other {rows:,} "
+            f"The frame was built from {supplied:,} graded wagers: {paired:,} "
+            f"paired with the other side of their own book's quote, "
+            f"{int(excluded.get('no_pair_key', 0)):,} carried a selection this "
+            f"lab forms no pair key for and were kept unpaired, and {rows:,} "
             f"({float(excluded.get('share', 0.0)):.6%}) were excluded because "
             f"{reason}. Excluding them is the only honest arithmetic available "
             "— there is no hold in a one-sided quote to de-vig — but every "

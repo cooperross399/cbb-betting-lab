@@ -308,6 +308,45 @@ def test_a_selection_with_no_complement_at_all_is_kept_and_counted_apart():
     assert set(frame["event_id"]) == {"e1", "e2"}, "the keyless row was dropped"
 
 
+def test_a_selection_with_a_named_other_side_but_no_pair_key_is_keyless_too():
+    """`pair_key` refuses more rows than an unknown selection, and both are keyless.
+
+    An over/under filed with no line at all is not a wager anyone could grade —
+    defaulting it to zero would pair two different numbers — so `FS.pair_key`
+    returns `None` for it while its selection `under` sits squarely in
+    `FS.COMPLEMENT` and does have a named other side. Drop the `pk is not None`
+    guard from `build`'s `wanted` comprehension and the row asks the store for
+    `(None, fanduel, over)`, finds nothing, and is counted and excluded as
+    though a book had hung one side of it. No book did: no key was ever formed
+    and nothing was ever looked for. It belongs in `no_pair_key`, and in the
+    frame — the term the refusal threshold is read against must not be inflated
+    by this lab's own vocabulary.
+    """
+    build = _load()
+    graded = _graded()
+    graded.loc[1, "line"] = float("nan")  # an over/under with no line at all
+    assert FS.pair_key(graded.loc[1].to_dict()) is None
+    assert graded.loc[1, "selection"] in FS.COMPLEMENT, "the other side is named"
+    store = pd.DataFrame([
+        {"event_id": "e1", "market": "total_points", "segment": "game",
+         "selection": "over", "line": 140.5, "book": "fanduel", "american_odds": -110},
+        {"event_id": "e1", "market": "total_points", "segment": "game",
+         "selection": "under", "line": 140.5, "book": "fanduel", "american_odds": -110},
+    ])
+    store["player"] = ""
+    store["snapshot_phase"] = "card"
+
+    frame, census = build(graded, store)
+    assert census.no_pair_key == 1
+    assert census.unpairable == 0, "a row with no key is not a one-sided quote"
+    assert census.paired == 1
+    assert census.supplied == 2 and census.accounted == 2
+    assert census.reconciles is True
+    assert census.share == 0.0 and census.refuses is False
+    assert census.by_book == {} and census.rows == []
+    assert set(frame["event_id"]) == {"e1", "e2"}, "the keyless row was excluded"
+
+
 def test_an_unpairable_share_above_the_threshold_still_refuses(tmp_path, capsys):
     """Excluding a large share is a broken join wearing the costume of a quirk.
 
@@ -495,6 +534,57 @@ def test_every_census_term_is_counted_off_the_frame_and_none_is_a_residual():
     assert len(scorable) == census.paired + census.no_pair_key
 
 
+class _LosesARowWhenBuildDerivesAColumn(pd.DataFrame):
+    """A graded frame that drops its last row the moment `build` assigns `_pk`.
+
+    It stands in for the edit this identity exists to catch and cannot be
+    provoked from the outside any other way: a filter, a dedupe or a re-index
+    added to `graded` between the frame `build` was handed and the keys it
+    buckets. `build`'s own three predicates are exhaustive over whatever
+    survives that step, so the loss has to come from the frame itself.
+    """
+
+    @property
+    def _constructor(self):
+        return pd.DataFrame
+
+    def assign(self, **kwargs):
+        return pd.DataFrame(self).assign(**kwargs).iloc[:-1]
+
+
+def test_a_graded_row_lost_before_the_bucketing_breaks_the_identity():
+    """`supplied` is read at entry and `paired` is counted, or this is a tautology.
+
+    Both halves are invisible to every other test here, because on a frame
+    `build` loses no rows from, the count at entry, the count after the columns
+    are derived and the sum of the three buckets are all the same number. This
+    frame loses one, and they stop agreeing — which is the only condition under
+    which the identity is a comparison rather than a restatement:
+
+    * `paired = supplied - unpairable - no_pair_key` — the residual back in a
+      three-term spelling — makes `accounted` equal `supplied` for any frame
+      whatever, and calls two rows paired where one found a complement.
+    * `supplied` read below the mask computations, or read off the masks
+      themselves, counts the frame *after* the loss, so the identity reconciles
+      over a population already short a row and says nothing was lost.
+
+    The census must report the three rows it was handed, the one that actually
+    paired, and a failure to reconcile.
+    """
+    build = _load()
+    lossy = _LosesARowWhenBuildDerivesAColumn(_three())
+    assert len(lossy) == 3, "the fixture must hand `build` all three rows"
+
+    _, census = build(lossy, _store_for_three())
+
+    assert census.supplied == 3, "`supplied` was read after the row went missing"
+    assert census.paired == 1, "`paired` must count rows that found a complement"
+    assert census.unpairable == 1
+    assert census.no_pair_key == 0, "the keyless row is the one that went missing"
+    assert census.accounted == 2
+    assert census.reconciles is False, "a row that reached no bucket was absorbed"
+
+
 def test_a_row_that_reached_no_bucket_makes_the_identity_fail_rather_than_absorb():
     """Empty each term by one in turn. The identity must notice all three.
 
@@ -639,6 +729,33 @@ def test_the_refusal_threshold_is_pinned_to_the_number_its_comment_argues_for():
     # of its smallest single book, 119 rows — which therefore still refuses.
     assert threshold < 119 / 566_377
     assert threshold < 292 / 566_377  # and its smallest single market
+
+
+def test_the_refusal_fires_a_hair_above_the_threshold_and_not_at_it():
+    """The constant is pinned; the comparison that reads it was not.
+
+    `MAX_UNPAIRABLE_SHARE == 0.0001` says nothing about what :attr:`refuses`
+    does with it. Widen the comparison to `share > max_share * 2` and every
+    test in this suite still passes, because the fixtures sit five thousand
+    times above the threshold or at zero and none of them lands in the gap. Two
+    censuses one row apart pin the boundary itself: at the declared share this
+    is bookkeeping and writes, one row past it this is a broken join and
+    refuses.
+    """
+    module = _module()
+    census_class = module["UnpairableCensus"]
+    threshold = module["MAX_UNPAIRABLE_SHARE"]
+
+    at = census_class(supplied=100_000, paired=99_990, unpairable=10, no_pair_key=0)
+    assert at.share == threshold
+    assert at.refuses is False, "exactly at the declared share is not above it"
+
+    over = census_class(supplied=100_000, paired=99_989, unpairable=11, no_pair_key=0)
+    assert over.share > threshold
+    assert over.refuses is True, "one row past the declared share must refuse"
+    # A hair over, not an order of magnitude: a comparison loosened to twice
+    # the threshold would write this frame out.
+    assert over.share < 2 * threshold
 
 
 def test_an_unpairable_row_whose_book_is_missing_is_still_counted_in_the_tally():

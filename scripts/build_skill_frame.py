@@ -36,7 +36,8 @@ position — 0.00035% — and refusing the frame over them stopped the lab's
 measurement outright.
 
 So the rule is neither "refuse" nor "drop quietly". The unpairable rows are
-excluded, **counted, named, and reconciled**: `supplied = paired + unpairable`,
+excluded, **counted, named, and reconciled**: `supplied = paired +
+unpairable + no_pair_key`, three terms each counted off the rows,
 printed in the same shape as the price backtest's accounting identity (see
 `OpinionAccounting` in `scripts/run_price_backtest.py`) and written to a JSON
 record beside the frame, so `forecast_skill` and any later reader can state
