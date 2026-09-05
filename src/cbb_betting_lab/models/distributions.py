@@ -322,7 +322,7 @@ def tilt_to_efficiency(
     return tilted / tilted.sum()
 
 
-def _match_variance(
+def _match_variance_reference(
     pmf: np.ndarray, support: np.ndarray, target_variance: float
 ) -> np.ndarray:
     """Rescale a lattice distribution to an exact variance, exact mean.
@@ -333,6 +333,12 @@ def _match_variance(
     `sqrt(target/current)`, because the linear split adds up to a quarter of a
     unit of variance of its own and the whole point of this function is that
     the answer is exact.
+
+    **This is the reference implementation**: one node, one scalar bisection,
+    kept verbatim so that the batched solver :func:`_match_variance_batch` has
+    something to be measured against. Production goes through the batch; this
+    function is called by the tests and by the
+    :data:`_FORCE_REFERENCE_PATH` switch only.
     """
     total = pmf.sum()
     if total <= 0:
@@ -371,18 +377,169 @@ def _match_variance(
     return out / out.sum()
 
 
-def _trip_count_pmf(
+#: How far, in units of `width × 2⁻⁵³` relative to the target, a batched node
+#: variance may sit from its target before :func:`_match_variance_batch`
+#: recomputes it the reference's way. The rounding error of a sum of
+#: non-negative terms is below `1 × width × 2⁻⁵³` relative for either
+#: computation, so 8 leaves a fourfold margin over the combined bound.
+_CLOSE_CALL_ULPS = 8.0
+
+#: Tests only. When true, :func:`_trip_count_pmfs` solves every node through
+#: the scalar :func:`_match_variance_reference` instead of the batched solver,
+#: so a whole `build` can be computed both ways and compared. Never on by
+#: default; nothing in production reads it except that one branch.
+_FORCE_REFERENCE_PATH = False
+
+
+def _match_variance_batch(
+    pmfs: Sequence[np.ndarray],
+    supports: Sequence[np.ndarray],
+    target_variances: Sequence[float],
+) -> list[np.ndarray]:
+    """:func:`_match_variance_reference` for many nodes at once.
+
+    The same mathematics, node for node — the same doubling rule, the same
+    sixty bisection steps, the same midpoint, the same final `realised` and
+    normalisation — but every step is one vectorised operation over the whole
+    batch instead of a Python call per node. A node that has finished doubling
+    keeps its own `high` while the others continue (masks); a node whose
+    bisection has decided keeps its own `low`/`high`. Nodes with no variance or
+    no positive target are returned untouched, exactly as the reference does.
+
+    Bit-identical to the reference, and here is why that needs saying. The
+    scatter, the mean and the normalising sum are the reference's own
+    operations in the reference's own order. The one place a batch rounds
+    differently is the per-node variance `got` at each step — a row-wise
+    reduction is not a 1-D BLAS dot — and a bisection compares `got` with the
+    target, so in the last dozen steps, where the two are within rounding of
+    each other, a batched `got` could send a node the other way. So every step
+    computes `got` batched, then recomputes it **the reference's way, one node
+    at a time, for exactly the nodes where the batched value is within the
+    rounding bound of the target** (`_CLOSE_CALL_ULPS` × width × 2⁻⁵³,
+    relative — the sum of non-negative terms has relative error below
+    `width · 2⁻⁵³` in either computation). Far from the target the decision
+    cannot depend on rounding; near it the reference's own arithmetic decides.
+    The tests check the result is `np.array_equal` to the reference.
+    """
+    count = len(pmfs)
+    if count != len(supports) or count != len(target_variances):
+        raise DistributionError("Batched variance matching needs one target per node.")
+    results: list[np.ndarray | None] = [None] * count
+    active: list[int] = []
+    means: list[float] = []
+    for i, (pmf, support, target) in enumerate(zip(pmfs, supports, target_variances)):
+        total = pmf.sum()
+        if total <= 0:
+            raise DistributionError("Cannot rescale an empty distribution.")
+        mean = float(pmf @ support) / total
+        variance = float(pmf @ (support - mean) ** 2) / total
+        if variance <= 0 or target <= 0:
+            results[i] = pmf
+            continue
+        active.append(i)
+        means.append(mean)
+    if not active:
+        return results  # type: ignore[return-value]
+
+    rows = len(active)
+    sizes = np.array([pmfs[i].size for i in active], dtype=np.int64)
+    width = int(sizes.max())
+    # Padded rows. A padded support cell carries the row's own `hi` and zero
+    # mass, so it lands where the clipped top of the support lands and adds
+    # exactly +0.0 there — a no-op in floating point.
+    pmf_rows = np.zeros((rows, width))
+    support_rows = np.empty((rows, width))
+    lo = np.empty(rows)
+    hi = np.empty(rows)
+    for r, i in enumerate(active):
+        size = int(sizes[r])
+        pmf_rows[r, :size] = pmfs[i]
+        support_rows[r, :size] = supports[i]
+        support_rows[r, size:] = supports[i][-1]
+        lo[r] = supports[i][0]
+        hi[r] = supports[i][-1]
+    mean = np.array(means)[:, None]
+    target = np.array([target_variances[i] for i in active], dtype=float)
+    lo_int = np.array([int(v) for v in lo], dtype=np.int64)[:, None]
+    lo = lo[:, None]
+    hi = hi[:, None]
+    centred = support_rows - mean
+    squared = centred**2
+    # The reference's `(support - mean) ** 2`, one 1-D array per node, for the
+    # close-call recomputation below.
+    squared_rows = [
+        (supports[i] - means[r]) ** 2 for r, i in enumerate(active)
+    ]
+    sizes_list = [int(size) for size in sizes]
+    close_call = _CLOSE_CALL_ULPS * width * 2.0**-53 * target
+    stride = width + 1
+    # Row `r` of the scatter target starts at flat cell `r * stride`; the
+    # reference's `floor - int(lo)` becomes `floor + shift` with the row offset
+    # folded in. Integer arithmetic, so exact.
+    shift = (np.arange(rows, dtype=np.int64) * stride)[:, None] - lo_int
+    flat_length = rows * stride
+    index_pairs = np.empty((2, rows, width), dtype=np.int64)
+    weight_pairs = np.empty((2, rows, width))
+
+    def realised(c: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        moved = mean + c[:, None] * centred
+        # `np.clip(x, lo, hi)` is `min(max(x, lo), hi)`; every value is finite.
+        np.maximum(moved, lo, out=moved)
+        np.minimum(moved, hi, out=moved)
+        floor = np.floor(moved)
+        frac = moved - floor
+        np.add(floor.astype(np.int64), shift, out=index_pairs[0])
+        np.add(index_pairs[0], 1, out=index_pairs[1])
+        np.multiply(pmf_rows, 1.0 - frac, out=weight_pairs[0])
+        np.multiply(pmf_rows, frac, out=weight_pairs[1])
+        # One sequential accumulation in the reference's order: every
+        # `(1 - frac)` share first, then every `frac` share, each in row-major
+        # order — which is the order `np.add.at` added them one node at a time.
+        out = np.bincount(
+            index_pairs.ravel(), weights=weight_pairs.ravel(), minlength=flat_length
+        ).reshape(rows, stride)[:, :width]
+        got = (out * squared).sum(axis=1) / np.maximum(out.sum(axis=1), 1e-300)
+        # Close calls: recompute with the reference's own expression so the
+        # comparison against the target is the reference's comparison.
+        # (`np.add.reduce` is what `ndarray.sum()` calls, minus the wrapper.)
+        for r in np.flatnonzero(np.abs(got - target) <= close_call):
+            row = out[r, : sizes_list[r]]
+            got[r] = float(row @ squared_rows[r]) / max(np.add.reduce(row), 1e-300)
+        return out, got
+
+    low = np.zeros(rows)
+    high = np.ones(rows)
+    _, at_one = realised(high)
+    doubling = (at_one < target) & (high < 64.0)
+    while doubling.any():
+        high = np.where(doubling, high * 2.0, high)
+        _, got = realised(high)
+        at_one = np.where(doubling, got, at_one)
+        doubling = (at_one < target) & (high < 64.0)
+    for _ in range(60):
+        middle = 0.5 * (low + high)
+        _, got = realised(middle)
+        below = got < target
+        low = np.where(below, middle, low)
+        high = np.where(below, high, middle)
+    out, _ = realised(0.5 * (low + high))
+    for r, i in enumerate(active):
+        row = out[r, : int(sizes[r])]
+        results[i] = row / row.sum()
+    return results  # type: ignore[return-value]
+
+
+def _match_variance(
+    pmf: np.ndarray, support: np.ndarray, target_variance: float
+) -> np.ndarray:
+    """One node, through the batched solver. See :func:`_match_variance_batch`."""
+    return _match_variance_batch([pmf], [support], [target_variance])[0]
+
+
+def _trip_count_pmf_reference(
     possessions: int, scoring_probability: float, target_variance: float
 ) -> np.ndarray:
-    """How many of `possessions` possessions score, with a measured spread.
-
-    Binomial is the independent-possession answer and it is measurably too
-    wide — see :data:`POSSESSION_DEPENDENCE`. The count is where the
-    correction belongs: at league-average parameters **88% of a team's score
-    variance is the number of scoring trips** (80.82 of 92.15) and only 12% is
-    what those trips are worth, so a correction applied to the trip values
-    would be applied where the variance is not.
-    """
+    """The one-node reference for :func:`_trip_count_pmfs`; tests only."""
     n = int(possessions)
     p = float(scoring_probability)
     if n <= 0:
@@ -404,7 +561,88 @@ def _trip_count_pmf(
     pmf /= pmf.sum()
     if target_variance <= 0:
         return pmf
-    return _match_variance(pmf, counts.astype(float), target_variance)
+    return _match_variance_reference(pmf, counts.astype(float), target_variance)
+
+
+def _trip_count_pmfs(
+    possessions: Sequence[int],
+    scoring_probability: float | Sequence[float],
+    target_variances: Sequence[float],
+) -> list[np.ndarray]:
+    """How many of `possessions` possessions score, for a batch of counts.
+
+    Binomial is the independent-possession answer and it is measurably too
+    wide — see :data:`POSSESSION_DEPENDENCE`. The count is where the
+    correction belongs: at league-average parameters **88% of a team's score
+    variance is the number of scoring trips** (80.82 of 92.15) and only 12% is
+    what those trips are worth, so a correction applied to the trip values
+    would be applied where the variance is not.
+
+    One call for a whole batch of nodes rather than one per possession count:
+    the binomials are laid out as padded rows and the variance matching is
+    solved for every row at once by :func:`_match_variance_batch`. Each row's
+    numbers are the reference's, operation for operation — the log-binomial is
+    elementwise, the row maximum is exact, and the normalising sum runs over
+    the row's own cells only. `scoring_probability` is one number for the
+    batch or one per row.
+    """
+    ns = [int(n) for n in possessions]
+    if np.ndim(scoring_probability) == 0:
+        probabilities = [float(scoring_probability)] * len(ns)
+    else:
+        probabilities = [float(p) for p in scoring_probability]
+    if len(probabilities) != len(ns) or len(target_variances) != len(ns):
+        raise DistributionError("Batched trip counts need one probability and target per node.")
+    if _FORCE_REFERENCE_PATH:
+        return [
+            _trip_count_pmf_reference(n, p, target)
+            for n, p, target in zip(ns, probabilities, target_variances)
+        ]
+    probabilities = [min(max(p, 1e-9), 1 - 1e-9) for p in probabilities]
+    results: list[np.ndarray | None] = [None] * len(ns)
+    live = [i for i, n in enumerate(ns) if n > 0]
+    for i, n in enumerate(ns):
+        if n <= 0:
+            results[i] = np.array([1.0])
+    if not live:
+        return results  # type: ignore[return-value]
+    from scipy.special import gammaln
+
+    n_column = np.array([ns[i] for i in live], dtype=np.int64)[:, None]
+    p_column = np.array([probabilities[i] for i in live], dtype=float)[:, None]
+    width = int(n_column.max()) + 1
+    counts = np.arange(width)
+    inside = counts[None, :] <= n_column
+    remaining = np.where(inside, n_column - counts, 0)
+    log = (
+        gammaln(n_column + 1)
+        - gammaln(counts + 1)
+        - gammaln(remaining + 1)
+        + counts * np.log(p_column)
+        + (n_column - counts) * np.log1p(-p_column)
+    )
+    log[~inside] = -np.inf
+    pmf_rows = np.exp(log - log.max(axis=1, keepdims=True))
+    pmfs: list[np.ndarray] = []
+    supports: list[np.ndarray] = []
+    for r, i in enumerate(live):
+        pmf = pmf_rows[r, : ns[i] + 1]
+        pmf /= pmf.sum()
+        pmfs.append(pmf)
+        supports.append(counts[: ns[i] + 1].astype(float))
+    matched = _match_variance_batch(
+        pmfs, supports, [target_variances[i] for i in live]
+    )
+    for r, i in enumerate(live):
+        results[i] = pmfs[r] if target_variances[i] <= 0 else matched[r]
+    return results  # type: ignore[return-value]
+
+
+def _trip_count_pmf(
+    possessions: int, scoring_probability: float, target_variance: float
+) -> np.ndarray:
+    """One possession count; see :func:`_trip_count_pmfs`."""
+    return _trip_count_pmfs([possessions], scoring_probability, [target_variance])[0]
 
 
 def _trip_value_powers(trip_pmf: np.ndarray, max_trips: int, length: int) -> np.ndarray:
@@ -700,7 +938,12 @@ def _conditional_scores(
     """
     max_possessions = int(possession_values[-1])
     out = np.zeros((efficiency_nodes.size, possession_values.size, length))
-    for e_index, shift in enumerate(efficiency_nodes):
+    ns = [int(possessions) for possessions in possession_values]
+    powers_by_node: list[np.ndarray] = []
+    batch_ns: list[int] = []
+    batch_scoring: list[float] = []
+    batch_variances: list[float] = []
+    for shift in efficiency_nodes:
         per_possession = tilt_to_efficiency(points_per_possession * (1.0 + shift))
         scoring = 1.0 - per_possession[0]
         trip_values = per_possession[1:] / scoring
@@ -710,18 +953,29 @@ def _conditional_scores(
         per_possession_variance = float(
             per_possession @ (_POINTS**2)
         ) - float(per_possession @ _POINTS) ** 2
-        powers = _trip_value_powers(
-            np.concatenate([[0.0], trip_values]), max_possessions, length
+        powers_by_node.append(
+            _trip_value_powers(
+                np.concatenate([[0.0], trip_values]), max_possessions, length
+            )
         )
-        for n_index, possessions in enumerate(possession_values):
-            n = int(possessions)
+        for n in ns:
             target = POSSESSION_DEPENDENCE * n * per_possession_variance
             # The trips themselves carry n*p*Var(P) of that; the rest has to
             # come from the count, which is where the measurement put it.
             count_variance = (target - n * scoring * trip_variance) / max(
                 trip_mean**2, 1e-12
             )
-            counts = _trip_count_pmf(n, scoring, max(count_variance, 0.0))
+            batch_ns.append(n)
+            batch_scoring.append(scoring)
+            batch_variances.append(max(count_variance, 0.0))
+    # Every (efficiency node, possession count) pair at once: one batched
+    # bisection rather than one scalar solve per pair — see `_trip_count_pmfs`.
+    counts_by_pair = _trip_count_pmfs(batch_ns, batch_scoring, batch_variances)
+    pair = 0
+    for e_index, powers in enumerate(powers_by_node):
+        for n_index in range(len(ns)):
+            counts = counts_by_pair[pair]
+            pair += 1
             out[e_index, n_index] = counts @ powers[: counts.size]
     return out
 
@@ -794,11 +1048,12 @@ def _resolved_overtime(
 
     resolved = decided.copy()
     carry = level
+    single_spectra: dict[tuple[int, int], np.ndarray] = {}
     for _ in range(64):
         mass = float(carry.sum())
         if mass < TIE_RESIDUAL_TOLERANCE:
             break
-        carry = _convolve2d(carry, single)
+        carry = _convolve2d(carry, single, single_spectra)
         rows, columns = carry.shape
         diagonal = min(rows, columns)
         indices = np.arange(diagonal)
@@ -815,15 +1070,32 @@ def _resolved_overtime(
     return resolved / total
 
 
-def _convolve2d(left: np.ndarray, right: np.ndarray) -> np.ndarray:
-    """Exact 2-D convolution of two lattice joints, by FFT."""
+def _convolve2d(
+    left: np.ndarray,
+    right: np.ndarray,
+    right_spectra: dict[tuple[int, int], np.ndarray] | None = None,
+) -> np.ndarray:
+    """Exact 2-D convolution of two lattice joints, by FFT.
+
+    `right_spectra`, when given, memoises `rfft2(right, shape)` by `shape` for
+    a caller convolving the **same** `right` repeatedly — the overtime cascade
+    — so the transform of the unchanging side is taken once per padded size
+    instead of once per step. The same input at the same size is the same
+    transform, so the output is unchanged to the bit.
+    """
     rows = left.shape[0] + right.shape[0] - 1
     columns = left.shape[1] + right.shape[1] - 1
     shape = (
         int(2 ** np.ceil(np.log2(max(rows, 2)))),
         int(2 ** np.ceil(np.log2(max(columns, 2)))),
     )
-    out = np.fft.irfft2(np.fft.rfft2(left, shape) * np.fft.rfft2(right, shape), shape)
+    if right_spectra is None:
+        right_spectrum = np.fft.rfft2(right, shape)
+    else:
+        right_spectrum = right_spectra.get(shape)
+        if right_spectrum is None:
+            right_spectrum = right_spectra[shape] = np.fft.rfft2(right, shape)
+    out = np.fft.irfft2(np.fft.rfft2(left, shape) * right_spectrum, shape)
     out = out[:rows, :columns]
     np.clip(out, 0.0, None, out=out)
     return out
@@ -886,12 +1158,19 @@ def _compound_joint(
         away_points_per_possession, values, nodes, length
     )
     joint = np.zeros((length, length))
+    # `joint += weight * np.outer(h, a)`, operation for operation — `outer` is
+    # the elementwise product, a scalar multiplies commutatively, and `+=` is
+    # `np.add` — but into one reused buffer rather than two fresh half-megabyte
+    # arrays per node, which were most of this loop's cost.
+    product = np.empty((length, length))
     for e_index, node_weight in enumerate(node_weights):
         for n_index, possession_weight in enumerate(possession_weights):
             weight = node_weight * possession_weight
             if weight < 1e-14:
                 continue
-            joint += weight * np.outer(home[e_index, n_index], away[e_index, n_index])
+            np.multiply.outer(home[e_index, n_index], away[e_index, n_index], out=product)
+            np.multiply(product, weight, out=product)
+            np.add(joint, product, out=joint)
     return _trim(joint / joint.sum())
 
 
