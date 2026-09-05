@@ -1,12 +1,23 @@
 """The append-only gate, exercised without pushing a PR.
 
-`.github/workflows/ledger-guard.yml` is the only place
-`scripts/check_ledger_append_only.py` runs for real, and a workflow can only
-be tested by merging it. So the comparison lives in a script and the script's
-failures live here: every one of these cases is an edit that reached `main`
-before 2026-09-04. The removal case is not hypothetical — it was reproduced on
-this lab's tracked ledger: twelve of thirty hypotheses deleted, the recorder
-re-run, x1.60 became x1.46 and the suite stayed green.
+`.github/workflows/ledger-guard.yml` is where
+`scripts/check_ledger_append_only.py` runs for real, and a workflow is tested
+by merging it, so the comparison lives in a script and the script's failures
+live here. The workflow's own resolve step — including a branch's first push,
+where the all-zeros `before` names no commit — is driven under stubs in
+`tests/test_workflows.py`.
+
+An earlier version of this docstring said the removal case had been reproduced
+as "twelve of thirty hypotheses deleted, the recorder re-run, x1.60 became
+x1.46, the suite stayed green". Re-measured on 2026-09-04, none of that
+happens: the old `save()` re-read raises on an in-process shrink, the recorder
+re-adds every hypothesis and prints x1.60 again, and x1.46 is the correction
+at twelve entries rather than at the eighteen twelve deletions leave (x1.53).
+`test_the_old_re_read_fired_on_an_in_process_shrink_and_missed_the_committed_one`
+and `test_the_recorder_self_heals_a_ledger_that_was_cut_on_disk` run each of
+those, so the corrected sentence has a test behind it. The edit that DOES get
+past every runtime guard is one made on disk and committed, and that is the
+edit this script's cases are about.
 
 The tests that matter most are the equal-count ones. A gate that only counts
 passes an edit that drops the failure and appends a replacement.
@@ -345,23 +356,140 @@ def test_each_tracked_ledger_passes_against_itself(relative: str, capsys: pytest
     assert "distinct hypotheses in the head ledger" in capsys.readouterr().out.splitlines()[0]
 
 
-def test_save_refuses_to_write_below_the_floor_the_caller_loaded(tmp_path: Path) -> None:
-    """The runtime half of the same rule, fixed the same day.
-
-    `save()` used to re-read the file it was about to overwrite; every caller
-    loads from and saves to the same path, so the comparison was `n >= n`.
-    Reproduced here against the old shape and then against the new one.
-    """
-    path = tmp_path / experiment_ledger.LEDGER_FILENAME
+def _thirty(path: Path) -> Path:
+    """A thirty-entry ledger on disk, the size of this lab's tracked one."""
     ledger = experiment_ledger.ExperimentLedger()
     ledger.record(*(
         experiment_ledger.Hypothesis(search="s", name=f"h{i}", tested_on="2026-09-01", seasons=(2026,), outcome="pending", predicted_direction="higher")
         for i in range(30)
     ))
     experiment_ledger.save(ledger, path, floor=0)
+    return path
 
-    # The old shape: load, delete twelve, save to the same path. The on-disk
-    # re-read alone cannot see it — the file still holds 30 until the write.
+
+def _old_save(ledger, path: Path) -> None:
+    """`save()` exactly as it stood on 02e75b7: re-read the target, compare.
+
+    Transcribed rather than described, so the test below exercises the old
+    BEHAVIOUR instead of asserting a sentence about it. Only the comparison
+    is reproduced; the write is not, because what is under test is which
+    edits reached the raise.
+    """
+    target = Path(path)
+    if target.is_file():
+        existing = experiment_ledger.load(target)
+        if len(ledger.hypotheses) < len(existing.hypotheses):
+            raise ValueError(
+                f"The experiment ledger would fall from {len(existing.hypotheses)} "
+                f"entries to {len(ledger.hypotheses)}. It is append-only."
+            )
+
+
+def test_the_old_re_read_fired_on_an_in_process_shrink_and_missed_the_committed_one(tmp_path: Path) -> None:
+    """What the guard before 2026-09-04 actually did, run rather than recalled.
+
+    Four files in this lab used to say that `save()`'s re-read compared
+    `n >= n` and "could never fire", and that deleting twelve of thirty
+    hypotheses and re-running the recorder dropped the correction from x1.60
+    to x1.46. Re-measured, all of that is wrong, and each half is asserted
+    below:
+
+    1. the old re-read DOES raise on an in-process shrink — the file still
+       holds thirty when the comparison happens;
+    2. it does NOT raise once the shorter ledger is already on disk, which is
+       what "edited by hand and committed" means, because then the comparison
+       is thirty-minus-twelve against itself;
+    3. the recorder self-heals, so re-running it after such an edit restores
+       every entry and prints x1.60 rather than a smaller factor;
+    4. x1.46 is the correction at TWELVE hypotheses. Deleting twelve of
+       thirty leaves eighteen, and eighteen is x1.53.
+    """
+    path = _thirty(tmp_path / experiment_ledger.LEDGER_FILENAME)
+
+    # 1. In process: load thirty, delete twelve, save back. The old re-read
+    #    sees thirty on disk against eighteen in memory, and raises.
+    in_process = experiment_ledger.load(path)
+    del in_process.hypotheses[18:]
+    with pytest.raises(ValueError, match="fall from 30 entries to 18"):
+        _old_save(in_process, path)
+
+    # 2. Edited on disk and committed: the shorter ledger IS the file, so the
+    #    old comparison is 18 >= 18 and nothing is raised. This is the shape
+    #    `scripts/check_ledger_append_only.py` and the Ledger Guard exist for.
+    edited_on_disk = tmp_path / "committed.json"
+    edited_on_disk.write_text(
+        json.dumps({"hypotheses": [
+            {"search": h.search, "name": h.name, "tested_on": h.tested_on,
+             "seasons": list(h.seasons), "outcome": h.outcome,
+             "predicted_direction": h.predicted_direction, "stage": h.stage,
+             "realised_direction": h.realised_direction}
+            for h in in_process.hypotheses
+        ]}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    _old_save(experiment_ledger.load(edited_on_disk), edited_on_disk)  # no raise
+
+    # 3. And the diff-level gate is what does see it.
+    assert check.main(["--base", str(path), "--head", str(edited_on_disk)]) == 1
+
+    # 4. The arithmetic the old prose quoted.
+    at_twelve = experiment_ledger.ExperimentLedger(hypotheses=in_process.hypotheses[:12])
+    at_eighteen = experiment_ledger.ExperimentLedger(hypotheses=in_process.hypotheses[:18])
+    at_thirty = experiment_ledger.load(path)
+    assert round(at_twelve.correction_factor(), 2) == 1.46
+    assert round(at_eighteen.correction_factor(), 2) == 1.53
+    assert round(at_thirty.correction_factor(), 2) == 1.60
+
+
+def test_the_recorder_self_heals_a_ledger_that_was_cut_on_disk(tmp_path: Path) -> None:
+    """Re-running the recorder after a hand edit RESTORES the ledger.
+
+    `ExperimentLedger.record()` skips a key it already holds and appends the
+    rest, so the recorder puts every hypothesis in `HYPOTHESES` back. That is
+    why "delete twelve of thirty and re-run the recorder" never produced the
+    x1.46 four files used to quote: the count comes back to thirty and the
+    printed correction is x1.60. Run here against the tracked ledger, cut to
+    eighteen in a temporary directory — the recorder's `record`/`save` path
+    is unchanged since 02e75b7, so this is the same behaviour the old prose
+    described wrongly.
+    """
+    import os
+    import subprocess
+    import sys
+
+    repo = Path(__file__).resolve().parents[1]
+    tracked = json.loads((repo / "data" / "outputs" / "experiment_ledger.json").read_text(encoding="utf-8"))
+    assert len(tracked["hypotheses"]) == 30, (
+        f"the tracked ledger holds {len(tracked['hypotheses'])} entries, not 30; "
+        "this test's arithmetic is quoted in four other files and needs re-deriving"
+    )
+    cut = dict(tracked)
+    cut["hypotheses"] = tracked["hypotheses"][:18]
+    (tmp_path / experiment_ledger.LEDGER_FILENAME).write_text(json.dumps(cut, indent=2) + "\n", encoding="utf-8")
+
+    completed = subprocess.run(
+        [sys.executable, str(repo / "scripts" / "record_experiments.py"), "--output-dir", str(tmp_path)],
+        cwd=repo, capture_output=True, text=True, timeout=300,
+        env={**os.environ, "PYTHONPATH": str(repo / "src")},
+    )
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert "18 distinct hypotheses before, 30 after (12 new)" in completed.stdout, completed.stdout
+    assert "x1.60" in completed.stdout, completed.stdout
+    restored = json.loads((tmp_path / experiment_ledger.LEDGER_FILENAME).read_text(encoding="utf-8"))
+    assert len(restored["hypotheses"]) == 30
+
+
+def test_save_refuses_to_write_below_the_floor_the_caller_loaded(tmp_path: Path) -> None:
+    """The floor: the count the caller LOADED, which the re-read cannot supply.
+
+    The re-read compares against whatever is at the target path, so it has
+    nothing to say when the target does not yet exist — a caller that loads
+    from one path and writes to another. The floor is a number the caller
+    held before it mutated anything, and it is required rather than defaulted
+    so it cannot quietly stop being passed.
+    """
+    path = _thirty(tmp_path / experiment_ledger.LEDGER_FILENAME)
+
     reloaded = experiment_ledger.load(path)
     loaded = len(reloaded.hypotheses)
     del reloaded.hypotheses[18:]
@@ -369,7 +497,15 @@ def test_save_refuses_to_write_below_the_floor_the_caller_loaded(tmp_path: Path)
         experiment_ledger.save(reloaded, path, floor=loaded)
     assert len(experiment_ledger.load(path).hypotheses) == 30, "the refused write reached the disk"
 
-    # A floor is required: the guard cannot be left to a default.
+    # The shape the re-read is blind to and the floor is not: a target that
+    # does not exist yet, so there is nothing to re-read.
+    elsewhere = tmp_path / "elsewhere" / experiment_ledger.LEDGER_FILENAME
+    _old_save(reloaded, elsewhere)  # the old comparison has nothing to compare
+    with pytest.raises(ValueError, match="fall from 30 entries \\(the count loaded\\) to 18"):
+        experiment_ledger.save(reloaded, elsewhere, floor=loaded)
+    assert not elsewhere.exists(), "the refused write created the file anyway"
+
+    # A floor is required: the guard is not left to a default.
     with pytest.raises(TypeError):
         experiment_ledger.save(reloaded, path)  # type: ignore[call-arg]
     with pytest.raises(ValueError, match="floor must be"):

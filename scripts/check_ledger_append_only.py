@@ -5,16 +5,24 @@
     python scripts/check_ledger_append_only.py --base-absent --head HEAD.json
 
 `ExperimentLedger.save()` raises when a ledger would shrink, but it only sees
-writes that travel through the code — and until 2026-09-04 it could not see
-even those. `scripts/record_experiments.py` loads the ledger and saves that
-same object back to the same path, and `save()` re-read the file it was about
-to overwrite, so the shrink guard compared `n >= n` on every run and could
-never fire. Reproduced on this lab: twelve of the thirty tracked hypotheses
-deleted by hand, the recorder re-run, and the printed correction fell from
-x1.60 to x1.46 with `git diff --exit-code` clean and CI green. `save()` now
-takes the count the caller loaded as an explicit floor; this script is the
-half that reads the base commit, so a removal has to get past a comparison
-rather than past a no-op.
+writes that travel through the code. An earlier version of this docstring said
+it "could never fire" and quoted a reproduction — twelve of thirty hypotheses
+deleted, the recorder re-run, the correction falling from x1.60 to x1.46. Both
+halves were re-measured on 2026-09-04 and both were wrong:
+
+- The old re-read fires. Load the tracked 30-entry ledger, delete twelve in
+  memory, save to the same path against `save()` as it stood on 02e75b7:
+  `ValueError: The experiment ledger would fall from 30 entries to 18.`
+- Running the recorder over a hand-cut 18-entry ledger at 02e75b7 prints *"18
+  distinct hypotheses before, 30 after (12 new)"* and *"x1.60"* — `record()`
+  puts every hypothesis back. And x1.46 is the factor at **12** hypotheses,
+  not at the 18 that deleting twelve of thirty leaves; that is x1.53.
+
+The edit no runtime guard can see is one made **on disk and committed**:
+`save()` is never called, so nothing compares anything, and every report from
+then on reads the shorter ledger and quotes the smaller correction. That is
+what this script is for. It reads the base commit, so a removal has to get
+past a comparison rather than past a function that is never invoked.
 
 A count check alone is not that comparison. Drop the hypothesis that failed,
 append a fresh one in its place, and the count is unchanged while the

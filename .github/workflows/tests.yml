@@ -8,13 +8,28 @@
 # protection is switched on, and so that a red `Tests` is a fact in the PR
 # rather than a suggestion until then. tests/test_workflows.py reads this file
 # with yaml.safe_load and refuses a rename of this job, a second job with the
-# same name, a matrix (which renames the context), `if:`, `continue-on-error`,
-# a narrowed or positional pytest invocation, PYTEST_ADDOPTS at any level, a
-# shell override, a paths or branches filter on pull_request, and a gate step
-# that reads anything but the junit the suite step wrote. It also EXECUTES
-# every run block below under stubs and demands a non-zero exit when a command
-# in it fails, which is what makes `if ! pytest; then echo; fi` a red build
-# rather than a rewording.
+# same name, a matrix (which renames the context), `if:`, `needs:` (a job this
+# one waits on can be skipped by its own condition, and GitHub reports a
+# conditionally-skipped required check as SUCCESS), an `if:` on any OTHER job
+# in this file, `continue-on-error`, a shell override, a paths or branches
+# filter on pull_request, and a gate step that reads anything but the junit the
+# suite step wrote. The suite line's arguments are a WHITELIST — `-q`, `-rs`
+# and one `--junit-xml=` under the runner temp — because a blocklist of
+# narrowing flags let `--version`, `-h` and `--help` through, and each of those
+# exits 0 and writes no junit. The gate line is pinned as a whole command, so
+# `: python scripts/check_test_results.py <path>` is refused rather than
+# matched. It also EXECUTES every run block below under stubs and demands a
+# non-zero exit when a command in it fails — which is what makes
+# `if ! pytest; then echo; fi` a red build rather than a rewording — and reads
+# back which command words were actually invoked, so a gate step that names
+# the script without running it is red too.
+#
+# WHAT IS STILL NOT COVERED HERE: this repository has no branch protection, so
+# a person may merge over a red tick; nothing in this file constrains the six
+# operational workflows beyond the corpus rules; and a `cd` before pytest, or
+# a swallow inside a nested `bash -c`, is disclosed open in
+# tests/test_workflows.py::test_the_disclosed_holes_are_real rather than
+# claimed closed.
 #
 # THIS JOB IS GIVEN NO CREDENTIAL, DELIBERATELY. The suite must pass without
 # one; that is what proves no test depends on a live provider, and it is what
@@ -22,12 +37,17 @@
 # and the linter refuses the secrets context anywhere in this file.
 #
 # `python -m pytest -q` ALONE IS NOT THE GATE. pytest exits 0 on a skipped
-# test and on an xfail. Measured on 2026-09-04 on a clean clone — which is
-# what this runner is — the suite ran as 647 passed, 80 skipped, exit 0, every
-# skip waiting on a gitignored table, and this workflow was green. The gate
-# step reads the junit the suite wrote and fails on any skip, any xfail, any
-# failure, an empty run, or a required guard module that contributed nothing.
-# It runs under `if: always()` so it also fires when the suite step died.
+# test and on an xfail. Re-measured on 2026-09-04 by cloning 02e75b7 — the
+# last commit before the tracked real-data sample existed — and running
+# `python -m pytest -q -rs`: 648 passed, 80 skipped, exit 0, every skip
+# waiting on a gitignored table, and this workflow was green. (An earlier
+# version of this comment said 647.) The gate step reads the junit the suite
+# wrote and fails on any skip — including one taken at COLLECTION, which no
+# per-item hook sees — any xfail, any failure, an empty run, a required guard
+# module that contributed nothing, a required guard module that declared a
+# test which did not run, and evidence older than the marker the suite step
+# writes immediately before pytest. It runs under `if: always()` so it also
+# fires when the suite step died.
 
 name: Tests
 
@@ -88,17 +108,32 @@ jobs:
         # schedules, which are gitignored and absent here. Every test that
         # needs them, or a processed table, reads the tracked real-data sample
         # under tests/fixtures/real_data/ instead — nothing skips.
+        env:
+          # `python -m pytest` puts the working directory at the head of
+          # sys.path, so a tracked `pytest.py` at the repository root IS
+          # pytest for this step. Measured on 2026-09-04: a pytest.py at the
+          # root whose main() printed and returned 0 turned this command
+          # into `everything is fine`, exit 0, no junit written, with the
+          # workflow untouched. With PYTHONSAFEPATH=1 the same command
+          # reported `pytest 9.1.1`. `tests/test_the_guards_exist.py` bans the
+          # tracked file and re-measures both halves; this is the belt.
+          PYTHONSAFEPATH: '1'
         run: |
           set -euo pipefail
           if [ -n "${CBB_ODDS_API_KEY:-}" ] || [ -n "${CBBD_API_KEY:-}" ]; then
             echo '::error::A provider credential is in scope for the step that runs the suite. This suite needs none, and its absence is the proof that no test depends on a live provider.'
             exit 1
           fi
+          # The marker the gate compares the evidence against. Written HERE,
+          # immediately before pytest, so any junit that predates this step —
+          # a tracked one, a leftover, one planted by an earlier step — is
+          # older than the marker and is refused.
+          : > "$RUNNER_TEMP/suite_started_at"
           python -m pytest -q -rs --junit-xml="$RUNNER_TEMP/junit.xml"
 
       - name: Fail on a skip, an xfail, a missing guard module, or an empty run
         if: always()
-        run: python scripts/check_test_results.py "$RUNNER_TEMP/junit.xml"
+        run: python scripts/check_test_results.py "$RUNNER_TEMP/junit.xml" --newer-than "$RUNNER_TEMP/suite_started_at"
 
       - name: Fail if the suite wrote into the working tree
         if: always()

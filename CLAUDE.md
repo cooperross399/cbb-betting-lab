@@ -423,8 +423,8 @@ guards made the suite greener and nothing said so.
 | No sibling import | `tests/test_no_sibling_lab_import.py`: source and environment; an unparseable module is a failure | — |
 | No sport literal outside the registry | `tests/test_competition_registry_is_the_only_place.py` | the `cbb_` output prefix on filenames; a key assembled at run time |
 | Contract strings | `tests/test_contract_strings.py` | — |
-| The required check `Tests` | `tests/test_workflows.py`: parsed YAML, and every run block of `tests.yml` and `ledger-guard.yml` EXECUTED under stubs and required to fail when a command fails | the six operational workflows keep their deliberate `continue-on-error`, `\|\| true` and `if-no-files-found: warn`; a nested `bash -c`; `cd` before pytest |
-| Zero skips, every guard ran | `scripts/check_test_results.py` on the junit CI writes; `tests/conftest.py` at collection | a non-strict `xfail` marker; a waiver keyed on a token no sweep arm draws |
+| The required check `Tests` | `tests/test_workflows.py`: parsed YAML — `if:`, `needs:` and `strategy:` all refused on the required job, and `if:` on any other job in the file, because GitHub reports a **conditionally-skipped required check as Success**; the suite line's arguments a WHITELIST (`-q`, `-rs`, one `--junit-xml=` under the runner temp) rather than a blocklist that let `--version` through; the gate line pinned as a whole command and then EXECUTED under stubs with the invoked command words read back | the six operational workflows keep their deliberate `continue-on-error`, `\|\| true` and `if-no-files-found: warn`; a nested `bash -c`; `cd` before pytest; the pin is exact, so `python3` for `python` is refused too |
+| Zero skips, every guard ran | `scripts/check_test_results.py` on the junit CI writes — per TEST, comparing each required guard's `def test_*` against the testcases recorded, and refusing evidence older than the marker the suite step writes; `tests/conftest.py` at collection, which stops the run on a collection-phase skip, on any narrowing pytest actually received (`--deselect`, `-k`, `--ignore`, `--ignore-glob`, the ini `addopts`, `PYTEST_ADDOPTS`), and on any tracked `tests/test_*.py` that collected nothing | a non-strict `xfail` marker; a waiver keyed on a token no sweep arm draws; **a test deleted outright** — the declaration goes with it, and `MINIMUM_TESTS = 5` is the only floor left |
 | Ledger append-only | `save(floor=…)` at runtime; `Ledger Guard` diffing both tracked ledgers against the PR base, keyed on `(search, name, seasons, stage)`; `pending` may be filled in once, nothing else moves | an appended hypothesis is taken on trust; the same span written in two orders is two keys |
 | Real-data tests run in CI | `tests/fixtures/real_data/` — 400 games of 2025-26 and every row of three schedules, cut by `scripts/build_test_fixtures.py`; the full tables when built | the CI numbers are over the sample, and every printed number says so |
 
@@ -460,8 +460,11 @@ PYTHONPATH=src .venv/bin/python scripts/estimate_credit_cost.py
 # Quota (free endpoint)
 PYTHONPATH=src .venv/bin/python scripts/check_provider_quota.py
 
-# Tests — the whole suite, or the collection hook stops the run
+# Tests — the whole suite, or the collection hook stops the run. A `-k`, a
+# `--deselect` or an `--ignore` now exits 1: run ONE FILE by naming it
+# instead, which the hook allows.
 PYTHONPATH=src .venv/bin/python -m pytest -q
+PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_workflows.py
 PYTHONPATH=src .venv/bin/python -m compileall -q -f src scripts
 
 # Re-cut the tracked real-data sample the suite reads where the tables are absent
