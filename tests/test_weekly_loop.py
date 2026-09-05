@@ -1007,9 +1007,20 @@ def test_the_weekly_workflow_holds_no_write_access_and_no_credential():
     document = yaml.safe_load(text)
 
     permissions = document.get("permissions")
-    assert permissions == {"contents": "read"}, (
+    assert all(value == "read" for value in (permissions or {}).values()), (
+        f"The weekly loop declares {permissions!r}. Every scope it holds must "
+        "be `read`: it reports and demotes, and neither needs a write."
+    )
+    # EXACT, and the set is closed. `actions: read` was added for one thing —
+    # `gh run download` cannot see the historical purchase's store artifact
+    # under `contents: read` alone, and that store is the population this loop
+    # measures — so a THIRD scope appearing here is a widening nobody wrote
+    # down, and this equality is what refuses it. The write dimension is
+    # already refused above, on every scope rather than on the two named here.
+    assert permissions == {"contents": "read", "actions": "read"}, (
         f"The weekly loop declares {permissions!r}. It must be exactly "
-        "`contents: read`: it reports and demotes, and neither needs a write."
+        "`contents: read` plus the `actions: read` that reaches the purchase's "
+        "store artifact."
     )
     for job in (document.get("jobs") or {}).values():
         assert "write" not in str(job.get("permissions") or ""), (
