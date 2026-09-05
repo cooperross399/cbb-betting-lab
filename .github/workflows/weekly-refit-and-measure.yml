@@ -91,6 +91,12 @@ permissions:
   # `tests/test_workflows.py` and must not be added to it. Everything it decides
   # comes back as an artifact.
   contents: read
+  # READ, and added for one reason: `gh run download` cannot see the historical
+  # purchase's store artifact under `contents: read` alone, and the store that
+  # artifact carries is the population this loop measures. It buys no write of
+  # any kind — the fence above is about `contents: write`, which this workflow
+  # still must never hold.
+  actions: read
 
 concurrency:
   # Serialised, never cancelled. A cancelled run that has appended to the
@@ -140,6 +146,12 @@ jobs:
       # not taken here, is letting a run fall back to the raw schedule when the
       # processed table is absent: that makes two populations diverge silently,
       # in the direction that looks like success.
+      #
+      # THIS KEY IS PINNED AND THEREFORE SAVES ONCE. That is tolerable for the
+      # free hoopR feeds, which the next step re-fetches anyway, and was NOT
+      # tolerable for the bought price store, which nothing here rebuilds: see
+      # `Restore the bought price store from the newest purchase` below, which
+      # deletes the card store this cache restores and refetches it.
       - name: Restore the feed and table cache
         id: cache
         uses: actions/cache@v4
@@ -163,6 +175,108 @@ jobs:
           set -eu
           python scripts/fetch_cbb_data.py --seasons $WEEKLY_SEASONS
           python scripts/build_datasets.py --seasons $WEEKLY_SEASONS
+
+      # THE STORE THIS LOOP MEASURES HAS TO BE THE ONE THE LAST PURCHASE BOUGHT.
+      #
+      # WHAT WAS WRONG. The bought price store reached this job only inside the
+      # `cbb-data-v1` cache restored above, whose key —
+      # `cbb-data-v1-<WEEKLY_SEASONS>-<hashFiles(src/cbb_betting_lab/data/**)>`
+      # — is the same string every Monday. `actions/cache` writes at its
+      # post-step ONLY when the primary key MISSED. So the first Monday missed
+      # and saved, and every Monday after it hit that key exactly, restored the
+      # first Monday's `data/processed`, and saved nothing. Every purchase made
+      # after that first Monday was invisible here: the loop re-measured one
+      # frozen store every week for the rest of the season, with clean intervals
+      # and good prose. That is the brief's failure mode with the arrow
+      # reversed — not a search that manufactures an edge, but a measurement
+      # that cannot move, and a lab measuring nothing new looks exactly like a
+      # lab that is running.
+      #
+      # WHY THE PURCHASE'S ARTIFACT AND NOT ANOTHER CACHE KEY. No cache holds
+      # the store on a key that rolls. The purchase's rolling key —
+      # `cbb-bought-<window>-<run_id>`, restore-key `cbb-bought-<window>-`,
+      # which actions/cache resolves to the most recently created match —
+      # covers `data/raw/cbb/historical_purchase/<window>`: the raw responses,
+      # not the store. The store reaches a cache only through the purchase's
+      # own `cbb-data-v1-<PURCHASE_SEASONS>-<hash>` key, pinned exactly the way
+      # this one was and therefore saved once and never again. Restoring the
+      # responses here instead would mean rebuilding the store from ~1.8M
+      # staged rows every Monday — the step that was OOM-killed on a 7GB runner
+      # in run 33917619764 — inside a 240-minute job. The durability classes
+      # differ too: an Actions cache is evicted after 7 days without a hit and
+      # LRU-evicted over the repository's 10GB, where 1.3M credits of raw
+      # responses live and must not be crowded out by a weekly writer, while
+      # `historical-<wave>-<window>` is kept 90 days, is uploaded `if: always()`
+      # by every purchase run, and holds exactly the CSV that run built and
+      # reported on.
+      #
+      # FAIL CLOSED, AND SAY SO. The card store is deleted before anything that
+      # can fail, so no path through this step leaves a store of unknown
+      # provenance behind: `run_weekly_loop.py` can report a population that is
+      # MISSING and has no way to report one that is STALE, and only the first
+      # is visible to a reader. The run it came from, the artifact and the row
+      # count go to the job summary either way, so "the store did not move this
+      # week" is something the run says rather than something nobody can see.
+      #
+      # ONLY THE CARD WINDOW. It is the only window this lab can bet, the only
+      # store `run_price_backtest.py` scores by default, and the one
+      # `weekly_backtest_season` reads. The close store is left exactly as the
+      # cache above restored it, and is still pinned; see the commit message.
+      - name: Restore the bought price store from the newest purchase
+        id: store
+        # SOFT, like the two steps above it, and for the same reason. The
+        # refit, the claims re-render and the demotion check on forward
+        # evidence do not read this store; losing all of them because an
+        # artifact expired would be the wrong trade. The run still finishes
+        # red — with no store the backtest reports the population missing, that
+        # step is unhealthy, and `run_weekly_loop.py` exits 1.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          # Both read by the block AND by `tests/test_workflows.py`, which
+          # checks them against `providers.historical` rather than trusting the
+          # spelling. A hand-spelled path the module never writes is the
+          # 1,299,945-credit defect this repository already paid for once.
+          WINDOW: card
+          STORE: data/processed/cbb_historical_prices__card.csv
+          PURCHASE_WORKFLOW: historical-purchase.yml
+          # How far back to look for a run whose store artifact has not expired.
+          PURCHASE_RUNS_TO_SEARCH: "40"
+        run: |
+          set -euo pipefail
+          mkdir -p data/processed
+          rm -f "$STORE"
+          RUN_IDS=$(gh run list --repo "$REPO" --workflow "$PURCHASE_WORKFLOW" --limit "$PURCHASE_RUNS_TO_SEARCH" --json databaseId --jq '.[].databaseId')
+          TMP=$(mktemp -d)
+          FROM_RUN=""
+          ARTIFACT=""
+          for run_id in $RUN_IDS; do
+            NAME=$(gh api "repos/$REPO/actions/runs/$run_id/artifacts" --jq 'first(.artifacts[] | select(.expired == false) | select((.name | startswith("historical-")) and ((.name | startswith("historical-cache-")) | not) and (.name | endswith("-" + env.WINDOW))) | .name)')
+            if [ -z "$NAME" ]; then
+              continue
+            fi
+            rm -rf "$TMP"
+            mkdir -p "$TMP"
+            gh run download "$run_id" --repo "$REPO" --name "$NAME" --dir "$TMP"
+            FOUND=$(find "$TMP" -type f -name "cbb_historical_prices__${WINDOW}.csv" -print -quit)
+            if [ -z "$FOUND" ]; then
+              continue
+            fi
+            cp "$FOUND" "$STORE"
+            FROM_RUN="$run_id"
+            ARTIFACT="$NAME"
+            break
+          done
+          rm -rf "$TMP"
+          printf '## Bought price store\n\n' >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$FROM_RUN" ]; then
+            echo "::warning::No unexpired ${WINDOW}-window store artifact in the last $PURCHASE_RUNS_TO_SEARCH runs of $PURCHASE_WORKFLOW. This week measures no bought population."
+            printf 'No store restored: nothing in the last %s runs of `%s` still holds a `%s` store artifact. The backtest will report the population missing rather than score a store nobody can date.\n' "$PURCHASE_RUNS_TO_SEARCH" "$PURCHASE_WORKFLOW" "$WINDOW" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          ROWS=$(wc -l < "$STORE")
+          printf 'Restored `%s` from artifact `%s` of %s run %s: **%s rows**.\n' "$STORE" "$ARTIFACT" "$PURCHASE_WORKFLOW" "$FROM_RUN" "$((ROWS - 1))" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Restore the forward-evidence ledger from card-feed
         # READ ONLY. The demotion check is judged on settled forward opinions,

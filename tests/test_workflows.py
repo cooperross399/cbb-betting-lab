@@ -1706,6 +1706,138 @@ def test_the_purchase_workflow_builds_the_store_it_uploads() -> None:
     )
 
 
+def test_the_weekly_loop_measures_the_newest_bought_store_and_not_a_pinned_cache_key(
+    tmp_path: Path,
+) -> None:
+    """`actions/cache` writes at its post-step ONLY when the primary key MISSED.
+
+    The weekly loop's key — `cbb-data-v1-<WEEKLY_SEASONS>-<hashFiles(...)>` — is
+    the same string every Monday, so the first Monday missed and saved, and
+    every Monday after it hit that key exactly, restored the first Monday's
+    `data/processed` with the bought price store inside it, and saved nothing.
+    Every purchase made after that first Monday was invisible to the loop,
+    which re-measured one frozen store for the rest of the season and read
+    exactly like a lab that was running.
+
+    The replacement is pinned here on four points, two of them executed. The
+    card store is deleted BEFORE anything that can fail, so no path through
+    the step leaves a store of unknown provenance behind — `run_weekly_loop.py`
+    can report a population that is MISSING and cannot report one that is
+    STALE. It is refetched from the newest purchase run whose store artifact
+    has not expired. The raw-response artifact is excluded by name, because
+    `historical-cache-<wave>-<window>` also ends in the window and is the
+    gigabytes this step must not pull. And the run it came from and the row
+    count reach the job summary, so a store that did not move this week is
+    something the run says rather than something nobody can see.
+    """
+    from cbb_betting_lab.competitions import CBB
+    from cbb_betting_lab.providers import historical as H
+
+    path = WORKFLOWS_DIR / "weekly-refit-and-measure.yml"
+    assert path.is_file(), "weekly-refit-and-measure.yml is missing"
+    document = load(path)
+
+    permissions = document.get("permissions")
+    assert permissions == {"contents": "read", "actions": "read"}, (
+        f"the weekly loop's permissions are {permissions!r}. It needs `actions: "
+        "read` to reach the purchase's store artifact and must never hold "
+        "`contents: write`."
+    )
+
+    steps = steps_of(next(iter(jobs_of(document).values())))
+    restore = [i for i, s in enumerate(steps) if s.get("id") == "store"]
+    loop = [i for i, s in enumerate(steps) if "run_weekly_loop.py" in str(s.get("run", ""))]
+    assert restore, (
+        "no step with `id: store` restores the bought price store. Without it "
+        "the store arrives only inside the pinned `cbb-data-v1` cache, which "
+        "saves once and is then frozen for the rest of the season."
+    )
+    assert loop, "no step in the weekly workflow runs run_weekly_loop.py"
+    assert restore[0] < loop[0], (
+        "the store is restored after the loop that measures it, so the loop "
+        "reads whatever the cache left behind"
+    )
+
+    step = steps[restore[0]]
+    environment = step.get("env", {})
+    assert environment.get("WINDOW") == H.CARD_WINDOW.name, (
+        f"the step names window {environment.get('WINDOW')!r}; the loop's "
+        f"backtest scores {H.CARD_WINDOW.name!r}"
+    )
+    expected_store = str(H.store_path(CBB, Path("data/processed"), H.CARD_WINDOW))
+    assert environment.get("STORE") == expected_store, (
+        f"the step names {environment.get('STORE')!r}; `historical.store_path` "
+        f"writes {expected_store!r}. A hand-spelled path the module never "
+        "writes is the defect this repository already paid 1,299,945 credits for."
+    )
+    purchase = environment.get("PURCHASE_WORKFLOW", "")
+    assert (WORKFLOWS_DIR / purchase).is_file(), (
+        f"the step reads artifacts from {purchase!r}, which is not a workflow "
+        "in this repository"
+    )
+    assert "Upload the store, the record and the cache" in (
+        (WORKFLOWS_DIR / purchase).read_text(encoding="utf-8")
+    ), f"{purchase} does not upload a store artifact for this step to read"
+
+    block = str(step.get("run", ""))
+    lines = commands(block)
+    removals = [i for i, line in enumerate(lines) if '"$STORE"' in line and line.split()[0] == "rm"]
+    # `command_words`, not the first token: `RUN_IDS=$(gh run list ...)` is a
+    # call to `gh` and its first token is an assignment.
+    gh_calls = [i for i, line in enumerate(lines) if "gh" in command_words(line)]
+    assert removals, "the step never deletes the store the pinned cache restored"
+    assert gh_calls, "the step never asks the purchase workflow for anything"
+    assert max(removals) < min(gh_calls), (
+        "the stale store is deleted after the first command that can fail, so a "
+        "failed lookup leaves last season's store on disk for the loop to "
+        "re-measure as though it were this week's"
+    )
+    assert "historical-cache-" in block, (
+        "the step does not exclude `historical-cache-<wave>-<window>`, the raw "
+        "response artifact, which also ends in the window name and is orders of "
+        "magnitude larger than the store"
+    )
+    reported = [
+        line for line in lines
+        if "GITHUB_STEP_SUMMARY" in line and "ROWS" in line and "FROM_RUN" in line
+    ]
+    assert reported, (
+        "no line writes both the run the store came from and its row count to "
+        f"the job summary; the step writes: {lines}"
+    )
+    assert any("::warning::" in line for line in lines), (
+        "the step restores nothing quietly when no artifact survives"
+    )
+
+    def sandbox(name: str) -> Path:
+        made = tmp_path / name
+        made.mkdir()
+        return made
+
+    # EXECUTED, because the ordering above is a claim about what runs and not
+    # about what is spelled. With BOTH `rm` and `gh` failing, whichever the
+    # block reaches first is the one that gets logged: `rm` here, and `gh` from
+    # any version that asks the purchase for an artifact while last season's
+    # store is still on disk.
+    stopped = run_block_under_stubs(block, {"rm", "gh"}, sandbox("rm"))
+    assert stopped.exit_code != 0, "a failed removal is swallowed"
+    assert stopped.any_failures == ["rm"], (
+        "the block did not reach the removal first, so a failed lookup leaves a "
+        f"store of unknown provenance on disk: {stopped.any_failures}"
+    )
+    assert not stopped.unmodelled, stopped.unmodelled
+
+    # And a failed lookup or download is not swallowed either. The step's own
+    # `continue-on-error` is the deliberate soft edge — the refit and the
+    # demotion check do not read this store — but the block itself must report.
+    unreachable = run_block_under_stubs(block, {"gh"}, sandbox("gh"))
+    assert unreachable.exit_code != 0, (
+        "the block reaches its end after `gh` failed, so a run that could not "
+        "read the purchase reports a clean restore"
+    )
+    assert not unreachable.unmodelled, unreachable.unmodelled
+
+
 # --------------------------------------------------------------------------
 # The self-regression suite: every rule watched failing.
 # --------------------------------------------------------------------------
