@@ -122,6 +122,18 @@ from cbb_betting_lab.stores import _decimal_payout as decimal_payout
 
 #: Bumped whenever the record's shape changes, so a stale record fails loudly
 #: at re-render rather than rendering a report with holes in it.
+#:
+#: **Not bumped on 2026-09-05 when the ROI tables started printing the
+#: clustering.** That change is in the renderer only: `cluster_unit` has been
+#: written by :func:`_interval_row` onto every interval row since before this
+#: branch, so a version 1 record already carries the field the new column
+#: reads, and every version 1 record on disk renders under the new header with
+#: the same numbers it always held. Changing the version here would refuse
+#: records that are not stale. What the field's absence would mean is covered
+#: instead by :func:`cluster_cell`, which prints `unknown-clusters` rather than
+#: guessing "games" — see `test_run_price_backtest.py::
+#: test_a_version_1_record_still_carries_the_clustering_on_every_row` and
+#: `::test_a_row_with_no_cluster_unit_is_never_assumed_to_be_games`.
 RECORD_VERSION = 1
 
 #: What a graded bet must carry before it can be measured. A **missing column

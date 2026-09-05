@@ -1099,6 +1099,64 @@ def test_both_clusterings_are_reachable_and_are_labelled_apart():
             assert "days" not in line, line
 
 
+def test_a_version_1_record_still_carries_the_clustering_on_every_row(scored):
+    """Why `price_backtest.RECORD_VERSION` was **not** bumped with the header.
+
+    `forecast_skill.RECORD_VERSION` moved 2 -> 3 in the same commit, because
+    that record's shape changed. This one's did not: `cluster_unit` has been
+    written onto every interval row by `_interval_row` since before this branch,
+    and only the renderer changed. So every version 1 record already on disk
+    carries the field the new "Clusters" column reads, and bumping here would
+    refuse records that are not stale. The claim is checked rather than
+    asserted in prose: the record this run writes is version 1, and every
+    interval row in it renders its clustering.
+    """
+    assert scored.record["record_version"] == PB.RECORD_VERSION == 1, (
+        "the cluster column is a renderer change over a field the record "
+        "already carried; a bump here would refuse records that are not stale"
+    )
+    rows = measured_rows(scored.record)
+    assert rows, "the fixture must produce measured cells"
+    for row in rows:
+        assert "cluster_unit" in row, (
+            "a version 1 record must already carry the clustering, or the "
+            f"version would have had to move with the column; got {row}"
+        )
+        assert PB.cluster_cell(row) in scored.report, row
+
+
+def test_a_row_with_no_cluster_unit_is_never_assumed_to_be_games():
+    """An absent clustering prints as unknown rather than as the commoner guess.
+
+    This is the case a version bump would have covered, and it is covered here
+    instead. `stats.interval_two_way` keeps the wider of the game and day
+    clusterings, so "games" is wrong roughly as often as it is right; a renderer
+    that defaulted to it would print a plausible sentence that is a coin flip.
+    """
+    naked = {
+        "name": "no clustering recorded",
+        "roi": 0.031,
+        "low": 0.004,
+        "high": 0.058,
+        "adjusted_low": -0.01,
+        "adjusted_high": 0.072,
+        "bets": 11_071,
+        "clusters": 513,
+        "looks": 1,
+        "standard_error": 0.014,
+        "enough_evidence": True,
+        "verdict": "no demonstrated edge",
+    }
+    cell = PB.cluster_cell(naked)
+    assert cell == "513 unknown-clusters", cell
+    assert "game" not in cell and "day" not in cell, cell
+    assert cell == PB.cluster_cell({**naked, "cluster_unit": ""}), (
+        "an empty string is as unknown as an absent key"
+    )
+    line = PB._row(naked, naked["name"])
+    assert "513 unknown-clusters" in line, line
+
+
 def test_the_null_baseline_is_printed_before_any_model_number(scored):
     """*"What would betting one side with no model at all return?"*
 

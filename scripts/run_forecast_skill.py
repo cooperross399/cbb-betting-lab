@@ -403,6 +403,27 @@ def print_brier(record: Mapping) -> None:
             )
 
 
+def _return_cell(bucket: Mapping) -> str:
+    """One claimed-edge bucket's realised return, printed the only allowed way.
+
+    Point estimate, sample size, the clustering that produced the interval, the
+    raw 95% interval, the **family-corrected** interval beside it, and the
+    verdict — `stats.RoiInterval.verdict()`, read off the corrected interval,
+    so a bucket spanning zero prints `no demonstrated edge` in exactly those
+    words. Until 2026-09-05 this line printed the raw interval alone and no
+    verdict at all, which left the reader to supply one.
+    """
+    looks = int(bucket.get("looks", 1) or 1)
+    return (
+        f"{bucket['roi']:+.1%} over {bucket['bets']:,} settled wagers across "
+        f"{bucket['clusters']:,} {bucket['cluster_unit']}s, 95% interval "
+        f"[{bucket['roi_low']:+.1%}, {bucket['roi_high']:+.1%}], "
+        f"family-corrected [{bucket['roi_adjusted_low']:+.1%}, "
+        f"{bucket['roi_adjusted_high']:+.1%}] across {looks:,} "
+        f"look{'' if looks == 1 else 's'} — {bucket['verdict']}"
+    )
+
+
 def print_buckets(record: Mapping) -> None:
     """Anti-predictiveness as a shape rather than as a minus sign."""
     print("")
@@ -451,23 +472,21 @@ def print_buckets(record: Mapping) -> None:
             low = shape["lowest_bucket"]
             high = shape["highest_bucket"]
             demonstrated = shape.get("demonstrated")
+            looks = int(shape.get("looks", 1) or 1)
             print(
                 f"    {'!' if demonstrated else '.'} realised return "
-                f"{low['roi']:+.1%} [{low['roi_low']:+.1%}, "
-                f"{low['roi_high']:+.1%}] over {low['bets']:,} settled wagers "
-                f"across {low['clusters']:,} {low['cluster_unit']}s in the "
-                "lowest claimed-edge bucket against "
-                f"{high['roi']:+.1%} [{high['roi_low']:+.1%}, "
-                f"{high['roi_high']:+.1%}] over {high['bets']:,} settled "
-                f"wagers across {high['clusters']:,} {high['cluster_unit']}s "
-                "in the highest — "
+                f"{_return_cell(low)} in the lowest claimed-edge bucket "
+                f"against {_return_cell(high)} in the highest — "
                 + (
-                    "the intervals do not overlap, so the biggest claimed "
-                    "edges did worst and raising the threshold is the wrong "
-                    "response."
+                    "the family-corrected intervals do not overlap across "
+                    f"{looks:,} look{'' if looks == 1 else 's'}, so the "
+                    "biggest claimed edges did worst and raising the "
+                    "threshold is the wrong response."
                     if demonstrated
-                    else "the intervals overlap, so the fall is not "
-                    "demonstrated and no threshold conclusion rests on it."
+                    else "the family-corrected intervals overlap across "
+                    f"{looks:,} look{'' if looks == 1 else 's'}, so the fall "
+                    "is not demonstrated and no threshold conclusion rests "
+                    "on it."
                 )
             )
 

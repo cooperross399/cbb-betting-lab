@@ -335,6 +335,28 @@ class OpinionAccounting:
         from it — which is what this file did until 2026-09-05 — makes a bet
         lost between `bets_from` and here reappear as a below-threshold wager,
         and the identity reconciles while the report measures one bet fewer.
+
+        **What `offered == unparseable + no opinion + below threshold + bets`
+        does and does not prove.** The four predicates are disjoint and
+        exhaustive over `frame` by construction, so `accounted` is always
+        exactly `len(frame)` and the identity is really the single comparison
+        `len(frame) == offered`. That is a real test and it is the one the
+        residual arithmetic could not make: it fails the moment a row the board
+        offered is not in the graded frame — dropped by a merge, a filter, a
+        dtype coercion, a re-index. It does **not** test that the four buckets
+        are the right buckets. A row mis-bucketed, an edge threshold read wrong,
+        a `bet_mask` that admits the wrong rows: all of those move a row from
+        one term to another and the sum is unchanged, so this identity is blind
+        to every one of them. Two further comparisons in :meth:`reconciles` are
+        not blind, because each is a **second, independently produced count** of
+        one term rather than a rearrangement of the same one:
+        `unparseable == unparseable_declared` against the pricer's own running
+        tally, and `bets == bets_in_hand` against the frame the report measures.
+        The bucketing itself is pinned by the tests, not by this arithmetic —
+        `test_run_price_backtest.py::
+        test_the_accounting_identity_counts_every_term_from_the_frame` and
+        `::test_a_dropped_row_makes_the_identity_fail_rather_than_absorb`, which
+        empties each of the four buckets by one row in turn.
         """
         if bets is not None:
             self.bets_in_hand = int(len(bets))

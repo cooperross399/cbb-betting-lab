@@ -308,9 +308,33 @@ def test_an_anti_predictive_model_is_negative_and_the_table_shows_the_shape(anti
         assert "the fall is not demonstrated" in report
 
 
-def _measured_with(low_roi, high_roi, *, low_ci, high_ci) -> dict:
-    """A `measure()`-shaped dict carrying two usable claimed-edge buckets."""
+def _measured_with(low_roi, high_roi, *, low_ci, high_ci, looks: int = 1) -> dict:
+    """A `measure()`-shaped dict carrying two usable claimed-edge buckets.
+
+    The ROI cell of each bucket is a **real** `stats.RoiInterval` put through
+    the module's own `_interval_row`, not a hand-written dict: the standard
+    error is recovered from the requested symmetric interval, so the raw
+    interval comes back exactly as asked for while `adjusted_low`,
+    `adjusted_high` and `verdict` are produced by production code. A fixture
+    that spelled the verdict out by hand could print `no demonstrated edge`
+    while `RoiInterval.verdict()` had stopped saying it.
+    """
+
     def bucket(low, high, roi, ci):
+        standard_error = (ci[1] - ci[0]) / (2.0 * S.Z95)
+        interval = S.RoiInterval(
+            roi=roi,
+            low=roi - S.Z95 * standard_error,
+            high=roi + S.Z95 * standard_error,
+            bets=400,
+            clusters=90,
+            standard_error=standard_error,
+            looks=looks,
+            cluster_unit="day",
+        )
+        assert interval.low == pytest.approx(ci[0]) and interval.high == pytest.approx(
+            ci[1]
+        ), "the requested interval must be symmetric about the point estimate"
         return {
             "low": low,
             "high": high,
@@ -318,16 +342,7 @@ def _measured_with(low_roi, high_roi, *, low_ci, high_ci) -> dict:
             "games": 90,
             "enough": True,
             "gap_to_model": 0.0,
-            "roi": {
-                "value": roi,
-                "low": ci[0],
-                "high": ci[1],
-                "rows": 400,
-                "clusters": 90,
-                "cluster_unit": "day",
-                "enough_evidence": True,
-                "verdict": "",
-            },
+            "roi": FS._interval_row(interval, name="realised return"),
         }
 
     buckets = [
@@ -401,6 +416,103 @@ def test_a_bucket_below_the_declared_floor_gets_no_anti_predictive_comparison():
     assert "raising the edge threshold the wrong response" not in text
 
 
+def test_every_printed_return_interval_carries_its_verdict_in_the_mandated_words():
+    """An interval printed with no verdict is a verdict the reader supplies.
+
+    The vocabulary is not decoration. An interval that includes zero reads
+    `stats.NO_DEMONSTRATED_EDGE` in exactly those words; `demonstrated edge` and
+    `demonstrated deficit` are reserved for intervals excluding zero on the
+    respective side **after** the family-wise correction. Until 2026-09-05 the
+    anti-predictive paragraph computed each bucket's verdict, dropped it, and
+    printed the bare interval — so a bucket at `-14.3% [-23.9%, -4.6%]` read as
+    a demonstrated deficit to any reader who did the arithmetic, and at 24 looks
+    it is not one.
+    """
+    both_span_zero = _measured_with(
+        0.06, -0.09, low_ci=(-0.05, 0.17), high_ci=(-0.30, 0.12)
+    )
+    text = "\n".join(FS._anti_predictive_paragraph(both_span_zero))
+    assert text.count(S.NO_DEMONSTRATED_EDGE) == 2, (
+        "both buckets' intervals include zero, so both must read "
+        f"{S.NO_DEMONSTRATED_EDGE!r} in exactly those words; got {text}"
+    )
+    assert S.DEMONSTRATED_EDGE not in text.replace(S.NO_DEMONSTRATED_EDGE, "")
+    assert S.DEMONSTRATED_DEFICIT not in text
+
+    # And the reserved words are reachable: a bucket whose corrected interval
+    # excludes zero on the losing side is a demonstrated deficit and is allowed
+    # to say so. A vocabulary test that only ever proves the negative would pass
+    # on a renderer that printed the same phrase unconditionally.
+    disjoint = _measured_with(0.06, -0.09, low_ci=(0.02, 0.10), high_ci=(-0.14, -0.04))
+    text = "\n".join(FS._anti_predictive_paragraph(disjoint))
+    assert S.DEMONSTRATED_EDGE in text, text
+    assert S.DEMONSTRATED_DEFICIT in text, text
+    assert S.NO_DEMONSTRATED_EDGE not in text, text
+
+    # Every printed interval, both of them, and each beside its own sample size.
+    for bucket in ("lowest_bucket", "highest_bucket"):
+        cell = disjoint["anti_predictive_return"][bucket]
+        assert cell["verdict"], cell
+        assert cell["verdict"] in text, cell
+    assert text.count("400 settled wagers across 90 days") == 2, text
+
+
+def test_the_anti_predictive_comparison_is_corrected_for_the_size_of_the_search():
+    """The comparison is one more look, and it is corrected like every other.
+
+    Until 2026-09-05 `demonstrated` read the raw 95% intervals while
+    `edge_buckets` was being handed the ledger's cumulative `looks` and every
+    other interval in the report was corrected by it. So the one comparison the
+    threshold sentence rests on was the one made before the search was counted.
+
+    Same point estimates, same raw intervals, only the look count moved: at one
+    look the two intervals are disjoint and the sentence is earned; at two
+    hundred looks the corrected intervals overlap and it is not.
+    """
+    at_one_look = _measured_with(
+        0.06, -0.09, low_ci=(0.02, 0.10), high_ci=(-0.14, -0.04), looks=1
+    )
+    at_two_hundred = _measured_with(
+        0.06, -0.09, low_ci=(0.02, 0.10), high_ci=(-0.14, -0.04), looks=200
+    )
+
+    one = at_one_look["anti_predictive_return"]
+    many = at_two_hundred["anti_predictive_return"]
+    assert one["looks"] == 1 and many["looks"] == 200
+    assert one["demonstrated_before_correction"], one
+    assert many["demonstrated_before_correction"], (
+        "the raw intervals are identical in both runs, so the uncorrected "
+        f"comparison must be unchanged; got {many}"
+    )
+    assert one["demonstrated"], one
+    assert not many["demonstrated"], (
+        "two hundred looks must widen the intervals until they overlap; got "
+        f"{many}"
+    )
+    for end in ("lowest_bucket", "highest_bucket"):
+        raw = many[end]["roi_high"] - many[end]["roi_low"]
+        corrected = many[end]["roi_adjusted_high"] - many[end]["roi_adjusted_low"]
+        assert corrected > raw, (
+            f"{end}: the correction must widen, never narrow; {many[end]}"
+        )
+
+    text = "\n".join(FS._anti_predictive_paragraph(at_two_hundred))
+    assert "raising the edge threshold the wrong response" not in text, text
+    assert "the fall is not demonstrated" in text
+    assert "the correction for the size of the search is what closed the gap" in text
+    # Both figures printed and labelled apart, per bucket, in both directions.
+    assert "95% interval [+2.0%, +10.0%]" in text, text
+    assert "family-corrected [" in text and "across 200 looks" in text, text
+    assert text.count(S.NO_DEMONSTRATED_EDGE) == 2, (
+        "at two hundred looks neither bucket's corrected interval excludes "
+        f"zero; got {text}"
+    )
+
+    earned = "\n".join(FS._anti_predictive_paragraph(at_one_look))
+    assert "raising the edge threshold the wrong response" in earned
+    assert "across 1 look" in earned, earned
+
+
 def test_the_bucket_table_prints_a_sample_size_beside_every_frequency():
     """Every measured number carries its `n`, and a thin bucket carries no number.
 
@@ -437,6 +549,73 @@ def test_the_bucket_table_prints_a_sample_size_beside_every_frequency():
         if count >= FS.MINIMUM_BUCKET:
             assert "%" in cells[3] and "%" in cells[5], line
             assert "pp" in cells[6], label
+
+
+def test_no_bucket_row_prints_a_return_interval_without_its_verdict():
+    """The bucket table's realised-return column, read cell by cell.
+
+    The column printed `-14.3% [-23.9%, -4.6%]` and stopped there. That interval
+    excludes zero on the losing side and any reader doing the arithmetic calls
+    it a demonstrated deficit — but the family-wise correction over this run's
+    looks widens it to `[-29.4%, +0.9%]`, which includes zero, so the only
+    permitted reading is `stats.NO_DEMONSTRATED_EDGE`. Raw and corrected are now
+    printed apart and the verdict is printed beside them.
+    """
+    anti = record_for("anti", looks=24)
+    report = FS.render(anti)
+    header = [
+        line for line in report.splitlines() if line.startswith("| Claimed edge |")
+    ]
+    assert header, report
+    columns = [cell.strip() for cell in header[0].strip("|").split("|")]
+    assert columns[-4:] == [
+        "Realised return",
+        "95% interval",
+        "Family-corrected",
+        "Verdict",
+    ], columns
+
+    rows = [
+        line
+        for line in report.splitlines()
+        if line.startswith(("| below ", "| +", "| -"))
+    ]
+    assert rows
+    checked = 0
+    saw_correction_change_the_verdict = False
+    for line in rows:
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        assert len(cells) == len(columns), line
+        _return, raw, corrected, verdict = cells[-4:]
+        if raw == "—":
+            # No return figure at all: the verdict says why, or the bucket is
+            # empty. Either way no interval is printed without one.
+            assert verdict, line
+            continue
+        assert verdict in {
+            S.NO_DEMONSTRATED_EDGE,
+            S.DEMONSTRATED_EDGE,
+            S.DEMONSTRATED_DEFICIT,
+        }, f"a printed interval carries a verdict in the reserved words: {line}"
+        assert corrected != "—" and "looks" in corrected, (
+            f"the family-corrected interval must be printed beside the raw one "
+            f"and labelled: {line}"
+        )
+        assert "settled" in _return, (
+            f"every measured number carries its sample size: {line}"
+        )
+        if raw.startswith("[-") and raw.endswith("]") and "+" not in raw:
+            # A raw interval wholly below zero whose corrected interval spans
+            # it: the case the old column let a reader misread.
+            if verdict == S.NO_DEMONSTRATED_EDGE:
+                saw_correction_change_the_verdict = True
+        checked += 1
+    assert checked >= 3, f"too few return rows to mean anything: {rows}"
+    assert saw_correction_change_the_verdict, (
+        "this fixture must contain at least one bucket whose raw interval "
+        "excludes zero and whose corrected interval does not, or the test "
+        "cannot show that the verdict reads the corrected one"
+    )
 
 
 def test_no_scorable_wager_falls_outside_every_bucket(anti):
@@ -1200,14 +1379,73 @@ def test_the_report_re_renders_from_the_record_byte_identically(tmp_path, anti):
 
 
 def test_a_record_from_a_different_shape_is_refused_rather_than_rendered(tmp_path, anti):
-    """A stale record renders a report with holes in it and nothing looks wrong."""
+    """A stale record renders a report with holes in it and nothing looks wrong.
+
+    A **newer** record — written by a checkout ahead of this one — and the
+    message names it as such, so a reader can tell it apart from the older
+    shape refused below rather than reading one message for two situations.
+    """
     path = tmp_path / "stale.json"
     stale = dict(anti)
     stale["record_version"] = FS.RECORD_VERSION + 1
     path.write_text(json.dumps(stale, default=str), encoding="utf-8")
     with pytest.raises(FS.ForecastSkillError) as raised:
         FS.read_record(path)
-    assert "Re-run" in str(raised.value)
+    message = str(raised.value)
+    assert "Re-run" in message
+    assert f"version {FS.RECORD_VERSION + 1} record" in message, message
+    assert "a newer" in message and "an older" not in message, message
+
+
+def _version_2_shaped(record: dict) -> dict:
+    """The record this module wrote until 2026-09-05, rebuilt from a live one.
+
+    Version 2 carried one key, `anti_predictive`, holding realised minus
+    model-implied — overconfidence under the anti-predictive name — and neither
+    `overconfidence` nor `anti_predictive_return`.
+    """
+    stale = json.loads(json.dumps(record, default=str))
+    stale["record_version"] = 2
+    for cell in list(stale.get("by_tier") or []) + [stale.get("pooled") or {}]:
+        curse = cell.pop("overconfidence", None)
+        cell.pop("anti_predictive_return", None)
+        if curse is not None:
+            cell["anti_predictive"] = curse
+    return stale
+
+
+def test_a_record_from_the_previous_shape_is_refused_and_named_as_older(tmp_path, anti):
+    """The stale record this repository actually has on disk is the older one.
+
+    `data/outputs/` carries records written by earlier runs, and an older
+    record's keys are a **subset** of what `render` reads — so re-rendering one
+    drops whole paragraphs and leaves a report that looks finished. The commit
+    that split `anti_predictive` into `overconfidence` and
+    `anti_predictive_return` left `RECORD_VERSION` at 2, so this guard could not
+    fire and a reader could not tell the two shapes apart.
+    """
+    assert FS.RECORD_VERSION == 3, (
+        "the record's shape changed when `anti_predictive` was split in two "
+        "and every bucket gained its corrected interval and its verdict; the "
+        "version must move with the shape or the staleness guard is decoration"
+    )
+    stale = _version_2_shaped(anti)
+    path = tmp_path / "stale.json"
+    path.write_text(json.dumps(stale, default=str), encoding="utf-8")
+
+    with pytest.raises(FS.ForecastSkillError) as raised:
+        FS.read_record(path)
+    message = str(raised.value)
+    assert "version 2 record" in message, message
+    assert "an older" in message, message
+    assert "Re-run" in message
+
+    # And the refusal is load-bearing, not ceremony: rendered anyway, the older
+    # shape loses the anti-predictive paragraph outright and nothing looks
+    # wrong.
+    headline = "Realised return by claimed edge — the anti-predictive statistic."
+    assert headline in FS.render(anti)
+    assert headline not in FS.render(stale)
 
 
 def test_the_disagreement_coefficient_survives_the_de_vig_choice(anti):

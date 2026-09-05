@@ -67,6 +67,16 @@ the first, recorded it under the key `anti_predictive`, and emitted the
 threshold sentence from it. Both are now measured and both are printed, and the
 threshold sentence is emitted only when the two return intervals are disjoint.
 
+Each bucket's return prints **both** intervals — the raw 95% one and the one
+widened by the family-wise correction over the experiment ledger's cumulative
+look count — labelled apart, and the disjointness the threshold sentence rests
+on is read off the corrected pair, because this comparison is one more look at
+the same data as every other interval in this report. Every printed interval
+carries `stats.RoiInterval.verdict()` beside it: a bucket whose corrected
+interval spans zero reads **no demonstrated edge** in exactly those words, and
+*demonstrated edge* and *demonstrated deficit* stay reserved for intervals that
+exclude zero after the correction.
+
 `b_market` is reported too, and it is a *diagnostic on the de-vig*, not a
 headline. Its null is **1.0**, not zero. A de-vigged price that is calibrated
 gives b_market near 1 with an intercept near 0; b_market far from 1 says the
@@ -291,8 +301,16 @@ from cbb_betting_lab.stores import _decimal_payout as decimal_payout
 #: Bumped whenever the record's shape changes, so a stale record fails loudly at
 #: re-render rather than rendering a report with holes in it. Version 2 carries
 #: two populations — every opinion and the threshold-selected subset — where
-#: version 1 carried one and could not say which it was.
-RECORD_VERSION = 2
+#: version 1 carried one and could not say which it was. Version 3 splits the
+#: single key `anti_predictive` — which held realised-minus-model-implied and
+#: was therefore overconfidence printed under the anti-predictive name — into
+#: `overconfidence` and `anti_predictive_return`, and the latter carries each
+#: bucket's family-corrected interval and its verdict beside the raw one. A
+#: version 2 record has none of those keys and every one of them is read by
+#: `render`, so re-rendering one would print a bucket section with the
+#: anti-predictive paragraph missing entirely and nothing would look wrong.
+#: That is exactly what :func:`read_record` refuses.
+RECORD_VERSION = 3
 
 #: The output stem. Competition-prefixed by `Competition.output_name`, so this
 #: lab's record could never be overwritten by another's.
@@ -1528,15 +1546,38 @@ def overconfidence_by_bucket(buckets: Sequence[Mapping]) -> dict:
 
 
 def _return_bucket(bucket: Mapping) -> dict:
-    """One bucket's realised return, with everything needed to read it."""
+    """One bucket's realised return, with everything needed to read it.
+
+    Both intervals travel, never one: the raw 95% interval **and** the interval
+    widened by the family-wise correction over `looks` — the experiment
+    ledger's cumulative count, which is what `build_record` hands `edge_buckets`
+    and what every other interval in this report is corrected by. A bucket that
+    carried only the raw interval would be the one place in the report where a
+    comparison was made before the search was counted.
+
+    `verdict` is `stats.RoiInterval.verdict()`, which reads the **corrected**
+    interval and the sign: `no demonstrated edge` when it spans zero,
+    `demonstrated edge` or `demonstrated deficit` when it does not, and `not
+    enough evidence` below the declared bet floor. It is carried here so no
+    renderer has to re-derive the words, and every printed interval prints it.
+    """
     roi = bucket.get("roi") or {}
+    raw_low = float(roi.get("low", 0.0))
+    raw_high = float(roi.get("high", 0.0))
     return {
         "low": bucket["low"],
         "high": bucket["high"],
         "rows": int(bucket.get("rows", 0)),
         "roi": float(roi.get("value", 0.0)),
-        "roi_low": float(roi.get("low", 0.0)),
-        "roi_high": float(roi.get("high", 0.0)),
+        "roi_low": raw_low,
+        "roi_high": raw_high,
+        # The family-wise correction, from the same `looks` every other
+        # interval in this record is corrected by. Absent keys fall back to the
+        # raw interval, which is what `RoiInterval.adjusted_low/high` return at
+        # one look — never something narrower than what was measured.
+        "roi_adjusted_low": float(roi.get("adjusted_low", raw_low)),
+        "roi_adjusted_high": float(roi.get("adjusted_high", raw_high)),
+        "looks": int(roi.get("looks", 1) or 1),
         "bets": int(roi.get("rows", 0)),
         "clusters": int(roi.get("clusters", 0)),
         "cluster_unit": str(roi.get("cluster_unit") or "game"),
@@ -1560,6 +1601,14 @@ def anti_predictive_return(buckets: Sequence[Mapping]) -> dict:
     only key any sentence about the shape may lean on. Two overlapping intervals
     are two buckets that have not been shown to differ, and saying so is not the
     same as saying they are equal.
+
+    **`demonstrated` reads the family-corrected intervals**, not the raw ones.
+    This comparison is one more look at the same data as every other interval
+    in this report, and a difference that survives only before the search is
+    counted has not survived. The raw disjointness is kept beside it as
+    `demonstrated_before_correction` — labelled, never printed as the answer —
+    so a reader can see what the correction cost, and `looks` records how many
+    results the correction was taken over.
     """
     usable = [
         b
@@ -1592,11 +1641,26 @@ def anti_predictive_return(buckets: Sequence[Mapping]) -> dict:
         "highest_bucket": highest,
         "falls_at_the_top": bool(highest["roi"] < lowest["roi"]),
         "return_falls_by": float(lowest["roi"] - highest["roi"]),
-        # Disjoint intervals, both clustered and both carrying their bet count.
-        # A difference whose intervals overlap has not been demonstrated, and a
-        # sentence that says "raising the threshold makes it worse" has to rest
-        # on this and not on the point estimates.
-        "demonstrated": bool(highest["roi_high"] < lowest["roi_low"]),
+        # How many results the family-wise correction is taken over. The
+        # ledger's cumulative count, threaded down from `build_record` through
+        # `edge_buckets`, so this comparison is corrected by the same divisor as
+        # the disagreement coefficient it is printed beside.
+        "looks": max(lowest["looks"], highest["looks"]),
+        # Disjoint intervals, both clustered, both carrying their bet count and
+        # both **family-corrected**. A difference whose corrected intervals
+        # overlap has not been demonstrated, and a sentence that says "raising
+        # the threshold makes it worse" has to rest on this and not on the
+        # point estimates and not on the uncorrected interval.
+        "demonstrated": bool(
+            highest["roi_adjusted_high"] < lowest["roi_adjusted_low"]
+        ),
+        # The same test before the correction, kept so the report can print
+        # what the correction cost. It is never the basis of a claim: a
+        # difference visible only at one look is a difference found by looking
+        # many times.
+        "demonstrated_before_correction": bool(
+            highest["roi_high"] < lowest["roi_low"]
+        ),
     }
 
 
@@ -2044,34 +2108,60 @@ def _bucket_section(measured: Mapping, record: Mapping) -> list[str]:
         lines.extend(_nothing("No wager carries a claimed edge."))
         return lines
     minimum = int(record.get("minimum_bucket", MINIMUM_BUCKET))
+    # The realised-return column is four cells, not one. A return, its sample
+    # size and clustering, the raw interval, the interval widened by the
+    # family-wise correction, and the verdict those words are reserved for —
+    # the same shape `price_backtest`'s ROI tables use, for the same reason. An
+    # interval printed with no verdict beside it is a verdict the reader
+    # supplies, and until 2026-09-05 this column printed `-14.3% [-23.9%,
+    # -4.6%]` and let the reader call it a demonstrated deficit, which at this
+    # run's look count it is not.
     add(
         "| Claimed edge | Wagers | Games | Model said | De-vigged price said | "
-        "Actually won | Realised − model | Realised return |"
+        "Actually won | Realised − model | Realised return | 95% interval | "
+        "Family-corrected | Verdict |"
     )
-    add("|:---|---:|---:|---:|---:|:---|---:|:---|")
+    add("|:---|---:|---:|---:|---:|:---|---:|---:|:---|:---|:---|")
     for bucket in buckets:
         label = bucket_label(bucket["low"], bucket["high"])
         n = int(bucket.get("rows", 0))
         if not n:
-            add(f"| {label} | 0 | 0 | — | — | — | — | — |")
+            add(f"| {label} | 0 | 0 | — | — | — | — | — | — | — | — |")
             continue
         if not bucket.get("enough"):
-            add(f"| {label} | {n:,} | {bucket['games']:,} | — | — | — | — | — |")
+            add(
+                f"| {label} | {n:,} | {bucket['games']:,} | — | — | — | — | — "
+                "| — | — | — |"
+            )
             continue
         roi = bucket.get("roi") or {}
-        return_cell = "—"
+        return_cell, interval_cell, corrected_cell = "—", "—", "—"
+        verdict_cell = "— (no settled wager)"
         if roi and roi.get("enough_evidence"):
+            looks = int(roi.get("looks", 1) or 1)
             return_cell = (
-                f"{roi['value']:+.1%} [{roi['low']:+.1%}, {roi['high']:+.1%}]"
+                f"{roi['value']:+.1%} over {roi['rows']:,} settled, "
+                f"{roi['clusters']:,} {roi.get('cluster_unit') or 'game'}s"
             )
+            interval_cell = f"[{roi['low']:+.1%}, {roi['high']:+.1%}]"
+            corrected_cell = (
+                f"[{roi['adjusted_low']:+.1%}, {roi['adjusted_high']:+.1%}] "
+                f"across {looks:,} look{'' if looks == 1 else 's'}"
+            )
+            verdict_cell = str(roi.get("verdict") or "")
         elif roi:
+            # Below the declared bet floor there is no return figure, and the
+            # verdict says so in the words `RoiInterval.verdict()` uses rather
+            # than leaving the cell blank for a reader to fill in.
             return_cell = f"— ({roi['rows']:,} settled)"
+            verdict_cell = str(roi.get("verdict") or "")
         add(
             f"| {label} | {n:,} | {bucket['games']:,} | "
             f"{bucket['model_implied']:.1%} | {bucket['market_implied']:.1%} | "
             f"{bucket['realised']:.1%} [{bucket['wilson_low']:.1%}, "
             f"{bucket['wilson_high']:.1%}] | "
-            f"{bucket['gap_to_model'] * 100:+.1f} pp | {return_cell} |"
+            f"{bucket['gap_to_model'] * 100:+.1f} pp | {return_cell} | "
+            f"{interval_cell} | {corrected_cell} | {verdict_cell} |"
         )
     add("")
     add(
@@ -2151,11 +2241,14 @@ def _anti_predictive_paragraph(measured: Mapping) -> list[str]:
     """The statistic the word *anti-predictive* actually names: realised return.
 
     Realised return in the highest claimed-edge bucket against the lowest, each
-    with its settled bet count, the clustering that produced its interval, and
-    the interval itself. The sentence *"raising the threshold makes it worse"*
-    is emitted only when the two intervals are **disjoint**, because that
-    sentence is a claim about money and the point estimates alone do not carry
-    it.
+    with its settled bet count, the clustering that produced its interval, the
+    raw 95% interval, the **family-corrected** interval beside it, and the
+    verdict those words are reserved for — a bucket whose corrected interval
+    spans zero reads `stats.NO_DEMONSTRATED_EDGE`. The sentence *"raising the
+    threshold makes it worse"* is emitted only when the two **corrected**
+    intervals are disjoint, because that sentence is a claim about money, the
+    point estimates alone do not carry it, and an interval read before the size
+    of the search is counted is not the interval the claim rests on.
     """
     lines: list[str] = []
     add = lines.append
@@ -2175,10 +2268,25 @@ def _anti_predictive_paragraph(measured: Mapping) -> list[str]:
     high = shape["highest_bucket"]
 
     def cell(bucket: Mapping) -> str:
+        """One bucket's return: both intervals, labelled, and the verdict.
+
+        Raw and family-corrected are printed side by side and named apart,
+        because the corrected one is what any claim rests on and the raw one is
+        what the correction was applied to. The verdict is
+        `stats.RoiInterval.verdict()` read off the corrected interval, so a
+        bucket whose corrected interval spans zero reads
+        `stats.NO_DEMONSTRATED_EDGE` in exactly those words — a printed
+        interval with no verdict beside it is the thing a reader supplies a
+        verdict for.
+        """
         return (
-            f"{bucket['roi']:+.1%} [{bucket['roi_low']:+.1%}, "
-            f"{bucket['roi_high']:+.1%}] over {bucket['bets']:,} settled "
-            f"wagers across {bucket['clusters']:,} {bucket['cluster_unit']}s"
+            f"{bucket['roi']:+.1%} over {bucket['bets']:,} settled wagers "
+            f"across {bucket['clusters']:,} {bucket['cluster_unit']}s, 95% "
+            f"interval [{bucket['roi_low']:+.1%}, {bucket['roi_high']:+.1%}], "
+            f"family-corrected [{bucket['roi_adjusted_low']:+.1%}, "
+            f"{bucket['roi_adjusted_high']:+.1%}] across "
+            f"{bucket['looks']:,} look{'' if bucket['looks'] == 1 else 's'} — "
+            f"{bucket['verdict']}"
         )
 
     head = (
@@ -2198,7 +2306,10 @@ def _anti_predictive_paragraph(measured: Mapping) -> list[str]:
     if shape.get("falls_at_the_top") and shape.get("demonstrated"):
         add(
             head
-            + " The two intervals do not overlap, so the return **falls** by "
+            + " The two **family-corrected** intervals do not overlap across "
+            f"{shape['looks']:,} look"
+            + ("" if shape["looks"] == 1 else "s")
+            + ", so the return **falls** by "
             f"{shape['return_falls_by'] * 100:.1f} pp across the range on the "
             "evidence of this run. That is anti-predictiveness measured on "
             "money, and it is what makes raising the edge threshold the wrong "
@@ -2210,9 +2321,18 @@ def _anti_predictive_paragraph(measured: Mapping) -> list[str]:
             head
             + " The point estimate falls by "
             f"{shape['return_falls_by'] * 100:.1f} pp across the range, but "
-            "the two intervals overlap, so **the fall is not demonstrated**. "
-            "No sentence here says raising the threshold makes it worse; the "
-            "disagreement coefficient is the test that can say so, and the "
+            "the two family-corrected intervals overlap across "
+            f"{shape['looks']:,} look"
+            + ("" if shape["looks"] == 1 else "s")
+            + ", so **the fall is not demonstrated**"
+            + (
+                " — the raw intervals were disjoint and the correction for the "
+                "size of the search is what closed the gap"
+                if shape.get("demonstrated_before_correction")
+                else " and the raw intervals overlap too"
+            )
+            + ". No sentence here says raising the threshold makes it worse; "
+            "the disagreement coefficient is the test that can say so, and the "
             "overconfidence column above measures a different quantity."
         )
     else:
@@ -2759,14 +2879,27 @@ def write_record(record: Mapping, path: Path) -> Path:
 
 
 def read_record(path: Path) -> dict:
+    """Read a record, refusing any shape but this module's.
+
+    Both directions are refused and both are named. An **older** record is the
+    one this repository actually produces — `data/outputs/` carries records
+    written by earlier runs — and it is the dangerous one: its keys are a
+    subset of what `render` reads, so re-rendering it drops whole paragraphs
+    and leaves a report that looks finished. A **newer** record was written by
+    a checkout ahead of this one and cannot be read at all. Neither is
+    salvaged: the fix is to re-run the regression, not to re-render.
+    """
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     version = int(payload.get("record_version", 0))
     if version != RECORD_VERSION:
+        older = version < RECORD_VERSION
         raise ForecastSkillError(
             f"{Path(path).name} is a version {version} record and this module "
-            f"writes version {RECORD_VERSION}. Re-run the regression rather "
-            "than re-rendering a record whose shape has changed — a stale "
-            "record renders a report with holes in it and nothing looks wrong."
+            f"writes version {RECORD_VERSION}, so it is "
+            + ("an older" if older else "a newer")
+            + " shape. Re-run the regression rather than re-rendering a record "
+            "whose shape has changed — a stale record renders a report with "
+            "holes in it and nothing looks wrong."
         )
     return payload
 
