@@ -105,7 +105,7 @@ from __future__ import annotations
 
 import importlib
 import inspect
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -366,11 +366,28 @@ DEFAULT_MODEL = "cbb_betting_lab.models.ratings:matchups_for"
 #: The keyword arguments a model may declare. It is handed the ones it names and
 #: no others, so a model that only wants the day and the history does not have
 #: to accept arguments it will not read.
+#:
+#: This is the vocabulary, not a promise: no single caller builds all of it —
+#: the price backtest's per-day pricer builds four of these five — so a model
+#: that *requires* one is wired to some callers and not others. Which is why
+#: :func:`call_model` checks against what the caller in hand actually supplies
+#: rather than against this tuple.
 MODEL_ARGUMENTS: tuple[str, ...] = ("day", "history", "prices", "competition", "raw_dir")
 
 
 class ModelNotWired(RuntimeError):
     """The named model could not be resolved. No fallback pricer exists."""
+
+
+class ModelArgumentUnsupplied(ModelNotWired):
+    """The model requires an argument the caller does not build.
+
+    A subclass of :class:`ModelNotWired` because it is the same fault seen from
+    the other end — the model and the caller are not wired to each other — and
+    because every entry point that already exits on a wiring fault should exit
+    on this one too, rather than growing a second handler that could be
+    forgotten at one of them.
+    """
 
 
 def resolve_model(spec: str = DEFAULT_MODEL) -> Callable:
@@ -421,22 +438,118 @@ def resolve_model(spec: str = DEFAULT_MODEL) -> Callable:
     return model
 
 
-def call_model(model: Callable, **arguments):
-    """Call a model with the arguments it declares, and no others.
+def model_name(model: Callable) -> str:
+    """`module.qualname` for a model, for refusals that have to name it."""
+    qualname = getattr(model, "__qualname__", None) or getattr(model, "__name__", "")
+    module = getattr(model, "__module__", "")
+    if qualname and module:
+        return f"{module}.{qualname}"
+    return qualname or repr(model)
 
-    A model that only wants the day and the history should not have to accept a
-    price frame it will never read, and a model that takes `**kwargs` gets
-    everything. Filtering here rather than at the model keeps the walk-forward
-    guarantee in one place: `history` is built by :func:`history_before` and is
-    the only view of the past anything downstream is given.
+
+def unsupplied_arguments(model: Callable, provided: Iterable[str]) -> list[str]:
+    """The parameters `model` requires that a caller offering `provided` cannot fill.
+
+    Empty means the pair is wired. A non-empty list is a wiring fault and
+    :func:`call_model` refuses on it; it is a function rather than four lines
+    inside `call_model` so a caller can be checked against a model without
+    calling it, which is the only way to assert the shipped seam still fits its
+    shipped callers without loading a season of data to run it.
+
+    **A parameter with a default is exempt, and that is a real distinction
+    rather than a hole in the check.** A default is the model author's written
+    statement that absence is acceptable and that the model has a defined
+    behaviour without the argument: `raw_dir=None` means "read the packaged raw
+    directory", `competition=CBB` means "this lab". A *required* parameter is
+    the opposite statement — the model cannot produce a number without it. The
+    signature is the one place the author makes either statement, so it is the
+    one place this reads. A model that genuinely needs a table nobody builds
+    yet says so by not defaulting it, and then this refuses instead of handing
+    it `None`.
+
+    Positional-only parameters are counted unsupplied even when the caller has
+    a value of that name: this seam calls by keyword only, so a required
+    positional-only parameter cannot be filled here by any caller.
     """
+    offered = set(provided)
+    try:
+        parameters = inspect.signature(model).parameters
+    except (TypeError, ValueError):
+        # Not introspectable — a builtin, or a C callable. Nothing can be
+        # checked and nothing can be filtered. Refusing here would refuse a
+        # model that is fine; the callee raises in its own words instead.
+        return []
+    unsupplied: list[str] = []
+    for name, parameter in parameters.items():
+        if parameter.default is not inspect.Parameter.empty:
+            continue
+        if parameter.kind in (
+            inspect.Parameter.VAR_POSITIONAL,
+            inspect.Parameter.VAR_KEYWORD,
+        ):
+            # `*args` and `**kwargs` are never required of a caller.
+            continue
+        if parameter.kind is inspect.Parameter.POSITIONAL_ONLY or name not in offered:
+            unsupplied.append(name)
+    return unsupplied
+
+
+def call_model(model: Callable, caller: str, /, **arguments):
+    """Call a model with the arguments it declares — or refuse, naming both.
+
+    Two rules, and the second one is the reason this function exists rather
+    than a bare `model(**arguments)` at each call site:
+
+    1. **An argument the model does not declare is not passed.** A model that
+       only wants the day and the history should not have to accept a price
+       frame it will never read, and a model taking `**kwargs` gets everything.
+       Filtering here rather than at the model keeps the walk-forward guarantee
+       in one place: `history` is built by :func:`history_before` and is the
+       only view of the past anything downstream is given.
+
+    2. **A parameter the model requires and the caller cannot build is a
+       refusal, not a quieter call.** Until 2026-09-05 this function filtered
+       the arguments by the callee's signature and stopped there, so a model
+       declaring `player_games` — as `models.ratings.matchups_for` does, with
+       four call sites and all four in `tests/` — was called without it and
+       never told. It would have priced the day off whatever its default was
+       and returned probabilities that looked like every other day's. That is
+       the shape this lab has spent the week removing: a missing input that
+       produces a plausible answer instead of an error.
+
+    `caller` is positional-only so it can never be shadowed by an argument the
+    model happens to name `caller`, and it has no default because a refusal
+    that cannot say whose call it was sends the reader to the wrong file.
+
+    See :func:`unsupplied_arguments` for why a parameter with a default is
+    exempt from rule 2.
+    """
+    missing = unsupplied_arguments(model, arguments)
+    if missing:
+        raise ModelArgumentUnsupplied(
+            f"{model_name(model)} requires "
+            + ", ".join(repr(name) for name in missing)
+            + f", which {caller} does not build. That caller supplies "
+            + f"{sorted(arguments)}. Nothing was priced: a model handed nothing "
+            "where it asked for a table would price from a substitute and "
+            "report the result in intervals, which is a wrong number wearing "
+            "a right number's clothes. Either build the argument at the caller "
+            "or give the parameter a default, which declares that the model "
+            "has a defined behaviour without it."
+        )
     try:
         parameters = inspect.signature(model).parameters
     except (TypeError, ValueError):
         return model(**arguments)
     if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
         return model(**arguments)
-    return model(**{k: v for k, v in arguments.items() if k in parameters})
+    passable = {
+        name
+        for name, parameter in parameters.items()
+        if parameter.kind
+        in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+    }
+    return model(**{k: v for k, v in arguments.items() if k in passable})
 
 
 def history_before(

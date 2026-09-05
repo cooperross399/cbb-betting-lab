@@ -563,6 +563,186 @@ def test_the_default_model_resolves(tmp_path):
     module = importlib.import_module(module_name)
     assert callable(getattr(module, attribute))
 
+
+# --------------------------------------------------------------------------
+# The seam under-supplying a model, which used to be silent
+# --------------------------------------------------------------------------
+#
+# `call_model` filtered its arguments by the callee's signature: a model that
+# declared a parameter the caller did not build was called without it and never
+# told. `models.ratings.matchups_for` declares `player_games`, has four call
+# sites, and all four are in `tests/` — no production caller builds it. The
+# rule now is that a *required* parameter the caller cannot build is a refusal,
+# and a parameter with a default is exempt because the default is the author's
+# statement that absence is acceptable. Both halves are asserted below,
+# because a check that refuses everything is as useless as one that refuses
+# nothing.
+
+
+class _RequiresAPlayerFrame:
+    """A model of the shape a player-prop model would have. Never callable here."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def matchups_for(self, *, day, history, prices, competition, player_games):
+        self.calls += 1
+        return {}
+
+
+def _model_arguments_the_backtests_pricer_builds() -> dict:
+    return {
+        "day": DAYS[0],
+        "history": team_games().iloc[0:0],
+        "prices": price_store(team_games()),
+        "competition": CBB,
+    }
+
+
+def test_a_model_requiring_an_argument_the_caller_cannot_build_is_refused():
+    """The seam refuses, naming the parameter and the caller, and does not call.
+
+    Before this, the model was called with the four arguments the caller had
+    and `player_games` fell to whatever the model's default was. A player model
+    would have priced every prop off an absent frame and returned probabilities
+    indistinguishable from the ones it returns when the frame is there.
+    """
+    model = _RequiresAPlayerFrame()
+
+    with pytest.raises(PB.ModelNotWired) as raised:
+        PB.call_model(
+            model.matchups_for,
+            "the price backtest's per-day pricer (make_price_day)",
+            **_model_arguments_the_backtests_pricer_builds(),
+        )
+
+    message = str(raised.value)
+    assert "player_games" in message, message
+    assert "per-day pricer" in message, "a refusal must name whose call it was"
+    assert "['competition', 'day', 'history', 'prices']" in message, (
+        "and must say what the caller does build, so the reader knows which "
+        "side to change"
+    )
+    assert model.calls == 0, "the model was called anyway, under-supplied"
+
+
+def test_a_required_argument_is_refused_even_through_kwargs():
+    """`**kwargs` does not excuse a parameter that was named and not defaulted.
+
+    The old filter short-circuited on `**kwargs` and passed everything, which
+    is right for the arguments the caller has and says nothing about the one it
+    does not.
+    """
+    def player_model(*, day, history, prices, competition, player_games, **rest):
+        raise AssertionError("called without the frame it required")
+
+    with pytest.raises(PB.ModelNotWired) as raised:
+        PB.call_model(
+            player_model,
+            "the price backtest's per-day pricer (make_price_day)",
+            **_model_arguments_the_backtests_pricer_builds(),
+        )
+
+    assert "player_games" in str(raised.value)
+
+
+def test_a_required_positional_only_parameter_cannot_be_filled_and_is_refused():
+    """This seam calls by keyword only, so a positional-only parameter never arrives.
+
+    Its name being in the caller's vocabulary does not make it fillable, and
+    without this branch the refusal would be a bare `TypeError` from Python
+    naming neither the seam nor the caller.
+    """
+    def positional_model(day, /, *, history, prices, competition):
+        raise AssertionError("called with a parameter this seam cannot pass")
+
+    with pytest.raises(PB.ModelNotWired) as raised:
+        PB.call_model(
+            positional_model,
+            "the price backtest's per-day pricer (make_price_day)",
+            **_model_arguments_the_backtests_pricer_builds(),
+        )
+
+    assert "'day'" in str(raised.value)
+
+
+def test_a_declared_argument_with_a_default_is_exempt_and_the_model_still_runs():
+    """A default is a declaration that absence is acceptable. Honour it.
+
+    This is the half of the rule that keeps the check honest: `matchups_for`
+    defaults `raw_dir` and `competition`, the backtest's pricer builds neither
+    `raw_dir` nor `player_games`, and refusing on those would refuse every run
+    the lab makes today.
+    """
+    seen: dict = {}
+    declared_default = "the frame the model reads when nobody hands it one"
+
+    def player_model(
+        *, day, history, prices, competition, player_games=declared_default
+    ):
+        seen["player_games"] = player_games
+        return {"evt-1": "priced"}
+
+    result = PB.call_model(
+        player_model,
+        "the price backtest's per-day pricer (make_price_day)",
+        **_model_arguments_the_backtests_pricer_builds(),
+    )
+
+    assert result == {"evt-1": "priced"}
+    assert "player_games" in seen, "the model was not called"
+    assert seen["player_games"] == declared_default, (
+        "the seam filled the parameter in itself. Exempting a default means "
+        "letting the model's own default stand, not passing None on its behalf "
+        "— which is the silent under-supply this whole check exists to stop"
+    )
+
+
+def test_the_shipped_model_fits_both_of_the_callers_that_ship_with_it():
+    """`matchups_for` requires nothing either production caller fails to build.
+
+    Read off the signature rather than by running it, so this stays a cheap
+    gate on the seam rather than a second copy of the backtest. If a player
+    frame is ever made required without a caller being taught to build it,
+    this is the test that goes red before the card does.
+    """
+    from cbb_betting_lab.models.ratings import matchups_for
+
+    backtest_builds = {"day", "history", "prices", "competition"}
+    card_builds = backtest_builds | {"raw_dir"}
+
+    assert PB.unsupplied_arguments(matchups_for, backtest_builds) == []
+    assert PB.unsupplied_arguments(matchups_for, card_builds) == []
+    assert PB.unsupplied_arguments(matchups_for, {"day"}) == ["history", "prices"], (
+        "the check is reading this signature, not returning empty for everything"
+    )
+
+
+def test_the_backtest_exits_on_a_model_that_does_not_fit_rather_than_pricing(
+    tmp_path, capsys
+):
+    """End to end, through the same `--model` door an operator uses.
+
+    The unit tests above call the seam directly; this one proves the refusal
+    reaches the operator as `::error::` and a non-zero exit with nothing
+    written, rather than as a traceback or, worse, as a report.
+    """
+    lab = Lab(tmp_path).with_tables().with_store()
+    module_name = "cbb_stub_model_requires_players"
+    module = types.ModuleType(module_name)
+    module.matchups_for = _RequiresAPlayerFrame().matchups_for
+    sys.modules[module_name] = module
+
+    code = lab.run("--model", f"{module_name}:matchups_for")
+
+    assert code != 0
+    combined = "".join(capsys.readouterr())
+    assert "::error::" in combined
+    assert "player_games" in combined
+    assert "per-day pricer" in combined
+    assert not lab.report_path.exists(), "a report was written for an unwired model"
+    assert not lab.record_path.exists()
+
 def test_a_model_with_an_opinion_on_nothing_is_a_wiring_fault_until_proven_otherwise(
     tmp_path, capsys
 ):

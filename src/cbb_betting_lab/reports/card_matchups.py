@@ -34,8 +34,11 @@ copy of each is a known defect family in the sibling labs:
 ## What is refused, and why it is a refusal
 
 The processed table the model fits on (`cbb_team_games.csv`) or the cached
-schedule for the season being absent raises :class:`InputsAbsent`. The entry
-point turns that into `::error::` and `decision=refused`. It is not degraded to
+schedule for the season being absent raises :class:`InputsAbsent`. A model that
+*requires* an argument this caller does not build raises
+`price_backtest.ModelArgumentUnsupplied` — the seam refusing rather than
+under-supplying, which is what it used to do in silence. The entry point turns
+either into `::error::` and `decision=refused`. It is not degraded to
 "price nothing and carry on", because that is precisely the state this module
 exists to end: a card with no opinion on anything is indistinguishable, from
 the outside, from a card whose model was never asked. **The card must say it
@@ -252,6 +255,7 @@ def matchups_for_card(
     if not joined.empty:
         matchups = PB.call_model(
             resolved_model,
+            "the gameday card's matchups_for_card",
             day=str(day),
             history=history,
             prices=joined,
