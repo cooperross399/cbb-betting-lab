@@ -2229,3 +2229,25 @@ def test_the_purchase_restores_the_latest_cache_of_any_wave() -> None:
         f"a wave-scoped restore key {restore_keys!r} hits before the any-wave one "
         "and shadows it — the exact defect this test pins"
     )
+
+
+def test_the_purchase_can_merge_an_orphaned_lineage_from_its_artifact() -> None:
+    """The any-wave restore key resolves to ONE cache — the latest — so a run
+    whose cache was saved before another run started is a lineage the chain
+    never restores again. The 609-event ladders run survived only in its own
+    cache and its artifact while every later run restored the props lineage.
+
+    The workflow must be able to merge a named run's raw-response artifact on
+    top of the restored cache before the rebuild, so the post-save holds the
+    union and every later run inherits it."""
+    document = yaml.safe_load((WORKFLOWS_DIR / "historical-purchase.yml").read_text(encoding="utf-8"))
+    triggers = document.get("on") or document.get(True) or {}
+    inputs = triggers["workflow_dispatch"]["inputs"]
+    assert "merge_artifact_runs" in inputs
+    names = [s.get("name", "") for job in document["jobs"].values() for s in steps_of(job)]
+    merge = next(i for i, n in enumerate(names) if n.startswith("Merge prior runs"))
+    restore = next(i for i, n in enumerate(names) if n == "Restore the bought responses")
+    rebuild = next(i for i, n in enumerate(names) if n.startswith("Build the store"))
+    assert restore < merge < rebuild, f"merge must sit between restore and rebuild; order is {names[restore:rebuild+1]}"
+    step = [s for job in document["jobs"].values() for s in steps_of(job) if str(s.get("name","")).startswith("Merge prior runs")][0]
+    assert "cp -Rn" in step["run"], "an existing response must never be overwritten by an older lineage's copy"
