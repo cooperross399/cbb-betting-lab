@@ -40,6 +40,7 @@ import dataclasses
 import importlib.util
 import json
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -52,6 +53,8 @@ from cbb_betting_lab.experiment_ledger import load as load_ledger
 from cbb_betting_lab.reports import forecast_skill as FS
 from cbb_betting_lab.reports import price_backtest as PB
 from cbb_betting_lab.reports import replication as REPL
+from cbb_betting_lab.reports import what_we_can_claim as WC
+from cbb_betting_lab.reports import why_the_model as WTM
 
 REPO = Path(__file__).resolve().parents[1]
 OUTPUTS = REPO / "data" / "outputs"
@@ -174,6 +177,104 @@ def test_an_absent_ledger_leaves_the_records_own_correction_in_force(tmp_path):
     )
 
 
+@pytest.mark.parametrize(
+    "how",
+    ["absent", "unreadable"],
+    ids=["a ledger that is not there", "a ledger that will not parse"],
+)
+@pytest.mark.parametrize(
+    "build",
+    [
+        pytest.param(lambda out: WC.build_record(output_dir=out), id="what_we_can_claim"),
+        pytest.param(
+            lambda out: WTM.build_record(competition=CBB, output_dir=out),
+            id="why_the_model",
+        ),
+    ],
+)
+def test_a_ledger_the_renderer_cannot_read_never_manufactures_a_replication(
+    tmp_path, build, how
+):
+    """The one direction a restatement may not move, at the two call sites that could.
+
+    `correction_from_ledger` returns `looks=1` for a ledger that is absent and
+    for one that is present and will not parse — deliberately, so a broken file
+    does not take the whole document down. One look applies no correction at
+    all, so passing it straight to `replication.restated` does not merely fail
+    to widen: it runs `judge_cell` again on the RAW 95% bounds and hands back
+    states nobody measured. On the committed record that turns
+    `team_total / mid_major` from *nothing to replicate* into **replicated** and
+    `total_points / low_major` into *did not replicate* — a claim manufactured
+    by deleting a file.
+
+    The floor is `restatement.widened`, which takes the larger of the ledger's
+    count and the record's own, so the worst an unreadable ledger can do is
+    leave the correction exactly where the run published it.
+    """
+    outputs = tmp_path / "outputs"
+    shutil.copytree(OUTPUTS, outputs)
+    ledger = outputs / "experiment_ledger.json"
+    assert ledger.is_file(), "the fixture copy must start with a readable ledger"
+
+    with_ledger = build(outputs)
+
+    if how == "absent":
+        ledger.unlink()
+    else:
+        ledger.write_text("{ this is not json", encoding="utf-8")
+
+    without_ledger = build(outputs)
+
+    for label, record in (("with", with_ledger), ("without", without_ledger)):
+        states = _replication_states(record)
+        assert states.get("replicated", 0) == 0, (
+            f"{label} a readable ledger, the report states "
+            f"{states.get('replicated')} replicated cell(s). The committed "
+            "record replicates nothing at its own correction or at the "
+            "ledger's; a replication that appears when a file is removed was "
+            "manufactured by the removal."
+        )
+        assert states.get("did not replicate", 0) == 0
+
+    assert _replication_states(with_ledger) == _replication_states(without_ledger), (
+        "an unreadable ledger changed the replication states. The floor exists "
+        "so that it cannot: the record's own correction stays in force."
+    )
+
+
+def _replication_states(record) -> dict:
+    """The replication state counts a built record carries, in either spelling.
+
+    `why_the_model` stores them already counted under
+    `replication.counts`; `what_we_can_claim` carries them as a `replicated`
+    flag on each claim plus its own `replication` block. Both are read here so
+    one test can hold both call sites, and the helper asserts it found
+    something rather than returning an empty dict that would make every
+    assertion below it vacuous.
+    """
+    payload = record.get("replication")
+    if isinstance(payload, dict) and isinstance(payload.get("counts"), dict):
+        counts = {str(k): int(v) for k, v in payload["counts"].items()}
+    else:
+        counts = {}
+        for market in (payload or {}).get("markets", []) or []:
+            for cell in market.get("cells", [market]):
+                state = cell.get("state")
+                if state:
+                    counts[state] = counts.get(state, 0) + 1
+        for claim in record.get("claims", []) or []:
+            if claim.get("replicated"):
+                counts["replicated"] = counts.get("replicated", 0) + 1
+        counts.setdefault("replicated", 0)
+        counts.setdefault("did not replicate", 0)
+    assert counts, (
+        "no replication states were found in the built record. This helper is "
+        "the only thing the assertions below read, so an empty result would "
+        "make the whole test pass on nothing."
+    )
+    return counts
+
+
 def test_a_shorter_ledger_never_narrows_a_report(tmp_path):
     shorter = RESTATEMENT.Correction(looks=12, factor=1.0, found=True, source="x")
     assert RESTATEMENT.widened(95, shorter) == 95
@@ -226,6 +327,60 @@ def test_the_rebuild_flag_reads_the_ledger_rather_than_replaying_the_record(
     )
 
 
+def test_a_restated_report_does_not_announce_that_no_correction_was_applied():
+    """The two sentences that used to contradict each other on one page.
+
+    `ledger_read` records whether the RUN found a ledger, and a restatement
+    deliberately leaves it alone — it is provenance, not arithmetic. But a
+    re-render corrects from the ledger it finds at render time, so a record
+    written with no ledger and re-rendered beside a 95-hypothesis one had every
+    interval widened by x1.77 under a bold paragraph reading *"NO FAMILY
+    CORRECTION WAS APPLIED ... Every interval below is the raw one ... Read
+    nothing here as corrected"*. The alarming sentence was the wrong one, which
+    is the worst way round for it to be wrong.
+
+    The paragraph is now keyed on the correction in force on the page. The
+    warning still fires when there genuinely is none, and when a run that saw
+    no ledger is corrected at render time the page says both things.
+    """
+    record = json.loads(
+        (OUTPUTS / "cbb_price_backtest.json").read_text(encoding="utf-8")
+    )
+    correction = RESTATEMENT.current(LEDGER)
+    looks = RESTATEMENT.widened(_as_int_or_one(record.get("looks")), correction)
+    assert looks > 1, "this test needs a ledger with a real cumulative count"
+
+    corrected_but_blind = RESTATEMENT.restate_tree(copy.deepcopy(record), looks=looks)
+    corrected_but_blind["looks"] = looks
+    corrected_but_blind["correction_factor"] = S.bonferroni_factor(looks)
+    corrected_but_blind["ledger_read"] = False
+    page = PB.render(corrected_but_blind)
+
+    assert "NO FAMILY CORRECTION WAS APPLIED" not in page, (
+        "the page announces that no correction was applied, over intervals it "
+        f"widened by x{S.bonferroni_factor(looks):.2f}."
+    )
+    assert f"Family correction: {looks:,} cumulative hypotheses" in page
+    assert "found no ledger; this correction was read at render time" in page, (
+        "the page corrects at render time and does not say that the run itself "
+        "never saw a ledger, which is the provenance the flag exists to carry."
+    )
+
+    # And the warning still fires when there is genuinely no correction.
+    uncorrected = copy.deepcopy(record)
+    uncorrected["looks"] = 1
+    uncorrected["correction_factor"] = 1.0
+    uncorrected["ledger_read"] = False
+    assert "NO FAMILY CORRECTION WAS APPLIED" in PB.render(uncorrected)
+
+
+def _as_int_or_one(value) -> int:
+    try:
+        return max(int(value), 1)
+    except (TypeError, ValueError):
+        return 1
+
+
 def _hypothesis(index: int) -> dict:
     return {
         "search": "synthetic",
@@ -258,24 +413,90 @@ def _generated_documents() -> list[Path]:
     return sorted(OUTPUTS.rglob("*.md")) + sorted(DOCS.rglob("*.md"))
 
 
-def test_every_generated_document_states_the_ledgers_current_count():
+#: Every document that MUST state the family size it corrects by, by name.
+#:
+#: **A roster, not a count.** This guard used to end at `assert checked >= 8`
+#: over the whole tree, and the tree yields 13 — so five documents could stop
+#: stating a correction at all and the floor still passed. That is not a
+#: hypothetical: `what_we_can_claim.render` emits its sentence only when a
+#: ledger was applied, so one render beside a missing ledger drops two of these
+#: files to zero matches, and seven of the thirteen have no other freshness
+#: check on them — they are not in the byte-equality parametrisation below and
+#: not in `HAND_WRITTEN`. A floor that is a sum cannot name what went missing;
+#: a roster can, and it goes red on the file rather than on the total.
+#:
+#: A document that legitimately stops carrying a correction is removed from
+#: here in the same commit, which is a line in a diff somebody has to justify.
+DOCUMENTS_THAT_STATE_A_CORRECTION: tuple[str, ...] = (
+    "data/outputs/cbb_experiment_ledger.md",
+    "data/outputs/cbb_forecast_skill.md",
+    "data/outputs/cbb_forward_evidence.md",
+    "data/outputs/cbb_price_backtest.md",
+    "data/outputs/cbb_ratings_fit.md",
+    "data/outputs/cbb_reachability.md",
+    "data/outputs/cbb_what_we_can_claim.md",
+    "data/outputs/cbb_why_the_model.md",
+    "data/outputs/core_team_only/cbb_price_backtest.md",
+    "data/outputs/holdout/cbb_price_backtest.md",
+    "data/outputs/holdout/cbb_replication.md",
+    "docs/what_we_can_and_cannot_claim.md",
+    "docs/why_the_model_does_or_does_not_have_an_edge.md",
+)
+
+
+@pytest.mark.parametrize("relative", DOCUMENTS_THAT_STATE_A_CORRECTION)
+def test_each_document_on_the_roster_states_the_ledgers_current_count(relative):
+    """Named, so a document that stops stating a correction fails as itself."""
     looks = ledger_looks()
-    checked = 0
-    for path in _generated_documents():
-        text = path.read_text(encoding="utf-8")
-        for match in CORRECTION_SENTENCES.finditer(text):
-            stated = next(group for group in match.groups() if group)
-            checked += 1
-            assert int(stated.replace(",", "")) == looks, (
-                f"{path.relative_to(REPO)} states its correction over "
-                f"{stated} hypotheses and the experiment ledger holds "
-                f"{looks:,}. Re-render it: a verdict stated at a narrower "
-                "correction than the search that produced it is the defect "
-                "decision 46 closed."
-            )
-    assert checked >= 8, (
-        f"only {checked} correction sentences were found across the generated "
-        "documents, so this guard is watching less than it thinks it is"
+    path = REPO / relative
+    assert path.is_file(), (
+        f"{relative} is on the roster of documents that must state their family "
+        "correction and is not on disk. Either re-render it or take it off the "
+        "roster in this commit."
+    )
+    text = path.read_text(encoding="utf-8")
+    stated = [
+        next(group for group in match.groups() if group)
+        for match in CORRECTION_SENTENCES.finditer(text)
+    ]
+    assert stated, (
+        f"{relative} states no family correction at all. Every interval it "
+        "prints is then uncorrected with nothing on the page saying so — which "
+        "is what `what_we_can_claim.render` does when it is rendered beside a "
+        "ledger it cannot read. Re-render it beside the ledger, or add the new "
+        "phrasing to CORRECTION_SENTENCES if the wording changed."
+    )
+    for value in stated:
+        assert int(value.replace(",", "")) == looks, (
+            f"{relative} states its correction over {value} hypotheses and the "
+            f"experiment ledger holds {looks:,}. Re-render it: a verdict stated "
+            "at a narrower correction than the search that produced it is the "
+            "defect decision 46 closed."
+        )
+
+
+def test_the_roster_names_every_document_that_states_a_correction():
+    """The roster cannot silently fall behind the tree.
+
+    The failure the roster replaces was a document dropping off a count. The
+    failure a roster introduces is a NEW document nobody added to it, so that
+    one is closed here: any generated document that states a correction and is
+    not on the roster fails, by name.
+    """
+    on_disk = {
+        path.relative_to(REPO).as_posix()
+        for path in _generated_documents()
+        if CORRECTION_SENTENCES.search(path.read_text(encoding="utf-8"))
+    }
+    roster = set(DOCUMENTS_THAT_STATE_A_CORRECTION)
+    assert on_disk - roster == set(), (
+        f"{sorted(on_disk - roster)} state a family correction and are not on "
+        "DOCUMENTS_THAT_STATE_A_CORRECTION, so nothing checks that theirs is "
+        "current. Add them."
+    )
+    assert roster - on_disk == set(), (
+        f"{sorted(roster - on_disk)} are on the roster and state no correction. "
+        "That is the exact hole the roster exists to catch."
     )
 
 
@@ -754,4 +975,38 @@ def test_restating_at_the_run_s_own_count_is_the_old_render_exactly(
     )
     assert RESTATEMENT.RESTATED_FROM not in unmoved, (
         "a record that did not move was stamped as restated"
+    )
+
+
+def test_the_status_row_counts_the_decision_log_rather_than_quoting_it():
+    """Row 21 said 47 while the log held 48, one commit after decision 46 landed.
+
+    A hand-maintained tally of a file that grows is stale by construction; this
+    one drifted in the same commit that recorded the decision about numbers
+    going stale. Counted here rather than re-typed, so the next decision fails
+    the suite instead of quietly widening the gap.
+    """
+    rows = re.findall(
+        r"^\| *(\d+) *\|", (DOCS / "decision_log.md").read_text(encoding="utf-8"), re.M
+    )
+    assert rows, "no numbered rows found in docs/decision_log.md"
+    status = (DOCS / "project_status.md").read_text(encoding="utf-8")
+    stated = re.search(r"\| \*\*done\*\* \| ([\d,]+) decisions", status)
+    assert stated, (
+        "docs/project_status.md row 21 no longer states a decision count in the "
+        "shape this guard reads. Re-point the guard in the same commit."
+    )
+    assert int(stated.group(1).replace(",", "")) == len(rows), (
+        f"docs/project_status.md states {stated.group(1)} decisions and "
+        f"docs/decision_log.md holds {len(rows)} rows."
+    )
+
+    classes = re.findall(
+        r"^\| *([A-Z]{1,2}) *\|", (DOCS / "ported_defects.md").read_text(encoding="utf-8"), re.M
+    )
+    stated_classes = re.search(r"\*\*(\d+) defect classes\*\*", status)
+    assert stated_classes, "row 21 no longer states a defect-class count"
+    assert int(stated_classes.group(1)) == len(classes), (
+        f"docs/project_status.md states {stated_classes.group(1)} defect "
+        f"classes and docs/ported_defects.md holds {len(classes)}."
     )

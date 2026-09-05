@@ -133,6 +133,7 @@ import pandas as pd
 from cbb_betting_lab import forward_evidence
 from cbb_betting_lab import gates
 from cbb_betting_lab import markets as markets_registry
+from cbb_betting_lab import restatement as RESTATEMENT
 from cbb_betting_lab import staging_provider_policy as policy_module
 from cbb_betting_lab import stats as S
 from cbb_betting_lab import verdicts as verdicts_module
@@ -1332,7 +1333,21 @@ def build_record(
     ):
         replication_payload = replication_report.restated(
             replication_payload,
-            looks=looks,
+            # **Floored by the record's own count, not the page's.** `looks`
+            # above is the ledger's raw count, and an absent or unreadable
+            # ledger makes that 1. For the tables below that is deliberate and
+            # loud: they are rebuilt from the stored estimate and standard
+            # error, and the document says in words that no correction could be
+            # applied. Here it would be silent and it would run `judge_cell`
+            # again, so a missing file would not just widen nothing — it would
+            # re-judge `team_total / mid_major` from *nothing to replicate* to
+            # **replicated**, printing a claim this lab has never earned. A
+            # restatement may only ever retract. `restatement.widened` is that
+            # floor, and it is the same one all four `--rebuild-report-only`
+            # paths take.
+            looks=RESTATEMENT.widened(
+                _as_int(replication_payload.get("looks")), correction
+            ),
             record_name=replication_report.record_file_name(replication_payload),
         )
     states = replication_states(replication_payload)

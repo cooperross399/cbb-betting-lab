@@ -93,6 +93,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from cbb_betting_lab import stats as S
+from cbb_betting_lab import restatement as RESTATEMENT
 from cbb_betting_lab.competitions import Competition
 from cbb_betting_lab.config import REPO_ROOT
 from cbb_betting_lab.conferences import Tier
@@ -896,7 +897,12 @@ def build_record(
     ):
         replication = REPLICATION.restated(
             replication,
-            looks=looks,
+            # Floored by the record's own count. `looks` is the ledger's raw
+            # count and an absent or unreadable ledger makes it 1, which would
+            # re-judge the held-out states on uncorrected bounds and print
+            # `replicated: 1 of 32` from a record whose own count is 0. A
+            # restatement may only ever retract; see `restatement.widened`.
+            looks=RESTATEMENT.widened(_as_int(replication.get("looks")), correction),
             record_name=REPLICATION.record_file_name(replication),
         )
 

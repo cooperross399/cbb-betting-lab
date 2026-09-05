@@ -2008,7 +2008,18 @@ def render(record: dict) -> str:
     )
     add("")
     looks = int(record.get("looks", 1))
-    if record.get("ledger_read", True):
+    # **Decided by the correction on this page, not by the flag the run wrote.**
+    # `ledger_read` records whether the RUN found a ledger, and a restatement
+    # deliberately does not move it — it is provenance. But since decision 46 a
+    # re-render corrects from the ledger it finds at render time, so a record
+    # written with `ledger_read=False, looks=1` and re-rendered beside a
+    # 95-hypothesis ledger has every interval on the page widened by x1.77
+    # while this paragraph, keyed off the flag, announced in bold that no
+    # correction had been applied and that every interval below was raw. Two
+    # sentences on one page stating opposite facts about the same numbers, with
+    # the alarming one wrong. What a reader needs to know is what corrected the
+    # intervals they are looking at, which is `looks`.
+    if looks > 1:
         add(
             f"**Family correction: {looks:,} cumulative hypotheses** in the "
             f"experiment ledger, widening every 95% interval by "
@@ -2016,6 +2027,16 @@ def render(record: dict) -> str:
             "cumulative count and never the day's — correcting today's findings "
             "across today's tests is a lie if more were tested last week."
         )
+        if not record.get("ledger_read", True):
+            add("")
+            add(
+                "**The run that measured these numbers found no ledger; this "
+                "correction was read at render time.** The measurement is "
+                "unaffected — a correction is arithmetic applied on top of a "
+                "point estimate and a standard error, and neither moved — but "
+                "no ledger was in place when the run happened, so nothing here "
+                "attests that the family was this size *then*."
+            )
     else:
         add(
             "**NO FAMILY CORRECTION WAS APPLIED, because no experiment ledger "
