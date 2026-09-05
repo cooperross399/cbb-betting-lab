@@ -18,6 +18,23 @@ markdown as a pure function of that record. The report is never written by hand
 — `--check` fails when the markdown on disk has stopped matching what its record
 renders to, because a hand-edited generated file survives exactly one re-render.
 
+## `--check` asks two questions, and it used to ask only the cheaper one
+
+1. **Is the record still about the evidence on disk?** The record writes down
+   every file it opened, whether it was there, and what that file stamped
+   itself with; `--check` re-asks the disk and fails when any of the three
+   answers has changed.
+2. **Does the markdown still match what the record renders to?** The original
+   question, and the one a hand-edit fails.
+
+Only the second existed, and on 2026-09-04 it passed while the document said
+*"nothing has been measured against real prices yet"* and named
+`data/outputs/cbb_price_backtest.json` as **not found** — with that record
+committed beside it holding 118,050 graded bets and one demonstrated deficit.
+The markdown was a faithful rendering of a run record written the day before the
+backtest ran, and a check that compares a document only against its own record
+can confirm that it is internally consistent and never that it is true.
+
 ## Why it exits zero with nothing to say
 
 Today there is nothing to claim: no price has been bought and no opinion has
@@ -26,8 +43,9 @@ failure. A run that exits non-zero here would mark the whole game-day run
 degraded, and *"the lab has measured nothing yet"* is not a fault — it is the
 correct state for a lab whose season opens in November.
 
-It exits non-zero for exactly two things: `--check` finding drift, and a record
-it was asked to render that cannot be read. Both are faults in the instrument.
+It exits non-zero for exactly two things: `--check` finding drift — a stale
+record or a hand-edited report — and a record it was asked to render that cannot
+be read. Both are faults in the instrument.
 """
 
 from __future__ import annotations
@@ -130,8 +148,9 @@ def main(argv: list[str] | None = None) -> int:
         "--check",
         action="store_true",
         help=(
-            "Do not write. Exit non-zero when the report on disk differs from "
-            "what its record renders to, which means it was edited by hand."
+            "Do not write. Exit non-zero when the record is older than the "
+            "evidence it says it read, or when the report on disk differs from "
+            "what that record renders to, which means it was edited by hand."
         ),
     )
     parser.add_argument(
@@ -172,6 +191,33 @@ def main(argv: list[str] | None = None) -> int:
             processed_dir=Path(args.processed_dir),
             manual_dir=Path(args.manual_dir) if args.manual_dir else None,
         )
+
+    # FRESHNESS BEFORE THE RENDER, and before the re-render comparison. Both
+    # of those describe the record's relationship to itself; only this one asks
+    # whether the record is still about the evidence on disk, and until it
+    # existed nothing did. On 2026-09-04 the markdown matched its record byte
+    # for byte — the record had been written the day before the price backtest
+    # ran, so both said `data/outputs/cbb_price_backtest.json` was **not found**
+    # while 118,050 graded bets sat committed in it. `--check` compared the
+    # document only against its own record, agreed with itself, and exited zero.
+    #
+    # It runs before `render` so that a record too old to carry
+    # `evidence_inputs` reports *why* it is out of date rather than the version
+    # mismatch it would also fail on. Both are faults; only one names the file
+    # whose evidence went unread.
+    if args.check:
+        stale = WC.stale_inputs(record)
+        if stale:
+            print(
+                f"::error::{record_target} is older than the evidence it says "
+                "it read, so the document rendered from it is stating things "
+                "about files it never opened. Re-run this script without "
+                "--check to rebuild the record from the evidence on disk.",
+                file=sys.stderr,
+            )
+            for reason in stale:
+                print(f"::error::  {reason}", file=sys.stderr)
+            return 1
 
     try:
         rendered = WC.render(record)
