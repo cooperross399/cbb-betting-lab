@@ -690,9 +690,413 @@ def test_the_accounting_identity_reconciles_and_is_printed(scored):
     assert scored.record["bets_taken"] <= offered
 
 
+@pytest.fixture(scope="module")
+def script() -> dict:
+    """The script's own namespace, loaded without running `main`."""
+    return runpy.run_path(str(SCRIPT))
+
+
+def graded_universe(script: dict, *, rows: int = 12) -> pd.DataFrame:
+    """A tiny priced-and-graded frame with one row in each of the four buckets."""
+    unparseable = script["UNPARSEABLE_COLUMN"]
+    records = []
+    for i in range(rows):
+        bucket = i % 4
+        records.append(
+            {
+                "event_id": f"e{i:02d}",
+                "slate_date": f"2027-01-{(i % 5) + 1:02d}",
+                "market": "spread",
+                "selection": "home",
+                "american_odds": -110,
+                "tier": Tier.HIGH_MAJOR.value,
+                unparseable: "the market is not one this lab wires"
+                if bucket == 0
+                else "",
+                "model_probability": None if bucket in (0, 1) else 0.55,
+                # bucket 2 sits below the threshold, bucket 3 clears it.
+                "edge": None if bucket in (0, 1) else (0.001 if bucket == 2 else 0.40),
+                "profit_units": 0.9,
+            }
+        )
+    return pd.DataFrame(records)
+
+
+def test_the_accounting_identity_counts_every_term_from_the_frame(script):
+    """No term is the residual of the others, so the identity can actually fail.
+
+    Until 2026-09-05 `scripts/run_price_backtest.py` computed two of the four
+    terms by subtraction —
+
+        accounting.no_opinion = max(len(priced) - opinions - unparseable, 0)
+        accounting.below_threshold = max(opinions - accounting.bets, 0)
+
+    — which makes the sum identically `len(priced)` whatever the frames hold.
+    The identity reconciled by construction and could never have detected the
+    loss it exists to detect.
+    """
+    accounting = script["OpinionAccounting"]
+    universe = graded_universe(script, rows=12)
+    book = accounting(offered=len(universe), unparseable_declared=3)
+    book.count_from(
+        universe,
+        threshold=0.02,
+        bets=universe[pd.to_numeric(universe["edge"], errors="coerce") >= 0.02],
+    )
+
+    assert (book.unparseable, book.no_opinion, book.below_threshold, book.bets) == (
+        3,
+        3,
+        3,
+        3,
+    ), book
+    assert book.accounted == 12 == book.offered
+    assert book.bets_in_hand == book.bets == 3
+    assert book.reconciles
+    book.check()  # does not raise
+
+
+def test_a_bet_dropped_between_selecting_and_counting_is_not_absorbed(script):
+    """The residual's signature failure, as a unit test.
+
+    `below_threshold = max(opinions - bets, 0)` makes a lost bet arithmetically
+    indistinguishable from a wager that never cleared the threshold. Counting
+    both from the frame and comparing the bets bucket against the frame the
+    report is handed makes the two distinguishable again.
+    """
+    accounting = script["OpinionAccounting"]
+    does_not_reconcile = script["AccountingDoesNotReconcile"]
+    universe = graded_universe(script, rows=12)
+    selected = universe[pd.to_numeric(universe["edge"], errors="coerce") >= 0.02]
+    book = accounting(offered=len(universe), unparseable_declared=3)
+    book.count_from(universe, threshold=0.02, bets=selected.iloc[1:])
+
+    assert book.accounted == book.offered, (
+        "the four buckets still sum to the offered count, which is exactly why "
+        "the sum alone never caught this"
+    )
+    assert book.bets == 3 and book.bets_in_hand == 2
+    assert not book.reconciles
+    with pytest.raises(does_not_reconcile, match="bets bucket"):
+        book.check()
+
+
+def test_a_dropped_row_makes_the_identity_fail_rather_than_absorb(script):
+    """The whole point: lose a row and the identity says so, loudly.
+
+    A measurement that silently lost rows still prints an interval, so the
+    failure is an exception and an `::error::` exit rather than a warning. Each
+    of the four buckets is emptied by one row in turn, because a residual term
+    absorbs a loss in exactly one of them and a test that only dropped from one
+    bucket would pass on the defective code.
+    """
+    accounting = script["OpinionAccounting"]
+    does_not_reconcile = script["AccountingDoesNotReconcile"]
+    unparseable = script["UNPARSEABLE_COLUMN"]
+    universe = graded_universe(script, rows=12)
+
+    for bucket, predicate in (
+        ("unparseable", universe[unparseable].astype(str).ne("")),
+        (
+            "no opinion",
+            universe[unparseable].astype(str).eq("")
+            & universe["model_probability"].isna(),
+        ),
+        ("below threshold", pd.to_numeric(universe["edge"]).between(0.0, 0.01)),
+        ("bets", pd.to_numeric(universe["edge"]) >= 0.02),
+    ):
+        first = universe[predicate].index[0]
+        short = universe.drop(index=[first])
+        book = accounting(offered=len(universe), unparseable_declared=3)
+        book.count_from(short, threshold=0.02)
+        assert book.accounted == len(universe) - 1, (
+            f"dropping a {bucket} row must reduce the accounted total; a term "
+            f"computed as a residual absorbs it instead: {book}"
+        )
+        assert not book.reconciles, bucket
+        with pytest.raises(does_not_reconcile):
+            book.check()
+        assert "reconciles               NO" in "\n".join(book.lines())
+
+
+def test_the_pricers_refusal_tally_is_checked_against_the_frame(script):
+    """Two independent counts of the same quantity, compared.
+
+    `card_pricing.build_wagers` returns its own integer count of the rows it
+    refused, accumulated day by day while pricing; `count_from` counts the rows
+    carrying a refusal in the graded frame. A refused row that disappeared
+    between the two leaves the tally high and the frame count low, and that is
+    a loss the four-bucket sum alone cannot see when a second row appears from
+    somewhere else.
+    """
+    accounting = script["OpinionAccounting"]
+    does_not_reconcile = script["AccountingDoesNotReconcile"]
+    universe = graded_universe(script, rows=12)
+    book = accounting(offered=len(universe), unparseable_declared=4)
+    book.count_from(universe, threshold=0.02)
+    assert book.accounted == book.offered, "the four buckets still sum correctly"
+    assert not book.reconciles, (
+        "the pricer refused four rows and three survive; the sum alone cannot "
+        "see that, and it is exactly the loss the identity exists to detect"
+    )
+    with pytest.raises(does_not_reconcile, match="unparseable"):
+        book.check()
+
+
+def test_a_bet_lost_on_the_way_to_the_report_stops_the_whole_run(
+    tmp_path, capsys, monkeypatch
+):
+    """End to end, on the seam the residual arithmetic absorbed silently.
+
+    `bets_from` selects the rows the report measures. Under the old code the
+    below-threshold term was `max(opinions - len(bets), 0)`, so a bet lost here
+    reappeared as a below-threshold wager, the four terms still summed to
+    `len(priced)`, the run printed `reconciles yes` and wrote a record and a
+    report measuring one bet fewer than it had selected. Now the bets bucket is
+    counted from the frame with `bet_mask` and compared against the frame the
+    report is handed, and the run refuses.
+    """
+    lab = Lab(tmp_path).with_tables().with_store()
+    model = StubModel(module_name="cbb_stub_model_dropped_bet")
+    spec = model.register()
+
+    honest = PB.bets_from
+
+    def drops_one(frame, **kwargs):
+        taken = honest(frame, **kwargs)
+        assert len(taken) > 1, "the fixture must select more than one bet"
+        return taken.iloc[1:].reset_index(drop=True)
+
+    monkeypatch.setattr(PB, "bets_from", drops_one)
+    code = lab.run("--model", spec)
+
+    assert code != 0, "a lost bet must not produce a measurement"
+    combined = "".join(capsys.readouterr())
+    assert "::error::" in combined
+    assert "accounting identity does not reconcile" in combined
+    assert "Nothing was written" in combined
+    assert "reconciles               NO" in combined
+    assert not lab.record_path.is_file(), "no record may survive a lost bet"
+    assert not lab.report_path.is_file(), "no report may survive a lost bet"
+
+
+def test_a_row_lost_after_pricing_stops_the_whole_run(tmp_path, capsys, monkeypatch):
+    """The other seam: a row that disappears between the pricer and the grader.
+
+    `add_edge` sits after the length check on `walk_forward`'s output and before
+    the frame the report is built from, so a row lost there is a row the
+    accounting identity is the only remaining guard on.
+    """
+    lab = Lab(tmp_path).with_tables().with_store()
+    model = StubModel(module_name="cbb_stub_model_dropped_row")
+    spec = model.register()
+
+    honest = PB.add_edge
+
+    def drops_one(frame, **kwargs):
+        priced = honest(frame, **kwargs)
+        return priced.iloc[1:].reset_index(drop=True)
+
+    monkeypatch.setattr(PB, "add_edge", drops_one)
+    code = lab.run("--model", spec)
+
+    assert code != 0, "a lost row must not produce a measurement"
+    combined = "".join(capsys.readouterr())
+    assert "::error::" in combined
+    assert "accounting identity does not reconcile" in combined
+    assert not lab.record_path.is_file(), "no record may survive a lost row"
+    assert not lab.report_path.is_file(), "no report may survive a lost row"
+
+
+def test_build_wagers_classifies_every_input_row_exactly_once():
+    """`row_reasons` is the per-row half of the count `build_wagers` returns.
+
+    One definition of "unparseable", read off the row rather than re-derived
+    from the aggregate. A second copy of the predicate is how the accounting
+    identity came to compute a term as a residual in the first place.
+    """
+    from cbb_betting_lab.reports import card_pricing
+
+    prices = pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "slate_date": "2027-01-02",
+                "commence_time": "2027-01-02T23:00:00Z",
+                "home_team": "Duke",
+                "away_team": "Kansas",
+                "market": "spread",
+                "segment": FULL_GAME,
+                "player": "",
+                "selection": "home",
+                "line": -3.5,
+                "american_odds": -110,
+                "book": "dk",
+            },
+            # A market this lab does not wire: refused, with a reason.
+            {
+                "event_id": "e1",
+                "slate_date": "2027-01-02",
+                "commence_time": "2027-01-02T23:00:00Z",
+                "home_team": "Duke",
+                "away_team": "Kansas",
+                "market": "corner_kicks",
+                "segment": FULL_GAME,
+                "player": "",
+                "selection": "over",
+                "line": 9.5,
+                "american_odds": -110,
+                "book": "dk",
+            },
+            # An unreadable price: refused, with a different reason.
+            {
+                "event_id": "e1",
+                "slate_date": "2027-01-02",
+                "commence_time": "2027-01-02T23:00:00Z",
+                "home_team": "Duke",
+                "away_team": "Kansas",
+                "market": "spread",
+                "segment": FULL_GAME,
+                "player": "",
+                "selection": "away",
+                "line": 3.5,
+                "american_odds": "",
+                "book": "dk",
+            },
+        ]
+    )
+    reasons: list[str] = []
+    wagers, unparseable, _ = card_pricing.build_wagers(
+        prices, competition=CBB, row_reasons=reasons
+    )
+    assert len(reasons) == len(prices), reasons
+    assert unparseable == sum(1 for r in reasons if r) == 2
+    assert reasons[0] == ""
+    assert reasons[1] and reasons[2] and reasons[1] != reasons[2]
+    assert len(wagers) == 1
+
+
 # --------------------------------------------------------------------------
 # The order the numbers are read in
 # --------------------------------------------------------------------------
+
+
+#: Every list of measured cells the record carries and `render` prints.
+CELL_KEYS = ("null_baseline", "by_market_and_tier", "by_tier", "pooled")
+
+
+def measured_rows(record: dict) -> list[dict]:
+    """Every `_interval_row` in the record, from every table `render` prints."""
+    rows: list[dict] = []
+    for key in CELL_KEYS:
+        rows.extend(record.get(key) or [])
+    half = record.get("half_point") or {}
+    for key in (
+        "half_point_decided",
+        "half_point_at_a_key_number",
+        "a_view_of_the_game",
+    ):
+        row = half.get(key)
+        if row:
+            rows.append(row)
+    return rows
+
+
+def test_the_record_carries_the_clustering_beside_every_cluster_count(scored):
+    """The number is meaningless without the unit, so the record carries both.
+
+    `stats.interval_two_way` clusters by game **and** by day and keeps the
+    wider, so the clustering behind one row of a table is routinely not the one
+    behind the row beneath it. A record that stored only the integer forced
+    every renderer to guess, and the guess was printed as a column headed
+    "Games".
+    """
+    rows = measured_rows(scored.record)
+    assert rows, "the fixture must produce measured cells"
+    for row in rows:
+        assert row.get("cluster_unit") in {"game", "day"}, row
+        assert int(row.get("clusters", -1)) >= 0, row
+
+
+def test_a_row_clustered_by_day_never_prints_the_word_games(scored):
+    """And a row clustered by game never prints "days". Checked row by row.
+
+    "11,071 bets / 513 days" and "11,071 bets / 513 games" are different claims
+    about the same integer, and the report used to print both under one column
+    headed "Games". Every table line is matched back to the record row that
+    produced it and read for the wrong unit.
+    """
+    report = scored.report
+    assert "| Games |" not in report, (
+        "no ROI table may head its cluster column 'Games' — the column holds "
+        "day counts on some rows"
+    )
+    lines = [line for line in report.splitlines() if line.startswith("|")]
+    checked = 0
+    for row in measured_rows(scored.record):
+        unit = row["cluster_unit"]
+        wrong = "day" if unit == "game" else "game"
+        cell = PB.cluster_cell(row)
+        assert f"{row['clusters']:,} {unit}s" == cell, cell
+        hits = [line for line in lines if cell in line]
+        assert hits, (
+            f"the row measured over {cell} is not printed with its clustering; "
+            f"looked for {cell!r} in the rendered tables"
+        )
+        for line in hits:
+            assert f"{row['clusters']:,} {wrong}s" not in line, (
+                f"a row clustered by {unit} printed the word {wrong}s: {line}"
+            )
+        checked += 1
+    assert checked >= len(CELL_KEYS), "too few rows checked to mean anything"
+
+
+def test_both_clusterings_are_reachable_and_are_labelled_apart():
+    """A day-clustered row and a game-clustered row, rendered from one record.
+
+    The fixture run may happen to choose one unit for every cell, and a test
+    that only ever saw one would pass on a renderer that hard-coded it. These
+    two rows are built by hand so both branches are real, and each is read for
+    its own unit and against the other's.
+    """
+    by_day = {
+        "name": "clustered by day",
+        "tier": "high_major",
+        "market": "spread",
+        "roi": 0.031,
+        "low": 0.004,
+        "high": 0.058,
+        "adjusted_low": -0.01,
+        "adjusted_high": 0.072,
+        "bets": 11_071,
+        "clusters": 513,
+        "cluster_unit": "day",
+        "looks": 1,
+        "standard_error": 0.014,
+        "enough_evidence": True,
+        "verdict": "demonstrated edge",
+    }
+    by_game = {**by_day, "name": "clustered by game", "clusters": 9_004,
+               "cluster_unit": "game"}
+
+    day_line = PB._row(by_day, by_day["name"])
+    game_line = PB._row(by_game, by_game["name"])
+    assert "513 days" in day_line and "games" not in day_line, day_line
+    assert "9,004 games" in game_line and "days" not in game_line, game_line
+
+    record = {
+        "record_version": PB.RECORD_VERSION,
+        "by_tier": [by_day, by_game],
+        "pooled": [by_day, by_game],
+    }
+    report = PB.render(record)
+    assert "| Clusters |" in report and "| Games |" not in report
+    assert "513 days" in report and "9,004 games" in report
+    for line in report.splitlines():
+        if "513 days" in line:
+            assert "games" not in line, line
+        if "9,004 games" in line:
+            assert "days" not in line, line
 
 
 def test_the_null_baseline_is_printed_before_any_model_number(scored):

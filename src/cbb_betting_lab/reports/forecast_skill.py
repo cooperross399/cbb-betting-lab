@@ -52,6 +52,21 @@ How to read it:
   natural response to a disappointing backtest. See "the threshold cannot help"
   below.
 
+## Anti-predictiveness and overconfidence are two different things
+
+The claimed-edge bucket table reports both, apart, under their own names.
+**Overconfidence** is realised minus model-implied: how far the model's own
+number was above what happened. It widens with the claimed edge under the
+winner's curse almost by construction — the top bucket is where the model's
+largest over-estimates land — so a widening gap says the model is optimistic
+where it is loud, and says nothing on its own about return.
+**Anti-predictiveness** is the realised *return* falling as the claimed edge
+rises: a statement about money, and the only one of the two that supports
+"raising the threshold makes it worse". Until 2026-09-05 this module computed
+the first, recorded it under the key `anti_predictive`, and emitted the
+threshold sentence from it. Both are now measured and both are printed, and the
+threshold sentence is emitted only when the two return intervals are disjoint.
+
 `b_market` is reported too, and it is a *diagnostic on the de-vig*, not a
 headline. Its null is **1.0**, not zero. A de-vigged price that is calibrated
 gives b_market near 1 with an intercept near 0; b_market far from 1 says the
@@ -1364,15 +1379,26 @@ def _interval_row(interval: S.RoiInterval, *, name: str = "") -> dict:
 def edge_buckets(frame: pd.DataFrame, *, looks: int = 1) -> list[dict]:
     """Realised outcome against model-implied, per bucket of **claimed** edge.
 
-    This is the table that makes anti-predictiveness impossible to wave away. A
-    coefficient is one number and a reader can call it noise; a column that gets
-    steadily more negative as the claimed edge grows is a shape.
+    This is the table that makes a shape visible where a coefficient is one
+    number a reader can call noise. It carries **two** columns that are easy to
+    confuse and are not the same quantity:
+
+    * `gap_to_model` — realised minus model-implied, the model's **over-estimate**
+      in that bucket. Read across buckets it is :func:`overconfidence_by_bucket`,
+      and a widening gap is the winner's curse: the model's own selection puts
+      its biggest over-estimates in its top bucket, whatever relationship it has
+      to money.
+    * `roi` — the realised **return** over the settled wagers in that bucket, a
+      two-way clustered interval with its bet count and cluster unit. Read
+      across buckets it is :func:`anti_predictive_return`, and *that* is what
+      the word anti-predictive names.
 
     Each bucket prints its `n`, what the model said would happen, what the
     de-vigged price said, and what did happen with a Wilson interval — Wilson
     rather than the normal approximation because the extreme buckets are exactly
     where small counts and proportions near zero or one live. Below
-    :data:`MINIMUM_BUCKET` rows a bucket prints its count and no frequency.
+    :data:`MINIMUM_BUCKET` rows a bucket prints its count and no frequency, and
+    below `stats.MINIMUM_BETS` settled wagers it carries no return figure.
     """
     if frame.empty or "edge" not in frame.columns:
         return []
@@ -1436,20 +1462,48 @@ def edge_buckets(frame: pd.DataFrame, *, looks: int = 1) -> list[dict]:
     return rows
 
 
-def anti_predictive(buckets: Sequence[Mapping]) -> dict:
-    """Do the biggest claimed edges do worst? Measured, over usable buckets.
+#: What the overconfidence block measures, in the words the report must use for
+#: it. Realised minus model-implied is the model's **over-estimate**, and an
+#: over-estimate that grows with the claimed edge is the winner's curse: the
+#: biggest claimed edges are the biggest over-estimates by construction,
+#: whatever relationship the model has to realised return. Until 2026-09-05
+#: this quantity was recorded under the key `anti_predictive` and described in
+#: the report as anti-predictiveness, which is a different claim about a
+#: different quantity.
+OVERCONFIDENCE_LABEL = "overconfidence (realised minus model-implied)"
+
+#: What anti-predictiveness actually is: a negative relationship between the
+#: model's claimed edge and what the wagers **returned**. It is measured from
+#: the realised return per claimed-edge bucket, which is a fact about money and
+#: not about the model's own arithmetic.
+ANTI_PREDICTIVE_LABEL = "realised return by claimed-edge bucket"
+
+
+def overconfidence_by_bucket(buckets: Sequence[Mapping]) -> dict:
+    """Does the model **over-estimate** more as its claimed edge grows?
 
     Compares the shortfall — realised minus model-implied — in the highest
     claimed-edge bucket that clears :data:`MINIMUM_BUCKET` against the lowest.
-    `worse_at_the_top` is the anti-predictive shape; it is reported as a fact
-    about two buckets with both their `n`s beside it, never as a significance
-    claim. The disagreement coefficient is the test; this is the picture.
+    Reported as a fact about two buckets with both their `n`s beside it, never
+    as a significance claim.
+
+    **This is overconfidence, not anti-predictiveness.** A shortfall that widens
+    with the claimed edge is the winner's curse and is very nearly guaranteed:
+    the model's own selection puts its largest over-estimates in its top bucket.
+    Anti-predictiveness is a statement about realised return, and it is measured
+    separately by :func:`anti_predictive_return`. Both are reported; neither is
+    printed under the other's name.
     """
     usable = [b for b in buckets if b.get("enough") and "gap_to_model" in b]
     if len(usable) < 2:
-        return {"usable_buckets": len(usable), "measurable": False}
+        return {
+            "measures": OVERCONFIDENCE_LABEL,
+            "usable_buckets": len(usable),
+            "measurable": False,
+        }
     lowest, highest = usable[0], usable[-1]
     return {
+        "measures": OVERCONFIDENCE_LABEL,
         "usable_buckets": len(usable),
         "measurable": True,
         "lowest_bucket": {
@@ -1464,12 +1518,85 @@ def anti_predictive(buckets: Sequence[Mapping]) -> dict:
             "rows": highest["rows"],
             "gap_to_model": highest["gap_to_model"],
         },
-        "worse_at_the_top": bool(
+        "widens_with_claimed_edge": bool(
             highest["gap_to_model"] < lowest["gap_to_model"]
         ),
-        "shortfall_widens_by": float(
+        "overconfidence_widens_by": float(
             lowest["gap_to_model"] - highest["gap_to_model"]
         ),
+    }
+
+
+def _return_bucket(bucket: Mapping) -> dict:
+    """One bucket's realised return, with everything needed to read it."""
+    roi = bucket.get("roi") or {}
+    return {
+        "low": bucket["low"],
+        "high": bucket["high"],
+        "rows": int(bucket.get("rows", 0)),
+        "roi": float(roi.get("value", 0.0)),
+        "roi_low": float(roi.get("low", 0.0)),
+        "roi_high": float(roi.get("high", 0.0)),
+        "bets": int(roi.get("rows", 0)),
+        "clusters": int(roi.get("clusters", 0)),
+        "cluster_unit": str(roi.get("cluster_unit") or "game"),
+        "verdict": str(roi.get("verdict", "")),
+    }
+
+
+def anti_predictive_return(buckets: Sequence[Mapping]) -> dict:
+    """Does the realised **return** fall as the claimed edge rises?
+
+    This is the anti-predictive statistic. The model's claimed edge is a
+    prediction about money, and anti-predictiveness is that prediction running
+    backwards: the buckets the model liked most returning less than the buckets
+    it liked least. It is read off the realised return `edge_buckets` already
+    measures per bucket — a two-way clustered interval over the settled wagers
+    in that bucket, with its bet count and the clustering that produced it.
+
+    A bucket enters only if its return clears `stats.MINIMUM_BETS`, because
+    below that floor there is no number. `falls_at_the_top` is the direction;
+    `demonstrated` is whether the two intervals are **disjoint**, and it is the
+    only key any sentence about the shape may lean on. Two overlapping intervals
+    are two buckets that have not been shown to differ, and saying so is not the
+    same as saying they are equal.
+    """
+    usable = [
+        b
+        for b in buckets
+        if b.get("enough") and (b.get("roi") or {}).get("enough_evidence")
+    ]
+    populated = [b for b in buckets if int(b.get("rows", 0))]
+    if len(usable) < 2:
+        return {
+            "measures": ANTI_PREDICTIVE_LABEL,
+            "usable_buckets": len(usable),
+            "populated_buckets": len(populated),
+            "measurable": False,
+        }
+    lowest, highest = _return_bucket(usable[0]), _return_bucket(usable[-1])
+    return {
+        "measures": ANTI_PREDICTIVE_LABEL,
+        "usable_buckets": len(usable),
+        "populated_buckets": len(populated),
+        # Whether the comparison reaches the top of the claimed-edge range. It
+        # usually does not: the top buckets are the thinnest, and a bucket below
+        # `stats.MINIMUM_BETS` settled wagers has no return figure at all. A
+        # comparison that stops two buckets short is a different comparison, and
+        # the report says which buckets it made.
+        "spans_the_range": bool(
+            populated and usable[-1] is populated[-1] and usable[0] is populated[0]
+        ),
+        "measurable": True,
+        "lowest_bucket": lowest,
+        "highest_bucket": highest,
+        "falls_at_the_top": bool(highest["roi"] < lowest["roi"]),
+        "return_falls_by": float(lowest["roi"] - highest["roi"]),
+        # Disjoint intervals, both clustered and both carrying their bet count.
+        # A difference whose intervals overlap has not been demonstrated, and a
+        # sentence that says "raising the threshold makes it worse" has to rest
+        # on this and not on the point estimates.
+        "demonstrated": bool(highest["roi_high"] < lowest["roi_low"]),
     }
 
 
@@ -1518,7 +1645,11 @@ def measure(
         # is the same defect as a pooled figure quietly larger than its tiers.
         "rows_outside_every_bucket": int(len(frame))
         - sum(int(b.get("rows", 0)) for b in buckets),
-        "anti_predictive": anti_predictive(buckets),
+        # Two different quantities under two different names. The first is the
+        # winner's curse; the second is the one the word "anti-predictive"
+        # means.
+        "overconfidence": overconfidence_by_bucket(buckets),
+        "anti_predictive_return": anti_predictive_return(buckets),
     }
 
 
@@ -1959,36 +2090,141 @@ def _bucket_section(measured: Mapping, record: Mapping) -> list[str]:
             "population still looks complete."
         )
         add("")
-    shape = measured.get("anti_predictive") or {}
-    if shape.get("measurable"):
-        low = shape["lowest_bucket"]
-        high = shape["highest_bucket"]
-        if shape.get("worse_at_the_top"):
-            add(
-                "**The biggest claimed edges do worst.** The shortfall against "
-                f"model-implied is {low['gap_to_model'] * 100:+.1f} pp in the "
-                f"{bucket_label(low['low'], low['high'])} bucket "
-                f"({low['rows']:,} wagers) and "
-                f"{high['gap_to_model'] * 100:+.1f} pp in the "
-                f"{bucket_label(high['low'], high['high'])} bucket "
-                f"({high['rows']:,} wagers) — it widens by "
-                f"{shape['shortfall_widens_by'] * 100:.1f} pp across the range. "
-                "That is anti-predictiveness as a table rather than as a minus "
-                "sign, and it is the shape that makes raising the edge "
-                "threshold the wrong response."
-            )
-        else:
-            add(
-                "The shortfall against model-implied does **not** widen with "
-                f"the claimed edge: {low['gap_to_model'] * 100:+.1f} pp in the "
-                f"{bucket_label(low['low'], low['high'])} bucket "
-                f"({low['rows']:,} wagers) against "
-                f"{high['gap_to_model'] * 100:+.1f} pp in the "
-                f"{bucket_label(high['low'], high['high'])} bucket "
-                f"({high['rows']:,} wagers). That is not evidence of skill; the "
-                "disagreement coefficient is the test and this is the picture."
-            )
+    lines.extend(_overconfidence_paragraph(measured))
+    lines.extend(_anti_predictive_paragraph(measured))
+    return lines
+
+
+def _overconfidence_paragraph(measured: Mapping) -> list[str]:
+    """Overconfidence by claimed-edge bucket, under its own name.
+
+    The section this paragraph closes measures **realised minus model-implied**
+    across buckets of claimed edge. That is the model's over-estimate, and an
+    over-estimate that widens with the claimed edge is the winner's curse — the
+    model's own selection puts its largest over-estimates in its top bucket.
+    Until 2026-09-05 this paragraph called that anti-predictiveness and used it
+    to say raising the threshold is the wrong response. Anti-predictiveness is a
+    statement about realised return; it now has its own paragraph below, and
+    that is where the threshold sentence lives.
+    """
+    lines: list[str] = []
+    add = lines.append
+    shape = measured.get("overconfidence") or {}
+    if not shape.get("measurable"):
+        return lines
+    low = shape["lowest_bucket"]
+    high = shape["highest_bucket"]
+    if shape.get("widens_with_claimed_edge"):
+        add(
+            "**The model over-estimates more where it claims more.** The "
+            "shortfall against model-implied is "
+            f"{low['gap_to_model'] * 100:+.1f} pp in the "
+            f"{bucket_label(low['low'], low['high'])} bucket "
+            f"({low['rows']:,} wagers) and "
+            f"{high['gap_to_model'] * 100:+.1f} pp in the "
+            f"{bucket_label(high['low'], high['high'])} bucket "
+            f"({high['rows']:,} wagers) — it widens by "
+            f"{shape['overconfidence_widens_by'] * 100:.1f} pp across the "
+            "range. That is **overconfidence**, which is what this column "
+            "measures, and it is the winner's curse: the biggest claimed edges "
+            "are the biggest over-estimates by construction. It is not by "
+            "itself anti-predictiveness — that is a claim about realised "
+            "return, and it is measured in its own right below."
+        )
+    else:
+        add(
+            "The shortfall against model-implied does **not** widen with the "
+            f"claimed edge: {low['gap_to_model'] * 100:+.1f} pp in the "
+            f"{bucket_label(low['low'], low['high'])} bucket "
+            f"({low['rows']:,} wagers) against "
+            f"{high['gap_to_model'] * 100:+.1f} pp in the "
+            f"{bucket_label(high['low'], high['high'])} bucket "
+            f"({high['rows']:,} wagers). That is an absence of overconfidence "
+            "and not evidence of skill; the disagreement coefficient is the "
+            "test."
+        )
+    add("")
+    return lines
+
+
+def _anti_predictive_paragraph(measured: Mapping) -> list[str]:
+    """The statistic the word *anti-predictive* actually names: realised return.
+
+    Realised return in the highest claimed-edge bucket against the lowest, each
+    with its settled bet count, the clustering that produced its interval, and
+    the interval itself. The sentence *"raising the threshold makes it worse"*
+    is emitted only when the two intervals are **disjoint**, because that
+    sentence is a claim about money and the point estimates alone do not carry
+    it.
+    """
+    lines: list[str] = []
+    add = lines.append
+    shape = measured.get("anti_predictive_return") or {}
+    if not shape.get("measurable"):
+        add(
+            "**Anti-predictiveness — the realised return falling as the claimed "
+            "edge rises — is not measured here.** Fewer than two claimed-edge "
+            f"buckets carry {S.MINIMUM_BETS:,} settled wagers, which is the "
+            "floor declared in advance, and below it there is no return figure "
+            "to compare. The overconfidence column above is a different "
+            "quantity and cannot stand in for this one."
+        )
         add("")
+        return lines
+    low = shape["lowest_bucket"]
+    high = shape["highest_bucket"]
+
+    def cell(bucket: Mapping) -> str:
+        return (
+            f"{bucket['roi']:+.1%} [{bucket['roi_low']:+.1%}, "
+            f"{bucket['roi_high']:+.1%}] over {bucket['bets']:,} settled "
+            f"wagers across {bucket['clusters']:,} {bucket['cluster_unit']}s"
+        )
+
+    head = (
+        "**Realised return by claimed edge — the anti-predictive statistic.** "
+        f"The {bucket_label(low['low'], low['high'])} bucket returned "
+        f"{cell(low)}; the {bucket_label(high['low'], high['high'])} bucket "
+        f"returned {cell(high)}."
+    )
+    if not shape.get("spans_the_range"):
+        head += (
+            f" Those are the lowest and highest of {shape['usable_buckets']:,} "
+            f"claimed-edge buckets (of {shape['populated_buckets']:,} with any "
+            f"wager in them) carrying {S.MINIMUM_BETS:,} settled wagers or "
+            "more, so this comparison does **not** reach the ends of the "
+            "claimed-edge range."
+        )
+    if shape.get("falls_at_the_top") and shape.get("demonstrated"):
+        add(
+            head
+            + " The two intervals do not overlap, so the return **falls** by "
+            f"{shape['return_falls_by'] * 100:.1f} pp across the range on the "
+            "evidence of this run. That is anti-predictiveness measured on "
+            "money, and it is what makes raising the edge threshold the wrong "
+            "response: a higher threshold admits only the buckets that "
+            "returned less."
+        )
+    elif shape.get("falls_at_the_top"):
+        add(
+            head
+            + " The point estimate falls by "
+            f"{shape['return_falls_by'] * 100:.1f} pp across the range, but "
+            "the two intervals overlap, so **the fall is not demonstrated**. "
+            "No sentence here says raising the threshold makes it worse; the "
+            "disagreement coefficient is the test that can say so, and the "
+            "overconfidence column above measures a different quantity."
+        )
+    else:
+        add(
+            head
+            + " The return does not fall across the range, so this run shows "
+            "no anti-predictiveness in realised return. That is not evidence "
+            "of skill — the disagreement coefficient is the test — and it does "
+            "not contradict the overconfidence column above, which measures a "
+            "different quantity."
+        )
+    add("")
     return lines
 
 
@@ -2031,9 +2267,12 @@ def _threshold_section(record: Mapping) -> list[str]:
             f"[{disagreement['low']:+.3f}, {disagreement['high']:+.3f}] over "
             f"{disagreement['rows']:,} wagers across "
             f"{disagreement['clusters']:,} {disagreement['cluster_unit']}s — "
-            f"{disagreement['verdict']}. The claimed-edge buckets above are the "
-            "measurement of the same thing; the algebra and the table are "
-            "printed together because either alone is arguable."
+            f"{disagreement['verdict']}. The **realised return** column of the "
+            "claimed-edge buckets above measures the same thing bucket by "
+            "bucket; the algebra and the table are printed together because "
+            "either alone is arguable. The realised-minus-model column beside "
+            "it is overconfidence, which is a different quantity and does not "
+            "support this section's conclusion on its own."
         )
         add("")
     add(

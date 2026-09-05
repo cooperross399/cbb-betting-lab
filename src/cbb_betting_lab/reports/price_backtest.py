@@ -1051,10 +1051,37 @@ def roi_cells(row: dict) -> tuple[str, str, str]:
     )
 
 
+#: The header every ROI table in this report uses. It says **Clusters**, not
+#: "Games", because `stats.interval_two_way` clusters by game *and* by day and
+#: keeps the wider of the two — so two rows of one table are routinely
+#: clustered differently, and a column headed "Games" printed a day count on
+#: some rows and a game count on others with nothing to tell them apart. The
+#: brief asks for both clusterings and for the sample size beside every number;
+#: a count whose unit the reader has to guess is not a sample size.
+CLUSTER_TABLE_HEADER = (
+    "| Market | Bets | Clusters | ROI | 95% interval | Family-corrected "
+    "| Verdict |\n"
+    "|:---|---:|---:|---:|:---|:---|:---|"
+)
+
+
+def cluster_cell(row: dict) -> str:
+    """`513 days` or `11,071 games` — the count and the clustering, always both.
+
+    Read from the row's own `cluster_unit`, which :func:`_interval_row` copies
+    off the `RoiInterval` that `stats.interval_two_way` chose. There is no
+    default that could silently be wrong: a row carrying no `cluster_unit` was
+    not built by this module, and it prints `unknown-clusters` rather than
+    being assumed to be games.
+    """
+    unit = str(row.get("cluster_unit") or "").strip() or "unknown-cluster"
+    return f"{int(row.get('clusters', 0) or 0):,} {unit}s"
+
+
 def _row(row: dict, label: str) -> str:
     roi, interval, corrected = roi_cells(row)
     return (
-        f"| {label} | {row.get('bets', 0):,} | {row.get('clusters', 0):,} | "
+        f"| {label} | {row.get('bets', 0):,} | {cluster_cell(row)} | "
         f"{roi} | {interval} | {corrected} | {row.get('verdict', '')} |"
     )
 
@@ -1141,13 +1168,16 @@ def render(record: dict) -> str:
     if not baseline:
         lines.extend(_nothing("No blind side could be graded."))
     else:
-        add("| Tier | Market | Blind side | Bets | Games | ROI | 95% interval | Family-corrected | Verdict |")
+        add(
+            "| Tier | Market | Blind side | Bets | Clusters | ROI "
+            "| 95% interval | Family-corrected | Verdict |"
+        )
         add("|:---|:---|:---|---:|---:|---:|:---|:---|:---|")
         for row in baseline:
             roi, interval, corrected = roi_cells(row)
             add(
                 f"| {row['tier']} | {row['market']} | {row['name']} | "
-                f"{row['bets']:,} | {row['clusters']:,} | {roi} | {interval} | "
+                f"{row['bets']:,} | {cluster_cell(row)} | {roi} | {interval} | "
                 f"{corrected} | {row['verdict']} |"
             )
         add("")
@@ -1165,13 +1195,16 @@ def render(record: dict) -> str:
     if not cells:
         lines.extend(_nothing("No model bet has been graded."))
     else:
-        add("| Tier | Market | Bets | Games | ROI | 95% interval | Family-corrected | Verdict |")
+        add(
+            "| Tier | Market | Bets | Clusters | ROI | 95% interval "
+            "| Family-corrected | Verdict |"
+        )
         add("|:---|:---|---:|---:|---:|:---|:---|:---|")
         for row in cells:
             roi, interval, corrected = roi_cells(row)
             add(
                 f"| {row['tier']} | {row['market']} | {row['bets']:,} | "
-                f"{row['clusters']:,} | {roi} | {interval} | {corrected} | "
+                f"{cluster_cell(row)} | {roi} | {interval} | {corrected} | "
                 f"{row['verdict']} |"
             )
         add("")
@@ -1199,7 +1232,7 @@ def render(record: dict) -> str:
     if not tiers:
         lines.extend(_nothing("No tier has a graded bet."))
     else:
-        add(S.ROI_TABLE_HEADER.replace("| Market |", "| Tier |"))
+        add(CLUSTER_TABLE_HEADER.replace("| Market |", "| Tier |"))
         for row in tiers:
             add(_row(row, row.get("name", row.get("tier", ""))))
         add("")
@@ -1212,7 +1245,7 @@ def render(record: dict) -> str:
     if not pooled_rows:
         lines.extend(_nothing("Nothing to pool."))
     else:
-        add(S.ROI_TABLE_HEADER)
+        add(CLUSTER_TABLE_HEADER)
         for row in pooled_rows:
             add(_row(row, row.get("name", "")))
         add("")
@@ -1245,7 +1278,7 @@ def render(record: dict) -> str:
         )
         add("")
     else:
-        add(S.ROI_TABLE_HEADER.replace("| Market |", "| Decided by |"))
+        add(CLUSTER_TABLE_HEADER.replace("| Market |", "| Decided by |"))
         for key in (
             "half_point_decided",
             "half_point_at_a_key_number",

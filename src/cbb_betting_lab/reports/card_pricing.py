@@ -283,6 +283,7 @@ def build_wagers(
     competition: Competition,
     key_for: Callable[[object], tuple] | None = None,
     tiers: Mapping | None = None,
+    row_reasons: list[str] | None = None,
 ) -> tuple[list[Wager], int, dict[str, int]]:
     """Group price rows into wagers. Returns `(wagers, unparseable, reasons)`.
 
@@ -292,6 +293,15 @@ def build_wagers(
     row that reaches none of those and is not staged has vanished, and a silent
     drop is how a card recommends from a sixth of a slate and reports it as the
     whole one.
+
+    Pass `row_reasons` — an empty list — to also get the refusal **per input
+    row**, in input order: the reason for a refused row, the empty string for
+    one that became part of a wager. `len(row_reasons) == len(prices)` always.
+    It exists so a caller that has to bucket every offered row can read the
+    refusal off the row instead of re-deriving the predicate from the aggregate
+    count. A second copy of "what makes a row unparseable" is how the accounting
+    identity in `scripts/run_price_backtest.py` came to compute one of its terms
+    as the residual of the others and reconcile by construction.
     """
     keyer = key_for or default_key_for(competition)
     records = (
@@ -308,6 +318,12 @@ def build_wagers(
         nonlocal unparseable
         unparseable += 1
         reasons[reason] = reasons.get(reason, 0) + 1
+        if row_reasons is not None:
+            row_reasons.append(reason)
+
+    def accept() -> None:
+        if row_reasons is not None:
+            row_reasons.append("")
 
     for record in records:
         row = _row(record)
@@ -358,10 +374,20 @@ def build_wagers(
                 [],
             ]
         grouped[key][1].append(Quote(book=row.book, american_odds=odds))
+        accept()
 
     wagers = [
         Wager(**{**grouped[k][0].__dict__, "quotes": tuple(grouped[k][1])}) for k in order
     ]
+    if row_reasons is not None and len(row_reasons) != len(records):
+        # Not defensive noise: this list is what a caller buckets every offered
+        # row by, and a list shorter than its input silently re-aligns every
+        # row after the gap onto the wrong reason.
+        raise ValueError(
+            f"build_wagers classified {len(row_reasons):,} of {len(records):,} "
+            "price rows. Every input row is either refused with a reason or "
+            "accepted into a wager; a row that reached neither has vanished."
+        )
     return wagers, unparseable, reasons
 
 

@@ -13,8 +13,13 @@ the number could be misread is closed:
 * a model that is the price plus noise must produce one that includes zero, and
   the words must be `stats.NO_DEMONSTRATED_EDGE` exactly;
 * an anti-predictive model must produce a negative one **and** a bucket table
-  whose shortfall widens with the claimed edge — a coefficient alone can be
-  called noise, a monotone column cannot;
+  that shows the shape — a coefficient alone can be called noise, a monotone
+  column cannot. Two columns are checked, apart, because they are two
+  quantities: **overconfidence** (realised minus model-implied, which widens
+  with the claimed edge under the winner's curse whatever the model's
+  relationship to money) and **anti-predictiveness** (the realised return
+  falling as the claimed edge rises, which is what the word means and the only
+  one that can carry "raising the threshold makes it worse");
 * the standard error must be the clustered one. One game supplies many
   correlated wagers, and the football lab's forward ledger shipped an interval
   10.3x too narrow on exactly that mistake;
@@ -239,26 +244,161 @@ def test_the_market_coefficient_recovers_one_when_the_price_is_calibrated(noise)
 def test_an_anti_predictive_model_is_negative_and_the_table_shows_the_shape(anti):
     """The coefficient AND the buckets. Either alone is arguable.
 
-    A coefficient is one number and a reader can call it noise. A shortfall
-    column that widens as the claimed edge grows is a shape, and it is what
-    makes "raise the threshold" visibly the wrong response rather than the
-    obvious one.
+    A coefficient is one number and a reader can call it noise. A shape across
+    buckets is harder to wave away — but it has to be a shape in the right
+    quantity. Two are measured and reported apart:
+
+    * **overconfidence**, realised minus model-implied, which widens with the
+      claimed edge under the winner's curse whatever the model's relationship
+      to return, because the model's own selection puts its biggest
+      over-estimates in its top bucket;
+    * **anti-predictiveness**, the realised *return* falling as the claimed
+      edge rises, which is the thing the word means and the only one that can
+      support "raising the threshold makes it worse".
+
+    Until 2026-09-05 the record carried the first under the key
+    `anti_predictive` and the report emitted the threshold sentence from it.
     """
     row = pooled_disagreement(anti)
     assert row["estimate"] < 0.0, row["estimate"]
     assert row["estimate"] == pytest.approx(-0.5, abs=0.45), row["estimate"]
 
-    shape = (anti.get("pooled") or {}).get("anti_predictive") or {}
-    assert shape["measurable"], shape
-    assert shape["worse_at_the_top"], (
-        "an anti-predictive model must show a wider shortfall in its highest "
-        f"claimed-edge bucket than in its lowest; got {shape}"
+    pooled = anti.get("pooled") or {}
+    assert "anti_predictive" not in pooled, (
+        "the key that named overconfidence anti-predictiveness must be gone, "
+        "not aliased: a reader of the record must not be able to reach the "
+        "winner's-curse number by the anti-predictive name"
     )
-    assert shape["shortfall_widens_by"] > 0.0
+
+    curse = pooled.get("overconfidence") or {}
+    assert curse["measures"] == FS.OVERCONFIDENCE_LABEL, curse
+    assert curse["measurable"], curse
+    assert curse["widens_with_claimed_edge"], (
+        "an anti-predictive model must show a wider shortfall in its highest "
+        f"claimed-edge bucket than in its lowest; got {curse}"
+    )
+    assert curse["overconfidence_widens_by"] > 0.0
+
+    shape = pooled.get("anti_predictive_return") or {}
+    assert shape["measures"] == FS.ANTI_PREDICTIVE_LABEL, shape
+    assert shape["measurable"], shape
+    assert shape["falls_at_the_top"], (
+        "this data-generating process makes the bigger claimed edge the worse "
+        f"bet, so the realised return must fall across the buckets; got {shape}"
+    )
+    for end in ("lowest_bucket", "highest_bucket"):
+        bucket = shape[end]
+        assert bucket["bets"] >= S.MINIMUM_BETS, (
+            f"{end} entered the comparison below the declared floor: {bucket}"
+        )
+        assert bucket["clusters"] > 0 and bucket["cluster_unit"], bucket
 
     report = FS.render(anti)
-    assert "The biggest claimed edges do worst." in report
-    assert "raising the edge threshold the wrong response" in report
+    assert "The model over-estimates more where it claims more." in report
+    assert "Realised return by claimed edge — the anti-predictive statistic." in report
+    # The threshold sentence rests on the return statistic, and only when the
+    # two buckets' clustered intervals are disjoint. On this fixture they are
+    # not, and the report must say so rather than borrow the overconfidence
+    # shape to make the claim.
+    threshold_sentence = "raising the edge threshold the wrong response"
+    if shape["demonstrated"]:
+        assert threshold_sentence in report
+    else:
+        assert threshold_sentence not in report
+        assert "the fall is not demonstrated" in report
+
+
+def _measured_with(low_roi, high_roi, *, low_ci, high_ci) -> dict:
+    """A `measure()`-shaped dict carrying two usable claimed-edge buckets."""
+    def bucket(low, high, roi, ci):
+        return {
+            "low": low,
+            "high": high,
+            "rows": 400,
+            "games": 90,
+            "enough": True,
+            "gap_to_model": 0.0,
+            "roi": {
+                "value": roi,
+                "low": ci[0],
+                "high": ci[1],
+                "rows": 400,
+                "clusters": 90,
+                "cluster_unit": "day",
+                "enough_evidence": True,
+                "verdict": "",
+            },
+        }
+
+    buckets = [
+        bucket(0.0, 0.02, low_roi, low_ci),
+        bucket(0.20, float("inf"), high_roi, high_ci),
+    ]
+    return {
+        "buckets": buckets,
+        "overconfidence": FS.overconfidence_by_bucket(buckets),
+        "anti_predictive_return": FS.anti_predictive_return(buckets),
+    }
+
+
+def test_the_threshold_sentence_is_emitted_only_by_disjoint_return_intervals():
+    """*"Raising the threshold makes it worse"* is a claim about money.
+
+    So it may be made only from the realised-return statistic, and only when
+    the two buckets' clustered intervals do not overlap. Both branches are
+    exercised on the same shaped input with only the intervals moved, because
+    the defect this closes was a sentence that never looked at them at all.
+    """
+    disjoint = _measured_with(
+        0.06, -0.09, low_ci=(0.02, 0.10), high_ci=(-0.14, -0.04)
+    )
+    assert disjoint["anti_predictive_return"]["demonstrated"]
+    text = "\n".join(FS._anti_predictive_paragraph(disjoint))
+    assert "raising the edge threshold the wrong response" in text
+    assert "+6.0%" in text and "-9.0%" in text, text
+    assert "400 settled wagers across 90 days" in text, (
+        "every measured number carries its sample size and the clustering that "
+        f"produced it; got {text}"
+    )
+
+    overlapping = _measured_with(
+        0.06, -0.09, low_ci=(-0.05, 0.17), high_ci=(-0.30, 0.12)
+    )
+    assert not overlapping["anti_predictive_return"]["demonstrated"]
+    text = "\n".join(FS._anti_predictive_paragraph(overlapping))
+    assert "the fall is not demonstrated" in text
+    assert "raising the edge threshold the wrong response" not in text
+    assert "the intervals overlap" in text or "intervals overlap" in text
+
+
+def test_a_bucket_below_the_declared_floor_gets_no_anti_predictive_comparison():
+    """Below `stats.MINIMUM_BETS` settled wagers there is no return figure.
+
+    So there is nothing to compare, and the report says the statistic was not
+    measured rather than falling back on the overconfidence column — which is a
+    different quantity and was, until 2026-09-05, printed under this one's name.
+    """
+    thin = [
+        {
+            "low": 0.0,
+            "high": 0.02,
+            "rows": 40,
+            "games": 20,
+            "enough": True,
+            "gap_to_model": 0.0,
+            "roi": {"value": 0.0, "low": 0.0, "high": 0.0, "rows": 40,
+                    "clusters": 20, "cluster_unit": "game",
+                    "enough_evidence": False, "verdict": ""},
+        }
+    ]
+    shape = FS.anti_predictive_return(thin)
+    assert not shape["measurable"], shape
+    text = "\n".join(
+        FS._anti_predictive_paragraph({"anti_predictive_return": shape})
+    )
+    assert "is not measured here" in text
+    assert f"{S.MINIMUM_BETS:,} settled wagers" in text
+    assert "raising the edge threshold the wrong response" not in text
 
 
 def test_the_bucket_table_prints_a_sample_size_beside_every_frequency():

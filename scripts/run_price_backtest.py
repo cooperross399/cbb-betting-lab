@@ -229,6 +229,14 @@ class NothingToMeasure(RuntimeError):
 # --------------------------------------------------------------------------
 
 
+#: The per-row refusal `card_pricing.build_wagers` reports, stamped onto every
+#: priced row: the reason the row could not become a wager, or the empty string
+#: when it did. It carries no probability and no bet either way; it exists so
+#: the unparseable term of the accounting identity is **counted off the frame**
+#: rather than derived from the other three.
+UNPARSEABLE_COLUMN = "unparseable_reason"
+
+
 def _reason_lines(what: str, reasons: Mapping[str, int], *, most: int = 6) -> list[str]:
     """The commonest reasons, largest first, and how many are not shown."""
     if not reasons:
@@ -241,6 +249,10 @@ def _reason_lines(what: str, reasons: Mapping[str, int], *, most: int = 6) -> li
     return lines
 
 
+class AccountingDoesNotReconcile(RuntimeError):
+    """The four buckets do not add up to the wagers the board offered."""
+
+
 @dataclass
 class OpinionAccounting:
     """`offered = unparseable + no opinion + below threshold + bets`, reconciled.
@@ -249,6 +261,19 @@ class OpinionAccounting:
     identity does not reconcile. It matters more here than on a card: a wager
     that reached none of the buckets has vanished from a *measurement*, and a
     measurement that silently lost a third of its rows still prints an interval.
+
+    **Every term is counted from the frame, and none is the residual of the
+    others.** Until 2026-09-05 the caller set two of them by subtraction —
+
+        accounting.no_opinion = max(len(priced) - opinions - unparseable, 0)
+        accounting.below_threshold = max(opinions - accounting.bets, 0)
+
+    — which makes the sum identically `len(priced)` whatever the frames hold.
+    The identity then reconciled by construction and could never have detected
+    the loss it exists to detect: drop a third of the rows between the pricer
+    and the grader and it still printed `reconciles yes`. :meth:`count_from`
+    reads all four off the graded frame with one row landing in exactly one
+    bucket, and :meth:`check` raises rather than warns.
     """
 
     offered: int = 0
@@ -256,6 +281,15 @@ class OpinionAccounting:
     no_opinion: int = 0
     below_threshold: int = 0
     bets: int = 0
+    #: The pricer's own running tally of rows `card_pricing.build_wagers`
+    #: refused, accumulated day by day. It is a **second, independent** count of
+    #: the same quantity :meth:`count_from` reads off the frame, and the two are
+    #: compared: a row that was refused during pricing and then disappeared
+    #: before grading leaves the tally high and the frame count low.
+    unparseable_declared: int = 0
+    #: How many rows the bets frame the report measures actually holds. `-1`
+    #: means no frame was supplied and the cross-check is not made.
+    bets_in_hand: int = -1
     #: Grouped, never one line per wager. Thirty-five markets over six seasons
     #: is millions of rows, and one line each is noise that hides the line that
     #: matters.
@@ -277,13 +311,97 @@ class OpinionAccounting:
                 self.declined_reasons.get(reason, 0) + int(count)
             )
 
+    def count_from(
+        self,
+        frame: pd.DataFrame,
+        *,
+        threshold: float,
+        bets: pd.DataFrame | None = None,
+    ) -> None:
+        """Bucket every row of the graded frame. Four counts, four predicates.
+
+        The predicates are disjoint and exhaustive over `frame` by construction,
+        in this priority: a row that cleared the threshold is a **bet** (read
+        with `price_backtest.bet_mask`, the one predicate `bets_from` uses, so
+        "a bet" here and "a bet" in the report cannot be two different cuts);
+        of the rest, a row `build_wagers` refused is **unparseable**; a row with
+        no model probability is **no opinion**; the remainder had an opinion
+        that did not clear the threshold. Nothing is subtracted, so the sum is a
+        real count of `frame` and comparing it to `offered` is a real test.
+
+        `bets` is the frame the report will actually measure. It is recorded so
+        the identity can check that the bucket and the frame hold the same rows:
+        setting `self.bets = len(bets)` and deriving the neighbouring bucket
+        from it — which is what this file did until 2026-09-05 — makes a bet
+        lost between `bets_from` and here reappear as a below-threshold wager,
+        and the identity reconciles while the report measures one bet fewer.
+        """
+        if bets is not None:
+            self.bets_in_hand = int(len(bets))
+        if frame.empty:
+            self.unparseable = self.no_opinion = 0
+            self.below_threshold = self.bets = 0
+            return
+        taken = PB.bet_mask(frame, threshold=float(threshold))
+        refused = (
+            frame[UNPARSEABLE_COLUMN].astype(str).str.strip().ne("")
+            if UNPARSEABLE_COLUMN in frame.columns
+            else pd.Series(False, index=frame.index)
+        )
+        has_opinion = pd.to_numeric(
+            frame["model_probability"]
+            if "model_probability" in frame.columns
+            else pd.Series(index=frame.index, dtype="float64"),
+            errors="coerce",
+        ).notna()
+        rest = ~taken
+        self.bets = int(taken.sum())
+        self.unparseable = int((rest & refused).sum())
+        self.no_opinion = int((rest & ~refused & ~has_opinion).sum())
+        self.below_threshold = int((rest & ~refused & has_opinion).sum())
+
     @property
     def accounted(self) -> int:
         return self.unparseable + self.no_opinion + self.below_threshold + self.bets
 
     @property
     def reconciles(self) -> bool:
-        return self.accounted == self.offered
+        return (
+            self.accounted == self.offered
+            and self.unparseable == self.unparseable_declared
+            and (self.bets_in_hand < 0 or self.bets == self.bets_in_hand)
+        )
+
+    def check(self) -> None:
+        """Raise unless the identity holds. An error, never a warning.
+
+        A measurement that silently lost rows still prints an interval, so a
+        soft landing here is worse than no measurement at all.
+        """
+        if self.reconciles:
+            return
+        if self.accounted != self.offered:
+            raise AccountingDoesNotReconcile(
+                f"{self.accounted:,} wager(s) reached one of the four buckets "
+                f"and {self.offered:,} were offered. A wager that reached none "
+                "of them has vanished between the board and the measurement."
+            )
+        if self.unparseable != self.unparseable_declared:
+            raise AccountingDoesNotReconcile(
+                f"the pricer refused {self.unparseable_declared:,} row(s) as "
+                f"unparseable and {self.unparseable:,} such row(s) survive in "
+                "the graded frame. The two counts are of the same quantity, so "
+                "they disagree only when rows were lost or re-labelled after "
+                "pricing."
+            )
+        raise AccountingDoesNotReconcile(
+            f"the bets bucket holds {self.bets:,} wager(s) and the frame the "
+            f"report measures holds {self.bets_in_hand:,}. Both are the rows "
+            "`price_backtest.bet_mask` marks, so they differ only when a bet "
+            "was lost between selecting them and counting them — and a bet "
+            "lost there used to reappear as a below-threshold wager and "
+            "reconcile."
+        )
 
     def lines(self) -> list[str]:
         out = [
@@ -295,7 +413,9 @@ class OpinionAccounting:
             f"  below the edge threshold {self.below_threshold:,}",
             f"  bets                     {self.bets:,}",
             f"  reconciles               {'yes' if self.reconciles else 'NO'} "
-            f"({self.accounted:,} accounted of {self.offered:,} offered)",
+            f"({self.accounted:,} accounted of {self.offered:,} offered; "
+            f"{self.unparseable_declared:,} refused by the pricer; "
+            f"{self.bets_in_hand:,} bet(s) in the measured frame)",
         ]
         # Grouped by reason and printed rather than only counted. A store where
         # a third of the rows are unparseable is a wiring signal, and a count
@@ -416,11 +536,20 @@ def make_price_day(
             prices=frame,
             competition=competition,
         )
+        row_reasons: list[str] = []
         wagers, unparseable, reasons = card_pricing.build_wagers(
-            frame, competition=competition, key_for=key_for
+            frame, competition=competition, key_for=key_for,
+            row_reasons=row_reasons,
         )
-        accounting.unparseable += int(unparseable)
+        accounting.unparseable_declared += int(unparseable)
         accounting.refuse(reasons)
+        # Stamped on the row rather than only counted, so the accounting
+        # identity can count its unparseable bucket off the same frame it
+        # counts the other three off. A term derived from the others is not a
+        # term, and an identity whose terms are derived cannot fail.
+        frame[UNPARSEABLE_COLUMN] = pd.Series(
+            row_reasons, index=frame.index, dtype="object"
+        )
 
         probabilities, census = gameday_card.opinions_for(
             wagers, matchups or {}, day=day
@@ -1131,10 +1260,6 @@ def main(argv: list[str] | None = None) -> int:
     opinions = int(
         pd.to_numeric(priced["model_probability"], errors="coerce").notna().sum()
     )
-    # An unparseable row can never carry a probability, so the two buckets do
-    # not overlap and every remaining wager is one the model declined or was
-    # never able to be asked about.
-    accounting.no_opinion = max(len(priced) - opinions - accounting.unparseable, 0)
 
     # ---- grade every wager the board offered -------------------------------
     game_ids = {
@@ -1149,21 +1274,23 @@ def main(argv: list[str] | None = None) -> int:
         census=census,
     )
     bets = PB.bets_from(universe, threshold=float(args.edge_threshold))
-    accounting.bets = len(bets)
-    # Every bet carries a probability, so the bets are a subset of the opinions
-    # and the rest of the opinions did not clear the threshold declared in
-    # advance. A wager with an opinion and an unreadable price has a missing
-    # edge and lands here, which is the correct side: it is not a bet.
-    accounting.below_threshold = max(opinions - accounting.bets, 0)
+    # All four terms read off the graded frame, none of them the residual of
+    # the others. `count_from` uses `PB.bet_mask` — the same predicate
+    # `bets_from` used one line above — so the bets bucket and the bets frame
+    # cannot be two different cuts of the same rows.
+    accounting.count_from(
+        universe, threshold=float(args.edge_threshold), bets=bets
+    )
 
     for line in accounting.lines():
         print(line)
-    if not accounting.reconciles:
+    try:
+        accounting.check()
+    except AccountingDoesNotReconcile as exc:
         print(
-            "::error::The accounting identity does not reconcile. A wager that "
-            "reached none of the four buckets has vanished from the "
-            "measurement, and a measurement that silently lost rows still "
-            "prints an interval. Nothing was written.",
+            f"::error::The accounting identity does not reconcile: {exc} A "
+            "measurement that silently lost rows still prints an interval. "
+            "Nothing was written.",
             file=sys.stderr,
         )
         return EXIT_NOTHING_TO_MEASURE
