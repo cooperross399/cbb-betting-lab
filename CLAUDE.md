@@ -393,6 +393,8 @@ breaks his automation, and the breakage looks like the lab going quiet.
 | Forward evidence ledger | `data/processed/cbb_forward_evidence.csv` |
 | Experiment ledger | `data/outputs/experiment_ledger.json` |
 | Changed-selections marker | `Selections changed` |
+| Policy gate check name | `Policy Gate` |
+| Policy gate workflow file | `.github/workflows/policy-gate.yml` |
 
 Every output file is competition-prefixed, so nothing else could ever overwrite
 a CBB record. `tests/test_contract_strings.py` pins every one of these against

@@ -18,8 +18,68 @@ granting cannot, so it never is.
 
 `withdraw()` exists and is callable by an automated run. `grant()` does not
 exist. Adding a market is editing `data/manual/staging_provider_policy.json`
-with a receipt beside it, in a pull request whose policy gate is green, merged
-by Cooper.
+with a receipt beside it, in a pull request whose **`Policy Gate`** check is
+green, merged by Cooper.
+
+`Policy Gate` is `.github/workflows/policy-gate.yml`, and until 2026-09-05 this
+paragraph named a gate that did not exist: nothing under `.github/workflows/`
+opened a receipt, so a pull request carrying an unreceipted allowlist was
+green and this sentence was true of nothing. The check now runs on every pull
+request — no `paths:` filter, because a filtered check is not reported on the
+pull requests it filters out — and runs
+`scripts/check_allowlist_receipts.py`, which calls :func:`load` exactly as the
+card calls it and then :func:`verify_receipt` on every allowlisted entry one at
+a time, including the entries a `manual_only` file leaves :func:`load` itself
+skipping. It names, in the job summary, every market it checked, the receipt
+behind it or what that market lacked, and which markets the change ADDS. It is
+red until a receipt stands behind every allowlisted market, and it exits `2`
+rather than `0` on a policy file that exists and cannot be read, because
+"nothing to check" and "I could not check" must not share a branch. That
+covers more than a file that is not JSON: an allowlist that is not a list, an
+entry that is a bare string or names no market, a directory where the file
+belongs and a symlink into nothing each turn into an allowlist of nothing in
+:func:`load`, and a gate reporting on an allowlist nobody read has checked
+nothing. The job summary ends with one verdict line built from the exit
+status, with the verdict wording removed from every other line first, so a
+red run cannot contain the sentence a green run prints — market names,
+receipt notes and the policy file's own `mode` field are text from files the
+gate does not control, and the last of those was printed raw until
+2026-09-05, so one line of JSON wrote a newline and a `|` into the summary as
+a markdown line and a markdown column of its own. That removal matches the
+LETTERS of the wording rather than the wording, the way
+:func:`_signer_is_forbidden` refuses `C.L.A.U.D.E.`, because a literal match
+was walked past by `POLICY-GATE-VERDICT` and by a verdict carrying a `|`; it
+then repeats to a fixed point and checks its own output, because one pass in
+a fixed order rewrote `POLICY GATE: <the green sentence>` into `POLICY GATE:
+[verdict text removed]` and so wrote the marker it had been asked to remove.
+What it still cannot see — a misspelling, a paraphrase — is written into the
+scrub's own docstring and held open by a test rather than described as
+closed; neither spells the marker. The checker is also the ONLY writer of
+that summary: the job summary is a per-step file GitHub concatenates, so a
+sibling step could otherwise put a green verdict above the real one in a red
+run, and `GITHUB_STEP_SUMMARY` is a plain environment variable, so a
+job-level or workflow-level `env:` could send the checker's own verdict to a
+file nobody opens. It is named nowhere in the workflow — not in a step, not
+in a job `env:`, not in a workflow `env:`. What that rule does not reach is
+written into its own docstring: what `actions/checkout` and
+`actions/setup-python` do with the same write handle, and a `run:` block in
+the checker's own step that assembles the variable name rather than spelling
+it. No condition stands between a pull request
+and that verdict: the job carries no `if:`, no `needs:` and no `strategy:`,
+because GitHub reports a check skipped by a condition as a success. Exactly
+one job in the whole workflow corpus carries the name that publishes this
+check, since a context is a job `name:` and nothing scopes it to a file.
+
+What it checks about the signature is what :func:`_signer_is_forbidden`
+checks and nothing more: that `signed_by` is not one of the spellings of
+Claude it refuses. Nothing there is cryptographic and no identity is
+verified, so whether the signer is really Cooper is the judgement of whoever
+reviews the pull request rather than a thing this gate can enforce.
+
+It is not a context branch protection requires: measured 2026-09-05, main
+requires `Tests` and nothing else, so a red `Policy Gate` is a fact in the pull
+request rather than a hold on the merge button. Adding the context is a
+repository setting and Cooper's to make.
 
 ## The receipt is checked, not named
 
@@ -71,6 +131,17 @@ from cbb_betting_lab.config import MANUAL_DIR
 
 POLICY_FILENAME = "staging_provider_policy.json"
 RECEIPTS_DIRNAME = "human_acceptance_receipts"
+
+#: The check every sentence in this repository promises, spelled exactly as
+#: GitHub reports it. It is a CONTRACT STRING: `CLAUDE.md`'s contract table
+#: holds it and `tests/test_contract_strings.py` pins the table against this
+#: constant, against the workflow's own `name:` and its job's `name:`, and
+#: against every document that promises the gate. Renaming the workflow
+#: without renaming the references is therefore a red build rather than four
+#: sentences about a check that no longer reports.
+POLICY_GATE_CHECK = "Policy Gate"
+#: The file that declares that check.
+POLICY_GATE_WORKFLOW = ".github/workflows/policy-gate.yml"
 
 #: The default, and the state this lab expects to stay in. Manual-only means
 #: the card reads nothing from staging and produces no selection.
