@@ -157,16 +157,35 @@ BACKTEST_SCRIPT = "run_price_backtest.py"
 #: one: the loop exists to notice drift in what is happening now, and the
 #: full-population figure is a separate, deliberate run that no CI job can
 #: hold. See the block comment where this is used.
-def weekly_backtest_season() -> int:
-    """The season the loop re-scores. Derived from the clock, never pinned.
+def weekly_backtest_season(processed_dir: Path) -> int | None:
+    """The season the loop re-scores: the LATEST ONE IN THE BOUGHT STORE.
 
-    A literal here would quietly keep scoring 2027 in 2029.
+    The first version derived it from the clock — the current season — and
+    that was wrong in a way that would have fired every Monday: the bought
+    store holds 2021 through 2026, the calendar says 2027, and a season filter
+    matching nothing is a refusal. The weekly backtest step would have failed
+    on the first scheduled run and every one after it. The current season's
+    only evidence is the forward ledger, which the gameday workflow settles
+    nightly and this loop reads for the demotion check; the bought store never
+    holds the season in progress.
+
+    So: the newest season the store actually contains. `None` when there is no
+    store, so the caller can report a MISSING population rather than invent a
+    year — a number here that names a season nobody bought is how a weekly
+    loop reports degraded for ever while looking like it is running.
     """
-    from datetime import datetime, timezone
+    from cbb_betting_lab.competitions import CBB
+    from cbb_betting_lab.providers import historical as H
 
-    from cbb_betting_lab.season import season_for_slate_date
+    store = H.store_path(CBB, Path(processed_dir), H.CARD_WINDOW)
+    if not store.is_file():
+        return None
+    import pandas as pd
 
-    return season_for_slate_date(datetime.now(timezone.utc).date().isoformat())
+    seasons = pd.read_csv(store, usecols=["season"])["season"].dropna()
+    return int(seasons.max()) if len(seasons) else None
+
+
 CLAIMS_SCRIPT = "run_what_we_can_claim.py"
 
 #: The market-vs-model regression, EVERY WEEK. The brief calls it the fastest
@@ -1576,7 +1595,15 @@ def main(argv: list[str] | None = None) -> int:
         # scratch every Monday answers a question nobody asked and cannot
         # finish. The full-population run stays deliberate and occasional, and
         # `docs/when_this_ends.md` reads it rather than this.
-        passthrough += ["--seasons", str(weekly_backtest_season())]
+        season = weekly_backtest_season(processed_dir)
+        if season is None:
+            print(
+                "::warning::No bought price store, so the weekly backtest has no "
+                "population. The step will report the store missing rather than "
+                "score a season nobody bought."
+            )
+        else:
+            passthrough += ["--seasons", str(season)]
     steps.append(
         run_script(
             REFIT_SCRIPT,

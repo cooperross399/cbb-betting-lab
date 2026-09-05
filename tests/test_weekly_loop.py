@@ -172,6 +172,14 @@ def with_siblings(lab: dict) -> dict:
     """
     for name in (LOOP.REFIT_SCRIPT, LOOP.CLAIMS_SCRIPT, LOOP.SKILL_FRAME_SCRIPT, LOOP.FORECAST_SCRIPT):
         stub_script(lab, name)
+    # A minimal bought store, so the weekly season resolves to a season the
+    # store holds rather than to nothing. The clock is not consulted: the
+    # store is.
+    from cbb_betting_lab.providers import historical as H
+
+    H.store_path(CBB, lab["processed"], H.CARD_WINDOW).write_text(
+        "season,market,snapshot_phase\n2026,spread,card\n", encoding="utf-8"
+    )
     stub_script(
         lab,
         LOOP.BACKTEST_SCRIPT,
@@ -1172,13 +1180,20 @@ def test_the_weekly_backtest_is_bounded_to_a_season(lab: dict):
     )
 
 
-def test_the_weekly_season_is_derived_from_the_clock_not_pinned():
-    """A literal would quietly keep scoring 2027 in 2029."""
-    from datetime import date
+def test_the_weekly_season_is_the_latest_in_the_store_not_the_calendar(tmp_path):
+    """The clock said 2027; the store held 2021-2026; a season filter matching
+    nothing is a refusal. Derived from the clock, the weekly backtest would
+    have failed on its first scheduled run and every one after it — degraded
+    for ever, looking like a lab that was running."""
+    from cbb_betting_lab.competitions import CBB
+    from cbb_betting_lab.providers import historical as H
 
-    expected = LOOP.weekly_backtest_season()
-    today = date.today()
-    assert expected == (today.year + 1 if today.month >= 7 else today.year)
+    store = H.store_path(CBB, tmp_path, H.CARD_WINDOW)
+    pd.DataFrame({"season": [2021, 2024, 2026], "market": ["spread"] * 3}).to_csv(store, index=False)
+    assert LOOP.weekly_backtest_season(tmp_path) == 2026
+
+    store.unlink()
+    assert LOOP.weekly_backtest_season(tmp_path) is None, "no store must not become a year"
 
 
 def test_the_loop_regresses_market_against_model_every_week(lab: dict):
