@@ -3591,3 +3591,167 @@ def test_the_gameday_card_step_reads_the_directory_the_build_step_writes() -> No
     if "--processed-dir" in card_block:
         assert re.search(r"--processed-dir\s+\"?data/processed", card_block), card_block
     assert "--output-dir" not in build_block or "data/processed" in build_block
+
+
+# ==========================================================================
+# The `contents: write` comment, pinned to the workflows on disk
+#
+# `cbb-gameday-refresh.yml` asserted in its `permissions:` block that it was
+# *"the ONLY workflow in the repository that has it"*, and that this was *"also
+# why the line-movement capture keeps its history in run artifacts rather than
+# on a branch of its own"*. Both sentences were false: `line-movement.yml` has
+# held `contents: write` and pushed to `refs/heads/line-movement` for as long
+# as it has existed.
+#
+# The mapping was right; only the prose was wrong — `WRITERS` above named both
+# workflows, and `check_permissions_are_declared_and_writers_are_the_closed_set`
+# enforced it in both directions. That is what makes this the interesting kind
+# of stale comment: the fence held, and the sentence describing the fence to a
+# human said the fence was somewhere else. A reader auditing what can write
+# `main` reads the comment, not the constant.
+#
+# So the comment now carries a machine-readable line, and these tests parse it.
+# ==========================================================================
+
+#: The marker that introduces the holders line inside the `permissions:` block
+#: of `cbb-gameday-refresh.yml`. A comment nothing parses is a comment that
+#: drifts; this one is data.
+CONTENTS_WRITE_HOLDERS_MARKER = "CONTENTS-WRITE HOLDERS:"
+
+#: The workflow whose comment describes the closed set to a human reader.
+HOLDERS_COMMENT_WORKFLOW = "cbb-gameday-refresh.yml"
+
+
+def holds_contents_write(path: Path) -> bool:
+    """Does this workflow grant `contents: write` anywhere in its tree?
+
+    Parsed, at every level — top-level `permissions:`, a job's own, and
+    `write-all` — rather than grepped, so a comment quoting the string (this
+    file's own subject matter, and the workflow header's) is not mistaken for a
+    grant and a grant spelled `write-all` is not missed.
+    """
+    document = load(path)
+    for mapping in mappings(document):
+        permissions = mapping.get("permissions")
+        if isinstance(permissions, dict) and permissions.get("contents") == "write":
+            return True
+        if permissions == "write-all":
+            return True
+    return False
+
+
+def contents_write_holders_on_disk() -> set[str]:
+    """Every workflow file that actually grants the permission, by name."""
+    return {path.name for path in WORKFLOW_FILES if holds_contents_write(path)}
+
+
+def holders_named_in_the_comment() -> dict[str, str]:
+    """The `workflow -> ref` pairs the comment declares, parsed.
+
+    The scan starts at the marker and runs to the end of that comment run: a
+    blank comment line (`  #`) or the first line that is not a comment ends it,
+    which is what lets the sentences under the list stay prose.
+    """
+    path = WORKFLOWS_DIR / HOLDERS_COMMENT_WORKFLOW
+    lines = path.read_text(encoding="utf-8").splitlines()
+    for index, line in enumerate(lines):
+        if CONTENTS_WRITE_HOLDERS_MARKER not in line:
+            continue
+        chunk = [line.split(CONTENTS_WRITE_HOLDERS_MARKER, 1)[1]]
+        for following in lines[index + 1 :]:
+            stripped = following.strip()
+            if not stripped.startswith("#"):
+                break
+            body = stripped.lstrip("#").strip()
+            if not body:
+                break
+            chunk.append(body)
+        pairs: dict[str, str] = {}
+        for piece in " ".join(chunk).split(";"):
+            piece = piece.strip().rstrip(".")
+            if not piece:
+                continue
+            name, arrow, ref = piece.partition("->")
+            assert arrow, (
+                f"{HOLDERS_COMMENT_WORKFLOW}: {piece!r} in the "
+                f"{CONTENTS_WRITE_HOLDERS_MARKER} line names no ref. Every "
+                "holder is listed as `workflow.yml -> refs/heads/<ref>`."
+            )
+            pairs[name.strip()] = ref.strip()
+        return pairs
+    return {}
+
+
+def test_the_permissions_comment_names_every_workflow_that_holds_contents_write():
+    """The comment is checked against the disk, in both directions.
+
+    It used to claim one holder while two workflows held the permission. A
+    reader auditing what can write `main` reads this comment; nothing read it
+    back, so it was the one statement in the block with no test under it.
+    """
+    named = holders_named_in_the_comment()
+    assert named, (
+        f"{HOLDERS_COMMENT_WORKFLOW}'s `permissions:` block carries no "
+        f"`{CONTENTS_WRITE_HOLDERS_MARKER}` line, so its prose about who may "
+        "write this repository is unchecked again."
+    )
+    on_disk = contents_write_holders_on_disk()
+    assert set(named) == on_disk, (
+        f"{HOLDERS_COMMENT_WORKFLOW}'s comment names {sorted(named)} as the "
+        f"workflows holding `contents: write`; the files on disk say "
+        f"{sorted(on_disk)}. A workflow gaining or losing that permission has "
+        "to change this comment with it — GitHub cannot scope the permission "
+        "to a ref, so every name on that list is write access to `main`."
+    )
+
+
+def test_the_holders_comment_and_the_writers_constant_are_the_same_closed_set():
+    """One set, described twice: once for a machine and once for a human.
+
+    `WRITERS` is what the per-file checks enforce; the comment is what a person
+    reads. They were allowed to disagree and did.
+    """
+    assert holders_named_in_the_comment() == WRITERS, (
+        "the comment and WRITERS disagree about who may write and where: "
+        f"comment {holders_named_in_the_comment()}, WRITERS {WRITERS}."
+    )
+
+
+def test_the_set_of_workflows_holding_contents_write_is_exactly_the_declared_writers():
+    """The set as a set, not one file at a time.
+
+    The per-file check cannot see a `WRITERS` entry whose workflow file has
+    been deleted or renamed: no file, no parametrised case, no failure. That
+    leaves a closed set naming a workflow that is not there, which reads as a
+    tighter fence than the repository has.
+    """
+    assert contents_write_holders_on_disk() == set(WRITERS), (
+        f"workflows holding `contents: write` on disk: "
+        f"{sorted(contents_write_holders_on_disk())}; declared in WRITERS: "
+        f"{sorted(WRITERS)}."
+    )
+    for name in WRITERS:
+        assert (WORKFLOWS_DIR / name).is_file(), (
+            f"WRITERS names {name}, which is not in {WORKFLOWS_DIR}. A closed "
+            "set naming a workflow that does not exist reads as a tighter "
+            "fence than this repository has."
+        )
+
+
+def test_no_workflow_comment_still_claims_a_single_contents_write_holder():
+    """The retired sentences, by their own words.
+
+    Two workflows hold the permission. Any workflow comment asserting a single
+    holder is the defect coming back, and it comes back as prose rather than as
+    a mapping, which is why this looks at the text.
+    """
+    if len(contents_write_holders_on_disk()) <= 1:
+        pytest.skip("only one workflow holds `contents: write`; the claim would be true")
+    for path in WORKFLOW_FILES:
+        text = path.read_text(encoding="utf-8")
+        for claim in ("ONLY workflow in the repository that has it", "only workflow that holds"):
+            assert claim not in text, (
+                f"{path.name} still claims to be the only holder of "
+                f"`contents: write`, and {len(contents_write_holders_on_disk())} "
+                "workflows hold it."
+            )

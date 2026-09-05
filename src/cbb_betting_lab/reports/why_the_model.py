@@ -1,0 +1,1261 @@
+"""`data/outputs/cbb_why_the_model.md` — the edge question, rendered from records.
+
+`docs/why_the_model_does_or_does_not_have_an_edge.md` said on its own third
+line, *"Generated from `data/outputs/cbb_price_backtest.json`. Every figure is
+read from that record rather than typed, so this cannot drift from the
+measurement."* **No generator existed.** Every figure in it had been typed by
+hand, and the sentence promising otherwise is exactly the sentence that stops a
+reader checking. This module is the generator that sentence claimed.
+
+## What it reads, and what it refuses
+
+Three records, all three required:
+
+* `data/outputs/cbb_price_backtest.json` — the returns, per market-and-tier
+  cell, and the blind baselines they are compared against;
+* `data/outputs/cbb_forecast_skill.json` — Brier against the market and the
+  claimed-edge buckets;
+* the replication record a held-out run writes, resolved through
+  :func:`what_we_can_claim.replication_path` so the `data/outputs/holdout/`
+  copy is found rather than reported missing.
+
+**A missing record raises :class:`WhyError` rather than rendering the document
+without it.** That is the whole point of the file: a document about whether a
+model has an edge, rendered with one of its three instruments silently absent,
+reads as a complete answer and is not one. `what_we_can_claim` may report *"no
+held-out test has been run"* because reporting the state of the evidence is its
+job; this document's job is to weigh the evidence, and it cannot weigh what it
+does not have.
+
+## The vocabulary is not restated here, it is imported
+
+Every verdict string comes from :meth:`stats.RoiInterval.verdict` — the one
+place in this repository that reads the sign — so an interval spanning zero
+reads :data:`stats.NO_DEMONSTRATED_EDGE` and nothing softer, and only an
+interval excluding zero **after the family-wise correction** is ever called a
+demonstrated edge or a demonstrated deficit. A second copy of a phrase drifts,
+and the direction it drifts in is never the conservative one.
+
+Three more rules this module enforces mechanically:
+
+1. **Every measured number carries its sample size**, and a cell below
+   `stats.MINIMUM_BETS` prints the phrase and no number at all.
+2. **The headline is per tier and never pooled.** High-major, mid-major and
+   low-major are three distributions. :func:`headline` reads
+   ``record["tiers"]`` and cannot reach the pooled figure, which lives in its
+   own section under `price_backtest.POOLED_CAVEAT`. The document this replaced
+   put the pooled row in the same table as the three tiers, one line below a
+   sentence saying it never would.
+3. **The title reads the sign.** The file is named *does or does not*; the
+   heading is derived from how many tiers show a demonstrated edge, so a
+   document titled *"does not have an edge"* cannot survive a measurement that
+   found one.
+
+## Corrected with today's family size, not the backtest's
+
+The stored `adjusted_low`/`adjusted_high` were computed with whatever the
+experiment ledger held when the backtest ran. Every interval here is rebuilt
+from the stored point estimate and standard error with the **current**
+cumulative hypothesis count, the same rule `what_we_can_claim` follows, so a
+December correction can never be quoted in March. It can only ever get wider.
+
+An absent ledger applies no correction **and says so**, which is a different and
+much more alarming claim than a correction that was applied and changed nothing.
+
+## Pure over a run record
+
+:func:`build_record` reads disk; :func:`render` reads only the record. Improving
+a sentence must never cost a re-run of the measurement, and a report that can
+only be produced by re-running the measurement is a report nobody improves.
+:func:`stale_inputs` re-asks the disk the three questions the record wrote down
+about every file it opened — which path, was it there, what did it stamp itself
+with — so a record that has fallen behind the evidence says so instead of
+rendering confident prose about files it never read.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import re
+from collections.abc import Mapping, Sequence
+from datetime import datetime, timezone
+from pathlib import Path
+
+from cbb_betting_lab import stats as S
+from cbb_betting_lab.competitions import Competition
+from cbb_betting_lab.config import REPO_ROOT
+from cbb_betting_lab.conferences import Tier
+from cbb_betting_lab.reports import forecast_skill as FS
+from cbb_betting_lab.reports import price_backtest as PB
+from cbb_betting_lab.reports import what_we_can_claim as WC
+
+#: Bumped whenever the record's shape changes, so a stale record fails loudly at
+#: re-render rather than rendering a report with holes in it. Same discipline as
+#: `price_backtest.RECORD_VERSION`, and for the same reason.
+RECORD_VERSION = 1
+
+#: `data/outputs/cbb_why_the_model.{json,md}`.
+REPORT_STEM = "why_the_model"
+
+#: The hand-written document whose fenced block this report is spliced into.
+#: Named here so the script, the weekly loop and the test all resolve one path.
+DOC_RELATIVE = "docs/why_the_model_does_or_does_not_have_an_edge.md"
+
+#: The markers that fence the generated block inside that document.
+BEGIN_MARKER = "<!-- BEGIN GENERATED: why_the_model -->"
+END_MARKER = "<!-- END GENERATED -->"
+
+#: How many blind baselines the document names. They are the worst by return,
+#: among those clearing `stats.MINIMUM_BETS`; a blind side below the floor is
+#: not printed with a number, for the same reason a model cell is not.
+BLIND_BASELINES_SHOWN = 5
+
+#: Tier order, strongest first — the same order as the backtest report and
+#: `what_we_can_claim`, so a reader moving between the three is not re-orienting.
+TIER_ORDER: tuple[str, ...] = (
+    Tier.HIGH_MAJOR.value,
+    Tier.MID_MAJOR.value,
+    Tier.LOW_MAJOR.value,
+    Tier.UNPLACED.value,
+)
+
+
+class WhyError(RuntimeError):
+    """A record this document needs is absent, unreadable, or the wrong shape.
+
+    Raised rather than rendering around the hole. A document that weighs three
+    instruments and silently weighs two still reads like an answer.
+    """
+
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+
+
+def record_path(competition: Competition, output_dir: Path) -> Path:
+    return Path(output_dir) / competition.output_name(REPORT_STEM, ".json")
+
+
+def report_path(competition: Competition, output_dir: Path) -> Path:
+    return Path(output_dir) / competition.output_name(REPORT_STEM, ".md")
+
+
+def doc_path() -> Path:
+    """The hand-written document, resolved from the repository root."""
+    return Path(REPO_ROOT) / DOC_RELATIVE
+
+
+def evidence_paths(competition: Competition, output_dir: Path) -> dict[str, Path]:
+    """The three records this document is a function of, by label.
+
+    Each is built by calling the module that writes it, never by re-spelling a
+    filename here: a second literal is how a reader and a writer drift apart,
+    and `what_we_can_claim` has the scar — it looked in `data/outputs/` alone
+    and reported a committed holdout replication as *"no held-out test has been
+    run"* for as long as that record existed.
+    """
+    outputs = Path(output_dir)
+    return {
+        "price backtest": PB.record_path(competition, outputs),
+        "forecast skill": FS.record_path(competition, outputs),
+        "held-out replication": WC.replication_path(competition, outputs),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Reading, defensively
+# ---------------------------------------------------------------------------
+
+
+def _text(value: object) -> str:
+    return "" if value is None else str(value).strip()
+
+
+def _as_float(value: object) -> float | None:
+    """A float, or None. A non-finite bound is None, never an infinity and
+    never a zero: a zero-width interval around a positive return reads as a
+    finding, and `-inf%` renders as nonsense."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _as_int(value: object) -> int:
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _repo_relative(path: Path) -> str:
+    target = Path(path)
+    try:
+        return str(target.resolve().relative_to(Path(REPO_ROOT).resolve()))
+    except ValueError:
+        return str(target)
+
+
+def _absolute(stored: str) -> Path:
+    target = Path(stored)
+    return target if target.is_absolute() else Path(REPO_ROOT) / target
+
+
+def _moment(stamp: str) -> datetime | None:
+    text = _text(stamp)
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+def read_evidence(label: str, path: Path) -> dict:
+    """One required record, or :class:`WhyError` naming what is missing.
+
+    The three failures are reported apart — absent, unreadable, not an object —
+    because *"the instrument is not there"*, *"the instrument is broken"* and
+    *"that file is not the instrument"* call for three different responses and
+    a single message invites the wrong one.
+    """
+    target = Path(path)
+    if not target.is_file():
+        raise WhyError(
+            f"The {label} record is not on disk at `{_repo_relative(target)}`. "
+            "This document weighs three measurements and refuses to render "
+            "with one of them missing: a page that weighs two and reads like "
+            "an answer is worse than no page. Run the measurement that writes "
+            "it, then re-render."
+        )
+    try:
+        payload = json.loads(target.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise WhyError(
+            f"The {label} record at `{_repo_relative(target)}` could not be "
+            f"read ({type(exc).__name__}). Refusing to render a partial "
+            "document over a good one."
+        ) from exc
+    if not isinstance(payload, dict):
+        raise WhyError(
+            f"The {label} record at `{_repo_relative(target)}` is not a JSON "
+            "object, so it is not the record this document names."
+        )
+    return payload
+
+
+def _require(payload: Mapping, key: str, *, label: str, path: Path) -> object:
+    if key not in payload:
+        raise WhyError(
+            f"The {label} record at `{_repo_relative(path)}` carries no "
+            f"`{key}`, so this document cannot say what it was written to say "
+            "about it. Refusing to render the section empty: an empty section "
+            "reads as a null result, and a null result is a claim."
+        )
+    return payload[key]
+
+
+def _evidence_input(label: str, path: Path) -> dict:
+    """One evidence file as this run found it: which path, present, stamped when.
+
+    `generated_at` is read from the file's own contents, never from its
+    modification time: a fresh `git clone` stamps every file with the moment of
+    the clone, and a freshness check that calls every record in CI stale is a
+    check somebody eventually silences.
+    """
+    target = Path(path)
+    stamp = ""
+    if target.is_file():
+        try:
+            payload = json.loads(target.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            payload = {}
+        if isinstance(payload, dict):
+            stamp = _text(payload.get("generated_at"))
+    return {
+        "label": label,
+        "path": _repo_relative(target),
+        "found": target.is_file(),
+        "generated_at": stamp,
+    }
+
+
+def stale_inputs(record: Mapping) -> list[str]:
+    """Every reason this record is no longer about the evidence it names.
+
+    Empty means the record is still true of the disk. Purity buys one guarantee
+    — the markdown always matches its record — and it was once read as buying a
+    second one it does not: `what_we_can_claim`'s `--check` passed while the
+    document it checked named a committed backtest of 118,050 graded bets as
+    *not found*, because the comparison was against the record and the record
+    was a day older than the measurement. Internally consistent, externally
+    false. So this asks the disk.
+    """
+    written_at = _text(record.get("generated_at")) or "an unrecorded time"
+    written = _moment(record.get("generated_at"))
+    inputs = record.get("evidence_inputs")
+    if not isinstance(inputs, Sequence) or isinstance(inputs, (str, bytes)) or not inputs:
+        return [
+            "This record does not write down which evidence files it read, so "
+            "nothing can tell whether it is older than they are. It was "
+            f"written at {written_at}. Re-render it with "
+            "`scripts/run_why_the_model.py`."
+        ]
+    reasons: list[str] = []
+    for item in inputs:
+        if not isinstance(item, Mapping):
+            continue
+        stored = _text(item.get("path"))
+        if not stored:
+            continue
+        label = _text(item.get("label")) or stored
+        target = _absolute(stored)
+        found_then = bool(item.get("found"))
+        found_now = target.is_file()
+        stamped_then = _text(item.get("generated_at")) or "an unrecorded time"
+        stamped_now = _evidence_input(label, target)["generated_at"]
+
+        if found_now and not found_then:
+            reasons.append(
+                f"{label}: `{stored}` was ABSENT when this record was written "
+                f"at {written_at} and is on disk now, generated at "
+                f"{stamped_now or 'an unrecorded time'}."
+            )
+            continue
+        if found_then and not found_now:
+            reasons.append(
+                f"{label}: `{stored}` was read when this record was written at "
+                f"{written_at}, stamped {stamped_then}, and is not on disk now. "
+                "This document is quoting a measurement that no longer exists."
+            )
+            continue
+        if not found_now:
+            continue
+        if stamped_now and stamped_now != stamped_then:
+            reasons.append(
+                f"{label}: `{stored}` was generated at {stamped_now}; this "
+                f"record read the version generated at {stamped_then} and was "
+                f"itself written at {written_at}."
+            )
+            continue
+        moment = _moment(stamped_now)
+        if moment is not None and written is not None and moment > written:
+            reasons.append(
+                f"{label}: `{stored}` was generated at {stamped_now}, which is "
+                f"after this record was written at {written_at}. A document "
+                "cannot have read evidence that did not exist yet."
+            )
+    return reasons
+
+
+# ---------------------------------------------------------------------------
+# Cells
+# ---------------------------------------------------------------------------
+
+
+def interval_from_row(row: Mapping, *, looks: int) -> S.RoiInterval:
+    """Rebuild a stored cell's interval under **today's** family size."""
+    return S.RoiInterval(
+        roi=_as_float(row.get("roi")) or 0.0,
+        low=_as_float(row.get("low")) or 0.0,
+        high=_as_float(row.get("high")) or 0.0,
+        bets=_as_int(row.get("bets")),
+        clusters=_as_int(row.get("clusters")),
+        standard_error=_as_float(row.get("standard_error")) or 0.0,
+        looks=looks,
+        cluster_unit=_text(row.get("cluster_unit")) or "game",
+    )
+
+
+def cell(row: Mapping, *, looks: int, name: str = "") -> dict:
+    """One measured cell as plain data, with its verdict already read.
+
+    **The sign is read here, once, by `stats.RoiInterval.verdict()`.** Nothing
+    downstream re-derives *"is this an edge"* — that re-derivation is the NHL
+    lab's defect 3, where a headline tested measured-survives-correction-and-
+    replicated and never looked at which side of zero the number sat on.
+    """
+    interval = interval_from_row(row, looks=looks)
+    return {
+        "name": name or _text(row.get("name")) or _text(row.get("market")),
+        "market": _text(row.get("market")),
+        "tier": _text(row.get("tier")),
+        "bets": interval.bets,
+        "clusters": interval.clusters,
+        "cluster_unit": interval.cluster_unit,
+        "roi": _as_float(interval.roi),
+        "low": _as_float(interval.low),
+        "high": _as_float(interval.high),
+        "adjusted_low": _as_float(interval.adjusted_low),
+        "adjusted_high": _as_float(interval.adjusted_high),
+        "looks": int(interval.looks),
+        "enough_evidence": bool(interval.enough_evidence),
+        "verdict": interval.verdict(),
+    }
+
+
+def _rows(payload: Mapping, key: str, *, label: str, path: Path) -> list[dict]:
+    value = _require(payload, key, label=label, path=path)
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        raise WhyError(
+            f"The {label} record at `{_repo_relative(path)}` carries a `{key}` "
+            "that is not a list of cells."
+        )
+    return [dict(row) for row in value if isinstance(row, Mapping)]
+
+
+def demonstrated_edges(cells: Sequence[Mapping]) -> list[dict]:
+    """Cells whose corrected interval excludes zero **above** it."""
+    return [c for c in cells if _text(c.get("verdict")) == S.DEMONSTRATED_EDGE]
+
+
+def demonstrated_deficits(cells: Sequence[Mapping]) -> list[dict]:
+    """Cells whose corrected interval excludes zero **below** it.
+
+    A separate function returning a disjoint list, never a flag on the first
+    one: the two are different findings and the sibling lab merged them.
+    """
+    return [c for c in cells if _text(c.get("verdict")) == S.DEMONSTRATED_DEFICIT]
+
+
+# ---------------------------------------------------------------------------
+# The record
+# ---------------------------------------------------------------------------
+
+
+def build_record(
+    *,
+    competition: Competition,
+    output_dir: Path,
+) -> dict:
+    """Read the three records and write down every number this document uses.
+
+    Reads disk. :func:`render` does not.
+    """
+    outputs = Path(output_dir)
+    paths = evidence_paths(competition, outputs)
+    backtest = read_evidence("price backtest", paths["price backtest"])
+    forecast = read_evidence("forecast skill", paths["forecast skill"])
+    replication = read_evidence("held-out replication", paths["held-out replication"])
+
+    correction = WC.correction_from_ledger(WC.experiment_ledger_path(outputs))
+    looks = correction.looks
+
+    backtest_path = paths["price backtest"]
+    tier_rows = _rows(backtest, "by_tier", label="price backtest", path=backtest_path)
+    cell_rows = _rows(
+        backtest, "by_market_and_tier", label="price backtest", path=backtest_path
+    )
+    pooled_rows = _rows(backtest, "pooled", label="price backtest", path=backtest_path)
+    blind_rows = _rows(
+        backtest, "null_baseline", label="price backtest", path=backtest_path
+    )
+
+    tiers = [cell(row, looks=looks) for row in tier_rows]
+    tiers.sort(key=lambda c: _tier_rank(_text(c.get("tier"))))
+    cells = [cell(row, looks=looks) for row in cell_rows]
+    pooled = [cell(row, looks=looks) for row in pooled_rows]
+    every_market = next(
+        (p for p in pooled if not _text(p.get("market"))),
+        None,
+    )
+
+    blind = [
+        cell(row, looks=looks)
+        for row in blind_rows
+        if _as_int(row.get("bets")) >= S.MINIMUM_BETS
+    ]
+    blind.sort(key=lambda c: (c.get("roi") if c.get("roi") is not None else 0.0))
+
+    record = {
+        "record_version": RECORD_VERSION,
+        "competition": competition.key,
+        "title": competition.title,
+        "generated_at": datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat(),
+        "evidence_inputs": [
+            _evidence_input(label, path) for label, path in paths.items()
+        ],
+        "correction": correction.as_dict(),
+        "backtest": {
+            "generated_at": _text(backtest.get("generated_at")),
+            "record_version": _as_int(backtest.get("record_version")),
+            "season_label": _text(backtest.get("season_label")),
+            "snapshot_phase": _text(backtest.get("snapshot_phase")),
+            "edge_threshold": _as_float(backtest.get("edge_threshold")),
+            "minimum_bets": _as_int(backtest.get("minimum_bets")) or S.MINIMUM_BETS,
+            "bets_graded": _as_int(backtest.get("bets_graded")),
+            "games": _as_int(backtest.get("games")),
+            "days": _as_int(backtest.get("days")),
+            "cells": len(cells),
+            "half_point": _half_point(backtest),
+            "calibration": _calibration(backtest),
+        },
+        "tiers": tiers,
+        "cells": cells,
+        "pooled": pooled,
+        "every_market": every_market,
+        "blind": blind[:BLIND_BASELINES_SHOWN],
+        "forecast": _forecast_section(forecast, paths["forecast skill"], looks=looks),
+        "replication": _replication_section(
+            replication, paths["held-out replication"]
+        ),
+    }
+    return record
+
+
+def _tier_rank(tier: str) -> tuple[int, str]:
+    try:
+        return (TIER_ORDER.index(tier), tier)
+    except ValueError:
+        return (len(TIER_ORDER), tier)
+
+
+def _half_point(backtest: Mapping) -> dict:
+    payload = backtest.get("half_point")
+    payload = payload if isinstance(payload, Mapping) else {}
+    convention = payload.get("convention")
+    convention = convention if isinstance(convention, Mapping) else {}
+    return {
+        "verified": bool(payload.get("verified")),
+        "checked": _as_int(convention.get("checked")),
+        "agreed": _as_int(convention.get("agreed")),
+        "rate": _as_float(convention.get("rate")),
+    }
+
+
+def _calibration(backtest: Mapping) -> dict:
+    payload = backtest.get("calibration")
+    payload = payload if isinstance(payload, Mapping) else {}
+
+    def side(key: str) -> dict:
+        block = payload.get(key)
+        block = block if isinstance(block, Mapping) else {}
+        return {
+            "points": _as_float(block.get("points")),
+            "rows": _as_int(block.get("n")),
+            "buckets": _as_int(block.get("buckets")),
+        }
+
+    return {
+        "overall": side("overall_overconfidence"),
+        "selected": side("selected_overconfidence"),
+    }
+
+
+def _advantage(block: Mapping, *, looks: int) -> dict:
+    """A Brier advantage over the market, re-corrected under today's looks.
+
+    `forecast_skill` stores the value, the uncorrected bounds and the standard
+    error; `stats.RoiInterval` is the one type that reads a sign, so the
+    advantage is carried through it and its verdict string is the one the
+    document prints. It is not a return, and the document says so where it
+    prints it — but *"does this interval exclude zero after the correction"* is
+    the same question and gets the same answer from the same code.
+    """
+    interval = S.RoiInterval(
+        roi=_as_float(block.get("value")) or 0.0,
+        low=_as_float(block.get("low")) or 0.0,
+        high=_as_float(block.get("high")) or 0.0,
+        bets=_as_int(block.get("rows")),
+        clusters=_as_int(block.get("clusters")),
+        standard_error=_as_float(block.get("standard_error")) or 0.0,
+        looks=looks,
+        cluster_unit=_text(block.get("cluster_unit")) or "day",
+    )
+    return {
+        "name": _text(block.get("name")),
+        "value": _as_float(interval.roi),
+        "low": _as_float(interval.low),
+        "high": _as_float(interval.high),
+        "adjusted_low": _as_float(interval.adjusted_low),
+        "adjusted_high": _as_float(interval.adjusted_high),
+        "rows": interval.bets,
+        "enough_evidence": bool(interval.enough_evidence),
+        "verdict": interval.verdict(),
+    }
+
+
+def _forecast_tier(block: Mapping, *, looks: int) -> dict:
+    brier = block.get("brier")
+    brier = brier if isinstance(brier, Mapping) else {}
+    anti = block.get("anti_predictive")
+    anti = anti if isinstance(anti, Mapping) else {}
+    lowest = anti.get("lowest_bucket")
+    lowest = lowest if isinstance(lowest, Mapping) else {}
+    highest = anti.get("highest_bucket")
+    highest = highest if isinstance(highest, Mapping) else {}
+    raw = brier.get("advantage_over_raw")
+    raw = raw if isinstance(raw, Mapping) else {}
+    return {
+        "label": _text(block.get("label")),
+        "rows": _as_int(block.get("rows")),
+        "games": _as_int(block.get("games")),
+        "model_brier": _as_float(brier.get("model")),
+        "base_rate_brier": _as_float(brier.get("base_rate_reference")),
+        "worse_than_the_base_rate": (
+            (_as_float(brier.get("model")) or 0.0)
+            > (_as_float(brier.get("base_rate_reference")) or 0.0)
+        ),
+        "loses_to_the_handicapped_market": bool(
+            brier.get("loses_to_the_handicapped_market")
+        ),
+        "advantage_over_raw": _advantage(raw, looks=looks) if raw else {},
+        "anti_predictive": {
+            "measurable": bool(anti.get("measurable")),
+            "usable_buckets": _as_int(anti.get("usable_buckets")),
+            "widens_by": _as_float(anti.get("shortfall_widens_by")),
+            "lowest_rows": _as_int(lowest.get("rows")),
+            "highest_rows": _as_int(highest.get("rows")),
+        },
+    }
+
+
+def _forecast_section(payload: Mapping, path: Path, *, looks: int) -> dict:
+    pooled = _require(payload, "pooled", label="forecast skill", path=path)
+    if not isinstance(pooled, Mapping):
+        raise WhyError(
+            f"The forecast skill record at `{_repo_relative(path)}` carries a "
+            "`pooled` that is not an object."
+        )
+    tiers = _require(payload, "by_tier", label="forecast skill", path=path)
+    if not isinstance(tiers, Sequence) or isinstance(tiers, (str, bytes)):
+        raise WhyError(
+            f"The forecast skill record at `{_repo_relative(path)}` carries a "
+            "`by_tier` that is not a list."
+        )
+    rendered = [
+        _forecast_tier(block, looks=looks) for block in tiers if isinstance(block, Mapping)
+    ]
+    rendered.sort(key=lambda t: _tier_rank(t["label"]))
+    return {
+        "generated_at": _text(payload.get("generated_at")),
+        "record_version": _as_int(payload.get("record_version")),
+        "source": _text(payload.get("source")),
+        "season_label": _text(payload.get("season_label")),
+        "devig_method": _text(payload.get("devig_method")),
+        "pooled": _forecast_tier(pooled, looks=looks),
+        "tiers": rendered,
+    }
+
+
+def _replication_section(payload: Mapping, path: Path) -> dict:
+    counts = _require(payload, "counts", label="held-out replication", path=path)
+    if not isinstance(counts, Mapping):
+        raise WhyError(
+            f"The held-out replication record at `{_repo_relative(path)}` "
+            "carries a `counts` that is not an object."
+        )
+    markets = payload.get("markets")
+    markets = markets if isinstance(markets, Sequence) and not isinstance(markets, (str, bytes)) else []
+    holdout = payload.get("holdout")
+    holdout = holdout if isinstance(holdout, Mapping) else {}
+    discovery = payload.get("discovery")
+    discovery = discovery if isinstance(discovery, Mapping) else {}
+    return {
+        "generated_at": _text(payload.get("generated_at")),
+        "record_version": _as_int(payload.get("record_version")),
+        "test_label": _text(payload.get("test_label")),
+        "discovery_season_label": _text(payload.get("discovery_season_label")),
+        "declared_in_advance": bool(payload.get("declared_in_advance")),
+        "declared_on": _text(payload.get("declared_on")),
+        "cells": len(markets),
+        "counts": {str(k): _as_int(v) for k, v in counts.items()},
+        "holdout_bets": _as_int(holdout.get("bets_graded")),
+        "holdout_games": _as_int(holdout.get("games")),
+        "discovery_bets": _as_int(discovery.get("bets_graded")),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Rendering — a pure function of the record
+# ---------------------------------------------------------------------------
+
+
+def _measured(record: Mapping, key: str) -> list[dict]:
+    """The rows of `record[key]` that clear the floor declared in advance.
+
+    A row below it has a phrase and no number, so it can be neither an edge nor
+    a deficit and must not be counted as an absence of one either.
+    """
+    return [
+        dict(row)
+        for row in record.get(key, [])
+        if isinstance(row, Mapping) and row.get("enough_evidence")
+    ]
+
+
+def _pct(value: object) -> str:
+    number = _as_float(value)
+    return "unbounded" if number is None else f"{number * 100:+.1f}%"
+
+
+def _tier_label(tier: str) -> str:
+    return (tier or Tier.UNPLACED.value).replace("_", "-")
+
+
+def _bets(count: int) -> str:
+    """`bet` or `bets`. A sample size of one is still a sample size."""
+    return "bet" if count == 1 else "bets"
+
+
+def _figure(claim: Mapping) -> str:
+    """One cell as a sentence, **always with its sample size**.
+
+    Below the floor there is no number at all, only the phrase the verdict
+    already carries. A +12% return over 40 bets and a coin flip are the same
+    claim at that sample size, and printing the +12% invites somebody to quote
+    it out of the row that qualifies it.
+    """
+    bets = _as_int(claim.get("bets"))
+    if not claim.get("enough_evidence"):
+        # No number at all. `RoiInterval.verdict()` already names the sample and
+        # the floor it is below, so printing a count beside it would say the
+        # same thing twice and printing the return would say it once too often.
+        return _text(claim.get("verdict"))
+    return (
+        f"{bets:,} {_bets(bets)}, **{_pct(claim.get('roi'))}**, corrected "
+        f"{_pct(claim.get('adjusted_low'))} to {_pct(claim.get('adjusted_high'))} "
+        f"— {_text(claim.get('verdict'))}"
+    )
+
+
+def headline(record: Mapping) -> str:
+    """The answer, per tier, over the tiers and never over the pool.
+
+    Reads ``record["tiers"]`` and cannot reach ``record["every_market"]``. The
+    document this replaced printed the pooled Division I row in the same table
+    as the three tiers, one line above a sentence saying it never would.
+    """
+    measured = _measured(record, "tiers")
+    edges = demonstrated_edges(measured)
+    deficits = demonstrated_deficits(measured)
+    if not measured:
+        return (
+            "**No tier clears the sample floor declared in advance**, so there "
+            "is no number to report in any of them."
+        )
+    spread = ", ".join(
+        f"{_tier_label(_text(t.get('tier')))} {_as_int(t.get('bets')):,} "
+        f"{_bets(_as_int(t.get('bets')))}"
+        for t in measured
+    )
+    if edges:
+        named = "; ".join(
+            f"{_tier_label(_text(t.get('tier')))} {_figure(t)}" for t in edges
+        )
+        lead = (
+            f"**{len(edges)} of {len(measured)} measured tiers shows a "
+            f"demonstrated edge**: {named}."
+        )
+    else:
+        lead = (
+            f"**No demonstrated edge in any of the {len(measured)} measured "
+            f"tiers** ({spread})."
+        )
+    if deficits:
+        named = "; ".join(
+            f"{_tier_label(_text(t.get('tier')))} {_figure(t)}" for t in deficits
+        )
+        lead += f" {len(deficits)} shows a demonstrated deficit: {named}."
+    else:
+        lead += " None shows a demonstrated deficit."
+    return lead
+
+
+def title(record: Mapping) -> str:
+    """The heading, derived from the sign rather than typed above the numbers.
+
+    A file named *does or does not* whose heading is hand-written says whichever
+    of the two somebody last believed. This one cannot outlive the measurement.
+    """
+    measured = _measured(record, "tiers") + _measured(record, "cells")
+    if demonstrated_edges(measured):
+        return "# Where the model does have a demonstrated edge, and where it does not"
+    return "# Why the model does not have a demonstrated edge"
+
+
+def _tier_table(record: Mapping) -> list[str]:
+    lines = ["| Tier | Result |", "|:---|:---|"]
+    for claim in record.get("tiers", []):
+        if not isinstance(claim, Mapping):
+            continue
+        lines.append(f"| {_tier_label(_text(claim.get('tier')))} | {_figure(claim)} |")
+    return lines
+
+
+def _cell_lines(record: Mapping) -> list[str]:
+    """The finer cut, named rather than counted away.
+
+    A tier is a pool of markets, and a finding inside one of them does not
+    survive being averaged with the rest. Both counts are printed even when
+    they are zero, because *"0 of 32 cells shows a demonstrated edge"* is the
+    answer and an omitted line reads as an oversight.
+    """
+    backtest = record.get("backtest")
+    backtest = backtest if isinstance(backtest, Mapping) else {}
+    total = _as_int(backtest.get("cells"))
+    measured = _measured(record, "cells")
+    edges = demonstrated_edges(measured)
+    deficits = demonstrated_deficits(measured)
+    lines = [
+        f"Cut finer, by market **and** tier: **{len(edges)} of {total:,} cells "
+        f"shows a demonstrated edge** and **{len(deficits)} shows a "
+        f"demonstrated deficit**, over the "
+        f"{len(measured):,} that clear the floor declared in advance.",
+        "",
+    ]
+    for row in edges + deficits:
+        lines.append(
+            f"- `{_text(row.get('market'))} / {_text(row.get('tier'))}`: "
+            f"{_figure(row)}"
+        )
+    if edges or deficits:
+        lines.append("")
+    return lines
+
+
+def _worst_tier(record: Mapping) -> Mapping | None:
+    measured = _measured(record, "tiers")
+    if not measured:
+        return None
+    return min(measured, key=lambda t: _as_float(t.get("roi")) or 0.0)
+
+
+def _provenance(record: Mapping) -> list[str]:
+    lines = [
+        "Every figure below is read from a record on disk by "
+        "`scripts/run_why_the_model.py`, never typed. The records, and the "
+        "moment each stamped itself with:",
+        "",
+    ]
+    for item in record.get("evidence_inputs", []):
+        if not isinstance(item, Mapping):
+            continue
+        stamp = _text(item.get("generated_at")) or "no `generated_at` of its own"
+        lines.append(
+            f"- **{_text(item.get('label'))}** — `{_text(item.get('path'))}`, "
+            f"generated {stamp}"
+        )
+    return lines
+
+
+def _correction_lines(record: Mapping) -> list[str]:
+    correction = record.get("correction")
+    correction = correction if isinstance(correction, Mapping) else {}
+    if not correction.get("applied"):
+        why = _text(correction.get("error"))
+        detail = (
+            f" It is on disk and could not be read: {why}"
+            if why
+            else " No experiment ledger was found."
+        )
+        return [
+            "**No family-wise correction could be applied.**" + detail + " Every "
+            "interval below is therefore uncorrected, and an uncorrected "
+            "interval on a search that has run many times is wider than it "
+            "looks. This document says so rather than quietly applying none.",
+        ]
+    return [
+        f"Every interval is corrected for "
+        f"{_as_int(correction.get('hypotheses')):,} cumulative distinct "
+        f"hypotheses — the experiment ledger's count at render time, not the "
+        f"count when the backtest ran — which widens each one by "
+        f"x{_as_float(correction.get('factor')) or 1.0:.2f}. The correction can "
+        "only ever get stricter as the search continues, which is the only "
+        "direction it is allowed to move.",
+    ]
+
+
+def _blind_lines(record: Mapping) -> list[str]:
+    blind = [b for b in record.get("blind", []) if isinstance(b, Mapping)]
+    if not blind:
+        return [
+            "No blind side clears the "
+            f"{S.MINIMUM_BETS:,}-bet floor declared in advance, so there is "
+            "nothing to compare against and this section reports that rather "
+            "than an empty table."
+        ]
+    lines = [
+        f"The worst blind sides that clear the {S.MINIMUM_BETS:,}-bet floor "
+        "declared in advance:",
+        "",
+    ]
+    for row in blind:
+        lines.append(
+            f"- `{_text(row.get('tier'))} / {_text(row.get('market'))} / "
+            f"{_text(row.get('name'))}`: {_as_int(row.get('bets')):,} "
+            f"{_bets(_as_int(row.get('bets')))}, **{_pct(row.get('roi'))}**"
+        )
+    lines.append("")
+    worst_blind = max(
+        (_as_float(b.get("roi")) or 0.0 for b in blind), default=0.0
+    )
+    tiers = _measured(record, "tiers")
+    beaten = [t for t in tiers if (_as_float(t.get("roi")) or 0.0) > worst_blind]
+    if tiers and len(beaten) == len(tiers):
+        verdict = (
+            f"All {len(tiers)} measured tiers return more than every one of "
+            "them"
+        )
+    elif beaten:
+        verdict = (
+            f"{len(beaten)} of {len(tiers)} measured tiers return more than "
+            "every one of them, and the rest do not"
+        )
+    else:
+        verdict = (
+            "**No measured tier returns more than all of them**, which is a "
+            "worse result than the model being merely unprofitable"
+        )
+    lines.append(
+        f"Each is a rule that needs no model at all. {verdict}. That is what "
+        "*the model carries information* means here, and it is a different "
+        "statement from *the model beats the price* — which is the one the "
+        "next section tests."
+    )
+    return lines
+
+
+def _forecast_lines(record: Mapping) -> list[str]:
+    forecast = record.get("forecast")
+    forecast = forecast if isinstance(forecast, Mapping) else {}
+    lines: list[str] = []
+    tiers = [t for t in forecast.get("tiers", []) if isinstance(t, Mapping)]
+    measured = [t for t in tiers if _as_int(t.get("rows")) >= S.MINIMUM_BETS]
+    if not measured:
+        lines.append(
+            "No tier carries enough scored rows to report a Brier comparison, "
+            "so none is reported."
+        )
+        return lines
+    lines.append("**Brier against the market, per tier, with the vig left in.**")
+    lines.append("")
+    lines.append("| Tier | Rows | Model minus raw market | Reading |")
+    lines.append("|:---|---:|:---|:---|")
+    for tier in measured:
+        advantage = tier.get("advantage_over_raw")
+        advantage = advantage if isinstance(advantage, Mapping) else {}
+        value = _as_float(advantage.get("value"))
+        cells = (
+            "no comparison recorded"
+            if value is None
+            else (
+                f"{value:+.5f}, corrected "
+                f"{_as_float(advantage.get('adjusted_low')) or 0.0:+.5f} to "
+                f"{_as_float(advantage.get('adjusted_high')) or 0.0:+.5f}"
+            )
+        )
+        lines.append(
+            f"| {_tier_label(_text(tier.get('label')))} "
+            f"| {_as_int(tier.get('rows')):,} | {cells} "
+            f"| {_text(advantage.get('verdict')) or 'not scored'} |"
+        )
+    lines.append("")
+    lines.append(
+        "A **negative** advantage is the model scoring worse than the price it "
+        "is betting into. The verdict column reads the sign the same way every "
+        "other interval in this repository does; it is a Brier difference and "
+        "not a return, and it is never added to one."
+    )
+    worse = [t for t in measured if t.get("worse_than_the_base_rate")]
+    if worse:
+        named = ", ".join(
+            f"{_tier_label(_text(t.get('label')))} "
+            f"({_as_float(t.get('model_brier')) or 0.0:.5f} against "
+            f"{_as_float(t.get('base_rate_brier')) or 0.0:.5f}, "
+            f"{_as_int(t.get('rows')):,} rows)"
+            for t in worse
+        )
+        lines.append("")
+        lines.append(
+            f"In {named} the model's Brier is worse than the base rate: beaten "
+            "by always predicting the league average."
+        )
+    anti = [
+        t
+        for t in measured
+        if isinstance(t.get("anti_predictive"), Mapping)
+        and t["anti_predictive"].get("measurable")
+    ]
+    if anti:
+        lines.append("")
+        lines.append(
+            "**Anti-predictiveness, per tier.** By claimed edge, the shortfall "
+            "against the model's own probability widens from the smallest "
+            "bucket to the largest by:"
+        )
+        lines.append("")
+        for tier in anti:
+            block = tier["anti_predictive"]
+            widens = _as_float(block.get("widens_by"))
+            lines.append(
+                f"- {_tier_label(_text(tier.get('label')))}: "
+                f"**{(widens or 0.0) * 100:.1f} pp** across "
+                f"{_as_int(block.get('usable_buckets'))} usable buckets "
+                f"({_as_int(block.get('lowest_rows')):,} rows in the smallest, "
+                f"{_as_int(block.get('highest_rows')):,} in the largest)"
+            )
+        lines.append("")
+        lines.append(
+            "The biggest claimed edges do worst in every tier that can be "
+            "measured, so raising the edge threshold is the wrong response — "
+            "and it is the one move a disappointing backtest invites."
+        )
+    return lines
+
+
+def _calibration_lines(record: Mapping) -> list[str]:
+    backtest = record.get("backtest")
+    backtest = backtest if isinstance(backtest, Mapping) else {}
+    calibration = backtest.get("calibration")
+    calibration = calibration if isinstance(calibration, Mapping) else {}
+    overall = calibration.get("overall") or {}
+    selected = calibration.get("selected") or {}
+    overall_points = _as_float(overall.get("points"))
+    selected_points = _as_float(selected.get("points"))
+    if overall_points is None or selected_points is None:
+        return [
+            "The backtest record carries no calibration summary, so none is "
+            "reported here."
+        ]
+
+    def word(points: float) -> str:
+        return "overconfident" if points > 0 else "underconfident"
+
+    return [
+        "**Calibration, over the whole population and over the bets the model "
+        "selected.** These are counts of rows across Division I rather than a "
+        "return, and they are reported together because only the second one is "
+        "evidence about the bets this lab would place:",
+        "",
+        f"- overall: **{abs(overall_points) * 100:.1f} pp "
+        f"{word(overall_points)}** over {_as_int(overall.get('rows')):,} rows",
+        f"- on the bets it **selected**: **{abs(selected_points) * 100:.1f} pp "
+        f"{word(selected_points)}** over {_as_int(selected.get('rows')):,} rows",
+        "",
+        "The overall figure is not evidence about a betting policy. Nothing "
+        "stakes money on the overall population.",
+    ]
+
+
+def _replication_lines(record: Mapping) -> list[str]:
+    block = record.get("replication")
+    block = block if isinstance(block, Mapping) else {}
+    counts = block.get("counts")
+    counts = counts if isinstance(counts, Mapping) else {}
+    declared = (
+        f"declared in advance on {_text(block.get('declared_on'))}"
+        if block.get("declared_in_advance")
+        else "**not declared in advance**, which is what a held-out test is for"
+    )
+    lines = [
+        f"The held-out test is {_text(block.get('test_label')) or 'unlabelled'}, "
+        f"discovered on {_text(block.get('discovery_season_label')) or 'unrecorded seasons'} "
+        f"and {declared}. It graded "
+        f"{_as_int(block.get('holdout_bets')):,} held-out bets over "
+        f"{_as_int(block.get('holdout_games')):,} games against "
+        f"{_as_int(block.get('discovery_bets')):,} on the discovery seasons, "
+        f"across {_as_int(block.get('cells')):,} cells:",
+        "",
+    ]
+    for state in sorted(counts):
+        lines.append(f"- {state}: **{_as_int(counts[state]):,}** of {_as_int(block.get('cells')):,}")
+    lines.append("")
+    lines.append(
+        "*Not enough evidence* and *nothing to replicate* are not failures to "
+        "replicate. A cell with no discovery claim had nothing to carry "
+        "forward, and a cell below the floor the criteria declared in advance "
+        "prints a phrase and not a number. Neither is a pass, an avoid, or a "
+        "no-value call."
+    )
+    return lines
+
+
+def _open_questions(record: Mapping) -> list[str]:
+    backtest = record.get("backtest")
+    backtest = backtest if isinstance(backtest, Mapping) else {}
+    half = backtest.get("half_point")
+    half = half if isinstance(half, Mapping) else {}
+    lines: list[str] = []
+    phase = _text(backtest.get("snapshot_phase"))
+    if phase:
+        lines.append(
+            f"- **One price window.** Every number above is measured at the "
+            f"`{phase}` snapshot and says nothing about any other."
+        )
+    if not half.get("verified"):
+        rate = _as_float(half.get("rate"))
+        lines.append(
+            "- **The half-point decomposition was refused, not computed.** The "
+            "ticket-margin reconstruction agreed with the recorded outcome on "
+            f"{_as_int(half.get('agreed')):,} of {_as_int(half.get('checked')):,} "
+            f"settled bets ({(rate or 0.0) * 100:.1f}%), below the bar this "
+            "repository set for using it, so how much of any spread or total "
+            "figure is half a point at a key number is still open."
+        )
+    thin = [
+        c
+        for c in record.get("cells", [])
+        if isinstance(c, Mapping) and not c.get("enough_evidence")
+    ]
+    if thin:
+        named = ", ".join(
+            f"`{_text(c.get('market'))} / {_text(c.get('tier'))}` "
+            f"({_as_int(c.get('bets')):,} {_bets(_as_int(c.get('bets')))})"
+            for c in sorted(thin, key=lambda c: -_as_int(c.get("bets")))
+        )
+        lines.append(
+            f"- **{len(thin)} of {_as_int(backtest.get('cells')):,} cells are "
+            f"below the {_as_int(backtest.get('minimum_bets')):,}-bet floor "
+            f"declared in advance** and carry a phrase rather than a number: "
+            f"{named}. A market in that list is not a market judged to have no "
+            "value; it is a market with no price-based evidence either way."
+        )
+    lines.append(
+        "- **Nothing here is a forward result.** Every number above is a "
+        "historical backtest, bet into prices somebody has already seen "
+        "resolve. The forward ledger is untouched by all of it and is the only "
+        "evidence that can still grow."
+    )
+    return lines
+
+
+def render(record: Mapping) -> str:
+    """The document, as a pure function of the record. Reads no disk."""
+    version = _as_int(record.get("record_version"))
+    if version != RECORD_VERSION:
+        raise WhyError(
+            f"This record is version {version}; this module renders version "
+            f"{RECORD_VERSION}. A record whose shape has changed is refused "
+            "rather than rendered with holes in it."
+        )
+    backtest = record.get("backtest")
+    backtest = backtest if isinstance(backtest, Mapping) else {}
+    every_market = record.get("every_market")
+    every_market = every_market if isinstance(every_market, Mapping) else {}
+
+    lines: list[str] = [title(record), ""]
+    lines += _provenance(record)
+    lines += [
+        "",
+        "Read `docs/what_we_can_and_cannot_claim.md` first. This says what the "
+        "evidence *is*; that says how to read it.",
+        "",
+        "## The answer",
+        "",
+        headline(record),
+        "",
+        f"Measured on {_as_int(backtest.get('bets_graded')):,} graded bets over "
+        f"{_as_int(backtest.get('games')):,} games and "
+        f"{_as_int(backtest.get('days')):,} days of the "
+        f"{_text(backtest.get('season_label')) or 'unrecorded'} seasons, across "
+        f"{_as_int(backtest.get('cells')):,} market-and-tier cells.",
+        "",
+    ]
+    lines += _correction_lines(record)
+    lines += ["", *_tier_table(record), ""]
+    lines += _cell_lines(record)
+
+    worst = _worst_tier(record)
+    if worst is not None:
+        lines += [
+            "### The tier this lab was built expecting to be the best",
+            "",
+            "The reason for a fourth lab was market heterogeneity — 360 teams "
+            "on a Tuesday night in January being priced with less attention "
+            "than a 32-team league, so softness should appear at the low-major "
+            "end. By point estimate the **worst** measured tier is "
+            f"**{_tier_label(_text(worst.get('tier')))}**: {_figure(worst)}. "
+            "Whatever is different about that board, this model is not better "
+            "there.",
+            "",
+        ]
+
+    if every_market:
+        lines += [
+            "### The pooled figure, which is not the answer",
+            "",
+            PB.POOLED_CAVEAT,
+            "",
+            f"Pooled across every market and tier: {_figure(every_market)}.",
+            "",
+        ]
+
+    lines += ["## The model is not worthless — it is beaten by the vig", ""]
+    lines += _blind_lines(record)
+    lines += ["", "## Three instruments, and none of them is the return", ""]
+    lines += _forecast_lines(record)
+    lines += ["", *_calibration_lines(record)]
+    lines += ["", "## The held-out test", ""]
+    lines += _replication_lines(record)
+    lines += ["", "## What this does not settle", ""]
+    lines += _open_questions(record)
+    return "\n".join(lines).rstrip() + "\n"
+
+
+# ---------------------------------------------------------------------------
+# Writing
+# ---------------------------------------------------------------------------
+
+
+def write_record(record: Mapping, path: Path) -> Path:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        json.dumps(record, indent=2, sort_keys=True, default=str) + "\n",
+        encoding="utf-8",
+    )
+    return target
+
+
+def read_record(path: Path) -> dict:
+    target = Path(path)
+    if not target.is_file():
+        raise WhyError(
+            f"No run record at `{_repo_relative(target)}`. This report is "
+            "re-rendered from its record and never written by hand, so without "
+            "the record there is nothing to render — run "
+            "`scripts/run_why_the_model.py` first."
+        )
+    try:
+        record = json.loads(target.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise WhyError(
+            f"The run record at `{_repo_relative(target)}` could not be read. "
+            "Refusing to render a partial report over a good one."
+        ) from exc
+    if not isinstance(record, dict):
+        raise WhyError(f"The run record at `{_repo_relative(target)}` is not a JSON object.")
+    return record
+
+
+def write_report(record: Mapping, path: Path) -> Path:
+    """Render and write, refusing the vocabulary of a tipster.
+
+    The forbidden list is `what_we_can_claim.FORBIDDEN_PHRASES` rather than a
+    second copy of it: two lists drift, and the direction they drift in is
+    never the conservative one. The check is on the rendered text, because the
+    phrase that matters is the one a reader sees.
+    """
+    rendered = render(record)
+    lowered = rendered.casefold()
+    for phrase in WC.FORBIDDEN_PHRASES:
+        if re.search(rf"\b{re.escape(phrase)}\b", lowered):
+            raise WhyError(
+                f"This document contains the phrase {phrase!r}, which this "
+                "repository does not use about its own results. A generated "
+                "summary that reaches for one of these has stopped reporting "
+                "and started selling."
+            )
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(rendered, encoding="utf-8")
+    return target

@@ -94,15 +94,30 @@ on:
         default: ""
 
 permissions:
-  # Write, and this is the ONLY workflow in the repository that has it.
+  # Write. TWO workflows in this repository hold it, and this is one of them.
+  #
+  # CONTENTS-WRITE HOLDERS: cbb-gameday-refresh.yml -> refs/heads/card-feed;
+  # line-movement.yml -> refs/heads/line-movement
   #
   # GitHub cannot scope `contents: write` to a single ref, so this permission
   # is write access to `main` as well, and no YAML can say otherwise. What
   # makes it safe is `tests/test_workflows.py`: every `git push` line in every
-  # workflow must end in `:refs/heads/card-feed`, and the list of workflows
-  # containing `contents: write` must be exactly this one. THAT TEST IS THE
-  # SCOPE. It is also why the line-movement capture keeps its history in run
-  # artifacts rather than on a branch of its own.
+  # workflow must end in the ref that workflow is declared for — this one's is
+  # `:refs/heads/card-feed` — and the set of workflows holding the permission
+  # must be exactly the pairs listed above. THAT TEST IS THE SCOPE. A capture
+  # must never be able to overwrite a card, and a card must never be able to
+  # overwrite a capture.
+  #
+  # THIS COMMENT WAS FALSE AND SAID SO CONFIDENTLY. It read *"this is the ONLY
+  # workflow in the repository that has it"* and *"it is also why the
+  # line-movement capture keeps its history in run artifacts rather than on a
+  # branch of its own"*. `line-movement.yml` has held `contents: write` and
+  # pushed to `refs/heads/line-movement` the whole time. Nothing checked the
+  # prose, only the mapping it described, so the sentence a reader would trust
+  # was the one thing here with no test under it.
+  # `test_the_permissions_comment_names_every_workflow_that_holds_contents_write`
+  # parses the HOLDERS line above and fails when it stops matching the
+  # workflows on disk, so it cannot go stale silently again.
   contents: write
 
 concurrency:
