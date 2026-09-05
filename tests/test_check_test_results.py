@@ -441,10 +441,10 @@ def test_the_collection_skip_hook_is_installed_in_this_suites_conftest() -> None
 def test_one_deselected_test_inside_a_guard_fails_the_run(tmp_path: Path) -> None:
     """The measured attack: `--deselect` of exactly one guard test.
 
-    On a clone of this branch on 2026-09-04, with that one line in
-    pyproject.toml's `addopts`, the suite ran 1253 passed / 1 deselected out
-    of 1254 and this gate printed PASS. The module still contributed 41
-    testcases, so every per-MODULE floor was clear.
+    On a clone of 133dabd, with that one line in pyproject.toml's `addopts`,
+    the suite ran with EXACTLY ONE test deselected and this gate printed PASS.
+    The module still contributed every other test it declares, so every
+    per-MODULE floor was clear.
     """
     victim = "tests/test_no_secrets_committed.py"
     dropped = "test_no_tracked_file_contains_an_odds_api_key_shape"
@@ -562,11 +562,11 @@ def test_the_gaps_the_per_test_floor_still_has_are_written_down(tmp_path: Path) 
 
     1. A test DELETED outright. The floor compares the declarations against
        the evidence, and deleting the `def` removes it from both sides.
-       Measured 2026-09-04 by deleting the last test function of
-       `tests/test_contract_strings.py`: 1318 passed where 1319 were
-       collected, and this gate printed PASS. `MINIMUM_TESTS = 5` in
-       `tests/test_the_guards_exist.py` is the only floor left there, so a
-       guard can lose two thirds of its tests and stay green.
+       Measured by deleting the last test function of
+       `tests/test_contract_strings.py`: the suite collected and passed
+       EXACTLY ONE test fewer, and this gate printed PASS. `MINIMUM_TESTS = 5`
+       in `tests/test_the_guards_exist.py` is the only floor left there, so a
+       guard may shrink all the way down to that number and stay green.
     2. The floor covers the eight REQUIRED modules and no others. A test
        deselected inside `tests/test_replication.py` is caught by the
        conftest's narrowing read, not by this file — and if it were dropped

@@ -5,14 +5,18 @@
         --newer-than "$RUNNER_TEMP/suite_started_at"
 
 `python -m pytest -q` exits 0 on a SKIP and on an XFAIL. Green then means "the
-suite did not object" rather than "the suite passed". Re-measured on
-2026-09-04 by cloning 02e75b7 — the last commit before the tracked real-data
-sample existed, and the state CI was in — and running `python -m pytest -q
--rs`: **648 passed, 80 skipped, exit 0**, every skip waiting on a gitignored
-table, and the workflow's tick was green. (An earlier version of this
-paragraph said 647; the count is 648.) Eighty tests that had never once run on
-the machine whose tick the lab reads, and no line anywhere said so. This
-script is what closes that.
+suite did not object" rather than "the suite passed". The evidence is this
+repository's own history rather than a local reconstruction of it: at 02e75b7
+— the parent of the commit that added the tracked real-data sample — the
+`Tests` run (Actions run 33914235441, job 101157576290) logged **648 passed,
+80 skipped** and concluded SUCCESS. Cloning 02e75b7 and running
+`PYTHONPATH=src python -m pytest -q -rs` reproduces both counts at exit 0, and
+`-rs` names the reason for each: an absent gitignored table under
+data/processed/, or an uncached schedule parquet. Eighty tests had never once
+run on the machine whose tick the lab reads, and no line anywhere said so.
+This script is what closes that. Both numbers are quoted with the commit and
+the run that produced them because a bare count here would go stale in a day
+and nothing would notice.
 
 `--newer-than` is the freshness half. `pytest --version`, `-h` and `--help`
 all exit 0 and write NO junit, so a junit sitting at the gated path from any
@@ -53,15 +57,16 @@ script reads the evidence file afterwards — so a `-k`, a `--deselect`, a
 
 THE FLOOR IS PER TEST, NOT PER MODULE. Requiring a module to contribute at
 least one testcase is a floor a single `--deselect` steps straight over.
-Measured on 2026-09-04, on a clone of 133dabd (the commit this branch sits
-on), with one line added to
-pyproject.toml — `addopts = "--deselect tests/test_no_secrets_committed.py::
-test_no_tracked_file_contains_an_odds_api_key_shape"` — the suite ran **1253
-passed, 1 deselected** out of 1254, the collection hook stayed quiet, and this
-script printed PASS. So every `def test_*` each required module DECLARES, read
-with `ast`, must appear among the testcase names the XML records for it: the
-name itself, or the name with a parametrisation suffix. A test that was
-declared and did not run is now a red build, whatever dropped it.
+Measured on a clone of 133dabd (the commit this branch sits on) with one line
+added to pyproject.toml — `addopts = "--deselect
+tests/test_no_secrets_committed.py::
+test_no_tracked_file_contains_an_odds_api_key_shape"` — the suite ran with
+EXACTLY ONE test deselected out of the whole collection, the collection hook
+stayed quiet, and this script printed PASS. So every `def test_*` each
+required module DECLARES, read with `ast`, must appear among the testcase
+names the XML records for it: the name itself, or the name with a
+parametrisation suffix. A test that was declared and did not run is now a red
+build, whatever dropped it.
 
 No integer is quoted for the size of that drop. It is whatever
 `pytest --collect-only -q <the two files>` reports today, and an absolute

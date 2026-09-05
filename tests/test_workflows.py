@@ -54,20 +54,31 @@ turns the file red and the sentence gets rewritten rather than outliving the
 fix. The rules that are still textual — the credential-on-a-command-line
 rule, the process-substitution and launcher bans — are labelled as such.
 
-CBB is private. There is no branch protection on this repository today, so
-nothing on GitHub's side gates a merge on `Tests` — the sibling labs are
-public and protected, and there the context this file pins is the one
-protection requires. Here, pinning it is what makes protection meaningful the
-day it is switched on, and what makes a red `Tests` a fact rather than a
-suggestion until then.
+CBB is PUBLIC and main is protected. Measured 2026-09-05 with
+`gh api repos/cooperross399/cbb-betting-lab/branches/main/protection`:
+`required_status_checks.contexts` is `["Tests"]`, `enforce_admins.enabled` is
+true, and `allow_force_pushes` and `allow_deletions` are both false. So the
+context this file pins IS the context protection requires, and a red `Tests`
+holds the merge button rather than only being a fact in the pull request.
+An earlier version of this docstring said the repository was private and that
+nothing on GitHub's side gated a merge; it carries the command now so the
+next session re-measures instead of trusting it.
+
+No rule in this file reads that API — the suite runs offline and with no
+credential, and that is deliberate. The two limits that fall out of the same
+payload are recorded in `test_the_disclosed_holes_are_real` rather than
+enforced here: `Ledger Guard` is not a required context, and
+`required_status_checks.strict` is false.
 """
 
 from __future__ import annotations
 
+import os
 import re
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Callable, Iterator, NamedTuple
@@ -2336,9 +2347,31 @@ def test_the_disclosed_holes_are_real(tmp_path: Path) -> None:
        `$RUNNER_TEMP/junit.xml` gated is the same file and is refused, by
        `the_gate_reads_the_evidence_this_run_wrote`, which compares strings.
     10. `PYTHONSAFEPATH` is required on the step that runs pytest and on no
-       other step and in no other workflow. The byte-compile step, the gate
-       step and all six operational workflows still start an interpreter with
-       the working directory on `sys.path`.
+       other step and in no other workflow — and the exposure it leaves
+       behind is NOT one shape but two. `python -m pytest` and
+       `python -m compileall` put the WORKING DIRECTORY at `sys.path[0]`,
+       which is the route a tracked root `pytest.py` takes.
+       `python scripts/check_test_results.py` does not: run below, the
+       interpreter puts the SCRIPT'S OWN directory at `sys.path[0]` and the
+       working directory nowhere on the path. So the gate step's exposure is
+       a tracked `scripts/<stdlib name>.py`, and the byte-compile step's is
+       the root-level one; the six operational workflows run both shapes.
+       An earlier version of this item named the working directory for all of
+       them, which is the wrong mechanism for the gate step. Both arms are run
+       below, and so is the one that shows what the variable buys: under
+       `PYTHONSAFEPATH=1` a module in the working directory is not importable
+       at all and the script's own directory is off the path too. Neither
+       exposure is closed on the steps that do not set it.
+    11. Branch protection is measured out of band, and no rule in this file
+       reads it. Measured 2026-09-05 with
+       `gh api repos/cooperross399/cbb-betting-lab/branches/main/protection`,
+       main requires the context `Tests` and no other — so a red
+       `Ledger Guard`, a gate this file executes under stubs like the other,
+       does not hold the merge button — and `required_status_checks.strict`
+       is false, so a green tick may have been earned against a base main has
+       since moved past. What IS assertable here is the half that makes the
+       first sentence bite: the ledger gate reports under a context this file
+       does not pin as required.
     """
     subshell = f"( {GATE_COMMAND} ) || true"
     assert swallow_findings(subshell + "\n") == []
@@ -2388,6 +2421,48 @@ def test_the_disclosed_holes_are_real(tmp_path: Path) -> None:
         if isinstance(step.get("env"), dict) and SAFE_PATH_VARIABLE in step["env"]
     ]
     assert safepath_steps == ["Run the suite"], safepath_steps
+
+    # 10, the mechanism, RUN rather than recalled: `-m` and `script.py` do not
+    # leave the same directory on sys.path, so they do not leave the same
+    # hole. The environment is built explicitly, because the step that runs
+    # this suite sets PYTHONSAFEPATH and would otherwise decide both arms.
+    probe_root = tmp_path / "sys-path-probe"
+    (probe_root / "scripts").mkdir(parents=True)
+    probe = "import sys\nprint(sys.path[0])\n"
+    (probe_root / "scripts" / "probe.py").write_text(probe, encoding="utf-8")
+    (probe_root / "asmodule.py").write_text(probe, encoding="utf-8")
+
+    def _probe(argv: list[str], *, safe_path: bool) -> subprocess.CompletedProcess:
+        environment = dict(os.environ)
+        environment.pop(SAFE_PATH_VARIABLE, None)
+        if safe_path:
+            environment[SAFE_PATH_VARIABLE] = "1"
+        return subprocess.run(
+            [sys.executable, *argv],
+            cwd=probe_root, env=environment, capture_output=True, text=True, timeout=60,
+        )
+
+    by_script = _probe(["scripts/probe.py"], safe_path=False)
+    by_module = _probe(["-m", "asmodule"], safe_path=False)
+    assert by_script.returncode == 0, by_script.stderr
+    assert by_module.returncode == 0, by_module.stderr
+    assert by_script.stdout.strip() == str(probe_root / "scripts"), by_script.stdout
+    assert Path(by_module.stdout.strip()).resolve() == probe_root.resolve(), by_module.stdout
+
+    # And with the variable the suite step sets, NEITHER directory is there:
+    # a module sitting in the working directory is not importable at all, and
+    # the script's own directory is off the path too.
+    assert _probe(["-m", "asmodule"], safe_path=True).returncode != 0
+    guarded = _probe(["scripts/probe.py"], safe_path=True)
+    assert guarded.returncode == 0, guarded.stderr
+    assert guarded.stdout.strip() != str(probe_root / "scripts"), guarded.stdout
+
+    # 11: the ledger gate reports under a context this file does not pin as
+    # required, which is why protection requiring only `Tests` leaves it out.
+    ledger_job_names = {
+        job.get("name") for job in jobs_of(load(WORKFLOWS_DIR / LEDGER_WORKFLOW)).values()
+    }
+    assert REQUIRED_CHECK not in ledger_job_names, ledger_job_names
 
     operational = [p for p in WORKFLOW_FILES if p.name not in GATE_WORKFLOWS]
     assert len(operational) == 6, [p.name for p in operational]

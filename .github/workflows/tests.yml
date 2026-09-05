@@ -1,35 +1,41 @@
 # Tests — the required status check.
 #
-# This job's `name: Tests` is the context branch protection asks for. CBB is
-# PRIVATE, and GitHub does not offer branch protection on a private repository
-# at this plan, so today NOTHING on GitHub's side stops a merge over a red
-# tick here. The sibling labs are public and protected and there this context
-# is load-bearing; here it is pinned so that it means something the day
-# protection is switched on, and so that a red `Tests` is a fact in the PR
-# rather than a suggestion until then. tests/test_workflows.py reads this file
-# with yaml.safe_load and refuses a rename of this job, a second job with the
-# same name, a matrix (which renames the context), `if:`, `needs:` (a job this
-# one waits on can be skipped by its own condition, and GitHub reports a
-# conditionally-skipped required check as SUCCESS), an `if:` on any OTHER job
-# in this file, `continue-on-error`, a shell override, a paths or branches
-# filter on pull_request, and a gate step that reads anything but the junit the
-# suite step wrote. The suite line's arguments are a WHITELIST — `-q`, `-rs`
-# and one `--junit-xml=` under the runner temp — because a blocklist of
-# narrowing flags let `--version`, `-h` and `--help` through, and each of those
-# exits 0 and writes no junit. The gate line is pinned as a whole command, so
-# `: python scripts/check_test_results.py <path>` is refused rather than
-# matched. It also EXECUTES every run block below under stubs and demands a
-# non-zero exit when a command in it fails — which is what makes
-# `if ! pytest; then echo; fi` a red build rather than a rewording — and reads
-# back which command words were actually invoked, so a gate step that names
-# the script without running it is red too.
+# This job's `name: Tests` is the context branch protection asks for, and on
+# this repository it is asked for. Measured 2026-09-05 with
+# `gh api repos/cooperross399/cbb-betting-lab/branches/main/protection`:
+# cbb-betting-lab is PUBLIC; main's `required_status_checks.contexts` is
+# exactly `["Tests"]`; `enforce_admins.enabled` is true, so the owner is held
+# to it too; `allow_force_pushes.enabled` and `allow_deletions.enabled` are
+# both false. An earlier version of this header said CBB was private and that
+# nothing on GitHub's side stopped a merge over a red tick here. That was
+# true when it was written and is not true now, which is why the sentence
+# names the command that measured it.
 #
-# WHAT IS STILL NOT COVERED HERE: this repository has no branch protection, so
-# a person may merge over a red tick; nothing in this file constrains the six
-# operational workflows beyond the corpus rules; and a `cd` before pytest, or
-# a swallow inside a nested `bash -c`, is disclosed open in
-# tests/test_workflows.py::test_the_disclosed_holes_are_real rather than
-# claimed closed.
+# tests/test_workflows.py reads this file with yaml.safe_load and refuses a
+# rename of this job, a second job with the same name, a matrix (which renames
+# the context), `if:`, `needs:` (a job this one waits on can be skipped by its
+# own condition, and GitHub reports a conditionally-skipped required check as
+# SUCCESS), an `if:` on any OTHER job in this file, `continue-on-error`, a
+# shell override, a paths or branches filter on pull_request, and a gate step
+# that reads anything but the junit the suite step wrote. The suite line's
+# arguments are a WHITELIST — `-q`, `-rs` and one `--junit-xml=` under the
+# runner temp — because a blocklist of narrowing flags let `--version`, `-h`
+# and `--help` through, and each of those exits 0 and writes no junit. The gate
+# line is pinned as a whole command, so `: python scripts/check_test_results.py
+# <path>` is refused rather than matched. It also EXECUTES every run block
+# below under stubs and demands a non-zero exit when a command in it fails —
+# which is what makes `if ! pytest; then echo; fi` a red build rather than a
+# rewording — and reads back which command words were actually invoked, so a
+# gate step that names the script without running it is red too.
+#
+# WHAT IS STILL NOT COVERED HERE. Protection requires this context and no
+# other, so a red `Ledger Guard` does not block the merge button.
+# `required_status_checks.strict` is false, so the tick that satisfies the rule
+# may have been earned against a base main has since moved past. Nothing in
+# this file constrains the six operational workflows beyond the corpus rules.
+# And a `cd` before pytest, or a swallow inside a nested `bash -c`, is
+# disclosed open in tests/test_workflows.py::test_the_disclosed_holes_are_real
+# rather than claimed closed.
 #
 # THIS JOB IS GIVEN NO CREDENTIAL, DELIBERATELY. The suite must pass without
 # one; that is what proves no test depends on a live provider, and it is what
@@ -37,17 +43,20 @@
 # and the linter refuses the secrets context anywhere in this file.
 #
 # `python -m pytest -q` ALONE IS NOT THE GATE. pytest exits 0 on a skipped
-# test and on an xfail. Re-measured on 2026-09-04 by cloning 02e75b7 — the
-# last commit before the tracked real-data sample existed — and running
-# `python -m pytest -q -rs`: 648 passed, 80 skipped, exit 0, every skip
-# waiting on a gitignored table, and this workflow was green. (An earlier
-# version of this comment said 647.) The gate step reads the junit the suite
-# wrote and fails on any skip — including one taken at COLLECTION, which no
-# per-item hook sees — any xfail, any failure, an empty run, a required guard
-# module that contributed nothing, a required guard module that declared a
-# test which did not run, and evidence older than the marker the suite step
-# writes immediately before pytest. It runs under `if: always()` so it also
-# fires when the suite step died.
+# test and on an xfail. The state this repository was in at 02e75b7 — the
+# parent of the commit that added the tracked real-data sample — is the
+# evidence: the `Tests` run at that commit (Actions run 33914235441, job
+# 101157576290) logged **648 passed, 80 skipped** and concluded SUCCESS.
+# Cloning 02e75b7 and running `PYTHONPATH=src python -m pytest -q -rs`
+# reproduces those two counts at exit 0, and every skip names an absent
+# gitignored table or an uncached schedule. Eighty tests had never once run on
+# the machine whose tick the lab reads, and no line anywhere said so. The gate
+# step reads the junit the suite wrote and fails on any skip — including one
+# taken at COLLECTION, which no per-item hook sees — any xfail, any failure, an
+# empty run, a required guard module that contributed nothing, a required guard
+# module that declared a test which did not run, and evidence older than the
+# marker the suite step writes immediately before pytest. It runs under
+# `if: always()` so it also fires when the suite step died.
 
 name: Tests
 
@@ -111,12 +120,13 @@ jobs:
         env:
           # `python -m pytest` puts the working directory at the head of
           # sys.path, so a tracked `pytest.py` at the repository root IS
-          # pytest for this step. Measured on 2026-09-04: a pytest.py at the
-          # root whose main() printed and returned 0 turned this command
-          # into `everything is fine`, exit 0, no junit written, with the
-          # workflow untouched. With PYTHONSAFEPATH=1 the same command
-          # reported `pytest 9.1.1`. `tests/test_the_guards_exist.py` bans the
-          # tracked file and re-measures both halves; this is the belt.
+          # pytest for this step. Measured on a clone of 133dabd: a pytest.py
+          # at the root whose main() printed and returned 0 turned this
+          # command into `everything is fine`, exit 0, no junit written, with
+          # the workflow untouched. With PYTHONSAFEPATH=1 the same command
+          # reported the real pytest's own version banner instead.
+          # `tests/test_the_guards_exist.py` bans the tracked file and
+          # re-measures both halves; this is the belt.
           PYTHONSAFEPATH: '1'
         run: |
           set -euo pipefail

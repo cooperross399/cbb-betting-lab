@@ -209,11 +209,11 @@ def test_a_stub_module_is_counted_as_hollow(tmp_path: Path) -> None:
 def test_the_hook_reads_the_narrowing_pytest_actually_received(tmp_path: Path) -> None:
     """A `--deselect` of ONE test in a guard, observed rather than spelled.
 
-    Measured on 2026-09-04 on a clone of 133dabd, the commit this branch sits
-    on, with that deselect in
-    pyproject.toml's `addopts` the suite ran **1253 passed, 1 deselected** out
-    of 1254, the per-module count hook stayed quiet because the module still
-    contributed 41 tests, and `scripts/check_test_results.py` printed PASS.
+    Measured on a clone of 133dabd, the commit this branch sits on: with that
+    deselect in pyproject.toml's `addopts` the suite ran with EXACTLY ONE test
+    deselected, the per-module count hook stayed quiet because the module still
+    contributed every other test it declares, and
+    `scripts/check_test_results.py` printed PASS.
     Every arm below sets the same narrowing by a different route — the command
     line, the environment, an ini file's `addopts` — and every arm must stop
     the run, because what is read is the option pytest RESOLVED and not the
@@ -334,14 +334,14 @@ def _declared_pythonpath_entries() -> list[str]:
 def test_no_tracked_file_shadows_pytest_or_the_interpreter_start() -> None:
     """A tracked root `pytest.py` replaces the suite without touching the workflow.
 
-    Measured 2026-09-04 on a clone of 133dabd: a `pytest.py` written at the
-    repository root, whose `main()` printed a line and returned 0, turned `python -m pytest -q -rs --junit-xml=...` into `everything is fine`,
-    exit **0**, and no junit file at all. Every rule in
-    `tests/test_workflows.py` reads the workflow, and the workflow was
-    untouched. The same measurement with `PYTHONSAFEPATH=1` in the
-    environment reported `pytest 9.1.1` — the real one — which is why the
-    suite step sets it and `check_the_suite_step_disables_the_path_shadows`
-    requires it.
+    Measured on a clone of 133dabd: a `pytest.py` written at the repository
+    root, whose `main()` printed a line and returned 0, turned
+    `python -m pytest -q -rs --junit-xml=...` into `everything is fine`, exit
+    **0**, and no junit file at all. Every rule in `tests/test_workflows.py`
+    reads the workflow, and the workflow was untouched. The same measurement
+    with `PYTHONSAFEPATH=1` in the environment printed the real pytest's own
+    version banner instead, which is why the suite step sets it and
+    `check_the_suite_step_disables_the_path_shadows` requires it.
     """
     offenders = sorted(p for p in tracked_files() if Path(p).name in FORBIDDEN_TRACKED_BASENAMES)
     assert not offenders, (
@@ -408,12 +408,12 @@ def test_a_module_dropped_by_collect_ignore_stops_the_run(tmp_path: Path) -> Non
     """A conftest can drop a whole module before collection, and no option shows it.
 
     `collect_ignore` is not a command-line narrowing and not a per-item hook's
-    business: pytest simply never collects the file. Measured 2026-09-04 with
-    `collect_ignore = ["test_replication.py"]` appended to `tests/conftest.py`
-    — 1228 passed where 1254 run clean, exit 0, and
-    `scripts/check_test_results.py` printed PASS. Twenty-six tests gone under
-    a green tick, because `test_replication.py` is not one of the eight named
-    guards.
+    business: pytest simply never collects the file. Measured on a clone of
+    133dabd with `collect_ignore = ["test_replication.py"]` appended to
+    `tests/conftest.py`: the run came back TWENTY-SIX tests short of the clean
+    collection, exit 0, and `scripts/check_test_results.py` printed PASS —
+    a whole module gone under a green tick, because `test_replication.py` is
+    not one of the eight named guards.
 
     The floor is now every `tests/test_*.py` git tracks. Exercised on a clone
     of this repository so the real `git ls-files` answers, with this

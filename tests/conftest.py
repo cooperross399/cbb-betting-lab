@@ -17,11 +17,11 @@ the three copies are held against each other by `test_the_guards_exist`.
 
 **What pytest actually received, not what a command line spells.** Counting
 items is a floor per MODULE, and a `--deselect` of exactly ONE test in a guard
-walks straight past it. Measured on 2026-09-04 on a clone of 133dabd, the commit this branch sits
-on: with
+walks straight past it. Measured on a clone of 133dabd, the commit this branch
+sits on: with
 `addopts = "--deselect tests/test_no_secrets_committed.py::test_no_tracked_\
 file_contains_an_odds_api_key_shape"` added to pyproject.toml, the suite ran
-**1253 passed, 1 deselected** out of 1254, this hook stayed quiet, and
+with EXACTLY ONE test deselected, this hook stayed quiet, and
 `scripts/check_test_results.py` printed PASS. So the hook now also reads the
 narrowing options out of the config pytest BUILT — `--deselect`, `-k`,
 `--ignore`, `--ignore-glob`, the ini file's `addopts`, and `PYTEST_ADDOPTS`
@@ -156,11 +156,11 @@ def tracked_test_modules() -> tuple[str, ...]:
     The named manifest is the hard-rule guards; this is every test module the
     next clone will have. It closes a route the named list does not see: a
     `collect_ignore` in a conftest drops a whole module before collection, and
-    for a module that is not on the manifest nothing noticed. Measured
-    2026-09-04: `collect_ignore = ["test_replication.py"]` in this file ran as
-    1228 passed where 1254 run clean, exit 0, and
-    `scripts/check_test_results.py` printed PASS — twenty-six tests gone with
-    a green tick.
+    for a module that is not on the manifest nothing noticed. Measured on a
+    clone of 133dabd: `collect_ignore = ["test_replication.py"]` in this file
+    ran TWENTY-SIX tests short of the clean collection, exit 0, and
+    `scripts/check_test_results.py` printed PASS — a whole module gone under a
+    green tick.
 
     When git cannot answer — an export rather than a checkout — this returns
     empty and the check degrades to the named manifest above, which is

@@ -1,29 +1,54 @@
 # Ledger Guard — the append-only rule, checked at the diff instead of at runtime.
 #
 # `ExperimentLedger.save()` in src/cbb_betting_lab/experiment_ledger.py refuses
-# to shrink a ledger, but it only sees writes that go through the code, and
-# until 2026-09-04 it could not see even those: scripts/record_experiments.py
-# loaded the ledger and saved the same object back to the same path, so
-# save()'s re-read of the file compared n >= n and could never fire. Delete
-# twelve of the thirty hypotheses by hand and re-run the recorder, and the
-# correction factor fell from x1.60 to x1.46 with CI green. The runtime guard
-# now takes the count the caller loaded as an explicit floor; this workflow is
-# the other half, comparing the ledger on the head against the ledger at the
-# base of the PR, keyed on (search, name, seasons, stage), and refusing a run
-# in which a recorded hypothesis was removed, re-dated, re-directed, or had a
-# measured outcome rewritten.
+# to shrink a ledger. This header used to add that "until 2026-09-04 it could
+# not see even those", and to quote a reproduction — twelve of thirty
+# hypotheses deleted, the recorder re-run, the correction falling from x1.60 to
+# x1.46. Both halves were re-measured and both were wrong; this file was the
+# fourth carrier of them and the one the correcting commit missed.
 #
-# ONE ledger is checked. A second tracked copy under data/outputs/holdout/
-# was where the replication appended its holdout looks while the backtest read
-# its correction from this one — two files, and the correction understated by
-# the holdout's looks. One cumulative count, because one ledger.
+#   - The old re-read DOES fire on an in-process shrink. Load the tracked
+#     ledger, delete entries in memory, save back to the same path, and it
+#     raises. `tests/test_check_ledger_append_only.py` runs that comparison
+#     against `save()` as it stood on 02e75b7 rather than describing it.
+#   - The recorder self-heals. `record()` puts every hypothesis in HYPOTHESES
+#     back, so the correction returns to what it was instead of falling.
 #
-# This workflow READS and never writes. It holds `contents: read` and accesses
-# the `secrets` context nowhere; tests/test_workflows.py refuses both. A base
-# ref it cannot resolve is a HARD STOP, not a pass: "there was no prior
-# ledger" and "I could not read the prior ledger" must never take the same
-# branch. Every run block here is executed under stubs by the linter and must
-# exit non-zero when any command in it fails.
+# What no runtime guard reaches is a ledger edited ON DISK AND COMMITTED:
+# `save()` is never called on that path, so nothing compares anything, and
+# every report from then on reads the shorter file and quotes the smaller
+# correction. This workflow is that layer. It compares the ledger on the head
+# against the ledger at the base of the PR, keyed on
+# (search, name, seasons, stage), and refuses a run in which a recorded
+# hypothesis was removed, re-dated, re-directed, or had a measured outcome
+# rewritten. The runtime guard now also takes the count the caller loaded as an
+# explicit floor — the one number a re-read cannot reconstruct when the target
+# path does not yet hold the ledger.
+#
+# ONE ledger is diffed, and the loop below has exactly one entry:
+# data/outputs/experiment_ledger.json. A second tracked copy under
+# data/outputs/holdout/ was where the replication appended its holdout looks
+# while the backtest read its correction from this one — two files, and the
+# correction understated by the holdout's looks. #11 removed the copy. One
+# cumulative count, because one ledger. The tracked render,
+# data/outputs/cbb_experiment_ledger.md, is NOT compared key by key; it is
+# covered by the re-render step below, which rebuilds it from the .json and
+# demands no diff.
+#
+# This workflow READS. It holds `contents: read`, and tests/test_workflows.py
+# refuses the write permission to any workflow absent from its WRITERS map,
+# which this one is; it reaches the `secrets` context nowhere, which that file
+# refuses too. A base ref it cannot resolve is a HARD STOP, not a pass:
+# "there was no prior ledger" and "I could not read the prior ledger" must
+# never take the same branch. Every run block here is executed under stubs by
+# the linter and must exit non-zero when any command in it fails.
+#
+# THIS CHECK IS NOT REQUIRED BY BRANCH PROTECTION. Measured 2026-09-05 with
+# `gh api repos/cooperross399/cbb-betting-lab/branches/main/protection`: the
+# only context main requires is `Tests`. A red `Ledger Guard` is a fact in the
+# pull request, not a block on the merge button, and that gap is written into
+# tests/test_workflows.py::test_the_disclosed_holes_are_real rather than
+# claimed shut.
 
 name: Ledger Guard
 
@@ -31,8 +56,9 @@ on:
   # No paths: filter (a filtered required check hangs pending), and no
   # branches: filter (a ledger edited on a side branch reaches main through a
   # merge, and the check has to run BEFORE the merge). The first push of a new
-  # branch carries an all-zeros `before` and is red; the PR run compares it
-  # properly against the base.
+  # branch carries an all-zeros `before`; #9 made that fall back to origin/main
+  # rather than exit 1, because a guard that is red on every new branch is a
+  # guard people learn to ignore.
   pull_request:
   push:
   workflow_dispatch:
@@ -113,7 +139,7 @@ jobs:
           echo "sha=${BASE}" >> "$GITHUB_OUTPUT"
           echo "Base commit: ${BASE}"
 
-      - name: Refuse a removed or rewritten hypothesis, in either ledger
+      - name: Refuse a removed or rewritten hypothesis
         env:
           BASE: ${{ steps.base.outputs.sha }}
         # The comparison lives in scripts/check_ledger_append_only.py, with
@@ -176,7 +202,7 @@ jobs:
           [ -n "${SUMMARY}" ] || { echo '::error::The append-only check left no summary. Nothing was compared.'; exit 1; }
           printf 'Ledger Guard against base %s\n%s\n' "${BASE}" "${SUMMARY}" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload the ledgers that were compared
+      - name: Upload the ledger that was compared
         if: always()
         uses: actions/upload-artifact@v4
         with:
