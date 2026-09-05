@@ -156,6 +156,22 @@ jobs:
           fi
           python scripts/buy_historical_prices.py $FLAGS | tee -a "$GITHUB_STEP_SUMMARY"
 
+      # THE EXPENSIVE THING IS PERSISTED FIRST. Run 33917619764 spent 1,199,926
+      # credits, then the store rebuild below was OOM-killed on a 7GB runner
+      # ("The operation was canceled"), and every step after it — this upload
+      # and both cache saves — was skipped. Nothing from that run was saved
+      # anywhere. The raw responses are the purchase; the store is derived
+      # from them for free. So the responses go up the moment Buy returns,
+      # before anything that can die touches them.
+      - name: Upload the raw bought responses (before anything can die)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: historical-cache-${{ inputs.waves }}-${{ inputs.window }}
+          path: data/raw/cbb/historical_purchase/${{ inputs.window }}/**
+          if-no-files-found: warn
+          retention-days: 90
+
       # THE LIVE BUY DOES NOT WRITE THE STORE. It caches every raw response and
       # counts the rows it staged, but the processed CSV is derived data built
       # by `--rebuild`, which makes no request and costs nothing. Without this
@@ -170,8 +186,14 @@ jobs:
           PYTHONPATH: src
         run: |
           set -o pipefail
+          # ALL waves, FROM SCRATCH. A rebuild scoped to this run's wave appended
+          # onto whatever stale store the cache happened to restore, which is how
+          # the store "shrank" from 2.9M rows to 2.3M when props were bought: the
+          # completion seasons and the ladders were never in the restored copy.
+          # The raw cache holds every wave; the store is rebuilt from all of it,
+          # one segment at a time so a large wave cannot exhaust memory.
           python scripts/buy_historical_prices.py \
-            --waves ${{ inputs.waves }} \
+            --waves all \
             --window ${{ inputs.window }} \
             --max-events-per-segment ${{ inputs.max_events_per_segment }} \
             --rebuild | tee -a "$GITHUB_STEP_SUMMARY"
@@ -199,11 +221,3 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
-      - name: Upload the raw bought responses
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: historical-cache-${{ inputs.waves }}-${{ inputs.window }}
-          path: data/raw/cbb/historical_purchase/${{ inputs.window }}/**
-          if-no-files-found: warn
-          retention-days: 90

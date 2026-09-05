@@ -94,6 +94,12 @@ def main(argv: list[str] | None = None) -> int:
 
     window = H.WINDOWS[args.window]
     wave_names = tuple(w.strip() for w in args.waves.split(",") if w.strip())
+    if "all" in wave_names:
+        # Every wave. The rebuild passes this, because the store must derive
+        # from EVERY wave's cached responses and not only this run's — a
+        # rebuild scoped to one wave appended onto a stale restored store, and
+        # the store shrank while the raw cache held everything (defect U).
+        wave_names = tuple(w.name for w in H.WAVES)
     waves = [H.wave_for(name) for name in wave_names]
 
     blocked = [w for w in waves if not w.buyable]
@@ -140,28 +146,52 @@ def main(argv: list[str] | None = None) -> int:
     cache_dir = H.cache_dir_for(CBB, Path(args.raw_dir), window)
 
     if args.rebuild:
-        # Three values, not two: rows, census, and the events that had at
-        # least one cached response. The two-value unpack here had never been
-        # exercised, because nothing ran `--rebuild` until the purchase turned
-        # out not to write its own store.
-        rows, census, reached = H.rebuild_from_cache(
-            plan=plan, cache_dir=cache_dir, indexes=indexes,
-            chunk_size=args.chunk_size,
-        )
+        # FROM SCRATCH, ONE SEGMENT AT A TIME.
+        #
+        # From scratch: the store is derived data and the raw cache is the
+        # source of truth. Appending onto whatever stale store a cache restore
+        # happened to leave is how the store "shrank" from 2.9M rows to 2.3M —
+        # the restored copy predated two whole waves. A rebuild that starts
+        # from the existing file is an append with a misleading name.
+        #
+        # One segment at a time: a whole wave in memory OOM-killed a runner and
+        # took 1,199,926 credits of unsaved responses with it. Each wave-season
+        # is staged, appended (deduped on price identity by `append_prices`)
+        # and released before the next is read.
         target = H.store_path(CBB, Path(args.processed_dir), window)
-        written = H.append_prices(rows, target, window=window)
+        if target.is_file():
+            target.unlink()
+            print(f"Removed the previous {target.name}: a rebuild derives from the cache, never from the stale store.")
+        total_rows = 0
+        reached_total = 0
+        census_all: dict[str, int] = {}
+        for segment in plan.segments:
+            if not segment.buyable:
+                continue
+            rows, census, reached = H.rebuild_from_cache(
+                plan=plan, cache_dir=cache_dir, indexes=indexes,
+                chunk_size=args.chunk_size, segments=[segment],
+            )
+            held = H.append_prices(rows, target, window=window)
+            print(
+                f"  {segment.wave}/{segment.season}: {len(rows):,} rows from "
+                f"{len(reached):,} cached events -> store holds {held:,}"
+            )
+            total_rows += len(rows)
+            reached_total += len(reached)
+            for reason, count in census.items():
+                census_all[reason] = census_all.get(reason, 0) + count
+            del rows
         print(
-            f"Rebuilt {written:,} price rows from {len(reached):,} cached "
+            f"Rebuilt {total_rows:,} price rows from {reached_total:,} cached "
             f"events into {target.name}. No request was made and no credit "
             "was spent."
         )
-        if census:
+        if census_all:
             print("\nWhat did not become a row:")
-            for reason, count in sorted(census.items(), key=lambda kv: -kv[1]):
+            for reason, count in sorted(census_all.items(), key=lambda kv: -kv[1]):
                 print(f"  {count:>9,}  {reason}")
-        if not rows:
-            # An empty rebuild is the signature of a cache that did not
-            # survive, and it must not read as a purchase with nothing in it.
+        if not total_rows:
             print(
                 "\n::warning::No cached response staged a single row. Either "
                 f"the cache under {cache_dir} is empty, or every response in "

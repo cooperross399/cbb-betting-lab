@@ -1393,7 +1393,15 @@ def test_the_purchase_workflow_builds_the_store_it_uploads() -> None:
     assert path.is_file()
     text = path.read_text(encoding="utf-8")
     assert "--rebuild" in text, "nothing in the purchase workflow rebuilds the store from the cached responses"
-    assert text.index("--rebuild") < text.index("upload-artifact"), "the store is rebuilt after it is uploaded"
+    # The STORE upload, by name. The first `upload-artifact` in the file is now
+    # the raw-response upload, which deliberately precedes the rebuild (defect
+    # S: persist the purchase before anything that can die). Anchoring on the
+    # first occurrence made this test fail on the fix for a worse defect.
+    store_upload = text.index("Upload the store, the record and the cache")
+    assert text.index("--rebuild") < store_upload, (
+        "the store is rebuilt after it is uploaded, so the artifact carries the "
+        "previous run's store or none at all"
+    )
 
 
 # --------------------------------------------------------------------------
@@ -2081,3 +2089,45 @@ def test_the_disclosed_holes_are_real(tmp_path: Path) -> None:
         if (step.get("with") or {}).get("if-no-files-found") != "error"
     ]
     assert warning_uploads, "every operational upload now errors on nothing to upload; move this out of the ledger and into the corpus rules"
+
+
+def _step_names(path: Path) -> list[str]:
+    """The `- name:` entries of a workflow, in order, comments excluded."""
+    return [
+        line.split("name:", 1)[1].strip()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip().startswith("- name:")
+    ]
+
+
+def test_the_purchase_uploads_raw_responses_before_anything_can_die() -> None:
+    """Defect S. Run 33917619764 spent 1,199,926 credits, then the store
+    rebuild was OOM-killed and every later step — the raw-response upload and
+    both cache saves — was skipped. Nothing was persisted.
+
+    The raw responses ARE the purchase; the store is derived from them for
+    free. So the upload of the responses must come before the rebuild, and
+    before anything else that can fail. Order is read from the file.
+    """
+    names = _step_names(WORKFLOWS_DIR / "historical-purchase.yml")
+    buy = names.index("Buy")
+    upload = next(i for i, n in enumerate(names) if n.startswith("Upload the raw bought responses"))
+    rebuild = next(i for i, n in enumerate(names) if n.startswith("Build the store"))
+    assert buy < upload < rebuild, (
+        f"Step order is {names[buy:rebuild + 1]}. The raw-response upload must "
+        "sit between Buy and the rebuild, so a rebuild that dies cannot take "
+        "the purchase with it."
+    )
+
+
+def test_the_purchase_rebuild_covers_every_wave() -> None:
+    """Defect U. A rebuild scoped to the run's own wave appended onto a stale
+    restored store, and the store shrank from 2.9M rows to 2.3M while the raw
+    cache held everything."""
+    text = (WORKFLOWS_DIR / "historical-purchase.yml").read_text(encoding="utf-8")
+    rebuild = text[text.index("Build the store from the cached responses"):]
+    rebuild = rebuild[: rebuild.index("- name:", 10)]
+    assert "--waves all" in rebuild, (
+        "The rebuild step scopes itself to this run's wave, so the store it "
+        "writes omits every other wave the cache holds."
+    )
