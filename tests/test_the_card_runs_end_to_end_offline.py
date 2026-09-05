@@ -122,8 +122,15 @@ def build_board(tmp_path: Path, names: list[str], *, games: int = 6) -> Path:
     return path
 
 
-def run_card(board: Path, tmp_path: Path, *extra: str):
-    """Run the real entry point as a subprocess, with no credential."""
+def run_card(board: Path, tmp_path: Path, *extra: str, inputs: tuple[Path, Path] | None = None):
+    """Run the real entry point as a subprocess, with no credential.
+
+    `inputs` is `(raw_dir, processed_dir)`: the cached schedules and the
+    processed tables the model is fitted on. The entry point refuses to card
+    without them — a card with no opinion on anything is indistinguishable from
+    one whose model was never asked — so every test that expects a card passes
+    the tracked real-data fixtures.
+    """
     env = {
         "PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin",
         "PYTHONPATH": str(REPO / "src"),
@@ -137,6 +144,10 @@ def run_card(board: Path, tmp_path: Path, *extra: str):
             "--staged-board", str(board),
             "--archive-dir", str(tmp_path / "archive"),
             "--output-dir", str(tmp_path / "outputs"),
+            *(
+                ("--raw-dir", str(inputs[0]), "--processed-dir", str(inputs[1]))
+                if inputs else ()
+            ),
             *extra,
         ],
         cwd=REPO, capture_output=True, text=True, env=env, timeout=600,
@@ -145,9 +156,9 @@ def run_card(board: Path, tmp_path: Path, *extra: str):
 
 
 @pytest.fixture()
-def carded(tmp_path, provider_names):
+def carded(tmp_path, provider_names, fixture_raw_dir, fixture_processed_dir):
     board = build_board(tmp_path, provider_names)
-    result = run_card(board, tmp_path)
+    result = run_card(board, tmp_path, inputs=(fixture_raw_dir, fixture_processed_dir))
     assert result.returncode == 0, (
         f"The card exited {result.returncode}.\n"
         f"stdout:\n{result.stdout[-3000:]}\nstderr:\n{result.stderr[-3000:]}"
@@ -249,6 +260,35 @@ def test_opinions_are_frozen_before_the_games_they_describe(carded):
         )
 
 
+def test_the_card_says_what_the_model_was_asked_and_answered(carded):
+    """Provider spellings for made-up pairings a week out join to no scheduled
+    game, so the model has nothing to price — and the run SAYS so, with the
+    counts, rather than pricing nothing in silence. Silence here was the
+    production defect: `matchups` was never passed and every wager read `no
+    opinion` for a whole season while the run looked healthy."""
+    result, _ = carded
+    out = result.stdout
+    assert "Model `cbb_betting_lab.models.ratings:matchups_for` asked about 6 event(s)" in out
+    assert "team-game row(s) strictly before" in out
+    assert "cbb_team_games.csv" in out
+
+
+def test_without_the_processed_tables_the_card_is_refused_not_emptied(
+    tmp_path, provider_names, fixture_raw_dir
+):
+    """The absence the workflow can produce: the free-feed step is soft, so a
+    failed fetch on a fresh runner leaves no table. The card must refuse, print
+    the reason as an error, and freeze nothing."""
+    board = build_board(tmp_path, provider_names)
+    empty = tmp_path / "no_tables"
+    empty.mkdir()
+    result = run_card(board, tmp_path, inputs=(fixture_raw_dir, empty))
+    assert result.returncode == 2, result.stdout[-2000:] + result.stderr[-2000:]
+    assert result.stdout.rstrip().endswith("decision=refused")
+    assert "::error::" in result.stderr and "cbb_team_games.csv" in result.stderr
+    assert not (tmp_path / "archive").exists(), "a refused card froze an opinion"
+
+
 def test_a_live_run_for_another_day_is_refused_without_rehearsal(tmp_path, provider_names):
     """Freezing a snapshot for a future slate would make the real run that day
     find one already standing and leave it there — and the first opinion of
@@ -261,11 +301,13 @@ def test_a_live_run_for_another_day_is_refused_without_rehearsal(tmp_path, provi
     )
 
 
-def test_the_card_opens_no_socket(tmp_path, provider_names, monkeypatch):
+def test_the_card_opens_no_socket(
+    tmp_path, provider_names, monkeypatch, fixture_raw_dir, fixture_processed_dir
+):
     """The offline path must be offline. Asserted at the socket layer rather
     than inferred from the absence of a credential."""
     board = build_board(tmp_path, provider_names)
-    result = run_card(board, tmp_path)
+    result = run_card(board, tmp_path, inputs=(fixture_raw_dir, fixture_processed_dir))
     assert result.returncode == 0
     # A card that reached the network without a credential would have failed
     # loudly; this pins the stronger claim that it never tried.

@@ -129,3 +129,72 @@ def test_no_input_makes_should_demote_grant_anything(criteria):
             if fires:
                 assert roi + 0.05 < criteria.demotion_roi_floor
                 assert bets >= criteria.demotion_minimum_bets
+
+
+def test_saving_an_allowlist_without_a_receipt_grants_nothing_after_load(tmp_path):
+    """The door is a receipt file, not a JSON field.
+
+    `save()` will faithfully write a policy whose `mode` is not manual-only and
+    whose allowlist names a market — that is what a machine `withdraw()` then
+    `save()` needs. What it cannot do is make that market **allowed**: `load()`
+    requires a human acceptance receipt under
+    `<manual_dir>/human_acceptance_receipts/` behind every allowlisted market,
+    and with none there the whole policy comes back manual-only, saying which
+    market lacked what. Until 2026-09-05 nothing anywhere read that directory.
+    """
+    manual = tmp_path / "data" / "manual"
+    manual.mkdir(parents=True)
+    policy = SPP.StagingProviderPolicy(
+        mode="reviewed",
+        allowlist={
+            "spread": SPP.AllowlistEntry(
+                market="spread", receipt_id="r-1", approved_on="2026-11-01",
+                roi_floor=-0.02, evidence_checksum="deadbeef",
+            )
+        },
+    )
+    assert policy.allows("spread"), "an in-memory policy is the test seam and must still work"
+
+    SPP.save(policy, manual)
+    loaded = SPP.load(manual)
+
+    assert loaded.mode == SPP.MANUAL_ONLY
+    assert loaded.declared_mode == "reviewed"
+    assert not loaded.allows("spread")
+    assert not any(loaded.allows(m) for m in ("spread", "moneyline", "total_points", ""))
+    assert "spread" in loaded.allowlist, "the entry is kept so withdraw() can still act on it"
+    assert "spread" in loaded.receipt_failures
+    assert "receipt" in loaded.receipt_failures["spread"]
+    from cbb_betting_lab.competitions import CBB
+    line = loaded.summary_line(CBB)
+    assert "manual-only" in line and "`spread` lacks" in line
+
+    # Saving the loaded object back and re-loading changes nothing: the human's
+    # declared mode is preserved, and the door stays shut.
+    SPP.save(loaded, manual)
+    again = SPP.load(manual)
+    assert json.loads((manual / SPP.POLICY_FILENAME).read_text())["mode"] == "reviewed"
+    assert again.mode == SPP.MANUAL_ONLY and not again.allows("spread")
+
+
+def test_the_policy_module_never_writes_a_receipt(tmp_path):
+    """Nothing in the module opens the receipts directory for writing. Checked
+    on the syntax tree — a call is a `Call` node, a sentence about one is not."""
+    import ast
+    import inspect
+
+    source = inspect.getsource(SPP)
+    tree = ast.parse(source)
+    writers = {"write_text", "write_bytes", "mkdir", "open", "dump", "touch", "rename", "replace"}
+    calls = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr in writers
+    ]
+    # `save()` writes the policy file and nothing else; every write call in the
+    # module must be inside it.
+    save_node = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "save")
+    inside_save = {id(n) for n in ast.walk(save_node)}
+    outside = [c for c in calls if id(c) not in inside_save]
+    assert not outside, [ast.unparse(c) for c in outside]

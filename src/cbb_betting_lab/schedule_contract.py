@@ -27,8 +27,13 @@ OBSERVED_LATENESS_H = 5.3
 EST_OFFSET_H = -5
 
 #: A game tipping inside this many minutes of a run is not carded by it.
-#: Matches `gates.IMMINENT_MINUTES` in spirit and is stated separately because
-#: this one is about scheduling and that one is about a single selection.
+#: This is the lead the historical store was bought at (T-60,
+#: `providers.historical.CARD_WINDOW`) and so the lead every measured number
+#: rests on. `gates.IMMINENT_MINUTES` **is** this constant — it imports it —
+#: so the per-game tip guard and the schedule read one number. They used to be
+#: two (15 and 60), and a game tipping in 16-59 minutes could be selected at a
+#: price no measurement ever covered. This module imports nothing from `gates`,
+#: which is what keeps that import acyclic.
 CARD_LEAD_MINUTES = 60
 
 

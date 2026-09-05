@@ -103,6 +103,8 @@ result and a null result is a claim.
 
 from __future__ import annotations
 
+import importlib
+import inspect
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -336,6 +338,111 @@ def settled_opinions(
 # --------------------------------------------------------------------------
 
 
+
+# --------------------------------------------------------------------------
+# The model seam: one callable, resolved and called the same way everywhere
+# --------------------------------------------------------------------------
+
+#: Where the model comes from by default. `models/ratings.py:matchups_for` is
+#: the single seam between the ratings and everything that consumes them — the
+#: price backtest, the replication, the gameday card and the forward freeze all
+#: price through it, so a game priced in a measurement is priced the same way it
+#: is on a card. It lives here, in the library, so the card does not have to
+#: import a script to find it.
+DEFAULT_MODEL = "cbb_betting_lab.models.ratings:matchups_for"
+
+#: The keyword arguments a model may declare. It is handed the ones it names and
+#: no others, so a model that only wants the day and the history does not have
+#: to accept arguments it will not read.
+MODEL_ARGUMENTS: tuple[str, ...] = ("day", "history", "prices", "competition", "raw_dir")
+
+
+class ModelNotWired(RuntimeError):
+    """The named model could not be resolved. No fallback pricer exists."""
+
+
+def resolve_model(spec: str = DEFAULT_MODEL) -> Callable:
+    """`module:attribute` -> the callable, or a refusal that names what is missing.
+
+    There is deliberately no fallback. A backtest that silently prices with
+    something other than the model the card runs measures a policy nobody would
+    have run, and it does it while printing intervals.
+    """
+    text = str(spec or "").strip()
+    module_name, separator, attribute = text.partition(":")
+    if not module_name or not separator or not attribute:
+        raise ModelNotWired(
+            f"--model {spec!r} is not a `module:attribute` path. It names the "
+            "callable that returns one matchup per event for a slate day, for "
+            f"example {DEFAULT_MODEL!r}."
+        )
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError as exc:
+        raise ModelNotWired(
+            f"{module_name} could not be imported ({exc}). "
+            + (
+                "`models/ratings.py` is not written yet — `gameday_card` says "
+                "so in its own docstring, and every wager on today's card "
+                "reads 'no opinion' for the same reason. "
+                if module_name.endswith("ratings")
+                else ""
+            )
+            + "Nothing was scored and nothing was written: a backtest with no "
+            "model is an empty report, and an empty report reads as a null "
+            "result."
+        ) from exc
+    try:
+        model = getattr(module, attribute)
+    except AttributeError as exc:
+        raise ModelNotWired(
+            f"{module_name} has no attribute {attribute!r}. It must be a "
+            "callable taking the keyword arguments it declares out of "
+            f"{list(MODEL_ARGUMENTS)} and returning a mapping of event_id to a "
+            "matchup object. "
+            "Nothing was scored and nothing was written: a backtest with no "
+            "model is an empty report, and an empty report reads as a null "
+            "result."
+        ) from exc
+    if not callable(model):
+        raise ModelNotWired(f"{spec} resolved to {type(model).__name__}, not a callable.")
+    return model
+
+
+def call_model(model: Callable, **arguments):
+    """Call a model with the arguments it declares, and no others.
+
+    A model that only wants the day and the history should not have to accept a
+    price frame it will never read, and a model that takes `**kwargs` gets
+    everything. Filtering here rather than at the model keeps the walk-forward
+    guarantee in one place: `history` is built by :func:`history_before` and is
+    the only view of the past anything downstream is given.
+    """
+    try:
+        parameters = inspect.signature(model).parameters
+    except (TypeError, ValueError):
+        return model(**arguments)
+    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
+        return model(**arguments)
+    return model(**{k: v for k, v in arguments.items() if k in parameters})
+
+
+def history_before(
+    games: pd.DataFrame, day: str, *, game_day_column: str = "slate_date"
+) -> pd.DataFrame:
+    """The games a pricer may see on `day`: those dated **strictly earlier**.
+
+    One definition, used by :func:`walk_forward` for every measured day and by
+    the gameday card for the day it prices. Two copies of this cut is how a
+    card comes to be fitted on a population no measurement ever saw; the
+    football lab's defect 13 was the same comparison written with `<=` in one
+    of its two places.
+    """
+    if games is None or games.empty or game_day_column not in games.columns:
+        return pd.DataFrame(columns=list(getattr(games, "columns", [])))
+    return games[games[game_day_column].astype(str) < str(day)]
+
+
 def walk_forward(
     prices: pd.DataFrame,
     games: pd.DataFrame,
@@ -363,7 +470,7 @@ def walk_forward(
         require_columns(games, (game_day_column,), "the games frame")
     produced: list[pd.DataFrame] = []
     for day in sorted(str(d) for d in prices[day_column].dropna().unique()):
-        history = games[games[game_day_column].astype(str) < day]
+        history = history_before(games, day, game_day_column=game_day_column)
         day_prices = prices[prices[day_column].astype(str) == day]
         priced = price_day(day=day, history=history, prices=day_prices)
         if priced is None or len(priced) == 0:

@@ -28,7 +28,7 @@ hides the credential, then runs this file.
 line of stdout and puts it on the card feed. Every word this script prints there
 is one of `cbb_betting_lab.reports.gameday_card.Decision`.
 
-## The three refusals, and why each one is a refusal rather than a warning
+## The four refusals, and why each one is a refusal rather than a warning
 
 1. **Any run pricing a day that is not today**, without `--rehearsal`. The
    snapshot is named by its day and it is append-only within one, so neither
@@ -50,6 +50,14 @@ is one of `cbb_betting_lab.reports.gameday_card.Decision`.
    account for every wager it saw — and a wager that reached none of the six
    buckets vanished, which is how a card recommends from a sixth of a slate and
    reports it as the whole one. Errors, not warnings, and the run exits on each.
+
+4. **The model cannot be asked.** `cbb_team_games.csv` under `--processed-dir`,
+   or the cached schedule for the season, is not on disk, so no opinion can be
+   built for any game. For the whole of the build this script never passed
+   `matchups` to `run_card` at all, and the production card would have priced
+   no opinion on anything all season while reading as healthy. An absent
+   input is therefore a refusal, not a card with nothing to say: **the card
+   must say it priced no opinion; it may never silently price none.**
 
 The credit cap is hard and is checked **inside the provider adapter, before
 every request, against the measured running total from `x-requests-last`** —
@@ -82,7 +90,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from cbb_betting_lab.competitions import DEFAULT_COMPETITION_KEY, competition_for
-from cbb_betting_lab.config import OUTPUTS_DIR, RAW_DIR, STAGING_DIR
+from cbb_betting_lab.config import OUTPUTS_DIR, PROCESSED_DIR, RAW_DIR, STAGING_DIR
 from cbb_betting_lab.forward_evidence import ARCHIVE_DIR, SnapshotKeyError
 from cbb_betting_lab.providers import staging
 from cbb_betting_lab.providers.env_file import load_provider_env, redact
@@ -91,6 +99,7 @@ from cbb_betting_lab.providers.odds_api import (
     ProviderError,
     sufficient_quota,
 )
+from cbb_betting_lab.reports import card_matchups
 from cbb_betting_lab.reports import gameday_card as GC
 from cbb_betting_lab.schedule_contract import SLOT_NAMES, slot_for
 from cbb_betting_lab.staging_provider_policy import load as load_policy
@@ -147,6 +156,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-dir", default=str(OUTPUTS_DIR))
     parser.add_argument("--staging-dir", default=str(STAGING_DIR))
     parser.add_argument("--raw-dir", default=str(RAW_DIR))
+    parser.add_argument(
+        "--processed-dir",
+        default=str(PROCESSED_DIR),
+        help="Where `cbb_team_games.csv` is. The model is fitted on the rows "
+        "dated strictly before the slate day, exactly as the backtest fits it. "
+        "Absent, the run is refused rather than carded with no opinion.",
+    )
     return parser
 
 
@@ -358,6 +374,29 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(placement.summary_line())
 
+    # ---- the model's opinion, through the seam the measurement used ---------
+    # `run_card` defaults `matchups` to None, and for the whole of the build
+    # this script never passed it: the production card would have priced no
+    # opinion on any game all season while every line of stdout read as a
+    # healthy run. The opinions are built here from the processed tables and
+    # the cached schedule — the same callable, the same strictly-earlier cut
+    # and the same game_id join as `scripts/run_price_backtest.py` — and an
+    # absent table is a refusal, not a card with nothing to say. Local files
+    # only: nothing here opens a socket, so the offline path stays offline.
+    try:
+        opinions = card_matchups.matchups_for_card(
+            board.rows,
+            competition=competition,
+            day=day,
+            processed_dir=Path(args.processed_dir),
+            raw_dir=Path(args.raw_dir),
+        )
+    except card_matchups.InputsAbsent as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        print(f"decision={GC.Decision.REFUSED.value}")
+        return 2
+    print(opinions.summary_line())
+
     outputs = Path(args.output_dir)
     state = GC.state_path(competition, outputs)
     try:
@@ -368,6 +407,7 @@ def main(argv: list[str] | None = None) -> int:
             card_slot=slot.name,
             archive_dir=archive,
             policy=policy,
+            matchups=opinions.matchups,
             placement=placement,
             rehearsal=bool(args.rehearsal),
             previous_fingerprint=_read_previous_fingerprint(

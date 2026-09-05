@@ -67,6 +67,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 
+from cbb_betting_lab.schedule_contract import CARD_LEAD_MINUTES
+
 
 class TipState(str, Enum):
     """Whether a game can still be bet."""
@@ -103,10 +105,28 @@ class Availability(str, Enum):
     NO_REPORT = "no_report"
 
 
-#: A game tipping inside this many minutes is treated as started. The card is
-#: published, read and acted on by a human, and a price on a game tipping in
-#: four minutes is not a price anybody can take.
-IMMINENT_MINUTES = 15
+#: A game tipping inside this many minutes is treated as started, and it is
+#: `schedule_contract.CARD_LEAD_MINUTES` — **the same number, read from the one
+#: place it is declared**, never a second literal. The historical store was
+#: bought at T-60, so every measured number this lab has rests on a price
+#: captured at least an hour before tip; a game tipping in sixteen to
+#: fifty-nine minutes would be selected at a price the measurement never
+#: covered. Until 2026-09-05 this read `15`, and that window was open.
+#:
+#: The card is also published, read and acted on by a human, and a price on a
+#: game tipping in four minutes is not a price anybody can take — the lead
+#: covers that too.
+IMMINENT_MINUTES = CARD_LEAD_MINUTES
+
+
+def imminent_note() -> str:
+    """The sentence the card prints about what `imminent` means, in numbers."""
+    return (
+        f"`imminent` is a game tipping inside {IMMINENT_MINUTES} minutes of the "
+        f"run — the T-{CARD_LEAD_MINUTES} lead the historical store was bought at "
+        "and the lead every measured number rests on — and it carries no stake, "
+        "exactly like a game that has already started."
+    )
 
 
 def tip_state(

@@ -117,3 +117,50 @@ def test_the_accounting_identity_reconciles_or_raises():
     with pytest.raises(ValueError, match="does not reconcile"):
         bad.raise_if_unreconciled()
     assert "off by" in bad.summary_line()
+
+
+# ---------------------------------------------------------------------------
+# The margin is the lead every measured number rests on, read from one place
+# ---------------------------------------------------------------------------
+
+
+def test_the_imminent_margin_is_the_card_lead_and_not_a_second_literal():
+    """`gates.IMMINENT_MINUTES` IS `schedule_contract.CARD_LEAD_MINUTES`.
+
+    The store was bought at T-60 and every measured number rests on a price
+    captured at least an hour before tip. The guard read `15` until 2026-09-05,
+    so a game tipping in 16-59 minutes was selectable at a price no measurement
+    covered. Pinned to the constant, and the constant pinned to the window the
+    store was bought at, so neither can drift on its own.
+    """
+    from cbb_betting_lab import gates, schedule_contract
+    from cbb_betting_lab.providers import historical as H
+
+    assert gates.IMMINENT_MINUTES == schedule_contract.CARD_LEAD_MINUTES
+    assert gates.IMMINENT_MINUTES is schedule_contract.CARD_LEAD_MINUTES
+    assert schedule_contract.CARD_LEAD_MINUTES == 60
+    assert H.CARD_WINDOW.minutes_before_tip == schedule_contract.CARD_LEAD_MINUTES, (
+        "the guard's lead and the window the store was bought at have parted"
+    )
+
+
+def test_a_game_tipping_in_59_minutes_is_inside_the_lead_and_61_is_not():
+    """Both sides of the boundary, one minute either way. A 59-minute tip is
+    quarantined like a started game; a 61-minute tip may carry a stake."""
+    assert tip_state(_at(59), now=NOW) is TipState.IMMINENT
+    assert not can_be_played(tip_state(_at(59), now=NOW))
+    assert tip_state(_at(60), now=NOW) is TipState.IMMINENT, "exactly at the lead is inside it"
+    assert tip_state(_at(61), now=NOW) is TipState.UPCOMING
+    assert can_be_played(tip_state(_at(61), now=NOW))
+    # The old margin, for the record: 16 minutes used to pass.
+    assert tip_state(_at(16), now=NOW) is TipState.IMMINENT
+
+
+def test_the_imminent_note_states_the_lead_in_numbers():
+    from cbb_betting_lab.gates import IMMINENT_MINUTES, imminent_note
+
+    note = imminent_note()
+    assert f"inside {IMMINENT_MINUTES} minutes" in note
+    assert f"T-{IMMINENT_MINUTES}" in note
+    assert "carries no stake" in note
+    assert "15" not in note

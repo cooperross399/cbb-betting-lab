@@ -21,6 +21,34 @@ exist. Adding a market is editing `data/manual/staging_provider_policy.json`
 with a receipt beside it, in a pull request whose policy gate is green, merged
 by Cooper.
 
+## The receipt is checked, not named
+
+Until 2026-09-05 `allows()` read `mode != manual_only and market in allowlist`,
+and nothing anywhere opened `data/manual/human_acceptance_receipts/`. The
+brief's single human stop was a JSON field a script could have written. Now
+:func:`load` requires, for **every** allowlisted market, a receipt file under
+`<manual_dir>/human_acceptance_receipts/*.json` that
+
+* names that market (`"market"`),
+* cites an evidence record (`"evidence": {"path": ..., "sha256": ...}`, or
+  `"evidence_path"` / `"evidence_sha256"`) — a relative path is read against
+  the repository root, two directories above `manual_dir` — where the record
+  **exists on disk and hashes to that value**,
+* carries a non-empty `"signed_by"` that is not Claude in any spelling or case,
+* and a `"signed_on"` date (`YYYY-MM-DD`).
+
+When the entry names a `receipt_id`, the receipt must carry the same id (as its
+`"receipt_id"` field or its file stem). `superseded/` is not read: a withdrawn
+receipt is a record, not a permission. Any allowlisted market lacking a valid
+receipt makes the **whole** policy load as manual-only — fail closed, not
+market-by-market — with the reasons kept on the object and printed by
+`summary_line()`, so the card says which market lacked what. The evidence hash
+check is the NHL lab's own catch, made mandatory: when the evidence moves
+underneath a receipt, the checksum stops matching and the door shuts on its
+own.
+
+Nothing here writes a receipt. There is still no `grant()`.
+
 ## Automatic demotion, one direction only
 
 An allowlisted market whose **forward ROI interval falls below the floor
@@ -34,7 +62,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from cbb_betting_lab.competitions import Competition
@@ -47,6 +75,11 @@ RECEIPTS_DIRNAME = "human_acceptance_receipts"
 #: The default, and the state this lab expects to stay in. Manual-only means
 #: the card reads nothing from staging and produces no selection.
 MANUAL_ONLY = "manual_only"
+
+#: The signer a receipt may never carry, matched case-insensitively on the
+#: letters of `signed_by` with everything else stripped, so `claude`, `CLAUDE`,
+#: `Claude Fable 5.1`, `claude-code` and `c.l.a.u.d.e` all refuse.
+FORBIDDEN_SIGNER = "claude"
 
 
 @dataclass(frozen=True)
@@ -72,27 +105,63 @@ class StagingProviderPolicy:
     """The whole policy. Absent or unreadable means manual-only."""
 
     provider: str = "the_odds_api"
+    #: The mode in force. :func:`load` sets this to `MANUAL_ONLY` whenever an
+    #: allowlisted market lacks a valid receipt, whatever the file declares.
     mode: str = MANUAL_ONLY
     allowlist: dict[str, AllowlistEntry] = field(default_factory=dict)
     withdrawn: list[dict] = field(default_factory=list)
+    #: What the policy file says its mode is. Kept apart from `mode` so that a
+    #: machine `save()` after a `withdraw()` writes the human's field back
+    #: unchanged: withdrawal is the one edit the machine may make to this file.
+    declared_mode: str = ""
+    #: market -> why its receipt did not stand up. Non-empty means `mode` was
+    #: forced to manual-only by :func:`load`.
+    receipt_failures: dict[str, str] = field(default_factory=dict)
+    #: market -> the receipt file that stood behind it, for the record.
+    receipts: dict[str, str] = field(default_factory=dict)
 
     def allows(self, market: str) -> bool:
-        return self.mode != MANUAL_ONLY and str(market) in self.allowlist
+        return (
+            self.mode != MANUAL_ONLY
+            and not self.receipt_failures
+            and str(market) in self.allowlist
+        )
 
     def entry(self, market: str) -> AllowlistEntry | None:
         return self.allowlist.get(str(market))
 
     def summary_line(self, competition: Competition) -> str:
-        if self.mode == MANUAL_ONLY:
+        who = f"`{self.provider}:{competition.key}`"
+        if self.receipt_failures:
+            lacking = "; ".join(
+                f"`{market}` lacks {reason}"
+                for market, reason in sorted(self.receipt_failures.items())
+            )
             return (
-                f"`{self.provider}:{competition.key}` is **manual-only**. No "
+                f"{who} is **manual-only, forced**: the policy file declares mode "
+                f"`{self.declared_mode or 'unknown'}` and allowlists "
+                f"{len(self.allowlist)} market(s), but {lacking}. No market is "
+                "read from staging and the card produces no selection until a "
+                "valid human acceptance receipt stands behind every allowlisted "
+                "market."
+            )
+        if self.mode == MANUAL_ONLY:
+            if self.allowlist:
+                return (
+                    f"{who} is **manual-only**. {len(self.allowlist)} market(s) "
+                    "are listed but the mode is manual-only, so none is read "
+                    "from staging and the card produces no selection."
+                )
+            return (
+                f"{who} is **manual-only**. No "
                 "market is allowlisted, the card produces no selection, and "
                 "that is the correct state for a lab with no signed receipt."
             )
         markets = ", ".join(sorted(self.allowlist)) or "none"
         return (
-            f"`{self.provider}:{competition.key}` allowlists {len(self.allowlist)} "
-            f"market(s): {markets}."
+            f"{who} allowlists {len(self.allowlist)} "
+            f"market(s): {markets}, each behind a verified human acceptance "
+            "receipt."
         )
 
 
@@ -100,11 +169,127 @@ def policy_path(manual_dir: Path | None = None) -> Path:
     return (Path(manual_dir) if manual_dir else Path(MANUAL_DIR)) / POLICY_FILENAME
 
 
+def receipts_dir(manual_dir: Path | None = None) -> Path:
+    return (Path(manual_dir) if manual_dir else Path(MANUAL_DIR)) / RECEIPTS_DIRNAME
+
+
+def repository_root(manual_dir: Path | None = None) -> Path:
+    """Where a receipt's relative evidence path is read from: two directories
+    above `manual_dir`, because the manual directory is `<repo>/data/manual`."""
+    return (Path(manual_dir) if manual_dir else Path(MANUAL_DIR)).resolve().parents[1]
+
+
+def _signer_is_forbidden(signed_by: str) -> bool:
+    letters = "".join(ch for ch in str(signed_by).casefold() if ch.isalpha())
+    return FORBIDDEN_SIGNER in letters
+
+
+def _evidence_of(receipt: dict) -> tuple[str, str]:
+    evidence = receipt.get("evidence")
+    if isinstance(evidence, dict):
+        return str(evidence.get("path", "") or ""), str(evidence.get("sha256", "") or "")
+    return (
+        str(receipt.get("evidence_path", "") or ""),
+        str(receipt.get("evidence_sha256", "") or ""),
+    )
+
+
+def _examine_receipt(
+    path: Path, payload: object, entry: AllowlistEntry, root: Path
+) -> str:
+    """Why this receipt does not stand behind `entry`, or "" when it does.
+
+    Every check is spelled out as a reason, because the summary line prints
+    the reason and a reader must be able to act on it.
+    """
+    name = path.name
+    if not isinstance(payload, dict):
+        return f"a receipt that is a JSON object ({name} is not one)"
+    if str(payload.get("market", "")) != entry.market:
+        return f"a receipt naming market `{entry.market}` ({name} names `{payload.get('market', '')}`)"
+    if entry.receipt_id:
+        carried = str(payload.get("receipt_id", "") or "")
+        if carried != entry.receipt_id and path.stem != entry.receipt_id:
+            return (
+                f"a receipt carrying receipt_id `{entry.receipt_id}` ({name} "
+                f"carries `{carried or path.stem}`)"
+            )
+    evidence_path, cited = _evidence_of(payload)
+    if not evidence_path or not cited:
+        return f"an evidence record path and its sha256 ({name} cites neither or one)"
+    record = Path(evidence_path)
+    if not record.is_absolute():
+        record = root / record
+    if not record.is_file():
+        return f"an evidence record on disk ({name} cites `{evidence_path}`, which does not exist)"
+    actual = hashlib.sha256(record.read_bytes()).hexdigest()
+    if actual.casefold() != cited.strip().casefold():
+        return (
+            f"an evidence record hashing to its cited sha256 ({name} cites "
+            f"{cited[:12]}… for `{evidence_path}`, which hashes to {actual[:12]}…)"
+        )
+    signed_by = str(payload.get("signed_by", "") or "").strip()
+    if not signed_by:
+        return f"a non-empty signed_by ({name} has none)"
+    if _signer_is_forbidden(signed_by):
+        return (
+            f"a human signer ({name} is signed by `{signed_by}`, and Claude may "
+            "never sign a receipt)"
+        )
+    signed_on = str(payload.get("signed_on", "") or "").strip()
+    if not signed_on:
+        return f"a signed_on date ({name} has none)"
+    try:
+        date.fromisoformat(signed_on)
+    except ValueError:
+        return f"a signed_on date in YYYY-MM-DD ({name} has `{signed_on}`)"
+    return ""
+
+
+def verify_receipt(
+    entry: AllowlistEntry, manual_dir: Path | None = None
+) -> tuple[Path | None, str]:
+    """`(receipt_path, "")` when a valid receipt stands behind `entry`, else
+    `(None, what_is_lacking)`.
+
+    Reads only `<manual_dir>/human_acceptance_receipts/*.json` — not
+    `superseded/`, whose contents are records of decisions that were unmade.
+    Never writes anything.
+    """
+    directory = receipts_dir(manual_dir)
+    if not directory.is_dir():
+        return None, f"a receipt directory at `{directory}` (there is none)"
+    root = repository_root(manual_dir)
+    candidates = sorted(p for p in directory.glob("*.json") if p.is_file())
+    if not candidates:
+        return None, f"any receipt under `{directory}` (there is none)"
+    reasons: list[str] = []
+    for path in candidates:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            reasons.append(f"a readable receipt ({path.name}: {exc.__class__.__name__})")
+            continue
+        reason = _examine_receipt(path, payload, entry, root)
+        if not reason:
+            return path, ""
+        reasons.append(reason)
+    # The most specific reason wins: a receipt that named the market and failed
+    # a later check explains more than one that never mentioned it.
+    naming = [r for r in reasons if not r.startswith("a receipt naming market")]
+    if naming:
+        return None, naming[0]
+    return None, f"a receipt naming market `{entry.market}` under `{directory}`"
+
+
 def load(manual_dir: Path | None = None) -> StagingProviderPolicy:
     """The policy, or a manual-only one.
 
     Every failure mode returns manual-only. A policy file that cannot be read
-    is not an excuse to read staging; it is a reason not to.
+    is not an excuse to read staging; it is a reason not to. And a policy
+    whose allowlist is not backed, market for market, by a receipt that
+    :func:`verify_receipt` accepts loads as manual-only **whole**, with the
+    reasons on `receipt_failures`.
     """
     path = policy_path(manual_dir)
     if not path.is_file():
@@ -128,22 +313,43 @@ def load(manual_dir: Path | None = None) -> StagingProviderPolicy:
             minimum_bets=int(item.get("minimum_bets", 200) or 200),
             note=str(item.get("note", "")),
         )
+    declared = str(payload.get("mode", MANUAL_ONLY))
+    failures: dict[str, str] = {}
+    receipts: dict[str, str] = {}
+    if declared != MANUAL_ONLY:
+        for market in sorted(entries):
+            receipt, reason = verify_receipt(entries[market], manual_dir)
+            if receipt is None:
+                failures[market] = reason
+            else:
+                receipts[market] = str(receipt)
     return StagingProviderPolicy(
         provider=str(payload.get("provider", "the_odds_api")),
-        mode=str(payload.get("mode", MANUAL_ONLY)),
+        mode=MANUAL_ONLY if failures else declared,
         allowlist=entries,
         withdrawn=list(payload.get("withdrawn", []) or []),
+        declared_mode=declared,
+        receipt_failures=failures,
+        receipts=receipts,
     )
 
 
 def save(policy: StagingProviderPolicy, manual_dir: Path | None = None) -> Path:
+    """Write the policy file. Writes no receipt, and never will.
+
+    The mode written is the one the file declared (`declared_mode`) when the
+    policy came from :func:`load`, so a run that loaded a receipt-less policy as
+    manual-only and then withdrew a market puts the human's own mode field back
+    unchanged. `load` re-checks the receipts on the next read regardless, so
+    nothing written here can make `allows()` true.
+    """
     path = policy_path(manual_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
             {
                 "provider": policy.provider,
-                "mode": policy.mode,
+                "mode": policy.declared_mode or policy.mode,
                 "allowlist": [
                     {
                         "market": e.market,
