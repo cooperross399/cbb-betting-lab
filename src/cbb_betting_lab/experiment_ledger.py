@@ -87,6 +87,26 @@ ALPHA = 0.05
 #: is the point — see the module docstring.
 DIRECTIONS: frozenset[str] = frozenset({"higher", "lower"})
 
+#: The one undirected look this ledger admits, and only at the holdout stage.
+#:
+#: The replication scores EVERY discovery cell on the held-out season — the
+#: cells the discovery window claimed nothing in included, because a cell that
+#: lights up only on the holdout is *"a NEW DISCOVERY made on the only clean
+#: season this lab had"* and the module has to look at it to say so. That look
+#: reads an interval, so it spends a degree of freedom, and until 2026-09-05 it
+#: was not written down: `run_replication.record_holdout_looks` appended a
+#: hypothesis only where discovery had claimed, so a run over 32 cells with 5
+#: claims recorded 5 looks and took 32. The family correction was short by
+#: exactly the looks nobody wrote down.
+#:
+#: There is no discovery sign to carry into such a cell, so its hypothesis is
+#: two-sided: *the held-out return differs from zero*. That is falsifiable — an
+#: interval that includes zero fails it — but it cannot *reverse*, and
+#: :meth:`Hypothesis.reversed_prediction` says so. It is NOT `none`: it is
+#: refused at the discovery stage, where a cut written without a direction is
+#: the football lab's exploratory slot wearing a pre-registration's clothes.
+TWO_SIDED = "either"
+
 #: Which half of the data a hypothesis was put to. Declared when the hypothesis
 #: is written, never after the number is seen.
 STAGES: frozenset[str] = frozenset({"discovery", "holdout"})
@@ -115,19 +135,25 @@ class Hypothesis:
     realised_direction: str = ""
 
     def __post_init__(self) -> None:
-        if self.predicted_direction not in DIRECTIONS:
-            raise DirectionRequired(
-                f"Hypothesis {self.name!r} in search {self.search!r} declares "
-                f"predicted_direction={self.predicted_direction!r}. It must be "
-                f"one of {sorted(DIRECTIONS)}. The football lab spent three of "
-                "twelve pre-registered slots on cuts written without a "
-                "direction, which could therefore only ever be exploratory; "
-                "this raises so that cannot happen again."
-            )
         if self.stage not in STAGES:
             raise ValueError(
                 f"Hypothesis {self.name!r} declares stage={self.stage!r}; it "
                 f"must be one of {sorted(STAGES)}."
+            )
+        two_sided_holdout = (
+            self.predicted_direction == TWO_SIDED and self.stage == "holdout"
+        )
+        if self.predicted_direction not in DIRECTIONS and not two_sided_holdout:
+            raise DirectionRequired(
+                f"Hypothesis {self.name!r} in search {self.search!r} declares "
+                f"predicted_direction={self.predicted_direction!r} at stage "
+                f"{self.stage!r}. It must be one of {sorted(DIRECTIONS)}, or "
+                f"{TWO_SIDED!r} at the holdout stage only — the one undirected "
+                "look this ledger admits, for a held-out cell the discovery "
+                "window claimed nothing in. The football lab spent three of "
+                "twelve pre-registered slots on cuts written without a "
+                "direction, which could therefore only ever be exploratory; "
+                "this raises so that cannot happen again."
             )
 
     def key(self) -> tuple[str, str, tuple[int, ...], str]:
@@ -149,6 +175,10 @@ class Hypothesis:
         sayable because a direction was written down beforehand.
         """
         if not self.realised_direction:
+            return False
+        if self.predicted_direction == TWO_SIDED:
+            # A two-sided look predicted no sign, so no sign can contradict it.
+            # It can fail (an interval including zero) but never reverse.
             return False
         return self.realised_direction != self.predicted_direction
 

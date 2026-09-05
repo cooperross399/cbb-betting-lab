@@ -1043,11 +1043,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--write-graded",
         default="",
         help=(
-            "Write the graded bets to this CSV, carrying "
-            "`forecast_skill.SKILL_COLUMNS`. It is what lets the market-vs-model "
+            "Write EVERY settled wager the model had an opinion on to this CSV, "
+            "carrying `forecast_skill.SKILL_COLUMNS`, `book`, and a boolean "
+            "`selected` that is True exactly for the rows that cleared the edge "
+            "threshold (the bets). It is what lets the market-vs-model "
             "regression run over the BOUGHT population rather than only over "
             "the forward ledger, which does not exist until the season starts. "
-            "Derived data: it rebuilds from the store for free."
+            "The bets alone are NOT that population: they are selected by the "
+            "model's disagreement with the price, and regressing outcome on "
+            "that disagreement over them alone bakes the winner's curse into "
+            "the coefficient. Derived data: it rebuilds from the store for free."
         ),
     )
 
@@ -1262,13 +1267,22 @@ def main(argv: list[str] | None = None) -> int:
             "tested nothing, which is not what this one is."
         )
     if args.write_graded:
-        # The graded frame is what `forecast_skill` regresses on. Written from
-        # the SAME `bets` object the record is built from, so the regression and
-        # the ROI table can never describe different populations — which is the
-        # accounting-identity discipline applied one layer out.
+        # The graded frame is what `forecast_skill` regresses on, and it is
+        # EVERY settled wager the model had an opinion on — not the bets. The
+        # bets are selected by the model's disagreement with the price; a
+        # regression of outcome on that same disagreement fitted over them
+        # alone has the winner's curse built into its coefficient, and a
+        # claimed-edge bucket table over them is tautological, every row being
+        # above the threshold by construction. Until 2026-09-05 this wrote
+        # `PB.settled(bets)`, and the skill report's "all opinions" was the
+        # bets. The frame is cut from the SAME `universe` the record is built
+        # from, with `selected` computed by the SAME predicate `bets_from`
+        # uses, so the regression's subset and the ROI table's bets can never
+        # be two different cuts — the accounting-identity discipline applied
+        # one layer out.
         target = Path(args.write_graded)
         target.parent.mkdir(parents=True, exist_ok=True)
-        missing = [c for c in FS.SKILL_COLUMNS if c not in bets.columns]
+        missing = [c for c in FS.SKILL_COLUMNS if c not in universe.columns]
         if missing:
             print(
                 f"::error::The graded frame is missing {missing!r}, so it "
@@ -1277,19 +1291,27 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 2
-        settled_bets = PB.settled(bets)
+        opinions_frame = PB.settled_opinions(universe)
+        opinions_frame = opinions_frame.assign(
+            selected=PB.bet_mask(opinions_frame, threshold=float(args.edge_threshold))
+        )
         # `book` is carried alongside the declared columns because
         # `forecast_skill` de-vigs WITHIN a book by default, and it refuses to
         # run without it rather than pooling every row into one nameless book —
         # which would pair quotes across books and understate the hold,
         # sometimes to nothing. The refusal is correct; the fix is the column.
         columns = list(FS.SKILL_COLUMNS)
-        if "book" in settled_bets.columns and "book" not in columns:
+        if "book" in opinions_frame.columns and "book" not in columns:
             columns.append("book")
-        settled_bets[columns].to_csv(target, index=False)
+        columns.append(FS.SELECTED_COLUMN)
+        opinions_frame[columns].to_csv(target, index=False)
+        selected_count = int(opinions_frame[FS.SELECTED_COLUMN].sum())
         print(
-            f"Wrote {len(settled_bets):,} graded bet(s) to {target} for the "
-            "market-vs-model regression."
+            f"Wrote {len(opinions_frame):,} settled opinion(s) to {target} for "
+            f"the market-vs-model regression; {selected_count:,} of them are "
+            f"the threshold-selected bets (`{FS.SELECTED_COLUMN}` is True). "
+            "The regression's population is every opinion; the selected subset "
+            "is reported beside it as the winner's-curse comparison."
         )
 
     margins, totals = key_number_inputs(team_games, game_ids)

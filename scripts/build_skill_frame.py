@@ -24,6 +24,15 @@ other side's name.
 complement would land that bet under no pair, silently excluded from the
 de-vig — and the excluded rows would not be a random sample, because a book
 that hangs only one side of a wager is a book doing something unusual with it.
+
+**It refuses a graded frame without the `selected` column.** Until 2026-09-05
+the export was the threshold-selected bets and nothing else, so a graded file
+left over from that backtest is the winner's-curse slice with no mark on it —
+handed to `forecast_skill` it would be fitted as "every opinion" and read as
+the skill measure. The flag is what tells the two apart; a frame without it is
+refused with the re-run command rather than passed through. Complement rows
+carry `selected=False`: they are not bets, they are not opinions, they are the
+other side of the price.
 """
 
 from __future__ import annotations
@@ -65,10 +74,11 @@ def build(graded: pd.DataFrame, store: pd.DataFrame) -> tuple[pd.DataFrame, int]
 
     # Complement rows exist only to complete the pair: no opinion, no outcome,
     # so they are unscorable by construction. They supply the hold; they are
-    # not bets.
+    # not bets, and the flag says so rather than being left blank.
     comp = comp.reindex(columns=[c for c in graded.columns if c != "_pk"])
     comp["model_probability"] = np.nan
     comp["outcome"] = ""
+    comp[FS.SELECTED_COLUMN] = False
     frame = pd.concat([graded.drop(columns=["_pk"]), comp], ignore_index=True)
     return frame, missing
 
@@ -98,8 +108,24 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+    if FS.SELECTED_COLUMN not in graded.columns:
+        print(
+            f"::error::The graded frame carries no `{FS.SELECTED_COLUMN}` column. "
+            "Before 2026-09-05 the export was the threshold-selected bets and "
+            "nothing else; a frame without the flag cannot be told apart from "
+            "that winner's-curse slice, and handed to forecast_skill it would be "
+            "fitted as every opinion and read as the skill measure. Re-run the "
+            "backtest with --write-graded; it now writes every settled opinion "
+            "and marks the bets. Nothing was written.",
+            file=sys.stderr,
+        )
+        return 2
     store = pd.read_csv(store_path, low_memory=False)
-    print(f"graded {len(graded):,} | store {len(store):,}")
+    selected = int(FS.selected_mask(graded).sum())
+    print(
+        f"graded {len(graded):,} settled opinion(s), of which {selected:,} are the "
+        f"threshold-selected bets | store {len(store):,}"
+    )
 
     frame, missing = build(graded, store)
     if missing:

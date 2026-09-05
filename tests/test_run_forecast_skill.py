@@ -478,6 +478,56 @@ def test_the_script_names_no_spending_flag():
         assert wrong not in text, f"{SCRIPT.name} declares {wrong}"
 
 
+def test_the_forward_ledger_carries_no_selected_flag_and_the_run_says_so(scored):
+    """Over the forward ledger the selected subset is not supplied, in words."""
+    lab, exit_code, output = scored
+    assert exit_code == 0, output
+    record = lab.record()
+    assert record["selected"]["available"] is False
+    assert "TWO POPULATIONS" in output
+    assert f"{FS.SELECTED_LABEL}: not supplied" in output
+    assert "THE THRESHOLD-SELECTED BETS, BESIDE IT" not in output
+    assert f"Population of every line above: {FS.ALL_OPINIONS_LABEL}" in output
+
+
+def test_a_graded_frame_with_the_flag_prints_the_selected_subset_beside_the_whole(tmp_path):
+    """The backtest's export carries `selected`; the run then reports both populations.
+
+    The whole is printed first and named the skill measure; the subset after,
+    named the winner's-curse comparison, with its own smaller count.
+    """
+    from cbb_betting_lab.reports import price_backtest as PB
+
+    frame = settled_ledger().rename(columns={"snapshot_date": "slate_date"})
+    edged = PB.add_edge(frame)
+    frame[FS.SELECTED_COLUMN] = PB.bet_mask(edged).to_numpy()
+    assert 0 < int(frame[FS.SELECTED_COLUMN].sum()) < len(frame)
+    graded_path = tmp_path / "graded.csv"
+    frame.to_csv(graded_path, index=False)
+
+    lab = Lab(tmp_path).with_experiment_ledger(24)
+    exit_code, output = lab.run("--graded", str(graded_path))
+    assert exit_code == 0, output
+    record = lab.record()
+
+    whole = record["populations"]["all_opinions"]
+    subset = record["populations"]["selected"]
+    assert subset["available"] is True
+    assert 0 < subset["rows"] < whole["rows"]
+    assert whole["rows"] == record["pooled"]["rows"]
+    assert f"{FS.ALL_OPINIONS_LABEL}: {whole['rows']:,} scorable wagers" in output
+    assert f"{FS.SELECTED_LABEL}: {subset['rows']:,} scorable wagers" in output
+    assert "THE THRESHOLD-SELECTED BETS, BESIDE IT" in output
+    # The skill measure is printed before the comparison, every time.
+    assert output.index("THE COEFFICIENT ON THE DISAGREEMENT") < output.index(
+        "THE THRESHOLD-SELECTED BETS, BESIDE IT"
+    )
+    assert f"— {FS.SELECTED_ROLE}" in output or FS.SELECTED_ROLE.upper() in output
+    report = lab.report()
+    assert "## The threshold-selected bets, beside it" in report
+    assert f"{subset['rows']:,} of {whole['rows']:,} scorable wagers" in report
+
+
 def test_a_bucket_is_named_the_same_way_on_stdout_as_in_the_report(scored):
     """One name per row. `-inf% to -10%` on a console and `below -10%` in a
     report is two names for one bucket, and a reader comparing them is

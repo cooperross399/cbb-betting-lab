@@ -254,6 +254,7 @@ from cbb_betting_lab.reports.price_backtest import (
     BET_EDGE_THRESHOLD,
     NOTHING_TO_MEASURE,
     POOLED_CAVEAT,
+    SCORABLE_OUTCOMES,
     TIER_ORDER,
     add_edge,
     ledger_path,
@@ -273,8 +274,10 @@ from cbb_betting_lab.stores import _decimal_payout as decimal_payout
 
 
 #: Bumped whenever the record's shape changes, so a stale record fails loudly at
-#: re-render rather than rendering a report with holes in it.
-RECORD_VERSION = 1
+#: re-render rather than rendering a report with holes in it. Version 2 carries
+#: two populations — every opinion and the threshold-selected subset — where
+#: version 1 carried one and could not say which it was.
+RECORD_VERSION = 2
 
 #: The output stem. Competition-prefixed by `Competition.output_name`, so this
 #: lab's record could never be overwritten by another's.
@@ -298,13 +301,46 @@ SKILL_COLUMNS: tuple[str, ...] = (
     "outcome",
 )
 
+#: The boolean column the price backtest's `--write-graded` export stamps on
+#: every settled opinion: True exactly where `price_backtest.bets_from` would
+#: have kept the row, i.e. the wager cleared the edge threshold and was a bet.
+#:
+#: It exists because of what the export used to be. Until 2026-09-05 the graded
+#: frame WAS the bets, so this regression — whose whole point is to run over
+#: every opinion rather than *"the small adversely-selected slice a threshold
+#: lets through"* — ran over exactly that slice. The selection is made by the
+#: model's disagreement with the price, and outcome was then regressed on that
+#: same disagreement: the winner's curse was in the coefficient, and every
+#: claimed-edge bucket below the threshold was empty by construction.
+#:
+#: The frame now carries every settled opinion and this column marks the bets,
+#: so the report can fit the whole population and show the selected subset
+#: BESIDE it — labelled as the winner's-curse comparison, never as the skill
+#: measure.
+SELECTED_COLUMN = "selected"
+
 #: Optional, and each one turns something on rather than being faked when
 #: absent. `book` narrows the de-vig scope to a single book's own two-sided
 #: quote; `profit_units` adds the realised return to the bucket table;
 #: `player` separates two athletes' props on one event; `edge` is used as
 #: supplied rather than recomputed, so this report and the card cannot disagree
-#: about what the card claimed.
-OPTIONAL_SKILL_COLUMNS: tuple[str, ...] = ("book", "player", "edge", "profit_units")
+#: about what the card claimed; `selected` turns on the selected-subset
+#: comparison, and a frame without it reports that subset as not supplied.
+OPTIONAL_SKILL_COLUMNS: tuple[str, ...] = (
+    "book",
+    "player",
+    "edge",
+    "profit_units",
+    SELECTED_COLUMN,
+)
+
+#: The two populations, named in words wherever a number from either appears.
+#: The first is the skill measure. The second is NOT — it is the model's own
+#: choice of rows, and its numbers show how much the winner's curse costs.
+ALL_OPINIONS_LABEL = "every settled wager the model had an opinion on"
+SELECTED_LABEL = "the threshold-selected bets only"
+ALL_OPINIONS_ROLE = "the skill measure"
+SELECTED_ROLE = "the winner's-curse comparison, not the skill measure"
 
 #: The de-vig. One method, declared, and stated in the report every time.
 DEVIG_METHOD = "multiplicative"
@@ -734,11 +770,10 @@ def overround_summary(frame: pd.DataFrame) -> dict:
 # --------------------------------------------------------------------------
 
 
-#: The two outcomes a probability can be scored against. A push is **not half a
-#: win**: folding it in as 0.5 measures a different quantity from the one the
-#: figure names, and the difference grows with exactly the markets where
-#: whole-number lines are common. Excluded and counted.
-SCORABLE_OUTCOMES: frozenset[str] = frozenset({"won", "lost"})
+# `SCORABLE_OUTCOMES` — won or lost — is imported from `price_backtest`, which
+# uses it to cut the graded export, so the export and this regression cannot
+# disagree about what "settled" means. A push is not half a win; it is counted
+# in the census below and scored nowhere.
 
 
 @dataclass
@@ -1455,11 +1490,23 @@ def _tiers_in(frame: pd.DataFrame) -> list[str]:
     return ordered + sorted(present - set(ordered))
 
 
-def measure(frame: pd.DataFrame, *, looks: int = 1, label: str = "") -> dict:
-    """Everything this report says about one population, as plain data."""
+def measure(
+    frame: pd.DataFrame,
+    *,
+    looks: int = 1,
+    label: str = "",
+    population: str = ALL_OPINIONS_LABEL,
+) -> dict:
+    """Everything this report says about one population, as plain data.
+
+    `population` names, in words, which of the two populations the numbers
+    belong to — every opinion, or the threshold-selected subset — and travels
+    with every cell so no renderer can print a number without its population.
+    """
     buckets = edge_buckets(frame, looks=looks)
     return {
         "label": label,
+        "population": population,
         "rows": int(len(frame)),
         "games": int(frame["event_id"].nunique()) if not frame.empty else 0,
         "days": int(frame["slate_date"].nunique()) if not frame.empty else 0,
@@ -1475,6 +1522,84 @@ def measure(frame: pd.DataFrame, *, looks: int = 1, label: str = "") -> dict:
     }
 
 
+def _by_tier(frame: pd.DataFrame, *, looks: int, population: str) -> list[dict]:
+    if frame.empty:
+        return []
+    return [
+        measure(
+            frame[frame["tier"].astype(str) == tier],
+            looks=looks,
+            label=tier,
+            population=population,
+        )
+        for tier in _tiers_in(frame)
+    ]
+
+
+def selected_mask(frame: pd.DataFrame) -> pd.Series:
+    """The rows :data:`SELECTED_COLUMN` marks, read strictly.
+
+    A CSV round-trip hands the column back as `bool`, as the strings `True` /
+    `False`, or as `1` / `0`, and any of those must read the same way. Anything
+    else — a blank, a `NaN`, a word — is **not** selected: an unreadable flag is
+    not a bet, for the same reason a missing probability is not a probability of
+    zero.
+    """
+    if frame.empty or SELECTED_COLUMN not in frame.columns:
+        return pd.Series(False, index=frame.index, dtype=bool)
+    raw = frame[SELECTED_COLUMN]
+    if raw.dtype == bool:
+        return raw.astype(bool)
+    return raw.astype(str).str.strip().str.lower().isin({"true", "1", "1.0"})
+
+
+def _selected_section(population: pd.DataFrame, graded: pd.DataFrame, *, looks: int) -> dict:
+    """The threshold-selected subset, measured apart and named as what it is.
+
+    Measured over the SAME scorable population the primary fit uses, cut by the
+    `selected` flag the backtest stamped, so the two populations differ by
+    exactly that flag and nothing else. Absent the column, the subset is
+    reported as not supplied — never inferred from the edge, because the whole
+    point of carrying the flag is that the backtest's predicate and this
+    module's must be one predicate.
+    """
+    available = bool(not graded.empty and SELECTED_COLUMN in graded.columns)
+    if not available:
+        return {
+            "available": False,
+            "label": SELECTED_LABEL,
+            "role": SELECTED_ROLE,
+            "column": SELECTED_COLUMN,
+            "rows": 0,
+            "games": 0,
+            "days": 0,
+            "reason": (
+                f"the frame carries no `{SELECTED_COLUMN}` column, so which "
+                "rows were bets is not recorded and the subset is not measured"
+            ),
+            "by_tier": [],
+            "pooled": measure(
+                population.iloc[0:0], looks=looks, label="every tier pooled",
+                population=SELECTED_LABEL,
+            ),
+        }
+    subset = population[selected_mask(population)] if not population.empty else population
+    return {
+        "available": True,
+        "label": SELECTED_LABEL,
+        "role": SELECTED_ROLE,
+        "column": SELECTED_COLUMN,
+        "rows": int(len(subset)),
+        "games": int(subset["event_id"].nunique()) if not subset.empty else 0,
+        "days": int(subset["slate_date"].nunique()) if not subset.empty else 0,
+        "reason": "",
+        "by_tier": _by_tier(subset, looks=looks, population=SELECTED_LABEL),
+        "pooled": measure(
+            subset, looks=looks, label="every tier pooled", population=SELECTED_LABEL
+        ),
+    }
+
+
 # --------------------------------------------------------------------------
 # The record
 # --------------------------------------------------------------------------
@@ -1487,7 +1612,9 @@ class SkillInputs:
     One frame, not two. This regression runs over **every graded wager**, not
     over the bets a threshold let through: the threshold's own effect is the
     bucket table's subject, and fitting only above it would condition the
-    regression on the variable whose usefulness is the question.
+    regression on the variable whose usefulness is the question. When the frame
+    carries :data:`SELECTED_COLUMN`, the rows it marks are ALSO measured, apart,
+    as the winner's-curse comparison — beside the whole and never instead of it.
     """
 
     graded: pd.DataFrame = field(default_factory=pd.DataFrame)
@@ -1538,23 +1665,13 @@ def build_record(
             f"{population_census.devigged:,} de-vigged. Nothing was recorded."
         )
 
-    tiers = (
-        [
-            measure(
-                population[population["tier"].astype(str) == tier],
-                looks=looks,
-                label=tier,
-            )
-            for tier in _tiers_in(population)
-        ]
-        if not population.empty
-        else []
-    )
+    tiers = _by_tier(population, looks=looks, population=ALL_OPINIONS_LABEL)
     # The pooled figure must equal the tiers plus whatever could not be placed
     # in one. A row whose tier is missing belongs to no tier section, and a
     # pooled number quietly larger than the sum of its tiers is how a Division I
     # headline reappears after being forbidden. Counted and printed.
     tiered_rows = sum(int(t["rows"]) for t in tiers)
+    selected = _selected_section(population, graded, looks=looks)
     return {
         "record_version": RECORD_VERSION,
         "competition": competition.key,
@@ -1575,9 +1692,34 @@ def build_record(
         "devig_census": devig_census.to_json(),
         "population_census": population_census.to_json(),
         "overround": overround_summary(priced),
+        # The two populations, side by side, each with its count. `by_tier`,
+        # `pooled` and `raw_market_fit` are the FIRST — every opinion, the skill
+        # measure. `selected` is the second and is labelled as what it is.
+        "population_label": ALL_OPINIONS_LABEL,
+        "population_role": ALL_OPINIONS_ROLE,
+        "populations": {
+            "all_opinions": {
+                "label": ALL_OPINIONS_LABEL,
+                "role": ALL_OPINIONS_ROLE,
+                "rows": int(len(population)),
+                "games": int(population["event_id"].nunique()) if not population.empty else 0,
+                "days": int(population["slate_date"].nunique()) if not population.empty else 0,
+            },
+            "selected": {
+                "label": SELECTED_LABEL,
+                "role": SELECTED_ROLE,
+                "available": bool(selected["available"]),
+                "rows": int(selected["rows"]),
+                "games": int(selected["games"]),
+                "days": int(selected["days"]),
+            },
+        },
         "by_tier": tiers,
         "rows_without_a_tier": int(len(population)) - tiered_rows,
-        "pooled": measure(population, looks=looks, label="every tier pooled"),
+        "pooled": measure(
+            population, looks=looks, label="every tier pooled", population=ALL_OPINIONS_LABEL
+        ),
+        "selected": selected,
         # The same fit on the un-de-vigged probabilities. The de-vig method is a
         # choice, and a choice nobody can see the effect of is an assumption.
         "raw_market_fit": (
@@ -1646,10 +1788,24 @@ def bucket_label(low: float, high: float) -> str:
     return f"{low:+.0%} to {high:+.0%}"
 
 
+def _population_line(measured: Mapping) -> str:
+    """Which population a cell's numbers belong to, in words, with its size."""
+    population = str(measured.get("population") or ALL_OPINIONS_LABEL)
+    role = SELECTED_ROLE if population == SELECTED_LABEL else ALL_OPINIONS_ROLE
+    return (
+        f"*Population: **{population}** — {role}; "
+        f"{int(measured.get('rows', 0)):,} scorable wagers in "
+        f"{int(measured.get('games', 0)):,} games over "
+        f"{int(measured.get('days', 0)):,} days.*"
+    )
+
+
 def _fit_section(measured: Mapping) -> list[str]:
     """One population's regression, as table rows plus the sentence that reads it."""
     lines: list[str] = []
     add = lines.append
+    add(_population_line(measured))
+    add("")
     fitted = measured.get("fit") or {}
     if not fitted.get("fitted"):
         add(
@@ -1869,7 +2025,8 @@ def _threshold_section(record: Mapping) -> list[str]:
     disagreement = coefficient(pooled_fit_of(record), "disagreement")
     if disagreement and disagreement.get("enough_evidence"):
         add(
-            f"This run's pooled disagreement coefficient is "
+            f"This run's pooled disagreement coefficient over "
+            f"**{ALL_OPINIONS_LABEL}** is "
             f"{disagreement['estimate']:+.3f} "
             f"[{disagreement['low']:+.3f}, {disagreement['high']:+.3f}] over "
             f"{disagreement['rows']:,} wagers across "
@@ -1942,6 +2099,123 @@ def _pooling_artefact_warning(record: Mapping) -> list[str]:
     ]
 
 
+def _populations_section(record: Mapping) -> list[str]:
+    """The two populations, named and counted, before any number from either."""
+    populations = record.get("populations") or {}
+    whole = populations.get("all_opinions") or {}
+    subset = populations.get("selected") or {}
+    lines: list[str] = []
+    add = lines.append
+    add("## Two populations, and which one is the skill measure")
+    add("")
+    add(
+        "A card takes a wager when the model's disagreement with the price "
+        "clears a threshold, and the bets are therefore the tail of the model's "
+        "own error distribution — the winner's curse. Regressing outcome on "
+        "that same disagreement **over the bets alone** builds the curse into "
+        "the coefficient, and a claimed-edge table over them is tautological: "
+        "every row is above the threshold by construction. Until 2026-09-05 the "
+        "graded export was exactly the bets, so this report's regression ran "
+        "over the slice it exists to avoid. Two populations are now measured, "
+        "and every number below says which it belongs to."
+    )
+    add("")
+    add("| Population | What it is | Scorable wagers | Games | Days |")
+    add("|:---|:---|---:|---:|---:|")
+    add(
+        f"| **{whole.get('label', ALL_OPINIONS_LABEL)}** | "
+        f"**{whole.get('role', ALL_OPINIONS_ROLE)}** | "
+        f"{int(whole.get('rows', 0)):,} | {int(whole.get('games', 0)):,} | "
+        f"{int(whole.get('days', 0)):,} |"
+    )
+    if subset.get("available"):
+        add(
+            f"| {subset.get('label', SELECTED_LABEL)} | "
+            f"{subset.get('role', SELECTED_ROLE)} | "
+            f"{int(subset.get('rows', 0)):,} | {int(subset.get('games', 0)):,} | "
+            f"{int(subset.get('days', 0)):,} |"
+        )
+    else:
+        add(
+            f"| {subset.get('label', SELECTED_LABEL)} | "
+            f"{subset.get('role', SELECTED_ROLE)} | not supplied | — | — |"
+        )
+    add("")
+    if subset.get("available"):
+        add(
+            f"The selected subset is {int(subset.get('rows', 0)):,} of "
+            f"{int(whole.get('rows', 0)):,} scorable wagers, cut by the "
+            f"`{SELECTED_COLUMN}` flag the price backtest stamped with the same "
+            "predicate it used to count its bets. It is reported **beside** the "
+            "whole, in its own section, and nothing in it is the skill measure."
+        )
+    else:
+        add(
+            f"The frame carried no `{SELECTED_COLUMN}` column, so the selected "
+            "subset is not reported. Every number in this report belongs to "
+            f"**{ALL_OPINIONS_LABEL}**."
+        )
+    add("")
+    return lines
+
+
+def _selected_report_section(record: Mapping) -> list[str]:
+    """The threshold-selected bets, beside the whole and never instead of it."""
+    selected = record.get("selected") or {}
+    lines: list[str] = []
+    add = lines.append
+    add("## The threshold-selected bets, beside it — the winner's-curse comparison")
+    add("")
+    add(
+        f"**Population: {SELECTED_LABEL} — {SELECTED_ROLE}.** These are the "
+        "rows the model's own disagreement with the price selected. A "
+        "disagreement coefficient here is fitted on the tail of the model's "
+        "error distribution and says how much the selection cost, not whether "
+        "the model knows anything; a bucket table here has nothing below the "
+        "threshold by construction. Read the section above for the skill "
+        "measure and this one for the size of the curse."
+    )
+    add("")
+    if not selected.get("available"):
+        add(
+            f"**Not supplied.** {selected.get('reason') or ''} The forward "
+            "evidence ledger does not carry the flag; the price backtest's "
+            "`--write-graded` export does."
+        )
+        add("")
+        return lines
+    if not int(selected.get("rows", 0)):
+        lines.extend(_nothing("No scorable wager was selected."))
+        return lines
+    for measured in selected.get("by_tier") or []:
+        label = measured.get("label", "")
+        add(f"### {label} — {SELECTED_LABEL}")
+        add("")
+        lines.extend(_fit_section(measured))
+        add(f"#### Brier — {label} — {SELECTED_LABEL}")
+        add("")
+        lines.extend(_brier_section(measured))
+        add(f"#### Claimed edge against what happened — {label} — {SELECTED_LABEL}")
+        add("")
+        lines.extend(_bucket_section(measured, record))
+    pooled = selected.get("pooled") or {}
+    add(f"### Pooled — {SELECTED_LABEL}")
+    add("")
+    add(POOLED_CAVEAT)
+    add("")
+    if not int(pooled.get("rows", 0)):
+        lines.extend(_nothing("Nothing to pool."))
+    else:
+        lines.extend(_fit_section(pooled))
+        add(f"#### Brier — pooled — {SELECTED_LABEL}")
+        add("")
+        lines.extend(_brier_section(pooled))
+        add(f"#### Claimed edge against what happened — pooled — {SELECTED_LABEL}")
+        add("")
+        lines.extend(_bucket_section(pooled, record))
+    return lines
+
+
 def render(record: Mapping) -> str:
     """The report, as a pure function of the record. No clock, no network."""
     lines: list[str] = []
@@ -1989,6 +2263,7 @@ def render(record: Mapping) -> str:
         "read."
     )
     add("")
+    lines.extend(_populations_section(record))
 
     census = record.get("devig_census") or {}
     population = record.get("population_census") or {}
@@ -2055,6 +2330,13 @@ def render(record: Mapping) -> str:
     add("## Per conference tier")
     add("")
     add(
+        f"**Population: {ALL_OPINIONS_LABEL} — {ALL_OPINIONS_ROLE}.** Every "
+        "number in this section and in the pooled section below it is fitted "
+        "over that population. The threshold-selected bets are measured apart, "
+        "in their own section further down, and are labelled as what they are."
+    )
+    add("")
+    add(
         "**6 high-major conferences / 79 teams, 10 mid-major / 122, 17 "
         "low-major / 164** are three different distributions, and this lab "
         "exists because the third is plausibly priced with less attention. No "
@@ -2090,6 +2372,8 @@ def render(record: Mapping) -> str:
     add("")
     add(POOLED_CAVEAT)
     add("")
+    add(f"**Population: {ALL_OPINIONS_LABEL} — {ALL_OPINIONS_ROLE}.**")
+    add("")
     lines.extend(_pooling_artefact_warning(record))
     pooled = record.get("pooled") or {}
     if not pooled or not int(pooled.get("rows", 0)):
@@ -2103,6 +2387,8 @@ def render(record: Mapping) -> str:
         add("")
         lines.extend(_bucket_section(pooled, record))
 
+    lines.extend(_selected_report_section(record))
+
     raw_fit = record.get("raw_market_fit") or {}
     add("## The same fit without the de-vig")
     add("")
@@ -2111,6 +2397,8 @@ def render(record: Mapping) -> str:
         "assumption. This is the identical regression run on the **raw** "
         "implied probabilities, with the hold still in them."
     )
+    add("")
+    add(f"**Population: {ALL_OPINIONS_LABEL} — {ALL_OPINIONS_ROLE}.**")
     add("")
     add(
         "**Under a constant overround the disagreement coefficient is "

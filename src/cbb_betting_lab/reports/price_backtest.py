@@ -263,6 +263,19 @@ def add_edge(frame: pd.DataFrame, *, probability_column: str = "model_probabilit
     return frame.assign(edge=edge.where(payout > float("-inf")))
 
 
+def bet_mask(frame: pd.DataFrame, *, threshold: float = BET_EDGE_THRESHOLD) -> pd.Series:
+    """True exactly where :func:`bets_from` would keep the row.
+
+    One predicate, used by `bets_from` and by the `selected` column the graded
+    export carries, so "a bet" and "a selected row" can never be two different
+    cuts of the same frame. A missing edge is not a bet.
+    """
+    if frame.empty or "edge" not in frame.columns:
+        return pd.Series(False, index=frame.index, dtype=bool)
+    edge = pd.to_numeric(frame["edge"], errors="coerce")
+    return (edge >= float(threshold)).fillna(False).astype(bool)
+
+
 def bets_from(frame: pd.DataFrame, *, threshold: float = BET_EDGE_THRESHOLD) -> pd.DataFrame:
     """The rows a card would have staked: an edge at or above the threshold.
 
@@ -274,8 +287,7 @@ def bets_from(frame: pd.DataFrame, *, threshold: float = BET_EDGE_THRESHOLD) -> 
     """
     if frame.empty or "edge" not in frame.columns:
         return frame.iloc[0:0]
-    edge = pd.to_numeric(frame["edge"], errors="coerce")
-    return frame[edge >= float(threshold)].reset_index(drop=True)
+    return frame[bet_mask(frame, threshold=threshold)].reset_index(drop=True)
 
 
 def settled(frame: pd.DataFrame) -> pd.DataFrame:
@@ -283,6 +295,40 @@ def settled(frame: pd.DataFrame) -> pd.DataFrame:
     if frame.empty or "profit_units" not in frame.columns:
         return frame.iloc[0:0]
     return frame[pd.to_numeric(frame["profit_units"], errors="coerce").notna()]
+
+
+#: The two outcomes a forecast can be scored against. A push is not half a win,
+#: a void is not a loss and `UNSETTLEABLE` is an exclusion; `forecast_skill`
+#: imports this rather than restating it so the export and the regression agree
+#: on what "settled" means.
+SCORABLE_OUTCOMES: frozenset[str] = frozenset({"won", "lost"})
+
+
+def settled_opinions(
+    frame: pd.DataFrame, *, probability_column: str = "model_probability"
+) -> pd.DataFrame:
+    """Every settled wager the model had an opinion on — bet or not.
+
+    This is the population the market-vs-model regression runs over: a model
+    probability, a realised profit, and a won-or-lost outcome. It is NOT
+    :func:`bets_from`: the bets are the rows the model's own disagreement with
+    the price selected, and regressing outcome on that same disagreement over
+    only those rows bakes the winner's curse into the coefficient and makes the
+    claimed-edge buckets tautological — every row is, by construction, above
+    the threshold. Until 2026-09-05 `--write-graded` exported exactly that.
+
+    The rows kept here are a superset of the settled bets; the export marks the
+    bets with a boolean `selected` column computed by :func:`bet_mask` so the
+    selected subset can be reported *beside* the whole, never instead of it.
+    """
+    if frame.empty or probability_column not in frame.columns or "outcome" not in frame.columns:
+        return frame.iloc[0:0]
+    kept = settled(frame)
+    if kept.empty:
+        return kept
+    probability = pd.to_numeric(kept[probability_column], errors="coerce")
+    outcome = kept["outcome"].astype(str).str.strip().str.lower()
+    return kept[probability.notna() & outcome.isin(SCORABLE_OUTCOMES)]
 
 
 # --------------------------------------------------------------------------
