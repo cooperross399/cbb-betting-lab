@@ -523,8 +523,10 @@ def _rows_of_the_record(record: Mapping) -> list[tuple[str, Mapping]]:
     **This walk is the population :func:`verdict_disagreements` checks, and it
     is checked in turn.**
     ``test_every_row_of_the_record_that_carries_a_figure_is_walked`` descends
-    the whole record looking for any mapping that carries a bound key or a
-    verdict, and asserts that every one of them comes back from here — by
+    the whole record looking for any mapping that carries one of
+    :data:`INTERVAL_BOUND_KEYS` or one of :data:`CLAIM_KEYS` — a bound, a
+    return or a verdict, the same vocabulary :func:`verdict_disagreements`
+    reads — and asserts that every one of them comes back from here — by
     identity, so a section this walk does not reach is a red test rather than a
     silently unchecked corner. Deleting `"blind"` from the tuple below, or
     adding a section to the record and not adding it here, fails that test.
@@ -651,8 +653,28 @@ def verdict_disagreements(record: Mapping) -> list[str]:
        kept coherent — and **only above the floor**, for the reason under gap 1.
     4. **The stored verdict, or `enough_evidence`, is not the reading of its
        own interval**, which is a record edited by hand between the
-       measurement and the document. Both run on every row, below the floor
-       included.
+       measurement and the document. Each of the two comparisons is guarded by
+       the row carrying its own key — ``if "verdict" in row`` and ``if
+       "enough_evidence" in row`` — so each runs on the rows that carry that
+       key, and what it refuses is a *wrong* stored value rather than a
+       deleted one. Neither is skipped below the floor: unlike refusal 3 they
+       have no `enough_evidence` guard, so a thin row is compared to its own
+       reading like any other.
+
+       **Deleting either key is refused by nothing here, and is not the defeat
+       that deleting a bound was**, because neither stored value is what the
+       page prints. Every verdict :func:`render` prints comes from
+       :func:`verdict_of`, which reads the interval, so a row that drops
+       `verdict` prints exactly the words a row carrying the right one does —
+       the string is checked because it is *in* the file, not because anything
+       downstream believes it. The only place this module reads a stored
+       `enough_evidence` is the below-floor list in :func:`_open_questions`,
+       and a missing key reads there as falsy, so dropping the key moves a
+       cell **into** the list of cells carrying a phrase instead of a number.
+       Both deletions understate; the flattering direction — a hand-set
+       ``enough_evidence: true`` promoting a 40-bet row into the headline's
+       population, or a `verdict` string that outranks its own interval — is
+       the direction the comparison catches.
 
     ## What still gets through
 
