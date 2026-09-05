@@ -37,6 +37,14 @@ The reason for a fourth lab was market heterogeneity — 360 teams on a Tuesday 
 
 Pooled across every market and tier: 118,050 bets, **-3.9%**, corrected -7.2% to -0.7% — demonstrated deficit.
 
+### A claim this document has retracted, recorded 2026-09-04
+
+Before this block was generated, this document said of **low-major** that it was *“the only tier whose interval excludes zero, and it excludes zero on the losing side”* — a demonstrated deficit. That was measured on the core team markets alone, before the alternate ladders and the halves entered the population.
+
+**It no longer holds.** On today's record low-major reads 34,720 bets, **-4.3%**, corrected -10.0% to +1.4% — no demonstrated edge.
+
+Nothing about the model changed. The population did: the markets added since are one season deep and thin, which widens every interval they enter. A finding that survives on the narrower population and dissolves when the wider one is measured was fragile to the population all along, and the earlier wording did not say so because at the time there was nothing to say it against.
+
 ## The model is not worthless — it is beaten by the vig
 
 The worst blind sides that clear the 200-bet floor declared in advance:

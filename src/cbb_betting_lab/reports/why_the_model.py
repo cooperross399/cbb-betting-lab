@@ -111,6 +111,34 @@ END_MARKER = "<!-- END GENERATED -->"
 #: not printed with a number, for the same reason a model cell is not.
 BLIND_BASELINES_SHOWN = 5
 
+#: A claim an earlier, hand-typed version of this document made, kept so the
+#: retraction survives beside the correction: the reason a claim was withdrawn
+#: is evidence about the claim, and deleting the retraction leaves only the
+#: correction.
+#:
+#: **It carries no figure.** The note that used to sit below the generated
+#: fence hand-typed the tier's CURRENT return and interval into a paragraph
+#: headed *historical*, which is the exact drift this whole cluster exists to
+#: prevent — and it carried the superseded run's return with no sample size
+#: beside it, from a record that no longer exists on disk to be re-read. What
+#: is kept here is the retracted WORDING and the day it was recorded, both
+#: historical by construction; every number in the rendered retraction is read
+#: from today's record by :func:`_retraction_lines`, including whether the
+#: claim still stands.
+SUPERSEDED_CLAIM: dict[str, str] = {
+    "recorded_on": "2026-09-04",
+    "tier": Tier.LOW_MAJOR.value,
+    "wording": (
+        "the only tier whose interval excludes zero, and it excludes zero on "
+        "the losing side"
+    ),
+    "verdict_claimed": S.DEMONSTRATED_DEFICIT,
+    "population": (
+        "the core team markets alone, before the alternate ladders and the "
+        "halves entered the population"
+    ),
+}
+
 #: Tier order, strongest first — the same order as the backtest report and
 #: `what_we_can_claim`, so a reader moving between the three is not re-orienting.
 TIER_ORDER: tuple[str, ...] = (
@@ -373,6 +401,124 @@ def interval_from_row(row: Mapping, *, looks: int) -> S.RoiInterval:
     )
 
 
+def printed_interval(row: Mapping) -> S.RoiInterval:
+    """The interval this document is about to PRINT, as a `RoiInterval`.
+
+    The corrected bounds are handed in as the interval's own bounds and the
+    correction is then switched off (``looks=1``), so
+    :meth:`stats.RoiInterval.verdict` reads exactly the two numbers a reader
+    sees beside the return — not a wider or narrower pair recomputed from a
+    standard error the reader is never shown.
+
+    Constructed rather than re-implemented. A second copy of *"which side of
+    zero is this on"* is a copy that drifts, and the direction it drifts in is
+    never the conservative one; `stats` owns that question for the whole
+    repository and this asks it there.
+
+    A row from the forecast section names its return `value` and its sample
+    `rows`; a backtest cell names them `roi` and `bets`. Both are accepted so
+    that one derivation covers every verdict this document prints.
+    """
+    roi = _as_float(row.get("roi"))
+    if roi is None:
+        roi = _as_float(row.get("value"))
+    bets = _as_int(row.get("bets")) or _as_int(row.get("rows"))
+    return S.RoiInterval(
+        roi=roi or 0.0,
+        low=_as_float(row.get("adjusted_low")) or 0.0,
+        high=_as_float(row.get("adjusted_high")) or 0.0,
+        bets=bets,
+        clusters=_as_int(row.get("clusters")),
+        standard_error=0.0,
+        looks=1,
+        cluster_unit=_text(row.get("cluster_unit")) or "game",
+    )
+
+
+def verdict_of(row: Mapping) -> str:
+    """The verdict of the interval in `row`, **derived, never read**.
+
+    The renderer calls this everywhere it used to read ``row["verdict"]``.
+    Setting a row's stored verdict to `"a demonstrated edge"` in the record on
+    disk once made the published document say so; a document whose whole job is
+    to stop a number being misread must not take the reading on trust from the
+    file it is reading.
+    """
+    return printed_interval(row).verdict()
+
+
+def enough_evidence_of(row: Mapping) -> bool:
+    """Whether `row`'s own sample size clears the floor declared in advance.
+
+    Derived from the count, not from the stored flag, for the same reason: a
+    hand-set ``enough_evidence: true`` on a 40-bet row would otherwise promote
+    it into the headline's population.
+    """
+    return printed_interval(row).enough_evidence
+
+
+#: Every place in the record that carries a stored verdict, as
+#: (description, row) pairs. Used only to REFUSE a record whose stored reading
+#: disagrees with its own interval — the rendering itself never reads these
+#: strings.
+def _rows_carrying_a_verdict(record: Mapping) -> list[tuple[str, Mapping]]:
+    found: list[tuple[str, Mapping]] = []
+    for key in ("tiers", "cells", "pooled", "blind"):
+        for index, row in enumerate(record.get(key, []) or []):
+            if isinstance(row, Mapping) and "verdict" in row:
+                found.append((f"{key}[{index}] {_text(row.get('name'))}".strip(), row))
+    every_market = record.get("every_market")
+    if isinstance(every_market, Mapping) and "verdict" in every_market:
+        found.append(("every_market", every_market))
+    forecast = record.get("forecast")
+    if isinstance(forecast, Mapping):
+        blocks: list[tuple[str, object]] = [("forecast.pooled", forecast.get("pooled"))]
+        for index, tier in enumerate(forecast.get("tiers", []) or []):
+            blocks.append((f"forecast.tiers[{index}]", tier))
+        for label, block in blocks:
+            if not isinstance(block, Mapping):
+                continue
+            advantage = block.get("advantage_over_raw")
+            if isinstance(advantage, Mapping) and "verdict" in advantage:
+                found.append((f"{label}.advantage_over_raw", advantage))
+    return found
+
+
+def verdict_disagreements(record: Mapping) -> list[str]:
+    """Every row whose STORED reading is not the reading of its own interval.
+
+    Empty means the record agrees with itself. A non-empty list is a record
+    that has been edited by hand between the measurement and the document, and
+    :func:`render` refuses it rather than printing either string: printing the
+    stored one publishes the edit, and printing the derived one silently
+    overwrites a disagreement a human should see.
+    """
+    reasons: list[str] = []
+    for label, row in _rows_carrying_a_verdict(record):
+        stored = _text(row.get("verdict"))
+        derived = verdict_of(row)
+        if stored != derived:
+            reasons.append(
+                f"{label}: the record stores the verdict {stored!r}, and the "
+                f"corrected interval it is printed beside "
+                f"[{_as_float(row.get('adjusted_low'))}, "
+                f"{_as_float(row.get('adjusted_high'))}] over "
+                f"{printed_interval(row).bets:,} reads {derived!r}."
+            )
+        if "enough_evidence" in row:
+            stored_enough = bool(row.get("enough_evidence"))
+            derived_enough = enough_evidence_of(row)
+            if stored_enough != derived_enough:
+                reasons.append(
+                    f"{label}: the record stores enough_evidence="
+                    f"{stored_enough} and its sample of "
+                    f"{printed_interval(row).bets:,} against the "
+                    f"{S.MINIMUM_BETS:,} declared in advance says "
+                    f"{derived_enough}."
+                )
+    return reasons
+
+
 def cell(row: Mapping, *, looks: int, name: str = "") -> dict:
     """One measured cell as plain data, with its verdict already read.
 
@@ -411,8 +557,13 @@ def _rows(payload: Mapping, key: str, *, label: str, path: Path) -> list[dict]:
 
 
 def demonstrated_edges(cells: Sequence[Mapping]) -> list[dict]:
-    """Cells whose corrected interval excludes zero **above** it."""
-    return [c for c in cells if _text(c.get("verdict")) == S.DEMONSTRATED_EDGE]
+    """Cells whose corrected interval excludes zero **above** it.
+
+    The predicate is :func:`verdict_of`, which reads the interval, and never
+    the stored ``verdict`` string: a record edited to say `"a demonstrated
+    edge"` must not be able to put a cell in this list.
+    """
+    return [c for c in cells if verdict_of(c) == S.DEMONSTRATED_EDGE]
 
 
 def demonstrated_deficits(cells: Sequence[Mapping]) -> list[dict]:
@@ -421,7 +572,7 @@ def demonstrated_deficits(cells: Sequence[Mapping]) -> list[dict]:
     A separate function returning a disjoint list, never a flag on the first
     one: the two are different findings and the sibling lab merged them.
     """
-    return [c for c in cells if _text(c.get("verdict")) == S.DEMONSTRATED_DEFICIT]
+    return [c for c in cells if verdict_of(c) == S.DEMONSTRATED_DEFICIT]
 
 
 # ---------------------------------------------------------------------------
@@ -509,6 +660,65 @@ def build_record(
         ),
     }
     return record
+
+
+#: The one field of the record that is allowed to differ between two builds of
+#: the same evidence: the moment the build happened. Everything else is a
+#: function of the three measurement records and the experiment ledger, so a
+#: difference anywhere else is a difference somebody made by hand.
+VOLATILE_RECORD_FIELDS: tuple[str, ...] = ("generated_at",)
+
+
+def rederivation_differences(
+    record: Mapping,
+    *,
+    competition: Competition,
+    output_dir: Path,
+) -> list[str]:
+    """Every field of `record` that a fresh build from the evidence disagrees with.
+
+    **The intermediate record must not be the only source of truth.** The
+    document is a pure function of this record, and `--check` compared the two
+    of them — so a fabricated figure hand-typed into
+    `data/outputs/cbb_why_the_model.json` produced a published document saying
+    it, with a green suite: the record and the document agreed with each other,
+    and nothing re-asked the measurement.
+
+    This re-derives the record from the three measurement records and the
+    experiment ledger and returns what differs. Empty means the record really
+    is what those files say. It raises the same :class:`WhyError` as
+    :func:`build_record` when one of them cannot be read — a comparison that
+    cannot be made is never reported as a comparison that passed.
+    """
+    fresh = build_record(competition=competition, output_dir=output_dir)
+    stored = {k: v for k, v in dict(record).items() if k not in VOLATILE_RECORD_FIELDS}
+    derived = {k: v for k, v in fresh.items() if k not in VOLATILE_RECORD_FIELDS}
+    reasons: list[str] = []
+    for key in sorted(set(stored) | set(derived)):
+        if key not in stored:
+            reasons.append(
+                f"`{key}`: the evidence on disk produces this section and the "
+                "record does not carry it at all."
+            )
+            continue
+        if key not in derived:
+            reasons.append(
+                f"`{key}`: the record carries this section and a fresh build "
+                "from the evidence on disk produces no such section."
+            )
+            continue
+        if stored[key] != derived[key]:
+            reasons.append(
+                f"`{key}`: the record says {_short(stored[key])} and the "
+                f"evidence on disk says {_short(derived[key])}."
+            )
+    return reasons
+
+
+def _short(value: object, limit: int = 240) -> str:
+    """A value as one line, cut, so a diff message names a field and not a book."""
+    text = json.dumps(value, sort_keys=True, default=str)
+    return text if len(text) <= limit else text[:limit] + "…"
 
 
 def _tier_rank(tier: str) -> tuple[int, str]:
@@ -688,7 +898,7 @@ def _measured(record: Mapping, key: str) -> list[dict]:
     return [
         dict(row)
         for row in record.get(key, [])
-        if isinstance(row, Mapping) and row.get("enough_evidence")
+        if isinstance(row, Mapping) and enough_evidence_of(row)
     ]
 
 
@@ -713,17 +923,25 @@ def _figure(claim: Mapping) -> str:
     already carries. A +12% return over 40 bets and a coin flip are the same
     claim at that sample size, and printing the +12% invites somebody to quote
     it out of the row that qualifies it.
+
+    **The verdict is derived from the two bounds printed on this line**, by
+    :func:`verdict_of`, and never read from the record. The renderer once
+    printed ``claim["verdict"]``, so setting that string in the record on disk
+    made the published document announce a demonstrated edge over an interval
+    that spanned zero — the number and the sentence beside it disagreeing, with
+    nothing in the pipeline to notice.
     """
-    bets = _as_int(claim.get("bets"))
-    if not claim.get("enough_evidence"):
+    interval = printed_interval(claim)
+    bets = interval.bets
+    if not interval.enough_evidence:
         # No number at all. `RoiInterval.verdict()` already names the sample and
         # the floor it is below, so printing a count beside it would say the
         # same thing twice and printing the return would say it once too often.
-        return _text(claim.get("verdict"))
+        return interval.verdict()
     return (
-        f"{bets:,} {_bets(bets)}, **{_pct(claim.get('roi'))}**, corrected "
-        f"{_pct(claim.get('adjusted_low'))} to {_pct(claim.get('adjusted_high'))} "
-        f"— {_text(claim.get('verdict'))}"
+        f"{bets:,} {_bets(bets)}, **{_pct(claim.get('roi', claim.get('value')))}**, "
+        f"corrected {_pct(claim.get('adjusted_low'))} to "
+        f"{_pct(claim.get('adjusted_high'))} — {interval.verdict()}"
     )
 
 
@@ -819,6 +1037,68 @@ def _cell_lines(record: Mapping) -> list[str]:
         )
     if edges or deficits:
         lines.append("")
+    return lines
+
+
+def _retraction_lines(record: Mapping) -> list[str]:
+    """The retracted claim, and what the same tier reads **in today's record**.
+
+    Generated, because the hand-written version of this note drifted exactly
+    the way the document above it did: it was headed *"the figures in this
+    section are historical"* and then hand-typed the tier's current return and
+    corrected interval underneath, so a re-measurement moved the table and left
+    the paragraph. Nothing here is typed but the retracted sentence and the day
+    it was recorded, and whether the claim still stands is read off the sign
+    rather than asserted.
+    """
+    tier_key = SUPERSEDED_CLAIM["tier"]
+    label = _tier_label(tier_key)
+    lines = [
+        f"### A claim this document has retracted, recorded "
+        f"{SUPERSEDED_CLAIM['recorded_on']}",
+        "",
+        f"Before this block was generated, this document said of **{label}** "
+        f"that it was *“{SUPERSEDED_CLAIM['wording']}”* — a "
+        f"{SUPERSEDED_CLAIM['verdict_claimed']}. That was measured on "
+        f"{SUPERSEDED_CLAIM['population']}.",
+        "",
+    ]
+    current = next(
+        (
+            row
+            for row in record.get("tiers", [])
+            if isinstance(row, Mapping) and _text(row.get("tier")) == tier_key
+        ),
+        None,
+    )
+    if current is None:
+        lines.append(
+            f"**Today's record carries no {label} row at all**, so this "
+            "document cannot say whether that claim still holds. It is left "
+            "standing as withdrawn rather than quietly re-asserted."
+        )
+        return lines
+    now = verdict_of(current)
+    if now == SUPERSEDED_CLAIM["verdict_claimed"]:
+        lines.append(
+            f"**It still holds.** On today's record {label} reads "
+            f"{_figure(current)}."
+        )
+    else:
+        lines.append(
+            f"**It no longer holds.** On today's record {label} reads "
+            f"{_figure(current)}."
+        )
+        lines += [
+            "",
+            "Nothing about the model changed. The population did: the markets "
+            "added since are one season deep and thin, which widens every "
+            "interval they enter. A finding that survives on the narrower "
+            "population and dissolves when the wider one is measured was "
+            "fragile to the population all along, and the earlier wording did "
+            "not say so because at the time there was nothing to say it "
+            "against.",
+        ]
     return lines
 
 
@@ -953,10 +1233,14 @@ def _forecast_lines(record: Mapping) -> list[str]:
                 f"{_as_float(advantage.get('adjusted_high')) or 0.0:+.5f}"
             )
         )
+        # The reading, derived from the corrected bounds printed in the cell to
+        # its left rather than read from the record — the same rule the return
+        # table follows, and for the same reason.
+        reading = verdict_of(advantage) if advantage else "not scored"
         lines.append(
             f"| {_tier_label(_text(tier.get('label')))} "
             f"| {_as_int(tier.get('rows')):,} | {cells} "
-            f"| {_text(advantage.get('verdict')) or 'not scored'} |"
+            f"| {reading} |"
         )
     lines.append("")
     lines.append(
@@ -1137,6 +1421,18 @@ def render(record: Mapping) -> str:
             f"{RECORD_VERSION}. A record whose shape has changed is refused "
             "rather than rendered with holes in it."
         )
+    # THE HEADLINE READS THE SIGN, and so does every other verdict on the page.
+    # Refusing here rather than printing either string: printing the stored one
+    # publishes a hand-edit, and quietly printing the derived one hides a
+    # disagreement between a measurement and the file that claims to hold it.
+    disagreements = verdict_disagreements(record)
+    if disagreements:
+        raise WhyError(
+            "This record's stored verdicts do not agree with its own "
+            "intervals, so it was edited between the measurement and the "
+            "document. Refusing to render either reading:\n  "
+            + "\n  ".join(disagreements)
+        )
     backtest = record.get("backtest")
     backtest = backtest if isinstance(backtest, Mapping) else {}
     every_market = record.get("every_market")
@@ -1188,6 +1484,9 @@ def render(record: Mapping) -> str:
             f"Pooled across every market and tier: {_figure(every_market)}.",
             "",
         ]
+
+    lines += _retraction_lines(record)
+    lines += [""]
 
     lines += ["## The model is not worthless — it is beaten by the vig", ""]
     lines += _blind_lines(record)

@@ -3744,14 +3744,26 @@ def test_no_workflow_comment_still_claims_a_single_contents_write_holder():
     Two workflows hold the permission. Any workflow comment asserting a single
     holder is the defect coming back, and it comes back as prose rather than as
     a mapping, which is why this looks at the text.
+
+    **Never conditional.** This used to skip itself when only one workflow held
+    the permission, on the grounds that the retired sentence would then be
+    true. That is the wrong test: the sentence is retired because a hand-typed
+    count of who holds write access to `main` is exactly the thing that drifted
+    — it stayed on the page through the day a second workflow gained the
+    permission — and a sentence that happens to be true today is still a claim
+    nobody re-checks tomorrow. `CONTENTS-WRITE HOLDERS:` is parsed and compared
+    by the two tests above; the prose form is banned here whatever the count
+    is. This repository also fails its own build on a skip, so a guard that
+    skips itself out of existence is not a guard.
     """
-    if len(contents_write_holders_on_disk()) <= 1:
-        pytest.skip("only one workflow holds `contents: write`; the claim would be true")
+    holders = contents_write_holders_on_disk()
     for path in WORKFLOW_FILES:
         text = path.read_text(encoding="utf-8")
         for claim in ("ONLY workflow in the repository that has it", "only workflow that holds"):
             assert claim not in text, (
                 f"{path.name} still claims to be the only holder of "
-                f"`contents: write`, and {len(contents_write_holders_on_disk())} "
-                "workflows hold it."
+                f"`contents: write`. {len(holders)} workflow(s) hold it today "
+                f"({sorted(holders)}), and a prose count of who can write to "
+                "`main` is a claim that goes stale silently — the parsed "
+                "`CONTENTS-WRITE HOLDERS:` line is the one to change."
             )

@@ -56,6 +56,14 @@ The reason for a fourth lab was market heterogeneity — 360 teams on a Tuesday 
 
 Pooled across every market and tier: 118,050 bets, **-3.9%**, corrected -7.2% to -0.7% — demonstrated deficit.
 
+### A claim this document has retracted, recorded 2026-09-04
+
+Before this block was generated, this document said of **low-major** that it was *“the only tier whose interval excludes zero, and it excludes zero on the losing side”* — a demonstrated deficit. That was measured on the core team markets alone, before the alternate ladders and the halves entered the population.
+
+**It no longer holds.** On today's record low-major reads 34,720 bets, **-4.3%**, corrected -10.0% to +1.4% — no demonstrated edge.
+
+Nothing about the model changed. The population did: the markets added since are one season deep and thin, which widens every interval they enter. A finding that survives on the narrower population and dissolves when the wider one is measured was fragile to the population all along, and the earlier wording did not say so because at the time there was nothing to say it against.
+
 ## The model is not worthless — it is beaten by the vig
 
 The worst blind sides that clear the 200-bet floor declared in advance:
@@ -119,29 +127,14 @@ The held-out test is 2024 (held out), discovered on 2021-2023 and declared in ad
 
 <!-- END GENERATED -->
 
-## A note on an earlier version of this document, recorded 2026-09-04
+## Why there is nothing below this line
 
-**The figures in this section are historical.** They are what this document said
-before it was generated, they are stamped with the day they were written, and
-nothing re-renders them. They are kept because the reason a claim was retracted
-is evidence about the claim, and deleting the retraction leaves only the
-correction.
-
-**An earlier version of this document said low-major was "the only tier whose
-interval excludes zero, and it excludes zero on the losing side".** That was
-true of the core team markets alone — low-major then read −3.9%, corrected
-−7.4% to −0.3%, a demonstrated deficit.
-
-It is **no longer true**. With the alternate ladders and the halves added, the
-same tier reads -4.3%, corrected
--10.0% to +1.4%
-— **no demonstrated edge**.
-
-Nothing about the model changed. The population did: the new markets are one
-season deep and thin, which widens every interval they enter. A deficit that
-survives on four seasons of three markets and dissolves when a fifth is added
-was **fragile to the population all along**, and the earlier wording did not
-say so because at the time there was nothing to say it against.
-
-The direction is unchanged and worth keeping: low-major is still the worst
-tier by point estimate, and the lab was built expecting it to be the best.
+Every figure about this model lives inside the generated block above, including
+the retraction of a claim an earlier version of this document made. There used
+to be a hand-written note here headed *the figures in this section are
+historical* which then hand-typed the tier's **current** return and corrected
+interval underneath it, so a re-measurement moved the table above and left the
+paragraph below saying what the tier used to read. That note is now rendered
+from the record like everything else, and
+`tests/test_why_the_model.py::test_no_figure_is_typed_outside_the_generated_fence`
+keeps this page free of typed figures.

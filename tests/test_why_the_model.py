@@ -31,6 +31,7 @@ import pytest
 
 from cbb_betting_lab import stats as S
 from cbb_betting_lab.competitions import CBB
+from cbb_betting_lab.reports import forecast_skill as FS
 from cbb_betting_lab.reports import price_backtest as PB
 from cbb_betting_lab.reports import why_the_model as WHY
 
@@ -39,6 +40,7 @@ SCRIPT = PROJECT_ROOT / "scripts" / "run_why_the_model.py"
 OUTPUTS = PROJECT_ROOT / "data" / "outputs"
 DOC = PROJECT_ROOT / WHY.DOC_RELATIVE
 LOOP = PROJECT_ROOT / "scripts" / "run_weekly_loop.py"
+STATUS = PROJECT_ROOT / "docs" / "project_status.md"
 
 
 # --------------------------------------------------------------------------
@@ -55,8 +57,13 @@ def outputs(tmp_path: Path) -> Path:
     record shape, which is the shape it will still agree with after the real
     one changes.
     """
-    if not OUTPUTS.is_dir():
-        pytest.skip("no data/outputs tree in this checkout")
+    assert OUTPUTS.is_dir(), (
+        f"{OUTPUTS} is missing. Every record this fixture copies is tracked by "
+        "git, so its absence is a broken checkout and not a reason to pass. "
+        "This fixture never skips: a guard that skips itself out of existence "
+        "when its data is absent is not a guard, and this repository fails its "
+        "own build on a skip for exactly that reason."
+    )
     target = tmp_path / "outputs"
     shutil.copytree(OUTPUTS, target)
     return target
@@ -64,6 +71,21 @@ def outputs(tmp_path: Path) -> Path:
 
 def build(outputs: Path) -> dict:
     return WHY.build_record(competition=CBB, output_dir=outputs)
+
+
+def committed_record() -> dict:
+    """The committed run record, or one BUILT from the committed evidence.
+
+    Never skips. The record is an intermediate — the three measurement records
+    beside it are the source of truth — so a checkout without it is a checkout
+    that has not run the generator yet, and the test can run it. Building the
+    record here rather than skipping is also the only version of these tests
+    that still fires on the day somebody deletes the record to make them quiet.
+    """
+    path = WHY.record_path(CBB, OUTPUTS)
+    if path.is_file():
+        return WHY.read_record(path)
+    return build(OUTPUTS)
 
 
 def run_script(*args: str) -> subprocess.CompletedProcess:
@@ -279,6 +301,69 @@ def test_the_title_reads_the_sign_rather_than_stating_a_conclusion(outputs):
     assert "demonstrated edge" in WHY.headline(record)
 
 
+def test_a_verdict_typed_into_the_record_never_reaches_the_document(outputs):
+    """**The headline reads the sign.**
+
+    Setting a row's `verdict` to a demonstrated edge in the record on disk once
+    made the rendered document say so, over an interval that spans zero: the
+    renderer printed `row["verdict"]` and trusted it. The render now derives
+    every verdict from the interval it is about to print and refuses a record
+    whose stored string disagrees — refuses rather than silently printing the
+    derived one, because a disagreement between a measurement and the file
+    claiming to hold it is something a human has to see.
+    """
+    record = build(outputs)
+    spanning = next(
+        row
+        for row in record["tiers"]
+        if row["enough_evidence"]
+        and (row["adjusted_low"] or 0.0) < 0.0 < (row["adjusted_high"] or 0.0)
+    )
+    spanning["verdict"] = S.DEMONSTRATED_EDGE
+
+    with pytest.raises(WHY.WhyError) as caught:
+        WHY.render(record)
+    assert S.DEMONSTRATED_EDGE in str(caught.value)
+    assert S.NO_DEMONSTRATED_EDGE in str(caught.value)
+
+    # And every reader of a verdict reads the interval, not the string, so the
+    # planted word cannot reach a headline, a table cell or an edge count even
+    # if the refusal above were removed.
+    assert WHY.verdict_of(spanning) == S.NO_DEMONSTRATED_EDGE
+    assert WHY.demonstrated_edges([spanning]) == []
+    assert WHY._figure(spanning).endswith(S.NO_DEMONSTRATED_EDGE), WHY._figure(spanning)
+    assert "shows a demonstrated edge" not in WHY.headline({"tiers": [spanning]})
+    assert "does have a demonstrated edge" not in WHY.title({"tiers": [spanning]})
+
+
+def test_a_verdict_typed_into_the_forecast_table_never_reaches_the_document(outputs):
+    """The same rule in the other table on the page. Its Reading column used to
+    print the verdict string stored beside the Brier advantage."""
+    record = build(outputs)
+    advantage = record["forecast"]["tiers"][0]["advantage_over_raw"]
+    assert advantage["verdict"] == S.DEMONSTRATED_DEFICIT
+    advantage["verdict"] = S.DEMONSTRATED_EDGE
+    with pytest.raises(WHY.WhyError) as caught:
+        WHY.render(record)
+    assert "advantage_over_raw" in str(caught.value)
+    assert WHY.verdict_of(advantage) == S.DEMONSTRATED_DEFICIT
+
+
+def test_a_sample_size_typed_over_the_floor_never_promotes_a_cell(outputs):
+    """`enough_evidence` is derived from the count too. A row hand-flagged as
+    having cleared the floor it does not clear would otherwise walk into the
+    headline's population carrying a number it is not allowed to print."""
+    record = build(outputs)
+    thin = next(row for row in record["tiers"] if not row["enough_evidence"])
+    assert thin["bets"] < S.MINIMUM_BETS
+    thin["enough_evidence"] = True
+    with pytest.raises(WHY.WhyError) as caught:
+        WHY.render(record)
+    assert "enough_evidence" in str(caught.value)
+    assert WHY.enough_evidence_of(thin) is False
+    assert "%" not in WHY._figure(thin)
+
+
 def test_a_demonstrated_deficit_is_named_and_never_folded_into_the_edges(outputs):
     """`demonstrated_edges` and `demonstrated_deficits` return disjoint lists.
     The NHL lab's headline announced a result had *survived and replicated* on a
@@ -361,15 +446,163 @@ def test_the_committed_document_carries_the_fence(outputs):
     )
 
 
+def test_no_figure_is_typed_outside_the_generated_fence(outputs):
+    """The drift this cluster exists to prevent, in its last hiding place.
+
+    Below the fence sat a note headed *"the figures in this section are
+    historical"* which then hand-typed the tier's **current** return and
+    corrected interval — `-4.3%, corrected -10.0% to +1.4%` — so a
+    re-measurement moved the generated table above it and left the paragraph
+    below saying what the tier used to read, under a heading promising it could
+    not. A percent sign outside the fence is a figure nothing re-renders.
+    """
+    text = DOC.read_text(encoding="utf-8")
+    outside = (
+        text[: text.index(WHY.BEGIN_MARKER)]
+        + text[text.index(WHY.END_MARKER) + len(WHY.END_MARKER) :]
+    )
+    assert "%" not in outside, (
+        f"{DOC.name} carries a figure outside its generated block: "
+        + repr(
+            [line for line in outside.splitlines() if "%" in line]
+        )
+        + ". Nothing re-renders those lines, so they are typed figures under a "
+        "heading saying there are none. Put the figure inside the fence, where "
+        "the generator writes it from the record."
+    )
+
+
+def test_the_retraction_reads_its_current_figure_from_the_record(outputs):
+    """The retracted claim is kept — the reason a claim was withdrawn is
+    evidence about the claim — but only its WORDING and its date are carried in
+    the source. Whether it still holds, and what the tier reads today, are read
+    off the record, so the retraction cannot become the stale paragraph that
+    the hand-written version of it was."""
+    record = build(outputs)
+    tier_key = WHY.SUPERSEDED_CLAIM["tier"]
+    current = next(row for row in record["tiers"] if row["tier"] == tier_key)
+    rendered = WHY.render(record)
+    heading = f"### A claim this document has retracted, recorded {WHY.SUPERSEDED_CLAIM['recorded_on']}"
+    assert heading in rendered
+    section = rendered[rendered.index(heading) :]
+    assert WHY.SUPERSEDED_CLAIM["wording"] in section
+    assert WHY._figure(current) in section, (
+        "the retraction does not print what the record says the tier reads "
+        "today, so it is a hand-typed figure again"
+    )
+    assert "**It no longer holds.**" in section
+    assert "**It still holds.**" not in section
+
+    # A DIFFERENT row that still does not hold. Asserting only that the
+    # committed tier's figure appears is not enough: that string is also what a
+    # hard-coded sentence would print today, which is exactly the drift this
+    # test exists to catch — measured, by hard-coding it and watching this pass.
+    moved = WHY.cell(
+        _tier(
+            name=tier_key, tier=tier_key, bets=30_000,
+            roi=-0.10, low=-0.16, high=-0.04, standard_error=0.05,
+        ),
+        looks=30,
+    )
+    assert moved["verdict"] == S.NO_DEMONSTRATED_EDGE, moved
+    assert WHY._figure(moved) != WHY._figure(current)
+    record["tiers"] = [moved]
+    moved_section = WHY.render(record)
+    moved_section = moved_section[moved_section.index(heading) :]
+    assert "**It no longer holds.**" in moved_section
+    assert WHY._figure(moved) in moved_section, (
+        "the retraction prints a figure that does not move when the record "
+        "does, so it is hard-coded"
+    )
+    assert WHY._figure(current) not in moved_section
+
+    # Flip the same tier to the reading the retracted claim made, and the
+    # retraction has to follow it rather than stay retracted.
+    record = build(outputs)
+    restored = WHY.cell(
+        _tier(
+            name=tier_key, tier=tier_key,
+            roi=-0.30, low=-0.35, high=-0.25, standard_error=0.02,
+        ),
+        looks=1,
+    )
+    assert restored["verdict"] == WHY.SUPERSEDED_CLAIM["verdict_claimed"]
+    record["tiers"] = [restored]
+    section = WHY.render(record)
+    section = section[section.index(heading) :]
+    assert "**It still holds.**" in section
+    assert "**It no longer holds.**" not in section
+    assert WHY._figure(restored) in section
+
+
+def test_no_document_quotes_the_devigged_advantage_as_the_raw_one():
+    """`docs/project_status.md` row 13 carried the figure this whole cluster is
+    about: **-0.01312 [-0.01468, -0.01156]**, described as the comparison *"with
+    the vig left in"*. `-0.01312` is the DE-VIGGED pooled advantage and those
+    bounds are its UNCORRECTED ones — the wrong instrument and the un-widened
+    interval, and a pooled all-of-Division-I figure besides. The strings are
+    computed from the record here, so this stays a check on the measurement
+    rather than a pin on a typo.
+    """
+    payload = json.loads(
+        FS.record_path(CBB, OUTPUTS).read_text(encoding="utf-8")
+    )
+    devigged = payload["pooled"]["brier"]["advantage_over_devigged"]
+    value = f"{devigged['value']:.5f}"
+    uncorrected = f"[{devigged['low']:.5f}, {devigged['high']:.5f}]"
+    documents = sorted((PROJECT_ROOT / "docs").rglob("*.md"))
+    assert documents, "no documents to check"
+    for path in documents:
+        text = path.read_text(encoding="utf-8")
+        assert value not in text, (
+            f"{path.name} prints {value}, the pooled DE-VIGGED Brier advantage. "
+            "This repository reports that comparison per tier and against the "
+            "raw market, and never pools Division I into one headline figure."
+        )
+        assert uncorrected not in text, (
+            f"{path.name} prints {uncorrected}, the UNCORRECTED bounds of the "
+            "pooled de-vigged advantage. Every interval quoted in this "
+            "repository is the family-corrected one."
+        )
+
+
+def test_the_status_row_for_the_regression_carries_the_measured_per_tier_figures():
+    """The other half of the same row: having removed the wrong figure, the
+    right ones have to be there and have to match the record. Read from
+    `cbb_forecast_skill.json`, so the day the regression is re-run and this row
+    is not rewritten, this fails."""
+    payload = json.loads(
+        FS.record_path(CBB, OUTPUTS).read_text(encoding="utf-8")
+    )
+    text = STATUS.read_text(encoding="utf-8")
+    measured = [
+        tier for tier in payload["by_tier"]
+        if int(tier.get("rows") or 0) >= S.MINIMUM_BETS
+    ]
+    assert len(measured) == 3, [t["label"] for t in measured]
+    for tier in measured:
+        raw = tier["brier"]["advantage_over_raw"]
+        printed = (
+            f"{raw['value']:.5f}, corrected "
+            f"{raw['adjusted_low']:.5f} to {raw['adjusted_high']:.5f}"
+        )
+        assert printed in text, (
+            f"docs/project_status.md does not carry {tier['label']}'s measured "
+            f"advantage as `{printed}`, so the row says something the record "
+            "does not."
+        )
+        assert f"{int(raw['rows']):,} rows" in text, (
+            f"{tier['label']}'s figure in docs/project_status.md carries no "
+            "sample size beside it"
+        )
+
+
 def test_the_committed_document_matches_what_its_committed_record_renders_to(outputs):
     """The pin the missing generator cost. The fenced block in the document is
     compared against a fresh render of the record committed beside it, so a
     hand-edit inside the fence — the exact way the old document acquired its
     wrong forecast-skill interval — fails the build."""
-    committed = WHY.record_path(CBB, OUTPUTS)
-    if not committed.is_file():
-        pytest.skip("no committed run record in this checkout")
-    rendered = WHY.render(WHY.read_record(committed))
+    rendered = WHY.render(committed_record())
     body = "\n".join(
         line for line in rendered.splitlines() if not line.startswith("# ")
     ).strip()
@@ -386,29 +619,114 @@ def test_the_committed_document_matches_what_its_committed_record_renders_to(out
     )
 
 
+def _pair_to_check(tmp_path: Path) -> tuple[Path, Path]:
+    """A record/report pair on disk for `--check` to read — the committed one
+    when it is committed, and one BUILT from the committed evidence otherwise.
+
+    Never skips. When the pair is absent the generator is run to produce it, so
+    a checkout that has not been generated is generated rather than excused,
+    and deleting the committed pair cannot turn this gate off.
+    """
+    record = WHY.record_path(CBB, OUTPUTS)
+    report = WHY.report_path(CBB, OUTPUTS)
+    if record.is_file() and report.is_file():
+        return record, report
+    record, report = tmp_path / "record.json", tmp_path / "report.md"
+    built = run_script(
+        "--competition", "cbb", "--record", str(record), "--report", str(report)
+    )
+    assert built.returncode == 0, built.stdout + built.stderr
+    return record, report
+
+
 def test_check_passes_on_the_committed_pair_and_fails_on_a_hand_edit(tmp_path):
     """`--check` is the gate. It compares the report on disk against a fresh
     render of its record, and a hand-edited generated file survives exactly one
     re-render."""
-    committed_record = WHY.record_path(CBB, OUTPUTS)
-    committed_report = WHY.report_path(CBB, OUTPUTS)
-    if not (committed_record.is_file() and committed_report.is_file()):
-        pytest.skip("no committed run record and report in this checkout")
-    assert run_script("--competition", "cbb", "--check").returncode == 0
+    record, report = _pair_to_check(tmp_path)
+    passing = run_script(
+        "--competition", "cbb", "--record", str(record), "--report", str(report),
+        "--check",
+    )
+    assert passing.returncode == 0, passing.stdout + passing.stderr
 
-    edited = tmp_path / "report.md"
+    edited = tmp_path / "edited.md"
     edited.write_text(
-        committed_report.read_text(encoding="utf-8").replace("bets", "wagers"),
+        report.read_text(encoding="utf-8").replace("bets", "wagers"),
         encoding="utf-8",
     )
     completed = run_script(
         "--competition", "cbb",
-        "--record", str(committed_record),
+        "--record", str(record),
         "--report", str(edited),
         "--check",
     )
     assert completed.returncode == 1, completed.stdout + completed.stderr
     assert "edited by hand" in completed.stderr or "does not match" in completed.stderr
+
+
+def test_a_figure_planted_in_the_record_is_refused_rather_than_published(tmp_path):
+    """**The record is not the source of truth.**
+
+    Nothing used to re-derive `data/outputs/cbb_why_the_model.json` from the
+    three measurement records, and the document is a pure function of it — so a
+    figure typed into the record reached the published document and `--check`
+    passed, because the document matched the record and the record matched
+    itself. Here a tier's return is doubled in a copy of the record and every
+    other number is left consistent with it; the check has to re-ask the
+    measurement to notice.
+    """
+    record, report = _pair_to_check(tmp_path)
+    payload = json.loads(record.read_text(encoding="utf-8"))
+    planted = tmp_path / "planted.json"
+    tier = payload["tiers"][0]
+    tier["roi"] = (tier["roi"] or 0.0) * 2 - 0.001
+    planted.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+    completed = run_script(
+        "--competition", "cbb",
+        "--record", str(planted),
+        "--report", str(report),
+        "--check",
+    )
+    assert completed.returncode == 1, completed.stdout + completed.stderr
+    assert "not what the measurement records on disk produce" in completed.stderr
+    assert "tiers" in completed.stderr
+
+
+def test_a_planted_figure_is_refused_on_rerender_too_and_writes_nothing(tmp_path):
+    """`--rerender` is the other door into the document, and it renders from
+    the record without rebuilding it. It re-derives and compares as well, and
+    it writes no report when the comparison fails: a refusal that has already
+    overwritten the good document is not a refusal."""
+    record, _ = _pair_to_check(tmp_path)
+    payload = json.loads(record.read_text(encoding="utf-8"))
+    payload["backtest"]["bets_graded"] = int(payload["backtest"]["bets_graded"]) + 1
+    planted = tmp_path / "planted.json"
+    planted.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    out = tmp_path / "out.md"
+
+    completed = run_script(
+        "--competition", "cbb",
+        "--record", str(planted),
+        "--report", str(out),
+        "--rerender",
+    )
+    assert completed.returncode == 1, completed.stdout + completed.stderr
+    assert "backtest" in completed.stderr
+    assert not out.exists(), "the refusal wrote the report anyway"
+
+
+def test_the_committed_record_is_what_the_committed_evidence_produces(outputs):
+    """The same question asked of the pair in the repository, in-process.
+
+    `rederivation_differences` raises rather than returning an empty list when
+    a measurement record cannot be read, so an unreadable instrument is never
+    reported here as agreement.
+    """
+    assert WHY.rederivation_differences(
+        committed_record(), competition=CBB, output_dir=OUTPUTS
+    ) == []
 
 
 # --------------------------------------------------------------------------
@@ -425,7 +743,22 @@ def test_the_weekly_loop_runs_the_generator_and_splices_the_document():
     assert SCRIPT.is_file(), "the loop names a script that is not in the repository"
     assert "WHY_SCRIPT," in text, "the loop declares the script and never runs it"
     assert "--splice-into" in text
-    assert WHY.DOC_RELATIVE in (LOOP.read_text(encoding="utf-8") + str(WHY.DOC_RELATIVE))
+    # This line used to read
+    #     assert WHY.DOC_RELATIVE in (LOOP.read_text(...) + str(WHY.DOC_RELATIVE))
+    # — a concatenation that appends the needle to the haystack, so the
+    # membership test was true for every possible loop script and pinned
+    # nothing at all. Both halves of what it meant to say, asserted separately:
+    # the loop resolves the path from the generator's own constant, and it names
+    # the document a reader would search for.
+    assert "WHY.DOC_RELATIVE" in text, (
+        "the loop spells the document path itself instead of resolving it from "
+        "why_the_model.DOC_RELATIVE, so the two can drift apart and the loop "
+        "will re-render a document nothing else is looking at"
+    )
+    assert WHY.DOC_RELATIVE in text, (
+        f"the loop never names {WHY.DOC_RELATIVE}, so nobody reading it can "
+        "tell which document the splice lands in"
+    )
 
 
 def test_the_splice_refuses_a_document_with_no_fence(tmp_path):

@@ -41,7 +41,7 @@ document that weighs three instruments and silently weighs two still reads like
 an answer, and this repository's whole arrangement is against a broken
 instrument being reported as a null result.
 
-## `--check` asks two questions
+## `--check` asks three questions
 
 1. **Is the record still about the evidence on disk?** The record writes down
    every file it opened, whether it was there, and what that file stamped
@@ -49,8 +49,14 @@ instrument being reported as a null result.
    `what_we_can_claim` learned this the expensive way: on 2026-09-04 its check
    passed while the document it checked named a committed backtest of 118,050
    graded bets as *not found*. Internally consistent, externally false.
-2. **Does the markdown still match what the record renders to?** The question a
-   hand-edit fails.
+2. **Is the record what the measurement records produce?** The run record is an
+   INTERMEDIATE, never the source of truth. `--check` and `--rerender` rebuild
+   it from the three measurement records and refuse on a difference, so a
+   figure typed into `data/outputs/cbb_why_the_model.json` cannot reach the
+   document. It used to, with a green suite: the document matched the record,
+   the record matched itself, and nothing re-asked the measurement.
+3. **Does the markdown still match what the record renders to?** The question a
+   hand-edit of the markdown fails.
 """
 
 from __future__ import annotations
@@ -117,10 +123,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--rerender",
         action="store_true",
         help=(
-            "Render the existing record without rebuilding it from the "
-            "measurement records. Use this to improve a sentence without "
-            "re-reading a measurement — the report is a pure function of the "
-            "record."
+            "Render the existing record rather than rebuilding it. Use this to "
+            "improve a sentence without re-running a measurement — the report "
+            "is a pure function of the record. The record is still re-derived "
+            "from the measurement records and compared, so this is a way to "
+            "re-render a record, never a way to render one somebody typed."
         ),
     )
     parser.add_argument(
@@ -128,8 +135,9 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Do not write. Exit non-zero when the record is older than the "
-            "evidence it says it read, or when the report on disk differs from "
-            "what that record renders to, which means it was edited by hand."
+            "evidence it says it read, when the record is not what a fresh "
+            "build from the measurement records produces, or when the report "
+            "on disk differs from what that record renders to."
         ),
     )
     parser.add_argument(
@@ -164,6 +172,32 @@ def main(argv: list[str] | None = None) -> int:
         except WHY.WhyError as exc:
             print(f"::error::{exc}", file=sys.stderr)
             return 2
+        # THE RECORD IS NOT THE SOURCE OF TRUTH. It is an intermediate, and
+        # every path that renders from it re-derives it from the three
+        # measurement records and refuses on a difference. Without this a
+        # figure typed into `data/outputs/cbb_why_the_model.json` reached the
+        # published document with a green suite: the document matched the
+        # record, the record matched itself, and nothing re-asked the
+        # measurement it claimed to be reporting.
+        try:
+            differences = WHY.rederivation_differences(
+                record, competition=competition, output_dir=output_dir
+            )
+        except WHY.WhyError as exc:
+            print(f"::error::{exc}", file=sys.stderr)
+            return 2
+        if differences:
+            print(
+                f"::error::{record_target} is not what the measurement records "
+                "on disk produce. It was edited between the measurement and "
+                "the document, so the document rendered from it reports "
+                "figures no instrument in this repository measured. Re-run "
+                "this script without --check/--rerender to rebuild it.",
+                file=sys.stderr,
+            )
+            for reason in differences:
+                print(f"::error::  {reason}", file=sys.stderr)
+            return 1
     else:
         try:
             record = WHY.build_record(competition=competition, output_dir=output_dir)
