@@ -318,23 +318,71 @@ def test_the_binomial_rounding_preserves_the_mean_and_reports_its_own_error() ->
     negative mass, so the convention is `n = round(...)` followed by a re-solve
     of `p = mu/n`.
 
-    Measured here across mu in [0.2, 6.0] at 0.01: the mean is preserved to
-    **exactly zero** error, and the largest |phi_used - phi| is **5.484e-04**,
-    which is 2.74% of the fit's own materiality floor of 0.02. The rounding is
-    charged to the dispersion, the row says how much, and D3 and D5 — both
-    first-moment identities — pay nothing for it.
+    Measured here across mu in [0.2, 6.0] at 0.01, off the pmf the recursion
+    actually emits: the largest absolute mean error is **1.06e-13** (at
+    mu = 5.62, 1.9e-14 relative — floating-point summation and nothing else),
+    and the largest |phi_used - phi| is **5.484e-04**, which is 2.74% of the
+    fit's own materiality floor of 0.02. The rounding is charged to the
+    dispersion, the row says how much, and D3 and D5 — both first-moment
+    identities — pay nothing for it.
+
+    **The mean is checked on the PRODUCED COUNT, not on the field that echoes
+    the request.** `assert parameters.mu == float(mu), "the rounding moved the
+    mean"` was the whole of this claim until this commit, and
+    `panjer_parameters` sets `mu=mean` verbatim from its own argument and never
+    derives it from the family it built — so the assertion was true by
+    construction, as was `float(parameters.trials).is_integer()` on a
+    `float(int(round(...)))`. Stubbing the binomial arm's `b` to
+    `(trials + 1.02) * probability / used` moves the emitted count's mean
+    (player_turnovers came back 1.8900775816106816 against 1.890862827111199)
+    while leaving `mu` and `phi_used` untouched, and this test stayed GREEN: the
+    four that went red were D3, D5, the two-mean-routes test and the Panjer
+    member test, none of which sweep mu. Both fields are still asserted — they
+    record what was ASKED for, and `phi_used` is the stored column — and the
+    Panjer recursion is now run at every step so the mean and the variance are
+    read off the distribution that was made.
     """
     shapes = _shapes()
     dispersion = shapes.value("conditional_dispersion")["turnovers"]
     floor = _materiality(shapes)
     worst = 0.0
+    worst_mean = 0.0
     for mu in np.arange(0.2, 6.001, 0.01):
         parameters = PD.panjer_parameters(
             mu=float(mu), phi=dispersion, materiality=floor
         )
-        assert parameters.mu == float(mu), "the rounding moved the mean"
+        assert parameters.mu == float(mu), (
+            "the member no longer records the mean it was asked for. This is "
+            "the request, not the produced first moment: `worst_mean` below is "
+            "what the recursion actually emitted."
+        )
         assert float(parameters.trials).is_integer()
+        trials = int(parameters.trials)
+        # The binomial's whole support, so the mass is 1 by arithmetic and the
+        # moments below are the family's own rather than a truncation's.
+        made = PD.compound_pmf(parameters, severity=(0.0, 1.0), size=trials)
+        assert float(made.sum()) == pytest.approx(1.0, abs=1e-12)
+        counts = np.arange(trials + 1, dtype=float)
+        produced_mean = float(made @ counts)
+        produced_variance = float(made @ (counts * counts)) - produced_mean**2
+        worst_mean = max(worst_mean, abs(produced_mean - float(mu)))
+        assert produced_variance / produced_mean == pytest.approx(
+            parameters.phi_used, rel=1e-9
+        ), (
+            f"at mu={float(mu)} the emitted count has a variance-to-mean ratio "
+            f"of {produced_variance / produced_mean} and the member says it "
+            f"carries {parameters.phi_used}. `phi_used` is design 9's stored "
+            "`phi_conditional` column, so a member that does not describe its "
+            "own pmf would be written into the store as though it did."
+        )
         worst = max(worst, abs(parameters.phi_used - dispersion))
+    assert 0.0 < worst_mean < 1e-11, (
+        f"the produced count's mean is now {worst_mean:.3e} away from the mean "
+        "it was matched on. The docstring above quotes 1.06e-13, which is "
+        "floating-point summation over up to 350 trials; anything at 1e-11 or "
+        "worse is the parameterisation, and D3 and D5 are first-moment "
+        "identities that must not pay for the integer-n rounding."
+    )
     assert worst == pytest.approx(5.484e-04, abs=1e-6), (
         f"the binomial rounding error is now {worst:.3e}; the docstring above "
         "quotes 5.484e-04 and must be re-measured"
@@ -649,6 +697,107 @@ def test_the_points_threes_correlation_identity_matches_a_brute_force_joint() ->
     )
 
 
+def test_the_stored_phi_column_is_nan_for_a_sum_and_the_event_phi_for_a_compound() -> None:
+    """Design 9's `phi_conditional`, on all ten markets rather than on one.
+
+    `PlayerDistribution.phi_conditional` was asserted exactly once in this file
+    — `player_rebounds` at 1.9 — while its docstring makes two further
+    behavioural claims that nothing checked. Stubbing the method to return
+    `0.0` for the combination markets and `1.0` for the compound stats left the
+    file green at 40 passed, and a `cbb_player_lines.csv` written by the first
+    consumer would then carry `phi_conditional = 0.0` on a pra row (which reads
+    as a measured dispersion of zero rather than "no phi was handed to this
+    sum") and 1.0 — Poisson — on a points row.
+
+    The three cases, measured:
+
+    * **NaN for the four combination markets.** No phi is handed to a sum: its
+      width is produced by the components, the copula and the mixture. NaN is
+      asserted as NaN and separately as *not zero*, because zero is the value a
+      well-meaning fill would put there and every comparison against NaN is
+      False, so `phi == 0.0` would not have caught it either.
+    * **The SHARED SCORING-EVENT dispersion for points and threes**, which is
+      `points_compound_reconciliation[POINTS_EVENT_DISPERSION_KEY]` =
+      1.1059306970490195 and is neither of the two numbers a reader would
+      expect to find on those rows: the frozen `conditional_dispersion` says
+      2.328891545818532 for points and 1.0846864899201918 for threes, and those
+      are the produced marginals' widths, which :meth:`structural_checks`
+      reports. `player_threes` carries the same number as `player_points`
+      because it is the same object thinned, and that is the column's content.
+    * **The rounding is in the column, for the one market that has one.**
+      `player_turnovers` is the binomial arm: the frozen conditional dispersion
+      is 0.9828561088984643 and the column reads 0.9828493167608962, a move of
+      6.79e-06 charged to the dispersion by the integer-`n` re-solve, three
+      orders inside the fit's own materiality floor of 0.02. The other three
+      Panjer stats are negative binomial, where no rounding happens and the
+      column is the frozen constant exactly.
+
+    And a market refused by name has no column at all rather than a filled one.
+    """
+    distribution = _distribution()
+    shapes = _shapes()
+    frozen = shapes.value("conditional_dispersion")
+    event_phi = float(
+        shapes.value("points_compound_reconciliation")[PD.POINTS_EVENT_DISPERSION_KEY]
+    )
+
+    for market in ("player_pra", "player_points_rebounds", "player_points_assists",
+                   "player_rebounds_assists"):
+        phi = distribution.phi_conditional(market)
+        assert math.isnan(phi), (
+            f"{market} carries phi_conditional={phi!r}. No dispersion is handed "
+            "to a sum — its width is produced by the components, the copula and "
+            "the mixture — and a number in this column is a parameter that does "
+            "not exist."
+        )
+        assert phi != 0.0, f"{market}: NaN, not a zero fill"
+
+    for market in ("player_points", "player_threes"):
+        assert distribution.phi_conditional(market) == event_phi, (
+            f"{market}: the column must carry the dispersion of the shared "
+            "scoring-event count, because that is the family a phi was handed "
+            f"to. Frozen: {event_phi}."
+        )
+    assert event_phi == pytest.approx(1.1059306970490195, abs=1e-12)
+    assert distribution.phi_conditional("player_points") != 1.0, (
+        "a points row reading 1.0 is a Poisson event count, which is not the "
+        "family this engine built"
+    )
+    assert distribution.phi_conditional("player_points") != frozen["points"], (
+        "the column is the EVENT count's dispersion, not the produced points "
+        "marginal's 2.3289; the marginal's width is a structural check and is "
+        "reported there"
+    )
+    assert distribution.phi_conditional("player_threes") != frozen["threes"]
+
+    for stat in ("rebounds", "assists", "steals"):
+        assert distribution.phi_conditional(f"player_{stat}") == float(frozen[stat]), (
+            f"{stat} is on the negative binomial arm, where nothing is rounded "
+            "and the column is the frozen constant exactly"
+        )
+    assert distribution.phi_conditional("player_rebounds") == pytest.approx(
+        1.1029646164554165, abs=1e-12
+    )
+
+    rounded = distribution.phi_conditional("player_turnovers")
+    assert rounded != float(frozen["turnovers"]), (
+        "turnovers is the binomial arm and its integer-`n` re-solve moves the "
+        "dispersion. A column reading the frozen constant exactly means the "
+        "rounding is being reported as if it had not happened."
+    )
+    assert rounded == pytest.approx(0.9828493167608962, abs=1e-12)
+    move = abs(rounded - float(frozen["turnovers"]))
+    assert move == pytest.approx(6.79e-06, abs=1e-8), (
+        f"the turnovers rounding is now {move:.3e}; the docstring quotes "
+        "6.79e-06 and must be re-measured"
+    )
+    assert move < _materiality(shapes)
+
+    for refused in PR.MARKETS_REFUSED_BY_NAME:
+        with pytest.raises(PD.MarketRefused):
+            distribution.phi_conditional(refused)
+
+
 # --------------------------------------------------------------------------
 # D1 -- the comb
 # --------------------------------------------------------------------------
@@ -793,12 +942,32 @@ def test_no_player_count_is_built_by_match_variance() -> None:
 
 
 def test_d2_the_ladder_is_monotone_off_one_cached_object() -> None:
-    """P(over) strictly decreasing in the line, on every rung of one object.
+    """P(over) strictly decreasing in the line, on EVERY rung that was asked for.
 
     Off ONE object, which is the content of it: the football lab shipped a
     ladder whose -6.5 was better value than its -7.5 because it had two models
     for one quantity. There is no alternate-ladder path here and there must
     never be one.
+
+    **The rung count is asserted before the monotonicity, because a rung that is
+    not there cannot be non-monotone.** As written until this commit the whole
+    of D2 was `all(a > b for a, b in zip(overs, overs[1:]))` and three `zip`s
+    over the same list — every one of which is vacuously true on an empty list
+    and silently short on a truncated one — and nothing asserted
+    `len(rungs) == len(lines)`. `PlayerDistribution.ladder` has exactly one
+    caller in this tree (this test), so a ladder returning fewer rungs than it
+    was asked for was constrained nowhere: stubbed to `return []`, the file
+    stayed green at 40 passed.
+
+    The realistic version is not the empty return. It is a rung FILTER —
+    wrapping `price_line` in `try/except MarketRefused: continue` so the rungs
+    above the count lattice's ceiling are dropped rather than refused — which
+    ships a ladder silently missing its top and leaves D2 green on whatever came
+    back. Both halves are held below: one rung per requested line in the
+    requested order on both sides, and a line past the ceiling REFUSING out of
+    `ladder` rather than vanishing from it. Measured on this fixture, the four
+    lattices run to 94 counts (points), 41 (rebounds), 22 (threes) and 165
+    (pra), so a 23.5 threes rung is above the ceiling and a 4.5 one is not.
     """
     distribution = _distribution()
     for market, lines in (
@@ -808,15 +977,42 @@ def test_d2_the_ladder_is_monotone_off_one_cached_object() -> None:
         ("player_pra", np.arange(12.5, 32.0, 1.0)),
     ):
         rungs = distribution.ladder(lines, market_key=market, side="over")
+        assert len(rungs) == len(lines), (
+            f"{market}: {len(lines)} lines went in and {len(rungs)} rungs came "
+            "back. A ladder that drops a rung it was asked for reports nothing "
+            "about that line, and every monotonicity check below is over "
+            "whatever survived rather than over what was priced."
+        )
+        assert [line for line, _ in rungs] == [float(line) for line in lines], (
+            f"{market}: the rungs are not the lines that were asked for, in "
+            "order. The caller reads the ladder positionally."
+        )
         overs = [triple[0] for _, triple in rungs]
         assert all(a > b for a, b in zip(overs, overs[1:])), market
-        unders = [
-            triple[0]
-            for _, triple in distribution.ladder(lines, market_key=market, side="under")
-        ]
+        under_rungs = distribution.ladder(lines, market_key=market, side="under")
+        assert len(under_rungs) == len(lines), (
+            f"{market}: the under side returned {len(under_rungs)} rungs for "
+            f"{len(lines)} lines"
+        )
+        unders = [triple[0] for _, triple in under_rungs]
         assert all(a < b for a, b in zip(unders, unders[1:])), market
+        assert len(rungs) == len(unders)
         for (line, triple), under in zip(rungs, unders):
             assert triple[0] + triple[1] + under == pytest.approx(1.0, abs=1e-12)
+
+    # And the rung that cannot be priced is REFUSED, never dropped. This is the
+    # assertion the count above exists for: with it, a `try/except
+    # MarketRefused: continue` inside `ladder` fails here, and without it the
+    # same filter would silently shorten every ladder that reaches its ceiling.
+    ceiling = distribution.count_pmf("player_threes").size - 1
+    assert ceiling == 22, (
+        f"the threes lattice now runs to {ceiling}; the line below has to stay "
+        "above the ceiling for this to be the refusal case"
+    )
+    with pytest.raises(PD.MarketRefused, match="above the count lattice ceiling"):
+        distribution.ladder(
+            [0.5, 1.5, float(ceiling) + 1.5], market_key="player_threes", side="over"
+        )
 
 
 def test_d3_the_combination_markets_agree_with_their_components() -> None:
@@ -1125,17 +1321,65 @@ def test_the_realised_correlation_is_reported_and_the_two_copula_routes_agree() 
        Measured agreement: 1.7e-09 relative. Nothing else in this file compares
        the two branches, and without it the conditioning inside the trivariate
        branch could be wrong by a whole term with every other test still green.
+
+    **Why the two assertions this test shipped with could not fail on the
+    defect they name.** `produced == approx(target, rel=0.04)` and
+    `abs(produced) <= abs(target)` are BOTH satisfied when `produced IS target`,
+    so the one outcome the docstring calls "fitting a constant at price time"
+    passed them: stubbing `realised_correlations` to return
+    `(matrix[0, 1], matrix[0, 1])` left the file green at 40 passed, and the
+    three measured numbers the paragraph above quotes were asserted nowhere in
+    the tree. Two things are held now instead of described.
+
+    * **The shortfall is a measured band, not a one-sided inequality.** Each
+      pair realises strictly LESS than it was asked for, by 1.81% (points|
+      rebounds), 3.45% (points|assists) and 3.73% (rebounds|assists) of the
+      target's absolute value. A solve-back drives that to zero, which is
+      outside the band from below; a discretisation that started losing a
+      quarter of the coupling is outside it from above and has to be
+      re-measured rather than absorbed.
+    * **The number reported as the TARGET is the frozen constant**, read out of
+      `residual_correlation` through the loader. Without that, a latent
+      parameter tuned until the realised correlation hit the frozen one would
+      report the tuned latent as its own target and land back inside any band
+      written on the pair alone.
     """
     distribution = _distribution()
     node = distribution.price_node()
+    frozen = _shapes().value("residual_correlation")
     realised = distribution.realised_correlations()
     assert set(realised) == {"points|rebounds", "points|assists", "rebounds|assists"}
+    measured = {
+        "points|rebounds": 0.10333029585215918,
+        "points|assists": -0.016045437179660036,
+        "rebounds|assists": 0.05600887929455022,
+    }
     for pair, (target, produced) in realised.items():
+        assert target == float(frozen[pair]), (
+            f"{pair}: the copula reports a target of {target} and the frozen "
+            f"`residual_correlation` says {frozen[pair]}. The reported target "
+            "is what every check below is relative to; a latent solved back "
+            "onto the constant would report the solved value here and look "
+            "faithful."
+        )
         assert produced == pytest.approx(target, rel=0.04), pair
         assert abs(produced) <= abs(target), (
             f"{pair}: the discretised copula realises MORE correlation than it "
             "was asked for, which is the direction a solved-back parameter "
             "would produce"
+        )
+        assert produced == pytest.approx(measured[pair], abs=1e-6), (
+            f"{pair}: realises {produced!r}; the docstring above quotes "
+            f"{measured[pair]:.5f} and must be re-measured"
+        )
+        shortfall = 1.0 - abs(produced) / abs(target)
+        assert 0.005 < shortfall < 0.06, (
+            f"{pair}: the copula realises {shortfall * 100:.3f}% less "
+            "correlation than it was asked for. At zero the latent parameter "
+            "has been solved back onto the frozen constant, which is fitting a "
+            "constant at price time and is the one thing this method exists to "
+            "make visible; far above the band the discretisation loss has "
+            "moved and the three numbers in the docstring are stale."
         )
 
     components = ("points", "rebounds", "assists")
@@ -1648,8 +1892,36 @@ def test_the_structural_checks_are_reported_and_only_one_can_stop_the_run() -> N
     and cannot stop anything**, which is the repair this file's
     `test_design_4s_stop_rule_is_a_population_quantity` measures. The fixture's
     1.0819 is one athlete's; design 4's stop is pooled over regulars.
+
+    **Design 4's check (b) is asserted here, and so are the ARGUMENTS the
+    engine hands it.** `structural_checks()` returns fourteen keys and five of
+    them — `corr_points_threes_given_minutes`, its target,
+    `points_vmr_given_minutes`, its target and `checked_at_minutes` — were read
+    by no assertion in the suite, including the 2.4751-against-2.3289 sentence
+    this docstring quotes. Stubbing the engine's one call to
+    `points_threes_correlation` to pass `value_pmf=self.severity[0:3]` instead
+    of `self.severity[1:4]` -- the severity array is `[0, p1, p2, p3]`, so the
+    share becomes p2 and both moments are wrong: the correlation goes to
+    0.8825 -- left the file green at 40 passed, measured against the file as it
+    stood at the parent commit. (The other half of the same stub, hard-coding
+    `points_vmr_given_minutes` to 0.0, is NOT green there: two tests written
+    since this finding was raised, `test_design_4s_stop_rule_is_a_population_
+    quantity` and `test_the_file_says_this_number_must_not_be_handed_to_a_
+    panjer_family`, reach that key by another route and go red on it. The
+    correlation half was caught by nothing at all.)
+    `points_threes_correlation` itself is checked against an
+    enumerated joint elsewhere; what is held below is which distribution the
+    engine asks it about, rebuilt from parts that do not pass through
+    `structural_checks` at all — the scoring-event mean as
+    `rates["points_events"] * minutes[node]` = 7.611078, the dispersion out of
+    the frozen file under `POINTS_EVENT_DISPERSION_KEY`, and the athlete's own
+    1/2/3 mix off `projection.value_pmf`. The conditional VMR gets the same
+    treatment against the compound identity `E[V^2]/E[V] + (phi-1)*E[V]`, which
+    reproduces the engine's 2.4750752387725523 to 2.8e-10 without touching a
+    pmf.
     """
-    checks = _distribution().structural_checks()
+    distribution = _distribution()
+    checks = distribution.structural_checks()
     assert checks["unconditional_points_vmr_target"] == pytest.approx(
         3.0529074370522156, abs=1e-12
     )
@@ -1721,6 +1993,75 @@ def test_the_structural_checks_are_reported_and_only_one_can_stop_the_run() -> N
             }
         )
     assert PD.POINTS_EVENT_DISPERSION_KEY == "effective_event_dispersion"
+
+    # -- check (b), and the distribution the engine asks it about -----------
+    projection = distribution.projection
+    node = distribution.price_node()
+    assert checks["checked_at_minutes"] == float(distribution.minutes[node]), (
+        "the reported node is not the node the columns were quoted at"
+    )
+    assert checks["checked_at_minutes"] == pytest.approx(32.0, abs=1e-12), (
+        f"the modal minutes node moved to {checks['checked_at_minutes']}; every "
+        "conditional number in this test is quoted at 32 minutes"
+    )
+
+    dispersion = float(
+        shapes.value("points_compound_reconciliation")[PD.POINTS_EVENT_DISPERSION_KEY]
+    )
+    events = float(projection.rates["points_events"]) * checks["checked_at_minutes"]
+    assert events == pytest.approx(7.611078044398606, abs=1e-9)
+    assert PD.points_threes_correlation(
+        mu_events=events, phi_events=dispersion, value_pmf=projection.value_pmf
+    ) == pytest.approx(checks["corr_points_threes_given_minutes"], abs=1e-12), (
+        "the engine's own call to `points_threes_correlation` does not "
+        "reproduce from the athlete's scoring-event mean, the frozen event "
+        "dispersion and his own value mix, so it is being asked about some "
+        "other distribution than the one it prices"
+    )
+    assert checks["corr_points_threes_given_minutes"] == pytest.approx(
+        0.746598, abs=1e-6
+    ), (
+        f"check (b) now produces {checks['corr_points_threes_given_minutes']}; "
+        "this fixture's three-heavy mix measured 0.7466 and the docstring of "
+        "`test_the_points_threes_correlation_identity_matches_a_brute_force_"
+        "joint` quotes it"
+    )
+    assert checks["corr_points_threes_given_minutes_target"] == pytest.approx(
+        0.6021705535430947, abs=1e-12
+    )
+    assert (
+        checks["corr_points_threes_given_minutes"]
+        > checks["corr_points_threes_given_minutes_target"]
+    ), (
+        "the thinning now produces a correlation at or below the frozen target. "
+        "No tolerance is declared for this check anywhere, so it stops nothing "
+        "and nothing may be tuned to close it — but the direction is part of "
+        "what is reported and has moved."
+    )
+
+    mix = np.asarray(projection.value_pmf, dtype=float)
+    values = np.array([1.0, 2.0, 3.0])
+    expected_value = float(mix @ values)
+    identity = float(mix @ (values * values)) / expected_value + (
+        dispersion - 1.0
+    ) * expected_value
+    assert checks["points_vmr_given_minutes"] == pytest.approx(identity, abs=1e-8), (
+        "the conditional points VMR the engine reports is not the compound "
+        f"identity at this athlete's own mix ({identity}), so the number in the "
+        "report is not the one the docstring's extrapolation argument is about"
+    )
+    assert checks["points_vmr_given_minutes"] == pytest.approx(2.475075, abs=1e-6)
+    assert checks["points_vmr_given_minutes_target"] == pytest.approx(
+        2.328891545818532, abs=1e-12
+    )
+    assert (
+        checks["points_vmr_given_minutes"] > checks["points_vmr_given_minutes_target"]
+    ), (
+        "the fixture athlete's shrunk mix has E[V] = 1.980 against the league's "
+        "1.857 and the compound identity is increasing in E[V], so his points "
+        "marginal is wider at the same dispersion. That extrapolation is "
+        "declared; if the direction has flipped, say why."
+    )
 
 
 # --------------------------------------------------------------------------
@@ -2244,7 +2585,33 @@ def test_the_two_mean_routes_agree_where_they_are_one_route_and_are_measured_whe
         gap = mu_events * (E[V_shrunk] - E[V_observed]) * minutes     (the mix)
             + (mu_events * E[V_observed] - rate_points) * minutes     (the weights)
 
-    On this athlete, in points: +0.212563 = -0.134648 + 0.347211. Both terms are
+    **`mix + weights == gap` is an algebraic rearrangement and cannot fail, so
+    the two halves are asserted individually.** `observed_share` cancels
+    identically between the two lines: re-evaluated here with `observed_share`
+    drawn uniformly from [-100, 100] -- values no shrinkage could produce --
+    `mix + weights - gap` came back within 4.6e-14 of zero on every draw of six
+    (-1.18e-14, +4.51e-14, +1.67e-14, -1.18e-14, -1.18e-14, -1.18e-14), which
+    is the float noise of the products and not a comparison. Until this
+    commit that identity was the whole of the decomposition's evidence.
+
+    Which half of it that mattered for is measurable rather than arguable.
+    Reading `role_prior` at bucket 5 or 7 instead of this athlete's 6 moves the
+    POINTS mix to -0.182397 and -0.106957 against -0.134648, and all three
+    satisfy the identity -- but the neighbouring box-score assertion catches
+    that one anyway, because `observed E[V]` goes to 2.007170 and 1.995842
+    against an exact 2.0. Doing the same to the THREES prior alone was caught by
+    NOTHING: `observed[threes]/observed[points_events]` moved from 2/7 to
+    0.292775 and the threes mix from -0.086123 to -0.133148 with this test
+    green, because no box-score identity pins a three-point share. So three
+    things are held now: each half of both decompositions against its own
+    measured value, that observed three-point share against 2/7, and the points
+    mix against the SAME quantity taken by a second route -- the box score fixes
+    `E[V_observed]` at exactly 2.000000 without inverting any shrinkage, so
+    `mix == rate_events * (E[V_shrunk] - 2.0) * minutes` compares the inverted
+    bank against the box score rather than against itself.
+
+    On this athlete, in points: +0.212563 = -0.134648 + 0.347211; in threes:
+    +0.012300 = -0.086123 + 0.098423. Both terms are
     structural and both are frozen. The first is the value mix being shrunk
     toward the league shape at `value_mix_shrinkage_events` = 9.220113 EVENTS
     while the points rate is shrunk toward the role prior at
@@ -2341,6 +2708,22 @@ def test_the_two_mean_routes_agree_where_they_are_one_route_and_are_measured_whe
         "decomposition is not the whole of it"
     )
 
+    assert observed["threes"] / observed["points_events"] == pytest.approx(
+        2.0 / 7.0, abs=1e-9
+    ), (
+        "the observed three-point share of this fixture's scoring events is no "
+        "longer 2/7. It is inverted out of the shrinkage the same way "
+        "E[V_observed] is, and unlike E[V_observed] no box-score identity pins "
+        "it, so it is pinned here instead: a wrong `role_prior` bucket or a "
+        "wrong `prior_weight` moves it and nothing else in this test would."
+    )
+
+    #: Each half of the decomposition, measured. `mix + weights == gap` holds
+    #: for ANY `observed_share`, so these are what carry the claim.
+    halves = {
+        "points": (-0.13464815840554356, 0.34721069422860906),
+        "threes": (-0.08612340270955803, 0.09842311620643912),
+    }
     for stat, share in (("points", expected_value), ("threes", float(severity[2]))):
         observed_share = observed[stat] / observed["points_events"]
         rate_events = float(projection.rates["points_events"])
@@ -2352,6 +2735,27 @@ def test_the_two_mean_routes_agree_where_they_are_one_route_and_are_measured_whe
             projection, f"player_{stat}"
         ) == pytest.approx(gap, abs=1e-9), stat
         assert mix < 0.0 < weights, stat
+        want_mix, want_weights = halves[stat]
+        assert mix == pytest.approx(want_mix, abs=1e-6), (
+            f"{stat}: the shrunk-mix half of the gap is now {mix:.6f} against "
+            f"the measured {want_mix:.6f}. The identity above holds whatever "
+            "`observed` is; this is the assertion that says `observed` is the "
+            "athlete's own unshrunk bank."
+        )
+        assert weights == pytest.approx(want_weights, abs=1e-6), (
+            f"{stat}: the credibility-weights half is now {weights:.6f} against "
+            f"the measured {want_weights:.6f}"
+        )
+    # The points mix, by the second route: the box score says a player's points
+    # are 1*FT + 2*FG2 + 3*FG3 and his scoring events are FT + FG2 + FG3, so
+    # E[V_observed] is 2.000000 here by identity and not by inversion.
+    assert float(projection.rates["points_events"]) * (
+        expected_value - 2.0
+    ) * minutes == pytest.approx(halves["points"][0], abs=1e-9), (
+        "the inverted bank and the box-score identity disagree about "
+        "E[V_observed], so one of `role_prior[bucket]` and `prior_weight` is "
+        "not the pair this projection was shrunk with"
+    )
     assert float(projection.prior_weight["points"]) == pytest.approx(0.685363, abs=1e-6)
     assert float(projection.prior_weight["points_events"]) == pytest.approx(
         0.721897, abs=1e-6
@@ -2912,7 +3316,41 @@ def test_design_4s_stop_rule_has_a_caller_on_the_pricing_path(
 # --------------------------------------------------------------------------
 
 
-def test_the_gaps_this_engine_still_has_are_the_ones_written_down() -> None:
+def _player_rows_in_archive(archive_dir) -> dict[str, list[str]]:
+    """`{snapshot filename: [player markets frozen in it]}`, through the shipped reader.
+
+    The detector behind clause 2's successor. It reads the frozen opinions the
+    way the settle pass does — `forward_evidence.snapshot_files` then
+    `read_snapshot`, never a hand-built glob or a hand-built column list — and
+    reports the rows whose market is in the PLAYER family of the registry.
+
+    Which market keys count is read off `markets.MARKETS` rather than typed,
+    because a player market added to the registry later must be watched by this
+    clause without anybody remembering to add it here.
+    """
+    from cbb_betting_lab import forward_evidence
+    from cbb_betting_lab import markets as markets_registry
+
+    player_keys = {
+        market.key
+        for market in markets_registry.MARKETS
+        if market.family == markets_registry.PLAYER
+    }
+    assert "player_points" in player_keys
+    found: dict[str, list[str]] = {}
+    for snapshot in forward_evidence.snapshot_files(archive_dir):
+        frozen = forward_evidence.read_snapshot(snapshot)
+        if "market" not in frozen.columns:
+            continue
+        hits = sorted(set(frozen["market"].dropna().astype(str)) & player_keys)
+        if hits:
+            found[snapshot.name] = hits
+    return found
+
+
+def test_the_gaps_this_engine_still_has_are_the_ones_written_down(
+    tmp_path: Path,
+) -> None:
     """Six, each of which goes red the day it is closed.
 
     The repository's form for a limitation: not a docstring claim that quietly
@@ -2938,14 +3376,35 @@ def test_the_gaps_this_engine_still_has_are_the_ones_written_down() -> None:
        10's 261,870-wager reconciliation has not run, and nothing may be graded
        until it does.
 
-       The successor is that **nothing stores what is now priced.** Design 9's
-       `data/processed/cbb_player_lines.csv` — one row per (game_id,
-       athlete_id, market) carrying `mu`, `phi_conditional`,
-       `model_probability`, `push_mass`, `void_probability` and the rest — does
-       not exist, so the probabilities this engine produces live only inside a
-       call and no run leaves a record of what it thought. The assertion below
-       goes red the day that file appears, and whoever writes it owes the
-       per-tier report this lab requires rather than a pooled headline.
+       The successor is that **no run has stored what is now priced — and the
+       writer that would store it is already wired, so the clause is guarded on
+       the archive and not only on design 9's file.** As it stood this clause
+       said "the probabilities this engine produces live only inside a call and
+       no run leaves a record of what it thought", and the only assertion under
+       it was that `data/processed/cbb_player_lines.csv` does not exist —
+       design 9's proposed store, which nothing in this branch writes or reads.
+       The path that actually records a player probability is
+       `gameday_card.run_card` -> `forward_evidence.write_snapshot`, wired in
+       this same branch and driven end to end by
+       `test_a_priced_prop_reaches_the_freeze_and_the_selection_gate_is_not_
+       what_stops_it`, which watches a player_points row reach a snapshot CSV
+       carrying `model_probability` and `edge`. The day
+       `price_backtest.DEFAULT_MODEL` is pointed at
+       `cbb_betting_lab.models.slate:slate_model`, the nightly card writes
+       exactly those rows into `data/archive/priced_snapshots/<day>.csv` — and
+       the clause as written would have stayed green while the branch went on
+       saying no run leaves a record.
+
+       So both are held. Design 9's per-row store still does not exist, and
+       `_player_rows_in_archive` finds no player-family row in any frozen
+       snapshot in this tree — measured today over 0 snapshot files, because
+       `data/archive/` has never been written here. The detector is exercised
+       on a fixture archive in the same assertion rather than trusted: a
+       snapshot written by the shipped `write_snapshot` with one player_points
+       row is found by it, so "no rows" is a fact about the archive and not
+       about the scan. `forward_evidence`'s own sentence — "no player prop has
+       ever been priced here" — is the same claim one module up, and it is
+       required to still be there so the two go red together.
     3. **No frozen combination target.** Design 8 says combination dispersions
        are "derived from the joint, never fitted -- checked against measured
        pra/pair VMR", and `structural_check_targets` carries no pra, pair or
@@ -3006,6 +3465,65 @@ def test_the_gaps_this_engine_still_has_are_the_ones_written_down() -> None:
         "outlive the call that made them. Say what is in it, report it per tier "
         "rather than pooled, and state that design 10's wager reconciliation "
         "still gates any grading of it."
+    )
+
+    # Clause 2's other half: the writer that is already wired. Prove the
+    # detector first, on an archive built by the shipped `write_snapshot`, so
+    # the empty result below is a fact about this tree and not about the scan.
+    from cbb_betting_lab import forward_evidence
+    from cbb_betting_lab.competitions import CBB
+    from cbb_betting_lab.reports import card_pricing
+
+    fixture_archive = tmp_path / "archive"
+    forward_evidence.write_snapshot(
+        [
+            {
+                "event_id": "E1",
+                "commence_time": "2024-01-15T23:00:00Z",
+                "home_team": "Home",
+                "away_team": "Away",
+                "market": "player_points",
+                "segment": "game",
+                "player": "Sean Bairstow",
+                "selection": "over",
+                "line": 14.5,
+                "american_odds": -110,
+                "book": "draftkings",
+            }
+        ],
+        {},
+        key_for=card_pricing.default_key_for(CBB),
+        verdicts_in_force=(),
+        snapshot_date=DAY,
+        archive_dir=fixture_archive,
+    )
+    assert _player_rows_in_archive(fixture_archive) == {
+        f"{DAY}.csv": ["player_points"]
+    }, (
+        "the detector below cannot see a player prop in a snapshot written by "
+        "the shipped writer, so the assertion after it certifies nothing"
+    )
+
+    frozen_player_rows = _player_rows_in_archive(forward_evidence.ARCHIVE_DIR)
+    assert not frozen_player_rows, (
+        "a run has frozen player-prop opinions into "
+        f"{forward_evidence.snapshot_dir(forward_evidence.ARCHIVE_DIR)}: "
+        f"{frozen_player_rows}. `write_snapshot` writes `model_probability` and "
+        "`edge` per row and is append-only within the day, so those "
+        "probabilities now outlive the call that made them and cannot be "
+        "withdrawn. Say what was recorded and on which model spec, and note "
+        "that design 10's 261,870-wager reconciliation still gates grading any "
+        "of it; do not delete this clause."
+    )
+    assert "no player prop has ever been priced here" in (
+        forward_evidence.__doc__ or ""
+    ), (
+        "`forward_evidence`'s module docstring no longer carries the sentence "
+        "the assertion above is the floor for. It is the same claim one module "
+        "up — inside the module that would do the recording — and it was "
+        "unguarded until this commit. If a prop has now been priced there, "
+        "rewrite both together; if the sentence was merely reworded, re-point "
+        "this assertion at the new words."
     )
 
     document = json.loads(SHAPES.read_text(encoding="utf-8"))

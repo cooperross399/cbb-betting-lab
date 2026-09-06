@@ -55,7 +55,7 @@ stops the run.
 
 `reconcile` **raises** `WagerCountMismatch`. It never warns, never returns a
 bool a caller can drop, never returns the smaller number and never "reconciles"
-by picking a side. Seven clauses, and clause 2 is the one that matters:
+by picking a side. Eight clauses, and clause 2 is the one that matters:
 
 1. a per-market count, or a per-market quote count, that is not what the frozen
    census artifact declares;
@@ -70,7 +70,13 @@ by picking a side. Seven clauses, and clause 2 is the one that matters:
 6. a source digest that is not the pinned one. The store is a SYMLINK into a
    shared tree, so an unpinned gate certifies whichever file the link pointed
    at;
-7. either market refused BY NAME appearing in the priced totals.
+7. either market refused BY NAME appearing in the priced totals;
+8. an expectation the frozen artifact does not carry at all. Every comparison
+   above is guarded by `if want is not None`, so a deleted key used to mean the
+   clause was silently not compared while it still counted towards
+   `Attribution.checked` -- a tick the gate had not earned. `compared_checks`
+   is now reported beside `checked` and the two are equal on any attribution
+   that returns.
 
 Counts are compared PER MARKET and never only as a total: two per-market errors
 of opposite sign cancel in a total, and the gate would pass on a store that had
@@ -403,6 +409,15 @@ class Attribution:
 
     A bool is droppable -- `if not gate(): pass` is one keystroke from `gate()`
     on its own line -- so the only two outcomes are this record and an exception.
+
+    `checked` is every clause the gate ATTEMPTED and `compared_checks` is how
+    many of them compared a value against an expectation the artifact carried.
+    The two are equal on every attribution `reconcile` can now return, because
+    an absent expectation raises -- and they are reported separately anyway, so
+    that "52 clauses ran" is a number a reader can check rather than infer from
+    `declared_checks + pinned_checks`, which are a partition of `checked` by
+    where the expectation came from and were reproduced in full by a record
+    with every value deleted.
     """
 
     census: Census
@@ -410,6 +425,7 @@ class Attribution:
     checked: tuple[str, ...]
     declared_checks: int
     pinned_checks: int
+    compared_checks: int
 
     def report(self) -> str:
         return (
@@ -789,11 +805,36 @@ def reconcile(taken: Census, expected: Expected) -> Attribution:
 
     Returns an `Attribution` or raises `WagerCountMismatch`. There is no third
     outcome and no bool.
+
+    **An expectation the artifact does not carry is a complaint, not a skip.**
+    Every value comparison below is guarded by `if want is not None`, and until
+    this commit an absent key meant the clause was silently not compared while
+    `note()` still appended it to `Attribution.checked` and counted it into
+    `declared_checks` or `pinned_checks`. The two counts are what stands for "52
+    clauses ran", and they came off the `sources` block rather than off the
+    value sections, so they were reproduced in full by a record with every value
+    deleted. Measured before the repair, against the real module: an
+    expectations record whose `quotes`, `totals`, `subjects` and `invariants`
+    were emptied to `{}` reconciled a census with three quotes where the record
+    had been written from a census with two, returned normally,
+    `len(checked) == 30`, `pinned_checks == 30`, and `"quotes[player_points]" in
+    checked` was True. `load_expected`'s own docstring says an empty record
+    "would let every count through" and it guards only against a missing FILE.
+
+    So the clauses whose expectation is absent are collected and refused
+    together at the end, naming each one. A count that is present and moved
+    already raises; a count that has been deleted from the artifact now raises
+    too, and the gate cannot certify a store on a clause it did not compare.
+    `Attribution.compared_checks` is the number of clauses that compared a
+    value, beside the `len(checked)` that counts every clause attempted, so a
+    reader can see the difference rather than infer it.
     """
     complaints: list[str] = []
     checked: list[str] = []
+    missing: list[str] = []
     declared = 0
     pinned = 0
+    compared = 0
 
     def note(name: str) -> None:
         nonlocal declared, pinned
@@ -802,6 +843,20 @@ def reconcile(taken: Census, expected: Expected) -> Attribution:
             declared += 1
         else:
             pinned += 1
+
+    def carried(name: str, want: object | None) -> object | None:
+        """Record whether the artifact carried an expectation for `name`.
+
+        Returns `want` unchanged so the comparison below reads the same as it
+        did; the bookkeeping is the point. A clause reaching here with `None`
+        did not compare anything and must not be counted as though it had.
+        """
+        nonlocal compared
+        if want is None:
+            missing.append(name)
+        else:
+            compared += 1
+        return want
 
     if taken.source_sha256 != expected.source_sha256:
         complaints.append(
@@ -825,8 +880,10 @@ def reconcile(taken: Census, expected: Expected) -> Attribution:
             "that vanished is a denominator that moved without anyone saying so."
         )
     for count in sorted(taken.by_market, key=lambda m: m.market):
-        want_wagers = expected.wagers_raw.get(count.market)
         note(f"wagers_raw[{count.market}]")
+        want_wagers = carried(
+            f"wagers_raw[{count.market}]", expected.wagers_raw.get(count.market)
+        )
         if want_wagers is not None and count.wagers_raw != want_wagers:
             complaints.append(
                 f"{count.market}: {count.wagers_raw:,} wagers under `raw`, "
@@ -834,8 +891,10 @@ def reconcile(taken: Census, expected: Expected) -> Attribution:
                 f"{count.wagers_raw - want_wagers:+,}). Source of the "
                 f"expectation: {expected.source_of(f'wagers_raw[{count.market}]')}."
             )
-        want_quotes = expected.quotes.get(count.market)
         note(f"quotes[{count.market}]")
+        want_quotes = carried(
+            f"quotes[{count.market}]", expected.quotes.get(count.market)
+        )
         if want_quotes is not None and count.quotes != want_quotes:
             complaints.append(
                 f"{count.market}: {count.quotes:,} quotes, expected "
@@ -853,7 +912,7 @@ def reconcile(taken: Census, expected: Expected) -> Attribution:
         ("refused_folded", taken.refused_folded),
     ):
         note(name)
-        want = expected.totals.get(name)
+        want = carried(name, expected.totals.get(name))
         if want is not None and value != want:
             complaints.append(
                 f"{name}: {value:,}, expected {want:,} (difference "
@@ -927,7 +986,7 @@ def reconcile(taken: Census, expected: Expected) -> Attribution:
         ("ambiguous_subjects", len(taken.ambiguous_subjects)),
     ):
         note(name)
-        want = expected.invariants.get(name)
+        want = carried(name, expected.invariants.get(name))
         if want is not None and value != int(want):
             complaints.append(
                 f"{name}: {value:,}, expected {int(want):,}. Source of the "
@@ -939,7 +998,7 @@ def reconcile(taken: Census, expected: Expected) -> Attribution:
         ("snapshot_phases", taken.snapshot_phases),
     ):
         note(name)
-        want = expected.invariants.get(name)
+        want = carried(name, expected.invariants.get(name))
         if want is not None and list(value) != list(want):
             complaints.append(
                 f"{name}: {list(value)}, expected {list(want)}. Source of the "
@@ -953,7 +1012,7 @@ def reconcile(taken: Census, expected: Expected) -> Attribution:
         ("player_points_folded", taken.points_subjects_folded),
     ):
         note(f"subjects[{name}]")
-        want = expected.subjects.get(name)
+        want = carried(f"subjects[{name}]", expected.subjects.get(name))
         if want is not None and value != want:
             complaints.append(
                 f"subjects[{name}]: {value:,}, expected {want:,}. These are the "
@@ -971,6 +1030,21 @@ def reconcile(taken: Census, expected: Expected) -> Attribution:
             "smaller for a reason nobody wrote down."
         )
 
+    if missing:
+        complaints.append(
+            f"{len(missing)} clause(s) were counted as checked and never "
+            f"compared, because the frozen artifact carries no expectation for "
+            f"them: {missing}. `Attribution.checked` would report "
+            f"{len(checked)} clauses and only {compared} of the value "
+            "comparisons ran. A gate that certifies a store on a clause it did "
+            "not compare is printing a tick it did not earn -- which is worse "
+            "than no gate -- and this is what a regenerated "
+            "cbb_player_census.json that dropped a `quotes[...]`, a `totals` or "
+            "a `subjects` entry while keeping its `sources` row would look "
+            "like. Restore the expectation or say, in the artifact, that the "
+            "clause no longer applies."
+        )
+
     if complaints:
         raise WagerCountMismatch(
             "The wager census does not reconcile, so nothing may be graded. "
@@ -985,6 +1059,7 @@ def reconcile(taken: Census, expected: Expected) -> Attribution:
         checked=tuple(checked),
         declared_checks=declared,
         pinned_checks=pinned,
+        compared_checks=compared,
     )
 
 

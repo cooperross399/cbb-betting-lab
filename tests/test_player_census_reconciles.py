@@ -462,6 +462,111 @@ def test_a_mismatch_stops_the_run_and_the_message_carries_both_numbers(tmp_path)
     assert "player_points" in message
 
 
+def test_a_clause_whose_expectation_is_absent_is_refused_not_counted_as_checked(
+    tmp_path,
+):
+    """A comparison that did not run must not be reported as a comparison.
+
+    Every value clause in `reconcile` is guarded by `if want is not None`, and
+    until this commit an expectation the artifact did not carry was silently not
+    compared while `note()` still appended the clause to `Attribution.checked`
+    and counted it into `declared_checks` or `pinned_checks`. Those two counts
+    are what `test_the_gate_reconciles_the_store_it_is_pinned_to` asserts as
+    "52 clauses ran", and both come off the `sources` block rather than off the
+    value sections — so a record with every value deleted reproduced them in
+    full.
+
+    Re-measured here against the module with the repair removed, and reproduced
+    below as the last case: an expectations record written from this fixture's
+    census and then emptied to `quotes: {}`, `totals: {}`, `subjects: {}`,
+    `invariants: {}` reconciled that same census and RETURNED NORMALLY, with
+    `len(checked) == 30`, `pinned_checks == 30`, `declared_checks == 0` and
+    `"quotes[player_points]" in checked` True -- while exactly ONE of the thirty
+    clauses had compared anything, because `wagers_raw` is a fifth section the
+    probe leaves alone. The realistic version is not
+    the emptied record: it is a regenerated `data/processed/
+    cbb_player_census.json` that drops one `quotes[...]`, `totals.priced_raw` or
+    `subjects.folded` while keeping its `sources` row, which left both that test
+    and `test_the_frozen_artifact_says_where_every_number_came_from` — which
+    counts `sources` keys — green while the gate certified a store it had not
+    compared on those clauses.
+
+    Held now: an absent expectation is a complaint naming the clause, and
+    `Attribution.compared_checks` says how many comparisons actually ran beside
+    the `len(checked)` that says how many were attempted. On this fixture the
+    two are 24 and 30 — one market gives two clauses, plus six totals, twelve
+    invariants and four subject counts, and the six that need no expectation
+    (the digest, the residual, the two collision clauses, the roster and the
+    null key fields) are attempted and compared against nothing by design.
+    """
+    taken, _, _ = take(tmp_path, [quote(), quote(book="fanduel", american_odds="-105")])
+    good = write_expected(tmp_path / "good.json", taken)
+    attribution = PC.reconcile(taken, PC.load_expected(good))
+    assert attribution.compared_checks == 24, (
+        f"{attribution.compared_checks} value comparisons ran on a "
+        "single-market fixture; two per market, six totals, twelve invariants "
+        "and four subject counts is 24"
+    )
+    assert len(attribution.checked) == 30
+    assert (
+        attribution.declared_checks + attribution.pinned_checks
+        == len(attribution.checked)
+    ), "the source split must partition the clauses attempted, not a subset"
+    assert attribution.pinned_checks == 30 and attribution.declared_checks == 0, (
+        "this fixture's artifact carries an empty `sources` block, so all 30 "
+        "clauses are PINNED -- which is the pair of numbers the probe in the "
+        "docstring reproduced with every value section emptied"
+    )
+    assert "quotes[player_points]" in attribution.checked
+
+    def without(name: str, *keys: str):
+        """The same artifact with one expectation DELETED, not moved."""
+        record = json.loads(good.read_text(encoding="utf-8"))
+        section = record
+        for key in keys[:-1]:
+            section = section[key]
+        del section[keys[-1]]
+        path = tmp_path / f"{name}.json"
+        path.write_text(json.dumps(record, indent=1), encoding="utf-8")
+        return PC.load_expected(path)
+
+    for name, keys, clause in (
+        ("no_quotes", ("quotes", "player_points"), "quotes[player_points]"),
+        ("no_total", ("totals", "priced_raw"), "priced_raw"),
+        ("no_subject", ("subjects", "folded"), "subjects[folded]"),
+        ("no_invariant", ("invariants", "player_quotes"), "player_quotes"),
+    ):
+        with pytest.raises(PC.WagerCountMismatch) as raised:
+            PC.reconcile(taken, without(name, *keys))
+        message = str(raised.value)
+        assert clause in message, message
+        assert "counted as checked and never compared" in message
+        assert "The run stops until it reconciles" in message
+
+    # And the emptied record, which is the probe that found this, run against
+    # the census it WAS written from so that nothing else can be the reason it
+    # stops. The digest matches, the one per-market wager count matches, and
+    # every other clause has nothing to compare against.
+    record = json.loads(good.read_text(encoding="utf-8"))
+    for section in ("quotes", "totals", "subjects", "invariants"):
+        record[section] = {}
+    emptied = tmp_path / "emptied.json"
+    emptied.write_text(json.dumps(record, indent=1), encoding="utf-8")
+
+    with pytest.raises(PC.WagerCountMismatch) as raised:
+        PC.reconcile(taken, PC.load_expected(emptied))
+    message = str(raised.value)
+    # 23 and not 24: `wagers_raw` is a fifth section and the probe left it
+    # alone, so exactly one comparison -- the per-market wager count -- ran.
+    assert "23 clause(s) were counted as checked and never compared" in message, message
+    assert "only 1 of the value comparisons ran" in message
+    assert "quotes[player_points]" in message
+    assert "The price store is not the one this census" not in message, (
+        "the digest matched, so this refusal has exactly one cause and it is "
+        "the one this test is about"
+    )
+
+
 def test_the_store_is_pinned_by_its_digest(tmp_path):
     """The store is a symlink into a shared tree and nothing else pins it.
 
@@ -817,6 +922,21 @@ def test_the_gate_reconciles_the_store_it_is_pinned_to():
     assert taken.snapshot_phases == ("card",)
     assert attribution.declared_checks == 23
     assert attribution.pinned_checks == 29
+    # And the 52 are 52 clauses that COMPARED something. `declared_checks` and
+    # `pinned_checks` partition the clauses attempted, by where the expectation
+    # came from, and both are read off the artifact's `sources` block; an
+    # expectation deleted from a value section left them unmoved while the
+    # comparison silently did not run. See
+    # `test_a_clause_whose_expectation_is_absent_is_refused_not_counted_as_
+    # checked` for the measurement.
+    assert len(attribution.checked) == 52
+    assert attribution.compared_checks == 46, (
+        f"{attribution.compared_checks} of the 52 clauses compared a value "
+        "against the artifact. Twelve markets give 24, plus six totals, twelve "
+        "invariants and four subject counts; the remaining six -- the digest, "
+        "the residual, the two collision clauses, the roster and the null key "
+        "fields -- need no expectation and are checked unconditionally."
+    )
     assert sum(c.odds_disagreements for c in taken.collisions) == 3959, (
         "the collapsing keys that carry two different american_odds are the "
         "ones where the shipped best_price_per_wager returns two rows for one "
