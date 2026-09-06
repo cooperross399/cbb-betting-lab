@@ -930,6 +930,34 @@ def assert_walk_forward(
     not read*, which is a statement about a table rather than about a day; a
     pricer that read a private frame and reported nothing is caught by
     :func:`assert_priced_from_the_past`, not here.
+
+    **The two kinds of column are NOT held to the same rule, and the asymmetry
+    is written down rather than left to be inferred.** `priced_through` is
+    required of every bet and is held to exactly the rule this function applied
+    before a second column existed. A `<name>_priced_through` column is
+    OPTIONAL: a bet priced by a model that never read the player frame carries
+    no player stamp, and pandas hands that absence over as NaN.
+
+    The first version of this check forgave the STRING `"nan"` on every column
+    at once. **Measured, that is a narrower mistake than it looks and a real
+    one either way.** Under pandas 2, `Series.astype(str)` leaves a float NaN
+    as NaN rather than turning it into the text `"nan"`, and every comparison
+    against NaN is False — so a genuinely absent stamp never triggered this
+    guard on any version of it, including origin/main's. What `!= "nan"`
+    actually exempted was a stamp whose literal text is `"nan"`, which is not
+    an absent stamp at all: it is a value somebody wrote, and it sorts above
+    every ISO date, so exempting it hid exactly the rows this guard exists to
+    catch.
+
+    So absence is now read off the value with :meth:`pandas.Series.isna`,
+    before anything is stringified, and forgiven only on the optional columns.
+    A literal `"nan"` is compared like any other text. This is identical to
+    origin/main on `priced_through` and strictly stricter on the columns main
+    never looked at.
+
+    `tests/test_run_price_backtest.py` pins all three: a future stamp raises on
+    either column, an absent optional stamp does not, and the literal text
+    `"nan"` raises.
     """
     if bets.empty:
         return
@@ -942,8 +970,15 @@ def assert_walk_forward(
         return
     day = bets[day_column].astype(str)
     for column in columns:
-        through = bets[column].astype(str)
-        leaked = bets[(through != "") & (through != "nan") & (through >= day)]
+        raw = bets[column]
+        through = raw.astype(str)
+        # A Series, never a bare bool: `~False` is the integer -1, and a mask
+        # built from it silently stops masking.
+        if column == "priced_through":
+            forgiven = pd.Series(False, index=bets.index)
+        else:
+            forgiven = raw.isna()
+        leaked = bets[(~forgiven) & (through != "") & (through >= day)]
         if not leaked.empty:
             raise WalkForwardLeak(
                 f"{len(leaked):,} bet(s) carry a `{column}` at or after the "

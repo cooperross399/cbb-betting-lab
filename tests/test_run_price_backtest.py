@@ -2737,3 +2737,41 @@ def test_a_stale_record_is_refused_rather_than_rendered_with_holes(tmp_path, cap
     assert code != 0
     assert "Re-run the backtest" in "".join(capsys.readouterr())
     assert not lab.report_path.exists()
+
+
+def test_the_optional_stamp_is_forgiven_when_absent_and_never_when_written():
+    """The asymmetry between the required stamp and the optional ones.
+
+    `priced_through` is required of every bet; `player_priced_through` is not,
+    and a bet priced by a model that never read the player frame carries NaN
+    there. Forgiving that absence is correct. Forgiving the literal text
+    `"nan"` is not: it sorts above every ISO date, so an exemption for it hides
+    precisely the rows this guard exists to catch.
+
+    Measured while writing this: under pandas 2, `astype(str)` leaves a float
+    NaN as NaN and every comparison against NaN is False, so a genuinely absent
+    stamp never reached the comparison on any version of this guard. The
+    exemption that was removed only ever applied to written text.
+    """
+    day = "2024-01-05"
+    base = {"slate_date": [day], "priced_through": ["2024-01-04"]}
+
+    def run(extra):
+        frame = pd.DataFrame({**base, **extra})
+        PB.assert_walk_forward(frame, day_column="slate_date")
+
+    # Absent optional stamp: forgiven.
+    run({"player_priced_through": [float("nan")]})
+    run({"player_priced_through": [""]})
+
+    # Written optional stamp reaching the day: refused.
+    for value in ("2024-01-06", day, "nan"):
+        with pytest.raises(PB.WalkForwardLeak):
+            run({"player_priced_through": [value]})
+
+    # The required column keeps origin/main's rule exactly.
+    with pytest.raises(PB.WalkForwardLeak):
+        PB.assert_walk_forward(
+            pd.DataFrame({"slate_date": [day], "priced_through": ["2024-01-06"]}),
+            day_column="slate_date",
+        )
