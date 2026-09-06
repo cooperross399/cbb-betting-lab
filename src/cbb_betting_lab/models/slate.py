@@ -90,6 +90,7 @@ from pathlib import Path
 import pandas as pd
 
 from cbb_betting_lab.competitions import CBB, Competition
+from cbb_betting_lab.conferences import Tier, TierTable
 from cbb_betting_lab.models import ratings
 from cbb_betting_lab.models.player_shapes import (
     DEFAULT_SHAPES_PATH,
@@ -598,6 +599,7 @@ def slate_model(
             competition=competition,
             season=int(season),
             shapes=shapes,
+            matchups=matchups,
         )
     )
 
@@ -616,6 +618,49 @@ def slate_model(
     return model
 
 
+def _tiers_from(matchups: "Mapping[str, ratings.Matchup]") -> TierTable:
+    """A team-to-tier lookup taken from the matchups the team half just built.
+
+    **Not a second tier table.** `matchups_for` builds one from seasons
+    STRICTLY EARLIER than the priced one — letting the priced season in moves
+    34 of 367 teams across a boundary, and uses that season's own conference
+    membership to price it — and every `Matchup` carries the two tiers it read
+    from that table. Reading them back is therefore the same table, arrived at
+    without a second construction that could drift from the rule.
+
+    Without this the estimator was called with no tiers at all and every
+    projection carried `unplaced`: measured, 25 of 25 built from the real
+    2024-01-20 cut. Per-tier reporting is a hard rule of this lab, so a field
+    that never populates is not cosmetic — the commit that writes
+    `data/processed/cbb_player_lines.csv` would either write "unplaced" into
+    every row or reach for the price store's per-game `tier` column, which is
+    the substitution design section 9 names and which files a high-major
+    starter under whichever tier his opponent decided.
+
+    A team the matchups do not mention stays `UNPLACED`, which is
+    `TierTable.tier_for`'s own answer for a team it does not know.
+    """
+    team_tier: dict = {}
+    for matchup in matchups.values():
+        for team_id, tier in (
+            (getattr(matchup, "home_team_id", None), getattr(matchup, "home_tier", None)),
+            (getattr(matchup, "away_team_id", None), getattr(matchup, "away_tier", None)),
+        ):
+            if team_id is None or tier is None:
+                continue
+            try:
+                team_tier[team_id] = Tier(tier) if not isinstance(tier, Tier) else tier
+            except ValueError:
+                continue
+    return TierTable(
+        team_tier=team_tier,
+        conference_tier={},
+        team_margin={},
+        conference_margin={},
+        seasons=(),
+    )
+
+
 def _player_half(
     *,
     day: str,
@@ -624,6 +669,7 @@ def _player_half(
     competition: Competition,
     season: int,
     shapes: PlayerShapes | None,
+    matchups: "Mapping[str, ratings.Matchup]",
 ):
     """The player half, or the full sentence saying which absence this is.
 
@@ -653,6 +699,39 @@ def _player_half(
             # names the constant and the window, and a paraphrase would lose
             # exactly the part an operator needs.
             return {}, {}, {}, "", {}, str(exc)
+    else:
+        # **A supplied `shapes` is an injection point past the provenance
+        # guard, and it was open.** `load_player_shapes` refuses a season the
+        # constants were fitted or validated on, but it is the SEASON ARGUMENT
+        # it checks, not the day anything is later priced for — so a caller
+        # could load for a permitted season and then price a forbidden one with
+        # the object. Probed against the real frozen file:
+        # `load_player_shapes(priced_season=2023)` is refused because 2023 is
+        # the declared validation season, while `priced_season=2025` is
+        # accepted and returns byte-identical constants. So
+        # `slate_model(day="2023-01-15", shapes=load_player_shapes(
+        # priced_season=2025))` priced the validation season with the constants
+        # validated on it and the refusal never fired.
+        #
+        # The object carries the season it was checked for, so the check is one
+        # comparison: it must be the season of the day being priced.
+        declared = getattr(shapes, "priced_season", None)
+        if declared is None or int(declared) != int(season):
+            return (
+                {},
+                {},
+                {},
+                "",
+                {},
+                (
+                    f"the player shapes handed to the slate were checked for "
+                    f"season {declared!r} and this slate prices season "
+                    f"{int(season)}. The provenance guard runs on the season it "
+                    "is given, so a set of constants checked for one season and "
+                    "used on another is unchecked — which is how the validation "
+                    "season would be priced with the constants validated on it."
+                ),
+            )
 
     result = estimator.player_projections_for(
         day=day,
@@ -660,6 +739,7 @@ def _player_half(
         prices=prices,
         shapes=shapes,
         competition=competition,
+        tiers=_tiers_from(matchups),
     )
     return _unpack(result, player_history=player_history)
 
