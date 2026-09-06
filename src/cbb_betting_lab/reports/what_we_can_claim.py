@@ -1942,14 +1942,44 @@ def render(record: Mapping) -> str:
             + "."
         )
         add("")
-        add(
-            "**It does not have one.** The model has been scored on ten "
-            "markets and every one is a team market; no player market has ever "
-            "been priced by anything in this repository. This section is about "
-            "the gate, not about a price — saying otherwise, which this "
-            "document did until 2026-09-06, tells a reader the lab holds "
-            "prices it has never produced."
+        # **Counted from the record, never typed.** This sentence was a
+        # hard-coded absolute, and it was true only because nothing had yet
+        # priced a player market. That made it a claim held up by an accident:
+        # the day a player market IS scored, the generator would go on printing
+        # "no player market has ever been priced" beside a record containing
+        # player probabilities — and this same sentence was already wrong once,
+        # on 2026-09-06, in the opposite direction. It now reads the measured
+        # cells, so it can only ever say what the record says.
+        scored = sorted(
+            {
+                _text(row.get("market"))
+                for row in record.get("claims", []) or []
+                if _text(row.get("market"))
+            }
         )
+        player_scored = [
+            key
+            for key in scored
+            if key in markets_registry.MARKETS_BY_KEY
+            and markets_registry.MARKETS_BY_KEY[key].family == markets_registry.PLAYER
+        ]
+        if not player_scored:
+            add(
+                f"**It does not have one.** The model has been scored on "
+                f"{len(scored)} market(s) and not one of them is a player "
+                "market. This section is about the gate, not about a price — "
+                "saying otherwise, which this document did until 2026-09-06, "
+                "tells a reader the lab holds prices it has never produced."
+            )
+        else:
+            add(
+                f"**{len(player_scored)} player market(s) have now been "
+                f"scored**: "
+                + ", ".join(f"`{key}`" for key in player_scored)
+                + ". The gate below is a separate bar and still stands: a "
+                "price that cannot reach `Availability.CONFIRMED` produces no "
+                "selection whatever its number says."
+            )
         add("")
         add(NOT_A_NO_VALUE_CALL)
         add("")

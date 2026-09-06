@@ -2,7 +2,7 @@
 
 Generated from the measurement records on disk, so it cannot drift from them. The hand-written rules — written before the first measurement, which is the whole point of them — live in `docs/what_we_can_and_cannot_claim.md`. **This file is re-rendered from its own run record and is never edited by hand.**
 
-- Generated: 2026-09-06T17:47:56+00:00
+- Generated: 2026-09-06T20:56:55+00:00
 - Sample floor: **200 bets**, declared in advance. Below it this document prints a phrase and not a number.
 
 **The only result that survives is a loss.** 32 market-and-tier cell(s) across 10 market(s) are measured against real prices. None excludes zero on the winning side; 3 exclude(s) it on the **losing** side after correcting for everything this lab has ever tested, which is a **demonstrated deficit**: `team_total` / mid_major (historical price backtest, bets) at -5.8% over 13,478 bets across 384 days; `moneyline` / low_major (historical price backtest, bets) at -7.9% over 7,561 bets across 632 days; `total_points` / low_major (historical price backtest, bets) at -5.2% over 17,903 bets across 7,131 games. A demonstrated deficit is a finding, not a null result, and it is the finding this lab has.
@@ -113,7 +113,7 @@ Division I men's basketball has **no mandated injury report**. Measured on 2026-
 
 So nothing reaches `Availability.CONFIRMED`, and these 17 market(s) **could not produce a selection even if this lab had a price for them**: `player_points`, `player_rebounds`, `player_assists`, `player_threes`, `player_blocks`, `player_steals`, `player_turnovers`, `player_field_goals`, `player_frees_made`, `player_frees_attempts`, `player_pra`, `player_points_rebounds`, `player_points_assists`, `player_rebounds_assists`, `player_blocks_steals`, `player_triple_double`, `player_first_team_basket`.
 
-**It does not have one.** The model has been scored on ten markets and every one is a team market; no player market has ever been priced by anything in this repository. This section is about the gate, not about a price — saying otherwise, which this document did until 2026-09-06, tells a reader the lab holds prices it has never produced.
+**It does not have one.** The model has been scored on 10 market(s) and not one of them is a player market. This section is about the gate, not about a price — saying otherwise, which this document did until 2026-09-06, tells a reader the lab holds prices it has never produced.
 
 **A market in this list is not a market judged to have no value.** It is a market with no price-based evidence either way, and nothing in this repository will present the two as the same thing. It is not a pass, it is not an avoid, and it is not a no-value call.
 

@@ -17,6 +17,7 @@ has to get right for the headline to be worth reading:
 
 from __future__ import annotations
 
+import copy
 import json
 import subprocess
 import sys
@@ -1081,3 +1082,39 @@ def test_nothing_in_this_repository_calls_a_player_prop_priced():
         "these lines describe a player prop as priced, and this lab has never "
         "priced one:\n  " + "\n  ".join(offenders)
     )
+
+
+def test_the_no_player_price_sentence_is_counted_rather_than_typed():
+    """A claim held up by an accident is not held up.
+
+    The sentence "no player market has ever been priced by anything in this
+    repository" was a hard-coded absolute. It was true — but only because
+    nothing had priced one yet, and the day something does, a hard-coded
+    sentence goes on saying it beside a record full of player probabilities.
+    This same sentence was already wrong once, on 2026-09-06, in the opposite
+    direction: it claimed the lab HELD prices it had never produced.
+
+    So it is derived. Feeding the renderer a record whose claims name a player
+    market must change what the document says.
+    """
+    record = WC.build_record(output_dir=Path("data/outputs"))
+    page = WC.render(record)
+    assert "not one of them is a player market" in page
+
+    # And with one scored, the sentence inverts rather than persisting.
+    from cbb_betting_lab.models import player_rates as PR
+
+    priced_player_market = PR.PRICED_MARKETS[0]
+    invented = copy.deepcopy(record)
+    claims = list(invented.get("claims") or [])
+    template = dict(claims[0]) if claims else {"market": "", "tier": "high_major"}
+    template["market"] = priced_player_market
+    invented["claims"] = claims + [template]
+
+    moved = WC.render(invented)
+    assert "not one of them is a player market" not in moved, (
+        "a record naming a scored player market still renders the sentence "
+        "saying none has ever been priced"
+    )
+    assert f"`{priced_player_market}`" in moved
+    assert "player market(s) have now been scored" in moved
