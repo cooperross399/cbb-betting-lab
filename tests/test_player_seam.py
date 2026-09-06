@@ -46,6 +46,7 @@ import pytest
 
 from cbb_betting_lab.competitions import CBB
 from cbb_betting_lab.markets import FULL_GAME
+from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.models import slate
 from cbb_betting_lab.reports import card_pricing, gameday_card
 from cbb_betting_lab.reports import price_backtest as PB
@@ -1212,3 +1213,84 @@ def test_the_seams_player_half_actually_runs(fixture_raw_dir) -> None:
         "the player half ran and said nothing about a quoted, resolvable "
         "subject with eight prior appearances"
     )
+
+    # **And every projection carries a real tier.** Per-tier reporting is a
+    # hard rule of this lab, and the estimator was called with no tier table at
+    # all: measured, 25 of 25 projections built from the real 2024-01-20 cut
+    # carried `unplaced`. The commit that writes `cbb_player_lines.csv` would
+    # have written that into every row, or reached for the price store's
+    # per-game `tier` column — which files a high-major starter under whichever
+    # tier his opponent decided.
+    projections = [p for by in model.players.values() for p in by.values()]
+    assert projections, "no projection to check a tier on"
+    tiers = {p.player_tier for p in projections}
+    assert Tier.UNPLACED.value not in tiers, (
+        f"a projection carries {Tier.UNPLACED.value!r}; the tier table the "
+        "team half built was not handed to the estimator"
+    )
+    # It is the player's OWN team's tier, read back from the matchup that
+    # named it — not a second tier table that could drift from the
+    # strictly-earlier rule `matchups_for` applies.
+    matchup = model.matchups[next(iter(model.matchups))]
+    assert tiers == {matchup.home_tier}, (
+        f"projection tiers {tiers} do not match the home side's "
+        f"{matchup.home_tier!r}, and the subject plays for the home team"
+    )
+
+
+def test_shapes_checked_for_another_season_are_refused(fixture_raw_dir) -> None:
+    """The injection point past the provenance guard, closed.
+
+    `load_player_shapes` refuses a season the constants were fitted or
+    validated on — but it checks the SEASON ARGUMENT it is given, not the day
+    anything is later priced for. Probed against the real frozen file:
+    `priced_season=2023` is refused, because 2023 is the declared validation
+    season, while `priced_season=2025` is accepted and returns byte-identical
+    constants. So a caller could load for a permitted season and hand the
+    object to a slate pricing a forbidden one, and the refusal never fired —
+    the validation season priced with the constants validated on it, which is
+    the one thing the frozen file exists to prevent.
+    """
+    from cbb_betting_lab.models.player_shapes import load_player_shapes
+
+    frozen = REPO / "data" / "processed" / "cbb_player_shapes.json"
+    day = "2025-11-29"
+
+    # The bypass, as it was available: constants checked for a season that is
+    # not this slate's.
+    wrong = load_player_shapes(frozen, priced_season=2025)
+    assert int(wrong.priced_season) == 2025
+
+    model = slate.slate_model(
+        day=day,  # season 2026
+        history=_countable_team_games(day),
+        player_history=_player_history(("2025-11-21",)),
+        prices=pd.DataFrame({"event_id": ["e1"], "game_id": [401823218]}),
+        shapes=wrong,
+        raw_dir=fixture_raw_dir,
+    )
+    assert not model.players, "a slate priced on constants checked for another season"
+    assert "checked for season 2025" in model.player_absence_reason
+    assert "prices season 2026" in model.player_absence_reason
+
+    # And the matching object is accepted, so the refusal is about the mismatch
+    # rather than about supplying shapes at all.
+    right = load_player_shapes(frozen, priced_season=2026)
+    ok = slate.slate_model(
+        day=day,
+        history=_countable_team_games(day),
+        player_history=_player_history(("2025-11-21",)),
+        prices=pd.DataFrame({"event_id": ["e1"], "game_id": [401823218]}),
+        shapes=right,
+        raw_dir=fixture_raw_dir,
+    )
+    assert "checked for season" not in (ok.player_absence_reason or "")
+
+
+def _countable_team_games(day: str) -> pd.DataFrame:
+    """The real team table cut before `day`. `ratings.prepare` needs its columns."""
+    from conftest import processed_table
+
+    path, _ = processed_table("cbb_team_games.csv")
+    frame = pd.read_csv(path, low_memory=False)
+    return frame[frame["slate_date"].astype(str) < day]
