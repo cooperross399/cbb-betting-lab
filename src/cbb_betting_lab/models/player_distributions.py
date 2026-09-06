@@ -284,7 +284,10 @@ COPULA_NODES_PER_CELL: int = 5
 
 #: How many geometric slivers the first and last latent cell are cut into, and
 #: by what factor. Declared for accuracy; :func:`_split_outer_cells` carries the
-#: measurement that fixes them.
+#: whole measurement, including what it does NOT settle — the sum pmf's error
+#: against an 800-node reference is 1.289e-09 at six pieces and 9.181e-10 at
+#: seven, so the measurement bounds the choice rather than picking six out of
+#: it. Four is the bottom of a U in the ratio, jointly with five.
 OUTER_CELL_PIECES: int = 6
 OUTER_CELL_RATIO: float = 4.0
 
@@ -390,8 +393,15 @@ STRUCTURAL_CHECK_POPULATION_FLOOR: int = 8
 #: The price of the choice is reported and not tuned away: the thinned
 #: three-point marginal's produced VMR is then 1.0206 against a measured
 #: `conditional_dispersion["threes"]` of 1.0846864899201918, about 6% narrow.
-#: Design 4 declares a tolerance for (a) and for nothing else, so that one is
-#: report-only. Both numbers appear in :meth:`PlayerDistribution.structural_checks`.
+#: **That is at the LEAGUE `value_pmf`**, whose three-point share is
+#: 0.19423721541072833; re-measured, `1 + p3*(phi - 1)` is 1.020575683621319
+#: there and the narrowness 5.9105%. It runs through the athlete's own shrunk
+#: mix, so it is a different number for every athlete — the test fixture's
+#: 0.2727822483104362 gives 1.0288960137061232 and 5.14% — and
+#: :meth:`PlayerDistribution.phi_conditional` reports the athlete's, not this
+#: one. Design 4 declares a tolerance for (a) and for nothing else, so that one
+#: is report-only. Both numbers appear in
+#: :meth:`PlayerDistribution.structural_checks`.
 #:
 #: **The sentence in the frozen file that reads as a prohibition on this line,
 #: quoted and answered.** `points_compound_reconciliation`'s note ends:
@@ -922,17 +932,91 @@ def _split_outer_cells(edges: np.ndarray) -> np.ndarray:
 
     **The one place a five-node rule was measurably not enough, and why.** In
     probability space the integrand is `P(X_next = j | Z = Phi^{-1}(u))`, whose
-    derivative is `-rho/s * phi((c - rho*z)/s) / phi(z)`. That ratio is 2.3e5 at
-    `z = -5` and 2.8e15 at the truncation, so inside the OUTER cells -- and only
-    those, because only they reach the truncation -- the integrand goes from one
-    plateau to another over a stretch that is invisible to any fixed-order rule.
-    Every interior cell is smooth and five nodes are ample there.
+    derivative in `u` is `-rho/s * [phi((c_j - rho*z)/s) - phi((c_{j-1} -
+    rho*z)/s)] / phi(z)`. The `1/phi(z)` is the whole story: only the OUTER
+    cells reach :data:`COPULA_LATENT_LIMIT`, where `phi(z)` is 8.0e-17, so only
+    they hold a stretch over which a bounded integrand moves between two
+    plateaux faster than any fixed-order rule can see. Every interior cell is
+    smooth and five nodes are ample there.
 
-    Measured on the test fixture's points-by-rebounds joint at the 20-minute
-    node, against a 400-node reference: undivided, the second marginal is wrong
-    by 7.2e-07 and the sum's mean by 8.9e-06; at
-    :data:`OUTER_CELL_PIECES` = 6 and :data:`OUTER_CELL_RATIO` = 4 those become
-    6.5e-10 and 7.4e-09. :func:`_fit_marginals` then closes the rest.
+    **Measured per cell rather than argued.** On the test fixture's
+    points-by-rebounds joint at the 20-minute node, integrating each of the 29
+    axis-0 cells with the shipped five-node rule and again with a 400-node one:
+    the FIRST cell is out by 8.788e-07 at its worst count, the worst of the 27
+    interior cells by 1.126e-09, and the median interior cell by 3.14e-14. That
+    one cell in twenty-nine therefore carries 8.788e-07 of the 8.800e-07 the
+    whole second marginal is out by, which is why the split is aimed at it. The
+    LAST cell is out by 2.0e-17 undivided: it reaches the truncation too, but on
+    the side where the lattice has already spent its mass, so it is narrow in
+    `u` and the integrand across it is flat. Cut into
+    :data:`OUTER_CELL_PIECES` = 6 pieces against :data:`OUTER_CELL_RATIO` = 4,
+    the first cell's error falls to 6.654e-10.
+
+    **What that is worth on the assembled object.** Same node, five nodes per
+    cell, with the marginal fitting switched off (`MARGINAL_SWEEPS = 0`) so the
+    quadrature stands alone. Undivided — `OUTER_CELL_PIECES = 1`, which
+    :func:`_outer_fractions` makes an exact identity — the second marginal is
+    wrong by 8.800e-07 at its worst rung and the sum's mean by 5.113e-05; at 6
+    pieces and ratio 4, by 1.886e-09 and 1.109e-07. The SECOND marginal is the
+    one that carries the error, and which component that is is not a choice:
+    :func:`coupled_sum_pmf` sorts by support, so at this node axis 0 is
+    rebounds and axis 1 is points, and axis 0's cell weights sum to its own
+    cell probabilities exactly — that marginal is out by 5.5e-17 in every
+    configuration below.
+
+    **This function is NOT what makes D3's mean identity hold; the sweeps
+    are.** With the shipped eight sweeps the identity holds with the split and
+    without it alike: `|mu(sum) - sum(mu)|` is 0.0 on `player_points_rebounds`
+    and 1.421e-14 on `player_pra`, undivided and split, the same two numbers.
+    So :func:`_fit_marginals`' neighbouring measurement — 5.1e-05 with neither
+    and 1.2e-07 with this alone — must not be read as making this function
+    load-bearing for D3. What the sweeps cannot restore is the DEPENDENCE, and
+    that is what this is for: against an 800-node reference (converged — 400
+    and 800 nodes agree to 9.97e-14) the coupled sum pmf at that node is out by
+    7.256e-07 at its worst rung undivided and 1.289e-09 split, and the realised
+    `points|rebounds` correlation reads 0.10207704656857115 undivided against
+    the reference's 0.10209676623064948 — a miss of 1.97e-05, where the split
+    misses by 3.6e-08.
+
+    **Why six, and why four — and what the measurement does not settle.**
+    Pieces, at ratio 4, against that reference: 7.256e-07, 1.793e-07,
+    4.460e-08, 1.115e-08, 2.974e-09, 1.289e-09, 9.181e-10, 8.386e-10,
+    8.200e-10, 8.156e-10 for 1 through 10. The error falls by a factor of four
+    per piece through the fifth, by 2.3 for the sixth and by 1.40 for the
+    seventh, and then stops: 8.16e-10 is the floor the interior cells' own
+    five-node rule leaves, and no number of outer pieces can go below it. Six
+    is within 1.58x of that floor, seven within 1.13x, ten within 1.00x. **The
+    measurement does not single out six over seven** and this docstring does
+    not pretend it does; what it settles is that anything at or above five is
+    within 3.6x of the floor and that below five the constant matters — one
+    piece is 890x the floor. Ratio, at 6 pieces: 9.411e-08, 2.221e-08,
+    3.022e-09, 1.289e-09, 1.174e-09, 1.545e-09, 3.403e-09, 2.291e-08 at 1.5, 2,
+    3, 4, 5, 6, 8 and 16. That is a U — too small and the innermost sliver
+    never reaches the truncation, too large and the sub-cells are spent where
+    there is no mass — and 4 and 5 are its bottom, within 10% of each other.
+
+    **And what it is worth at price time, so the exponents are not read as a
+    result.** Mixed over the whole minutes lattice, undivided against shipped,
+    the priced pmf moves by at most 1.291e-06 on `player_points_rebounds` and
+    7.550e-07 on `player_pra`, and the `over 19.5` win leg on the first moves
+    from 0.44609676189196446 to 0.4460971685625639. This is an accuracy
+    constant; nothing here is a measurement of an edge.
+
+    **The four figures this docstring used to quote did not reproduce, which is
+    why the test exists.** It said the undivided second marginal was wrong by
+    7.2e-07 and the sum's mean by 8.9e-06, becoming 6.5e-10 and 7.4e-09 split.
+    Re-measured they are 8.800e-07 / 5.113e-05 and 1.886e-09 / 1.109e-07, and
+    they never reproduced: run against this module AS IT STOOD at commit
+    0985942 — the commit that wrote the four figures — the fixture's component
+    means come back 9.41767029946209 and 4.0588963589730103 and all four
+    errors come back identical to today's, so nothing repaired on this branch
+    moved them. And no node of the 45 reproduces the quoted pair:
+    node 21's undivided marginal reads 6.939e-07 but its mean error 4.281e-05,
+    and node 30's mean error reads 8.377e-06 but its marginal 8.545e-08. The
+    constants were right and the measurement was wrong. Nothing re-measured
+    them, so they could not go red;
+    `test_the_outer_cell_split_re_measures_the_numbers_that_fix_its_constants`
+    now measures every figure above and asserts this docstring still quotes it.
     """
     if edges.shape[-1] < 3:
         # One cell owns the whole line, so there is no outer cell to separate
@@ -1399,8 +1483,10 @@ def assert_structural_checks(checks: Mapping[str, float]) -> None:
     tolerance is widened and no market is dropped. The other four targets in
     `structural_check_targets` carry no declared tolerance anywhere in the design
     or the frozen file, so they are reported and cannot stop anything —
-    including the ~6% narrowness of the thinned three-point marginal, which is
-    the known price of :data:`POINTS_EVENT_DISPERSION_KEY`.
+    including the narrowness of the thinned three-point marginal, which is the
+    known price of :data:`POINTS_EVENT_DISPERSION_KEY` — 5.9105% at the league
+    `value_pmf` and 5.14% at the fixture athlete's own mix, because it runs
+    through his three-point share and not through anything the model chose.
 
     **It takes a population and refuses to take anything else.** The census keys
     below exist only on a mapping :func:`population_structural_checks` built, so
@@ -1502,6 +1588,27 @@ class PlayerDistribution:
 
     # -- components --------------------------------------------------------
 
+    def _threes_parameters(self, node: int) -> PanjerParameters:
+        """The thinned family the three-point count at `node` is actually built from.
+
+        `thin(event_parameters[node], p3)`, and it is a method rather than an
+        expression written twice because two readers need the SAME object:
+        :meth:`node_component_pmf` builds the count from it and
+        :meth:`phi_conditional` reports its width in design 9's column. Those
+        two were separate expressions until this commit and they disagreed —
+        the column carried the un-thinned event dispersion for a count nothing
+        had built at that width. One construction is what makes the column and
+        the lattice the same claim rather than two claims that happen to be
+        maintained together.
+
+        `p3` is `severity[3]`, the athlete's own shrunk three-point share, and
+        the thinned dispersion `1 + p3*(phi_events - 1)` therefore moves with
+        the athlete and not with the node: it is 1.0288960137061232 at this
+        fixture's 0.2727822483104362 on all 45 nodes, because `thin` scales
+        `beta` and `beta` is `phi - 1` at every node.
+        """
+        return thin(self.event_parameters[node], float(self.severity[3]))
+
     def node_component_pmf(self, stat: str, node: int) -> np.ndarray:
         """`P(stat = k | m)` at one minutes node — stage 2 of the order.
 
@@ -1518,9 +1625,7 @@ class PlayerDistribution:
                 )
             elif stat == "threes":
                 pmf = compound_pmf(
-                    thin(self.event_parameters[node], float(self.severity[3])),
-                    severity=(0.0, 1.0),
-                    size=size,
+                    self._threes_parameters(node), severity=(0.0, 1.0), size=size
                 )
             else:
                 pmf = compound_pmf(
@@ -1621,14 +1726,50 @@ class PlayerDistribution:
         return [(float(line), price_line(pmf, line, side)) for line in lines]
 
     def phi_conditional(self, market_key: str) -> float:
-        """The dispersion actually handed to the family that made this count.
+        """The dispersion the family that made THIS count was carrying.
 
-        Design 9's column. For the four plain Panjer stats it is the frozen
-        conditional dispersion with the binomial's integer-`n` rounding already
-        in it. For `player_points` and `player_threes` it is the dispersion of
-        the shared scoring-event count, because that is the family a phi was
-        handed to; the produced dispersion of the points and threes marginals is
-        a different quantity and :meth:`structural_checks` reports it.
+        Design 9's column, and there are three cases because the engine has
+        three constructions.
+
+        * **The four plain Panjer stats** carry the frozen conditional
+          dispersion with the binomial's integer-`n` rounding already in it:
+          `player_turnovers` reads 0.9828493167608962 against a frozen
+          0.9828561088984643, and the three negative-binomial stats read the
+          frozen constant exactly.
+        * **`player_points`** carries the shared scoring-event count's
+          dispersion, 1.1059306970490195 out of
+          `points_compound_reconciliation[POINTS_EVENT_DISPERSION_KEY]`,
+          because a compound sum is handed no dispersion of its own — the phi
+          goes to the event count and the sum's width is PRODUCED
+          (2.4750752387725523 at this fixture's price node, against a frozen
+          `conditional_dispersion["points"]` of 2.328891545818532).
+          :meth:`structural_checks` is where the produced width is reported.
+        * **`player_threes` carries the THINNED dispersion**,
+          `1 + p3*(phi_events - 1)`, read off the same
+          :meth:`_threes_parameters` call :meth:`node_component_pmf` builds the
+          count from. On this fixture that is 1.0288960137061232 at a
+          three-point share of 0.2727822483104362, and it is what the lattice
+          is: the produced `threes_vmr_given_minutes` reads
+          1.0288960135790235, 1.27e-10 below it, and the whole gap is
+          count-lattice truncation.
+
+        **The defect the third case is arranged against.** Until this commit
+        `player_threes` returned the UN-THINNED 1.1059306970490195 — the same
+        cell as `player_points`, for a count nothing ever built at that width.
+        The thinning is the reason threes falls out of the points object at
+        all, so a column that ignores it names a distribution this engine did
+        not price, and names it in the wrong DIRECTION: a reader reconciling
+        that cell against `conditional_dispersion["threes"]` =
+        1.0846864899201918 read the three-point marginal as 1.96% wide when
+        the marginal actually priced is 5.14% narrow. That 5.14% is this
+        athlete's and moves with his own three-point share — at the league
+        `value_pmf`'s 0.19423721541072833 it is the 5.91% recorded at
+        :data:`POINTS_EVENT_DISPERSION_KEY`. The old behaviour was DISCLOSED,
+        in the body of this docstring, and that is exactly what made it worth
+        repairing rather than re-declaring: the summary line said "the
+        dispersion actually handed to the family that made this count", which
+        was true of nine markets and false of the tenth, and a convention that
+        contradicts its own summary line is not a decision anybody took.
 
         **NaN for the four combination markets, deliberately.** No phi is handed
         to a sum: its width is produced by the components, the copula and the
@@ -1639,6 +1780,8 @@ class PlayerDistribution:
         if len(components) > 1:
             return float("nan")
         stat = components[0]
+        if stat == "threes":
+            return float(self._threes_parameters(self.price_node()).phi_used)
         if stat in COMPOUND_STATS:
             return float(self.dispersions["points_event_dispersion_used"])
         return float(self.stat_parameters[stat][self.price_node()].phi_used)

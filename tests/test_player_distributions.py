@@ -716,14 +716,18 @@ def test_the_stored_phi_column_is_nan_for_a_sum_and_the_event_phi_for_a_compound
       asserted as NaN and separately as *not zero*, because zero is the value a
       well-meaning fill would put there and every comparison against NaN is
       False, so `phi == 0.0` would not have caught it either.
-    * **The SHARED SCORING-EVENT dispersion for points and threes**, which is
+    * **The SHARED SCORING-EVENT dispersion for `player_points`**, which is
       `points_compound_reconciliation[POINTS_EVENT_DISPERSION_KEY]` =
-      1.1059306970490195 and is neither of the two numbers a reader would
-      expect to find on those rows: the frozen `conditional_dispersion` says
-      2.328891545818532 for points and 1.0846864899201918 for threes, and those
-      are the produced marginals' widths, which :meth:`structural_checks`
-      reports. `player_threes` carries the same number as `player_points`
-      because it is the same object thinned, and that is the column's content.
+      1.1059306970490195 and is not what a reader would expect on that row:
+      the frozen `conditional_dispersion` says 2.328891545818532 for points,
+      which is the produced marginal's width and is where
+      :meth:`structural_checks` reports it. **`player_threes` no longer carries
+      the same number**, and the assertion here is now that it must not: the
+      threes count is built from `thin(event, p3)` and its column is that
+      family's own dispersion. See
+      `test_the_threes_phi_column_is_the_thinned_width_the_count_was_built_at`,
+      which owns that case; this test keeps the tripwire that stops it being
+      folded back into the points branch.
     * **The rounding is in the column, for the one market that has one.**
       `player_turnovers` is the binomial arm: the frozen conditional dispersion
       is 0.9828561088984643 and the column reads 0.9828493167608962, a move of
@@ -752,12 +756,19 @@ def test_the_stored_phi_column_is_nan_for_a_sum_and_the_event_phi_for_a_compound
         )
         assert phi != 0.0, f"{market}: NaN, not a zero fill"
 
-    for market in ("player_points", "player_threes"):
-        assert distribution.phi_conditional(market) == event_phi, (
-            f"{market}: the column must carry the dispersion of the shared "
-            "scoring-event count, because that is the family a phi was handed "
-            f"to. Frozen: {event_phi}."
-        )
+    assert distribution.phi_conditional("player_points") == event_phi, (
+        "player_points: the column must carry the dispersion of the shared "
+        "scoring-event count, because a compound sum is handed no phi of its "
+        f"own. Frozen: {event_phi}."
+    )
+    assert distribution.phi_conditional("player_threes") != event_phi, (
+        "player_threes carries the UN-THINNED event dispersion again. The "
+        "count at the price node is built from `thin(event, p3)`, whose "
+        "phi_used is a different number, so this cell would be naming a width "
+        "nothing was priced at — and naming it in the wrong direction, as "
+        "1.96% wide against the frozen threes dispersion where the priced "
+        "marginal is 5.14% narrow."
+    )
     assert event_phi == pytest.approx(1.1059306970490195, abs=1e-12)
     assert distribution.phi_conditional("player_points") != 1.0, (
         "a points row reading 1.0 is a Poisson event count, which is not the "
@@ -796,6 +807,151 @@ def test_the_stored_phi_column_is_nan_for_a_sum_and_the_event_phi_for_a_compound
     for refused in PR.MARKETS_REFUSED_BY_NAME:
         with pytest.raises(PD.MarketRefused):
             distribution.phi_conditional(refused)
+
+
+def test_the_threes_phi_column_is_the_thinned_width_the_count_was_built_at() -> None:
+    """Design 9's `phi_conditional` for `player_threes`, off the count's own family.
+
+    **The defect.** The method returned
+    `dispersions["points_event_dispersion_used"]` = 1.1059306970490195 for
+    `player_threes`, which is the SHARED SCORING-EVENT count's dispersion. The
+    threes count is not that count: `node_component_pmf` builds it from
+    `thin(event_parameters[node], severity[3])`, whose `phi_used` is
+    `1 + p3*(phi_events - 1)` = 1.0288960137061232 at this athlete's
+    three-point share of 0.2727822483104362. So the column named a width no
+    lattice in the engine was ever built at, and named it in the wrong
+    direction: against the frozen `conditional_dispersion["threes"]` of
+    1.0846864899201918, the old cell reads 1.96% WIDE and the marginal that is
+    actually priced is 5.14% NARROW. The old cell was also bit-identical to the
+    `player_points` cell, so two different distributions shared one number.
+
+    **The premise was checked before it was repaired**, because the old
+    behaviour was disclosed rather than hidden — the body of the method's
+    docstring declared the convention while its summary line ("the dispersion
+    actually handed to the family that made this count") contradicted it. What
+    settles it is that for `player_threes` there IS a family and it DOES carry
+    a phi: `thin` returns a `PanjerParameters` whose `phi_requested` and
+    `phi_used` are both the thinned dispersion, and `compound_pmf` is handed
+    that object. `player_points` is the case where no such family exists — a
+    compound sum is handed no dispersion of its own — and its cell is
+    unchanged at 1.1059306970490195, which this test also asserts, because the
+    repair must not migrate.
+
+    **The column and the lattice are now one construction, not two.**
+    `PlayerDistribution._threes_parameters` is called by
+    `node_component_pmf` and by `phi_conditional`, so the number reported and
+    the number priced cannot drift; the assertion below reads the produced
+    `threes_vmr_given_minutes` back off the mixture-free node pmf and finds
+    1.0288960135790235, 1.27e-10 under the column, all of it count-lattice
+    truncation.
+
+    **What is NOT asserted here.** Nothing about whether 5.14% narrow is
+    acceptable. Design 4 declares a tolerance for the unconditional points VMR
+    and for nothing else, `structural_check_targets` carries none for this, and
+    a test that turned the narrowness into a threshold would be inventing a
+    stop rule the design does not have. The narrowness is measured, reported,
+    and shown to move with the athlete's own three-point share rather than with
+    anything the model chose.
+    """
+    shapes = _shapes()
+    distribution = _distribution(shapes)
+    node = distribution.price_node()
+    share = float(distribution.severity[3])
+    event = distribution.event_parameters[node]
+    event_phi = float(
+        shapes.value("points_compound_reconciliation")[PD.POINTS_EVENT_DISPERSION_KEY]
+    )
+    frozen_threes = float(shapes.value("conditional_dispersion")["threes"])
+
+    column = distribution.phi_conditional("player_threes")
+    thinned = PD.thin(event, share)
+
+    assert column == thinned.phi_used, (
+        f"the threes column reads {column!r} and the family the count was "
+        f"built from carries {thinned.phi_used!r}. The column has to be the "
+        "family's own number, bit for bit, or it is a second calculation of "
+        "what the engine intended rather than a reading of what it did."
+    )
+    assert column == pytest.approx(1.0288960137061232, abs=1e-15)
+    assert column == pytest.approx(1.0 + share * (event.phi_used - 1.0), rel=1e-15)
+    assert share == pytest.approx(0.2727822483104362, abs=1e-15)
+
+    assert column != event_phi, (
+        "the threes column is the un-thinned event dispersion again, which is "
+        "the defect: the thinning is what makes threes fall out of the points "
+        "object, and a dispersion that ignores it describes a different "
+        "distribution from the one being priced"
+    )
+    assert distribution.phi_conditional("player_points") == event_phi, (
+        "the repair migrated onto player_points. A compound sum is handed no "
+        "phi of its own; the event count is the only family in that "
+        "construction and 1.1059306970490195 is its dispersion."
+    )
+    assert distribution.phi_conditional("player_points") != column
+
+    # The column is the width the lattice actually has.
+    mean, variance = _moments(distribution.node_component_pmf("threes", node))
+    produced = variance / mean
+    assert produced == pytest.approx(1.0288960135790235, abs=1e-12)
+    assert 0.0 < column - produced < 1e-09, (
+        f"the column is {column!r} and the produced lattice VMR is "
+        f"{produced!r}. The gap is count-lattice truncation and is one-sided "
+        "and tiny; a two-sided or larger gap means the column and the lattice "
+        "are no longer the same family."
+    )
+
+    # The direction of the disclosure, measured rather than asserted as a bound.
+    narrow = 1.0 - column / frozen_threes
+    assert narrow == pytest.approx(0.051435, abs=1e-6), (
+        f"the priced three-point marginal is now {narrow * 100:.4f}% narrow "
+        "against the frozen threes dispersion; the docstrings quote 5.14% and "
+        "must be re-measured"
+    )
+    stale = event_phi / frozen_threes - 1.0
+    assert stale == pytest.approx(0.0195856, abs=1e-7), (
+        "the number the OLD column reported reads as 1.96% wide against the "
+        "same frozen constant, which is why the two are not interchangeable: "
+        "they disagree about the sign"
+    )
+
+    # It moves with the athlete's own mix, not with the node and not with the
+    # model. The league `value_pmf`'s share is what the 5.91% recorded at
+    # `POINTS_EVENT_DISPERSION_KEY` is measured at.
+    for other in (0, node, distribution.minutes.size - 1):
+        assert PD.thin(
+            distribution.event_parameters[other], share
+        ).phi_used == pytest.approx(column, abs=1e-15), (
+            "the thinned dispersion moved with the minutes node. `thin` scales "
+            "`beta`, and `beta` is `phi - 1` at every node, so it cannot."
+        )
+    league = float(shapes.value("value_pmf")[2])
+    assert league == pytest.approx(0.19423721541072833, abs=1e-15)
+    league_phi = 1.0 + league * (event_phi - 1.0)
+    assert league_phi == pytest.approx(1.020575683621319, abs=1e-15)
+    assert 1.0 - league_phi / frozen_threes == pytest.approx(0.059105, abs=1e-6), (
+        "`POINTS_EVENT_DISPERSION_KEY` records the price of the dispersion "
+        "choice as `1.0206 ... about 6% narrow`, and that is the LEAGUE mix, "
+        "not this athlete's. The two numbers are both right and are not the "
+        "same number, which is why each now says which mix it is at."
+    )
+    module = " ".join(MODULE.read_text(encoding="utf-8").split())
+    assert (
+        "there and the narrowness 5.9105%" in module
+        and "0.2727822483104362 gives 1.0288960137061232 and 5.14%" in module
+    ), (
+        "`POINTS_EVENT_DISPERSION_KEY`'s note quoted `about 6% narrow` with no "
+        "mix named, and `assert_structural_checks` quoted `~6%`. Both "
+        "reproduce — at the LEAGUE mix — and neither said so, which is how a "
+        "reader ends up comparing them to the column this athlete's row "
+        "carries. The mix is named in both places now and this holds it."
+    )
+
+    # One construction, and it is the one the count is built from.
+    assert distribution._threes_parameters(node) == thinned
+    doc = " ".join((PD.PlayerDistribution.phi_conditional.__doc__ or "").split())
+    assert "carries the THINNED dispersion" in doc
+    assert "1.0288960137061232" in doc and "0.2727822483104362" in doc
+    assert "1.96% wide when the marginal actually priced is 5.14% narrow" in doc
 
 
 # --------------------------------------------------------------------------
@@ -1399,6 +1555,374 @@ def test_the_realised_correlation_is_reported_and_the_two_copula_routes_agree() 
         "the trivariate copula branch and the bivariate one disagree about the "
         "pairwise covariances, so one of them is conditioning wrongly"
     )
+
+
+def test_the_outer_cell_split_re_measures_the_numbers_that_fix_its_constants(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`OUTER_CELL_PIECES` = 6 and `OUTER_CELL_RATIO` = 4, against a reference.
+
+    **The defect this is arranged against.** `_split_outer_cells`' docstring
+    was the only evidence for both constants and its four figures did not
+    reproduce. It said that, on this fixture's points-by-rebounds joint at the
+    20-minute node against a 400-node reference, the undivided second marginal
+    is wrong by 7.2e-07 and the sum's mean by 8.9e-06, and that six pieces at
+    ratio four make those 6.5e-10 and 7.4e-09. Re-measured they are 8.800e-07 /
+    5.113e-05 and 1.886e-09 / 1.109e-07, and the figures never reproduced: the
+    module AS IT STOOD at commit 0985942, the one that wrote them, was copied
+    over the shipped file and driven through this same fixture — the component
+    means came back 9.41767029946209 and 4.0588963589730103 and all four errors
+    came back identical to today's, so no repair on this branch moved them.
+    (`data/processed/cbb_player_shapes.json` is byte-identical across the
+    branch and `models/player_rates.py` is identical once docstrings are
+    stripped, so the fixture is the same fixture.) No node of the 45
+    reproduces the quoted pair: node 21's
+    undivided marginal is 6.939e-07 with a mean error of 4.281e-05, node 30's
+    mean error is 8.377e-06 with a marginal of 8.545e-08. `grep` found the four
+    strings only in that docstring, so nothing could go red on them. **The
+    constants were right and the measurement was wrong**, which this test
+    settles by measuring the curve both constants sit on rather than one point
+    of it.
+
+    Everything asserted here is a QUADRATURE ACCURACY measurement on a fixture
+    joint. No probability below is a price, an edge or a result, and the last
+    section exists to bound what the whole question is worth at price time:
+    4.1e-07 on a win leg.
+
+    Six claims, each of which the docstring now states and this test measures:
+
+    1. **The error is one cell in twenty-nine.** Integrating each axis-0 cell
+       with the shipped five-node rule and again with a 400-node one, the first
+       cell — the only one that reaches `COPULA_LATENT_LIMIT` on the side where
+       the lattice still has mass — is out by 8.788e-07, the worst of the 27
+       interior cells by 1.126e-09 and the median interior cell by 3.14e-14.
+       The last cell is out by 2.0e-17 even undivided. Split six ways at ratio
+       four the first cell falls to 6.654e-10.
+    2. **On the assembled joint, with the marginal fitting switched off**, the
+       second marginal (points — `coupled_sum_pmf` sorts by support, so axis 0
+       is rebounds and its weights sum to its own cell probabilities exactly,
+       leaving it out by 5.5e-17 in every configuration) is out by 8.800e-07
+       undivided and 1.886e-09 split, and the sum's mean by 5.113e-05 and
+       1.109e-07.
+    3. **The split is not what makes D3 hold.** With the shipped eight sweeps
+       `|mu(sum) - sum(mu)|` is 0.0 on `player_points_rebounds` and 1.421e-14
+       on `player_pra` WITH the split and WITHOUT it — the same two numbers. A
+       reader of `_fit_marginals`' 5.1e-05 / 1.2e-07 / 1.4e-14 would infer the
+       opposite, so it is asserted here.
+    4. **What the split is for is the dependence**, which the sweeps cannot
+       restore: against an 800-node reference the coupled sum pmf is out by
+       7.256e-07 undivided and 1.289e-09 split, and the realised
+       `points|rebounds` correlation misses the reference by 1.97e-05 undivided
+       against 3.6e-08 split.
+    5. **Both constants sit on a measured curve.** Pieces 1..10 at ratio 4 run
+       7.256e-07 down to 8.156e-10, falling four-fold per piece to the fifth
+       and flattening onto the floor the interior cells' own five-node rule
+       leaves. The assertions are the SHAPE — six beats five, ten does not beat
+       six by as much as a factor of two, one is hundreds of times the floor —
+       and NOT that six is uniquely best, because it is not: seven reads
+       9.181e-10. Ratio at six pieces is a U with 4 and 5 at the bottom
+       (1.289e-09 and 1.174e-09) and 3 and 8 up at 3.022e-09 and 3.403e-09.
+    6. **The docstring still quotes every figure measured here.** A negative
+       tripwire was refused: banning the superseded strings would go red on the
+       paragraph that records them as superseded, which is exactly the
+       confusion this repair exists to prevent. The check is positive — each
+       measured figure must appear in `_split_outer_cells.__doc__` — so
+       re-measuring without editing the prose, or editing the prose without
+       re-measuring, both go red.
+    """
+    engine = _distribution()
+    node = int(np.flatnonzero(engine.minutes == 20.0)[0])
+    assert float(engine.minutes[node]) == 20.0
+
+    points = engine.node_component_pmf("points", node)
+    rebounds = engine.node_component_pmf("rebounds", node)
+    matrix = engine._correlation_matrix(("points", "rebounds"))
+    exact_mean = _moments(points)[0] + _moments(rebounds)[0]
+    assert rebounds.size < points.size, (
+        "the docstring names axis 0 as rebounds and axis 1 as points because "
+        "`coupled_sum_pmf` sorts by support; if that ordering changes, every "
+        "figure below is about the other marginal"
+    )
+
+    fit_marginals = PD._fit_marginals
+    seen: dict = {}
+
+    def _capture(joint, marginals):
+        seen["joint"] = np.array(joint, copy=True)
+        seen["targets"] = [np.array(target, copy=True) for target in marginals]
+        return fit_marginals(joint, marginals)
+
+    monkeypatch.setattr(PD, "_fit_marginals", _capture)
+
+    def _couple(pieces, *, ratio=4.0, sweeps=8, nodes=5, pair=None):
+        monkeypatch.setattr(PD, "OUTER_CELL_PIECES", int(pieces))
+        monkeypatch.setattr(PD, "OUTER_CELL_RATIO", float(ratio))
+        monkeypatch.setattr(PD, "MARGINAL_SWEEPS", int(sweeps))
+        monkeypatch.setattr(PD, "COPULA_NODES_PER_CELL", int(nodes))
+        lattices = pair or [points, rebounds]
+        return PD.coupled_sum_pmf(lattices, matrix)
+
+    def _marginal_errors():
+        joint, targets = seen["joint"], seen["targets"]
+        out = []
+        for axis in range(joint.ndim):
+            others = tuple(index for index in range(joint.ndim) if index != axis)
+            out.append(float(np.abs(joint.sum(axis=others) - targets[axis]).max()))
+        return out
+
+    # -- claim 1: the error lives in one cell ------------------------------
+    cells = PD._latent_cells(rebounds)
+    cuts = PD._latent_cells(points)[2]
+    rho = float(matrix[0, 1])
+    spread = math.sqrt(1.0 - rho * rho)
+
+    def _cell(lower: float, upper: float, nodes: int) -> np.ndarray:
+        grid, weight = PD._cell_nodes(
+            np.array([lower]), np.array([upper]), nodes
+        )
+        latent = PD._latent(grid)
+        conditional = np.diff(
+            PD.ndtr((cuts - rho * latent[..., None]) / spread), axis=-1
+        )
+        return np.einsum("cq,cqv->cv", weight, conditional)[0]
+
+    edges = cells[1]
+    per_cell = np.array(
+        [
+            float(np.abs(_cell(edges[k], edges[k + 1], 5)
+                         - _cell(edges[k], edges[k + 1], 400)).max())
+            for k in range(edges.size - 1)
+        ]
+    )
+    assert per_cell.size == 29
+    assert per_cell[0] == pytest.approx(8.788e-07, rel=1e-3), (
+        f"the first axis-0 cell's five-node error is now {per_cell[0]:.4e}; the "
+        "docstring quotes 8.788e-07 and must be re-measured"
+    )
+    interior = per_cell[1:-1]
+    assert interior.max() == pytest.approx(1.126e-09, rel=1e-3)
+    assert float(np.median(interior)) == pytest.approx(3.14e-14, rel=1e-2)
+    assert per_cell[-1] == pytest.approx(2.0e-17, rel=0.05), (
+        "the LAST outer cell reaches the truncation too and is nonetheless "
+        "harmless, because the lattice has spent its mass there. If this grew, "
+        "the docstring's account of WHY the split is aimed at the first cell "
+        "is wrong even though the split itself still works."
+    )
+    assert per_cell[0] > 700 * interior.max(), (
+        "the whole argument for splitting only the outer cells is that they "
+        "carry the error; at this ratio they no longer do"
+    )
+    fractions = PD._outer_fractions(6, 4.0)
+    sliver = edges[0] + (edges[1] - edges[0]) * fractions
+    split_first = sum(
+        _cell(sliver[k], sliver[k + 1], 5) for k in range(6)
+    )
+    assert float(np.abs(split_first - _cell(edges[0], edges[1], 400)).max()) == (
+        pytest.approx(6.654e-10, rel=1e-3)
+    )
+
+    # -- claim 2: the assembled joint, quadrature standing alone -----------
+    _couple(1, sweeps=0)
+    undivided = _marginal_errors()
+    undivided_mean = abs(_moments(_couple(1, sweeps=0))[0] - exact_mean)
+    _couple(6, sweeps=0)
+    split = _marginal_errors()
+    split_mean = abs(_moments(_couple(6, sweeps=0))[0] - exact_mean)
+
+    assert PD._outer_fractions(1, 4.0).tolist() == [0.0, 1.0], (
+        "`OUTER_CELL_PIECES = 1` is the undivided control only because "
+        "`_outer_fractions` makes it an exact identity"
+    )
+    assert undivided[1] == pytest.approx(8.800e-07, rel=1e-3)
+    assert undivided_mean == pytest.approx(5.113e-05, rel=1e-3)
+    assert split[1] == pytest.approx(1.886e-09, rel=1e-3)
+    assert split_mean == pytest.approx(1.109e-07, rel=1e-3)
+    for errors in (undivided, split):
+        assert errors[0] == pytest.approx(5.5e-17, rel=0.02), (
+            "axis 0's marginal is exact by construction — its cell weights sum "
+            "to its own cell probabilities — so a moved number here means the "
+            "quadrature is no longer taken in probability space"
+        )
+
+    # -- claim 4: the dependence, against a converged reference ------------
+    reference = _couple(6, nodes=800)
+    assert float(np.abs(_couple(6, nodes=400) - reference).max()) == pytest.approx(
+        9.97e-14, rel=0.05
+    ), "the 800-node reference is only a reference if it has converged"
+
+    def _against_reference(pieces, *, ratio=4.0):
+        produced = _couple(pieces, ratio=ratio)
+        return float(np.abs(produced - reference).max())
+
+    assert _against_reference(1) == pytest.approx(7.256e-07, rel=1e-3)
+    assert _against_reference(6) == pytest.approx(1.289e-09, rel=1e-3)
+
+    def _realised(pieces, *, nodes=5):
+        produced = _couple(pieces, nodes=nodes)
+        variances = [_moments(points)[1], _moments(rebounds)[1]]
+        covariance = (_moments(produced)[1] - variances[0] - variances[1]) / 2.0
+        return covariance / math.sqrt(variances[0] * variances[1])
+
+    reference_correlation = _realised(6, nodes=800)
+    assert reference_correlation == pytest.approx(0.10209676623064948, abs=1e-15)
+    assert _realised(1) == pytest.approx(0.10207704656857115, abs=1e-15)
+    assert _realised(6) == pytest.approx(0.10209673007926263, abs=1e-15)
+    assert abs(_realised(1) - reference_correlation) == pytest.approx(1.97e-05, rel=1e-2)
+    assert abs(_realised(6) - reference_correlation) == pytest.approx(3.6e-08, rel=2e-2)
+
+    # -- claim 5: the curve both constants sit on --------------------------
+    quoted_pieces = [
+        7.256e-07, 1.793e-07, 4.460e-08, 1.115e-08, 2.974e-09,
+        1.289e-09, 9.181e-10, 8.386e-10, 8.200e-10, 8.156e-10,
+    ]
+    curve = [_against_reference(pieces) for pieces in range(1, 11)]
+    for pieces, (produced, quoted) in enumerate(zip(curve, quoted_pieces), start=1):
+        assert produced == pytest.approx(quoted, rel=1e-3), (
+            f"pieces={pieces}: {produced:.4e} against the docstring's {quoted:.4e}"
+        )
+    floor = curve[-1]
+    assert curve[5] < curve[4], "six must beat five or the constant is not a choice"
+    assert curve[5] < 2.0 * floor, (
+        "six is supposed to be within a small multiple of the floor more outer "
+        "pieces cannot go below"
+    )
+    assert curve[0] > 500.0 * floor, (
+        "undivided is supposed to be hundreds of times the floor; if it is not, "
+        "this function is buying nothing and the constants are decoration"
+    )
+    assert curve[6] < curve[5], (
+        "seven is measurably better than six. The docstring says so rather than "
+        "claiming six is optimal, and this assertion is what stops the claim "
+        "from being made later."
+    )
+
+    quoted_ratios = {
+        1.5: 9.411e-08, 2.0: 2.221e-08, 3.0: 3.022e-09, 4.0: 1.289e-09,
+        5.0: 1.174e-09, 6.0: 1.545e-09, 8.0: 3.403e-09, 16.0: 2.291e-08,
+    }
+    for ratio, quoted in quoted_ratios.items():
+        produced = _against_reference(6, ratio=ratio)
+        assert produced == pytest.approx(quoted, rel=1e-3), (
+            f"ratio={ratio}: {produced:.4e} against the docstring's {quoted:.4e}"
+        )
+    assert quoted_ratios[4.0] < quoted_ratios[3.0]
+    assert quoted_ratios[4.0] < quoted_ratios[8.0]
+
+    # -- claim 3, and what the whole question is worth at price time -------
+    monkeypatch.setattr(PD, "_fit_marginals", fit_marginals)
+    priced = {}
+    for label, pieces in (("undivided", 1), ("shipped", 6)):
+        monkeypatch.setattr(PD, "OUTER_CELL_PIECES", pieces)
+        monkeypatch.setattr(PD, "OUTER_CELL_RATIO", 4.0)
+        monkeypatch.setattr(PD, "MARGINAL_SWEEPS", 8)
+        monkeypatch.setattr(PD, "COPULA_NODES_PER_CELL", 5)
+        engine._cache.clear()
+        priced[label] = {
+            market: engine.count_pmf(market)
+            for market in ("player_points_rebounds", "player_pra")
+        }
+        for market, components in (
+            ("player_points_rebounds", ("points", "rebounds")),
+            ("player_pra", ("points", "rebounds", "assists")),
+        ):
+            parts = sum(engine.mean(f"player_{stat}") for stat in components)
+            gap = abs(engine.mean(market) - parts)
+            expected = 0.0 if market == "player_points_rebounds" else 1.421e-14
+            assert gap == pytest.approx(expected, abs=1e-16), (
+                f"{label}/{market}: the D3 mean identity is out by {gap:.4e}. "
+                "The docstring's claim is that `_fit_marginals` closes it with "
+                "the split and without it alike, to the same two numbers."
+            )
+    engine._cache.clear()
+
+    for market, quoted in (
+        ("player_points_rebounds", 1.291e-06),
+        ("player_pra", 7.550e-07),
+    ):
+        first, second = priced["undivided"][market], priced["shipped"][market]
+        assert first.size == second.size
+        assert float(np.abs(first - second).max()) == pytest.approx(quoted, rel=1e-3)
+
+    legs = {
+        label: PD.price_line(priced[label]["player_points_rebounds"], 19.5, PD.OVER)
+        for label in ("undivided", "shipped")
+    }
+    assert legs["undivided"][0] == pytest.approx(0.44609676189196446, abs=1e-15)
+    assert legs["shipped"][0] == pytest.approx(0.4460971685625639, abs=1e-15)
+    assert abs(legs["undivided"][0] - legs["shipped"][0]) < 1e-06, (
+        "the accuracy question this function settles is worth well under a "
+        "millionth of a win leg; a number here that had grown would mean the "
+        "docstring's last paragraph is stale and the constant is doing "
+        "something else"
+    )
+
+    # -- claim 6: the prose and the measurement cannot drift apart ---------
+    # PHRASES, not bare figures, and whitespace-normalised so the wrapping is
+    # not part of the contract. A bare-figure scan was tried first and a
+    # mutation walked through it: putting `7.2e-07` back as the live
+    # measurement left the test green, because `8.800e-07` was still present a
+    # paragraph later in the sentence that records it as the correction. Every
+    # figure below is pinned inside the sentence that asserts it.
+    doc = " ".join((PD._split_outer_cells.__doc__ or "").split())
+    for phrase in (
+        "the FIRST cell is out by 8.788e-07 at its worst count, the worst of "
+        "the 27 interior cells by 1.126e-09, and the median interior cell by "
+        "3.14e-14",
+        "The LAST cell is out by 2.0e-17 undivided",
+        "the first cell's error falls to 6.654e-10",
+        "the second marginal is wrong by 8.800e-07 at its worst rung and the "
+        "sum's mean by 5.113e-05; at 6 pieces and ratio 4, by 1.886e-09 and "
+        "1.109e-07",
+        "that marginal is out by 5.5e-17 in every configuration below",
+        "is 0.0 on `player_points_rebounds` and 1.421e-14 on `player_pra`",
+        "400 and 800 nodes agree to 9.97e-14",
+        "out by 7.256e-07 at its worst rung undivided and 1.289e-09 split",
+        "reads 0.10207704656857115 undivided against the reference's "
+        "0.10209676623064948",
+        "a miss of 1.97e-05, where the split misses by 3.6e-08",
+        "7.256e-07, 1.793e-07, 4.460e-08, 1.115e-08, 2.974e-09, 1.289e-09, "
+        "9.181e-10, 8.386e-10, 8.200e-10, 8.156e-10 for 1 through 10",
+        "9.411e-08, 2.221e-08, 3.022e-09, 1.289e-09, 1.174e-09, 1.545e-09, "
+        "3.403e-09, 2.291e-08 at 1.5, 2, 3, 4, 5, 6, 8 and 16",
+        "at most 1.291e-06 on `player_points_rebounds` and 7.550e-07 on "
+        "`player_pra`",
+        "moves from 0.44609676189196446 to 0.4460971685625639",
+        "node 21's undivided marginal reads 6.939e-07 but its mean error "
+        "4.281e-05, and node 30's mean error reads 8.377e-06 but its marginal "
+        "8.545e-08",
+        "The measurement does not single out six over seven",
+    ):
+        assert phrase in doc, (
+            "`_split_outer_cells`' docstring no longer says "
+            f"{phrase!r}, which this test measures. That docstring is the only "
+            "place the two constants are justified and it has been wrong once "
+            "already."
+        )
+
+    # The two nodes that show the superseded pair belongs to no node at all.
+    # The capture wrapper was handed back before the priced section above, so
+    # it goes on again here; without it `_marginal_errors` silently reports the
+    # last joint anything captured, which is a green test reading a stale array.
+    monkeypatch.setattr(PD, "_fit_marginals", _capture)
+    for other, marginal, mean_error in (
+        (20, 6.939e-07, 4.281e-05),
+        (29, 8.545e-08, 8.377e-06),
+    ):
+        pair = [
+            engine.node_component_pmf("points", other),
+            engine.node_component_pmf("rebounds", other),
+        ]
+        total = _couple(1, sweeps=0, pair=pair)
+        assert _marginal_errors()[1] == pytest.approx(marginal, rel=1e-3)
+        produced = abs(
+            _moments(total)[0]
+            - sum(_moments(lattice)[0] for lattice in pair)
+        )
+        assert produced == pytest.approx(mean_error, rel=1e-3), (
+            f"minutes node {other + 1}: the docstring cites this node to show "
+            "the superseded pair reproduces at NO node, and the citation is "
+            "now stale"
+        )
 
 
 # --------------------------------------------------------------------------
