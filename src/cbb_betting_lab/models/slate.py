@@ -47,14 +47,17 @@ D. the event is not in `players` at all -> NO OPINION. The model was never
 
 ## What this module does not do, and why that is written here
 
-Nothing here measures anything. `models/player_rates.py` and
-`models/player_distributions.py` are not written, so **no athlete carries a
-projection today and no line carries a probability**. The seam reports that as
-a structural absence with a sentence naming the missing file
-(:data:`NO_RATE_ESTIMATOR`, :data:`NO_DISTRIBUTION_ENGINE`) rather than as a
-model with no opinions, because those two look identical from the outside and
-one of them is a wiring fault. `tests/test_player_seam.py` holds that
-distinction as a passing assertion that goes red the day either file lands.
+Nothing here measures anything. `models/player_rates.py` has since been
+written, so an athlete can now carry a projection; `models/player_distributions.py`
+has not, so **no line carries a probability** and a priceable projection's last
+word is :data:`NO_DISTRIBUTION_ENGINE`. Every structural absence is reported
+with a sentence naming the missing file (:data:`NO_RATE_ESTIMATOR`,
+:data:`NO_DISTRIBUTION_ENGINE`) rather than as a model with no opinions,
+because those two look identical from the outside and one of them is a wiring
+fault. `NO_RATE_ESTIMATOR` is kept and still reachable: the estimator is
+imported inside the call, so a tree that loses it says which absence this is
+instead of reporting a night with no evidence.
+`tests/test_player_seam.py` holds that distinction as a passing assertion.
 
 ## The cut, and the one place two names meet
 
@@ -143,13 +146,16 @@ NO_PLAYER_HISTORY: str = (
     "declining"
 )
 
-#: The estimator itself is not written. Distinct from
+#: The estimator could not be imported. Distinct from
 #: :data:`NO_PLAYER_HISTORY`, and the distinction is the point: one is a night
 #: with no evidence, the other is a lab with no model, and a census that
 #: printed the same sentence for both would hide the second inside the first.
+#: The file exists today; this sentence is what a tree that lost it would say,
+#: and it is reachable because the import is made inside the call.
 NO_RATE_ESTIMATOR: str = (
-    "`src/cbb_betting_lab/models/player_rates.py` is not written, so the seam "
-    "asked no estimator for a projection and no athlete carries one. This is "
+    "`src/cbb_betting_lab/models/player_rates.py` could not be imported, so "
+    "the seam asked no estimator for a projection and no athlete carries one. "
+    "This is "
     "the model never being asked, not the model declining, and it is not a "
     "pass, an avoid or a no-value call"
 )
@@ -446,13 +452,14 @@ class SlateModel:
 
 
 def _player_rates_module():
-    """`models.player_rates`, or `None` while it is not written.
+    """`models.player_rates`, or `None` if it cannot be imported.
 
     Imported inside the call rather than at module scope, deliberately. A
-    module-scope import would bind the answer once per process, so a tree that
-    grew the estimator would keep reporting it absent until something restarted
-    — and the sentence this returns instead of a projection is the only thing
-    telling an operator which of the two states the lab is in.
+    module-scope import would bind the answer once per process — and would make
+    an estimator that fails to import take the whole seam down with it, so a
+    card that could still price every spread would print nothing at all. The
+    sentence returned instead of a projection is the only thing telling an
+    operator which of the two states the lab is in.
     """
     try:
         from cbb_betting_lab.models import player_rates  # noqa: PLC0415

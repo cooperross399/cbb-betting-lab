@@ -1044,22 +1044,31 @@ def test_s10_the_seam_declares_no_module_level_frame_or_projection_memo() -> Non
 
 
 def test_the_gaps_this_seam_still_has_are_the_ones_written_down() -> None:
-    """Four, each of which goes red the day it is closed.
+    """Four, of which one has since closed; each goes red the day it does.
 
     The repository's form for a limitation: not a docstring claim that quietly
     becomes false, but an assertion that fails on the commit which fixes it and
     forces somebody to say so.
 
-    1. **No estimator.** `models/player_rates.py` is not written, so
-       `slate_model` returns an empty player half carrying
-       :data:`slate.NO_RATE_ESTIMATOR` and every prop census is a census of
-       zero projections.
+    1. **CLOSED.** `models/player_rates.py` did not exist when this seam
+       landed, so `slate_model` returned an empty player half carrying
+       `slate.NO_RATE_ESTIMATOR`. The estimator was written in the next commit,
+       which turned this clause red and is what moved `player_rates.py` from
+       `MODEL_FILES` to `INPUT_FILES` in
+       `tests/test_the_player_props_are_pre_registered.py`. The clause is
+       replaced by its successor rather than deleted: the seam is now wired to
+       an estimator, and what it hands the card is a projection.
     2. **No engine.** `models/player_distributions.py` is not written, so a
        priceable projection still yields no probability.
     3. **`DEFAULT_MODEL` still names the team seam.** `slate_model` is proved
-       to fit both production callers (S4) and is not yet what they resolve. It
-       moves in the commit that lands the estimator, and moving it changes the
-       model string the next replication run records.
+       to fit both production callers (S4) and is not yet what they resolve.
+       Moving it is blocked on a gate, not on the estimator:
+       `test_gameday_card.py::test_a_model_the_card_cannot_supply_refuses_
+       instead_of_pricing_without_it` monkeypatches `ratings.matchups_for` and
+       asserts the card refuses naming both `player_games` and
+       `matchups_for_card`, and under a moved `DEFAULT_MODEL` that patch is no
+       longer on the path `call_model` inspects. Moving it changes the model
+       string the next replication run records.
     4. **`matchups_for`'s `player_games` is withheld.** Design 2.4 directs the
        cut frame into it. Filling it flips `CarryoverFit.uses_roster` on the
        efficiency term and applies `share_as_of(day)` in `_prior_means`, which
@@ -1068,11 +1077,11 @@ def test_the_gaps_this_seam_still_has_are_the_ones_written_down() -> None:
        it does not move inside a commit that measures nothing.
     """
     models = SRC / "cbb_betting_lab" / "models"
-    assert not (models / "player_rates.py").exists(), (
-        "the estimator now exists. `slate_model`'s player half is no longer "
-        "structurally empty: move `player_rates.py` from MODEL_FILES to "
-        "INPUT_FILES in tests/test_the_player_props_are_pre_registered.py, say "
-        "in that test what the ordering now rests on, and delete this clause."
+    assert (models / "player_rates.py").exists(), (
+        "the estimator has been removed, so `slate_model`'s player half is "
+        "structurally empty again and every prop census is a census of zero "
+        "projections. Put `player_rates.py` back in MODEL_FILES in "
+        "tests/test_the_player_props_are_pre_registered.py if that is deliberate."
     )
     assert not (models / "player_distributions.py").exists(), (
         "the distribution engine now exists, so a priceable projection can "

@@ -6,14 +6,26 @@ ledger entry itself distinguishes the two afterwards — the entry looks
 identical either way. What distinguishes them is that on the commit which
 registered these, **there was no player model to measure anything with**.
 
-That started as one assertion over five absent files. Three of them have since
-arrived — the frozen constants, their fitter and their loader — so the claim is
-now carried by two tests instead of one: no model exists (`player_rates.py` and
-`player_distributions.py`, the files that could actually price a prop, are
-still absent), and nothing about the constants could have been tuned on what
-they will be graded against (fitted on 2019-2022, validated on 2023, floor at
-2024, which is the only season the family names). Neither is a promise, and
-neither can be satisfied by deleting a line.
+That started as one assertion over five absent files. **Four of them have now
+arrived** — the frozen constants, their fitter, their loader, and as of this
+commit the estimator, `models/player_rates.py`. So the ordering is no longer
+carried by the tree being empty, and this file says what it is carried by
+instead.
+
+What still holds without argument: `models/player_distributions.py` does not
+exist, and **nothing in this repository can turn a projection into a
+probability without it**. `player_rates.py` produces a mean, a 46-long minutes
+lattice and a refusal census; it produces no `P(over)`, no de-vigged
+comparison and no log loss, so not one of the 33 hypotheses below can have been
+looked at. That is the same claim the empty tree used to make, narrowed to the
+file that actually stands between a projection and a graded number.
+
+What the rest rests on, now that the inputs exist, is
+`test_the_directions_could_not_have_been_written_after_the_numbers`: every
+entry is `pending` with an empty realised direction, the ledger is append-only
+under its own CI job, and the constants were fitted on 2019-2022 and validated
+on 2023 with a price-season floor at 2024 that their loader refuses to cross.
+None of those is a promise and none can be satisfied by deleting a line.
 
 The rest pins the shape the design named, so a later session cannot quietly
 grow or shrink the family:
@@ -32,6 +44,7 @@ grow or shrink the family:
 
 from __future__ import annotations
 
+import dataclasses
 import importlib.util
 import json
 from pathlib import Path
@@ -66,37 +79,50 @@ def _player_entries(payload: dict) -> list[dict]:
     return [h for h in payload["hypotheses"] if h["search"] in (DEVIG, CONTROL)]
 
 
-#: The files that constitute the MODEL — the thing the 33 hypotheses make a
-#: prediction about. None exists yet, and while that is true the ordering claim
-#: needs no argument at all.
+#: What is left of the MODEL — the thing the 33 hypotheses make a prediction
+#: about. `player_rates.py` moved out of this list in the commit that wrote it;
+#: `player_distributions.py` is what remains, and while it is absent no
+#: projection in this repository can become a probability, so no hypothesis
+#: below can have been looked at.
 MODEL_FILES = (
-    "src/cbb_betting_lab/models/player_rates.py",
     "src/cbb_betting_lab/models/player_distributions.py",
 )
 
-#: Its INPUTS, which do now exist. Named rather than merely allowed, so a third
+#: Its INPUTS, which do now exist. Named rather than merely allowed, so a fifth
 #: file appearing under this heading is a red test and a decision somebody
-#: makes on purpose.
+#: makes on purpose. `player_rates.py` is here rather than above because it
+#: forms projections and refusals and cannot score anything: it has no line, no
+#: price and no outcome to compare against, and the ten markets it is
+#: registered for are named in `MARKET_COMPONENTS` before any of them has been
+#: measured.
 INPUT_FILES = (
     "src/cbb_betting_lab/models/player_shapes.py",
+    "src/cbb_betting_lab/models/player_rates.py",
     "scripts/fit_player_model.py",
     "data/processed/cbb_player_shapes.json",
 )
 
 
-def test_the_model_these_hypotheses_predict_about_still_does_not_exist() -> None:
-    """The registration precedes the thing it registers.
+def test_nothing_in_this_tree_can_turn_a_projection_into_a_probability() -> None:
+    """The registration precedes the thing it registers, narrowed twice.
 
     This test used to assert that all five files were absent, and it said in
     its own docstring that the commit which builds the model is expected to
-    change it. That commit has now landed for three of them: the frozen
-    constants, their fitter and the loader are on disk. So the assertion is
-    split rather than deleted, because deleting it is exactly what it exists to
-    make difficult.
+    change it. That commit has now landed for four of them: the frozen
+    constants, their fitter, their loader and the estimator are on disk. The
+    assertion is narrowed rather than deleted, because deleting it is exactly
+    what it exists to make difficult.
 
-    What survives unchanged: no player model exists. `player_rates.py` and
-    `player_distributions.py` are the model, and nothing here can price a prop
-    without them. While that holds, the ordering is a fact about the tree.
+    What it now says: `player_distributions.py` does not exist. Without it
+    there is no `P(over)`, no de-vigged fair price to compare one against and
+    no log loss, and every one of the 33 hypotheses below is a claim about a
+    mean log loss. So no number has met them, and could not have.
+
+    The second narrowing is a check on the first, because "the file is absent"
+    is a claim about a name: nothing anywhere in `src/` or `scripts/` produces
+    a player probability. `models/player_rates.py` returns a mean, a minutes
+    lattice and refusals, and its own tests assert that a priceable projection's
+    last word is that no engine exists.
     """
     for relative in MODEL_FILES:
         assert not (_REPO / relative).exists(), (
@@ -112,6 +138,27 @@ def test_the_model_these_hypotheses_predict_about_still_does_not_exist() -> None
             "not on disk. Either it was removed, in which case take it off this "
             "list, or this list is wrong."
         )
+
+    from cbb_betting_lab.models import player_rates
+
+    produced = {
+        name.lstrip("_")
+        for name in dir(player_rates)
+        if "probab" in name.lower()
+    }
+    assert produced == {"dnp_probability"}, (
+        f"the estimator now exposes {sorted(produced)}. `dnp_probability` is a "
+        "stored diagnostic that is never multiplied into a price; anything else "
+        "with a probability in its name is a price, and this family was "
+        "registered before one existed."
+    )
+    fields = {
+        field.name for field in dataclasses.fields(player_rates.PlayerProjection)
+    }
+    assert "model_probability" not in fields and "push_mass" not in fields, (
+        "a projection now carries a probability, so the thing the 33 "
+        "hypotheses predict about exists. Say what the ordering rests on."
+    )
 
 
 def test_the_directions_could_not_have_been_written_after_the_numbers() -> None:
