@@ -116,6 +116,14 @@ that goes red if any is quietly turned into a fit:
   :meth:`PlayerShapes.evidence`) but not how many of them make a population.
   Eight, and the measurement that chose it is on the constant.
 
+Three, and it says three because a fourth was found and deleted. This module
+also carried `_MINUTES_LATTICE_LENGTH = 46`, which is not a constant without a
+counterpart at all: it is `declared.minutes_support` = [1, 45] retyped a third
+time, after the frozen file and after `player_rates.MINUTES_SUPPORT` — and
+`player_rates` holds ITS copy against the file at price time while this one was
+held against nothing. It is now derived, in :func:`_minutes_lattice_length`,
+which is where the drift it would have caused is written down.
+
 ## What this module does not do
 
 It grades nothing, it selects nothing, and it opens no file: `shapes` arrives
@@ -489,7 +497,9 @@ _CONSTANTS_READ_HERE: tuple[str, ...] = (
     "structural_check_targets",
 )
 
-_MINUTES_LATTICE_LENGTH = 46
+#: A scoring event is worth one, two or three points. Structural, not fitted:
+#: there is no fourth value for a basketball possession to be worth, and the
+#: frozen `value_pmf` is a pmf OVER these three and does not name them.
 _SEVERITY_SUPPORT = (1, 2, 3)
 
 
@@ -1914,6 +1924,62 @@ def _materiality_floor(shapes: PlayerShapes) -> float:
     return floor
 
 
+def _minutes_lattice_length(shapes: PlayerShapes) -> int:
+    """How long a minutes pmf must be, read off `declared.minutes_support`.
+
+    `high + 1`, because the lattice is indexed BY minutes with a 0.0 prepended:
+    a support of [1, 45] is a 46-long array whose index 45 is the 45-minute
+    rung. The arithmetic is the only thing declared here; the number is not.
+
+    **The defect this is arranged against is a third copy.** This was
+    `_MINUTES_LATTICE_LENGTH = 46`, a literal, and 46 is a restatement of the
+    frozen file's `declared.minutes_support` = [1, 45] that was neither derived
+    from it nor asserted against it. `player_rates` declares the same support as
+    `MINUTES_SUPPORT` and holds it against the file in `_assert_declared_agrees`
+    at price time, so those two provably cannot drift; this module's copy could,
+    and silently. A refit widening the support to [1, 48] — the obvious response
+    to the file's own `declared.overtime_is_included` caveat, which says
+    multi-overtime nights are folded onto 45 rather than dropped — would update
+    the file and `player_rates` together, pass `_assert_declared_agrees`, and
+    hand this function 49-long lattices; :func:`build` would then refuse every
+    athlete with a message naming neither the frozen file nor the constant that
+    moved, and every prop on every card would decline. It failed closed, which
+    is why nothing caught it, and it defeated the single-source rule the
+    `declared` block exists for.
+
+    The AST scan in
+    `test_every_constant_comes_from_the_frozen_file_through_the_loader` could
+    not have caught it either, twice over: it only collects numbers under
+    `document["constants"]` and the support lives under `document["declared"]`,
+    and it drops whole numbers on purpose because a frozen 4 is not a
+    fingerprint of anything.
+
+    Raises rather than defaulting. A file with no readable support is a file
+    this engine cannot index a lattice against, and a default of 46 here would
+    be exactly the copy this function exists to delete.
+    """
+    declared = shapes.document.get("declared") or {}
+    support = declared.get("minutes_support")
+    try:
+        low, high = int(support[0]), int(support[1])  # type: ignore[index]
+    except (TypeError, ValueError, KeyError, IndexError) as error:
+        raise PlayerDistributionError(
+            f"{shapes.path}: the `declared` block states no readable "
+            f"`minutes_support` (it reads {support!r}), so the length a minutes "
+            "lattice must have is not declared anywhere this engine can see. "
+            "A length written into this module would be a number about the "
+            "file that did not come from it."
+        ) from error
+    if low != 1 or high < low:
+        raise PlayerDistributionError(
+            f"{shapes.path}: `declared.minutes_support` is [{low}, {high}]. The "
+            "lattice index IS the number of minutes and index 0 is the void "
+            "rung the book pays back, so the support must start at 1 and run "
+            "upward; a support starting elsewhere renumbers every rung."
+        )
+    return high + 1
+
+
 def _refused_stats(shapes: PlayerShapes, projection: PlayerProjection) -> set[str]:
     """Which of the seven stats no family may be built for.
 
@@ -1971,11 +2037,14 @@ def build(projection: PlayerProjection, *, shapes: PlayerShapes) -> PlayerDistri
             "distribution engine is not a second opinion about a refusal."
         )
     lattice = np.asarray(projection.minutes_pmf, dtype=float)
-    if lattice.size != _MINUTES_LATTICE_LENGTH:
+    required = _minutes_lattice_length(shapes)
+    if lattice.size != required:
         raise PlayerDistributionError(
             f"The minutes lattice is {lattice.size} long and the index is the "
-            f"number of minutes, so it must be {_MINUTES_LATTICE_LENGTH}. A "
-            "support that moved would silently renumber every rung."
+            f"number of minutes, so it must be {required} — "
+            f"{shapes.path} declares `minutes_support` "
+            f"{list(shapes.document.get('declared', {}).get('minutes_support', []))}. "
+            "A support that moved would silently renumber every rung."
         )
     if lattice[0] != 0.0:
         raise PlayerDistributionError(

@@ -1216,12 +1216,49 @@ def opinions_for(
     priceable projection plus the slate's own provenance-checked constants build
     one `models.player_distributions.PlayerDistribution` per (event, athlete),
     cached here beside `joints`, and every rung on that athlete is read off it.
-    What that changes for the card is one number — `census.priced` — and nothing
-    else: `gates.can_produce_a_selection` is `CONFIRMED`-only and no availability
-    feed exists for Division I men's basketball, so every prop is still stopped
-    before it can become a selection. `availability_note`'s "a market the lab
-    prices, freezes and settles but may not bet" was aspirational for the player
-    family until this commit and is now literally true of it.
+    **What that changes for the card, stated correctly.** This paragraph used to
+    say it changes one number — `census.priced` — and nothing else, and gave the
+    selection gate as the reason. That is wrong twice over, and the same
+    docstring conceded it four lines later by saying "prices, freezes and
+    settles" is now literally true of the player family.
+
+    Three outputs move, not one:
+
+    * `census.priced` counts the props;
+    * the returned `probabilities` map now carries a player key per priced rung;
+    * `census.push_mass` carries the exact lattice mass on the line beside it,
+      which is new for this family — all ten player markets are
+      `push_possible=True` and a whole-number rebounds line settles as a
+      returned stake.
+
+    And the freeze is **not** behind the selection gate. `run_card` freezes from
+    :func:`_rows_to_freeze`, which takes the WAGERS and never consults
+    `result.selections`: its three filters are tip state, complete strata and
+    best price. `forward_evidence.write_snapshot` is then handed this whole
+    `probabilities` map, computes `edge = expected_value(probability,
+    american_odds)` per row, and appends `model_probability` and `edge` to
+    `priced_snapshots/<day>.csv`. So a player rung this function prices becomes a
+    dated, per-wager model-against-price number on disk, in a file that is
+    append-only within the day — the first such row can never be re-priced or
+    withdrawn. Driven end to end in
+    `tests/test_player_distributions.py::test_a_priced_prop_reaches_the_freeze_
+    and_the_selection_gate_is_not_what_stops_it`.
+
+    What the selection gate DOES stop is a bet: `gates.can_produce_a_selection`
+    is `CONFIRMED`-only and no availability feed exists for Division I men's
+    basketball, so no prop can become a selection. It stops nothing upstream of
+    that. What stops a shipped nightly run from writing those rows today is
+    `price_backtest.DEFAULT_MODEL`, which still resolves the team seam —
+    `card_matchups.py` documents moving it as a one-line swap, and
+    `scripts/run_gameday_card.py` already passes the full container. That is a
+    gate on one constant, not on this function.
+
+    `availability_note`'s "a market the lab prices, freezes and settles but may
+    not bet" was aspirational for the player family until this commit. Two of
+    its three verbs are now literally true of it — priced here, frozen by
+    `run_card`. The third is not this branch's to claim: nothing this engine
+    produces has been graded, and design 10's 261,870-wager reconciliation
+    gates any grading of it.
 
     **This function RAISES `StructuralCheckFailed`.** Design 4's stop rule — the
     single automatic refusal the design puts on the engine's own output — is

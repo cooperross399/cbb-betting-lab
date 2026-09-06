@@ -270,14 +270,31 @@ def _latest_day(frame: "pd.DataFrame | None", *, day_column: str = SLATE_DAY_COL
     never makes it; this reads a maximum off a frame somebody else already cut,
     which is what the stamp is. It is written here rather than imported because
     `models/` importing `reports/` is an edge that does not exist in this tree
-    and this file may not create it — `reports/price_backtest.py` imports
-    nothing from `models/`, and the seam is what would make that circular.
+    and this file may not create it.
+
+    **The reason was stated wrongly and is corrected here.** It used to read
+    "`reports/price_backtest.py` imports nothing from `models/`, and the seam is
+    what would make that circular". That stopped being true on commit 0d4f195,
+    which added `from cbb_betting_lab.models import player_census` to
+    `price_backtest.py` (and the same import to `reports/forecast_skill.py`);
+    `player_census` imports `models/player_rates`, so `reports` already depends
+    on `models` at module scope. The dependency runs one way — reports on models
+    — and importing back the other way from here would close it into
+    `models -> reports -> models`, which is the edge the duplication exists to
+    prevent, not one it would create. Today it would not even raise: nothing on
+    the return path imports `slate`, so a reader who checks the old sentence,
+    finds it false and "fixes" the duplication gets a tree that works and a
+    layering rule that no longer has a floor.
+
+    Two copies of "strictly earlier" is the football lab's defect 13, so the
+    copy is not left to be trusted: `tests/test_player_seam.py` asserts this
+    agrees with `price_backtest.latest_day` on the same frames, and asserts the
+    edge is still absent, so the two are provably one definition rather than two
+    that happen to agree today.
 
     A blank and the string `"nan"` — what a missing day looks like after a CSV
     round trip — are not days, and a stamp reading `"nan"` would sort above
-    every real date and fail every run. `tests/test_player_seam.py` asserts
-    this agrees with `price_backtest.latest_day` on the same frames, so the two
-    are provably one definition rather than two that happen to agree today.
+    every real date and fail every run.
     """
     if frame is None or len(frame) == 0:
         return ""
@@ -725,15 +742,24 @@ def _player_half(
 
     Three absences, and they are not the same fact:
 
-    * the estimator is not written (:data:`NO_RATE_ESTIMATOR`) — a lab with no
-      model;
-    * the estimator is written and was handed no rows
+    * `models/player_rates.py` could not be imported (:data:`NO_RATE_ESTIMATOR`)
+      — a tree that has lost its estimator;
+    * the estimator imported and was handed no rows
       (:data:`NO_PLAYER_HISTORY`) — a night with no evidence;
     * the frozen constants refuse this season — the provenance guard firing,
       reported in the guard's own words rather than paraphrased.
 
     A single "no player opinions" bucket would hide the first inside the
     second, and the first is a wiring fault.
+
+    The FIRST bullet used to describe the estimator as never having been
+    written, which is not what :data:`NO_RATE_ESTIMATOR` says and has not been true of
+    this tree since the estimator landed. `NO_DISTRIBUTION_ENGINE` was
+    re-pointed off exactly that wording on 2026-09-06 and this bullet was
+    missed; a docstring describing a check the constant does not make is the
+    defect findings 7, 14 and 8 are all instances of.
+    `tests/test_player_seam.py::test_s4_the_latest_day_this_module_reads_is_the_
+    harnesss_definition` now holds the bullets against the sentences.
 
     Returns the five container fields, the absence sentence, and **the shapes
     object the projections were actually built from** — never the argument, and

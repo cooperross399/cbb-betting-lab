@@ -1300,6 +1300,66 @@ def test_projection_for_raises_on_a_name_rather_than_inventing_an_athlete() -> N
 # --------------------------------------------------------------------------
 
 
+def test_this_module_no_longer_tells_its_reader_the_engine_is_not_written() -> None:
+    """The sweep clause 1 ordered, held against the FILE and not against a test.
+
+    `test_the_gaps_this_estimator_still_has_are_the_ones_written_down`'s clause
+    1 said: delete this clause, and with it every sentence in this file that
+    says no probability exists. It was read as applying to the test module's own
+    docstring, which was the only sentence swept, and `models/player_rates.py`
+    got zero commits on the branch that wrote the engine — so the estimator, the
+    file every projection comes from, went on telling its reader in two places
+    that `models/player_distributions.py` is not written: the module docstring
+    and `mean_for_market`. Both were false from commit 0985942 onward.
+
+    Measured before the repair: `git log origin/main..HEAD --
+    src/cbb_betting_lab/models/player_rates.py` printed nothing, so the file had
+    no commit on the branch that wrote the engine; `grep -n` on it put "is not
+    written" at lines 7 and 1204 and "no engine exists" at line 8.
+
+    This holds the file rather than the prose about the file. What is banned is
+    the wording the two false sentences actually used; the module may still say
+    the engine exists, name it, describe what it does, and describe in the PAST
+    tense what these lines used to claim. It is a tripwire on the exact wording,
+    not a proof that no paraphrase can be reintroduced, and it says so rather
+    than pretending otherwise. It would have gone red on commit 0985942, which
+    is the commit it exists for.
+
+    A third candidate, `"no probability exists"`, is deliberately NOT banned.
+    The comment on :data:`MARKETS_REFUSED_BY_NAME` QUOTES the card's old
+    sentence — "no probability exists for this line yet" — to say what a
+    first-basket wager used to fall through to, and a substring ban cannot tell
+    a quotation of a repaired defect from a fresh claim of it. Banning it would
+    force out the one place the module records what went wrong, which is the
+    opposite of what this test is for. The two bans below are enough: both
+    false sentences carried `"is not written"`, and one carried
+    `"no engine exists"` as well.
+    """
+    source = MODULE.read_text(encoding="utf-8")
+    engine = REPO / "src" / "cbb_betting_lab" / "models" / "player_distributions.py"
+    assert engine.is_file(), (
+        "the distribution engine has been removed. The sentences banned below "
+        "would be TRUE again: put them back, in this module and in "
+        "`models/slate.py`'s NO_DISTRIBUTION_ENGINE, rather than leaving a file "
+        "that claims a downstream price nothing can produce."
+    )
+    for absent in ("is not written", "no engine exists"):
+        assert absent not in source, (
+            f"`models/player_rates.py` says {absent!r} again, and "
+            f"{engine.name} exists and is wired into "
+            "`reports/gameday_card.opinions_for`. A file that understates what "
+            "the lab holds is the same defect as commit dcaab15's six sentences "
+            "that overstated it."
+        )
+    # The other half: the file has to still say the true thing. A module that
+    # simply deleted the paragraph would pass the ban above and leave a reader
+    # with no idea where a projection goes next.
+    assert "player_distributions" in source, (
+        "the estimator no longer names the engine anywhere, so nothing tells a "
+        "reader what turns one of these projections into a price"
+    )
+
+
 def test_the_gaps_this_estimator_still_has_are_the_ones_written_down() -> None:
     """Six, of which one has since closed; each goes red the day it does.
 
@@ -1312,8 +1372,15 @@ def test_the_gaps_this_estimator_still_has_are_the_ones_written_down() -> None:
        probability. `models/player_distributions.py` was written and then wired
        into `reports/gameday_card.opinions_for`, so a priceable projection now
        carries one; this clause's own instruction was to delete it and with it
-       every sentence in this file saying no probability exists, and the one
-       such sentence was in the module docstring above.
+       every sentence saying no probability exists. That instruction was read
+       as covering THIS file only, and this file's module docstring was the
+       only sentence swept — so `models/player_rates.py`, which got zero
+       commits on the branch that wrote the engine, went on saying it in two
+       places (its module docstring and `mean_for_market`) for three commits.
+       Both are repaired, and
+       `test_this_module_no_longer_tells_its_reader_the_engine_is_not_written`
+       is the tripwire, held against the ESTIMATOR's source rather than
+       against this file's prose.
 
        The successor is that **this estimator still carries two routes to a
        mean for two of the seven stats, and they do not agree.** `points` has a

@@ -611,11 +611,29 @@ def test_s4_the_seams_own_argument_check_is_the_harnesss_check() -> None:
 
 
 def test_s4_the_latest_day_this_module_reads_is_the_harnesss_definition() -> None:
-    """The stamp is read the same way on both sides of the seam.
+    """The stamp is read the same way on both sides of the seam, and the copy has a reason.
 
     `_latest_day` is not a second cut — the cut is `history_before`, made once,
     at the caller. It is a maximum, and a maximum written twice is still two
     places a `"nan"` can sort above every real date.
+
+    **The second half of this test holds the REASON the copy exists**, because
+    that reason was stated wrongly and went stale without anything noticing.
+    `_latest_day`'s docstring justified not importing `price_backtest.latest_day`
+    on the ground that "`reports/price_backtest.py` imports nothing from
+    `models/`, and the seam is what would make that circular". Commit 0d4f195
+    added `from cbb_betting_lab.models import player_census` to
+    `price_backtest.py` — and the same import to `reports/forecast_skill.py` —
+    so the antecedent was false from that commit on. Nothing was wrong with the
+    behaviour; the written reason for a structural decision was, which is worse
+    than no reason at all: the next reader checks it, finds it false, and
+    "fixes" the duplication by importing `reports/` from `models/`.
+
+    So both halves of the corrected reason are asserted here, from the sources:
+    `models/slate.py` imports nothing from `reports/` (the rule), and
+    `reports/price_backtest.py` DOES import from `models/` (the fact that makes
+    the old sentence false and the new one true). Either going red means the
+    docstring has to be re-read rather than assumed.
     """
     frames = [
         pd.DataFrame(columns=["slate_date"]),
@@ -626,6 +644,58 @@ def test_s4_the_latest_day_this_module_reads_is_the_harnesss_definition() -> Non
     ]
     for frame in frames:
         assert slate._latest_day(frame) == PB.latest_day(frame), frame.to_dict()
+
+    def _modules_imported_by(path: Path) -> set[str]:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        names: set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                names.add(node.module or "")
+            elif isinstance(node, ast.Import):
+                names.update(alias.name for alias in node.names)
+        return names
+
+    models = SRC / "cbb_betting_lab" / "models"
+    reports = SRC / "cbb_betting_lab" / "reports"
+
+    imported_by_slate = _modules_imported_by(models / "slate.py")
+    assert not any(
+        name.startswith("cbb_betting_lab.reports") for name in imported_by_slate
+    ), (
+        "`models/slate.py` now imports from `reports/`, which is the edge "
+        "`_latest_day`'s duplication exists to avoid. `reports` already depends "
+        "on `models`, so this closes `models -> reports -> models`. It may not "
+        f"raise today, which is the danger. Imported: {sorted(imported_by_slate)}"
+    )
+
+    imported_by_backtest = _modules_imported_by(reports / "price_backtest.py")
+    assert any(
+        name.startswith("cbb_betting_lab.models") for name in imported_by_backtest
+    ), (
+        "`reports/price_backtest.py` no longer imports from `models/`. That was "
+        "the state `_latest_day`'s ORIGINAL justification described, and commit "
+        "0d4f195 ended it; the docstring now says reports depends on models and "
+        "that importing back would close the cycle. Re-read it and say which of "
+        "the two states the tree is in — do not leave a third stale reason. "
+        f"Imported: {sorted(imported_by_backtest)}"
+    )
+    # Both absence sentences say which absence they are, and `_player_half`'s
+    # bullets have to name them the same way. The estimator bullet said "the
+    # estimator is not written" while :data:`NO_RATE_ESTIMATOR` said "could not
+    # be imported" — a docstring describing a check the constant does not make,
+    # and the same drift `NO_DISTRIBUTION_ENGINE` was re-pointed for.
+    for sentence in (slate.NO_RATE_ESTIMATOR, slate.NO_DISTRIBUTION_ENGINE):
+        assert "could not be imported" in sentence, sentence
+        assert "is not written" not in sentence, sentence
+    half = slate._player_half.__doc__ or ""
+    first_bullet = half.split("*", 2)[1] if "*" in half else half
+    assert "could not be imported" in first_bullet, (
+        "`_player_half`'s first bullet no longer describes NO_RATE_ESTIMATOR in "
+        "that sentence's own terms. It read 'the estimator is not written' while "
+        "the sentence said 'could not be imported' — a tree that LOST a file "
+        "and a lab that never had one are different facts, and the bullet is "
+        f"what a reader meets first. It reads: {first_bullet.strip()!r}"
+    )
 
 
 # --------------------------------------------------------------------------

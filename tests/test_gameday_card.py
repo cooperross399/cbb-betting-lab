@@ -840,7 +840,7 @@ def test_the_frozen_price_is_the_best_price_and_not_whichever_book_came_first(
     selection key does not carry the book. Hand it every quote and it keeps
     **whichever row arrived first** — bookmaker order in the provider's
     response, which is an arbitrary book rather than the price the card would
-    have taken. `gameday_card._freezable_rows` collapses to one row per wager at
+    have taken. `gameday_card._rows_to_freeze` collapses to one row per wager at
     the best price first, which is the same collapse `card_pricing.select`
     makes when it takes the best price last.
 

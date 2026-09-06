@@ -4,8 +4,15 @@ This is the estimator half of the player model. It turns a **cut** player frame
 — rows dated strictly earlier than the day being priced — into one
 :class:`PlayerProjection` per (event, athlete) the book quoted, or into a
 full-sentence refusal saying why there is none. It does not produce a
-probability: `models/player_distributions.py` is not written, so a priceable
-projection's last word is still that no engine exists to turn it into a price.
+probability, and it is no longer the last word before one: on 2026-09-06
+`models/player_distributions.py` was written and wired into
+`reports/gameday_card.opinions_for`, so a priceable projection built here is
+turned into `(win, push, loss)` per rung one module downstream. Until 2026-09-06
+these three lines said the engine had never been written and that a priceable
+projection's last word was that none existed — false from commit 0985942
+onward, and false in the same way as commit dcaab15's six sentences claiming
+prices this lab had never produced, with the sign reversed. Nothing in THIS
+file changed; the sentence about another file did.
 
 ## The defect this file is arranged against
 
@@ -1199,9 +1206,25 @@ def mean_for_market(projection: PlayerProjection, market_key: str) -> float:
     on one player cannot disagree. That is design 5's coherence identity D3 and
     `tests/test_player_rates.py` asserts it to 1e-9 off this function.
 
-    A mean, not a probability. Nothing here selects a bet and nothing can:
-    turning a mean into a price needs `models/player_distributions.py`, which
-    is not written.
+    A mean, not a probability, and nothing here selects a bet. That second
+    half still holds — `gates.can_produce_a_selection` is `CONFIRMED`-only and
+    Division I men's basketball has no availability report, so no prop this
+    lab prices can become a selection — but the first half is no longer the
+    end of the road. `models/player_distributions.py` was written and wired on
+    2026-09-06 and turns a projection into a count distribution; this function
+    is the OTHER route to a points mean, and the two do not agree.
+
+    Measured on this module's own fixture athlete, in
+    `tests/test_player_distributions.py::test_the_two_mean_routes_agree_where_
+    they_are_one_route_and_are_measured_where_they_are_two`: the compound route
+    (`rates["points_events"] * minutes * E[V]`, which is what the engine
+    prices) runs **1.6386%** above `rates["points"] * minutes`, which is what
+    this function returns, and the thinned threes route runs **0.6817%** above
+    `rates["threes"] * minutes`. That disagreement is the point of keeping both
+    and it is not academic: one of the two is now a live price and this one is
+    the check. Until 2026-09-06 this docstring said the price route had never
+    been written, which made the gap read as a comparison between two numbers
+    nothing used.
     """
     components = MARKET_COMPONENTS.get(market_key)
     if components is None:

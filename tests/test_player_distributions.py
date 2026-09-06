@@ -152,13 +152,47 @@ def _interior_ratios(pmf: np.ndarray, floor: float = D1_INTERIOR_FLOOR) -> np.nd
     return pmf[low + 1 : high + 1] / pmf[low:high]
 
 
-def _the_comb(mean: float = 9.0, dispersion: float = 2.3289) -> np.ndarray:
-    """A player points count built the refused way, at the same two moments.
+#: The mean D1's comb is built at. DECLARED, and it is **not** the fixture
+#: athlete's points mean — see :func:`_the_comb`, which measures what happens
+#: at his (13.184738) and why the comb is not moved there.
+COMB_MEAN = 9.0
 
-    `distributions._match_variance` applied to a Poisson lattice and asked for
-    the frozen conditional points VMR. This is the object design 4 refuses, and
-    D1 runs against it so the band is shown to still catch what it exists for.
+
+def _the_comb(mean: float = COMB_MEAN, shapes=None) -> np.ndarray:
+    """A player points count built the refused way, at a declared mean and the file's VMR.
+
+    `distributions._match_variance` applied to a Poisson lattice and asked to
+    hit a variance of `mean * conditional_dispersion["points"]`. This is the
+    object design 4 refuses, and D1 runs against it so the band is shown to
+    still catch what it exists for.
+
+    **The dispersion is read through the loader, never typed.** It was the
+    literal `2.3289`, a four-decimal rounding of
+    `conditional_dispersion["points"]` = 2.328891545818532, while this
+    docstring said the comb is asked for the frozen conditional points VMR.
+    The engine module is scanned for retyped frozen constants
+    (`test_every_constant_comes_from_the_frozen_file_through_the_loader`) and
+    this file is not — and that scan could not have caught this one anyway,
+    because it compares against exact frozen values and 2.3289 is a rounding.
+    A refit moving that constant would have moved every priced pmf and left the
+    comb at the old second moment, while D1's docstring went on saying both
+    were at the same two moments. Reading it costs nothing measurable today:
+    the comb's interior ratios move from 0.392104/2.751335 to 0.392103/2.751405
+    and its worst adjacent swing from 5.073401 to 5.073336, all inside the
+    tolerances D1 asserts.
+
+    **The mean is declared, and it is not the fixture's.** 9.0 is not read off
+    any projection and must not be quietly replaced by one: the fixture
+    athlete's points mean is 13.184738, and at THAT mean the comb's interior
+    ratios run 0.350047 to 2.073995 — it still breaks D1's lower edge of 0.4
+    and it no longer breaks the upper edge of 2.5. So "tie the mean to the
+    projection" would leave `comb.max() > 2.5` false and invite somebody to
+    weaken the conjunction to a disjunction. D1 holds both means instead: the
+    declared one where the comb fails on both edges, and the fixture's own
+    where it fails on one.
     """
+    resolved = shapes or _shapes()
+    dispersion = float(resolved.value("conditional_dispersion")["points"])
     counts = np.arange(80, dtype=float)
     base = np.array(
         [math.exp(-mean) * mean**k / math.factorial(k) for k in range(80)]
@@ -620,17 +654,29 @@ def test_the_points_threes_correlation_identity_matches_a_brute_force_joint() ->
 # --------------------------------------------------------------------------
 
 
-def test_d1_no_priced_pmf_carries_the_match_variance_comb() -> None:
+def test_d1_no_priced_pmf_carries_the_match_variance_comb(tmp_path: Path) -> None:
     """Design 4's smoothness band, with the object it exists to catch run beside it.
 
     The band is `[0.4, 2.5]` on adjacent-integer ratios across the interior
     support. Measured on this fixture, over the ten priced markets, the worst
     ratios are **0.489** and **2.042**; the same measurement on
-    `_match_variance` at the same two moments gives **0.392** and **2.751**, so
-    the band still catches the comb on both edges. The comb's largest adjacent
-    swing — the ratio of one ratio to the next — is **5.07**, which is the
-    design's "adjacent-integer swings of ~5x", against **2.89** for the
-    engine's worst market.
+    `_match_variance` at a mean of 9.0 and the frozen conditional points VMR
+    gives **0.392** and **2.751**, so the band still catches the comb on both
+    edges. The comb's largest adjacent swing — the ratio of one ratio to the
+    next — is **5.07**, which is the design's "adjacent-integer swings of ~5x",
+    against **2.89** for the engine's worst market.
+
+    **The comb's two moments, and what each is.** The VMR is read from the
+    frozen file through the loader, so a refit moves the comb with the priced
+    pmfs; the check that it does is a copy of the file with that constant moved
+    to 4.0, whose comb must differ. The MEAN is declared at
+    :data:`COMB_MEAN` = 9.0 and is not any projection's. Both are held here
+    because the comb is weaker at the fixture athlete's own points mean of
+    13.184738: its ratios there run 0.350047 to 2.073995, which trips the lower
+    edge and NOT the upper one. That is the trap in "tie the fixture to the
+    projection" — it would make `comb.max() > 2.5` false and the obvious next
+    move is to weaken the conjunction. Both means are asserted instead, and the
+    weaker one is asserted as the single-edge catch it actually is.
 
     **A DISAGREEMENT WITH THE DESIGN, reported rather than patched.** "Interior
     support" has to be defined and the design does not define it. Over the whole
@@ -668,6 +714,37 @@ def test_d1_no_priced_pmf_carries_the_match_variance_comb() -> None:
     comb_swing = float(np.max(np.maximum(comb_steps, 1.0 / comb_steps)))
     assert comb_swing == pytest.approx(5.07, abs=0.02)
     assert comb_swing > swing * 1.5
+
+    # The comb's dispersion comes from the FILE. Move that constant in a copy
+    # and the comb has to move with it; a retyped literal would not.
+    def _move_points_vmr(payload: dict) -> None:
+        payload["constants"]["conditional_dispersion"]["value"]["points"] = 4.0
+
+    moved = _shapes_with(tmp_path, _move_points_vmr, name="comb.json")
+    assert not np.allclose(_the_comb(shapes=moved), _the_comb()), (
+        "the frozen conditional points VMR moved and D1's comb did not, so the "
+        "comb is built on a number typed here rather than read from the file. "
+        "A refit would then leave the engine's pmfs at the new second moment "
+        "and this comb at the old one, while D1 went on claiming both are at "
+        "the same two moments."
+    )
+
+    # And what the comb looks like at the fixture athlete's OWN points mean:
+    # weaker, one edge instead of two, which is why COMB_MEAN is declared.
+    at_his_mean = _interior_ratios(_the_comb(mean=distribution.mean("player_points")))
+    assert distribution.mean("player_points") == pytest.approx(13.184738, abs=5e-6)
+    assert at_his_mean.min() == pytest.approx(0.350, abs=5e-3)
+    assert at_his_mean.max() == pytest.approx(2.074, abs=5e-3)
+    assert at_his_mean.min() < 0.4, (
+        "the comb at the fixture athlete's own points mean now passes D1 on "
+        "BOTH edges, so at his mean the band catches nothing. Do not widen the "
+        "band and do not move COMB_MEAN; find out what changed."
+    )
+    assert at_his_mean.max() <= 2.5, (
+        "the comb at the fixture's own mean now trips the upper edge too, so "
+        "the reason COMB_MEAN is declared rather than read off the projection "
+        "has gone. Re-measure and say so before moving it."
+    )
 
 
 def test_no_player_count_is_built_by_match_variance() -> None:
@@ -1156,6 +1233,63 @@ def test_every_constant_comes_from_the_frozen_file_through_the_loader(
     assert moved.mean("player_rebounds") == pytest.approx(
         baseline.mean("player_rebounds"), rel=1e-9
     ), "the dispersion moved the mean, which is a parameterisation error"
+
+
+def test_the_minutes_lattice_length_is_derived_from_the_declared_block(
+    tmp_path: Path,
+) -> None:
+    """The length the engine demands moves with the file, not with a literal.
+
+    The engine carried `_MINUTES_LATTICE_LENGTH = 46`, a third copy of
+    `declared.minutes_support` = [1, 45] — after the frozen file itself and
+    after `player_rates.MINUTES_SUPPORT`, which is the only one of the three
+    that was held against the file (`player_rates._assert_declared_agrees`, at
+    price time). The scan above could not see it: it collects numbers under
+    `document["constants"]` and the support lives under `document["declared"]`,
+    and it drops whole numbers deliberately because a frozen 4 fingerprints
+    nothing.
+
+    Three things, each measured against a file rather than described:
+
+    1. On the SHIPPED file the derived length is 46, so the repair changed no
+       behaviour on any path that prices anything today.
+    2. On a copy declaring [1, 48] it is 49, and `build` then refuses the
+       shipped 46-long lattice **naming the file and the support it read** —
+       which is the half the old message did not have. A refit that widened the
+       support would have produced 49-long lattices, passed
+       `_assert_declared_agrees`, and made every prop on every card decline with
+       a message naming neither the file nor the constant that moved.
+    3. A file whose `declared` block states no readable support REFUSES rather
+       than falling back to 46. A default here would be the copy this deletes.
+    """
+    shipped = _shapes()
+    assert PD._minutes_lattice_length(shipped) == 46
+    assert len(_projection(shipped).minutes_pmf) == 46
+
+    def _widen(payload: dict) -> None:
+        payload["declared"]["minutes_support"] = [1, 48]
+
+    widened = _shapes_with(tmp_path, _widen, name="wide.json")
+    assert PD._minutes_lattice_length(widened) == 49
+    with pytest.raises(PD.PlayerDistributionError) as raised:
+        PD.build(_projection(shipped), shapes=widened)
+    message = str(raised.value)
+    assert "46 long" in message and "must be 49" in message, message
+    assert "wide.json" in message and "[1, 48]" in message, (
+        "the refusal names neither the frozen file nor the support it read, so "
+        "a reader hitting it on every prop on every card cannot tell which of "
+        "the three copies moved. That is the whole reason this length is "
+        f"derived rather than typed. It read: {message}"
+    )
+
+    for index, broken in enumerate(([], [1], "1-45", None, [2, 45])):
+
+        def _break(payload: dict, value=broken) -> None:
+            payload["declared"]["minutes_support"] = value
+
+        bad = _shapes_with(tmp_path, _break, name=f"broken{index}.json")
+        with pytest.raises(PD.PlayerDistributionError):
+            PD._minutes_lattice_length(bad)
 
 
 def test_the_markets_refused_by_name_are_refused_by_name() -> None:
@@ -2445,6 +2579,133 @@ def test_a_priceable_projection_now_carries_a_probability_through_the_card() -> 
     assert rung_census.priced == 5
     steps = [priced[wager.key] for wager in ladder]
     assert steps == sorted(steps, reverse=True) and len(set(steps)) == 5, steps
+
+
+def test_a_priced_prop_reaches_the_freeze_and_the_selection_gate_is_not_what_stops_it(
+    tmp_path: Path,
+) -> None:
+    """What pricing a prop actually changes, driven through the shipped functions.
+
+    `gameday_card.opinions_for`'s docstring said the wiring changes "one number
+    — `census.priced` — and nothing else", and gave the selection gate as the
+    reason. Both halves were wrong, and the same docstring conceded it four
+    lines later by saying "prices, freezes and settles" is now literally true of
+    the player family.
+
+    Three outputs move, and this asserts all three off one call: `census.priced`,
+    a player key in the returned `probabilities` map, and `census.push_mass`
+    beside it.
+
+    The freeze is not behind the selection gate. `_rows_to_freeze` takes the
+    WAGERS — its three filters are tip state, complete strata and best price —
+    and never reads `result.selections`, so a prop that can never become a
+    selection is frozen anyway. `forward_evidence.write_snapshot` is handed the
+    whole probability map and writes `model_probability` and `edge` per row into
+    an append-only-within-the-day CSV, so the first such row can never be
+    re-priced or withdrawn.
+
+    Driven with the shipped key builder (`card_pricing.default_key_for(CBB)`),
+    the shipped `_rows_to_freeze` and the shipped `write_snapshot`, into
+    `tmp_path`. **Nothing here is graded and no result is stated**: the two
+    numbers asserted are that the snapshot's player row carries a finite
+    probability strictly between 0 and 1 and a finite edge — a structural check
+    that the columns are populated rather than blank, not a claim about the
+    model's accuracy or its value against the price.
+
+    This test is where the docstring's claim is held. It goes red if the freeze
+    is ever put behind `result.selections`, at which point that paragraph is
+    wrong in the other direction and has to be rewritten again.
+    """
+    from dataclasses import replace as _replace
+    from datetime import datetime, timezone
+
+    from cbb_betting_lab import forward_evidence
+    from cbb_betting_lab.competitions import CBB
+    from cbb_betting_lab.reports import card_pricing, gameday_card as GC
+
+    key_for = card_pricing.default_key_for(CBB)
+    model, _shapes_used = _slate_model()
+
+    # The real key, built by the same callable the card and the freeze share,
+    # rather than the hand-built tuple `_wager` carries for the other tests.
+    # Two hand-built copies of a join key is the NHL lab's five-member bug
+    # family, and a test that built its own would prove the join, not use it.
+    prop = _wager("player_points", line=14.5)
+    prop = _replace(prop, key=key_for(prop))
+
+    probabilities, census = GC.opinions_for([prop], model, day=DAY)
+    assert census.priced == 1
+    assert prop.key in probabilities, sorted(probabilities)
+    assert 0.0 < probabilities[prop.key] < 1.0
+    assert prop.key in census.push_mass, (
+        "the call filled no push mass for a player rung. All ten player markets "
+        "are push_possible and the freeze reads this map."
+    )
+
+    guard = GC.TipGuard(now=lambda: datetime(2024, 1, 15, 12, 0, tzinfo=timezone.utc))
+    freezable = GC._rows_to_freeze(
+        [prop], guard=guard, per_event_complete=True
+    )
+    assert len(freezable) == 1, (
+        "the prop did not reach the freeze at all, so this test proves nothing "
+        f"about what the freeze writes. Rows: {freezable.to_dict('records')}"
+    )
+
+    path = forward_evidence.write_snapshot(
+        freezable,
+        probabilities,
+        key_for=key_for,
+        verdicts_in_force=(),
+        snapshot_date=DAY,
+        archive_dir=tmp_path / "archive",
+    )
+    assert path is not None and path.is_file()
+    frozen = forward_evidence.read_snapshot(path)
+    rows = frozen.loc[frozen["market"] == "player_points"]
+    assert len(rows) == 1, frozen.to_dict("records")
+    row = rows.iloc[0]
+
+    written = float(row["model_probability"])
+    assert written == pytest.approx(probabilities[prop.key], abs=1e-12), (
+        "the frozen probability is not the one the card produced"
+    )
+    assert 0.0 < written < 1.0
+    assert math.isfinite(float(row["edge"])), (
+        "`write_snapshot` computes `edge = expected_value(probability, "
+        "american_odds)` and wrote a blank for a row that carries both. The "
+        "docstring's claim that pricing changes `census.priced` and nothing "
+        "else rested on this column staying empty."
+    )
+
+    # The selection gate is a different question and does not reach here. It
+    # stops a BET, and it is asserted where it belongs; what this shows is that
+    # `_rows_to_freeze` never asked it anything.
+    import inspect as _inspect
+
+    source = _inspect.getsource(GC._rows_to_freeze)
+    assert "selections" not in source, (
+        "`_rows_to_freeze` now reads the selections, so the freeze IS behind "
+        "the selection gate and `opinions_for`'s docstring — which says it is "
+        "not — has to be rewritten. Say which way round the tree is."
+    )
+
+    # And the docstring, held POSITIVELY. A ban on the false form of words
+    # cannot be written here: the corrected paragraph quotes the sentence it is
+    # correcting, and a substring test cannot tell a quotation of a repaired
+    # defect from a fresh claim of it — the same reason
+    # `tests/test_player_rates.py` will not ban "no probability exists". So the
+    # docstring is required to NAME each of the three outputs that move and the
+    # writer they reach, which a paragraph claiming only `census.priced` moves
+    # could not do.
+    doc = GC.opinions_for.__doc__ or ""
+    for named in ("push_mass", "_rows_to_freeze", "write_snapshot", "edge"):
+        assert named in doc, (
+            f"`opinions_for`'s docstring no longer names {named!r}. It said for "
+            "three commits that pricing the player half changes `census.priced` "
+            "and nothing else, while it also fills the push mass and the "
+            "probability map — and both reach an append-only frozen snapshot "
+            "carrying a model probability and an edge per player wager."
+        )
 
 
 def test_two_spellings_of_one_athlete_build_one_object(monkeypatch) -> None:
