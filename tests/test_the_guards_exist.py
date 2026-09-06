@@ -61,6 +61,8 @@ REQUIRED_GUARDS: tuple[str, ...] = (
     "tests/test_check_test_results.py",
     "tests/test_check_ledger_append_only.py",
     "tests/test_player_shapes_provenance.py",
+    "tests/test_player_seam.py",
+    "tests/test_player_model_leakage.py",
 )
 
 #: A guard with fewer test functions than this has been hollowed out.
