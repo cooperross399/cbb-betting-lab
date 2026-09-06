@@ -2487,7 +2487,17 @@ def fit_report(ratings: Ratings, prepared: PreparedGames | None = None) -> str:
 #: it daily would be ~147x the work for the same object. The roster evidence
 #: inside it does move, and moves legitimately — a player who has appeared has
 #: appeared — which is why the key carries the day's month rather than the day.
-_SEASON_CACHE: dict[tuple, "Prior"] = {}
+#:
+#: **The stored value is `(prior, built_through)`, and the second half is not
+#: decoration.** The key is `(season, day[:7])`, but the `Prior` is built from
+#: `prepare(history)` — a DAY-cut frame. Two callers in one process pricing
+#: days out of order within one month therefore got the earlier day the later
+#: day's prior: the card rehearsing 12 February after a backtest priced 20
+#: February, say. It is latent while `player_games` is withheld, because the
+#: roster evidence is then empty and the prior genuinely does not move within a
+#: season — and it goes live the day that argument is filled. The fix is one
+#: comparison, not the ~147x daily refit this cache exists to avoid.
+_SEASON_CACHE: dict[tuple, "tuple[Prior, str]"] = {}
 _TIER_CACHE: dict[tuple, "TierTable"] = {}
 #: Keyed on (season, raw_dir). **Keying on the season alone was a defect**: a
 #: caller pointing at a different `--raw-dir` — which every card test does —
@@ -2661,8 +2671,17 @@ def matchups_for(
     # The prior does not move within a season, so it is built once. The month
     # is in the key because the roster evidence inside it legitimately does
     # move as players appear.
+    #
+    # AND IT IS REBUILT WHEN THE CACHED ONE WAS BUILT THROUGH THIS DAY OR
+    # LATER. `prepared` is a day-cut frame, so a prior memoised while pricing
+    # 20 February has seen rows this day may not; handing it to 12 February in
+    # the same process and the same month is a leak the stamp cannot see,
+    # because the stamp describes the frame the caller cut and not the object
+    # the cache returned. One comparison, and it fires only on out-of-order
+    # days: a walk-forward run prices in date order and never rebuilds.
     prior_key = (season, str(day)[:7])
-    prior = _SEASON_CACHE.get(prior_key)
+    cached = _SEASON_CACHE.get(prior_key)
+    prior = None if cached is None or cached[1] >= str(day) else cached[0]
     if prior is None:
         prior = prepare_prior(
             prepared,
@@ -2671,7 +2690,12 @@ def matchups_for(
             schedules=schedules,
             player_games=player_games,
         )
-        _SEASON_CACHE[prior_key] = prior
+        built_through = ""
+        if "slate_date" in getattr(prepared.rows, "columns", ()):
+            days = prepared.rows["slate_date"].dropna().astype(str)
+            days = days[(days != "") & (days.str.strip().str.lower() != "nan")]
+            built_through = "" if days.empty else str(days.max())
+        _SEASON_CACHE[prior_key] = (prior, built_through)
 
     # `fit` takes `prepare(...).rows`, not raw team-games — it reads the
     # derived `efficiency` and `possessions` columns that `prepare` computes

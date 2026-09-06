@@ -63,10 +63,14 @@ than a failure of `pair_key`.
 **None of those rows is ever asked for here.** This script looks for a
 complement only for a row in the graded export, and the graded export carries
 **no player prop at all — 0 of 566,377 rows**. That is by declaration, not by
-accident: `gameday_card.opinions_for` refuses the whole `PLAYER` family with
-*"this lab has no player model, so no player prop carries a modelled opinion"*,
-and the backtest prices through that same function, so a prop is never an
-opinion, never a bet and never graded. The five non-prop rows in that 146,617
+accident: `gameday_card.opinions_for` gives the whole `PLAYER` family a
+census bucket and no probability, and the backtest prices through that same
+function, so a prop is never an opinion, never a bet and never graded. Since
+the player seam landed the sentence is per prop rather than per family — the
+model was never asked, or the name did not resolve, or the athlete is refused,
+or *"`player_distributions.py` is not written, so no probability exists for
+this line yet"* — but the count is unchanged at zero and stays there until an
+engine exists to produce one. The five non-prop rows in that 146,617
 are draftkings `team_total` quotes on four November-2024 slate dates, and one of
 them is the `home_over` 74.5 already named as one of the two graded rows this
 script excludes.

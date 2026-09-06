@@ -35,6 +35,7 @@ from cbb_betting_lab import forward_evidence
 from cbb_betting_lab.competitions import CBB
 from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.gates import TipState
+from cbb_betting_lab.models import slate
 from cbb_betting_lab.providers import odds_api, staging
 from cbb_betting_lab.reports import gameday_card as GC
 from cbb_betting_lab.season import season_for_slate_date
@@ -1763,9 +1764,15 @@ def test_the_entry_point_passes_the_models_opinion_to_the_card(
     `run_card` defaults `matchups` to None, so for the whole of the build the
     production card would have priced no opinion on any game, all season, and
     read as healthy while doing it. Asserted on the call rather than on the
-    prose: the kwarg reaches `run_card` as a non-empty mapping keyed by the
-    board's event ids, built from the tracked real-data sample through the same
-    seam the price backtest prices through.
+    prose: the kwarg reaches `run_card` carrying a non-empty mapping keyed by
+    the board's event ids, built from the tracked real-data sample through the
+    same seam the price backtest prices through.
+
+    Since the player seam landed the kwarg is a `slate.SlateModel` rather than
+    the bare dict, and the team half is read off it here. Every assertion below
+    is the one it always made, plus one it could not: that the container also
+    says what happened to the **player** half, so a card carrying no prop
+    opinion says which absence that is instead of saying nothing.
     """
     board = _board_from_the_schedule(FIXTURE_DAY)
     staged = stage_to_disk(board, tmp_path, FIXTURE_DAY)
@@ -1783,9 +1790,22 @@ def test_the_entry_point_passes_the_models_opinion_to_the_card(
 
     assert status == 0, out
     assert "matchups" in seen, "run_card was called without the matchups keyword"
-    matchups = seen["matchups"]
+    passed = seen["matchups"]
+    assert isinstance(passed, slate.SlateModel), (
+        f"the entry point passed {type(passed).__name__}; `opinions_for` reads "
+        "the player half off this object and a bare dict would make every prop "
+        "read `no opinion` for the wrong reason"
+    )
+    assert passed.day == FIXTURE_DAY, "a slate carried across days is defect 13"
+    matchups = passed.matchups
     assert isinstance(matchups, Mapping) and len(matchups) > 0, (
-        f"the entry point passed {matchups!r}; the model was never asked"
+        f"the entry point passed {passed!r}; the model was never asked"
+    )
+    # The player half answered too, and said which absence it is rather than
+    # being silent — a silence is what a wiring fault looks like from outside.
+    assert passed.players == {}
+    assert passed.player_absence_reason, (
+        "the container carries no projection and no sentence saying why"
     )
     assert set(matchups) <= set(board.rows["event_id"].astype(str)), (
         "a matchup was passed for an event that is not on the board"

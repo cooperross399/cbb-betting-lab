@@ -134,6 +134,33 @@ def team_games() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def player_games(games: pd.DataFrame) -> pd.DataFrame:
+    """Two athletes per team-game, in the seam's declared columns.
+
+    Additive: nothing that reads `team_games` or `game_segments` changes. It is
+    here because `make_price_day`'s pricer now declares `player_history`, so a
+    lab on disk that carried no player table would exercise the stand-in frame
+    on every run instead of the real cut — and the stand-in is the case where
+    the board has no props, which is not the case most of these tests are in.
+    """
+    rows: list[dict] = []
+    for _, row in games.iterrows():
+        for athlete in (1, 2):
+            rows.append(
+                {
+                    "slate_date": row["slate_date"],
+                    "season": int(row["season"]),
+                    "game_id": int(row["game_id"]),
+                    "athlete_id": int(row["team_id"]) * 10 + athlete,
+                    "athlete_display_name": f"Player {int(row['team_id'])}-{athlete}",
+                    "team_id": int(row["team_id"]),
+                    "did_not_play": False,
+                    "minutes": 24.0 + athlete,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
 def game_segments(games: pd.DataFrame) -> pd.DataFrame:
     home = games[games["home_away"] == "home"]
     return pd.DataFrame(
@@ -305,6 +332,9 @@ class Lab:
         self.games.to_csv(self.processed / "cbb_team_games.csv", index=False)
         game_segments(self.games).to_csv(
             self.processed / "cbb_game_segments.csv", index=False
+        )
+        player_games(self.games).to_csv(
+            self.processed / "cbb_player_games.csv", index=False
         )
         return self
 
@@ -707,10 +737,16 @@ def test_the_shipped_model_fits_both_of_the_callers_that_ship_with_it():
     gate on the seam rather than a second copy of the backtest. If a player
     frame is ever made required without a caller being taught to build it,
     this is the test that goes red before the card does.
+
+    `slate_model` is asserted against the **same** two argument sets, because
+    it is the model `DEFAULT_MODEL` is intended to name once
+    `models/player_rates.py` exists, and a seam that does not fit its callers
+    on the day it is wired is discovered by an operator rather than here.
     """
     from cbb_betting_lab.models.ratings import matchups_for
+    from cbb_betting_lab.models.slate import slate_model
 
-    backtest_builds = {"day", "history", "prices", "competition"}
+    backtest_builds = {"day", "history", "prices", "competition", "player_history"}
     card_builds = backtest_builds | {"raw_dir"}
 
     assert PB.unsupplied_arguments(matchups_for, backtest_builds) == []
@@ -718,6 +754,12 @@ def test_the_shipped_model_fits_both_of_the_callers_that_ship_with_it():
     assert PB.unsupplied_arguments(matchups_for, {"day"}) == ["history", "prices"], (
         "the check is reading this signature, not returning empty for everything"
     )
+
+    assert PB.unsupplied_arguments(slate_model, backtest_builds) == []
+    assert PB.unsupplied_arguments(slate_model, card_builds) == []
+    assert PB.unsupplied_arguments(slate_model, {"day"}) == [
+        "history", "player_history", "prices",
+    ], "the check is reading this signature, not returning empty for everything"
 
 
 def test_the_backtest_exits_on_a_model_that_does_not_fit_rather_than_pricing(

@@ -919,19 +919,38 @@ def assert_walk_forward(
 
     Checked on the stamp rather than trusted from the code path, because the
     code path is exactly what was wrong in the lab this guard is ported from.
+
+    **Every column ending in `_priced_through` is checked, not only
+    `priced_through`.** A pricer with two inputs writes two stamps — the
+    player pricer writes `player_priced_through` off the projection itself —
+    and a guard that read one of them would certify a run on the evidence of
+    half its inputs. That is not hypothetical: it is the defect this whole
+    seam was built against, and until this check existed the second column was
+    decorative. A blank stays exempt, because a blank means *this frame was
+    not read*, which is a statement about a table rather than about a day; a
+    pricer that read a private frame and reported nothing is caught by
+    :func:`assert_priced_from_the_past`, not here.
     """
-    if bets.empty or "priced_through" not in bets.columns:
+    if bets.empty:
         return
-    through = bets["priced_through"].astype(str)
+    columns = [
+        column
+        for column in bets.columns
+        if column == "priced_through" or str(column).endswith("_priced_through")
+    ]
+    if not columns:
+        return
     day = bets[day_column].astype(str)
-    leaked = bets[(through != "") & (through >= day)]
-    if not leaked.empty:
-        raise WalkForwardLeak(
-            f"{len(leaked):,} bet(s) were priced through a day at or after the "
-            "day they bet on. A model that has seen the game it is pricing "
-            "does not have an edge, it has the answer — and the football lab's "
-            "compound markets looked good for exactly this reason."
-        )
+    for column in columns:
+        through = bets[column].astype(str)
+        leaked = bets[(through != "") & (through != "nan") & (through >= day)]
+        if not leaked.empty:
+            raise WalkForwardLeak(
+                f"{len(leaked):,} bet(s) carry a `{column}` at or after the "
+                "day they bet on. A model that has seen the game it is pricing "
+                "does not have an edge, it has the answer — and the football "
+                "lab's compound markets looked good for exactly this reason."
+            )
 
 
 # --------------------------------------------------------------------------
