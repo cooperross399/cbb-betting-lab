@@ -852,6 +852,13 @@ class OpinionCensus:
     push_mass: dict[tuple, float] = field(default_factory=dict)
     #: Frozen key -> the prior's weight in the rating behind the price.
     prior_weight: dict[tuple, float] = field(default_factory=dict)
+    #: Design 4's check (a), pooled over the regular athletes this run priced —
+    #: whatever `models.player_distributions.population_structural_checks`
+    #: returned, or empty when no player distribution was built at all. Design 4
+    #: asks for the ratio to be REPORTED as well as stopped on, and until it was
+    #: carried here nothing printed it: :meth:`structural_check_line` is the
+    #: report and `assert_structural_checks` is the stop.
+    structural_check: dict[str, float] = field(default_factory=dict)
 
     def decline(self, reason: str) -> None:
         self.declined[reason] = self.declined.get(reason, 0) + 1
@@ -861,6 +868,47 @@ class OpinionCensus:
             f"{self.priced:,} of {self.wagers:,} priced wager(s) carry a "
             "modelled opinion. An absent opinion is **not** a probability of "
             "zero: it is the model declining, or never being asked."
+        )
+
+    def structural_check_line(self) -> str:
+        """Design 4's "report the ratio", said in one sentence or not at all.
+
+        Three states, and they are three different facts. No player
+        distribution was built, so the check was never asked. Fewer regulars
+        than `STRUCTURAL_CHECK_POPULATION_FLOOR`, so it ran and may not stop —
+        printed with the count, because a check that silently declines to run is
+        indistinguishable from one that passed and that is the shape of the
+        defect this whole path exists against. Or it ran over a population and
+        the run is still going, which means it passed.
+        """
+        checks = self.structural_check
+        if not checks:
+            return (
+                "Design 4's structural check was not asked: this card built no "
+                "player distribution."
+            )
+        athletes = int(checks.get("population_athletes", 0))
+        floor = int(checks.get("population_floor", 0))
+        offered = int(checks.get("population_athletes_offered", 0))
+        below = int(checks.get("population_below_regular_floor", 0))
+        minutes = float(checks.get("regular_min_projected_minutes", 0.0))
+        head = (
+            f"Design 4's structural check (a): {athletes:,} of {offered:,} "
+            f"athlete(s) priced are regulars at {minutes:.1f}+ projected "
+            f"minutes ({below:,} below, counted apart and never pooled)"
+        )
+        if athletes < floor:
+            return (
+                f"{head}. Fewer than the declared floor of {floor}, so the "
+                "ratio is reported and STOPS NOTHING — pooled over this few it "
+                "would be the per-athlete number the floor exists against."
+            )
+        return (
+            f"{head}. Pooled unconditional points VMR "
+            f"{checks['unconditional_points_vmr']:.4f} against the frozen "
+            f"{checks['unconditional_points_vmr_target']:.4f}, a ratio of "
+            f"{checks['unconditional_points_vmr_ratio']:.4f}. The run continued, "
+            "so it is inside design 4's 15% stop."
         )
 
     def table(self) -> str:
@@ -1161,6 +1209,15 @@ def opinions_for(
     before it can become a selection. `availability_note`'s "a market the lab
     prices, freezes and settles but may not bet" was aspirational for the player
     family until this commit and is now literally true of it.
+
+    **This function RAISES `StructuralCheckFailed`.** Design 4's stop rule — the
+    single automatic refusal the design puts on the engine's own output — is
+    evaluated once, after the loop, over the regular athletes this card priced,
+    by :func:`_run_the_structural_check`. It had no caller anywhere outside a
+    test until this commit, so a card could price ten markets on an athlete
+    whose assembled mixture missed a frozen target it cannot influence and
+    nothing said a word. It is a raise and not a census line on purpose: see
+    `models.player_distributions.StructuralCheckFailed`.
     """
     probabilities: dict[tuple, float] = {}
     census = OpinionCensus()
@@ -1295,7 +1352,51 @@ def opinions_for(
         if prior is not None:
             census.prior_weight[wager.key] = prior
         census.priced += 1
+
+    # Design 4's stop rule, on the only population a run ever has: the athletes
+    # this card actually built a distribution for. It runs AFTER the loop and
+    # not inside it because the thing being checked is a pooled number over a
+    # population — the frozen target is `pooled_vmr` over 242,634 rows of
+    # regulars — and there is no population until the loop has finished. It ran
+    # nowhere at all until this commit: `assert_structural_checks` had no caller
+    # outside its own test file, so design 4's single automatic refusal on the
+    # engine's own output could not fire on a card, a backtest or anything else.
+    _run_the_structural_check(players, model, census)
     return probabilities, census
+
+
+def _run_the_structural_check(
+    players: Mapping[tuple, object],
+    model: "slate.SlateModel",
+    census: OpinionCensus,
+) -> None:
+    """Report design 4's ratio, and stop the run when it is off by over 15%.
+
+    `players` is the (event, athlete) cache `opinions_for` filled, so its values
+    are one `PlayerDistribution` per subject the card priced, plus the refusal
+    STRINGS for the subjects whose engine declined. The strings are dropped
+    here: a refused subject produced no mixture, so it has no VMR to pool, and
+    counting it would be pooling an absence.
+
+    Silent when the card built nothing — a team-only slate is not a structural
+    failure and must not read as one — and silent when the slate carries no
+    checked constants, because `population_structural_checks` reads the target
+    and the regulars floor out of the frozen file and there is no honest number
+    without it. Both of those states leave `census.structural_check` empty, and
+    :meth:`OpinionCensus.structural_check_line` says which.
+    """
+    built = [
+        distribution
+        for distribution in players.values()
+        if not isinstance(distribution, str)
+    ]
+    if not built or model.shapes is None:
+        return
+    engine = _player_distributions_module()
+    census.structural_check = dict(
+        engine.population_structural_checks(built, shapes=model.shapes)
+    )
+    engine.assert_structural_checks(census.structural_check)
 
 
 def _month_of(day: str) -> int:

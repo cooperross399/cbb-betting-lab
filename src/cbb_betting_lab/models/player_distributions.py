@@ -89,10 +89,10 @@ nothing.
 
 ## What is declared here rather than fitted, and why it had to be
 
-Two constants this engine needs have no counterpart in
-`data/processed/cbb_player_shapes.json`. Neither is invented as a fitted number;
-both are declared as structural, with the reason written down and a test that
-goes red if either is quietly turned into a fit:
+Three constants this engine needs have no counterpart in
+`data/processed/cbb_player_shapes.json`. None is invented as a fitted number;
+all three are declared as structural, with the reason written down and a test
+that goes red if any is quietly turned into a fit:
 
 * :data:`POISSON_BAND` — design 4 says "VMR = 1 -> Poisson", which never happens
   in floating point. It MUST NOT be set to
@@ -104,6 +104,11 @@ goes red if either is quietly turned into a fit:
   ceiling" and the frozen file declares `minutes_support` and no count ceiling
   for any of the seven stats, so R4's upper half was unenforced. It is enforced
   here, from a declared tail tolerance and a structural cap.
+* :data:`STRUCTURAL_CHECK_POPULATION_FLOOR` — design 4's check (a) is a POOLED
+  quantity over regulars, so it needs a population, and the file says who is a
+  regular (`regular_min_projected_minutes` = 15.0, read through
+  :meth:`PlayerShapes.evidence`) but not how many of them make a population.
+  Eight, and the measurement that chose it is on the constant.
 
 ## What this module does not do
 
@@ -153,6 +158,7 @@ __all__ = [
     "price_line",
     "count_lattice_ceiling",
     "assert_structural_checks",
+    "population_structural_checks",
     "held_out_panjer_families",
     "points_threes_correlation",
     "CONSTRUCTION_ORDER",
@@ -165,6 +171,7 @@ __all__ = [
     "OUTER_CELL_RATIO",
     "MARGINAL_SWEEPS",
     "UNCONDITIONAL_POINTS_VMR_STOP",
+    "STRUCTURAL_CHECK_POPULATION_FLOOR",
     "POINTS_EVENT_DISPERSION_KEY",
     "PANJER_STATS",
     "COMPOUND_STATS",
@@ -197,9 +204,18 @@ class StructuralCheckFailed(PlayerDistributionError):
     """Design 4's stop rule fired: the run stops and the discrepancy is the finding.
 
     Raised only by :func:`assert_structural_checks`, only for the unconditional
-    within-player points VMR, and only outside +/-15%. Nothing else in design 4
-    or in `structural_check_targets` declares a tolerance, so nothing else here
-    can stop a run — the rest are reported.
+    within-player points VMR **pooled over the run's regular athletes**, and only
+    outside +/-15%. Nothing else in design 4 or in `structural_check_targets`
+    declares a tolerance, so nothing else here can stop a run — the rest are
+    reported.
+
+    It reaches a run through `reports/gameday_card.opinions_for`, which is the
+    only function in this repository that turns wagers into modelled
+    probabilities. It escapes rather than being folded into `OpinionCensus`: a
+    declined wager is a wager the model had no opinion about, and this is the
+    model saying its own assembled mixture does not reproduce a number nothing
+    in it can influence. Those are different facts and a card that printed the
+    second as the first would have turned a stop into a footnote.
     """
 
 
@@ -277,6 +293,52 @@ COPULA_LATENT_LIMIT: float = 8.5
 #: and the discrepancy is the finding." Quoted from the design, not chosen here.
 UNCONDITIONAL_POINTS_VMR_STOP: float = 0.15
 
+#: How many REGULAR athletes a run must have priced before the stop above is
+#: allowed to stop it. **A floor on the population the check is computed over,
+#: not a tolerance**, and it is declared here because the frozen file has no
+#: number for it.
+#:
+#: The defect it exists against: `structural_check_targets.
+#: unconditional_points_vmr_regulars` = 3.0529074370522156 is a POOLED
+#: within-player VMR over 242,634 rows of regulars, whose own
+#: `regular_min_projected_minutes` is 15.0. Dividing ONE athlete's mixture VMR
+#: by it compares two different objects, and the answer then moves with the
+#: athlete's minutes rather than with the model. Measured on frozen constants
+#: only — the file's own nine role priors, its own nine minutes shapes, tilted
+#: to its own recorded bucket means 6.73 ... 36.22, at the league value mix —
+#: the per-athlete ratio runs
+#:
+#:     1.1123  1.1203  1.0893  1.0497  1.0043  0.9626  0.9203  0.8790  0.8482
+#:
+#: while the CONDITIONAL half reads 2.328891545818532 at all nine, to floating
+#: point, which is the frozen `points_vmr_given_minutes` exactly. So the entire
+#: spread is the minutes channel, and the average 36.22-minute starter — inside
+#: the population the target is measured on, not a tail case — is 15.2% low and
+#: would stop the run on its own.
+#:
+#: Pooled the way the target is pooled — a ratio of two sums — those same nine
+#: restricted to regulars reproduce 2.8113 against 3.0529074370522156, a ratio
+#: of **0.9209**, 7.9% low and inside the stop. That is the number design 4's
+#: sentence is about, and it is what :func:`population_structural_checks`
+#: returns for them, because a slate carries each athlete once and the function
+#: therefore weights them equally. Weighting the same six by the frozen file's
+#: own `minutes_pmf` evidence `rows_per_bucket` instead — the occupancy the
+#: TARGET's population actually has — gives 2.8803 and **0.9435**. Both are
+#: inside; the pair is quoted so the composition sensitivity is on the page
+#: rather than discovered later.
+#:
+#: Eight is where the floor sits, and it is measured rather than picked.
+#: Drawing regular athletes iid from that same `rows_per_bucket` mix, 40,000
+#: populations at each size: at ONE athlete the stop fires on 2.72% of them on
+#: composition alone; at two, 0.08%; at three and above, none of 40,000. At
+#: eight the worst of 40,000 draws is 0.8745 — 12.6% off, still inside — so the
+#: floor sits well past where the check stopped being a coin toss about which
+#: athletes the book quoted. Below it the check does not stop and does not
+#: silently pass either: it reports that it could not run, and
+#: `test_the_population_floor_is_a_gap_that_is_held_open` is the passing
+#: assertion that goes red the day a run-level population makes it closable.
+STRUCTURAL_CHECK_POPULATION_FLOOR: int = 8
+
 #: Which frozen number is handed to the scoring-event count's Panjer family.
 #:
 #: The frozen file freezes both candidates under
@@ -289,13 +351,27 @@ UNCONDITIONAL_POINTS_VMR_STOP: float = 0.15
 #: in minutes and a constant conditional VMR, `VMR_unconditional = VMR_conditional
 #: + r * Var(M)/E(M)`, so the minutes lift is additive and equals, from
 #: `structural_check_targets`, 3.0529074370522156 - 2.328891545818532 =
-#: 0.7240159. Feeding `measured_event_dispersion` produces a conditional points
-#: VMR of 2.8377415929483303 and therefore an unconditional 3.5617575, a ratio
-#: of 1.1667 against the frozen target — over design 4's own 15% stop. Feeding
-#: `effective_event_dispersion` produces 2.328891545818532 and a ratio of
-#: 1.0000. The file's stated mechanism for the gap is that free throws arrive in
-#: pairs, so two made free throws are one trip charged as two independent
-#: severity draws: exchangeability fails, in the direction observed.
+#: 0.7240159. **That arithmetic is a statement about the frozen constants and
+#: not about anything this module produces**, and the distinction is written out
+#: here because it was once blurred: carrying the target's own POPULATION lift,
+#: `measured_event_dispersion` implies 2.8377415929483303 + 0.7240159 =
+#: 3.5617575, a ratio of 1.1667, and `effective_event_dispersion` implies
+#: 2.328891545818532 + 0.7240159 = the target itself, a ratio of 1.0000. Neither
+#: 1.0000 nor 1.1667 is a number :func:`population_structural_checks` returns or
+#: ever could: the produced lift is each athlete's OWN `r * Var(M)/E(M)` over
+#: his own minutes lattice, not the population's.
+#:
+#: What the engine does produce, through
+#: :func:`population_structural_checks` over the frozen file's nine role-prior
+#: athletes restricted to regulars: **0.9209** on this key, and **1.0875** on
+#: `measured_event_dispersion`. So the choice moves the produced ratio by 0.167
+#: — the whole width of design 4's stop budget, which is why it is a choice
+#: worth naming — but **both land inside the 15% stop, and the stop rule
+#: therefore does not decide it**. The identity above does, and the file's
+#: stated mechanism for the gap is that free throws arrive in pairs, so two made
+#: free throws are one trip charged as two independent severity draws:
+#: exchangeability fails, in the direction observed. `test_the_dispersion_
+#: choice_is_not_decided_by_the_stop_rule` holds both produced numbers.
 #:
 #: The price of the choice is reported and not tuned away: the thinned
 #: three-point marginal's produced VMR is then 1.0206 against a measured
@@ -1038,6 +1114,105 @@ def _moments(pmf: np.ndarray) -> tuple[float, float]:
     return mean, variance
 
 
+def population_structural_checks(
+    population: Iterable[PlayerDistribution], *, shapes: PlayerShapes
+) -> Mapping[str, float]:
+    """Design 4's check (a), pooled over the POPULATION the target is defined on.
+
+    Design 4: "the mixture must reproduce (a) the unconditional within-player
+    points VMR **among regulars**, measured 2.991 (fit) / 3.024 (2023). Report
+    the ratio. If (a) is off by more than 15%, the run stops and the discrepancy
+    is the finding." The subject of that sentence is a population, and this is
+    the function that supplies one. :meth:`PlayerDistribution.structural_checks`
+    reports the same quantity for a single athlete, under a key that says so,
+    and cannot be handed to :func:`assert_structural_checks` at all.
+
+    **The defect this is arranged against**, and it is why the two are separate
+    functions. `structural_check_targets.unconditional_points_vmr_regulars` is
+    `pooled_vmr` over 242,634 rows of regulars: within-player sums of squares
+    over `sum(n_i - 1)`, divided by the mean of every row used. One athlete's
+    mixture VMR divided by that is a per-athlete number over a population
+    constant, and the answer moves with the athlete's minutes rather than with
+    the model — 1.1123 at the 6.73-minute bucket down to 0.8482 at the
+    36.22-minute one, on the frozen file's own role priors, with the conditional
+    half pinned at 2.328891545818532 throughout. See
+    :data:`STRUCTURAL_CHECK_POPULATION_FLOOR` for the whole measurement.
+
+    **What is pooled, and the one place it differs from the fitter.** The target
+    weights an athlete-season by its games; a slate carries each athlete once, so
+    there is no `n_i` to weight by and every athlete counts once. The shape is
+    otherwise the fitter's: `mean of the produced variances / mean of the
+    produced means`, a ratio of two sums and NOT the mean of the per-athlete
+    ratios. The two differ — 0.9209 against 0.9440 on the regulars among the
+    nine role-prior athletes — and the first is the one that matches how the
+    target was built. `test_design_4s_stop_rule_is_a_population_quantity` holds
+    both, so the day someone simplifies this to a mean of ratios it goes red.
+
+    **Who is a regular is read off the frozen file, never assumed here.**
+    `regular_min_projected_minutes` is 15.0 and it lives in the target's own
+    evidence block, so it arrives through :meth:`PlayerShapes.evidence`. An
+    athlete below it was not in the population the target was measured over and
+    is counted apart rather than pooled: `population_below_regular_floor` is a
+    reported census bucket, not a silent drop.
+
+    Returns every number the caller needs to print the ratio design 4 asks to be
+    reported, and the census that says whether it may stop anything. Nothing
+    here raises on population size: with no regulars at all the ratio is NaN and
+    `population_athletes` is 0, and :func:`assert_structural_checks` reads the
+    census before it reads the ratio.
+    """
+    target = float(
+        shapes.value("structural_check_targets")["unconditional_points_vmr_regulars"]
+    )
+    evidence = shapes.evidence("structural_check_targets")
+    try:
+        regular_floor = float(evidence["fit"]["regular_min_projected_minutes"])
+    except (KeyError, TypeError) as error:
+        raise PlayerDistributionError(
+            f"{shapes.path}: `structural_check_targets` records no "
+            "`fit.regular_min_projected_minutes`, so the population its value "
+            "was measured over is not stated and nothing can be compared to it. "
+            "Design 4's check (a) is about regulars; a floor invented here "
+            "would be a number about the file that did not come from it."
+        ) from error
+
+    means: list[float] = []
+    variances: list[float] = []
+    offered = 0
+    below = 0
+    # `population`, never `distributions`: `test_no_player_count_is_built_by_
+    # match_variance` scans this module's AST for the name of the TEAM
+    # distribution module and refuses it, because design 4's refusal of
+    # `_match_variance` for player counts is easiest to defeat one attribute at
+    # a time. A parameter that shadowed the module name would have blunted it.
+    for subject in population:
+        offered += 1
+        if float(subject.projection.projected_minutes) < regular_floor:
+            below += 1
+            continue
+        mean, variance = _moments(subject.count_pmf("player_points"))
+        means.append(mean)
+        variances.append(variance)
+
+    if means:
+        pooled_mean = float(np.mean(means))
+        pooled_variance = float(np.mean(variances))
+        produced = pooled_variance / pooled_mean if pooled_mean > 0.0 else float("nan")
+    else:
+        produced = float("nan")
+
+    return {
+        "unconditional_points_vmr": produced,
+        "unconditional_points_vmr_target": target,
+        "unconditional_points_vmr_ratio": produced / target,
+        "population_athletes": float(len(means)),
+        "population_athletes_offered": float(offered),
+        "population_below_regular_floor": float(below),
+        "regular_min_projected_minutes": regular_floor,
+        "population_floor": float(STRUCTURAL_CHECK_POPULATION_FLOOR),
+    }
+
+
 def assert_structural_checks(checks: Mapping[str, float]) -> None:
     """Design 4's stop rule, and it is the only one there is.
 
@@ -1048,7 +1223,42 @@ def assert_structural_checks(checks: Mapping[str, float]) -> None:
     or the frozen file, so they are reported and cannot stop anything —
     including the ~6% narrowness of the thinned three-point marginal, which is
     the known price of :data:`POINTS_EVENT_DISPERSION_KEY`.
+
+    **It takes a population and refuses to take anything else.** The census keys
+    below exist only on a mapping :func:`population_structural_checks` built, so
+    a single athlete's :meth:`PlayerDistribution.structural_checks` cannot reach
+    the tolerance by accident — it does not carry a key called
+    `unconditional_points_vmr_ratio` at all. That is the whole repair: the
+    tolerance is unchanged and the quantity it is applied to is now the one
+    design 4's sentence names.
+
+    **Below the floor it does not stop, and it does not pass either.** Fewer
+    than :data:`STRUCTURAL_CHECK_POPULATION_FLOOR` regulars is the per-athlete
+    comparison wearing a population's name, which is the defect, so the check
+    reports instead of stopping and the caller says so — `gameday_card`'s
+    `OpinionCensus.structural_check_line`. Widening the tolerance to make a
+    small population pass would be the one move this function exists to prevent.
     """
+    for required in (
+        "unconditional_points_vmr_ratio",
+        "population_athletes",
+        "population_floor",
+    ):
+        if required not in checks:
+            raise PlayerDistributionError(
+                "Design 4's check (a) is a POPULATION quantity — the pooled "
+                "within-player points VMR among regulars — and this mapping "
+                f"carries no {required!r}, so it is not one. Build it with "
+                "`population_structural_checks(population, shapes=shapes)`. "
+                "A single athlete's `structural_checks()` reports "
+                "`unconditional_points_vmr_ratio_this_athlete`, which moves "
+                "with his minutes rather than with the model and is not the "
+                "thing design 4 stops on."
+            )
+    athletes = int(checks["population_athletes"])
+    floor = int(checks["population_floor"])
+    if athletes < floor:
+        return
     ratio = float(checks["unconditional_points_vmr_ratio"])
     if not math.isfinite(ratio) or abs(ratio - 1.0) > UNCONDITIONAL_POINTS_VMR_STOP:
         raise StructuralCheckFailed(
@@ -1058,7 +1268,9 @@ def assert_structural_checks(checks: Mapping[str, float]) -> None:
             f"{checks['unconditional_points_vmr_target']:.6f}, a ratio of "
             f"{ratio:.4f}. Design 4 stops the run outside "
             f"{UNCONDITIONAL_POINTS_VMR_STOP:.0%} and the discrepancy is the "
-            "finding. Nothing is tuned to close it."
+            "finding. Nothing is tuned to close it. Pooled over the "
+            f"{athletes:,} regular athlete(s) this run priced, at or above "
+            f"{checks['regular_min_projected_minutes']:.1f} projected minutes."
         )
 
 
@@ -1274,12 +1486,25 @@ class PlayerDistribution:
     # -- checks and diagnostics -------------------------------------------
 
     def structural_checks(self) -> Mapping[str, float]:
-        """What the assembled mixture reproduces, against what was frozen.
+        """What THIS athlete's assembled mixture reproduces, against what was frozen.
 
         Report, never tune. Design 4 gives two free checks and a tolerance for
         exactly one of them; `structural_check_targets`' own note says these are
         "not parameters ... what the assembled mixture has to reproduce with
         nothing tuned to them".
+
+        **Nothing here can stop a run, including the unconditional points VMR.**
+        The key that carries it is `unconditional_points_vmr_ratio_this_athlete`
+        and the suffix is load-bearing: the frozen target is pooled over 242,634
+        rows of regulars, so one athlete's ratio to it is two different objects
+        divided, and it moves with his minutes rather than with the model —
+        1.1123 at the 6.73-minute role prior down to 0.8482 at the 36.22-minute
+        one, with the conditional half pinned at 2.328891545818532 throughout.
+        Design 4's stop is :func:`assert_structural_checks` over
+        :func:`population_structural_checks`, and it cannot be handed this
+        mapping because this mapping has no `unconditional_points_vmr_ratio`.
+        The per-athlete number is still worth printing — it is the design's
+        "report the ratio" for one subject — which is why it is here at all.
         """
         points = self.count_pmf("player_points")
         mean, variance = _moments(points)
@@ -1301,7 +1526,10 @@ class PlayerDistribution:
         return {
             "unconditional_points_vmr": produced,
             "unconditional_points_vmr_target": target,
-            "unconditional_points_vmr_ratio": produced / target,
+            # NOT `unconditional_points_vmr_ratio`. See the docstring: the
+            # target is a population and this is one athlete, so the name says
+            # so and `assert_structural_checks` cannot read it.
+            "unconditional_points_vmr_ratio_this_athlete": produced / target,
             "points_vmr_given_minutes": conditional_variance / conditional_mean,
             "points_vmr_given_minutes_target": float(
                 self.targets["points_vmr_given_minutes"]

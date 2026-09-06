@@ -1185,13 +1185,25 @@ def test_the_structural_checks_are_reported_and_only_one_can_stop_the_run() -> N
     nor `structural_check_targets` gives one for the conditional VMRs, the
     threes marginal or the points/threes correlation, so those are reported and
     stop nothing. Nothing here is tuned to any of them.
+
+    **The per-athlete unconditional ratio is reported under a key that says so
+    and cannot stop anything**, which is the repair this file's
+    `test_design_4s_stop_rule_is_a_population_quantity` measures. The fixture's
+    1.0819 is one athlete's; design 4's stop is pooled over regulars.
     """
     checks = _distribution().structural_checks()
     assert checks["unconditional_points_vmr_target"] == pytest.approx(
         3.0529074370522156, abs=1e-12
     )
-    assert checks["unconditional_points_vmr_ratio"] == pytest.approx(1.0819, abs=1e-3)
-    PD.assert_structural_checks(checks)
+    assert checks["unconditional_points_vmr_ratio_this_athlete"] == pytest.approx(
+        1.0819, abs=1e-3
+    )
+    assert "unconditional_points_vmr_ratio" not in checks, (
+        "a single athlete's checks must not carry the key the population stop "
+        "reads, or the two objects can be divided by accident again"
+    )
+    with pytest.raises(PD.PlayerDistributionError, match="POPULATION quantity"):
+        PD.assert_structural_checks(checks)
 
     assert checks["measured_event_dispersion"] == pytest.approx(
         1.3799506487253412, abs=1e-12
@@ -1203,15 +1215,34 @@ def test_the_structural_checks_are_reported_and_only_one_can_stop_the_run() -> N
         1.2184945228743802, abs=1e-12
     )
 
-    # The stop rule fires, and it fires by raising rather than by warning.
+    # The stop rule fires, and it fires by raising rather than by warning. The
+    # census keys are what make the mapping a population's; the tolerance
+    # applied to the ratio is unchanged.
+    population = {
+        "unconditional_points_vmr": 3.0529074370522156,
+        "unconditional_points_vmr_target": 3.0529074370522156,
+        "unconditional_points_vmr_ratio": 1.0,
+        "population_athletes": float(PD.STRUCTURAL_CHECK_POPULATION_FLOOR),
+        "population_floor": float(PD.STRUCTURAL_CHECK_POPULATION_FLOOR),
+        "regular_min_projected_minutes": 15.0,
+    }
+    PD.assert_structural_checks(population)
     with pytest.raises(PD.StructuralCheckFailed, match="the discrepancy is the finding"):
-        PD.assert_structural_checks({**checks, "unconditional_points_vmr_ratio": 1.17})
-    PD.assert_structural_checks({**checks, "unconditional_points_vmr_ratio": 1.149})
+        PD.assert_structural_checks(
+            {**population, "unconditional_points_vmr_ratio": 1.17}
+        )
+    PD.assert_structural_checks({**population, "unconditional_points_vmr_ratio": 1.149})
+    with pytest.raises(PD.StructuralCheckFailed):
+        PD.assert_structural_checks(
+            {**population, "unconditional_points_vmr_ratio": float("nan")}
+        )
 
-    # The alternative dispersion is the one that trips it, which is the whole
-    # argument for `POINTS_EVENT_DISPERSION_KEY`. Arithmetic on frozen
+    # The alternative dispersion is the one that trips the IDENTITY, which is
+    # the argument for `POINTS_EVENT_DISPERSION_KEY`. Arithmetic on frozen
     # constants: the minutes lift is additive, so the unconditional VMR is the
-    # conditional one plus 3.0529074370522156 - 2.328891545818532.
+    # conditional one plus 3.0529074370522156 - 2.328891545818532. What the
+    # engine PRODUCES under each key is a different pair of numbers and
+    # `test_the_dispersion_choice_is_not_decided_by_the_stop_rule` holds those.
     shapes = _shapes()
     targets = shapes.value("structural_check_targets")
     lift = (
@@ -1225,13 +1256,308 @@ def test_the_structural_checks_are_reported_and_only_one_can_stop_the_run() -> N
     with pytest.raises(PD.StructuralCheckFailed):
         PD.assert_structural_checks(
             {
-                **checks,
+                **population,
                 "unconditional_points_vmr": alternative,
                 "unconditional_points_vmr_ratio": alternative
                 / targets["unconditional_points_vmr_regulars"],
             }
         )
     assert PD.POINTS_EVENT_DISPERSION_KEY == "effective_event_dispersion"
+
+
+# --------------------------------------------------------------------------
+# Design 4's stop rule: what it is computed OVER, and where it runs
+# --------------------------------------------------------------------------
+
+
+def _role_prior_athlete(shapes, bucket: int, *, minutes: float | None = None):
+    """One athlete built from the frozen file's OWN role prior for a bucket.
+
+    Not a fixture and not a store row: `role_prior[stat][bucket]` for the rates,
+    `minutes_lattice` tilted to the bucket's own recorded mean for the lattice,
+    and the league `value_pmf` for the severity mix. It is the file describing
+    the average athlete of a minutes bucket, so a check computed over the nine
+    of them is a check over the file's own population rather than over whoever
+    the test fixture happens to be.
+    """
+    priors = shapes.value("role_prior")
+    table = shapes.value("minutes_pmf")
+    support = np.arange(
+        int(table["support_low"]), int(table["support_high"]) + 1, dtype=float
+    )
+    mean = float(np.asarray(table["pmf"][bucket], dtype=float) @ support)
+    projected = mean if minutes is None else float(minutes)
+    projection = PR.PlayerProjection(
+        event_id="E",
+        game_id="G",
+        athlete_id=f"role-prior-{bucket}",
+        display_name=f"bucket {bucket}",
+        provider_name=f"bucket {bucket}",
+        team_id="T",
+        opponent_id="O",
+        player_tier="high",
+        projected_minutes=projected,
+        minutes_bucket=bucket,
+        minutes_pmf=PR.minutes_lattice(
+            projected_minutes=projected, bucket=bucket, shapes=shapes
+        ),
+        rates={stat: float(priors[stat][bucket]) for stat in priors},
+        prior_weight={stat: 1.0 for stat in priors},
+        prior_minutes=400.0,
+        prior_games=20,
+        value_pmf=tuple(float(v) for v in shapes.value("value_pmf")),
+        value_prior_events=100.0,
+        value_mix_weight=1.0,
+        dnp_probability=0.01,
+        resolution_route="exact",
+        priceable=True,
+        unpriceable_reason=None,
+        priced_through="2024-01-14",
+        refused_stats={},
+    )
+    return PD.build(projection, shapes=shapes)
+
+
+def test_design_4s_stop_rule_is_a_population_quantity() -> None:
+    """The check is pooled over regulars, and one athlete is not a population.
+
+    **A STRUCTURAL CHECK, NOT A RESULT.** Every number here is produced from the
+    frozen file's own nine role priors and nine minutes shapes. No store row is
+    read, nothing is graded, and none of it is an edge.
+
+    The defect. `structural_check_targets.unconditional_points_vmr_regulars` is
+    `pooled_vmr` over 242,634 rows whose own `regular_min_projected_minutes` is
+    15.0 — a POPULATION number. Dividing ONE athlete's mixture VMR by it divides
+    two different objects, and the quotient then moves with the athlete's
+    minutes rather than with the model. Measured below: the nine role-prior
+    athletes read 1.1123, 1.1203, 1.0893, 1.0497, 1.0043, 0.9626, 0.9203, 0.8790
+    and 0.8482 from the 6.73-minute bucket to the 36.22-minute one, a spread of
+    0.272, while the CONDITIONAL half reads 2.328891545818532 at all nine to
+    floating point — exactly the frozen `points_vmr_given_minutes`. So the whole
+    spread is the minutes channel and none of it is the model missing anything.
+
+    The consequence, and it is the reason this is a bug rather than a nuance:
+    the 36.22-minute athlete is 15.2% low, so the per-athlete route stops the
+    run on the average high-minutes starter — squarely inside the population the
+    target is measured over, not a tail case.
+
+    Pooled the way the target is pooled — a ratio of two sums, not a mean of
+    ratios — the regulars among those nine reproduce 2.8113 against
+    3.0529074370522156, a ratio of 0.9209, inside design 4's 15% stop.
+    """
+    shapes = _shapes()
+    athletes = [_role_prior_athlete(shapes, bucket) for bucket in range(9)]
+
+    per_athlete = [
+        a.structural_checks()["unconditional_points_vmr_ratio_this_athlete"]
+        for a in athletes
+    ]
+    assert per_athlete == pytest.approx(
+        [1.1123, 1.1203, 1.0893, 1.0497, 1.0043, 0.9626, 0.9203, 0.8790, 0.8482],
+        abs=5e-4,
+    )
+    conditional = [
+        a.structural_checks()["points_vmr_given_minutes"] for a in athletes
+    ]
+    assert conditional == pytest.approx([2.328891545818532] * 9, abs=1e-8), (
+        "the conditional half is exact by construction at the league value mix, "
+        "so every bit of the spread above is the minutes channel"
+    )
+    # 1e-8 rather than 1e-12, and the residual is a lattice truncation rather
+    # than a model difference. Every one of the nine sits BELOW the constant,
+    # which is the signature of dropped tail mass and not of noise: the
+    # deviations run -1.25e-09, -3.74e-10, -3.43e-10, -2.37e-10, -3.20e-10,
+    # -2.27e-10, -2.10e-10, -1.69e-10, -2.17e-10, worst at the 6.73-minute
+    # bucket where `count_lattice_ceiling` truncates the smallest count. All
+    # nine are one-sided and all nine are inside 1.3e-09.
+    assert max(conditional) < 2.328891545818532, (
+        "all nine sit below the frozen constant. A two-sided spread would be a "
+        "different fact and would not be truncation"
+    )
+    assert min(conditional) > 2.328891545818532 - 1.3e-9
+    assert max(per_athlete) - min(per_athlete) == pytest.approx(0.2721, abs=1e-3)
+    assert abs(per_athlete[8] - 1.0) > PD.UNCONDITIONAL_POINTS_VMR_STOP, (
+        "the average 36.22-minute starter is outside the stop on the per-athlete "
+        "route. He is a regular by the target's own definition, so a rule that "
+        "stopped on him would stop most of the book"
+    )
+
+    # The population route, on the same nine objects.
+    checks = PD.population_structural_checks(athletes, shapes=shapes)
+    assert checks["regular_min_projected_minutes"] == 15.0
+    assert checks["population_athletes_offered"] == 9.0
+    assert checks["population_athletes"] == 6.0
+    assert checks["population_below_regular_floor"] == 3.0, (
+        "the three sub-15-minute buckets were not in the population the target "
+        "was measured over, so they are counted apart rather than pooled"
+    )
+    assert checks["unconditional_points_vmr"] == pytest.approx(2.8113, abs=1e-3)
+    assert checks["unconditional_points_vmr_ratio"] == pytest.approx(0.9209, abs=1e-3)
+    assert abs(checks["unconditional_points_vmr_ratio"] - 1.0) < (
+        PD.UNCONDITIONAL_POINTS_VMR_STOP
+    )
+
+    # A ratio of two sums, NOT the mean of the ratios. The two differ, and the
+    # first is the one `pooled_vmr` builds the target with.
+    regulars = per_athlete[3:]
+    assert float(np.mean(regulars)) == pytest.approx(0.9440, abs=1e-3)
+    assert checks["unconditional_points_vmr_ratio"] != pytest.approx(
+        float(np.mean(regulars)), abs=1e-4
+    )
+
+    # And the two mappings cannot be confused: neither carries the other's key.
+    assert "unconditional_points_vmr_ratio_this_athlete" not in checks
+    with pytest.raises(PD.PlayerDistributionError, match="POPULATION quantity"):
+        PD.assert_structural_checks(athletes[8].structural_checks())
+
+
+def test_the_population_floor_is_a_gap_that_is_held_open() -> None:
+    """Below the floor the stop cannot run, and that is stated rather than passed.
+
+    **A LIMITATION, ASSERTED.** This test goes red the day a run-level
+    population reaches the floor by itself, which is the only honest way to
+    carry the gap: the check is wired and it evaluates, but on a population
+    smaller than :data:`PD.STRUCTURAL_CHECK_POPULATION_FLOOR` it may not stop
+    anything, because pooling over that few IS the per-athlete comparison the
+    floor exists against.
+
+    What decided eight, measured on frozen constants: regular athletes drawn iid
+    from the frozen file's own `minutes_pmf` evidence `rows_per_bucket`, 40,000
+    populations at each size, tripped the 15% stop on COMPOSITION ALONE 2.72% of
+    the time at one athlete, 0.08% at two, and never at three or more; the worst
+    of 40,000 at eight was 0.8745, which is 12.6% off and inside. Eight is
+    therefore well past where the check stopped being a coin toss about which
+    athletes the book happened to quote.
+
+    The gap is real and it is not closed here: a single-athlete card evaluates
+    the check, reports the ratio and stops nothing.
+    """
+    shapes = _shapes()
+    assert PD.STRUCTURAL_CHECK_POPULATION_FLOOR == 8
+
+    # The 36.22-minute starter is outside the stop on his own, and one athlete
+    # does not stop the run.
+    alone = PD.population_structural_checks(
+        [_role_prior_athlete(shapes, 8)], shapes=shapes
+    )
+    assert alone["population_athletes"] == 1.0
+    assert alone["unconditional_points_vmr_ratio"] == pytest.approx(0.8482, abs=1e-3)
+    assert abs(alone["unconditional_points_vmr_ratio"] - 1.0) > (
+        PD.UNCONDITIONAL_POINTS_VMR_STOP
+    )
+    PD.assert_structural_checks(alone)  # does not raise: below the floor
+
+    # At the floor the same discrepancy does stop the run. This is the pair that
+    # makes the floor a floor rather than an exemption: the tolerance never
+    # moved, only the size of the population it is allowed to speak about.
+    crowd = PD.population_structural_checks(
+        [_role_prior_athlete(shapes, 8) for _ in range(8)], shapes=shapes
+    )
+    assert crowd["population_athletes"] == 8.0
+    assert crowd["unconditional_points_vmr_ratio"] == pytest.approx(
+        alone["unconditional_points_vmr_ratio"], rel=1e-12
+    )
+    with pytest.raises(PD.StructuralCheckFailed, match="the discrepancy is the finding"):
+        PD.assert_structural_checks(crowd)
+
+    # No regulars at all is not a pass either: it is NaN and no population.
+    empty = PD.population_structural_checks(
+        [_role_prior_athlete(shapes, 0)], shapes=shapes
+    )
+    assert empty["population_athletes"] == 0.0
+    assert empty["population_below_regular_floor"] == 1.0
+    assert math.isnan(empty["unconditional_points_vmr_ratio"])
+    PD.assert_structural_checks(empty)
+
+
+def test_the_regulars_floor_comes_from_the_frozen_file_not_from_this_module(
+    tmp_path: Path,
+) -> None:
+    """Who counts as a regular is a fact about the target, read off the target.
+
+    `regular_min_projected_minutes` = 15.0 defines the population
+    `unconditional_points_vmr_regulars` was pooled over, and it lives in that
+    constant's own evidence block. A floor hard-coded in the engine would go on
+    reading 15.0 after a refit moved it, and the check would then be pooling a
+    population the target was never measured on. Asserted by moving it in a copy
+    of the file and watching the census follow.
+    """
+    shapes = _shapes()
+    assert shapes.evidence("structural_check_targets")["fit"][
+        "regular_min_projected_minutes"
+    ] == 15.0
+
+    athletes = [_role_prior_athlete(shapes, bucket) for bucket in range(9)]
+    assert PD.population_structural_checks(athletes, shapes=shapes)[
+        "population_athletes"
+    ] == 6.0
+
+    def _move_the_floor(document):
+        document["constants"]["structural_check_targets"]["evidence"]["fit"][
+            "regular_min_projected_minutes"
+        ] = 25.0
+
+    moved = _shapes_with(tmp_path, _move_the_floor, name="moved-floor.json")
+    followed = PD.population_structural_checks(athletes, shapes=moved)
+    assert followed["regular_min_projected_minutes"] == 25.0
+    assert followed["population_athletes"] == 4.0, (
+        "at a 25-minute floor the 18.32 and 22.44 buckets leave the population, "
+        "which is the engine following the file rather than its own literal"
+    )
+
+    def _delete_the_floor(document):
+        del document["constants"]["structural_check_targets"]["evidence"]["fit"][
+            "regular_min_projected_minutes"
+        ]
+
+    without = _shapes_with(tmp_path, _delete_the_floor, name="no-floor.json")
+    with pytest.raises(PD.PlayerDistributionError, match="regular_min_projected_minutes"):
+        PD.population_structural_checks(athletes, shapes=without)
+
+
+def test_the_dispersion_choice_is_not_decided_by_the_stop_rule() -> None:
+    """What each candidate PRODUCES, against what the identity arithmetic says.
+
+    **A STRUCTURAL CHECK, NOT A RESULT.** `POINTS_EVENT_DISPERSION_KEY`'s
+    docstring used to argue for `effective_event_dispersion` by quoting "a ratio
+    of 1.0000" against "1.1667 — over design 4's own 15% stop". Both numbers are
+    frozen-constant arithmetic — the target's own conditional VMR plus the
+    target's own POPULATION minutes lift of 3.0529074370522156 −
+    2.328891545818532 — and neither is a number the engine emits, because the
+    produced lift is each athlete's own `r·Var(M)/E(M)`.
+
+    Measured here over the file's nine role-prior athletes restricted to
+    regulars: `effective_event_dispersion` produces 0.9209 and
+    `measured_event_dispersion` produces 1.0875. The choice moves the produced
+    ratio by 0.167 — the whole width of the stop budget — but **both land
+    inside the stop**, so the stop rule does not decide it and the docstring may
+    not say it does. The identity does, and the file's stated mechanism is that
+    free throws arrive in pairs.
+    """
+    shapes = _shapes()
+    produced = {}
+    original = PD.POINTS_EVENT_DISPERSION_KEY
+    try:
+        for key in ("effective_event_dispersion", "measured_event_dispersion"):
+            PD.POINTS_EVENT_DISPERSION_KEY = key
+            athletes = [_role_prior_athlete(shapes, bucket) for bucket in range(9)]
+            produced[key] = PD.population_structural_checks(athletes, shapes=shapes)[
+                "unconditional_points_vmr_ratio"
+            ]
+    finally:
+        PD.POINTS_EVENT_DISPERSION_KEY = original
+    assert PD.POINTS_EVENT_DISPERSION_KEY == "effective_event_dispersion"
+
+    assert produced["effective_event_dispersion"] == pytest.approx(0.9209, abs=1e-3)
+    assert produced["measured_event_dispersion"] == pytest.approx(1.0875, abs=1e-3)
+    assert produced["measured_event_dispersion"] - produced[
+        "effective_event_dispersion"
+    ] == pytest.approx(0.1666, abs=1e-3)
+    for key, ratio in produced.items():
+        assert abs(ratio - 1.0) < PD.UNCONDITIONAL_POINTS_VMR_STOP, (
+            f"{key} produces {ratio:.4f}, and the docstring may not claim the "
+            "stop rule picks between the two while both are inside it"
+        )
 
 
 # --------------------------------------------------------------------------
@@ -1763,13 +2089,118 @@ def test_the_card_says_which_absence_it_is_when_it_cannot_reach_the_engine(
     assert "not a pass, an avoid or a no-value call" in SLATE.NO_DISTRIBUTION_ENGINE
 
 
+def _card_of(events: int, *, shapes=None):
+    """One fixture athlete on `events` distinct events, and a wager on each.
+
+    The card keys its distribution cache on `(event_id, athlete_id)`, so the
+    same athlete on N events is N subjects and therefore a population of N. The
+    projection is still the real estimator's — nothing is assembled by hand —
+    and the athlete is a regular at 28.0 projected minutes, above the frozen
+    file's own `regular_min_projected_minutes` of 15.0.
+    """
+    from cbb_betting_lab.models import slate as SLATE
+
+    model, resolved = _slate_model(shapes=shapes)
+    athletes = dict(model.players["e1"])
+    players = {f"e{index}": dict(athletes) for index in range(1, events + 1)}
+    lookup = {
+        (f"e{index}", name): athlete_id
+        for (_, name), athlete_id in model.resolved.items()
+        for index in range(1, events + 1)
+    }
+    wide = SLATE.SlateModel(
+        day=DAY,
+        matchups={},
+        players=players,
+        resolved=lookup,
+        name_refusals={},
+        player_priced_through=model.player_priced_through,
+        shapes=model.shapes,
+    )
+    wagers = [
+        _wager("player_points", line=14.5, event_id=f"e{index}")
+        for index in range(1, events + 1)
+    ]
+    return wide, wagers, resolved
+
+
+def test_design_4s_stop_rule_has_a_caller_on_the_pricing_path(
+    tmp_path: Path,
+) -> None:
+    """It runs on a card, it reports, and it stops the run when it fires.
+
+    **The defect.** `assert_structural_checks` had no caller anywhere outside
+    this file: `build()` did not call it, `opinions_for` built one
+    `PlayerDistribution` per subject and read every rung off it without ever
+    asking for the checks, and a grep over `src/` and `scripts/` found the name
+    only in its own definition and docstrings. Design 4's single automatic
+    refusal on the engine's own output therefore could not fire on any run, and
+    the ratio design 4 also asks to be REPORTED was never printed either. The
+    engine commit could reasonably leave it unwired because it priced nothing;
+    the wiring commit made the card price and did not wire it.
+
+    **Nothing here is graded and no result is stated.** The probabilities are a
+    fixture's, the target is frozen, and the only number asserted is a
+    structural ratio.
+    """
+    from cbb_betting_lab.reports import gameday_card as GC
+
+    # It runs, over the population the card actually built, and it reports.
+    model, wagers, _ = _card_of(PD.STRUCTURAL_CHECK_POPULATION_FLOOR)
+    probabilities, census = GC.opinions_for(wagers, model, day=DAY)
+    assert census.priced == PD.STRUCTURAL_CHECK_POPULATION_FLOOR
+    assert len(probabilities) == PD.STRUCTURAL_CHECK_POPULATION_FLOOR
+    checks = census.structural_check
+    assert checks, "the card priced eight subjects and reported no structural check"
+    assert checks["population_athletes"] == float(
+        PD.STRUCTURAL_CHECK_POPULATION_FLOOR
+    )
+    assert checks["population_below_regular_floor"] == 0.0
+    assert checks["unconditional_points_vmr_ratio"] == pytest.approx(1.0819, abs=1e-3)
+    assert "a ratio of 1.0819" in census.structural_check_line()
+    assert "inside design 4's 15% stop" in census.structural_check_line()
+
+    # And it STOPS. The mutation is on the frozen TARGET, which is the one thing
+    # in this comparison no path in the engine can influence and which feeds no
+    # price: `targets` is read by `structural_checks` and by nothing else, so a
+    # moved target changes the check and leaves every probability alone.
+    def _move_the_target(document):
+        document["constants"]["structural_check_targets"]["value"][
+            "unconditional_points_vmr_regulars"
+        ] = 2.5
+
+    moved = _shapes_with(tmp_path, _move_the_target, name="moved.json")
+    model, wagers, _ = _card_of(PD.STRUCTURAL_CHECK_POPULATION_FLOOR, shapes=moved)
+    with pytest.raises(PD.StructuralCheckFailed, match="the discrepancy is the finding"):
+        GC.opinions_for(wagers, model, day=DAY)
+
+    # The gap, on the same moved target: below the floor the card prices, reports
+    # the very same out-of-band ratio, and does NOT stop. This is the limitation
+    # `test_the_population_floor_is_a_gap_that_is_held_open` records, seen from
+    # the card, and it goes red the day the floor is reachable by a single
+    # subject.
+    model, wagers, _ = _card_of(PD.STRUCTURAL_CHECK_POPULATION_FLOOR - 1, shapes=moved)
+    _, census = GC.opinions_for(wagers, model, day=DAY)
+    assert census.priced == PD.STRUCTURAL_CHECK_POPULATION_FLOOR - 1
+    assert abs(
+        census.structural_check["unconditional_points_vmr_ratio"] - 1.0
+    ) > PD.UNCONDITIONAL_POINTS_VMR_STOP
+    assert "STOPS NOTHING" in census.structural_check_line()
+
+    # A card that built no player distribution is not a structural failure and
+    # must not read as one.
+    _, census = GC.opinions_for([], {}, day=DAY)
+    assert census.structural_check == {}
+    assert "was not asked" in census.structural_check_line()
+
+
 # --------------------------------------------------------------------------
 # The limitations, recorded as passing assertions
 # --------------------------------------------------------------------------
 
 
 def test_the_gaps_this_engine_still_has_are_the_ones_written_down() -> None:
-    """Five, each of which goes red the day it is closed.
+    """Six, each of which goes red the day it is closed.
 
     The repository's form for a limitation: not a docstring claim that quietly
     becomes false, but an assertion that fails on the commit which fixes it and
@@ -1815,6 +2246,15 @@ def test_the_gaps_this_engine_still_has_are_the_ones_written_down() -> None:
        reconciles the compound POINTS marginal (`points_compound_reconciliation`)
        and nothing reconciles the thinned THREES one, so the measured narrowness
        is reported against no number that could fail.
+    6. **Design 4's stop rule cannot run on one athlete.** Its target is pooled
+       within-player over 242,634 rows of regulars, so the engine's counterpart
+       has to be pooled too, and a card that priced fewer than
+       `STRUCTURAL_CHECK_POPULATION_FLOOR` regulars reports the ratio and stops
+       nothing — see `test_the_population_floor_is_a_gap_that_is_held_open`.
+       What would close it is a frozen target the comparison could be made
+       against ONE athlete: a per-bucket or minutes-conditional unconditional
+       points VMR. The file carries exactly one and it is the pooled one, which
+       is what the assertion below holds.
     """
     # Names the CODE binds or touches, not words in the prose: the prose has to
     # be able to say "no ROI, no log loss" without turning its own check red.
@@ -1864,6 +2304,14 @@ def test_the_gaps_this_engine_still_has_are_the_ones_written_down() -> None:
         "a combination-market VMR target now exists, so design 8's check on the "
         "derived joint can be run. Write it, and say whether the derivation "
         "reproduces it."
+    )
+    unconditional = sorted(k for k in targets if "unconditional_points_vmr" in k)
+    assert unconditional == ["unconditional_points_vmr_regulars"], (
+        "the fit now carries more than one unconditional points VMR. If one of "
+        "them is per-bucket or minutes-conditional, design 4's check (a) can be "
+        "made against a single athlete and `STRUCTURAL_CHECK_POPULATION_FLOOR` "
+        "is no longer needed — say so and delete the floor rather than leaving "
+        "a population apparatus around a target that no longer needs one."
     )
     assert "corr_points_threes_given_minutes" in targets
     assert not any("tolerance" in key for key in targets), (
