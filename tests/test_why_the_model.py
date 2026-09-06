@@ -21,6 +21,7 @@ document against it, so the claim cannot become false again without a red build.
 
 from __future__ import annotations
 
+import copy
 import json
 import re
 import shutil
@@ -1668,3 +1669,99 @@ def test_the_splice_refuses_a_document_with_no_fence(tmp_path):
     with pytest.raises(program.WhySpliceError):
         program.splice(doc, "# Title\n\nbody\n")
     assert doc.read_text(encoding="utf-8") == "# A document with no markers\n"
+
+
+# ---------------------------------------------------------------------------
+# The re-derivation guard compares measurements, not the last bits of a double
+# ---------------------------------------------------------------------------
+
+
+def _nudge_every_float(value, steps: int = 5):
+    """`value` with every float moved `steps` units in the last place.
+
+    Stands in for the platform difference measured between this repository's
+    records and CI: `_statistics._normal_dist_inv_cdf` compiled by two
+    compilers returns doubles a unit apart, and `adjusted_low`/`adjusted_high`
+    amplify that to about five.
+    """
+    import math as _math
+
+    if isinstance(value, dict):
+        return {k: _nudge_every_float(v, steps) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_nudge_every_float(v, steps) for v in value]
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, float):
+        for _ in range(steps):
+            value = _math.nextafter(value, _math.inf)
+        return value
+    return value
+
+
+def test_a_platforms_worth_of_last_bit_difference_is_not_a_fabrication():
+    """The failure that found this: CI called an honest re-render a fabrication.
+
+    Bit-identity across machines is not a property this arithmetic has, and two
+    attempts to give it one were measured and rejected — rounding the
+    correction to a fixed number of digits only moves the boundary (3,247 of
+    4,999 family sizes change under a four-unit nudge at 15 digits), and
+    computing `inv_cdf` in pure Python still calls `math.log`, which no
+    platform must round correctly. So the guard compares measurements.
+    """
+    record = json.loads(
+        (OUTPUTS / "cbb_why_the_model.json").read_text(encoding="utf-8")
+    )
+    assert not WHY._differs(record, _nudge_every_float(record)), (
+        "five units in the last place reads as a different measurement, so "
+        "this guard still fails on any machine whose libm differs from the one "
+        "that wrote the record."
+    )
+
+
+@pytest.mark.parametrize(
+    "label,mutate",
+    [
+        (
+            "a bound moved by one part in a million",
+            lambda r: r["tiers"][0].__setitem__(
+                "adjusted_low", r["tiers"][0]["adjusted_low"] * (1 + 1e-6)
+            ),
+        ),
+        (
+            "a bound moved by one part in a hundred million",
+            lambda r: r["tiers"][0].__setitem__(
+                "adjusted_low", r["tiers"][0]["adjusted_low"] * (1 + 1e-8)
+            ),
+        ),
+        (
+            "a verdict word",
+            lambda r: r["tiers"][0].__setitem__("verdict", "demonstrated edge"),
+        ),
+        (
+            "one bet",
+            lambda r: r["tiers"][0].__setitem__("bets", r["tiers"][0]["bets"] + 1),
+        ),
+        (
+            "the correction's applied flag",
+            lambda r: r["correction"].__setitem__("applied", False),
+        ),
+        (
+            "a bound of exactly zero nudged above the floor",
+            lambda r: r["cells"][20].__setitem__("adjusted_high", 1e-11),
+        ),
+    ],
+)
+def test_the_tolerance_still_catches_everything_a_hand_could_type(label, mutate):
+    """The gate's purpose, unchanged: a figure no instrument produced.
+
+    Every one of these is orders of magnitude larger than the platform noise
+    above, and every one is smaller than anything a reader could see. If one of
+    them ever passes, the tolerance has stopped being a tolerance.
+    """
+    record = json.loads(
+        (OUTPUTS / "cbb_why_the_model.json").read_text(encoding="utf-8")
+    )
+    edited = copy.deepcopy(record)
+    mutate(edited)
+    assert WHY._differs(record, edited), f"{label} was not caught."

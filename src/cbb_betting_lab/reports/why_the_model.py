@@ -1015,12 +1015,94 @@ def rederivation_differences(
                 "from the evidence on disk produces no such section."
             )
             continue
-        if stored[key] != derived[key]:
+        if _differs(stored[key], derived[key]):
             reasons.append(
                 f"`{key}`: the record says {_short(stored[key])} and the "
                 f"evidence on disk says {_short(derived[key])}."
             )
     return reasons
+
+
+#: How far two floats may differ, relatively, and still be the same measurement.
+#:
+#: **Not a softened gate — a gate that asserts something the arithmetic has.**
+#: `==` on floats here demanded that this lab's numbers be reproducible bit for
+#: bit on every machine, and they are not. `stats.bonferroni_z` calls
+#: `NormalDist.inv_cdf`, which is `_statistics._normal_dist_inv_cdf`, a C
+#: extension; the same source compiled by Clang on arm64 and GCC on x86-64
+#: returns doubles that differ by a unit in the last place, and every
+#: `adjusted_low`/`adjusted_high` derived from it amplifies that to about five.
+#: Measured: at 95 hypotheses this repository's records carry a correction
+#: factor of 1.7689064332643192 and CI computes 1.7689064332643194, and this
+#: guard called the honest re-render of an untouched record a fabrication.
+#:
+#: Two ways to make bit-identity true were tried and measured, and neither
+#: works. Rounding the correction to a fixed number of significant digits only
+#: moves the boundary: at 15 digits, 3,247 of the 4,999 family sizes from 2 to
+#: 5,000 change their rounded value under a four-unit nudge, so it is a
+#: coincidence at 95 rather than a property. Computing `inv_cdf` in pure Python
+#: does not close it either — for these tail probabilities the algorithm calls
+#: `math.log`, which no platform is required to round correctly.
+#:
+#: So the tolerance sits where it can do no harm. A published figure is a
+#: percentage to one decimal place, and the smallest distinction this lab ever
+#: draws is a bound crossing zero, which it has measured at 1.3e-5. A relative
+#: 1e-9 is four orders of magnitude tighter than that and seven looser than the
+#: platform noise it exists to absorb. Nothing a hand could type into a record
+#: survives it: `tests/test_why_the_model.py` pins that a bound moved by a
+#: millionth is still caught.
+REDERIVATION_TOLERANCE = 1e-9
+
+#: The floor beneath which a relative tolerance has nothing to scale against.
+#:
+#: A bound of exactly 0.0 is a real value in these records — a cell with no
+#: standard error produces one — and relative tolerance around zero is
+#: meaningless: any non-zero difference is infinitely larger than zero. This is
+#: absolute and sits seven orders of magnitude below the smallest distinction
+#: this lab has ever drawn (a bound crossing zero at 1.3e-5).
+REDERIVATION_FLOOR = 1e-12
+
+
+def _differs(stored: object, derived: object) -> bool:
+    """Whether two record sections disagree about anything but the last bits.
+
+    Structure, strings, integers, booleans and `None` are compared exactly: a
+    changed verdict word, a changed bet count or a changed market name is never
+    a rounding matter. Only floats are given `REDERIVATION_TOLERANCE`, and a
+    float against a non-float is always a difference.
+    """
+    if isinstance(stored, Mapping) or isinstance(derived, Mapping):
+        if not (isinstance(stored, Mapping) and isinstance(derived, Mapping)):
+            return True
+        if set(stored) != set(derived):
+            return True
+        return any(_differs(stored[key], derived[key]) for key in stored)
+    if isinstance(stored, (list, tuple)) or isinstance(derived, (list, tuple)):
+        if not (
+            isinstance(stored, (list, tuple)) and isinstance(derived, (list, tuple))
+        ):
+            return True
+        if len(stored) != len(derived):
+            return True
+        return any(_differs(a, b) for a, b in zip(stored, derived))
+    # `bool` is an `int`, and True == 1. Compared exactly, before the numbers.
+    if isinstance(stored, bool) or isinstance(derived, bool):
+        return stored is not derived
+    if isinstance(stored, float) or isinstance(derived, float):
+        if not (
+            isinstance(stored, (int, float)) and isinstance(derived, (int, float))
+        ):
+            return True
+        if stored == derived:
+            return False
+        if math.isnan(stored) or math.isnan(derived):
+            return not (math.isnan(stored) and math.isnan(derived))
+        if math.isinf(stored) or math.isinf(derived):
+            return True
+        scale = max(abs(stored), abs(derived))
+        allowed = max(REDERIVATION_TOLERANCE * scale, REDERIVATION_FLOOR)
+        return abs(stored - derived) > allowed
+    return stored != derived
 
 
 def _short(value: object, limit: int = 240) -> str:
