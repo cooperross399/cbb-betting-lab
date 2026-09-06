@@ -439,7 +439,7 @@ Kept because it is how a dead key gets noticed and fixed, and printed under this
 
 ## What this does not establish
 
-- **Retention is not permission to card.** Nothing in this lab reaches `Availability.CONFIRMED` — ESPN's men's college basketball injuries endpoint is permanently empty and conference reports cover about 115 of 365 teams, conference games only. Player props are priced, frozen and settled and still **cannot be selected**, so a tier-3 market reading RETAINED_AND_MEASURABLE here is measurable and not playable.
+- **Retention is not permission to card.** Nothing in this lab reaches `Availability.CONFIRMED` — ESPN's men's college basketball injuries endpoint is permanently empty and conference reports cover about 115 of 365 teams, conference games only. No player prop can be **selected**, and this lab has never priced one — so a tier-3 market reading RETAINED_AND_MEASURABLE here is measurable and not playable.
 - **One snapshot per event**, 60 minutes before tip. A market hung only at open, or only in-play, is invisible to this run and its absence here means nothing about it.
 - **The archive's own start dates bound this.** Featured markets exist for this sport from 2020-11-16 and everything else from 2023-05-03, so the full catalogue is buyable for three seasons only. `guard_history_window` refuses a sample that would measure the archive's start date and record it as market absence.
 - **Every share carries its denominator.** A market priced on 3 of 3 events is not the same claim as one priced on 30 of 30, and the Wilson interval beside each share is what says so.

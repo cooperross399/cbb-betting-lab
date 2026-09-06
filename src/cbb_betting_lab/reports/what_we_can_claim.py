@@ -133,6 +133,7 @@ import pandas as pd
 from cbb_betting_lab import forward_evidence
 from cbb_betting_lab import gates
 from cbb_betting_lab import markets as markets_registry
+from cbb_betting_lab.models import player_rates
 from cbb_betting_lab import restatement as RESTATEMENT
 from cbb_betting_lab import staging_provider_policy as policy_module
 from cbb_betting_lab import stats as S
@@ -1167,11 +1168,20 @@ def unmeasured_markets(
         if market.key in measured:
             continue
         if market.family == markets_registry.PLAYER:
+            # **Not "priced, frozen and settled".** This sentence used to say
+            # that a market with no bought price and no settled opinion was
+            # nevertheless priced — a contradiction inside one sentence, in the
+            # direction that overstates what this lab has. Measured
+            # 2026-09-06: the model has been scored on ten markets and every
+            # one of them is a team market; no player market has ever been
+            # priced by anything here. The availability gate is a SECOND and
+            # independent bar, and it is stated as one.
             reason = (
                 "no historical price has been bought for it and no forward "
-                "opinion on it has settled. It is also gated: nothing in this "
-                "sport reaches `Availability.CONFIRMED`, so it is priced, "
-                "frozen and settled and cannot produce a selection"
+                "opinion on it has settled, so this lab has no price for it. "
+                "It is also gated: nothing in this sport reaches "
+                "`Availability.CONFIRMED`, so a price would not produce a "
+                "selection either"
             )
         elif market.family == markets_registry.FUTURES:
             reason = (
@@ -1236,12 +1246,49 @@ def gated_markets() -> list[dict]:
     all, and the conference reports that exist cover roughly 115 of 365 teams,
     conference games only. A gate that read a missing feed as "nobody is
     injured" would clear an entire slate.
+
+    **A market the model refuses BY NAME is not in this list, and putting it
+    here was a false claim of the worst kind.** This returned every PLAYER
+    market unconditionally, so `player_first_basket` and `player_double_double`
+    were printed under *"priced, frozen and settled but cannot produce a
+    selection"* — which tells a reader a price exists and that only the missing
+    injury feed stops the lab betting it. The design says no price exists and
+    none ever will, and the refusal sentence's whole job is to draw exactly
+    that line: *"This is a model refusal, not a data absence."* The published
+    `data/outputs/cbb_what_we_can_claim.md` carried the inverted version.
+
+    They are reported by :func:`markets_refused_by_name` instead, in the
+    model's own words. A market with no price is never described by the reason
+    it cannot be bet — there is nothing to bet.
     """
     note = gates.availability_note(gates.Availability.NO_REPORT)
     return [
         {"market": m.key, "title": m.title, "note": note}
         for m in markets_registry.MARKETS
         if m.family == markets_registry.PLAYER
+        and m.key not in player_rates.MARKETS_REFUSED_BY_NAME
+    ]
+
+
+def markets_refused_by_name() -> list[dict]:
+    """The markets the player model refuses by name, with the model's reason.
+
+    Separate from :func:`gated_markets` because the two say opposite things. A
+    gated market has a price and cannot be bet; a refused market has no price
+    and never will. Collapsing them loses the distinction the refusal exists to
+    make, and loses it in the direction that overstates what this lab has.
+    """
+    return [
+        {
+            "market": key,
+            "title": (
+                markets_registry.MARKETS_BY_KEY[key].title
+                if key in markets_registry.MARKETS_BY_KEY
+                else key
+            ),
+            "reason": reason,
+        }
+        for key, reason in sorted(player_rates.MARKETS_REFUSED_BY_NAME.items())
     ]
 
 
@@ -1464,6 +1511,7 @@ def build_record(
         "unmeasured": unmeasured_markets(claims, processed_dir=processed_dir),
         "deferred": deferred_groups(),
         "gated": gated_markets(),
+        "refused_by_name": markets_refused_by_name(),
         "backtest": backtest_block,
         "forward": forward_block,
         "replication": {
@@ -1873,7 +1921,7 @@ def render(record: Mapping) -> str:
     # --- gated -------------------------------------------------------------
     gated = [r for r in record.get("gated", []) or [] if isinstance(r, Mapping)]
     if gated:
-        add("## Priced, frozen and settled — and unable to produce a selection")
+        add("## Wired, and unable to produce a selection even if priced")
         add("")
         add(
             "Division I men's basketball has **no mandated injury report**. "
@@ -1888,11 +1936,44 @@ def render(record: Mapping) -> str:
         add("")
         add(
             f"So nothing reaches `Availability.CONFIRMED`, and these "
-            f"{len(gated)} market(s) are priced, frozen and settled but "
-            "**cannot produce a selection**: "
+            f"{len(gated)} market(s) **could not produce a selection even if "
+            "this lab had a price for them**: "
             + ", ".join(f"`{_text(r.get('market'))}`" for r in gated)
             + "."
         )
+        add("")
+        add(
+            "**It does not have one.** The model has been scored on ten "
+            "markets and every one is a team market; no player market has ever "
+            "been priced by anything in this repository. This section is about "
+            "the gate, not about a price — saying otherwise, which this "
+            "document did until 2026-09-06, tells a reader the lab holds "
+            "prices it has never produced."
+        )
+        add("")
+        add(NOT_A_NO_VALUE_CALL)
+        add("")
+
+    # --- refused by the model, by name --------------------------------------
+    refused = [
+        r for r in record.get("refused_by_name", []) or [] if isinstance(r, Mapping)
+    ]
+    if refused:
+        add("## Refused by the model, by name")
+        add("")
+        add(
+            "**These are not priced.** The section above is about markets this "
+            "lab has a price for and cannot bet; these are markets it has no "
+            "price for and never will, refused before the run and by name. "
+            "Printing them under the availability gate — which is what this "
+            "document did until 2026-09-06 — tells a reader a price exists and "
+            "that only the missing injury feed stands in the way. It does not "
+            "exist. Each refusal is printed in the model's own words, and each "
+            "says what kind of refusal it is."
+        )
+        add("")
+        for row in refused:
+            add(f"- `{_text(row.get('market'))}` — {_text(row.get('reason'))}")
         add("")
         add(NOT_A_NO_VALUE_CALL)
         add("")

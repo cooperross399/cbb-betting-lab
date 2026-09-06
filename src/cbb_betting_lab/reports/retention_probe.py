@@ -106,8 +106,8 @@ a market qualify. The reasoning:
 ## What this module does not establish
 
 * Retention is a fact about the archive. It is **not** permission to card
-  anything. Nothing in this lab reaches `Availability.CONFIRMED`, so player
-  props are priced, frozen and settled and still **cannot be selected**; a
+  anything. Nothing in this lab reaches `Availability.CONFIRMED`, so no player
+  prop can be **selected** — and none has ever been priced here either; a
   tier-3 market reading RETAINED_AND_MEASURABLE here is a measurable market and
   not a playable one.
 * A market that returns nothing is reported as *the provider returned no price
@@ -1831,10 +1831,9 @@ def render(record: Mapping) -> str:
         f"- **Retention is not permission to card.** Nothing in this lab "
         "reaches `Availability.CONFIRMED` — ESPN's men's college basketball "
         "injuries endpoint is permanently empty and conference reports cover "
-        "about 115 of 365 teams, conference games only. Player props are "
-        "priced, frozen and settled and still **cannot be selected**, so a "
-        "tier-3 market reading RETAINED_AND_MEASURABLE here is measurable and "
-        "not playable."
+        "about 115 of 365 teams, conference games only. No player prop can be "
+        "**selected**, and this lab has never priced one — so a tier-3 market "
+        "reading RETAINED_AND_MEASURABLE here is measurable and not playable."
     )
     add(
         f"- **One snapshot per event**, "
