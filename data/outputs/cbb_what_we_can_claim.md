@@ -2,7 +2,7 @@
 
 Generated from the measurement records on disk, so it cannot drift from them. The hand-written rules — written before the first measurement, which is the whole point of them — live in `docs/what_we_can_and_cannot_claim.md`. **This file is re-rendered from its own run record and is never edited by hand.**
 
-- Generated: 2026-09-05T22:37:42+00:00
+- Generated: 2026-09-06T17:47:56+00:00
 - Sample floor: **200 bets**, declared in advance. Below it this document prints a phrase and not a number.
 
 **The only result that survives is a loss.** 32 market-and-tier cell(s) across 10 market(s) are measured against real prices. None excludes zero on the winning side; 3 exclude(s) it on the **losing** side after correcting for everything this lab has ever tested, which is a **demonstrated deficit**: `team_total` / mid_major (historical price backtest, bets) at -5.8% over 13,478 bets across 384 days; `moneyline` / low_major (historical price backtest, bets) at -7.9% over 7,561 bets across 632 days; `total_points` / low_major (historical price backtest, bets) at -5.2% over 17,903 bets across 7,131 games. A demonstrated deficit is a finding, not a null result, and it is the finding this lab has.
@@ -96,20 +96,33 @@ Every modelling policy is a **recorded verdict read from disk**, never an assert
 
 ## Not measured against real prices
 
-- **19 market(s)** — no historical price has been bought for it and no forward opinion on it has settled. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so it is priced, frozen and settled and cannot produce a selection.
+- **19 market(s)** — no historical price has been bought for it and no forward opinion on it has settled, so this lab has no price for it. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either.
   - `player_points` (settles on `player_points`), `player_rebounds` (settles on `player_rebounds`), `player_assists` (settles on `player_assists`), `player_threes` (settles on `player_threes_made`), `player_blocks` (settles on `player_blocks`), `player_steals` (settles on `player_steals`), `player_turnovers` (settles on `player_turnovers`), `player_field_goals` (settles on `player_field_goals_made`), `player_frees_made` (settles on `player_free_throws_made`), `player_frees_attempts` (settles on `player_free_throws_attempted`), `player_pra` (settles on `player_pra`), `player_points_rebounds` (settles on `player_points_rebounds`), `player_points_assists` (settles on `player_points_assists`), `player_rebounds_assists` (settles on `player_rebounds_assists`), `player_blocks_steals` (settles on `player_blocks_steals`), `player_double_double` (settles on `player_double_double`), `player_triple_double` (settles on `player_triple_double`), `player_first_basket` (settles on `player_first_basket`), `player_first_team_basket` (settles on `player_first_team_basket`)
-- **5 market(s)** — no historical price has been bought for it and no forward opinion on it has settled.
-  - `team_total_h1` (settles on `half_team_score`), `moneyline_h2` (settles on `half_margin`), `spread_h2` (settles on `half_margin`), `total_points_h2` (settles on `half_total`), `team_total_h2` (settles on `half_team_score`)
+- **3 market(s)** — historical prices for it **have** been bought and no measurement has scored them yet. That is a step this lab has not run, not a market the provider does not serve.
+  - `moneyline_h2` (settles on `half_margin`), `spread_h2` (settles on `half_margin`), `total_points_h2` (settles on `half_total`)
+- **2 market(s)** — no historical price has been bought for it and no forward opinion on it has settled.
+  - `team_total_h1` (settles on `half_team_score`), `team_total_h2` (settles on `half_team_score`)
 - **1 market(s)** — a futures market, served under a separate provider sport key, settling on a clock measured in months. Nothing has been bought for it and nothing has settled.
   - `championship_winner` (settles on `tournament_champion`)
 
 **A market in this list is not a market judged to have no value.** It is a market with no price-based evidence either way, and nothing in this repository will present the two as the same thing. It is not a pass, it is not an avoid, and it is not a no-value call.
 
-## Priced, frozen and settled — and unable to produce a selection
+## Wired, and unable to produce a selection even if priced
 
 Division I men's basketball has **no mandated injury report**. Measured on 2026-09-01: ESPN's men's-college-basketball injuries endpoint is permanently empty, CollegeBasketballData has no availability endpoint at all, and the conference reports that exist cover roughly 115 of 365 teams, conference games only, which leaves two thirds of the division and the whole of November and December uncovered. A gate that read a missing feed as *nobody is injured* would clear an entire slate.
 
-So nothing reaches `Availability.CONFIRMED`, and these 19 market(s) are priced, frozen and settled but **cannot produce a selection**: `player_points`, `player_rebounds`, `player_assists`, `player_threes`, `player_blocks`, `player_steals`, `player_turnovers`, `player_field_goals`, `player_frees_made`, `player_frees_attempts`, `player_pra`, `player_points_rebounds`, `player_points_assists`, `player_rebounds_assists`, `player_blocks_steals`, `player_double_double`, `player_triple_double`, `player_first_basket`, `player_first_team_basket`.
+So nothing reaches `Availability.CONFIRMED`, and these 17 market(s) **could not produce a selection even if this lab had a price for them**: `player_points`, `player_rebounds`, `player_assists`, `player_threes`, `player_blocks`, `player_steals`, `player_turnovers`, `player_field_goals`, `player_frees_made`, `player_frees_attempts`, `player_pra`, `player_points_rebounds`, `player_points_assists`, `player_rebounds_assists`, `player_blocks_steals`, `player_triple_double`, `player_first_team_basket`.
+
+**It does not have one.** The model has been scored on ten markets and every one is a team market; no player market has ever been priced by anything in this repository. This section is about the gate, not about a price — saying otherwise, which this document did until 2026-09-06, tells a reader the lab holds prices it has never produced.
+
+**A market in this list is not a market judged to have no value.** It is a market with no price-based evidence either way, and nothing in this repository will present the two as the same thing. It is not a pass, it is not an avoid, and it is not a no-value call.
+
+## Refused by the model, by name
+
+**These are not priced.** The section above is about markets this lab has a price for and cannot bet; these are markets it has no price for and never will, refused before the run and by name. Printing them under the availability gate — which is what this document did until 2026-09-06 — tells a reader a price exists and that only the missing injury feed stands in the way. It does not exist. Each refusal is printed in the model's own words, and each says what kind of refusal it is.
+
+- `player_double_double` — refused: the store holds two quotes on one player-game. There is nothing to measure, and pricing it would add a pre-registered hypothesis -- widening every other interval in the lab -- in exchange for a sample of one.
+- `player_first_basket` — refused: this market settles on the scorer of the game's first field goal, which is decided by the starting five and the opening tip. Neither is knowable at T-60 in this sport, no tip-winner data exists in any table here, and a per-minute rate says nothing about minute zero. It is also a mutually exclusive family -- the probabilities across a game's players must sum to at most one, and the store quotes 422 names over 1,180 games, a partial field, so no normalisation exists and independently priced names would over-sum with nothing looking wrong. This is a model refusal, not a data absence: `first_basket_athlete_id` is present on 100% of game-segment rows and the market is perfectly settleable. Not a pass, not an avoid, not a no-value call.
 
 **A market in this list is not a market judged to have no value.** It is a market with no price-based evidence either way, and nothing in this repository will present the two as the same thing. It is not a pass, it is not an avoid, and it is not a no-value call.
 

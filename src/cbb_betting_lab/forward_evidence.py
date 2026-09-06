@@ -152,8 +152,10 @@ separately and always both, because mixing them flatters whichever is worse. A
 player-prop row is an opinion and can never be a bet — nothing reaches
 `Availability.CONFIRMED` in this sport, ESPN's men's-college-basketball injuries
 endpoint is permanently empty and the conference reports cover ~115 of 365 teams
-in conference games only — so it is priced, frozen and settled, and reported in
-the gate's own words. **That is not a pass, an avoid, or a no-value call.**
+in conference games only — so it can never produce a selection, and it is
+reported in the gate's own words. The gate is the reason it cannot be bet, not
+evidence that a price for it exists: no player prop has ever been priced here.
+**That is not a pass, an avoid, or a no-value call.**
 """
 
 from __future__ import annotations
@@ -1697,9 +1699,9 @@ def render_ledger(
     player_rows = sum(1 for m in games["market"] if _is_player_market(m))
     if player_rows:
         add(
-            f"{player_rows:,} of those opinions are player props. They are "
-            "priced, frozen and settled, and they **cannot produce a "
-            "selection**: nothing in this sport reaches `Availability."
+            f"{player_rows:,} of those opinions are player props. They "
+            "**cannot produce a selection**, and this lab has no price for "
+            "them either: nothing in this sport reaches `Availability."
             "CONFIRMED`, ESPN's men's-college-basketball injuries endpoint is "
             "permanently empty, and the conference reports that exist cover "
             "roughly 115 of 365 teams in conference games only. They are "

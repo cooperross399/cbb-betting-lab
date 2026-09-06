@@ -148,7 +148,7 @@ from cbb_betting_lab.gates import (
     tip_state,
 )
 from cbb_betting_lab.markets import FUTURES, MARKETS_BY_KEY, PLAYER, per_event_provider_keys
-from cbb_betting_lab.models import distributions, slate
+from cbb_betting_lab.models import distributions, player_rates, slate
 from cbb_betting_lab.population import VenueState
 from cbb_betting_lab.providers import staging, team_names
 from cbb_betting_lab.providers.odds_api import (
@@ -953,6 +953,15 @@ def _player_decline(model: "slate.SlateModel", wager: Wager) -> str:
     Four states, counted separately and never summed, and the separation is the
     deliverable of the seam this reads:
 
+    * **refused by name** — `player_first_basket` or `player_double_double`.
+      This is asked FIRST, before anything about the athlete, because it is a
+      statement about the market and is true whatever the athlete's evidence
+      looks like. Until 2026-09-06 there was no such branch, so a first-basket
+      wager on a well-evidenced athlete fell through to *no engine* and the
+      card printed "no probability exists for this line yet" — a temporary
+      wiring absence — for a market the design refuses permanently. The
+      refusal is printed in the design's own words, which say plainly that it
+      is a model refusal and not a data absence.
     * **never asked** — the model holds no projection for this event at all.
       `no opinion`, and the slate's own sentence says which absence it is: a
       night with no player evidence, an estimator that is not written, or a
@@ -971,6 +980,9 @@ def _player_decline(model: "slate.SlateModel", wager: Wager) -> str:
     entry is never counted as a refusal: `ratings.matchups_for`'s docstring
     draws the same line for the team half, in the same words.
     """
+    refused = player_rates.MARKETS_REFUSED_BY_NAME.get(clean_text(wager.market))
+    if refused:
+        return refused
     if not model.was_asked_about_players(wager.event_id):
         reason = model.player_absence_reason or slate.NO_PLAYER_SLATE
         return (

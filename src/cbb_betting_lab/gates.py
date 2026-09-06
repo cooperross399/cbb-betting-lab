@@ -57,8 +57,12 @@ So availability is modelled as **unobserved**, and the five states below keep
 exists at all". A gate that read a missing feed as "nobody is injured" would
 clear an entire slate.
 
-**Nothing can reach `CONFIRMED`.** Player props are priced, frozen and settled;
-they cannot produce a selection, and the card says so in those words.
+**Nothing can reach `CONFIRMED`.** No player prop can produce a selection,
+and the card says so in those words. It is a gate and not a price: measured
+2026-09-06, the model has been scored on ten markets and every one is a team
+market, so this lab has never priced a player prop at all. Saying the props are
+"priced, frozen and settled" — which this docstring did until then — claims
+prices it has never produced.
 """
 
 from __future__ import annotations

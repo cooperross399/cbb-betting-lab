@@ -236,18 +236,38 @@ MARKET_COMPONENTS: Mapping[str, tuple[str, ...]] = {
 #: The ten markets this model is registered against, in the ledger's order.
 PRICED_MARKETS: tuple[str, ...] = tuple(MARKET_COMPONENTS)
 
-#: The two markets the design refuses BY NAME. They are carried in the census
-#: and they never become an eleventh market after the fact.
+#: The two markets the design refuses BY NAME, in the design's own words.
+#:
+#: **A refusal that reaches no output is not a refusal.** Until 2026-09-06 this
+#: mapping had exactly one reader in the whole tree — the exception message in
+#: :func:`mean_for_market` — so a first-basket wager on a priceable athlete
+#: fell through to "no probability exists for this line yet", which describes a
+#: temporary wiring absence, and the claims document listed both markets as
+#: "priced, frozen and settled", which asserts a price exists and blames the
+#: availability gate. Both inverted the one distinction these sentences exist
+#: to draw. Every path that can surface one of these markets now reads this
+#: mapping, and `tests/test_player_rates.py` pins the wording clause by clause
+#: rather than by one substring.
+#:
+#: The first-basket text is the design's verbatim census wording. Three clauses
+#: had been dropped from it — the mutually-exclusive sum, the measured size of
+#: the partial field, and the evidence half of the model-refusal claim — and
+#: the evidence half is the one that matters, because every OTHER refusal in
+#: this module is a data absence. Without it a reader is asked to take the
+#: distinction on trust.
 MARKETS_REFUSED_BY_NAME: Mapping[str, str] = {
     "player_first_basket": (
         "refused: this market settles on the scorer of the game's first field "
         "goal, which is decided by the starting five and the opening tip. "
         "Neither is knowable at T-60 in this sport, no tip-winner data exists "
         "in any table here, and a per-minute rate says nothing about minute "
-        "zero. It is also a mutually exclusive family, and the store quotes a "
-        "partial field, so no normalisation exists and independently priced "
-        "names would over-sum with nothing looking wrong. This is a model "
-        "refusal, not a data absence. Not a pass, not an avoid, not a "
+        "zero. It is also a mutually exclusive family -- the probabilities "
+        "across a game's players must sum to at most one, and the store quotes "
+        "422 names over 1,180 games, a partial field, so no normalisation "
+        "exists and independently priced names would over-sum with nothing "
+        "looking wrong. This is a model refusal, not a data absence: "
+        "`first_basket_athlete_id` is present on 100% of game-segment rows and "
+        "the market is perfectly settleable. Not a pass, not an avoid, not a "
         "no-value call."
     ),
     "player_double_double": (
@@ -1390,6 +1410,20 @@ def _subjects_of_the_day(prices: pd.DataFrame):
     lines per subject across a mean 4.6 books (design 10, quoted), so counting
     rows would report a resolution census of ladder rungs and call it a census
     of players.
+
+    **A market refused by name contributes no subject.** This used to select
+    every key whose family is PLAYER, so a `player_first_basket` rung put its
+    athlete into the subject set, resolved him, gave him a full priceable
+    projection, and tallied him into the resolution census — for a market the
+    design refused before the run. Two things went wrong with that. The
+    projection is one the design says must not exist, and the per-tier
+    resolution rate that design 13 failure mode 5 stops the run on at 2pp was
+    being computed over a board including two refused markets' quotes, so the
+    gate was reading a different board from the one being priced.
+
+    A subject quoted ONLY on refused markets therefore disappears from the
+    census entirely, which is correct: he is not a subject of this model. A
+    subject quoted on both keeps his projection, from the priced rungs alone.
     """
     subjects: dict[str, list[str]] = {}
     quotes: dict[tuple[str, str], int] = {}
@@ -1402,7 +1436,7 @@ def _subjects_of_the_day(prices: pd.DataFrame):
     player_keys = {
         market.key
         for market in MARKETS_BY_KEY.values()
-        if market.family == PLAYER
+        if market.family == PLAYER and market.key not in MARKETS_REFUSED_BY_NAME
     }
     frame = prices[prices["market"].map(clean_text).isin(player_keys)]
     if len(frame) == 0:

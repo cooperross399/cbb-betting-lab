@@ -442,14 +442,39 @@ def test_no_excluded_market_is_ever_a_pass_an_avoid_or_a_no_value_call(
         "The sentence must sit under every list of markets with no evidence — "
         "the unmeasured, the availability-gated and the deferred provider keys."
     )
-    # The only place the words appear is the sentence denying them.
+    # The only place the words appear is a sentence DENYING them. There are
+    # exactly two such sentences and both are named here rather than matched
+    # loosely: the document's own standing denial, and the player model's
+    # refusal wording, which the design marks verbatim and which ends "Not a
+    # pass, not an avoid, not a no-value call." A pattern broad enough to
+    # accept any nearby "not" would accept a line that reads as a no-value call
+    # with a hedge in it, which is the thing this rule exists to forbid.
+    denials = (
+        "not a market judged to have no value",
+        "not a pass, not an avoid, not a no-value call",
+    )
+    assert len(denials) == 2
     for phrase in ("no value", "no-value"):
         for line in rendered.splitlines():
             if phrase in line.casefold():
-                assert "not a market judged to have no value" in line
+                assert any(d in line.casefold() for d in denials), (
+                    f"this line uses the words and is not one of the two "
+                    f"sentences permitted to: {line[:160]}"
+                )
 
-    assert "cannot produce a selection" in rendered
+    assert "could not produce a selection" in rendered
     assert "no mandated injury report" in rendered
+
+    # **And it must not claim a price it does not have.** The sentence used to
+    # read "no historical price has been bought for it ... so it is priced,
+    # frozen and settled", contradicting itself inside one sentence and
+    # overstating what this lab holds. Measured 2026-09-06: the model has been
+    # scored on ten markets, every one a team market, and no player market has
+    # ever been priced by anything here.
+    assert "priced, frozen and settled" not in rendered, (
+        "a market with no bought price and no settled opinion is described as "
+        "priced. The availability gate is a second bar, not a price."
+    )
 
 
 def test_every_wired_market_appears_somewhere(tmp_path: Path):
@@ -963,3 +988,96 @@ def test_a_replication_record_that_appears_later_fails_the_check(tmp_path: Path)
 
     assert result.returncode == 1, result.stdout
     assert "holdout" in result.stderr
+
+
+def test_a_market_refused_by_name_is_never_reported_as_priced_and_gated():
+    """The published document said a price existed for two markets that have none.
+
+    `gated_markets()` returned every PLAYER market unconditionally, so
+    `player_first_basket` and `player_double_double` were printed under
+    *"priced, frozen and settled but cannot produce a selection"* — which tells
+    a reader the lab has a price and only the missing injury feed stops it
+    betting. The design says no price exists and none ever will, and the
+    refusal sentence's whole job is to draw that line. The committed
+    `data/outputs/cbb_what_we_can_claim.md` carried the inverted version.
+    """
+    from cbb_betting_lab.models import player_rates as PR
+
+    refused = set(PR.MARKETS_REFUSED_BY_NAME)
+    gated = {row["market"] for row in WC.gated_markets()}
+    assert not (gated & refused), (
+        f"{sorted(gated & refused)} are described as priced and gated. A market "
+        "with no price is never described by the reason it cannot be bet — "
+        "there is nothing to bet."
+    )
+
+    reported = {row["market"] for row in WC.markets_refused_by_name()}
+    assert reported == refused, (
+        "a market the model refuses by name reaches no section of this report, "
+        "so the refusal exists only in the model's source"
+    )
+
+
+def test_the_rendered_report_states_each_refusal_in_the_models_own_words():
+    """A refusal that reaches no output is not a refusal."""
+    from cbb_betting_lab.models import player_rates as PR
+
+    record = WC.build_record(output_dir=Path("data/outputs"))
+    page = WC.render(record)
+
+    assert "## Refused by the model, by name" in page
+    head, _, tail = page.partition("## Refused by the model, by name")
+    section = tail.partition("\n## ")[0]
+
+    for market, reason in PR.MARKETS_REFUSED_BY_NAME.items():
+        assert f"`{market}`" in section, f"{market} is not named in the section"
+        # The model's own words, not a paraphrase of them.
+        assert reason in section, f"{market}'s reason is not the model's sentence"
+        assert f"`{market}`" not in head.partition(
+            "## Priced, frozen and settled"
+        )[2], f"{market} is still listed under the availability gate"
+
+
+def test_nothing_in_this_repository_calls_a_player_prop_priced():
+    """The same false claim was in six places, so it is guarded repo-wide.
+
+    Measured 2026-09-06: `data/outputs/cbb_price_backtest.json` scores the
+    model on ten markets and every one is a team market. No player prop has
+    ever been priced by anything here. Six places said otherwise — the claims
+    document twice, `gates.py`, `forward_evidence.py` twice and
+    `retention_probe.py` — and one of them contradicted itself inside a single
+    sentence: *"no historical price has been bought for it ... so it is priced,
+    frozen and settled"*.
+
+    A phrase corrected in one file and left in five is not corrected, so this
+    reads the tree rather than a document.
+    """
+    import subprocess
+
+    repo = Path(__file__).resolve().parents[1]
+    listing = subprocess.run(
+        ["git", "ls-files", "-z", "src", "scripts", "docs", "data/outputs"],
+        cwd=repo,
+        capture_output=True,
+        check=True,
+    )
+    offenders = []
+    for name in listing.stdout.decode("utf-8").split("\0"):
+        if not name or not name.endswith((".py", ".md")):
+            continue
+        text = (repo / name).read_text(encoding="utf-8", errors="replace")
+        for number, line in enumerate(text.splitlines(), 1):
+            if "priced, frozen and settled" not in line:
+                continue
+            # The correction's own explanation of what it corrected is allowed
+            # to quote the phrase; a line that ASSERTS it is not.
+            if any(
+                marker in line
+                for marker in ('"priced, frozen and settled"', "*\"priced, frozen")
+            ):
+                continue
+            offenders.append(f"{name}:{number}: {line.strip()[:120]}")
+    assert not offenders, (
+        "these lines describe a player prop as priced, and this lab has never "
+        "priced one:\n  " + "\n  ".join(offenders)
+    )

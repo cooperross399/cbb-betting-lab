@@ -1376,3 +1376,81 @@ def test_the_gaps_this_estimator_still_has_are_the_ones_written_down() -> None:
         assert term not in {
             parameter for parameter in inspect.signature(PR.projection_for).parameters
         }, f"a {term} term reached the estimator; the admission bar is 2% of RMSE"
+
+
+# ---------------------------------------------------------------------------
+# A refusal that reaches no output is not a refusal
+# ---------------------------------------------------------------------------
+
+#: The clauses the design marks verbatim in the first-basket census wording.
+#: Asserted one at a time rather than by a single substring, because a single
+#: substring is exactly what let three of them be dropped: the shipped sentence
+#: kept "first field goal" — the only thing the old test looked for — while
+#: losing the mutually-exclusive sum, the measured size of the partial field,
+#: and the evidence half of the model-refusal claim.
+FIRST_BASKET_CLAUSES = (
+    "scorer of the game's first field goal",
+    "decided by the starting five and the opening tip",
+    "no tip-winner data exists",
+    "a per-minute rate says nothing about minute zero",
+    "mutually exclusive family",
+    "must sum to at most one",
+    "422 names over 1,180 games",
+    "no normalisation exists",
+    "This is a model refusal, not a data absence",
+    "`first_basket_athlete_id` is present on 100% of game-segment rows",
+    "perfectly settleable",
+    "Not a pass, not an avoid, not a no-value call",
+)
+
+
+@pytest.mark.parametrize("clause", FIRST_BASKET_CLAUSES)
+def test_the_first_basket_refusal_keeps_every_clause_the_design_marked_verbatim(clause):
+    """The evidence half is the clause that matters and it was the one dropped.
+
+    Every OTHER refusal this module makes is a data absence. This one is a
+    modelling choice on a market that settles cleanly, and the sentence has to
+    establish that or a reader is asked to take it on trust.
+    """
+    assert clause in PR.MARKETS_REFUSED_BY_NAME["player_first_basket"]
+
+
+def test_a_market_refused_by_name_contributes_no_subject():
+    """The docstring said so and the code did the opposite.
+
+    `_subjects_of_the_day` selected every PLAYER-family key, so a first-basket
+    rung put its athlete into the subject set, resolved him, gave him a full
+    priceable projection for a market the design refused before the run, and
+    tallied him into the resolution census that design 13 failure mode 5 stops
+    the run on at 2pp — so the gate was reading a different board from the one
+    being priced.
+    """
+    refused_only = pd.DataFrame(
+        {
+            "event_id": ["e1", "e1"],
+            "player": ["Some Player", "Some Player"],
+            "market": ["player_first_basket", "player_double_double"],
+        }
+    )
+    subjects, quotes, _ = PR._subjects_of_the_day(refused_only)
+    assert subjects == {}, (
+        "a subject quoted only on refused markets is not a subject of this "
+        "model, and giving him a projection produces a price the design says "
+        "must not exist"
+    )
+    assert quotes == {}
+
+    # Quoted on a priced market too: he is a subject, counted on that rung
+    # alone. One quote, not three.
+    both = pd.concat(
+        [
+            refused_only,
+            pd.DataFrame(
+                {"event_id": ["e1"], "player": ["Some Player"], "market": ["player_points"]}
+            ),
+        ],
+        ignore_index=True,
+    )
+    subjects, quotes, _ = PR._subjects_of_the_day(both)
+    assert subjects == {"e1": ["Some Player"]}
+    assert quotes == {("e1", "Some Player"): 1}

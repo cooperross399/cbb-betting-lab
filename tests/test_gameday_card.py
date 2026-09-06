@@ -2072,3 +2072,34 @@ def test_the_card_never_claims_the_RUN_was_healthy():
         assert claim not in source, (
             "The card asserts the run's health. It can only speak for the card."
         )
+
+
+def test_a_market_refused_by_name_is_refused_by_name_on_the_card():
+    """Not "no probability exists yet" — that describes a wiring absence.
+
+    `_player_decline` asked only whether the model was asked, whether the name
+    resolved and whether the athlete was priceable, so a `player_first_basket`
+    wager on a well-evidenced athlete fell through to the *no engine* bucket
+    and the card printed "no probability exists for this line yet ... not a
+    pass, an avoid or a no-value call". Every word of that is true of a market
+    waiting on `player_distributions.py` and false of one the design refuses
+    permanently and in specific words.
+
+    The branch is asked FIRST, before anything about the athlete, because the
+    refusal is a statement about the market and holds whatever his evidence
+    looks like — which is why this test can pass `None` as the model.
+    """
+    from cbb_betting_lab.models import player_rates as PR
+
+    assert PR.MARKETS_REFUSED_BY_NAME, "no market is refused by name any more"
+    for market, reason in PR.MARKETS_REFUSED_BY_NAME.items():
+        wager = SimpleNamespace(
+            market=market, event_id="e1", player="Some Player", selection="over"
+        )
+        said = GC._player_decline(None, wager)
+        assert said == reason, (
+            f"the card declines {market} with {said[:90]!r}, which is not the "
+            "model's refusal. A market refused before the run must never be "
+            "declined as a missing engine."
+        )
+        assert "no probability exists for this line yet" not in said
