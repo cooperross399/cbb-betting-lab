@@ -21,11 +21,47 @@ for any dispersion constant, so the comparison would require a refit inside a
 test. Each of those is a passing assertion at the bottom of this file that goes
 red the day the thing it waits for arrives.
 
+**Every check here owes a leaking counterpart, and carries one.** A leak test
+whose leaking case has quietly stopped leaking goes on passing while it proves
+nothing, so each check below is also pointed at a model built to fail it: an
+uncut bank for L1, an identity-blind bank for L5, a bank frozen before either
+day for L8, a screen on realised minutes for L9(b), a module with a fitted
+number written into it for L4, and — at the harness — a pricer that reads the
+whole player table and reports either a blank stamp or no frame at all. Each
+control is proved to read the future *first*, then run through the honest
+test's own comparison. `test_run_price_backtest.py` established that shape;
+this file owes it too.
+
 The distinction L1 rests on, because it is easy to lose: `assert_priced_from_
 the_past` **deletes** future rows, and deletion changes the frame's shape, so a
 model that legitimately reads a length or groups over all athletes can differ
 honestly. Poisoning preserves shape and identity and is the stricter question.
 Both are run.
+
+And the distinction L1 does **not** close, stated here rather than left to be
+assumed: a read whose value is discarded moves no answer, and the answer is
+every check here's only evidence. `test_a_read_that_changes_no_answer_is_
+invisible_to_every_check_here` is that gap, asserted open.
+
+Two of the checks below are cut by the caller before the model is reached, so
+their power over the module's own cut had to be built rather than assumed. L1
+and L9(b) each run a second time through `projection_for`, which takes the
+roster UNCUT and cuts it with `prior_roster` — measured by mutation:
+`prior_roster` widened from `<` to `<=` leaves both of their first halves green
+and turns both of their second halves red.
+
+**How this file was checked.** Thirteen mutations were applied to the shipped
+source one at a time — the day cut widened, the frame refusal disabled, the
+stamp set to the day and then to blank, a fitted value written in as a literal,
+the shrink weight forced to nil, the half-life hard-coded, the bank left
+holding the row it projects, the projection made identity-blind end to end, the
+bank frozen at a fixed day, `assert_walk_forward` narrowed back to one column,
+the production `frames=` removed, and `slate.py`'s blank-stamp refusal turned
+off — and each was required to turn a NAMED test red before the source was
+restored. Two of them changed this file rather than passing it: the widened cut
+was invisible to L1 and L9(b) until each gained its `projection_for` half, and
+an identity-blind rate table was invisible to L5 until L5 counted `rates` and
+`projected_minutes` separately instead of comparing the pair.
 """
 
 from __future__ import annotations
@@ -42,8 +78,10 @@ import pandas as pd
 import pytest
 
 from cbb_betting_lab.models import player_rates as PR
+from cbb_betting_lab.models import slate
 from cbb_betting_lab.models.player_shapes import load_player_shapes
 from cbb_betting_lab.reports import price_backtest as PB
+from cbb_betting_lab.season import season_for_slate_date
 
 REPO = Path(__file__).resolve().parents[1]
 MODULE = REPO / "src" / "cbb_betting_lab" / "models" / "player_rates.py"
@@ -208,6 +246,22 @@ def _all_records(slate: PR.PlayerSlate) -> dict:
     }
 
 
+def _by_spelling(slate: PR.PlayerSlate) -> dict:
+    """L5's comparison, per component, keyed by the book's spelling.
+
+    Keyed by the spelling rather than the athlete id because that is what a
+    permutation of identity moves: the spelling is the book's and does not
+    change, and what it reaches does.
+    """
+    return {
+        spelling: {
+            "rates": slate.projections[event][athlete].rates,
+            "projected_minutes": slate.projections[event][athlete].projected_minutes,
+        }
+        for (event, spelling), athlete in slate.resolved.items()
+    }
+
+
 def _poison(frame: pd.DataFrame, *, day: str) -> pd.DataFrame:
     """Every row dated on or after `day`, made absurd, shape and identity kept.
 
@@ -262,6 +316,34 @@ def test_a_poisoned_future_does_not_move_one_projection() -> None:
     assert not settled.equals(_poison(settled, day=DAY))
     assert clean.name_refusals == {("e1", "Brand New"): PR.R1A_TONIGHT_ONLY}
     assert len(clean.resolved) == 3
+
+    # And the same corruption through `projection_for`, which is handed the
+    # roster UNCUT and makes the cut itself with `prior_roster`. This is the
+    # half that binds the module's own comparison rather than the caller's:
+    # above, the test cuts before it calls, so a widened cut inside the module
+    # has nothing left to widen onto. Measured by mutation -- `prior_roster`
+    # changed from `<` to `<=` leaves every assertion above green and turns
+    # this one red.
+    def _one(frame: pd.DataFrame) -> dict:
+        return _record(
+            PR.projection_for(
+                day=DAY,
+                event_id="e1",
+                game_id=999,
+                home_team_id=55,
+                away_team_id=66,
+                provider_name="Sean Bairstow",
+                roster=frame,
+                shapes=_shapes(),
+                priced_through=PB.latest_day(PB.history_before(frame, DAY)),
+            )
+        )
+
+    assert _one(settled) == _one(_poison(settled, day=DAY))
+    assert _one(settled)["prior_games"] == 8, (
+        "the athlete's bank already counts tonight, so this comparison is "
+        "measuring a model that has nothing left to leak"
+    )
 
 
 def test_deleting_the_future_and_poisoning_it_are_different_questions() -> None:
@@ -629,15 +711,6 @@ def test_permuting_identity_within_a_game_moves_the_projection() -> None:
     ]
     moved = _price(permuted)
 
-    def _by_spelling(slate: PR.PlayerSlate) -> dict:
-        return {
-            spelling: (
-                slate.projections[event][athlete].rates,
-                slate.projections[event][athlete].projected_minutes,
-            )
-            for (event, spelling), athlete in slate.resolved.items()
-        }
-
     before, after = _by_spelling(baseline), _by_spelling(moved)
     assert set(before) == set(after) and len(before) == 3
     banks = {
@@ -645,12 +718,24 @@ def test_permuting_identity_within_a_game_moves_the_projection() -> None:
     }
     assert len(banks) == 3, "the three athletes must carry three different banks"
 
-    differing = sum(1 for spelling in before if before[spelling] != after[spelling])
-    print(f"{differing} of {len(before)} subjects moved when identity was permuted")
-    assert differing == len(before), (
-        "permuting which athlete each spelling reaches left the projections "
-        "unchanged, so the model is a role table wearing a name"
-    )
+    # Counted PER COMPONENT and not on the pair. Measured by mutation: with
+    # `_project` reading the last bank row whoever it belongs to -- a rate
+    # table genuinely blind to identity -- the projected minutes still move,
+    # because they are looked up separately, and a comparison on the pair
+    # passes on the strength of the half that still works.
+    moved_by = {
+        component: sum(
+            1 for spelling in before
+            if before[spelling][component] != after[spelling][component]
+        )
+        for component in ("rates", "projected_minutes")
+    }
+    print(f"{moved_by} of {len(before)} subjects moved when identity was permuted")
+    for component, differing in moved_by.items():
+        assert differing == len(before), (
+            f"permuting which athlete each spelling reaches left {component} "
+            "unchanged, so that half of the model is a role table wearing a name"
+        )
 
 
 # --------------------------------------------------------------------------
@@ -682,6 +767,14 @@ def test_the_same_day_cut_a_day_earlier_runs_and_differs() -> None:
         for projection in by_athlete.values():
             assert projection.priced_through < "2024-01-08"
     assert _all_records(today) != _all_records(yesterday)
+    # ...and they differ in something other than the stamp. The stamp is a
+    # fact about the CUT and moves whenever the day moves, so the line above
+    # passes against a model whose bank was built once before either day --
+    # measured, on this fixture, in
+    # `test_the_lag_check_goes_red_on_a_bank_that_stopped_updating`.
+    assert _without_the_stamp(_all_records(today)) != _without_the_stamp(
+        _all_records(yesterday)
+    )
 
 
 # --------------------------------------------------------------------------
@@ -724,6 +817,39 @@ def test_the_estimator_never_screens_on_the_game_it_is_pricing() -> None:
     projection = before.projections["e1"][4001]
     assert projection.minutes_bucket == PR.role_prior_bucket(
         projection.projected_minutes, bucket_edges=PR.BUCKET_EDGES
+    )
+
+    # The same corruption through `projection_for`, which is handed the roster
+    # UNCUT. Above, the caller cuts before it calls, so the corrupted rows never
+    # reach a screen and the comparison is a statement about the CUT rather than
+    # about the screens. Here the module makes its own cut, so a screen reading a
+    # realised quantity would see 999.0 and change its mind. Measured by
+    # mutation: `prior_roster` widened from `<` to `<=` turns this red and
+    # leaves everything above green.
+    def _screened(frame: pd.DataFrame) -> tuple:
+        one = PR.projection_for(
+            day=DAY,
+            event_id="e1",
+            game_id=999,
+            home_team_id=55,
+            away_team_id=66,
+            provider_name="Sean Bairstow",
+            roster=frame,
+            shapes=_shapes(),
+            priced_through=PB.latest_day(PB.history_before(frame, DAY)),
+        )
+        return (
+            one.priceable,
+            one.unpriceable_reason,
+            one.projected_minutes,
+            one.prior_games,
+            one.prior_minutes,
+        )
+
+    assert _screened(settled) == _screened(corrupted)
+    assert _screened(settled)[0] is True, (
+        "the subject is refused either way, so the screens have nothing to "
+        "change their mind about"
     )
 
 
@@ -822,6 +948,50 @@ def test_the_leak_tests_this_commit_cannot_carry_are_the_ones_written_down() -> 
     assert "unfiltered" not in SHAPES.read_text(encoding="utf-8")
 
 
+def test_a_read_that_changes_no_answer_is_invisible_to_every_check_here() -> None:
+    """Written down rather than hoped shut: L1 does not close the ninth gap.
+
+    Every check in this file has the answer for its only evidence. A model that
+    reads the settlement table and then does not use what it read produces the
+    same records under the poison as without it, so L1 is silent; its stamp is
+    the frame it was handed, so L2 is silent; the frame it was handed is still
+    the cut one, so L3 is silent. `test_run_price_backtest.py` carries the same
+    limitation at the harness level, in
+    `test_the_output_guard_cannot_see_a_leak_that_does_not_change_the_answer`,
+    and this is its estimator-level twin.
+
+    Two things bound it, and neither is the poison. `models/player_rates.py`
+    names no reader, no path and no config — asserted over its own syntax tree
+    in `test_the_estimator_opens_no_file_and_holds_no_frame` — so a read inside
+    the module is caught by reading the module rather than by pricing with it.
+    A read through a closure is caught by nothing here, and that is the entry.
+
+    A read-and-discard is also, on its own, harmless: it is the state the day
+    before somebody uses the value. Which is exactly why it is worth recording
+    while it is still harmless.
+    """
+    settled = _settled()
+    discarded = PR.trailing_evidence(settled, half_life=4.0)  # read, then dropped
+    assert len(discarded) == 4, "the read did not reach the future it discards"
+
+    baseline = _all_records(_price(settled))
+    assert _all_records(_price(_poison(settled, day=DAY))) == baseline, (
+        "L1 now separates a model that discards what it read from one that "
+        "never read it. It cannot: the answer is its only evidence. If this "
+        "went red the comparison changed, not the model."
+    )
+
+    # What does bind it, and how far. The module's own tree carries no reader,
+    # so the in-module route is closed by reading rather than by pricing.
+    tree = ast.parse(MODULE.read_text(encoding="utf-8"))
+    assert not {
+        node.func.attr if isinstance(node.func, ast.Attribute) else node.func.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, (ast.Attribute, ast.Name))
+    } & {"read_csv", "read_parquet", "open"}
+
+
 def test_the_output_guard_still_has_no_production_caller() -> None:
     """`assert_priced_from_the_past` is referenced only from tests, still.
 
@@ -844,3 +1014,593 @@ def test_the_output_guard_still_has_no_production_caller() -> None:
         "the two leak checks are no longer one production call apart."
     )
     assert "priced_through" in inspect.getsource(PB.assert_walk_forward)
+
+
+# --------------------------------------------------------------------------
+# The leaking version of every check above, proved to leak before it is
+# proved caught
+# --------------------------------------------------------------------------
+#
+# A leak test whose leaking case has quietly stopped leaking proves nothing,
+# and it goes on passing while it proves nothing. `test_run_price_backtest.py`
+# already carries the shape this repository uses for that
+# (`_a_leak_this_guard_does_not_see` asserts the pricer answers with all three
+# days BEFORE it asserts the guard is blind to it), and every check in this
+# file owes the same thing: a model that really does read the future, shown to
+# read it, and then shown to fail the exact comparison the honest test makes.
+#
+# Every control below is built from the estimator's own parts — the same
+# resolver, the same `_project`, the same provenance-checked constants — so
+# that one thing differs and the comparison is the shipped one rather than a
+# second copy of it. `test_the_reconstruction_below_is_the_shipped_estimator`
+# holds that: with nothing broken, the reconstruction is bit-identical to
+# `player_projections_for`.
+
+
+def _reconstructed_slate(
+    frame: pd.DataFrame,
+    *,
+    day: str = DAY,
+    shapes=None,
+    bank_frame: pd.DataFrame | None = None,
+    evidence: pd.DataFrame | None = None,
+) -> PR.PlayerSlate:
+    """`player_projections_for` rebuilt from its own public parts, one seam open.
+
+    The seam is the bank. `bank_frame` says which rows the trailing evidence is
+    built over and `evidence` replaces it outright; everything else — the cut,
+    the prior roster, the resolver, `_project`, the constants — is the shipped
+    code path. Defaults reproduce the shipped estimator exactly, which is what
+    makes each control below a one-variable experiment rather than a second
+    model that happens to disagree.
+    """
+    shapes = shapes if shapes is not None else _shapes()
+    season = season_for_slate_date(day)
+    cut = PB.history_before(frame, day)
+    if evidence is None:
+        source = bank_frame if bank_frame is not None else cut
+        evidence = PR.trailing_evidence(
+            source, half_life=float(shapes.value("minutes_half_life"))
+        )
+    projections: dict[str, dict] = {}
+    resolved: dict[tuple[str, str], object] = {}
+    refusals: dict[tuple[str, str], str] = {}
+    for _, quote in _board().iterrows():
+        event, spelling = str(quote["event_id"]), str(quote["player"])
+        prior = PR.prior_roster(cut, day=day, season=season, team_ids=(55, 66))
+        resolution = PR.resolve_subject(spelling, roster=prior)
+        if not resolution.resolved:
+            refusals[(event, spelling)] = resolution.refusal
+            continue
+        athlete = PR._athlete_key(resolution.athlete_id)
+        projections.setdefault(event, {})[athlete] = PR._project(
+            day=day,
+            event_id=event,
+            game_id=quote["game_id"],
+            provider_name=spelling,
+            resolution=resolution,
+            evidence=evidence,
+            shapes=shapes,
+            tiers=None,
+            priced_through=PB.latest_day(cut),
+            missing_columns=[],
+        )
+        resolved[(event, spelling)] = athlete
+    return PR.PlayerSlate(
+        projections=projections,
+        resolved=resolved,
+        name_refusals=refusals,
+        priced_through=PB.latest_day(cut),
+    )
+
+
+def _a_bank_built_once_over_the_whole_table(
+    frame: pd.DataFrame, *, day: str = DAY, shapes=None
+) -> PR.PlayerSlate:
+    """The defect the whole build is arranged against, in nine characters.
+
+    `trailing_evidence` over the frame it was handed rather than over the cut —
+    design 11's failure mode 1, *a frame loaded once, uncut, outside the
+    per-day loop*, and the football lab's defect 13 in its own words: a
+    distribution loaded once outside the loop meant the model pricing 2023 had
+    seen 2025, and only the markets that consumed it looked good.
+
+    Nothing else is changed. The names still resolve against the prior roster,
+    so this is not a resolver that reads tonight's box score; only the bank
+    reaches the game being priced. That makes it the *quietest* version of the
+    leak, which is the one worth building a detector against.
+    """
+    return _reconstructed_slate(frame, day=day, shapes=shapes, bank_frame=frame)
+
+
+def _an_identity_blind_bank(
+    frame: pd.DataFrame, *, day: str = DAY, shapes=None
+) -> PR.PlayerSlate:
+    """A role table wearing a name: every athlete handed the same bank row.
+
+    This is design 11's L6 control in the shape L5 can test — the projection
+    that knows the role and not the player. It passes L1 (it reads nothing from
+    the future), L2 (its stamp is the frame's), L3 (it opens no file) and L4
+    (its constants are all fetched), and it is not a model of anybody. L5 is
+    the only check in this file that separates it from the shipped estimator,
+    which is why L5 is in this file rather than left to the probability layer.
+    """
+    honest = PR.trailing_evidence(
+        PB.history_before(frame, day),
+        half_life=float((shapes if shapes is not None else _shapes()).value(
+            "minutes_half_life"
+        )),
+    )
+    flattened = honest.copy()
+    for column in flattened.columns:
+        flattened[column] = honest[column].iloc[0]
+    return _reconstructed_slate(frame, day=day, shapes=shapes, evidence=flattened)
+
+
+#: The day a frozen bank stops updating. Chosen so both cuts L8 compares --
+#: `< 2024-01-15` and `< 2024-01-08` -- lie strictly after it, which is what
+#: makes the frozen model answer both days identically.
+_FROZEN_AT = "2024-01-05"
+
+
+def _a_bank_frozen_before_the_season(
+    frame: pd.DataFrame, *, day: str = DAY, shapes=None
+) -> PR.PlayerSlate:
+    """A bank computed once and never updated: the stale half of defect 13.
+
+    The uncut frame reads *forward* past the day; this reads nothing *up to*
+    it. Both are one frame built outside the loop, and L8 is the check that
+    separates a model tracking the most recent day from one that stopped.
+    """
+    return _reconstructed_slate(
+        frame,
+        day=day,
+        shapes=shapes,
+        bank_frame=PB.history_before(frame, _FROZEN_AT),
+    )
+
+
+def _priceable_set(slate: PR.PlayerSlate) -> set:
+    """L9(b)'s comparison, in one place so the control runs the honest one."""
+    return {
+        (event, athlete, projection.priceable, projection.unpriceable_reason)
+        for event, by_athlete in slate.projections.items()
+        for athlete, projection in by_athlete.items()
+    }
+
+
+def _screened_on_tonights_minutes(frame: pd.DataFrame, *, day: str = DAY) -> set:
+    """R3's floor of eight, read off the game being priced instead of projected.
+
+    Not a straw man: "did he play enough to be worth pricing" is the natural
+    sentence, and the realised column is the one that answers it directly. It
+    is the fitter's own L9 failure one level down, and the reason
+    `role_prior_bucket` takes projected minutes and nothing else.
+    """
+    tonight = frame[frame["slate_date"].astype(str) == str(day)]
+    out = set()
+    for _, row in tonight.iterrows():
+        minutes = float(row["minutes"])
+        priceable = minutes >= PR.MIN_PROJECTED_MINUTES
+        out.add(
+            (
+                "e1",
+                PR._athlete_key(row["athlete_id"]),
+                priceable,
+                "" if priceable else PR.R3_NO_MINUTES,
+            )
+        )
+    return out
+
+
+def _without_the_stamp(records: dict) -> dict:
+    """Every field of every record except `priced_through`.
+
+    L8 needs this and nothing else does. The stamp is a fact about the *cut*
+    and moves whenever the day moves, so a comparison that includes it says
+    "the two runs differ" for a model that ignored both days equally.
+    `test_the_lag_check_goes_red_on_a_bank_that_stopped_updating` is the
+    measurement of that: the frozen model's records differ WITH the stamp and
+    are identical without it.
+    """
+    return {
+        key: {name: value for name, value in record.items() if name != "priced_through"}
+        for key, record in records.items()
+    }
+
+
+def test_the_reconstruction_below_is_the_shipped_estimator() -> None:
+    """One variable per control, and this is what makes that true.
+
+    Rebuilt from `prior_roster`, `resolve_subject`, `trailing_evidence` and
+    `_project` — the shipped ones — the reconstruction is bit-identical to
+    `player_projections_for` on the fixture: same records, same resolutions,
+    same refusals, same stamp. So when a control below disagrees with the
+    shipped estimator, the disagreement is the seam that control opened and
+    not an artefact of writing the model out twice.
+    """
+    settled = _settled()
+    shipped = _price(settled)
+    rebuilt = _reconstructed_slate(settled)
+
+    assert _all_records(rebuilt) == _all_records(shipped)
+    assert rebuilt.resolved == shipped.resolved
+    assert rebuilt.name_refusals == shipped.name_refusals
+    assert rebuilt.priced_through == shipped.priced_through == "2024-01-08"
+
+
+def test_the_leaking_bank_really_does_read_the_future() -> None:
+    """Before any check is pointed at it: this model reads the game it prices.
+
+    Its bank counts nine prior games where the honest bank counts eight, and
+    the ninth is the game being priced; its projected minutes are the EWMA
+    *including* tonight, so every rate below them differs too.
+
+    And that is the whole of the difference. The names still resolve against
+    the prior roster, so the debutant is still refused under R1a and the
+    census is unmoved — a run of this model prints exactly the refusal counts
+    a clean run prints. There is no bucket to notice it in, which is why L1
+    compares the projections rather than the census.
+    """
+    settled = _settled()
+    honest = _price(settled)
+    leaking = _a_bank_built_once_over_the_whole_table(settled)
+
+    assert leaking.projections["e1"][4001].prior_games == 9
+    assert honest.projections["e1"][4001].prior_games == 8, (
+        "the honest bank counts nine prior games, so the fixture no longer has "
+        "a future for the leaking model to read"
+    )
+    assert (settled["slate_date"].astype(str) == DAY).sum() == 4, (
+        "the ninth game is not the day being priced, so the extra row is not "
+        "the future"
+    )
+    assert (
+        leaking.projections["e1"][4001].projected_minutes
+        != honest.projections["e1"][4001].projected_minutes
+    )
+    assert leaking.projections["e1"][4001].rates != honest.projections["e1"][4001].rates
+
+    # The census cannot tell the two apart, and it is not supposed to be able
+    # to: R1a is about the roster and this leak is in the bank.
+    assert leaking.name_refusals == honest.name_refusals
+    assert ("e1", "Brand New") in honest.name_refusals
+
+
+def test_the_poisoned_future_check_goes_red_on_a_model_that_reads_it() -> None:
+    """L1's comparison, run against the leaking model, and it fails.
+
+    The same two lines the honest test asserts equal — every field of every
+    record, and the resolution census — asserted here to differ, because the
+    model under them reads the rows the poison corrupted. Without this, L1
+    would pass just as happily against a model that had no way of failing it.
+    """
+    settled = _settled()
+    poisoned = _poison(settled, day=DAY)
+
+    clean = _all_records(_a_bank_built_once_over_the_whole_table(settled))
+    dirty = _all_records(_a_bank_built_once_over_the_whole_table(poisoned))
+    assert clean != dirty, (
+        "the poison did not reach the leaking model, so L1's comparison has "
+        "not been shown to have any power at all"
+    )
+
+    moved = sorted(
+        name
+        for key in clean
+        for name in clean[key]
+        if clean[key][name] != dirty[key][name]
+    )
+    assert "projected_minutes" in moved and "rates" in moved
+    print(f"L1's comparison moves {len(set(moved))} field(s) on the leaking model")
+
+    # And the honest model, under the identical corruption, does not move --
+    # which is the honest test, re-run here so the two halves sit together.
+    assert _all_records(_price(settled)) == _all_records(_price(poisoned))
+
+
+def test_the_identity_check_goes_red_on_a_role_table_wearing_a_name() -> None:
+    """L5's comparison, run against a model that knows the role and not the player.
+
+    Measured on the fixture: three of three subjects move under the shipped
+    estimator, zero of three under the identity-blind bank. A check that could
+    not report zero would not be a check.
+    """
+    settled = _settled()
+    names = {athlete: name for athlete, name, *_ in _ROSTER}
+    rotated = dict(zip(names, list(names.values())[1:] + list(names.values())[:1]))
+    permuted = settled.copy()
+    permuted["athlete_display_name"] = [
+        rotated.get(athlete, name)
+        for athlete, name in zip(
+            permuted["athlete_id"], permuted["athlete_display_name"]
+        )
+    ]
+
+    def _moved(build) -> dict:
+        before, after = _by_spelling(build(settled)), _by_spelling(build(permuted))
+        assert set(before) == set(after) and len(before) == 3
+        return {
+            component: sum(
+                1 for spelling in before
+                if before[spelling][component] != after[spelling][component]
+            )
+            for component in ("rates", "projected_minutes")
+        }
+
+    blind = _moved(_an_identity_blind_bank)
+    shipped = _moved(_reconstructed_slate)
+    print(f"identity permutation moves shipped {shipped}, identity-blind {blind}")
+    assert shipped == {"rates": 3, "projected_minutes": 3}
+    assert blind == {"rates": 0, "projected_minutes": 0}, (
+        "the identity-blind control moved, so it is reading identity somewhere "
+        "and L5 has not been shown able to go red"
+    )
+
+
+def test_the_lag_check_goes_red_on_a_bank_that_stopped_updating() -> None:
+    """L8's comparison, and the measurement that made it stronger.
+
+    A model whose bank was built once before either day answers both days with
+    the same numbers. Its *records* still differ, because `priced_through`
+    describes the cut rather than the model and moves whenever the day moves —
+    so L8 asserted on the whole record would pass against a model that ignores
+    every recent day, which is exactly the thing it exists to catch. Measured
+    on the fixture: the frozen model's records differ with the stamp included
+    and are identical with it excluded.
+
+    `test_the_same_day_cut_a_day_earlier_runs_and_differs` therefore asserts
+    both, and this is the control that shows the second one is doing the work.
+    """
+    settled = _settled()
+    today = _all_records(_a_bank_frozen_before_the_season(settled, day=DAY))
+    yesterday = _all_records(
+        _a_bank_frozen_before_the_season(settled, day="2024-01-08")
+    )
+
+    assert today != yesterday, (
+        "even the stamp stopped moving, so the fixture's two cuts are the same "
+        "cut and this control proves nothing"
+    )
+    assert _without_the_stamp(today) == _without_the_stamp(yesterday), (
+        "the frozen bank moved between the two days, so it is not frozen"
+    )
+
+    # The shipped estimator fails neither half, which is the point of running
+    # both: the strengthened comparison is what separates them.
+    honest_today = _all_records(_price(settled))
+    honest_yesterday = _all_records(
+        PR.player_projections_for(
+            day="2024-01-08",
+            player_history=PB.history_before(settled, "2024-01-08"),
+            prices=_board(),
+            shapes=_shapes(),
+        )
+    )
+    assert _without_the_stamp(honest_today) != _without_the_stamp(honest_yesterday)
+
+
+def test_the_filter_audit_goes_red_on_a_screen_that_reads_tonights_minutes() -> None:
+    """L9(b)'s comparison, run against the screen the design warns about.
+
+    "Did he play enough to be worth pricing" is the natural sentence and the
+    realised minutes column answers it directly, which is what makes it a
+    plausible mistake rather than a straw man. Corrupt tonight's minutes to
+    999.0 and the realised screen admits everybody, including the athlete it
+    had just turned away; the shipped screens — four prior appearances, sixty
+    prior minutes, eight PROJECTED minutes — do not move at all.
+    """
+    settled = _settled()
+    thin = settled.copy()
+    tonight = thin["slate_date"].astype(str) == DAY
+    thin.loc[tonight & (thin["athlete_id"] == 4003.0), "minutes"] = 2.0
+
+    before = _screened_on_tonights_minutes(thin)
+    corrupted = thin.copy()
+    for column in (
+        "minutes", "points", "rebounds", "assists", "steals", "turnovers",
+        "field_goals_made", "three_point_field_goals_made", "free_throws_made",
+    ):
+        corrupted.loc[tonight, column] = 999.0
+    after = _screened_on_tonights_minutes(corrupted)
+
+    assert before != after, (
+        "corrupting tonight's box score did not move the realised screen, so "
+        "L9(b)'s comparison has not been shown able to go red"
+    )
+    assert any(not priceable for *_, priceable, _reason in before)
+    assert all(priceable for *_, priceable, _reason in after)
+
+    # And the shipped screens, over the identical pair of frames, hold.
+    assert _priceable_set(_price(thin)) == _priceable_set(_price(corrupted))
+
+
+def test_the_constant_check_goes_red_on_a_module_that_writes_a_number_down(
+    tmp_path: Path,
+) -> None:
+    """L4's literal scan, run over a module that carries a fitted value.
+
+    The scan is the honest test's, character for character; only the source it
+    reads changes. `0.4685073108980741` is `value_pmf`'s second element as the
+    frozen file records it — a number that in a source file carries no fit
+    window, no sample size and no input hash, and that nothing afterwards can
+    date.
+    """
+    document = json.loads(SHAPES.read_text(encoding="utf-8"))
+    twos = float(document["constants"]["value_pmf"]["value"][1])
+
+    def _literals(source: str) -> set[float]:
+        return {
+            round(float(node.value), 6)
+            for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.Constant)
+            and isinstance(node.value, (int, float))
+            and not isinstance(node.value, bool)
+        }
+
+    written_down = tmp_path / "a_module_that_knows_too_much.py"
+    written_down.write_text(
+        f"VALUE_MIX = ({document['constants']['value_pmf']['value'][0]!r}, "
+        f"{twos!r}, {document['constants']['value_pmf']['value'][2]!r})\n",
+        encoding="utf-8",
+    )
+    assert round(twos, 6) in _literals(written_down.read_text(encoding="utf-8")), (
+        "the scan did not find a fitted value sitting in plain sight, so the "
+        "honest test's empty result means nothing"
+    )
+    assert round(twos, 6) not in _literals(MODULE.read_text(encoding="utf-8"))
+
+
+def test_a_pricer_that_reports_no_stamp_is_the_one_the_harness_cannot_catch(
+) -> None:
+    """The blank stamp, stated as the open gap it is, and where it is closed.
+
+    `assert_walk_forward` exempts `""` deliberately — a blank means *this frame
+    was not read*, which is a statement about a table rather than about a day.
+    That exemption is also the one value a leaking pricer would want, and this
+    is the measurement of it: a pricer that reads every day of the player table
+    and reports nothing is certified.
+
+    It is not left there. `models/slate.py` refuses a populated player half
+    carrying a blank stamp, so the two halves of the check sit on either side
+    of this line: the harness cannot see the blank, and the construction site
+    will not produce one. Held here as a passing assertion rather than a
+    sentence, so the day the harness closes it this test goes red and somebody
+    re-reads both.
+    """
+    uncut = pd.DataFrame(
+        [
+            {"slate_date": day, "points": 10.0}
+            for day in ("2024-01-14", "2024-01-15", "2024-01-16")
+        ]
+    )
+    store = pd.DataFrame(
+        [{"event_id": "e1", "slate_date": "2024-01-15", "market": "player_points"}]
+    )
+    games = pd.DataFrame([{"slate_date": "2024-01-14", "margin": 2.0}])
+
+    def reads_it_all_and_says_nothing(*, day, history, prices):
+        priced = prices.copy()
+        # The whole table, every day of it, tonight's included.
+        priced["model_probability"] = 0.4 + 0.001 * float(uncut["points"].sum())
+        priced["player_priced_through"] = ""
+        return priced
+
+    priced = PB.walk_forward(store, games, price_day=reads_it_all_and_says_nothing)
+    assert float(priced["model_probability"].iloc[0]) == pytest.approx(0.43), (
+        "the pricer no longer reads all three days, so it proves nothing"
+    )
+    assert list(priced["player_priced_through"]) == [""]
+    PB.assert_walk_forward(priced)  # certified, and it read the future
+
+    # Where it is closed instead. A populated player half with a blank stamp is
+    # a contradiction, and the construction site raises on it rather than
+    # handing the harness a value the harness has said it will not read.
+    populated = slate.SlateModel(
+        day="2024-01-15",
+        matchups={},
+        players={"e1": {4001: object()}},
+        team_priced_through="2024-01-14",
+        player_priced_through="",
+    )
+    with pytest.raises(slate.SlateError) as refused:
+        slate._assert_invariants(populated, prices=store, day="2024-01-15")
+    assert "player_priced_through" in str(refused.value), (
+        "models/slate.py no longer refuses a populated player half with a "
+        "blank stamp, and the harness never did: the gap is now open at both "
+        "ends"
+    )
+
+
+def test_an_undeclared_player_frame_is_a_gap_and_the_shipped_pricer_declares_it(
+) -> None:
+    """Say it plainly: undeclared, this frame is invisible to every guard here.
+
+    A pricer that closes over the settlement table declares three arguments and
+    reads two tables. `_refuse_undeclared_frames` has no parameter to refuse —
+    its own docstring says so — the stamp describes the team history alone, and
+    `assert_walk_forward` certifies the run. That is written-down gap 1 of the
+    output guard's nine (a frame inside a container) wearing this lab's actual
+    player table, and `assert_priced_from_the_past`, which reaches some of
+    those, has no production caller.
+
+    So the frame is not left undeclared. Both production walk-forwards hand it
+    in through `frames=` — `tests/test_player_seam.py::test_s9_both_production_
+    walk_forwards_declare_the_player_frame` holds that on the call sites — and
+    the consequence asserted here is the behaviour: once a pricer declares
+    `player_history`, forgetting `frames=` is a refusal rather than a silent
+    `None`, so the wiring cannot be dropped quietly later.
+    """
+    uncut = pd.DataFrame(
+        [
+            {"slate_date": day, "points": 10.0}
+            for day in ("2024-01-14", "2024-01-15", "2024-01-16")
+        ]
+    )
+    store = pd.DataFrame(
+        [{"event_id": "e1", "slate_date": "2024-01-15", "market": "player_points"}]
+    )
+    games = pd.DataFrame([{"slate_date": "2024-01-14", "margin": 2.0}])
+
+    def through_a_closure(*, day, history, prices):
+        priced = prices.copy()
+        priced["model_probability"] = 0.4 + 0.001 * float(uncut["points"].sum())
+        return priced
+
+    priced = PB.walk_forward(store, games, price_day=through_a_closure)
+    assert float(priced["model_probability"].iloc[0]) == pytest.approx(0.43), (
+        "the closure case no longer reads the future, so it proves nothing"
+    )
+    assert list(priced["priced_through"]) == ["2024-01-14"], (
+        "the stamp describes the team history alone, which is the half of the "
+        "run the leak is not in"
+    )
+    PB.assert_walk_forward(priced)  # certified on the evidence of one input
+
+    # Declared, the same frame is cut, stamped and refusable.
+    seen: list[int] = []
+
+    def declares_it(*, day, history, prices, player_history):
+        seen.append(len(player_history))
+        priced = prices.copy()
+        priced["model_probability"] = 0.4 + 0.001 * float(
+            player_history["points"].sum()
+        )
+        priced["player_priced_through"] = PB.latest_day(player_history)
+        return priced
+
+    declared = PB.walk_forward(
+        store, games, price_day=declares_it, frames={"player_history": uncut}
+    )
+    assert seen == [1], "the declared frame was not cut to the day being priced"
+    assert float(declared["model_probability"].iloc[0]) == pytest.approx(0.41)
+    assert list(declared["player_priced_through"]) == ["2024-01-14"]
+    PB.assert_walk_forward(declared)
+
+    with pytest.raises(PB.BacktestError) as raised:
+        PB.walk_forward(store, games, price_day=declares_it)
+    assert "player_history" in str(raised.value)
+
+    # ...and the stamp it now writes is checked. `assert_walk_forward` read
+    # `priced_through` and nothing else until the seam commit, which made a
+    # `player_priced_through` column decorative: a pricer that read a private
+    # player frame through the day being priced could report that day and still
+    # be certified. Held here as well as at the seam, because L2's third clause
+    # is a leak check and this is the leak file.
+    def declares_it_and_overreaches(*, day, history, prices, player_history):
+        priced = prices.copy()
+        priced["model_probability"] = 0.41
+        priced["player_priced_through"] = str(day)
+        return priced
+
+    overreached = PB.walk_forward(
+        store,
+        games,
+        price_day=declares_it_and_overreaches,
+        frames={"player_history": uncut},
+    )
+    with pytest.raises(PB.WalkForwardLeak) as leaked:
+        PB.assert_walk_forward(overreached)
+    assert "player_priced_through" in str(leaked.value), (
+        "the guard must name which of the two stamps reached the day it bet on"
+    )
