@@ -93,6 +93,18 @@ def _shapes_with(tmp_path: Path, mutate, *, name: str = "shapes.json"):
     return load_player_shapes(path, priced_season=PRICED_SEASON)
 
 
+def _materiality(shapes=None) -> float:
+    """The fit's own materiality floor, off the constant whose rounding it bounds.
+
+    `conditional_dispersion.material_absolute` = 0.02, read through the loaded
+    `PlayerShapes` and never typed here. The engine takes the same number from
+    the same place; a test that hard-coded it would agree with the engine about
+    a floor neither of them got from the fit.
+    """
+    resolved = shapes or _shapes()
+    return float(resolved.constants["conditional_dispersion"]["material_absolute"])
+
+
 def _rates_fixture():
     """`tests/test_player_rates.py`, loaded for its row builders and nothing else.
 
@@ -176,7 +188,9 @@ def test_the_panjer_member_is_selected_by_the_conditional_dispersion() -> None:
     assert PD.panjer_family(1.0) == "poisson"
 
     # The arm actually produces a distribution, and it is underdispersed.
-    parameters = PD.panjer_parameters(mu=1.9, phi=frozen["turnovers"])
+    parameters = PD.panjer_parameters(
+        mu=1.9, phi=frozen["turnovers"], materiality=_materiality()
+    )
     assert parameters.family == "binomial"
     pmf = PD.compound_pmf(parameters, severity=(0.0, 1.0), size=40)
     mean, variance = _moments(pmf)
@@ -276,10 +290,14 @@ def test_the_binomial_rounding_preserves_the_mean_and_reports_its_own_error() ->
     charged to the dispersion, the row says how much, and D3 and D5 — both
     first-moment identities — pay nothing for it.
     """
-    dispersion = _shapes().value("conditional_dispersion")["turnovers"]
+    shapes = _shapes()
+    dispersion = shapes.value("conditional_dispersion")["turnovers"]
+    floor = _materiality(shapes)
     worst = 0.0
     for mu in np.arange(0.2, 6.001, 0.01):
-        parameters = PD.panjer_parameters(mu=float(mu), phi=dispersion)
+        parameters = PD.panjer_parameters(
+            mu=float(mu), phi=dispersion, materiality=floor
+        )
         assert parameters.mu == float(mu), "the rounding moved the mean"
         assert float(parameters.trials).is_integer()
         worst = max(worst, abs(parameters.phi_used - dispersion))
@@ -288,6 +306,132 @@ def test_the_binomial_rounding_preserves_the_mean_and_reports_its_own_error() ->
         "quotes 5.484e-04 and must be re-measured"
     )
     assert worst < 0.02, "the rounding moved the dispersion materially"
+    assert worst < floor and floor == 0.02, (
+        "the same bound, against the floor read off the frozen file rather than "
+        "typed here. `panjer_parameters` now REFUSES past it — see "
+        "`test_the_binomial_rounding_refuses_a_material_move_and_reads_its_floor"
+        "_from_the_file` — so this loop passing is the measurement that says the "
+        "refusal cannot fire on the file as shipped"
+    )
+
+
+def test_the_binomial_rounding_refuses_a_material_move_and_reads_its_floor_from_the_file(
+    tmp_path: Path,
+) -> None:
+    """The refusal `panjer_parameters` promised in prose, performed, with a floor from the file.
+
+    **The defect.** Its docstring said "this function refuses if the rounding
+    moved it further than `conditional_dispersion.material_absolute` = 0.02, the
+    fit's own materiality floor", and no such comparison existed anywhere in
+    `src/`: `material_absolute` was read by nothing, `phi_requested` was stored
+    on `PanjerParameters` and never read back, and the mean-preserving convention
+    `n = max(1, round(mu/(1-phi)))`, `p = mu/n` silently substituted a different
+    dispersion whenever `mu/(1-phi)` rounded below one. Measured on the code as
+    it stood, nothing raised: `(mu=0.3, phi=0.5)` produced `phi_used = 0.70`,
+    moved 0.20 — ten times the floor the docstring named — and `(0.05, 0.8)`,
+    `(0.04, 0.9)` and `(0.02, 0.95)` moved 0.15, 0.06 and 0.03. The house rule
+    is that a docstring must not describe a check the code does not do, and the
+    repair is the check rather than the deletion, because the substitution is
+    real: the count would be priced at a width nobody fitted.
+
+    **The floor is an argument, never a module constant.** It is
+    `conditional_dispersion.material_absolute`, read out of the frozen file by
+    `build` and threaded down — the same rule
+    `population_structural_checks` follows for `regular_min_projected_minutes`.
+    Held here by tightening the file's own number and watching the same athlete
+    refuse.
+
+    **And it ships latent, which is stated rather than hidden.** `turnovers` is
+    the one frozen dispersion below 1, so the largest move the shipped constants
+    can produce is `1 - 0.9828561088984643 = 0.01714`, inside the 0.02 floor;
+    over mu in [0.001, 6.0] at a step of 0.001 the worst is 1.614e-02, also
+    inside. This refusal cannot fire on the file as shipped. It fires on a refit
+    that moves a sub-1 dispersion further from 1, or on a second stat entering
+    the binomial arm.
+    """
+    shapes = _shapes()
+    floor = _materiality(shapes)
+    assert floor == 0.02, "the fit's materiality floor moved; re-measure below"
+
+    # The four the finding measured. Every one was silent; every one refuses.
+    for mu, phi, moved in (
+        (0.3, 0.5, 0.20),
+        (0.05, 0.8, 0.15),
+        (0.04, 0.9, 0.06),
+        (0.02, 0.95, 0.03),
+    ):
+        with pytest.raises(PD.PlayerDistributionError, match="materiality floor") as raised:
+            PD.panjer_parameters(mu=mu, phi=phi, materiality=floor)
+        assert f"{floor}" in str(raised.value), (
+            "the refusal must quote the floor it was given, so a reader can see "
+            "which number refused and where it came from"
+        )
+        # The same arithmetic against a floor wide enough to admit it still
+        # prices, so what refuses is the SIZE of the move rather than the
+        # rounding itself, and the trial floor is the mechanism.
+        admitted = PD.panjer_parameters(mu=mu, phi=phi, materiality=moved + 0.01)
+        assert admitted.trials == 1.0
+        assert admitted.mu == mu, "the rounding must never move the mean"
+        assert abs(admitted.phi_used - admitted.phi_requested) == pytest.approx(
+            moved, abs=5e-3
+        )
+
+    # A floor that cannot be compared is a guard that passes everything:
+    # `abs(gap) > nan` is False. Refused before a family is chosen.
+    turnovers = shapes.value("conditional_dispersion")["turnovers"]
+    for bad in (float("nan"), 0.0, -0.02, float("inf")):
+        with pytest.raises(PD.PlayerDistributionError, match="is not a floor"):
+            PD.panjer_parameters(mu=1.9, phi=turnovers, materiality=bad)
+
+    # The shipped file cannot reach the floor, measured rather than asserted.
+    assert PD.panjer_family(turnovers) == "binomial"
+    assert 1.0 - turnovers == pytest.approx(0.01714389110153569, abs=1e-15)
+    assert 1.0 - turnovers < floor, (
+        "the frozen turnovers dispersion is now further from 1 than the fit's "
+        "materiality floor, so the trial floor can substitute a dispersion the "
+        "fit never stood behind. This refusal is no longer latent: say so."
+    )
+    worst = max(
+        abs(
+            PD.panjer_parameters(
+                mu=float(mu), phi=turnovers, materiality=floor
+            ).phi_used
+            - turnovers
+        )
+        for mu in np.arange(0.001, 6.0, 0.001)
+    )
+    assert worst == pytest.approx(1.614e-02, abs=1e-5) and worst < floor
+
+    # The floor comes from the FILE. Tighten the file's own number and the same
+    # athlete refuses: his worst turnovers rounding across the 45 minutes nodes
+    # is 2.612e-04, inside 0.02 and far outside 1e-06.
+    def _tighten(document: dict) -> None:
+        document["constants"]["conditional_dispersion"]["material_absolute"] = 1e-06
+
+    tight = _shapes_with(tmp_path, _tighten, name="tight.json")
+    assert _materiality(tight) == 1e-06
+    with pytest.raises(PD.PlayerDistributionError, match="materiality floor of 1e-06"):
+        _distribution(tight)
+
+    # And it is carried, not re-chosen: every family the engine built holds the
+    # file's floor, and a thinned family holds the floor of the count it came
+    # from rather than one this module picked.
+    built = _distribution(shapes)
+    moves = [
+        abs(parameters.phi_used - parameters.phi_requested)
+        for parameters in built.stat_parameters["turnovers"].values()
+    ]
+    assert max(moves) == pytest.approx(2.6119e-04, abs=1e-7)
+    assert all(
+        parameters.materiality == floor
+        for table in built.stat_parameters.values()
+        for parameters in table.values()
+    )
+    events = built.event_parameters[built.price_node()]
+    assert events.materiality == floor
+    assert PD.thin(events, 0.35).materiality == floor
+    poisson = PD.panjer_parameters(mu=2.0, phi=1.0, materiality=floor)
+    assert PD.thin(poisson, 0.5).materiality == floor
 
 
 # --------------------------------------------------------------------------
@@ -427,7 +571,9 @@ def test_the_points_threes_correlation_identity_matches_a_brute_force_joint() ->
 
     for mu, cap in ((0.9, 25), (3.0, 32)):
         counts = PD.compound_pmf(
-            PD.panjer_parameters(mu=mu, phi=dispersion), severity=(0.0, 1.0), size=cap
+            PD.panjer_parameters(mu=mu, phi=dispersion, materiality=_materiality(shapes)),
+            severity=(0.0, 1.0),
+            size=cap,
         )
         joint = np.zeros((cap * 3 + 1, cap + 1))
         for events in range(cap + 1):
@@ -1086,6 +1232,183 @@ def test_a_constant_the_fit_refused_to_invent_refuses_the_market(
         PD.build(_projection(), shapes=nothing)
 
 
+
+
+#: The five markets that read the scoring-event count. `points` is the compound
+#: sum over it and `threes` is the same count thinned, so every market carrying
+#: either component needs it — and `points_events` is a component of none of
+#: them, which is the whole reason its refusal went unnoticed.
+COMPOUND_MARKETS = (
+    "player_points",
+    "player_threes",
+    "player_pra",
+    "player_points_rebounds",
+    "player_points_assists",
+)
+
+
+def test_an_r5_refusal_of_the_scoring_event_count_refuses_instead_of_crashing(
+    tmp_path: Path,
+) -> None:
+    """R5 on `points_events`, which is a stat no market names.
+
+    **The defect, reproduced before it was repaired.** `player_rates._unfittable`
+    reads `role_prior.<stat>` and `rate_shrinkage_k.<stat>` for all seven stats,
+    `points_events` among them, and `_rates` DROPS a refused stat from
+    `projection.rates`. The projection stays `priceable=True` — six rates are
+    still there and six markets still have everything they need — so `build()`
+    ran, and its market-refusal loop asked only about each market's own
+    components. `points_events` is a component of none of the ten. So no market
+    was refused, and two statements later `rates["points_events"]` was read
+    unconditionally: `KeyError('points_events')`, on both keys, measured through
+    the real loader.
+
+    That is worse than a wrong price. `KeyError` is not a `ValueError`, so
+    neither `except engine.PlayerDistributionError` nor `except (TypeError,
+    ValueError)` in `reports/gameday_card.opinions_for` caught it: a refusal the
+    fit made deliberately took down the whole card — every spread, total and
+    moneyline on the slate, and a `player_rebounds` prop that has nothing to do
+    with points. The contrast is `conditional_dispersion.points_events`, which
+    took the constant route through `_refused_constants` and refused the same
+    five markets correctly all along.
+
+    Asserted here on all three keys: the two the estimator reads and the one it
+    does not.
+    """
+    from cbb_betting_lab.reports import gameday_card as GC
+
+    sentence = "refused: the scoring-event count did not stabilise."
+    cost = "Every market that reads the scoring-event count is unpriced."
+    priced_anyway = tuple(
+        market for market in PR.MARKET_COMPONENTS if market not in COMPOUND_MARKETS
+    )
+    assert len(COMPOUND_MARKETS) == 5 and len(priced_anyway) == 5
+
+    for key in (
+        "role_prior.points_events",
+        "rate_shrinkage_k.points_events",
+        "conditional_dispersion.points_events",
+    ):
+        def _refuse(document: dict, key: str = key) -> None:
+            document["unfittable"] = {key: {"reason": sentence, "cost": cost}}
+
+        shapes = _shapes_with(tmp_path, _refuse, name=key.replace(".", "_") + ".json")
+        projection = _projection(shapes)
+
+        # The estimator's own shape, asserted rather than assumed: this is why
+        # the read raised instead of returning a number.
+        estimator_route = key.split(".")[0] in ("role_prior", "rate_shrinkage_k")
+        assert ("points_events" in projection.refused_stats) is estimator_route
+        assert ("points_events" not in projection.rates) is estimator_route
+        assert projection.priceable is True, (
+            "a refusal of one stat leaves the other six priceable, which is "
+            "exactly why this reached the engine at all"
+        )
+
+        distribution = PD.build(projection, shapes=shapes)
+        assert sorted(distribution.refusals) == sorted(COMPOUND_MARKETS), (
+            f"{key}: the five markets that read the scoring-event count are "
+            f"not the five refused. Refused: {sorted(distribution.refusals)}"
+        )
+        for market in COMPOUND_MARKETS:
+            with pytest.raises(PD.MarketRefused, match="did not stabilise"):
+                distribution.count_pmf(market)
+            assert cost in distribution.refusals[market], (
+                "the refusal must be the FILE's sentence, not a paraphrase "
+                "written in the engine"
+            )
+        for market in priced_anyway:
+            assert distribution.mean(market) > 0.0, (
+                f"{market} needs no scoring-event count and must still price"
+            )
+        assert not distribution.event_parameters, (
+            "no scoring-event family may be built at all when the count it "
+            "would be built from was refused"
+        )
+
+        # And through the card, which is where the KeyError actually landed.
+        model, _ = _slate_model(shapes=shapes)
+        wagers = [
+            _wager("player_points", line=14.5),
+            _wager("player_rebounds", line=5.5),
+        ]
+        probabilities, census = GC.opinions_for(wagers, model, day=DAY)
+        assert census.wagers == 2 and census.priced == 1, census.declined
+        assert ("e1", "player_rebounds", "over", 5.5, "Sean Bairstow") in probabilities
+        assert ("e1", "player_points", "over", 14.5, "Sean Bairstow") not in probabilities
+        assert any(sentence in reason for reason in census.declined), sorted(
+            census.declined
+        )
+
+
+def test_a_regular_whose_points_is_refused_is_counted_apart_not_pooled(
+    tmp_path: Path,
+) -> None:
+    """The stop rule's population survives a refused subject, and says how many.
+
+    `population_structural_checks` asks every regular for
+    `count_pmf("player_points")`, and that raises `MarketRefused` for a subject
+    whose points constant the fit would not stand behind. It is called by
+    `gameday_card._run_the_structural_check` OUTSIDE every `except` the card
+    owns — the call has to be outside, because the check is about the pooled
+    population rather than about one wager — so before this commit one refused
+    prop killed the card there instead of in `build()`. The bucket is reported
+    rather than silently dropped: a population that shrank because a constant
+    was refused reads exactly like a population that was small, and the second
+    is a limitation while the first is a finding.
+    """
+    def _refuse_points(document: dict) -> None:
+        document["unfittable"] = {
+            "conditional_dispersion.points": {
+                "reason": "refused: the points dispersion did not stabilise.",
+                "cost": "Every market with a points component is unpriced.",
+            }
+        }
+
+    shapes = _shapes()
+    refused_shapes = _shapes_with(tmp_path, _refuse_points, name="no_points.json")
+    # Eight regulars off the file's own role priors, at the floor exactly, and
+    # a ninth who is a 36.22-minute starter — a regular by the target's own
+    # `regular_min_projected_minutes` of 15.0, so he cannot be excused as
+    # sub-floor and the only thing separating him from the eight is the
+    # refusal. The eight pool to 0.9214, inside design 4's stop, so the run
+    # this test describes is one that continues.
+    healthy = [_role_prior_athlete(shapes, bucket) for bucket in (3, 4, 5, 6, 7, 8, 4, 7)]
+    refused = _role_prior_athlete(refused_shapes, 8)
+    assert "player_points" in refused.refusals
+    assert float(refused.projection.projected_minutes) > 15.0
+
+    checks = PD.population_structural_checks([*healthy, refused], shapes=shapes)
+    assert checks["population_athletes_offered"] == 9.0
+    assert checks["population_athletes"] == 8.0
+    assert checks["population_points_refused"] == 1.0
+    assert checks["population_below_regular_floor"] == 0.0
+    assert (
+        checks["population_athletes"]
+        + checks["population_points_refused"]
+        + checks["population_below_regular_floor"]
+        == checks["population_athletes_offered"]
+    ), "the three buckets must partition what was offered, or one is a silent drop"
+
+    # The pooled number is the eight it could read, unchanged by the ninth.
+    alone = PD.population_structural_checks(healthy, shapes=shapes)
+    assert checks["unconditional_points_vmr_ratio"] == pytest.approx(
+        alone["unconditional_points_vmr_ratio"], rel=1e-12
+    )
+    assert checks["unconditional_points_vmr_ratio"] == pytest.approx(0.9214, abs=1e-3)
+    PD.assert_structural_checks(checks)  # at the floor, inside the stop, no raise
+    # And the card prints the bucket rather than leaving the population short
+    # with no explanation.
+    from cbb_betting_lab.reports.gameday_card import OpinionCensus
+
+    census = OpinionCensus(wagers=0)
+    census.structural_check = dict(checks)
+    assert "1 regular(s) whose `player_points` the fit refused" in (
+        census.structural_check_line()
+    )
+
+
+
 def test_an_unpriceable_projection_is_not_given_a_second_opinion() -> None:
     """R2 through R6 stand; this engine does not re-adjudicate a refusal."""
     fixtures = _rates_fixture()
@@ -1159,7 +1482,8 @@ def test_r4s_upper_half_is_enforced_on_counts_here() -> None:
     # rather than truncating.
     with pytest.raises(PD.MarketRefused, match="R4"):
         PD.count_lattice_ceiling(
-            PD.panjer_parameters(mu=180.0, phi=1.1), severity=(0.0, 1.0)
+            PD.panjer_parameters(mu=180.0, phi=1.1, materiality=_materiality()),
+            severity=(0.0, 1.0),
         )
     assert PD.COUNT_LATTICE_HARD_CAP == 200
     assert PD.COUNT_LATTICE_TAIL_TOLERANCE == 1e-12
@@ -1558,6 +1882,134 @@ def test_the_dispersion_choice_is_not_decided_by_the_stop_rule() -> None:
             f"{key} produces {ratio:.4f}, and the docstring may not claim the "
             "stop rule picks between the two while both are inside it"
         )
+
+
+def test_the_file_says_this_number_must_not_be_handed_to_a_panjer_family() -> None:
+    """The frozen file's own prohibition, quoted, and the antecedent that answers it.
+
+    `points_compound_reconciliation`'s note ends "It is not the event count's
+    dispersion and must not be handed to a Panjer family as one", and
+    `build` hands `effective_event_dispersion` to `panjer_parameters` as the
+    scoring-event count's phi. Read with "It" bound to that constant, the file
+    forbids what the engine does — and until this commit no docstring in the
+    module quoted the sentence or answered it, so an auditor comparing the two
+    found a flat contradiction with nothing to read.
+
+    **The answer is an antecedent, not a preference, and it is measured here.**
+
+    1. The subject is the design's published 1.11. The fitter that wrote both
+       the value and the note says of it "The design's own published 1.11 is
+       neither" — neither of the two frozen candidates — and the file's own
+       evidence block says it "reproduces as `points_vmr_over_compound_poisson`,
+       not as an event-count dispersion". That quantity is 1.0922583243981805
+       and this engine reads it nowhere.
+    2. `effective_event_dispersion` is not a measurement of anything; it is
+       DEFINED by inverting the compound identity. Handing it back to a Panjer
+       family reproduces the frozen `measured_points_vmr_given_minutes` of
+       2.328891545818532 **bit-for-bit**, and handing over
+       `measured_event_dispersion` reproduces the frozen
+       `compound_implied_points_vmr` of 2.8377415929483303 bit-for-bit. A
+       constant computed by inverting the identity cannot coherently be barred
+       from the family it was inverted out of.
+    3. The cost of the other reading is reported rather than hidden: obeying it
+       literally produces a conditional points VMR of 2.8377 against the file's
+       own measured 2.3289, and moves the population ratio from 0.9209 to
+       1.0875 — see `test_the_dispersion_choice_is_not_decided_by_the_stop_rule`,
+       which holds that both land inside design 4's stop, so nothing here is
+       decided by a tolerance.
+
+    **This test goes red the day the note is rewritten**, which is the only
+    honest way to hold an answer to a sentence in a file this module does not
+    own: the answer above would then be about a sentence that no longer exists
+    and has to be re-read, not silently kept.
+    """
+    document = json.loads(SHAPES.read_text(encoding="utf-8"))
+    constant = document["constants"]["points_compound_reconciliation"]
+    note = constant["note"]
+    values = constant["value"]
+    evidence = constant["evidence"]["fit"]
+
+    prohibition = (
+        "It is not the event count's dispersion and must not be handed to a "
+        "Panjer family as one."
+    )
+    reproduces = (
+        "the design's 1.11 reproduces as `points_vmr_over_compound_poisson`, "
+        "not as an event-count dispersion"
+    )
+    neither = "The design's own published 1.11 is neither"
+
+    assert prohibition in note, (
+        "the frozen file's note no longer carries the sentence "
+        "`POINTS_EVENT_DISPERSION_KEY`'s docstring quotes and answers. Re-read "
+        "the note and rewrite the answer with it."
+    )
+    assert reproduces in evidence["how_the_design_number_reads"]
+    fitter = " ".join((REPO / "scripts" / "fit_player_model.py").read_text(
+        encoding="utf-8"
+    ).split())
+    assert neither in fitter, (
+        "the fitter's own reading of the design's 1.11 has changed, and it is "
+        "the antecedent the module's answer rests on"
+    )
+
+    # The module quotes all three rather than paraphrasing them.
+    module = " ".join(MODULE.read_text(encoding="utf-8").replace("#:", " ").split())
+    for quoted in (prohibition, reproduces, neither):
+        assert " ".join(quoted.split()) in module, (
+            f"the module does not quote {quoted!r}. The file's sentence has to "
+            "be on the page it contradicts, not summarised somewhere else."
+        )
+
+    # The arithmetic that settles the antecedent, from the file's own evidence.
+    expected = float(evidence["expected_value_of_a_scoring_event"])
+    variance = float(evidence["variance_of_a_scoring_event"])
+
+    def compound_vmr(phi: float) -> float:
+        return (variance + phi * expected**2) / expected
+
+    assert compound_vmr(values["effective_event_dispersion"]) == (
+        values["measured_points_vmr_given_minutes"]
+    ), "the inversion no longer reproduces the measured points VMR exactly"
+    assert compound_vmr(values["measured_event_dispersion"]) == (
+        values["compound_implied_points_vmr"]
+    )
+    assert compound_vmr(values["points_vmr_over_compound_poisson"]) == pytest.approx(
+        2.30350, abs=1e-5
+    ), (
+        "the design's published number read as an event phi produces neither "
+        "frozen points VMR, which is the whole content of `is neither`"
+    )
+    assert values["compound_implied_points_vmr"] / values[
+        "measured_points_vmr_given_minutes"
+    ] == pytest.approx(1.2185, abs=1e-4), "the 22% the note names"
+
+    # And what the engine actually hands over is the inverted constant.
+    assert PD.POINTS_EVENT_DISPERSION_KEY == "effective_event_dispersion"
+    built = _distribution()
+    requested = {
+        parameters.phi_requested for parameters in built.event_parameters.values()
+    }
+    assert requested == {values["effective_event_dispersion"]}
+    assert values["points_vmr_over_compound_poisson"] not in requested
+    # And it reproduces, THROUGH THE ENGINE, at the mix the constant was
+    # measured at: the file's own role-prior athlete carries the league
+    # `value_pmf`, and his produced conditional points VMR is the frozen
+    # 2.328891545818532. That is the inversion coming back out of the assembled
+    # object rather than out of the arithmetic above.
+    assert _role_prior_athlete(_shapes(), 8).structural_checks()[
+        "points_vmr_given_minutes"
+    ] == pytest.approx(values["measured_points_vmr_given_minutes"], abs=1e-8), (
+        "the produced conditional points VMR is the frozen measured one, which "
+        "is what the inversion is for and the reason the choice is defensible"
+    )
+    # At an athlete's OWN shrunk mix it is a different number and must not be
+    # the frozen one — `Var[V]/E[V] + phi*E[V]` moves with the mix — and the
+    # fixture's three-heavy mix produces 2.4751. A test that demanded the
+    # constant here would be asking the engine to ignore the athlete.
+    assert built.structural_checks()["points_vmr_given_minutes"] == pytest.approx(
+        2.4751, abs=1e-3
+    )
 
 
 # --------------------------------------------------------------------------

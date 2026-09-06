@@ -880,6 +880,13 @@ class OpinionCensus:
         indistinguishable from one that passed and that is the shape of the
         defect this whole path exists against. Or it ran over a population and
         the run is still going, which means it passed.
+
+        A fourth number rides on the head line whenever it is not zero: the
+        regulars whose `player_points` the fit refused. They were built, they
+        are not below the minutes floor and they still carry no points mixture,
+        so they are out of both sums — and a population that quietly shrank
+        because a constant was refused would otherwise read exactly like a
+        population that was small.
         """
         checks = self.structural_check
         if not checks:
@@ -892,11 +899,17 @@ class OpinionCensus:
         offered = int(checks.get("population_athletes_offered", 0))
         below = int(checks.get("population_below_regular_floor", 0))
         minutes = float(checks.get("regular_min_projected_minutes", 0.0))
+        refused = int(checks.get("population_points_refused", 0))
         head = (
             f"Design 4's structural check (a): {athletes:,} of {offered:,} "
             f"athlete(s) priced are regulars at {minutes:.1f}+ projected "
             f"minutes ({below:,} below, counted apart and never pooled)"
         )
+        if refused:
+            head += (
+                f", and {refused:,} regular(s) whose `player_points` the fit "
+                "refused, counted apart as well"
+            )
         if athletes < floor:
             return (
                 f"{head}. Fewer than the declared floor of {floor}, so the "
@@ -1377,6 +1390,13 @@ def _run_the_structural_check(
     STRINGS for the subjects whose engine declined. The strings are dropped
     here: a refused subject produced no mixture, so it has no VMR to pool, and
     counting it would be pooling an absence.
+
+    An object whose `player_points` alone is refused is the same fact one level
+    down, and it is `population_structural_checks` that drops it — not this
+    function and not a `try` around this call. This line sits outside every
+    `except` `opinions_for` owns, so a `MarketRefused` raised while pooling
+    would kill the card and every team wager on it; the census bucket is in the
+    returned mapping and :meth:`OpinionCensus.structural_check_line` prints it.
 
     Silent when the card built nothing — a team-only slate is not a structural
     failure and must not read as one — and silent when the slate carries no

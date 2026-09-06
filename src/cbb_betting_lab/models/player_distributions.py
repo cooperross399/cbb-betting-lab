@@ -99,7 +99,13 @@ that goes red if any is quietly turned into a fit:
   `conditional_dispersion.material_absolute` = 0.02, because the frozen
   turnovers phi is 0.9828561088984643, i.e. 0.0171 from 1, and a 0.02 band would
   swallow the binomial branch entirely and delete the only case design 4 says
-  the binomial exists for.
+  the binomial exists for. That 0.02 now has a reader of its own — it is the
+  floor :func:`panjer_parameters` checks the binomial's integer rounding
+  against, threaded down from :func:`build` through
+  :func:`_materiality_floor` — and the two questions are different at the same
+  scale: "did the rounding move the dispersion materially" is what the fit's
+  agreement floor is the right size for, and "is this dispersion equal to one"
+  is not.
 * :data:`COUNT_LATTICE_HARD_CAP` — R4 refuses a mean "above the lattice
   ceiling" and the frozen file declares `minutes_support` and no count ceiling
   for any of the seven stats, so R4's upper half was unenforced. It is enforced
@@ -378,6 +384,59 @@ STRUCTURAL_CHECK_POPULATION_FLOOR: int = 8
 #: `conditional_dispersion["threes"]` of 1.0846864899201918, about 6% narrow.
 #: Design 4 declares a tolerance for (a) and for nothing else, so that one is
 #: report-only. Both numbers appear in :meth:`PlayerDistribution.structural_checks`.
+#:
+#: **The sentence in the frozen file that reads as a prohibition on this line,
+#: quoted and answered.** `points_compound_reconciliation`'s note ends:
+#:
+#:     "The design's published 1.11 is the SECOND of these: it reproduces as
+#:     `effective_event_dispersion` = 1.106 here and 1.079 on the design's own
+#:     two seasons, inside its own +/-0.05 gate. It is not the event count's
+#:     dispersion and must not be handed to a Panjer family as one."
+#:
+#: Read with "It" bound to `effective_event_dispersion`, that forbids exactly
+#: what :func:`build` does, and an auditor comparing this module against the
+#: file finds a contradiction with nothing to read. It is answered here rather
+#: than left standing, and the answer is an antecedent, not a preference.
+#:
+#: *The subject of that sentence is the design's published 1.11, not this
+#: constant.* The fitter's own `compound_reconciliation` — the function that
+#: wrote both the value and the note, `scripts/fit_player_model.py` — says of
+#: the design's number: "The design's own published 1.11 is neither: it is
+#: `VMR(points|m) / (E[V^2]/E[V])`, a multiplier on the compound-*Poisson*
+#: points VMR, which is reproduced here to about a hundredth. Read as an event
+#: count's dispersion -- which is how a Panjer family would consume it -- it is
+#: out by about 0.24, and that is the reading a distribution engine is most
+#: likely to take." The note's "is the SECOND of these" and the fitter's "is
+#: neither" cannot both be true; the file's own evidence block sides with the
+#: fitter — "the design's 1.11 reproduces as `points_vmr_over_compound_poisson`,
+#: not as an event-count dispersion" — and that quantity is
+#: 1.0922583243981805, which this module reads nowhere.
+#:
+#: *The arithmetic that settles it.* `effective_event_dispersion` is not
+#: measured; it is DEFINED by inverting the compound identity, `phi =
+#: (VMR_points * E[V] - Var[V]) / E[V]^2`, and handing it back to a Panjer
+#: family is the only thing it can be for. Measured on the file's own evidence
+#: — `E[V]` = 1.856981741719531, `Var[V]` = 0.5110384669003465 — the compound
+#: identity `(Var[V] + phi*E[V]^2)/E[V]` returns **2.328891545818532 exactly**,
+#: bit-for-bit the frozen `measured_points_vmr_given_minutes`, at
+#: `effective_event_dispersion`; and **2.8377415929483303 exactly**, bit-for-bit
+#: the frozen `compound_implied_points_vmr`, at `measured_event_dispersion`. A
+#: constant computed by inverting the identity cannot coherently be barred from
+#: the family it was inverted out of, and the same note says in the sentence
+#: before that "the choice between them belongs to the model, not to the fit".
+#:
+#: *What the other reading would cost, so the choice is not hidden behind the
+#: antecedent.* Obeying it literally means handing over
+#: `measured_event_dispersion`, and the produced conditional points VMR becomes
+#: 2.8377415929483303 against the file's own measured 2.328891545818532 — 21.8%
+#: wide, the 22% overstatement the note itself names — while the population
+#: ratio moves from 0.9209 to 1.0875. Both are inside design 4's 15% stop, so
+#: the stop rule does not decide this either way, and the engine prints
+#: `measured_event_dispersion` beside `effective_event_dispersion` on every run.
+#: `test_the_file_says_this_number_must_not_be_handed_to_a_panjer_family` reads
+#: the sentence out of the frozen file, re-measures both sides of the identity,
+#: and goes red the day a refit rewrites the note — at which point this answer
+#: has to be rewritten with it.
 POINTS_EVENT_DISPERSION_KEY: str = "effective_event_dispersion"
 
 #: The order design 5 fixes, recorded so a reader and a test see the same list.
@@ -403,12 +462,24 @@ COMPOUND_STATS: tuple[str, ...] = ("points", "threes")
 
 #: Constants this module reads and must therefore check for a fit-level refusal
 #: before it prices anything. `player_rates._unfittable` reads only `role_prior`
-#: and `rate_shrinkage_k`, so these five are unchecked anywhere else and a
+#: and `rate_shrinkage_k`, so these six are unchecked anywhere else and a
 #: market that needs one of them would otherwise be priced on a number the fit
-#: refused to stand behind. The shipped `unfittable` block is empty, so this
-#: path ships exercised only against a synthetic file — which is what
-#: `test_a_constant_the_fit_refused_to_invent_refuses_the_market_that_needs_it`
-#: builds.
+#: refused to stand behind.
+#:
+#: The other half of R5 does NOT come through here and must not be looked for
+#: here: `role_prior.<stat>` and `rate_shrinkage_k.<stat>` are the two the
+#: estimator itself reads, and it hands them on as `projection.refused_stats`,
+#: which :func:`build` folds into the same market refusals. That is the split
+#: that hid the `points_events` crash — this tuple can only ever refuse a market
+#: whose CONSTANT was refused, and `points_events` is refused by STAT.
+#:
+#: The shipped `unfittable` block is empty, so both halves ship exercised only
+#: against a synthetic file, which is what
+#: `test_a_constant_the_fit_refused_to_invent_refuses_the_market` and
+#: `test_an_r5_refusal_of_the_scoring_event_count_refuses_instead_of_crashing`
+#: build. (The name this comment carried before was
+#: `..._refuses_the_market_that_needs_it`, which is not a test that exists in
+#: this repository.)
 _CONSTANTS_READ_HERE: tuple[str, ...] = (
     "conditional_dispersion",
     "value_pmf",
@@ -437,6 +508,13 @@ class PanjerParameters:
     rounding for the binomial, and it is `phi_used` that is stored in design 9's
     `phi_conditional` column, because that is the dispersion the price was
     actually made at.
+
+    `materiality` is the floor the gap between those two was CHECKED against —
+    `conditional_dispersion.material_absolute`, read out of the frozen file by
+    :func:`build` and never defaulted here. It is carried on the member rather
+    than on the module so :func:`thin` can hand the same floor to the thinned
+    family: a derived count that quietly acquired a laxer floor than the count
+    it came from would be the guard defeating itself one construction at a time.
     """
 
     family: str
@@ -446,6 +524,7 @@ class PanjerParameters:
     a: float
     b: float
     g0: float
+    materiality: float
     trials: float = float("nan")
     shape_r: float = float("nan")
     scale_beta: float = float("nan")
@@ -484,7 +563,9 @@ def panjer_family(phi: float) -> str:
     return "binomial" if value < 1.0 else "negative_binomial"
 
 
-def panjer_parameters(*, mu: float, phi: float) -> PanjerParameters:
+def panjer_parameters(
+    *, mu: float, phi: float, materiality: float
+) -> PanjerParameters:
     """`(a, b, g0)` for the member :func:`panjer_family` selects at this `phi`.
 
     The three parameterisations, each matched on `(mu, phi * mu)` so that the
@@ -503,17 +584,59 @@ def panjer_parameters(*, mu: float, phi: float) -> PanjerParameters:
     emits negative mass. The declared convention is `n = round(mu/(1-phi))`
     followed by a re-solve of `p = mu/n`, so the **mean is preserved exactly**
     — D3 and D5 are first-moment identities and must not pay for a rounding —
-    and the dispersion moves by `O(1/n)`. The realised `phi_used = 1 - p` is
-    stored, and this function refuses if the rounding moved it further than
-    `conditional_dispersion.material_absolute` = 0.02, the fit's own materiality
-    floor. Measured on the frozen turnovers phi across mu in [0.2, 6.0] at a
-    step of 0.01: the mean error is exactly zero and the largest
-    |phi_used - phi| is 5.484e-04, which is 2.74% of that floor.
+    and the dispersion moves by `O(1/n)`.
+
+    **The realised `phi_used = 1 - p` is then checked against `materiality`, and
+    the check is performed rather than described.** Until this commit the
+    paragraph above ended with a sentence saying this function "refuses if the
+    rounding moved it further than `conditional_dispersion.material_absolute` =
+    0.02" and no such comparison existed anywhere: `material_absolute` was read
+    by nothing in `src/`, `phi_requested` was stored on
+    :class:`PanjerParameters` and never read back, and the `max(1, ...)` floor
+    on the trial count silently substituted a different dispersion. Measured on
+    the code as it stood, with nothing raised: `(mu=0.3, phi=0.5)` returned
+    `trials=1`, `phi_used=0.70` — moved 0.20, ten times the floor the docstring
+    named; `(mu=0.05, phi=0.8)` moved 0.15; `(mu=0.04, phi=0.9)` moved 0.06;
+    `(mu=0.02, phi=0.95)` moved 0.03. All four now refuse, in words.
+
+    The floor is a REQUIRED argument and is never defaulted here, because a
+    floor this module chose would be a number about the file that did not come
+    from it: :func:`build` reads
+    `conditional_dispersion.material_absolute` = 0.02 out of the frozen file and
+    hands it down, and :func:`thin` carries the same floor onto the thinned
+    family. A non-finite or non-positive floor is refused before a family is
+    chosen — `abs(gap) > nan` is False, so a NaN floor would be a guard that
+    silently passed everything.
+
+    **What the shipped file can and cannot reach.** The mechanism the guard is
+    against is line `trials = max(1, int(round(mean / (1.0 - dispersion))))`:
+    when `mu/(1-phi)` rounds to zero the floor forces a one-trial binomial and
+    the realised dispersion becomes `1 - mu` whatever the fit said. `turnovers`
+    is the one frozen dispersion below 1, at 0.9828561088984643, so the largest
+    move it can produce is `1 - phi = 0.01714389110153569` as `mu -> 0` —
+    inside the frozen 0.02, and measured over mu in [0.001, 6.0] at a step of
+    0.001 the worst is 1.614e-02, also inside. So this refusal cannot fire on
+    the file as shipped and it ships latent, exactly like R5: it fires on a
+    refit that moves a sub-1 dispersion further from 1, or on a second stat
+    entering the binomial arm. Over the narrower grid the older measurement
+    quotes — mu in [0.2, 6.0] at a step of 0.01 — the mean error is exactly zero
+    and the largest |phi_used - phi| is 5.484e-04, 2.74% of the floor.
     `test_the_binomial_rounding_preserves_the_mean_and_reports_its_own_error`
-    re-measures both rather than taking them on trust.
+    re-measures both, and
+    `test_the_binomial_rounding_refuses_a_material_move_and_reads_its_floor_from_the_file`
+    holds the refusal and the provenance of the floor.
     """
     mean = float(mu)
     dispersion = float(phi)
+    floor = float(materiality)
+    if not math.isfinite(floor) or floor <= 0.0:
+        raise PlayerDistributionError(
+            f"A materiality floor of {materiality!r} is not a floor. The "
+            "binomial rounding is checked against "
+            "`conditional_dispersion.material_absolute` from the frozen file, "
+            "and every comparison against a NaN is False — a floor that cannot "
+            "be compared is a guard that passes everything."
+        )
     if not math.isfinite(mean) or mean <= 0.0:
         raise PlayerDistributionError(
             f"A count mean of {mu!r} is outside the support this engine can "
@@ -531,6 +654,7 @@ def panjer_parameters(*, mu: float, phi: float) -> PanjerParameters:
             a=0.0,
             b=mean,
             g0=math.exp(-mean),
+            materiality=floor,
         )
     if family == "negative_binomial":
         beta = dispersion - 1.0
@@ -543,6 +667,7 @@ def panjer_parameters(*, mu: float, phi: float) -> PanjerParameters:
             a=beta / dispersion,
             b=(shape - 1.0) * beta / dispersion,
             g0=dispersion ** (-shape),
+            materiality=floor,
             shape_r=shape,
             scale_beta=beta,
         )
@@ -557,6 +682,18 @@ def panjer_parameters(*, mu: float, phi: float) -> PanjerParameters:
             "what this count is."
         )
     used = 1.0 - probability
+    if abs(used - dispersion) > floor:
+        raise PlayerDistributionError(
+            f"A binomial matched on (mu={mean}, phi={dispersion}) needs "
+            f"{trials} trial(s) once `n = mu/(1 - phi)` is rounded to an "
+            f"integer, and the re-solved dispersion is {used}. That is "
+            f"{abs(used - dispersion)} from what the fit recorded, past the "
+            f"fit's own materiality floor of {floor}. The mean is preserved and "
+            "the rounding is charged to the dispersion, so a move this large "
+            "would price the count at a width nobody fitted — most often "
+            "because `mu/(1 - phi)` rounded below one and the trial floor "
+            "substituted a one-trial binomial whose dispersion is `1 - mu`."
+        )
     return PanjerParameters(
         family=family,
         mu=mean,
@@ -565,6 +702,7 @@ def panjer_parameters(*, mu: float, phi: float) -> PanjerParameters:
         a=-probability / used,
         b=(trials + 1) * probability / used,
         g0=used**trials,
+        materiality=floor,
         trials=float(trials),
     )
 
@@ -580,6 +718,15 @@ def thin(parameters: PanjerParameters, retention: float) -> PanjerParameters:
     `1 + q*(phi - 1)` for every member, so the thinned marginal's width is a
     consequence of the shared event count rather than a second fitted number,
     and `conditional_dispersion["threes"]` is what it is checked against.
+
+    **No new rounding happens here, and the materiality floor is carried
+    through anyway.** The binomial arm keeps the trial count it was given and
+    scales `p` by `q` exactly, so there is nothing for
+    :func:`panjer_parameters`' rounding check to re-check; the floor is copied
+    onto the thinned member so that a family derived from this one — through
+    the Poisson arm, which does re-enter `panjer_parameters` — is checked
+    against the floor the frozen file gave the count it came from rather than
+    against one this module chose.
     """
     keep = float(retention)
     if not 0.0 < keep <= 1.0:
@@ -589,7 +736,9 @@ def thin(parameters: PanjerParameters, retention: float) -> PanjerParameters:
             "own shrunk value mix and is strictly inside (0, 1]."
         )
     if parameters.family == "poisson":
-        return panjer_parameters(mu=parameters.mu * keep, phi=1.0)
+        return panjer_parameters(
+            mu=parameters.mu * keep, phi=1.0, materiality=parameters.materiality
+        )
     if parameters.family == "negative_binomial":
         beta = parameters.scale_beta * keep
         shape = parameters.shape_r
@@ -602,6 +751,7 @@ def thin(parameters: PanjerParameters, retention: float) -> PanjerParameters:
             a=beta / dispersion,
             b=(shape - 1.0) * beta / dispersion,
             g0=dispersion ** (-shape),
+            materiality=parameters.materiality,
             shape_r=shape,
             scale_beta=beta,
         )
@@ -616,6 +766,7 @@ def thin(parameters: PanjerParameters, retention: float) -> PanjerParameters:
         a=-probability / used,
         b=(trials + 1) * probability / used,
         g0=used**trials,
+        materiality=parameters.materiality,
         trials=float(trials),
     )
 
@@ -1155,6 +1306,18 @@ def population_structural_checks(
     is counted apart rather than pooled: `population_below_regular_floor` is a
     reported census bucket, not a silent drop.
 
+    **A regular whose points market is REFUSED is a third bucket, not a
+    crash.** `player_points` is refused for a subject whenever the fit would not
+    stand behind a constant the compound sum needs — `conditional_dispersion.
+    points`, `conditional_dispersion.points_events`, `role_prior.points_events`
+    — and asking that subject for `count_pmf("player_points")` raises
+    :class:`MarketRefused`. This function pools the athletes it was handed, is
+    called by `gameday_card._run_the_structural_check` outside every `except`
+    the card owns, and would therefore have turned one refused prop into a dead
+    card. A refused subject produced no points mixture, so he has no VMR to
+    pool and pooling an absence is the one thing that must not happen: he is
+    counted in `population_points_refused` and left out of both sums.
+
     Returns every number the caller needs to print the ratio design 4 asks to be
     reported, and the census that says whether it may stop anything. Nothing
     here raises on population size: with no regulars at all the ratio is NaN and
@@ -1180,6 +1343,7 @@ def population_structural_checks(
     variances: list[float] = []
     offered = 0
     below = 0
+    refused = 0
     # `population`, never `distributions`: `test_no_player_count_is_built_by_
     # match_variance` scans this module's AST for the name of the TEAM
     # distribution module and refuses it, because design 4's refusal of
@@ -1189,6 +1353,9 @@ def population_structural_checks(
         offered += 1
         if float(subject.projection.projected_minutes) < regular_floor:
             below += 1
+            continue
+        if "player_points" in subject.refusals:
+            refused += 1
             continue
         mean, variance = _moments(subject.count_pmf("player_points"))
         means.append(mean)
@@ -1208,6 +1375,7 @@ def population_structural_checks(
         "population_athletes": float(len(means)),
         "population_athletes_offered": float(offered),
         "population_below_regular_floor": float(below),
+        "population_points_refused": float(refused),
         "regular_min_projected_minutes": regular_floor,
         "population_floor": float(STRUCTURAL_CHECK_POPULATION_FLOOR),
     }
@@ -1707,6 +1875,45 @@ def _refused_constants(shapes: PlayerShapes) -> dict[str, str]:
     return refusals
 
 
+def _materiality_floor(shapes: PlayerShapes) -> float:
+    """`conditional_dispersion.material_absolute`, and it comes from the file.
+
+    The floor :func:`panjer_parameters` checks the binomial rounding against.
+    It is read here, from the constant whose dispersions do the rounding, and
+    handed down as an argument, because a floor written into this module would
+    be a number about the file that did not come from it — the same rule
+    :func:`population_structural_checks` follows for
+    `regular_min_projected_minutes`, and the reason both are arguments rather
+    than constants.
+
+    It is deliberately NOT the same object as :data:`POISSON_BAND`, which the
+    module docstring spends a paragraph refusing to set to this number: 0.02 is
+    the fit's floor for **agreement between two windows**, which is the right
+    scale for "did the rounding move the dispersion materially" and the wrong
+    scale entirely for "is this dispersion equal to one", where it would swallow
+    the frozen turnovers phi and delete the binomial arm.
+
+    `material_absolute` sits beside `value` on the constant rather than inside
+    it, so it is read off the constant block; the refusal is asked for first,
+    because a floor taken from a constant the fit would not stand behind is not
+    a floor either.
+    """
+    refusal = shapes.refusal_for("conditional_dispersion")
+    if refusal:
+        raise MarketRefused(refusal)
+    try:
+        floor = float(shapes.constants["conditional_dispersion"]["material_absolute"])
+    except (KeyError, TypeError, ValueError) as error:
+        raise PlayerDistributionError(
+            f"{shapes.path}: `conditional_dispersion` records no readable "
+            "`material_absolute`, so the fit's own materiality floor is not "
+            "stated and the binomial rounding has nothing to be checked "
+            "against. A floor invented here would be a number about the file "
+            "that did not come from it."
+        ) from error
+    return floor
+
+
 def _refused_stats(shapes: PlayerShapes, projection: PlayerProjection) -> set[str]:
     """Which of the seven stats no family may be built for.
 
@@ -1741,7 +1948,21 @@ def build(projection: PlayerProjection, *, shapes: PlayerShapes) -> PlayerDistri
       is the one property that makes the priced quantity `P(· | the wager
       stands)`;
     * a market whose stat the fit recorded unfittable (R5), in the fit's own
-      words.
+      words — **including `points_events`, which is a stat no market names.**
+      `points` and `threes` are both read off the scoring-event count, so an R5
+      refusal of `role_prior.points_events` or `rate_shrinkage_k.points_events`
+      refuses the five markets that need it. Until this commit it did not: the
+      refusal loop only asked about a market's own components, `points_events`
+      is a component of none of the ten, and `player_rates._rates` drops a
+      refused stat from `projection.rates` — so `rates["points_events"]` was
+      read unconditionally two statements later and the fit's deliberate
+      refusal came out as `KeyError('points_events')`. `KeyError` is not a
+      `ValueError`, so neither `except` clause in
+      `reports/gameday_card.opinions_for` caught it and one refused prop killed
+      the whole card, every spread and total on the slate with it. Reproduced
+      through the real loader on both keys before the repair, and
+      `test_an_r5_refusal_of_the_scoring_event_count_refuses_instead_of_crashing`
+      holds it from both ends.
     """
     if not projection.priceable:
         raise PlayerDistributionError(
@@ -1777,11 +1998,22 @@ def build(projection: PlayerProjection, *, shapes: PlayerShapes) -> PlayerDistri
     refusals = _refused_constants(shapes)
     refused_stats = _refused_stats(shapes, projection)
     for market, components in MARKET_COMPONENTS.items():
-        reasons = [
-            projection.refused_stats[stat]
-            for stat in components
-            if stat in projection.refused_stats
-        ]
+        # The scoring-event count is an INPUT of every compound market without
+        # being a component of any: `points` is the compound sum over it and
+        # `threes` is the same count thinned. `player_rates._unfittable` reads
+        # `role_prior.<stat>` and `rate_shrinkage_k.<stat>` for all seven stats,
+        # `points_events` among them, so `projection.refused_stats` can carry a
+        # refusal that no market's component list mentions. Asking only about
+        # components left those five markets unrefused and then priced them off
+        # a rate that had been dropped from `projection.rates`.
+        needed = list(components)
+        if any(stat in COMPOUND_STATS for stat in components):
+            needed.append("points_events")
+        reasons: list[str] = []
+        for stat in needed:
+            reason = projection.refused_stats.get(stat)
+            if reason and reason not in reasons:
+                reasons.append(reason)
         if reasons:
             refusals[market] = " ".join(
                 [refusals[market]] + reasons if market in refusals else reasons
@@ -1793,6 +2025,7 @@ def build(projection: PlayerProjection, *, shapes: PlayerShapes) -> PlayerDistri
         )
 
     dispersions = dict(shapes.value("conditional_dispersion"))
+    materiality = _materiality_floor(shapes)
     reconciliation = dict(shapes.value("points_compound_reconciliation"))
     correlations = dict(shapes.value("residual_correlation"))
     targets = dict(shapes.value("structural_check_targets"))
@@ -1825,16 +2058,30 @@ def build(projection: PlayerProjection, *, shapes: PlayerShapes) -> PlayerDistri
 
     # Stage 1 of CONSTRUCTION_ORDER is the lattice above; stage 2 is every
     # family below, one per minutes node, at the CONDITIONAL dispersion.
-    event_parameters = {
-        index: panjer_parameters(
-            mu=float(rates["points_events"]) * float(node), phi=event_dispersion
-        )
-        for index, node in enumerate(minutes)
-    }
+    #
+    # `points_events` is read only after the refusal set has been consulted. A
+    # stat the fit refused has no entry in `projection.rates` at all, so the
+    # guard is what makes the refusal a refusal rather than a `KeyError`; the
+    # five markets that need the count are already in `refusals` above, and the
+    # other five are priced from their own rates as usual.
+    event_parameters = (
+        {}
+        if "points_events" in refused_stats
+        else {
+            index: panjer_parameters(
+                mu=float(rates["points_events"]) * float(node),
+                phi=event_dispersion,
+                materiality=materiality,
+            )
+            for index, node in enumerate(minutes)
+        }
+    )
     stat_parameters = {
         stat: {
             index: panjer_parameters(
-                mu=float(rates[stat]) * float(node), phi=float(dispersions[stat])
+                mu=float(rates[stat]) * float(node),
+                phi=float(dispersions[stat]),
+                materiality=materiality,
             )
             for index, node in enumerate(minutes)
         }
