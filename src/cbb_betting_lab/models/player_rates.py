@@ -387,9 +387,10 @@ R1A_TONIGHT_ONLY = (
     "the comma is the design's and this module cannot check it: the roster "
     "searched is a PRIOR roster, so a spelling that reaches no prior athlete "
     "is a debutant and an unreadable spelling at once, and separating the two "
-    "would need the box score of the game being priced. The design measured "
-    "the unreachable-spelling share of that bucket at 372 of 9,584 (game, "
-    "player) pairs, 3.88%, on a settlement-time join this module may not make."
+    "would need the box score of the game being priced. "
+    "`providers/player_names.py` measured 372 unreachable spellings on "
+    "2026-09-05, against 9,584 (game, player) pairs, on a settlement-time join "
+    "this module may not make."
 )
 
 R1B_NO_PRIOR_ROSTER = (

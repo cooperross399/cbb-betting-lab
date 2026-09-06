@@ -1372,10 +1372,28 @@ def test_the_gaps_this_estimator_still_has_are_the_ones_written_down() -> None:
         "form a rate and R6 no longer fires there. Delete clause 6, and "
         "re-measure the read cost `card_matchups.load_player_games` quotes."
     )
-    for term in ("opponent", "pace", "venue", "rest"):
-        assert term not in {
-            parameter for parameter in inspect.signature(PR.projection_for).parameters
-        }, f"a {term} term reached the estimator; the admission bar is 2% of RMSE"
+    # **Substring, over the whole signature and the source, not exact parameter
+    # names.** `term not in set(parameters)` is exact membership, so
+    # `opponent_adjustment`, `pace_factor` or `rest_days` — every realistic
+    # spelling — passed while the assertion still read as evidence that no
+    # adjustment had been admitted. The design's bar is 2% of held-out RMSE
+    # and the measured values are 0.13-0.29%, so none of these is admitted;
+    # what is checked is that none has quietly arrived.
+    signature = inspect.signature(PR.projection_for)
+    names = " ".join(signature.parameters)
+    source = inspect.getsource(PR.projection_for)
+    for term in ("opponent", "pace", "venue", "rest", "travel", "altitude"):
+        assert term not in names, (
+            f"a parameter of `projection_for` mentions {term!r}; the admission "
+            "bar is 2% of held-out RMSE and the measured values are 0.13-0.29%"
+        )
+        # The body too: an adjustment reached through a module global rather
+        # than an argument is the same admission with no parameter to see.
+        assert f"{term}_" not in source and f"_{term}" not in source, (
+            f"the body of `projection_for` names {term!r}; an adjustment that "
+            "arrives through a global rather than an argument is still an "
+            "adjustment"
+        )
 
 
 # ---------------------------------------------------------------------------
