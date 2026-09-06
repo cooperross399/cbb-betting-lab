@@ -44,6 +44,7 @@ grow or shrink the family:
 
 from __future__ import annotations
 
+import ast
 import dataclasses
 import importlib.util
 import json
@@ -77,6 +78,95 @@ def _tracked() -> dict:
 
 def _player_entries(payload: dict) -> list[dict]:
     return [h for h in payload["hypotheses"] if h["search"] in (DEVIG, CONTROL)]
+
+
+#: The two directories the sentence "nothing in this tree produces a player
+#: probability" is a sentence about. Both, because a P(over) written in a
+#: script grades a hypothesis exactly as well as one written in the package,
+#: and the pre-registration is a claim about the whole commit.
+SEARCHED_TREES = ("src/cbb_betting_lab", "scripts")
+
+#: What a player probability would be CALLED. Six tokens rather than one,
+#: because the thing being looked for is not only the word "probability": a
+#: P(over) is a de-vigged comparison against a fair price scored by log loss,
+#: and every one of those words is a plausible name for the function that
+#: produces it. Measured against this tree on 2026-09-06, the six together
+#: match exactly two names, both in `models/player_rates.py`; `prob` is
+#: deliberately NOT among them, because it matches `problem` and `probe` and a
+#: token that fires on unrelated code trains a reader to ignore this test.
+PROBABILITY_TOKENS = (
+    "probab", "p_over", "log_loss", "devig", "de_vig", "fair_price",
+)
+
+#: The only player probability name allowed to exist. `dnp_probability` is a
+#: stored diagnostic that is never multiplied into a price, and the assertion
+#: on `player_rates`' namespace below says the same thing about the same name
+#: from the other direction.
+ALLOWED = frozenset({"dnp_probability", "_dnp_probability"})
+
+
+def _bound_names(source: str) -> set[str]:
+    """Every name a module binds, at any depth, however it binds it.
+
+    Functions, classes, plain and annotated assignments, attribute stores and
+    arguments. Depth matters: a P(over) written as a method on a class, or as a
+    closure inside a report builder, is a player probability in this tree just
+    as much as a module-level `def` is, and a scan that only read the top level
+    would be a scan a later session could step around without meaning to.
+    """
+    names: set[str] = set()
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            names.add(node.name)
+        elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            names.add(node.id)
+        elif isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Store):
+            names.add(node.attr)
+        elif isinstance(node, ast.arg):
+            names.add(node.arg)
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            names.add(node.target.id)
+    return names
+
+
+def _is_a_player_probability_name(name: str, *, in_a_player_file: bool) -> bool:
+    """Does `name` name a player probability, judged by the name alone?
+
+    Two halves, and both are needed. A probability token alone would fire on
+    `distributions.scoring_probability` and `card_pricing.probability`, which
+    are team-model prices this family says nothing about. The player half is
+    carried either by the name itself or by the file it is written in — a
+    module called `player_something.py` is a player module and everything in it
+    is player-shaped, which is how `models/player_probability.py` would be
+    caught the moment somebody writes it.
+    """
+    lowered = name.lower()
+    if not any(token in lowered for token in PROBABILITY_TOKENS):
+        return False
+    return in_a_player_file or "player" in lowered
+
+
+def _player_probability_names() -> dict[str, list[str]]:
+    """`{path: names}` for every player probability name in the searched trees.
+
+    Empty except for the two allowed names, or the ordering evidence below is
+    covering less than it says.
+    """
+    found: dict[str, list[str]] = {}
+    for tree in SEARCHED_TREES:
+        for path in sorted((_REPO / tree).rglob("*.py")):
+            if "__pycache__" in path.parts:
+                continue
+            hits = sorted(
+                name
+                for name in _bound_names(path.read_text(encoding="utf-8"))
+                if _is_a_player_probability_name(
+                    name, in_a_player_file="player" in path.name.lower()
+                )
+            )
+            if hits:
+                found[str(path.relative_to(_REPO))] = hits
+    return found
 
 
 #: What is left of the MODEL — the thing the 33 hypotheses make a prediction
@@ -119,10 +209,35 @@ def test_nothing_in_this_tree_can_turn_a_projection_into_a_probability() -> None
     mean log loss. So no number has met them, and could not have.
 
     The second narrowing is a check on the first, because "the file is absent"
-    is a claim about a name: nothing anywhere in `src/` or `scripts/` produces
-    a player probability. `models/player_rates.py` returns a mean, a minutes
-    lattice and refusals, and its own tests assert that a priceable projection's
-    last word is that no engine exists.
+    is a claim about a name and a name is the cheapest thing in a repository to
+    change. So this now READS THE TREE, which until 2026-09-06 it only said it
+    did: the docstring claimed "nothing anywhere in `src/` or `scripts/`
+    produces a player probability" while the body inspected two things, the
+    `player_rates` module namespace and the fields of `PlayerProjection`, and
+    walked nothing. The docstring asserted the broad property and the code
+    asserted the narrow one, which is the house rule exactly inverted.
+
+    What the body does now: every `.py` under `src/cbb_betting_lab/` and
+    `scripts/` is parsed and every name it binds at any depth is collected —
+    function, class, assignment, annotated assignment, attribute store,
+    argument. A name is a player probability when it carries one of
+    `PROBABILITY_TOKENS` **and** is either written in a file whose own name
+    says `player` or says `player` itself. Measured on this commit, the whole
+    tree holds exactly two such names, `dnp_probability` and `_dnp_probability`
+    in `models/player_rates.py`, and both are the stored did-not-play
+    diagnostic that is never multiplied into a price.
+
+    It is not vacuous. It is the assertion that goes red when a later session
+    writes the de-vig and the P(over) into `models/player_probability.py`, or
+    into `reports/player_card.py`, or as a `player_over_probability` in any
+    file at all — every route in this finding's failure scenario, none of which
+    touches `MODEL_FILES`, `player_rates`' namespace or `PlayerProjection`.
+
+    **The gap this scan still has, asserted open at the end of the body rather
+    than described here**: it judges names, so a player probability written
+    under a name that mentions neither `player` nor any of the six tokens is
+    invisible to it. Widening a file-absence claim from one path to the whole
+    tree is not the same as reading the code, and this does the first.
     """
     for relative in MODEL_FILES:
         assert not (_REPO / relative).exists(), (
@@ -158,6 +273,26 @@ def test_nothing_in_this_tree_can_turn_a_projection_into_a_probability() -> None
     assert "model_probability" not in fields and "push_mass" not in fields, (
         "a projection now carries a probability, so the thing the 33 "
         "hypotheses predict about exists. Say what the ordering rests on."
+    )
+
+    # The tree, not just the one module: this is the check the docstring above
+    # used to claim and the body used not to perform.
+    assert _player_probability_names() == {
+        "src/cbb_betting_lab/models/player_rates.py": ["_dnp_probability", "dnp_probability"]
+    }, (
+        "a player probability is now named somewhere in `src/` or `scripts/`. "
+        "If it is the engine, the 33 hypotheses can have been looked at and "
+        "the ordering has to be re-stated from something other than the tree. "
+        "If it is a diagnostic that never reaches a price, add it to `ALLOWED` "
+        "and say in one line why it is not a price."
+    )
+
+    # The gap in that scan, held open. Red here means somebody taught the scan
+    # to read what a function computes rather than what it is called, which is
+    # strictly better and makes the paragraph above wrong: rewrite it.
+    assert not _is_a_player_probability_name("_over", in_a_player_file=False), (
+        "the scan now catches a name carrying neither `player` nor a "
+        "probability token, so it is no longer a check on names alone"
     )
 
 
