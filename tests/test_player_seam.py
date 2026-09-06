@@ -1110,3 +1110,105 @@ def test_the_gaps_this_seam_still_has_are_the_ones_written_down() -> None:
         "roster terms in the carryover fit and changes every published team "
         "number. Re-measure in the same commit, or take it out again."
     )
+
+
+def test_the_seams_player_half_actually_runs(fixture_raw_dir) -> None:
+    """The half nothing executed until now.
+
+    Measured by mutation against a shadow copy of `src/`: prepending an early
+    return to `_player_half` gave a whole-suite failure set byte-identical to
+    the unmutated baseline, and returning a bare `SlateModel` from
+    `slate_model` before `matchups_for` left 226 of 227 tests green across the
+    seam, rates, leakage and card modules. So the estimator call, the shapes
+    lookup, the live unpack path and three of the four structural-absence
+    sentences were asserted only where a test supplied them itself.
+
+    The reason was mechanical rather than anybody's oversight: every existing
+    call raises before reaching the player half, and the one path that would
+    not raise needs a cached hoopR schedule. The tracked fixtures are seasons
+    2025 to 2027, so this drives a real 2026 game — the seam's cut is
+    season-independent, and 2026 is not a season the frozen constants were
+    fitted or validated on.
+    """
+    day = "2025-11-29"
+    game_id = 401823218
+    home_id, away_id = 2459, 91
+
+    player_history = pd.DataFrame(
+        [
+            {
+                "slate_date": "2025-11-2%d" % d,
+                "season": 2026,
+                "game_id": game_id - 1,
+                "athlete_id": 4001,
+                "athlete_display_name": "A Player",
+                "team_id": home_id,
+                "did_not_play": False,
+                "minutes": 28.0,
+                "points": 14.0,
+                "rebounds": 5.0,
+                "assists": 3.0,
+                "threes": 2.0,
+                "steals": 1.0,
+                "turnovers": 2.0,
+            }
+            for d in (1, 2, 3, 4, 5, 6, 7, 8)
+        ]
+    )
+    prices = pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "game_id": game_id,
+                "market": "player_points",
+                "player": "A Player",
+                "selection": "over",
+                "line": 13.5,
+                "book": "dk",
+                "season": 2026,
+                "slate_date": day,
+                "home_team": home_id,
+                "away_team": away_id,
+            }
+        ]
+    )
+
+    # **The real team table, not the two-column stand-in the other tests use.**
+    # `ratings.prepare` reads `game_state` and `venue_state`, which the
+    # stand-in does not carry — every other call in this file raises before
+    # reaching it, which is part of why the player half was never executed.
+    from conftest import processed_table
+
+    team_path, corpus = processed_table("cbb_team_games.csv")
+    team_games = pd.read_csv(team_path, low_memory=False)
+    team_games = team_games[team_games["slate_date"].astype(str) < day]
+    print(f"team corpus={corpus} rows_before_{day}={len(team_games):,}")
+
+    model = slate.slate_model(
+        day=day,
+        history=team_games,
+        player_history=player_history,
+        prices=prices,
+        raw_dir=fixture_raw_dir,
+    )
+
+    # The half ran: it produced a stamp of its own, off the player frame rather
+    # than the team frame, and it is strictly earlier than the day.
+    assert model.player_priced_through, (
+        "the player half produced no stamp, so it did not run — which is the "
+        "state this test exists to make impossible"
+    )
+    assert model.player_priced_through < day
+    assert model.player_priced_through == max(
+        player_history["slate_date"].astype(str)
+    )
+
+    # And it reached a verdict about the subject rather than a structural
+    # absence: either a projection or a named refusal, never silence.
+    reached = bool(model.players) or bool(model.name_refusals) or bool(
+        model.resolution_census
+    )
+    assert reached, (
+        "the player half ran and said nothing about a quoted, resolvable "
+        "subject with eight prior appearances"
+    )

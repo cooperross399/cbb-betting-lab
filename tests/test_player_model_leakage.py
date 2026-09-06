@@ -72,6 +72,7 @@ import inspect
 import json
 import sys
 from dataclasses import fields
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -359,8 +360,43 @@ def test_deleting_the_future_and_poisoning_it_are_different_questions() -> None:
     settled = _settled()
     poisoned = _poison(settled, day=DAY)
     deleted = settled[settled["slate_date"].astype(str) < DAY]
-
     assert len(poisoned) == len(settled) != len(deleted)
+
+    # **Through `_price` these three are one input, not three.** `_price`
+    # applies `PB.history_before` first, and `_poison` only rewrites rows dated
+    # on or after the day — exactly the rows that cut removes. Measured:
+    # `history_before` of all three is (24, 19), `.equals()` each other, same
+    # index. The old version of this test compared the estimator against itself
+    # on one input, three times, and passed for that reason.
+    cut = PB.history_before(settled, DAY)
+    assert cut.equals(PB.history_before(poisoned, DAY))
+    assert cut.equals(PB.history_before(deleted, DAY))
+
+    # So the two questions are asked where they differ, and what they found is
+    # better than the docstring above assumed. **Neither layer reads the
+    # future; both REFUSE it.** `player_projections_for`'s docstring says its
+    # caller cuts — it does not merely trust that, it checks, and an uncut
+    # frame raises rather than quietly projecting from a frame that reaches
+    # the game it is projecting. The seam refuses a second time, independently.
+    # Two refusals, not one refusal and one convention.
+    for label, frame in (("settled", settled), ("poisoned", poisoned)):
+        with pytest.raises(PR.PlayerRatesError) as at_the_estimator:
+            PR.player_projections_for(
+                day=DAY, player_history=frame, prices=_board(), shapes=_shapes()
+            )
+        assert "strictly earlier" in str(at_the_estimator.value), label
+
+    # `deleted` is refused by neither: every row it keeps is strictly earlier
+    # than the day. That is the control proving the refusal above is about the
+    # future rows and not about the frame being handed over at all.
+    PR.player_projections_for(
+        day=DAY, player_history=deleted, prices=_board(), shapes=_shapes()
+    )
+
+    # And once the cut is where it belongs, poisoning and deleting tonight are
+    # both no-ops — which is what "the answer does not depend on tonight"
+    # actually means, now that it is asked of an estimator that would refuse
+    # the uncut frame outright.
     baseline = _all_records(_price(settled))
     assert _all_records(_price(poisoned)) == baseline
     assert _all_records(_price(deleted)) == baseline
@@ -814,9 +850,28 @@ def test_the_estimator_never_screens_on_the_game_it_is_pricing() -> None:
     }
 
     # And the bucket the role prior is read at is the projected one.
+    #
+    # **Derived from the edges here, not re-read from the function.** This
+    # compared `projection.minutes_bucket` against a second call of
+    # `role_prior_bucket`, which is `f(x) == f(x)` and holds for any bucket
+    # function at all — including one that ignores its argument. Measured:
+    # prepending `return 4` to `role_prior_bucket` left the whole suite's
+    # failure set byte-identical, while moving athlete 4001 from bucket 7 to 4
+    # and his points rate from 0.522836 to 0.499305, so the shrink target and
+    # the minutes-pmf shape moved for every athlete not already in bucket 4.
     projection = before.projections["e1"][4001]
-    assert projection.minutes_bucket == PR.role_prior_bucket(
-        projection.projected_minutes, bucket_edges=PR.BUCKET_EDGES
+    minutes = float(projection.projected_minutes)
+    expected = sum(1 for edge in PR.BUCKET_EDGES if minutes >= edge)
+    assert projection.minutes_bucket == expected, (
+        f"{minutes:.3f} projected minutes sits in bucket {expected} by the "
+        f"declared edges {PR.BUCKET_EDGES}, and the projection carries "
+        f"{projection.minutes_bucket}"
+    )
+    # The fixture must not sit in the bucket a constant function would return,
+    # or the assertion above is satisfied by that constant too.
+    assert expected != 4, (
+        "athlete 4001 projects into bucket 4, which is the value the measured "
+        "mutation returns, so this assertion could not tell them apart"
     )
 
     # The same corruption through `projection_for`, which is handed the roster
