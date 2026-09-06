@@ -1813,23 +1813,29 @@ def test_the_gaps_this_output_guard_still_has_are_the_ones_written_down(
     2. **A frame behind a nested attribute.** `self.bundle.frame`,
        `self.tables["players"]`. `__dict__` is walked one level; the value has
        to BE the frame.
-    3. **A frame in a `functools.lru_cache`.** The cached table lives in the C
+    3. **A frame bound POSITIONALLY into a `functools.partial`.**
+       `partial(price, frame)` versus `partial(price, frame=frame)` — one
+       character apart, opposite outcomes, because `partial.args` is READ-ONLY
+       and cannot be rebound while `keywords` is a plain dict that can. This is
+       the only entry here that is not a matter of depth or of bounding the
+       walk: it cannot be closed by this mechanism at all.
+    4. **A frame in a `functools.lru_cache`.** The cached table lives in the C
        structure the wrapper owns, which none of the dunders walked reaches.
-    4. **A `Series` or numpy array carved out of a future frame.**
+    5. **A `Series` or numpy array carved out of a future frame.**
        `_past_only` cuts DataFrames and returns `None` for everything else, and
        `None` means "left exactly as it was".
-    5. **An absolute path, whether or not it points into `data_dir`.** The
+    6. **An absolute path, whether or not it points into `data_dir`.** The
        second price runs inside a *copy* of the tree and only the relative path
        is rewritten; an absolute path names the original, uncut. The docstring
        used to say "outside `data_dir`", which drew the boundary in the wrong
        place.
-    6. **A CSV whose day column is not one of `DAY_COLUMNS`.**
+    7. **A CSV whose day column is not one of `DAY_COLUMNS`.**
        `_rewrite_csv` returns False and the file is copied through whole. The
        docstring never said so.
-    7. **A dated file that is not a CSV.** A parquet — which is what this lab's
+    8. **A dated file that is not a CSV.** A parquet — which is what this lab's
        own fixtures are — is copied byte for byte.
 
-    An eighth gap has a test of its own rather than an entry here, because it is
+    A ninth gap has a test of its own rather than an entry here, because it is
     not about reach: a leak that does not change the answer is invisible to a
     guard whose only evidence is the answer. See
     `test_the_output_guard_cannot_see_a_leak_that_does_not_change_the_answer`.
@@ -1844,6 +1850,28 @@ def test_the_gaps_this_output_guard_still_has_are_the_ones_written_down(
         return frame
 
     _a_leak_this_guard_does_not_see(through_a_list, note="a frame inside a list")
+
+    def positional(day, history, prices, players):
+        frame = prices.copy()
+        frame["model_probability"] = _priced_from(players["points"].sum())
+        return frame
+
+    bound_positionally = functools.partial(
+        lambda players, *, day, history, prices: positional(
+            day, history, prices, players
+        ),
+        _tonights_players(),  # POSITIONAL: lands in `args`, which is read-only
+    )
+    bound_positionally.__signature__ = _three_declared_arguments()
+    _a_leak_this_guard_does_not_see(
+        bound_positionally, note="a frame bound positionally into a partial"
+    )
+    # ...and the same frame passed by KEYWORD is caught, which is the pair that
+    # makes this a property of `partial.args` being read-only rather than a
+    # guess about coverage.
+    assert isinstance(functools.partial(positional).args, tuple)
+    with pytest.raises(AttributeError):
+        functools.partial(positional).args = ()
 
     shelf = {"all": _tonights_players()}
 

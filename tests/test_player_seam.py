@@ -1027,12 +1027,24 @@ def test_s10_the_seam_declares_no_module_level_frame_or_projection_memo() -> Non
         elif isinstance(node, ast.Assign):
             module_level += [t.id for t in node.targets if isinstance(t, ast.Name)]
 
-    memos = [name for name in module_level if name.endswith("_CACHE")]
-    assert memos == ["_SHAPES_CACHE"], (
-        f"slate.py declares module-level memo(s) {memos}. The only permitted "
-        "one holds provenance-checked constants and no game row; a memo of a "
-        "frame, a projection or a distribution makes the poisoned-future leak "
-        "test pass by never recomputing anything."
+    # **Every mutable module global, not the ones whose names end in `_CACHE`.**
+    # Filtering on the name first meant a memo called `_seen`, `_projections`
+    # or `_by_event` passed without being looked at, and nothing else in the
+    # suite inspects this module's globals — so the check read as a scan and
+    # was a spelling convention. A memo is a mutable container at module
+    # level; that is what is looked for now, whatever it is called.
+    values = {name: getattr(slate, name, None) for name in module_level}
+    mutable = {
+        name: type(value).__name__
+        for name, value in values.items()
+        if isinstance(value, (dict, list, set))
+    }
+    assert set(mutable) == {"_SHAPES_CACHE"}, (
+        f"slate.py declares mutable module-level container(s) {mutable}. The "
+        "only permitted one holds provenance-checked constants and no game "
+        "row; a memo of a frame, a projection or a distribution makes the "
+        "poisoned-future leak test pass by never recomputing anything, "
+        "whatever the name on it."
     )
     assert hasattr(slate, "clear_caches"), "and it must be droppable"
     slate.clear_caches()

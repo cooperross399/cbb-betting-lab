@@ -1060,6 +1060,13 @@ def _swap_to_the_past(
       class defines — the places a pricer written as a callable object keeps
       what a function pricer keeps in its own ``__dict__`` and globals;
 
+    A partial's POSITIONAL arguments are **not** among them, and cannot be:
+    ``functools.partial.args`` is read-only, so ``partial(price, frame)`` holds
+    a frame this function has no way to rebind, while
+    ``partial(price, frame=frame)`` is rebound through ``keywords``. One
+    character apart, opposite outcomes. Held open by name in
+    ``test_the_gaps_this_output_guard_still_has_are_the_ones_written_down``.
+
     and then that same list again on ``target.__wrapped__``, on
     ``target.__self__``, on a partial's ``func``, and on **any callable held in
     a cell of** ``target.__closure__``.
