@@ -134,6 +134,33 @@ def team_games() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def player_games(games: pd.DataFrame) -> pd.DataFrame:
+    """Two athletes per team-game, in the seam's declared columns.
+
+    Additive: nothing that reads `team_games` or `game_segments` changes. It is
+    here because `make_price_day`'s pricer now declares `player_history`, so a
+    lab on disk that carried no player table would exercise the stand-in frame
+    on every run instead of the real cut — and the stand-in is the case where
+    the board has no props, which is not the case most of these tests are in.
+    """
+    rows: list[dict] = []
+    for _, row in games.iterrows():
+        for athlete in (1, 2):
+            rows.append(
+                {
+                    "slate_date": row["slate_date"],
+                    "season": int(row["season"]),
+                    "game_id": int(row["game_id"]),
+                    "athlete_id": int(row["team_id"]) * 10 + athlete,
+                    "athlete_display_name": f"Player {int(row['team_id'])}-{athlete}",
+                    "team_id": int(row["team_id"]),
+                    "did_not_play": False,
+                    "minutes": 24.0 + athlete,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
 def game_segments(games: pd.DataFrame) -> pd.DataFrame:
     home = games[games["home_away"] == "home"]
     return pd.DataFrame(
@@ -305,6 +332,9 @@ class Lab:
         self.games.to_csv(self.processed / "cbb_team_games.csv", index=False)
         game_segments(self.games).to_csv(
             self.processed / "cbb_game_segments.csv", index=False
+        )
+        player_games(self.games).to_csv(
+            self.processed / "cbb_player_games.csv", index=False
         )
         return self
 
@@ -707,10 +737,16 @@ def test_the_shipped_model_fits_both_of_the_callers_that_ship_with_it():
     gate on the seam rather than a second copy of the backtest. If a player
     frame is ever made required without a caller being taught to build it,
     this is the test that goes red before the card does.
+
+    `slate_model` is asserted against the **same** two argument sets, because
+    it is the model `DEFAULT_MODEL` is intended to name once
+    `models/player_rates.py` exists, and a seam that does not fit its callers
+    on the day it is wired is discovered by an operator rather than here.
     """
     from cbb_betting_lab.models.ratings import matchups_for
+    from cbb_betting_lab.models.slate import slate_model
 
-    backtest_builds = {"day", "history", "prices", "competition"}
+    backtest_builds = {"day", "history", "prices", "competition", "player_history"}
     card_builds = backtest_builds | {"raw_dir"}
 
     assert PB.unsupplied_arguments(matchups_for, backtest_builds) == []
@@ -718,6 +754,12 @@ def test_the_shipped_model_fits_both_of_the_callers_that_ship_with_it():
     assert PB.unsupplied_arguments(matchups_for, {"day"}) == ["history", "prices"], (
         "the check is reading this signature, not returning empty for everything"
     )
+
+    assert PB.unsupplied_arguments(slate_model, backtest_builds) == []
+    assert PB.unsupplied_arguments(slate_model, card_builds) == []
+    assert PB.unsupplied_arguments(slate_model, {"day"}) == [
+        "history", "player_history", "prices",
+    ], "the check is reading this signature, not returning empty for everything"
 
 
 def test_the_backtest_exits_on_a_model_that_does_not_fit_rather_than_pricing(
@@ -1527,6 +1569,28 @@ def _in_a_closure():
     return pricer
 
 
+def _behind_a_captured_callable():
+    """The frame two closures deep: the pricer closes over a helper, not the frame.
+
+    This was a WRITTEN-DOWN GAP until 2026-09-06, and it is the shape the lab
+    actually ships — `make_price_day` closes the pricer over the resolved
+    model, so the model always lives in a different module and the pricer's own
+    `__globals__` are never the model's. Closing it is what lets the swap reach
+    a frame the model keeps in its own module's globals.
+    """
+    players = _tonights_players()
+
+    def helper():
+        return players["points"].sum()
+
+    def pricer(*, day, history, prices):
+        frame = prices.copy()
+        frame["model_probability"] = _priced_from(helper())
+        return frame
+
+    return pricer
+
+
 def _in_the_modules_globals():
     def pricer(*, day, history, prices):
         frame = prices.copy()
@@ -1664,6 +1728,7 @@ SWAP_REACHES = {
     "a partial's func": _behind_a_partials_func,
     "__wrapped__": _behind_a_wrappers_wrapped,
     "__self__": _on_a_bound_methods_self,
+    "a callable captured in a cell": _behind_a_captured_callable,
 }
 
 
@@ -1745,29 +1810,26 @@ def test_the_gaps_this_output_guard_still_has_are_the_ones_written_down(
     1. **A frame inside a container.** `box[0]`, `{"all": frame}`. The closure
        cell holds a list or a dict, `_past_only` returns `None` for it, and
        nothing descends into it.
-    2. **A frame two closures away.** The pricer closes over a helper; the
-       helper closes over the frame. The swap reads the pricer's own cells and
-       does not recurse into what they hold.
-    3. **A frame behind a nested attribute.** `self.bundle.frame`,
+    2. **A frame behind a nested attribute.** `self.bundle.frame`,
        `self.tables["players"]`. `__dict__` is walked one level; the value has
        to BE the frame.
-    4. **A frame in a `functools.lru_cache`.** The cached table lives in the C
+    3. **A frame in a `functools.lru_cache`.** The cached table lives in the C
        structure the wrapper owns, which none of the dunders walked reaches.
-    5. **A `Series` or numpy array carved out of a future frame.**
+    4. **A `Series` or numpy array carved out of a future frame.**
        `_past_only` cuts DataFrames and returns `None` for everything else, and
        `None` means "left exactly as it was".
-    6. **An absolute path, whether or not it points into `data_dir`.** The
+    5. **An absolute path, whether or not it points into `data_dir`.** The
        second price runs inside a *copy* of the tree and only the relative path
        is rewritten; an absolute path names the original, uncut. The docstring
        used to say "outside `data_dir`", which drew the boundary in the wrong
        place.
-    7. **A CSV whose day column is not one of `DAY_COLUMNS`.**
+    6. **A CSV whose day column is not one of `DAY_COLUMNS`.**
        `_rewrite_csv` returns False and the file is copied through whole. The
        docstring never said so.
-    8. **A dated file that is not a CSV.** A parquet — which is what this lab's
+    7. **A dated file that is not a CSV.** A parquet — which is what this lab's
        own fixtures are — is copied byte for byte.
 
-    A ninth gap has a test of its own rather than an entry here, because it is
+    An eighth gap has a test of its own rather than an entry here, because it is
     not about reach: a leak that does not change the answer is invisible to a
     guard whose only evidence is the answer. See
     `test_the_output_guard_cannot_see_a_leak_that_does_not_change_the_answer`.
@@ -1791,26 +1853,6 @@ def test_the_gaps_this_output_guard_still_has_are_the_ones_written_down(
         return frame
 
     _a_leak_this_guard_does_not_see(through_a_dict, note="a frame inside a dict")
-
-    def build_two_closures():
-        players = _tonights_players()
-
-        def helper():
-            return players["points"].sum()
-
-        def pricer(*, day, history, prices):
-            frame = prices.copy()
-            frame["model_probability"] = _priced_from(helper())
-            return frame
-
-        return pricer
-
-    two_deep = build_two_closures()
-    _a_leak_this_guard_does_not_see(two_deep, note="a frame two closures away")
-    # ...and the frame IS sitting in a cell, one hop past the cells that get
-    # read: this is a depth limit, not an inability to see closures at all.
-    helper_cell = two_deep.__closure__[0].cell_contents
-    assert isinstance(helper_cell.__closure__[0].cell_contents, pd.DataFrame)
 
     class Bundle:
         def __init__(self):
@@ -2695,3 +2737,41 @@ def test_a_stale_record_is_refused_rather_than_rendered_with_holes(tmp_path, cap
     assert code != 0
     assert "Re-run the backtest" in "".join(capsys.readouterr())
     assert not lab.report_path.exists()
+
+
+def test_the_optional_stamp_is_forgiven_when_absent_and_never_when_written():
+    """The asymmetry between the required stamp and the optional ones.
+
+    `priced_through` is required of every bet; `player_priced_through` is not,
+    and a bet priced by a model that never read the player frame carries NaN
+    there. Forgiving that absence is correct. Forgiving the literal text
+    `"nan"` is not: it sorts above every ISO date, so an exemption for it hides
+    precisely the rows this guard exists to catch.
+
+    Measured while writing this: under pandas 2, `astype(str)` leaves a float
+    NaN as NaN and every comparison against NaN is False, so a genuinely absent
+    stamp never reached the comparison on any version of this guard. The
+    exemption that was removed only ever applied to written text.
+    """
+    day = "2024-01-05"
+    base = {"slate_date": [day], "priced_through": ["2024-01-04"]}
+
+    def run(extra):
+        frame = pd.DataFrame({**base, **extra})
+        PB.assert_walk_forward(frame, day_column="slate_date")
+
+    # Absent optional stamp: forgiven.
+    run({"player_priced_through": [float("nan")]})
+    run({"player_priced_through": [""]})
+
+    # Written optional stamp reaching the day: refused.
+    for value in ("2024-01-06", day, "nan"):
+        with pytest.raises(PB.WalkForwardLeak):
+            run({"player_priced_through": [value]})
+
+    # The required column keeps origin/main's rule exactly.
+    with pytest.raises(PB.WalkForwardLeak):
+        PB.assert_walk_forward(
+            pd.DataFrame({"slate_date": [day], "priced_through": ["2024-01-06"]}),
+            day_column="slate_date",
+        )

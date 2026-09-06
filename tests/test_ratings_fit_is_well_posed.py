@@ -265,6 +265,53 @@ def test_the_schedule_caches_change_no_number(tmp_path):
             )
 
 
+def test_a_later_days_prior_is_never_handed_to_an_earlier_day(tmp_path):
+    """The season prior is memoised on `(season, month)` and built day-cut.
+
+    Those two facts do not sit together. `prepare_prior` is handed
+    `prepare(history)`, and `history` has already been cut to the day being
+    priced — so a prior built while pricing the 20th of a month has been shown
+    rows the 12th of that month may not see, and the key cannot tell the two
+    apart. Two callers in one process pricing days out of order is not
+    hypothetical: `models/slate.py` makes the card and the backtest reach the
+    same seam, and a card rehearsing a past day runs after a backtest that
+    priced a later one.
+
+    It is **latent** while `matchups_for` is called without `player_games`,
+    because the roster evidence is then empty and the prior genuinely does not
+    move within a season — which is why this asserts on what was built rather
+    than on a number that would not yet differ. A stamp cannot see this: the
+    stamp describes the frame the caller cut, not the object the cache handed
+    back.
+    """
+    world, frame = _november_regime_case(tmp_path)
+    season = world["seasons"][-1]
+    days = _slate_days(world, season)
+    within_a_month = [d for d in days if d[:7] == days[-1][:7]]
+    assert len(within_a_month) >= 2, "no two priced days share a month here"
+    earlier, later = within_a_month[0], within_a_month[-1]
+
+    R.clear_caches()
+    for day in (later, earlier):  # out of order, deliberately
+        prices = _slate(season, day, world["raw"])
+        assert not prices.empty, day
+        R.matchups_for(
+            day=day,
+            history=frame[frame["slate_date"] < day],
+            prices=prices,
+            raw_dir=world["raw"],
+        )
+        cached = R._SEASON_CACHE[(season, day[:7])]
+        assert isinstance(cached, tuple) and len(cached) == 2, (
+            "the cache stores the prior alone, so nothing records which day's "
+            "cut it was built from and an out-of-order caller cannot be caught"
+        )
+        assert cached[1] < day, (
+            f"the prior handed to {day} was built through {cached[1]}, which is "
+            "not strictly earlier. It was memoised while pricing a later day."
+        )
+
+
 def test_clear_caches_really_empties_every_cache():
     """A cache added to the module and not to `clear_caches` is a cache a test
     cannot reset, and the next test in the file inherits its contents."""

@@ -6,14 +6,26 @@ ledger entry itself distinguishes the two afterwards — the entry looks
 identical either way. What distinguishes them is that on the commit which
 registered these, **there was no player model to measure anything with**.
 
-That started as one assertion over five absent files. Three of them have since
-arrived — the frozen constants, their fitter and their loader — so the claim is
-now carried by two tests instead of one: no model exists (`player_rates.py` and
-`player_distributions.py`, the files that could actually price a prop, are
-still absent), and nothing about the constants could have been tuned on what
-they will be graded against (fitted on 2019-2022, validated on 2023, floor at
-2024, which is the only season the family names). Neither is a promise, and
-neither can be satisfied by deleting a line.
+That started as one assertion over five absent files. **Four of them have now
+arrived** — the frozen constants, their fitter, their loader, and as of this
+commit the estimator, `models/player_rates.py`. So the ordering is no longer
+carried by the tree being empty, and this file says what it is carried by
+instead.
+
+What still holds without argument: `models/player_distributions.py` does not
+exist, and **nothing in this repository can turn a projection into a
+probability without it**. `player_rates.py` produces a mean, a 46-long minutes
+lattice and a refusal census; it produces no `P(over)`, no de-vigged
+comparison and no log loss, so not one of the 33 hypotheses below can have been
+looked at. That is the same claim the empty tree used to make, narrowed to the
+file that actually stands between a projection and a graded number.
+
+What the rest rests on, now that the inputs exist, is
+`test_the_directions_could_not_have_been_written_after_the_numbers`: every
+entry is `pending` with an empty realised direction, the ledger is append-only
+under its own CI job, and the constants were fitted on 2019-2022 and validated
+on 2023 with a price-season floor at 2024 that their loader refuses to cross.
+None of those is a promise and none can be satisfied by deleting a line.
 
 The rest pins the shape the design named, so a later session cannot quietly
 grow or shrink the family:
@@ -32,6 +44,8 @@ grow or shrink the family:
 
 from __future__ import annotations
 
+import ast
+import dataclasses
 import importlib.util
 import json
 from pathlib import Path
@@ -66,37 +80,164 @@ def _player_entries(payload: dict) -> list[dict]:
     return [h for h in payload["hypotheses"] if h["search"] in (DEVIG, CONTROL)]
 
 
-#: The files that constitute the MODEL — the thing the 33 hypotheses make a
-#: prediction about. None exists yet, and while that is true the ordering claim
-#: needs no argument at all.
+#: The two directories the sentence "nothing in this tree produces a player
+#: probability" is a sentence about. Both, because a P(over) written in a
+#: script grades a hypothesis exactly as well as one written in the package,
+#: and the pre-registration is a claim about the whole commit.
+SEARCHED_TREES = ("src/cbb_betting_lab", "scripts")
+
+#: What a player probability would be CALLED. Six tokens rather than one,
+#: because the thing being looked for is not only the word "probability": a
+#: P(over) is a de-vigged comparison against a fair price scored by log loss,
+#: and every one of those words is a plausible name for the function that
+#: produces it. Measured against this tree on 2026-09-06, the six together
+#: match exactly two names, both in `models/player_rates.py`; `prob` is
+#: deliberately NOT among them, because it matches `problem` and `probe` and a
+#: token that fires on unrelated code trains a reader to ignore this test.
+PROBABILITY_TOKENS = (
+    "probab", "p_over", "log_loss", "devig", "de_vig", "fair_price",
+)
+
+#: The only player probability name allowed to exist. `dnp_probability` is a
+#: stored diagnostic that is never multiplied into a price, and the assertion
+#: on `player_rates`' namespace below says the same thing about the same name
+#: from the other direction.
+ALLOWED = frozenset({"dnp_probability", "_dnp_probability"})
+
+
+def _bound_names(source: str) -> set[str]:
+    """Every name a module binds, at any depth, however it binds it.
+
+    Functions, classes, plain and annotated assignments, attribute stores and
+    arguments. Depth matters: a P(over) written as a method on a class, or as a
+    closure inside a report builder, is a player probability in this tree just
+    as much as a module-level `def` is, and a scan that only read the top level
+    would be a scan a later session could step around without meaning to.
+    """
+    names: set[str] = set()
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            names.add(node.name)
+        elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            names.add(node.id)
+        elif isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Store):
+            names.add(node.attr)
+        elif isinstance(node, ast.arg):
+            names.add(node.arg)
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            names.add(node.target.id)
+    return names
+
+
+def _is_a_player_probability_name(name: str, *, in_a_player_file: bool) -> bool:
+    """Does `name` name a player probability, judged by the name alone?
+
+    Two halves, and both are needed. A probability token alone would fire on
+    `distributions.scoring_probability` and `card_pricing.probability`, which
+    are team-model prices this family says nothing about. The player half is
+    carried either by the name itself or by the file it is written in — a
+    module called `player_something.py` is a player module and everything in it
+    is player-shaped, which is how `models/player_probability.py` would be
+    caught the moment somebody writes it.
+    """
+    lowered = name.lower()
+    if not any(token in lowered for token in PROBABILITY_TOKENS):
+        return False
+    return in_a_player_file or "player" in lowered
+
+
+def _player_probability_names() -> dict[str, list[str]]:
+    """`{path: names}` for every player probability name in the searched trees.
+
+    Empty except for the two allowed names, or the ordering evidence below is
+    covering less than it says.
+    """
+    found: dict[str, list[str]] = {}
+    for tree in SEARCHED_TREES:
+        for path in sorted((_REPO / tree).rglob("*.py")):
+            if "__pycache__" in path.parts:
+                continue
+            hits = sorted(
+                name
+                for name in _bound_names(path.read_text(encoding="utf-8"))
+                if _is_a_player_probability_name(
+                    name, in_a_player_file="player" in path.name.lower()
+                )
+            )
+            if hits:
+                found[str(path.relative_to(_REPO))] = hits
+    return found
+
+
+#: What is left of the MODEL — the thing the 33 hypotheses make a prediction
+#: about. `player_rates.py` moved out of this list in the commit that wrote it;
+#: `player_distributions.py` is what remains, and while it is absent no
+#: projection in this repository can become a probability, so no hypothesis
+#: below can have been looked at.
 MODEL_FILES = (
-    "src/cbb_betting_lab/models/player_rates.py",
     "src/cbb_betting_lab/models/player_distributions.py",
 )
 
-#: Its INPUTS, which do now exist. Named rather than merely allowed, so a third
+#: Its INPUTS, which do now exist. Named rather than merely allowed, so a fifth
 #: file appearing under this heading is a red test and a decision somebody
-#: makes on purpose.
+#: makes on purpose. `player_rates.py` is here rather than above because it
+#: forms projections and refusals and cannot score anything: it has no line, no
+#: price and no outcome to compare against, and the ten markets it is
+#: registered for are named in `MARKET_COMPONENTS` before any of them has been
+#: measured.
 INPUT_FILES = (
     "src/cbb_betting_lab/models/player_shapes.py",
+    "src/cbb_betting_lab/models/player_rates.py",
     "scripts/fit_player_model.py",
     "data/processed/cbb_player_shapes.json",
 )
 
 
-def test_the_model_these_hypotheses_predict_about_still_does_not_exist() -> None:
-    """The registration precedes the thing it registers.
+def test_nothing_in_this_tree_can_turn_a_projection_into_a_probability() -> None:
+    """The registration precedes the thing it registers, narrowed twice.
 
     This test used to assert that all five files were absent, and it said in
     its own docstring that the commit which builds the model is expected to
-    change it. That commit has now landed for three of them: the frozen
-    constants, their fitter and the loader are on disk. So the assertion is
-    split rather than deleted, because deleting it is exactly what it exists to
-    make difficult.
+    change it. That commit has now landed for four of them: the frozen
+    constants, their fitter, their loader and the estimator are on disk. The
+    assertion is narrowed rather than deleted, because deleting it is exactly
+    what it exists to make difficult.
 
-    What survives unchanged: no player model exists. `player_rates.py` and
-    `player_distributions.py` are the model, and nothing here can price a prop
-    without them. While that holds, the ordering is a fact about the tree.
+    What it now says: `player_distributions.py` does not exist. Without it
+    there is no `P(over)`, no de-vigged fair price to compare one against and
+    no log loss, and every one of the 33 hypotheses below is a claim about a
+    mean log loss. So no number has met them, and could not have.
+
+    The second narrowing is a check on the first, because "the file is absent"
+    is a claim about a name and a name is the cheapest thing in a repository to
+    change. So this now READS THE TREE, which until 2026-09-06 it only said it
+    did: the docstring claimed "nothing anywhere in `src/` or `scripts/`
+    produces a player probability" while the body inspected two things, the
+    `player_rates` module namespace and the fields of `PlayerProjection`, and
+    walked nothing. The docstring asserted the broad property and the code
+    asserted the narrow one, which is the house rule exactly inverted.
+
+    What the body does now: every `.py` under `src/cbb_betting_lab/` and
+    `scripts/` is parsed and every name it binds at any depth is collected —
+    function, class, assignment, annotated assignment, attribute store,
+    argument. A name is a player probability when it carries one of
+    `PROBABILITY_TOKENS` **and** is either written in a file whose own name
+    says `player` or says `player` itself. Measured on this commit, the whole
+    tree holds exactly two such names, `dnp_probability` and `_dnp_probability`
+    in `models/player_rates.py`, and both are the stored did-not-play
+    diagnostic that is never multiplied into a price.
+
+    It is not vacuous. It is the assertion that goes red when a later session
+    writes the de-vig and the P(over) into `models/player_probability.py`, or
+    into `reports/player_card.py`, or as a `player_over_probability` in any
+    file at all — every route in this finding's failure scenario, none of which
+    touches `MODEL_FILES`, `player_rates`' namespace or `PlayerProjection`.
+
+    **The gap this scan still has, asserted open at the end of the body rather
+    than described here**: it judges names, so a player probability written
+    under a name that mentions neither `player` nor any of the six tokens is
+    invisible to it. Widening a file-absence claim from one path to the whole
+    tree is not the same as reading the code, and this does the first.
     """
     for relative in MODEL_FILES:
         assert not (_REPO / relative).exists(), (
@@ -112,6 +253,47 @@ def test_the_model_these_hypotheses_predict_about_still_does_not_exist() -> None
             "not on disk. Either it was removed, in which case take it off this "
             "list, or this list is wrong."
         )
+
+    from cbb_betting_lab.models import player_rates
+
+    produced = {
+        name.lstrip("_")
+        for name in dir(player_rates)
+        if "probab" in name.lower()
+    }
+    assert produced == {"dnp_probability"}, (
+        f"the estimator now exposes {sorted(produced)}. `dnp_probability` is a "
+        "stored diagnostic that is never multiplied into a price; anything else "
+        "with a probability in its name is a price, and this family was "
+        "registered before one existed."
+    )
+    fields = {
+        field.name for field in dataclasses.fields(player_rates.PlayerProjection)
+    }
+    assert "model_probability" not in fields and "push_mass" not in fields, (
+        "a projection now carries a probability, so the thing the 33 "
+        "hypotheses predict about exists. Say what the ordering rests on."
+    )
+
+    # The tree, not just the one module: this is the check the docstring above
+    # used to claim and the body used not to perform.
+    assert _player_probability_names() == {
+        "src/cbb_betting_lab/models/player_rates.py": ["_dnp_probability", "dnp_probability"]
+    }, (
+        "a player probability is now named somewhere in `src/` or `scripts/`. "
+        "If it is the engine, the 33 hypotheses can have been looked at and "
+        "the ordering has to be re-stated from something other than the tree. "
+        "If it is a diagnostic that never reaches a price, add it to `ALLOWED` "
+        "and say in one line why it is not a price."
+    )
+
+    # The gap in that scan, held open. Red here means somebody taught the scan
+    # to read what a function computes rather than what it is called, which is
+    # strictly better and makes the paragraph above wrong: rewrite it.
+    assert not _is_a_player_probability_name("_over", in_a_player_file=False), (
+        "the scan now catches a name carrying neither `player` nor a "
+        "probability token, so it is no longer a check on names alone"
+    )
 
 
 def test_the_directions_could_not_have_been_written_after_the_numbers() -> None:

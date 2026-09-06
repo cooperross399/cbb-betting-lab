@@ -401,6 +401,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"decision={GC.Decision.REFUSED.value}")
         return 2
     print(opinions.summary_line())
+    # The player census is printed beside the team one, every run, and it is
+    # separate on purpose: the two are decoupled, and a prop on a game whose
+    # spread the model refuses still prices. Design 13's fifth failure mode is
+    # name resolution drifting by tier, which is only catchable if this line is
+    # in front of somebody nightly rather than in a JSON file.
+    print(opinions.player_summary_line())
 
     outputs = Path(args.output_dir)
     state = GC.state_path(competition, outputs)
@@ -412,7 +418,10 @@ def main(argv: list[str] | None = None) -> int:
             card_slot=slot.name,
             archive_dir=archive,
             policy=policy,
-            matchups=opinions.matchups,
+            # The whole container, not just the team half: `opinions_for` reads
+            # the player half off it and a bare dict would make every prop read
+            # "the model was never asked" for the wrong reason.
+            matchups=opinions.slate,
             placement=placement,
             rehearsal=bool(args.rehearsal),
             previous_fingerprint=_read_previous_fingerprint(

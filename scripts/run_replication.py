@@ -229,6 +229,13 @@ def score_season(
         price_day=backtest.make_price_day(
             model, competition=competition, accounting=accounting
         ),
+        # MANDATORY, not optional. `make_price_day`'s pricer declares
+        # `player_history`, and `_refuse_undeclared_frames` refuses a pricer
+        # that reaches past what the caller cut — so a replication run without
+        # this raises `BacktestError` on the first call and scores nothing.
+        # The replication prices through the discovery run's pricer, which is
+        # the point of it, so it hands in the same frame under the same name.
+        frames={"player_history": tables[backtest.PLAYER_TABLE]},
     )
     PB.assert_walk_forward(priced)
     priced = PB.add_edge(priced)

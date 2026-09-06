@@ -148,7 +148,7 @@ from cbb_betting_lab.gates import (
     tip_state,
 )
 from cbb_betting_lab.markets import FUTURES, MARKETS_BY_KEY, PLAYER, per_event_provider_keys
-from cbb_betting_lab.models import distributions
+from cbb_betting_lab.models import distributions, slate
 from cbb_betting_lab.population import VenueState
 from cbb_betting_lab.providers import staging, team_names
 from cbb_betting_lab.providers.odds_api import (
@@ -342,15 +342,17 @@ class Matchup(Protocol):
     """The three numbers a game is priced from, and what they are made of.
 
     This is `models/__init__.py`'s described seam, read from the consuming
-    side. `models/ratings.py` does not exist yet, so this is a **Protocol**
-    rather than a dataclass: declaring the shape costs nothing at runtime,
+    side. It stays a **Protocol** now that `models/ratings.py` exists, and for
+    the reason it was one before: declaring the shape costs nothing at runtime,
     keeps the type hints honest, and cannot become a second definition that
-    drifts from the real `ratings.Matchup` the day it lands. A duplicated
-    dataclass is the `_bonferroni_factor` defect in miniature.
+    drifts from the real `ratings.Matchup`. A duplicated dataclass is the
+    `_bonferroni_factor` defect in miniature. The card reads matchups through
+    `_matchup_field`, so a test double carrying these names is as good a
+    matchup here as the shipped dataclass — which is what keeps the doubles in
+    `tests/` from having to import the model.
 
-    Until that module exists, no game carries a matchup, every wager is
-    `NO_OPINION`, and the card says so in those words rather than pretending
-    the model declined.
+    A game with no entry is `NO_OPINION`, and the card says so in those words
+    rather than pretending the model declined.
     """
 
     #: Expected points per possession, each side.
@@ -945,9 +947,57 @@ def _read_market(
     )
 
 
+def _player_decline(model: "slate.SlateModel", wager: Wager) -> str:
+    """Why this prop carries no probability, in the bucket it actually belongs to.
+
+    Four states, counted separately and never summed, and the separation is the
+    deliverable of the seam this reads:
+
+    * **never asked** — the model holds no projection for this event at all.
+      `no opinion`, and the slate's own sentence says which absence it is: a
+      night with no player evidence, an estimator that is not written, or a
+      day in no season.
+    * **the name** — R1/R1a. The book's spelling did not resolve to exactly one
+      athlete on a **prior** roster. No athlete id exists and none is invented;
+      the refusal is filed under the spelling as the book wrote it.
+    * **the athlete** — R2 to R5, printed in the projection's own words.
+    * **no engine** — the athlete is projected and priceable, and there is
+      still no probability, because `models/player_distributions.py` is not
+      written. This is the one bucket that is a statement about the lab rather
+      than about the player, and it goes away in the commit that adds the
+      engine.
+
+    None of these is a pass, an avoid or a no-value call, and the missing
+    entry is never counted as a refusal: `ratings.matchups_for`'s docstring
+    draws the same line for the team half, in the same words.
+    """
+    if not model.was_asked_about_players(wager.event_id):
+        reason = model.player_absence_reason or slate.NO_PLAYER_SLATE
+        return (
+            "the model was never asked about this event's athletes, so this "
+            f"prop carries no opinion: {reason}"
+        )
+    refusal = model.name_refusal(wager.event_id, wager.player)
+    if refusal:
+        return refusal
+    projection = model.projection_for(wager.event_id, wager.player)
+    if projection is None:
+        return (
+            "the model projects athletes on this event and holds no projection "
+            "for this subject, so it has no opinion on him. An absent "
+            "projection is not a probability of zero"
+        )
+    if not bool(getattr(projection, "priceable", False)):
+        return clean_text(getattr(projection, "unpriceable_reason", "")) or (
+            "the player model refuses this subject and recorded no reason, "
+            "which is itself a fault: a refusal with no sentence is a silence"
+        )
+    return slate.NO_DISTRIBUTION_ENGINE
+
+
 def opinions_for(
     wagers: Iterable[Wager],
-    matchups: Mapping[str, object] | None,
+    matchups: "Mapping[str, object] | slate.SlateModel | None",
     *,
     day: str,
 ) -> tuple[dict[tuple, float], OpinionCensus]:
@@ -964,10 +1014,9 @@ def opinions_for(
 
     Four things stop a game being priced at all, before any market is read:
 
-    1. **No matchup.** No rating exists for this game. That is the state of this
-       lab today — `models/ratings.py` is not written — so every wager reads
-       `no opinion`, which is not a probability of zero and is not the model
-       declining to find value.
+    1. **No matchup.** No rating exists for this game, so the model was never
+       asked about it. That reads `no opinion`, which is not a probability of
+       zero and is not the model declining to find value.
     2. **The ratings module refuses.** The schedule graph has not connected
        these two teams by anything but the prior, so any adjusted rating is
        identified by the prior alone. An unpriced game is an honest output; a
@@ -978,22 +1027,28 @@ def opinions_for(
        were in a participant's own city. Unknown quarantines.
     4. **A November price with no recorded prior weight.** See
        :data:`PRIOR_REGIME_MONTHS`.
+
+    **The player half is read from the same object and answers separately.**
+    `matchups` is coerced to a :class:`models.slate.SlateModel` — a bare
+    mapping, which is what `ratings.matchups_for` and every test double return,
+    becomes one with an empty player half — and the two halves are then looked
+    up independently. A prop on a game whose spread this function refuses at
+    step 2 still prices, which is the property `models/slate.py` exists for and
+    which nesting the projections inside `Matchup` made unrepresentable. The
+    player branch therefore has to stay **above** the matchup lookup below;
+    moving it under makes that state unreachable again.
     """
     probabilities: dict[tuple, float] = {}
     census = OpinionCensus()
     joints: dict[tuple[str, str], distributions.GameDistribution | str] = {}
     in_prior_regime = _month_of(day) in PRIOR_REGIME_MONTHS
-    matchups = matchups or {}
+    model = slate.SlateModel.coerce(matchups, day=day)
 
     for wager in wagers:
         census.wagers += 1
         market = MARKETS_BY_KEY.get(wager.market)
         if market is not None and market.family == PLAYER:
-            census.decline(
-                "this lab has no player model, so no player prop carries a "
-                "modelled opinion. The prop is priced by the board, frozen and "
-                "settled; it is **not** a pass, an avoid or a no-value call"
-            )
+            census.decline(_player_decline(model, wager))
             continue
         if market is not None and market.family == FUTURES:
             census.decline(
@@ -1002,7 +1057,7 @@ def opinions_for(
             )
             continue
 
-        matchup = matchups.get(wager.event_id)
+        matchup = model.matchup_for(wager.event_id)
         if matchup is None:
             census.decline(
                 "no rating exists for this game — `models/ratings.py` is not "
@@ -1201,7 +1256,7 @@ def run_card(
     card_slot: str,
     archive_dir: Path | str,
     policy: StagingProviderPolicy | None = None,
-    matchups: Mapping[str, object] | None = None,
+    matchups: "Mapping[str, object] | slate.SlateModel | None" = None,
     placement: Placement | None = None,
     availability_for: Callable[[Wager], Availability] | None = None,
     now: Callable[[], datetime] | None = None,

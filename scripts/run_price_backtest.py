@@ -159,6 +159,7 @@ from cbb_betting_lab.providers.player_names import build_index as build_player_i
 from cbb_betting_lab.forward_evidence import _ROW_FOR_SELECTION as ROW_FOR_SELECTION
 from cbb_betting_lab.forward_evidence import _SEGMENT_SETTLED as SEGMENT_SETTLED
 from cbb_betting_lab.markets import MARKETS_BY_KEY, PLAYER
+from cbb_betting_lab.models import slate
 from cbb_betting_lab.providers import historical as H
 from cbb_betting_lab.reports import calibration_on_selected as CAL
 from cbb_betting_lab.reports import card_pricing, gameday_card
@@ -552,15 +553,27 @@ def make_price_day(
     """
     key_for = card_pricing.default_key_for(competition)
 
-    def price_day(*, day: str, history: pd.DataFrame, prices: pd.DataFrame):
+    def price_day(
+        *,
+        day: str,
+        history: pd.DataFrame,
+        prices: pd.DataFrame,
+        player_history: pd.DataFrame,
+    ):
+        # `player_history` is named for the `frames=` key, exactly. A parameter
+        # that is neither one of `PRICER_ARGUMENTS` nor a frame the caller cut
+        # is refused by `_refuse_undeclared_frames`, default or no default —
+        # so this name is the declaration that the caller cut this frame, and
+        # there is no other way to say it.
         frame = prices.copy()
-        matchups = call_model(
+        answered = call_model(
             model,
             "the price backtest's per-day pricer (make_price_day)",
             day=day,
             history=history,
             prices=frame,
             competition=competition,
+            player_history=player_history,
         )
         row_reasons: list[str] = []
         wagers, unparseable, reasons = card_pricing.build_wagers(
@@ -577,8 +590,19 @@ def make_price_day(
             row_reasons, index=frame.index, dtype="object"
         )
 
+        # Whatever the model answered, in one container. A bare mapping — which
+        # is what `ratings.matchups_for` and every test double return — becomes
+        # a slate with an empty player half and a sentence saying which absence
+        # that is, rather than a silence that reads like a model with no
+        # opinions.
+        model_slate = slate.SlateModel.coerce(
+            answered,
+            day=day,
+            team_priced_through=PB.latest_day(history),
+            player_priced_through="",
+        )
         probabilities, census = gameday_card.opinions_for(
-            wagers, matchups or {}, day=day
+            wagers, model_slate, day=day
         )
         accounting.decline(census.declined)
 
@@ -614,6 +638,23 @@ def make_price_day(
             ),
             errors="coerce",
         )
+        # THE PLAYER STAMP IS WRITTEN BY THE PRICER, not by the harness, and
+        # that is the whole of its value. A stamp the harness computes is a
+        # statement about what the caller cut; it cannot detect a pricer that
+        # read a different frame, which is exactly the defect that existed
+        # here. This column is the model's own declaration of what it read of
+        # the player table — empty when it read none — and
+        # `assert_walk_forward` checks it alongside `priced_through`.
+        #
+        # `priced_through` is the max of the two rather than a third column.
+        # Under `_stamp_series`'s floor-never-overwrite rule a separate
+        # `team_priced_through` would be a second name for a number already on
+        # the row, and one word apart with different contents is the mistake
+        # the design warns about twice.
+        team_through = PB.latest_day(history)
+        player_through = str(model_slate.player_priced_through)
+        frame["player_priced_through"] = player_through
+        frame["priced_through"] = max(team_through, player_through)
         return frame
 
     return price_day
@@ -891,7 +932,16 @@ def load_store(
 
 
 def load_tables(processed_dir: Path, competition: Competition, *, players: bool):
-    """The results tables settlement grades against. A missing one is refused."""
+    """The results tables settlement grades against. A missing one is refused.
+
+    The player table is loaded when the board holds a player market and stood
+    in for when it does not — and **the stand-in carries the seam's declared
+    columns**, not nothing. A bare `pd.DataFrame()` has no `slate_date`, and
+    `walk_forward` raises on a frame it cannot cut rather than handing the
+    pricer an empty one every night. That refusal is correct and this must not
+    walk into it: a board with no props is a board with no props, not a broken
+    table, and the two must not arrive looking the same.
+    """
     directory = Path(processed_dir)
     stems = list(REQUIRED_TABLES) + ([PLAYER_TABLE] if players else [])
     tables: dict[str, pd.DataFrame] = {}
@@ -905,7 +955,17 @@ def load_tables(processed_dir: Path, competition: Competition, *, players: bool)
                 "measurement built on that still prints an interval."
             )
         tables[stem] = pd.read_csv(path, low_memory=False)
-    tables.setdefault(PLAYER_TABLE, pd.DataFrame())
+    if PLAYER_TABLE not in tables:
+        print(
+            "The board carries no player market, so "
+            f"`{competition.output_name(PLAYER_TABLE, '.csv')}` was not read. "
+            "The player seam is handed an empty frame with the columns it "
+            "declares, and every prop census on this run is a census of zero "
+            "quotes rather than of zero opinions."
+        )
+        tables[PLAYER_TABLE] = pd.DataFrame(
+            columns=list(slate.REQUIRED_PLAYER_COLUMNS)
+        )
     return tables
 
 
@@ -1304,6 +1364,15 @@ def main(argv: list[str] | None = None) -> int:
             price_day=make_price_day(
                 model, competition=competition, accounting=accounting
             ),
+            # The player table goes in through the door that cuts it. Every
+            # other route a pricer could reach it by — a dict it closed over,
+            # an attribute, a module-level memo, its own `read_csv` off an
+            # absolute `PROCESSED_DIR` — is uncut, unstamped, and is written
+            # down as an open gap in this guard's own ledger. No
+            # `frame_day_columns`: the table's day column is `slate_date`,
+            # which is `walk_forward`'s default, and a second place naming it
+            # is a second place it can be named wrongly.
+            frames={"player_history": tables[PLAYER_TABLE]},
         )
     except ModelNotWired as exc:
         # `resolve_model` above catches the model that is not THERE; this

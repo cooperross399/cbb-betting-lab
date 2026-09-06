@@ -82,10 +82,13 @@ underneath it, whatever its signature said. It is the only guard here whose
 evidence is the output rather than a declaration.
 
 **It is a list of places, not a sweep of the object graph, and the difference
-is written down rather than glossed.** A frame one container, one attribute or
-one closure past those places — `box[0]`, `self.tables["players"]`, an
-`lru_cache` — is not reached; nor is a `Series` carved out of a frame, a file
-opened by an absolute path, or a dated table that is not a CSV. Walking
+is written down rather than glossed.** A frame one container or one attribute
+past those places — `box[0]`, `self.tables["players"]`, an `lru_cache` — is not
+reached; nor is a `Series` carved out of a frame, a file opened by an absolute
+path, or a dated table that is not a CSV. **One hop is followed, because it is
+code and not a container**: a callable held in a closure cell, which is how the
+shipped pricer holds the model, and which brings its own module's globals with
+it. Walking
 arbitrary objects to find frames has no bound, and a guard that tries to be
 total and is not is worse than one that says what it covers, so
 `test_the_gaps_this_output_guard_still_has_are_the_ones_written_down` asserts
@@ -919,19 +922,73 @@ def assert_walk_forward(
 
     Checked on the stamp rather than trusted from the code path, because the
     code path is exactly what was wrong in the lab this guard is ported from.
+
+    **Every column ending in `_priced_through` is checked, not only
+    `priced_through`.** A pricer with two inputs writes two stamps — the
+    player pricer writes `player_priced_through` off the projection itself —
+    and a guard that read one of them would certify a run on the evidence of
+    half its inputs. That is not hypothetical: it is the defect this whole
+    seam was built against, and until this check existed the second column was
+    decorative. A blank stays exempt, because a blank means *this frame was
+    not read*, which is a statement about a table rather than about a day; a
+    pricer that read a private frame and reported nothing is caught by
+    :func:`assert_priced_from_the_past`, not here.
+
+    **The two kinds of column are NOT held to the same rule, and the asymmetry
+    is written down rather than left to be inferred.** `priced_through` is
+    required of every bet and is held to exactly the rule this function applied
+    before a second column existed. A `<name>_priced_through` column is
+    OPTIONAL: a bet priced by a model that never read the player frame carries
+    no player stamp, and pandas hands that absence over as NaN.
+
+    The first version of this check forgave the STRING `"nan"` on every column
+    at once. **Measured, that is a narrower mistake than it looks and a real
+    one either way.** Under pandas 2, `Series.astype(str)` leaves a float NaN
+    as NaN rather than turning it into the text `"nan"`, and every comparison
+    against NaN is False — so a genuinely absent stamp never triggered this
+    guard on any version of it, including origin/main's. What `!= "nan"`
+    actually exempted was a stamp whose literal text is `"nan"`, which is not
+    an absent stamp at all: it is a value somebody wrote, and it sorts above
+    every ISO date, so exempting it hid exactly the rows this guard exists to
+    catch.
+
+    So absence is now read off the value with :meth:`pandas.Series.isna`,
+    before anything is stringified, and forgiven only on the optional columns.
+    A literal `"nan"` is compared like any other text. This is identical to
+    origin/main on `priced_through` and strictly stricter on the columns main
+    never looked at.
+
+    `tests/test_run_price_backtest.py` pins all three: a future stamp raises on
+    either column, an absent optional stamp does not, and the literal text
+    `"nan"` raises.
     """
-    if bets.empty or "priced_through" not in bets.columns:
+    if bets.empty:
         return
-    through = bets["priced_through"].astype(str)
+    columns = [
+        column
+        for column in bets.columns
+        if column == "priced_through" or str(column).endswith("_priced_through")
+    ]
+    if not columns:
+        return
     day = bets[day_column].astype(str)
-    leaked = bets[(through != "") & (through >= day)]
-    if not leaked.empty:
-        raise WalkForwardLeak(
-            f"{len(leaked):,} bet(s) were priced through a day at or after the "
-            "day they bet on. A model that has seen the game it is pricing "
-            "does not have an edge, it has the answer — and the football lab's "
-            "compound markets looked good for exactly this reason."
-        )
+    for column in columns:
+        raw = bets[column]
+        through = raw.astype(str)
+        # A Series, never a bare bool: `~False` is the integer -1, and a mask
+        # built from it silently stops masking.
+        if column == "priced_through":
+            forgiven = pd.Series(False, index=bets.index)
+        else:
+            forgiven = raw.isna()
+        leaked = bets[(~forgiven) & (through != "") & (through >= day)]
+        if not leaked.empty:
+            raise WalkForwardLeak(
+                f"{len(leaked):,} bet(s) carry a `{column}` at or after the "
+                "day they bet on. A model that has seen the game it is pricing "
+                "does not have an edge, it has the answer — and the football "
+                "lab's compound markets looked good for exactly this reason."
+            )
 
 
 # --------------------------------------------------------------------------
@@ -1004,18 +1061,44 @@ def _swap_to_the_past(
       what a function pricer keeps in its own ``__dict__`` and globals;
 
     and then that same list again on ``target.__wrapped__``, on
-    ``target.__self__`` and on a partial's ``func``.
+    ``target.__self__``, on a partial's ``func``, and on **any callable held in
+    a cell of** ``target.__closure__``.
 
-    **One level of indirection is one level too far.** The value has to *be*
-    the frame. A frame inside a list, a dict or another object — ``box[0]``,
-    ``self.tables["players"]``, ``self.bundle.frame`` — is not rebound, because
-    nothing here descends into a container or into a plain attribute holder.
-    Neither is a frame reached through a second closure (a pricer closing over
-    a helper that closes over the frame), nor one held in a C-level cache such
-    as :func:`functools.lru_cache`'s, nor a ``Series`` or numpy array carved
-    out of a frame — :func:`_past_only` cuts DataFrames and returns `None` for
-    everything else, and `None` means "left exactly as it was". Every one of
-    those leaks and passes :func:`assert_priced_from_the_past`;
+    **Why a captured callable is followed, and why one in ``__globals__`` is
+    not.** The shipped wiring is ``make_price_day`` in
+    `scripts/run_price_backtest.py`, which closes the pricer over the resolved
+    model — so the model always lives in a DIFFERENT module from the pricer,
+    and the ``__globals__`` walked above are the pricer's, never the model's.
+    Measured on 2026-09-06 with this arm removed: a pricer of exactly that
+    shape, whose model reads a bare DataFrame out of its own module's globals,
+    answered 0.43 where the two allowed days give 0.42, and this guard returned
+    cleanly; the identical frame in the PRICER's module was refused, which is
+    the control proving the rest of the guard works. A captured callable is not
+    a container holding a frame — it is the other half of the pricer, and the
+    places it keeps its frames are these same named places — so it is followed,
+    and the arm is bounded by how deeply closures nest rather than by the size
+    of the object graph.
+
+    A callable held anywhere else is **not** followed. Not one in
+    ``__globals__``: that names every function a module defines or imports, and
+    following it transitively is the import graph. And not one on ``self``, in
+    a default, or in a partial's keywords — a line drawn at the shape the lab
+    actually ships rather than at a principle, which is why it is held open as
+    a named gap below instead of being left for a reader to infer.
+
+    **One level of indirection is one level too far, unless the hop is
+    code.** The value has to *be* the frame. A frame inside a list, a dict or
+    another object — ``box[0]``, ``self.tables["players"]``,
+    ``self.bundle.frame`` — is not rebound, because nothing here descends into
+    a container or into a plain attribute holder. Neither is one held in a
+    C-level cache such as :func:`functools.lru_cache`'s, nor a ``Series`` or
+    numpy array carved out of a frame — :func:`_past_only` cuts DataFrames and
+    returns `None` for everything else, and `None` means "left exactly as it
+    was". The one exception is the hop named above: because a captured callable
+    is followed, a pricer closing over a helper that closes over the frame IS
+    reached, and so is a model reading its own module's globals. A callable
+    reached any other way is not followed and neither is what it holds. Every
+    one of those leaks and passes :func:`assert_priced_from_the_past`;
     `test_the_gaps_this_output_guard_still_has_are_the_ones_written_down` holds
     each of them open, so this list cannot drift away from the code.
 
@@ -1041,12 +1124,21 @@ def _swap_to_the_past(
             return
         undo.append(functools.partial(put, value))
 
+    # Callables captured in a cell, recursed into at the end. A captured
+    # callable is not a container holding a frame; it is code this pricer will
+    # run, and it keeps its frames in these same named places. This is the arm
+    # that reaches the MODEL's module in the shipped wiring, where
+    # `make_price_day` closes the pricer over the resolved model and the
+    # `__globals__` walked below are the pricer's.
+    followed: list[object] = []
     for cell in getattr(target, "__closure__", None) or ():
         try:
             captured = cell.cell_contents
         except ValueError:  # an empty cell, from a closure not yet filled
             continue
         maybe(captured, functools.partial(setattr, cell, "cell_contents"))
+        if captured is not None and callable(captured):
+            followed.append(captured)
 
     namespaces = [
         getattr(target, "__globals__", None),
@@ -1108,6 +1200,7 @@ def _swap_to_the_past(
     onwards = [getattr(target, "__wrapped__", None), getattr(target, "__self__", None)]
     if isinstance(target, functools.partial):
         onwards.append(target.func)
+    onwards.extend(followed)
     for further in onwards:
         undo.extend(
             _swap_to_the_past(further, day=day, day_columns=day_columns, seen=seen)
@@ -1248,9 +1341,13 @@ def assert_priced_from_the_past(
     * **from the dated frames the pricer holds in the places**
       :func:`_swap_to_the_past` **names** — a closure cell, an attribute on
       `self` or on its class, a keyword bound into a `functools.partial`, a
-      DataFrame sitting in its module's globals as a cache. That is a list of
-      places, not "everywhere": a frame one container, one attribute or one
-      closure further away is not rebound, and that docstring says which;
+      DataFrame sitting in the globals of the pricer's own module as a cache,
+      and that whole list again on any callable the pricer closes over, which
+      is how the globals of the **model's** module are reached at all: in the
+      shipped wiring the pricer and the model are never in the same module.
+      That is a list of places, not "everywhere": a frame one container or one
+      attribute further away is not rebound, and neither is a callable held
+      anywhere but a cell, and that docstring says which;
     * **from every dated CSV under `data_dir`**, by copying that tree with
       those rows stripped and running the second price with the copy as the
       working directory, so a pricer that opens a file by a **relative** path
@@ -1285,7 +1382,12 @@ def assert_priced_from_the_past(
       same.
     * **A frame one level of indirection away** from the places
       :func:`_swap_to_the_past` walks: inside a list or a dict, behind
-      `self.bundle.frame`, two closures deep, or in a `functools.lru_cache`.
+      `self.bundle.frame`, or in a `functools.lru_cache`. *Two closures deep*
+      left this list on 2026-09-06 — a callable in a cell is now followed — and
+      what took its place is narrower and still open: **a callable held
+      anywhere but a closure cell is not followed**, so a model kept on
+      `self.model`, in a default, in a partial's keywords, or named in the
+      pricer's own `__globals__` keeps its module's globals out of reach.
     * **A `Series` or numpy array carved out of a future frame.** The cut is a
       DataFrame operation; :func:`_past_only` returns `None` for anything else
       and `None` means "left alone".
