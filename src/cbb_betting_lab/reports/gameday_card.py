@@ -947,10 +947,27 @@ def _read_market(
     )
 
 
-def _player_decline(model: "slate.SlateModel", wager: Wager) -> str:
-    """Why this prop carries no probability, in the bucket it actually belongs to.
+def _player_distributions_module():
+    """`models.player_distributions`, or `None` if it cannot be imported.
 
-    Four states, counted separately and never summed, and the separation is the
+    Imported inside the call, for the reason `slate._player_rates_module` is: a
+    module-scope import binds the answer once per process and would make an
+    engine that fails to import take the whole card down, so a card that could
+    still price every spread would print nothing at all.
+    :data:`slate.NO_DISTRIBUTION_ENGINE` is the sentence that says which of the
+    two states the lab is in, and it is reachable only because of this.
+    """
+    try:
+        from cbb_betting_lab.models import player_distributions  # noqa: PLC0415
+    except ImportError:
+        return None
+    return player_distributions
+
+
+def _player_decline(model: "slate.SlateModel", wager: Wager) -> str:
+    """Why this prop carries no probability, or `""` when it can be priced.
+
+    Six states, counted separately and never summed, and the separation is the
     deliverable of the seam this reads:
 
     * **refused by name** — `player_first_basket` or `player_double_double`.
@@ -969,20 +986,50 @@ def _player_decline(model: "slate.SlateModel", wager: Wager) -> str:
     * **the name** — R1/R1a. The book's spelling did not resolve to exactly one
       athlete on a **prior** roster. No athlete id exists and none is invented;
       the refusal is filed under the spelling as the book wrote it.
-    * **the athlete** — R2 to R5, printed in the projection's own words.
-    * **no engine** — the athlete is projected and priceable, and there is
-      still no probability, because `models/player_distributions.py` is not
-      written. This is the one bucket that is a statement about the lab rather
-      than about the player, and it goes away in the commit that adds the
-      engine.
+    * **not one of the ten** — the board carries player markets this model is
+      not registered against at all. Measured on `markets.PLAYER_MARKETS`: 19
+      player markets, of which 10 are priced and 2 are refused by name, leaving
+      **seven** — `player_blocks`, `player_field_goals`, `player_frees_made`,
+      `player_frees_attempts`, `player_blocks_steals`, `player_triple_double`
+      and `player_first_team_basket`. The model was never asked about any of
+      them and the frozen file carries a constant for none of them:
+      `player_rates.STAT_KEYS` is seven names and blocks, field goals, free
+      throws and a triple-double are not among them. Until 2026-09-06 all seven
+      read *no engine*, which said the engine was not written — true of the lab
+      then and never true of these.
 
-    None of these is a pass, an avoid or a no-value call, and the missing
-    entry is never counted as a refusal: `ratings.matchups_for`'s docstring
-    draws the same line for the team half, in the same words.
+      `player_first_team_basket` is worth naming separately: it is a DIFFERENT
+      key from `player_first_basket` and is not in `MARKETS_REFUSED_BY_NAME`, so
+      the design's first-basket refusal does not cover it and it lands here
+      instead. Every word of that refusal — the opening tip, the mutually
+      exclusive family, the partial field — applies to it as well, and this
+      bucket says only that the model was never asked. Refusing it by name is a
+      decision for whoever owns that mapping, not an edit to make in passing.
+    * **the athlete** — R2 to R5, printed in the projection's own words.
+    * **no engine** — `models/player_distributions.py` could not be imported.
+      A statement about the lab rather than about the player, and reachable
+      because the import is made inside the call.
+    * **no constants** — the slate carries a priceable projection and not the
+      frozen constants it was built from, so nothing can be built from it.
+      A `SlateModel` assembled by hand or coerced from a bare mapping is in this
+      state; one built by `slate.slate_model` never is.
+
+    Returning `""` means every one of those is answered and the wager can be
+    read off a distribution — see :func:`_read_player_market`. None of these is
+    a pass, an avoid or a no-value call, and the missing entry is never counted
+    as a refusal: `ratings.matchups_for`'s docstring draws the same line for the
+    team half, in the same words.
     """
     refused = player_rates.MARKETS_REFUSED_BY_NAME.get(clean_text(wager.market))
     if refused:
         return refused
+    if clean_text(wager.market) not in player_rates.MARKET_COMPONENTS:
+        return (
+            "the player model is registered against ten markets and this is "
+            "not one of them, so it was never asked about this line: "
+            f"{', '.join(player_rates.PRICED_MARKETS)}. An unregistered market "
+            "is not a refusal and it is not a pass, an avoid or a no-value call"
+        )
     if not model.was_asked_about_players(wager.event_id):
         reason = model.player_absence_reason or slate.NO_PLAYER_SLATE
         return (
@@ -1004,7 +1051,61 @@ def _player_decline(model: "slate.SlateModel", wager: Wager) -> str:
             "the player model refuses this subject and recorded no reason, "
             "which is itself a fault: a refusal with no sentence is a silence"
         )
-    return slate.NO_DISTRIBUTION_ENGINE
+    if _player_distributions_module() is None:
+        return slate.NO_DISTRIBUTION_ENGINE
+    if getattr(model, "shapes", None) is None:
+        return slate.NO_ENGINE_CONSTANTS
+    return ""
+
+
+def _read_player_market(
+    wager: Wager, distribution: object
+) -> tuple[float | None, float, str]:
+    """`(probability, push_mass, reason)` for one prop off one cached object.
+
+    The player half of :func:`_read_market`, and deliberately the same shape,
+    the same push convention and the same three-way return. **The push counts
+    against the bet**: `forward_evidence.expected_value` is `p·(1+payout) − 1`
+    and has no push term, so `p = win` understates the edge by exactly the push
+    mass — the conservative direction — while `win/(1-push)` would overstate it
+    in the flattering direction on precisely the whole-number lines. All ten
+    player markets carry `push_possible=True`, `settlement._settle_player_column`
+    settles 14 rebounds against a line of 14 as a returned stake, and the engine
+    puts exact lattice mass there rather than a density at an integer.
+
+    One `PlayerDistribution` per (event, athlete) is the caller's cache, and it
+    is what makes a points rung and a pra rung on one player two questions asked
+    of one object rather than two models that can disagree.
+
+    Two refusals reach this function as `MarketRefused` and are printed in the
+    engine's own words: R4's line above the count lattice ceiling, and R5's
+    market whose constant the fit would not invent. The two markets refused BY
+    NAME never get here — `_player_decline` asks about them first, before
+    anything about the athlete — and that ordering is asserted in
+    `tests/test_gameday_card.py`. A refusal is never turned into `(0, 0, 1)`:
+    a confident zero that is an artefact of where a lattice was truncated would
+    be the most attractive-looking number on the card.
+    """
+    engine = _player_distributions_module()
+    if engine is None:  # pragma: no cover - the caller has already asked
+        return None, 0.0, slate.NO_DISTRIBUTION_ENGINE
+    if wager.selection not in (OVER, UNDER):
+        return None, 0.0, "the selection does not name a side of this player line"
+    line = normalise_line(wager.line)
+    if line is None:
+        return (
+            None,
+            0.0,
+            "a player prop with no line cannot be read off a count "
+            "distribution: there is no rung to price",
+        )
+    try:
+        win, push, _ = distribution.market(
+            clean_text(wager.market), float(line), wager.selection
+        )
+    except engine.PlayerDistributionError as exc:
+        return None, 0.0, str(exc)
+    return float(win), float(push), ""
 
 
 def opinions_for(
@@ -1049,10 +1150,27 @@ def opinions_for(
     which nesting the projections inside `Matchup` made unrepresentable. The
     player branch therefore has to stay **above** the matchup lookup below;
     moving it under makes that state unreachable again.
+
+    **Since 2026-09-06 that branch prices rather than only declining.** A
+    priceable projection plus the slate's own provenance-checked constants build
+    one `models.player_distributions.PlayerDistribution` per (event, athlete),
+    cached here beside `joints`, and every rung on that athlete is read off it.
+    What that changes for the card is one number — `census.priced` — and nothing
+    else: `gates.can_produce_a_selection` is `CONFIRMED`-only and no availability
+    feed exists for Division I men's basketball, so every prop is still stopped
+    before it can become a selection. `availability_note`'s "a market the lab
+    prices, freezes and settles but may not bet" was aspirational for the player
+    family until this commit and is now literally true of it.
     """
     probabilities: dict[tuple, float] = {}
     census = OpinionCensus()
     joints: dict[tuple[str, str], distributions.GameDistribution | str] = {}
+    # One `PlayerDistribution` per (event_id, athlete_id), built once and read
+    # many times — design 2's rule, and the player half of `joints` above. A
+    # points rung, a threes rung and a pra rung on one athlete are three
+    # questions asked of one object, so they cannot disagree; the football lab
+    # shipped a ladder whose -6.5 beat its -7.5 because it had two.
+    players: dict[tuple, object] = {}
     in_prior_regime = _month_of(day) in PRIOR_REGIME_MONTHS
     model = slate.SlateModel.coerce(matchups, day=day)
 
@@ -1060,7 +1178,54 @@ def opinions_for(
         census.wagers += 1
         market = MARKETS_BY_KEY.get(wager.market)
         if market is not None and market.family == PLAYER:
-            census.decline(_player_decline(model, wager))
+            reason = _player_decline(model, wager)
+            if reason:
+                census.decline(reason)
+                continue
+            projection = model.projection_for(wager.event_id, wager.player)
+            # Keyed on (event, athlete) and NOT on the book's spelling: two
+            # spellings of one athlete on one game are one subject — the price
+            # store holds 64 folded names carrying two raw spellings each, 4,396
+            # wager keys of a book's title-caser — and building a second object
+            # for the second spelling would give one player two models whose
+            # rungs could disagree.
+            #
+            # The id comes from `resolved`, which is the mapping `players` is
+            # keyed by and the one the seam's own invariant I5 ties to it, not
+            # from `projection.athlete_id`: a projection whose field disagreed
+            # with its container key would otherwise be built twice under one
+            # subject. `_player_decline` has already established that this pair
+            # resolves to a priceable projection, so the id is never `None` here.
+            subject = (
+                clean_text(wager.event_id),
+                model.resolved.get((clean_text(wager.event_id), clean_text(wager.player))),
+            )
+            cached = players.get(subject)
+            if cached is None:
+                engine = _player_distributions_module()
+                try:
+                    cached = engine.build(projection, shapes=model.shapes)
+                except engine.PlayerDistributionError as exc:
+                    # Every one of the ten markets refused, R4's lower half, a
+                    # lattice that carries mass at zero minutes: the engine's own
+                    # sentence, never a paraphrase and never a price.
+                    cached = str(exc)
+                except (TypeError, ValueError) as exc:
+                    cached = (
+                        "the player distribution could not be built for this "
+                        f"subject ({exc})"
+                    )
+                players[subject] = cached
+            if isinstance(cached, str):
+                census.decline(cached)
+                continue
+            probability, push, reason = _read_player_market(wager, cached)
+            if probability is None:
+                census.decline(reason or "the model has no reader for this market")
+                continue
+            probabilities[wager.key] = probability
+            census.push_mass[wager.key] = push
+            census.priced += 1
             continue
         if market is not None and market.family == FUTURES:
             census.decline(

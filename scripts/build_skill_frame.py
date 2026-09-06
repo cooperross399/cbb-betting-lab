@@ -62,15 +62,28 @@ than a failure of `pair_key`.
 
 **None of those rows is ever asked for here.** This script looks for a
 complement only for a row in the graded export, and the graded export carries
-**no player prop at all — 0 of 566,377 rows**. That is by declaration, not by
-accident: `gameday_card.opinions_for` gives the whole `PLAYER` family a
-census bucket and no probability, and the backtest prices through that same
-function, so a prop is never an opinion, never a bet and never graded. Since
-the player seam landed the sentence is per prop rather than per family — the
-model was never asked, or the name did not resolve, or the athlete is refused,
-or *"`player_distributions.py` is not written, so no probability exists for
-this line yet"* — but the count is unchanged at zero and stays there until an
-engine exists to produce one. The five non-prop rows in that 146,617
+**no player prop at all — 0 of 566,377 rows**, measured on the artifact on
+disk. What that count rests on changed on 2026-09-06 and the number did not, so
+the two are worth separating.
+
+It used to rest on `gameday_card.opinions_for` giving the whole `PLAYER` family
+a census bucket and no probability. That function now PRICES a prop: a
+priceable projection plus the slate's own frozen constants build a
+`models/player_distributions.py` object and the rungs are read off it. Three
+things hold the export at zero anyway, and each is a separate fact:
+
+* no production caller resolves the seam. `price_backtest.DEFAULT_MODEL` is
+  still `cbb_betting_lab.models.ratings:matchups_for`, which returns a bare
+  mapping of matchups with no player half, so on every shipped run a prop reads
+  *"the model was never asked about this event's athletes"*;
+* nothing may be bet. `gates.can_produce_a_selection` is CONFIRMED-only and
+  Division I men's basketball has no availability report;
+* nothing may be graded through the engine until design 10's 261,870-wager
+  reconciliation has run, and it has not.
+
+So the count is unchanged at zero, and the day it moves it will be because one
+of those three changed — which is a decision somebody makes, not a drift. The
+five non-prop rows in that 146,617
 are draftkings `team_total` quotes on four November-2024 slate dates, and one of
 them is the `home_over` 74.5 already named as one of the two graded rows this
 script excludes.

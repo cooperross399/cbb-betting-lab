@@ -41,6 +41,7 @@ import importlib.util
 import json
 import math
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -1234,6 +1235,535 @@ def test_the_structural_checks_are_reported_and_only_one_can_stop_the_run() -> N
 
 
 # --------------------------------------------------------------------------
+# The ten readers, and the two routes to a mean
+# --------------------------------------------------------------------------
+
+
+def test_the_ten_readers_are_ten_questions_asked_of_one_object() -> None:
+    """Every priced market reads a rung off the SAME cached object.
+
+    Design 6 registers ten markets and design 5 says the four combinations come
+    "from components over the shared minutes draw, never from their own
+    history". Both halves are checked here rather than asserted:
+
+    * the ten are exactly `MARKET_COMPONENTS`, and the two refused by name are
+      disjoint from them;
+    * every reader returns `(win, push, loss)` summing to one with each leg in
+      [0, 1], on a half-point rung and on an integer rung;
+    * `over` and `under` at one line are the same three numbers with the outer
+      two swapped, so a caller cannot get a different bet by asking the other
+      way round;
+    * an integer rung's push is EXACTLY the lattice mass at that count -- never
+      a density at an integer and never an interpolation between rungs;
+    * no combination market has a rate, a role prior, a credibility constant or
+      a dispersion anywhere in the frozen file. Design 8: derived from the
+      joint, never fitted. A fitted pra constant appearing later is a defect,
+      not an improvement.
+    """
+    distribution = _distribution()
+    assert set(PR.MARKET_COMPONENTS) == set(PR.PRICED_MARKETS)
+    assert len(PR.PRICED_MARKETS) == 10
+    assert set(PR.PRICED_MARKETS) & set(PR.MARKETS_REFUSED_BY_NAME) == set()
+
+    for market in PR.PRICED_MARKETS:
+        pmf = distribution.count_pmf(market)
+        rung = math.floor(distribution.mean(market)) + 0.5
+        over = distribution.market(market, rung, "over")
+        under = distribution.market(market, rung, "under")
+        assert sum(over) == pytest.approx(1.0, abs=1e-12), market
+        assert all(0.0 <= leg <= 1.0 for leg in over), market
+        assert over == (under[2], under[1], under[0]), (
+            f"{market}: the two sides of one line are not one bet read twice"
+        )
+        assert over[1] == 0.0, f"{market}: a half-point rung cannot push"
+
+        integer = float(math.floor(rung))
+        win, push, loss = distribution.market(market, integer, "over")
+        assert push == float(pmf[int(integer)]), market
+        assert win + push + loss == pytest.approx(1.0, abs=1e-12), market
+        assert push > 0.0, f"{market}: an integer rung must carry lattice mass"
+
+    document = json.loads(SHAPES.read_text(encoding="utf-8"))
+    combinations = {"pra", "points_rebounds", "points_assists", "rebounds_assists"}
+    for name in ("role_prior", "rate_shrinkage_k", "conditional_dispersion"):
+        assert not set(document["constants"][name]["value"]) & combinations, (
+            f"{name} now carries a combination-market constant. Design 8 says "
+            "combination dispersions are derived from the joint and never "
+            "fitted, so this is a defect rather than an improvement."
+        )
+
+
+def test_the_two_mean_routes_agree_where_they_are_one_route_and_are_measured_where_they_are_two() -> None:
+    """The points/threes ruling, and the size of what it costs, measured.
+
+    `player_rates` carries TWO routes to a mean for two of the seven stats, and
+    the markets contract settles which one is the price:
+
+        the compound is the price and `rates["points"]` is the check
+
+    -- `player_rates.py`'s own comment, quoting the fitter's. `player_threes`
+    goes the same way, because design 4 says it "falls out as the three-point
+    component of the same object rather than as a separate count", and because
+    the standalone route would make design 4's own `corr(points, threes)` check
+    a comparison of the frozen 0.6021705535430947 with itself.
+
+    **WHERE THE TWO ROUTES ARE ONE ROUTE THEY AGREE, AND THE TOLERANCE IS
+    STATED: 1e-9 RELATIVE.** For `rebounds`, `assists`, `steals`, `turnovers`
+    and `player_rebounds_assists` the engine's price mean and
+    `player_rates.mean_for_market` are the same arithmetic -- `rate * E[M]`,
+    with the minutes lattice tilted to `projected_minutes` so `E[M]` reproduces
+    it to 7.1e-15. Measured worst case on this fixture: 6.6e-12 relative, three
+    orders inside the stated tolerance, and the residual is the count lattice's
+    own 1e-12 tail truncation.
+
+    **WHERE THEY ARE TWO ROUTES THEY DO NOT AGREE, AND THE DISAGREEMENT IS
+    REPORTED RATHER THAN TUNED.** Measured on this fixture athlete:
+
+        player_points            +1.6386%   (13.184738 against 12.972176)
+        player_threes            +0.6817%   ( 1.816646 against  1.804346)
+        player_pra               +0.9929%   (the points leg, unchanged)
+        player_points_rebounds   +1.1395%
+        player_points_assists    +1.3517%
+
+    There is no tolerance at which those agree -- a 2% ROI edge at -110 is about
+    1.0pp of probability -- so this test asserts the DECOMPOSITION instead,
+    which is exact and names both halves:
+
+        gap = mu_events * (E[V_shrunk] - E[V_observed]) * minutes     (the mix)
+            + (mu_events * E[V_observed] - rate_points) * minutes     (the weights)
+
+    On this athlete, in points: +0.212563 = -0.134648 + 0.347211. Both terms are
+    structural and both are frozen. The first is the value mix being shrunk
+    toward the league shape at `value_mix_shrinkage_events` = 9.220113 EVENTS
+    while the points rate is shrunk toward the role prior at
+    `rate_shrinkage_k["points"]` = 102.833900 prior MINUTES -- two targets, two
+    speeds, two units. The second is that the two rates carry different
+    credibility weights on identical evidence: 0.685363 for `points` against
+    0.721897 for `points_events` and 0.765818 for `threes`.
+
+    The identity underneath is the box score's own: a player's points are
+    `1*FT + 2*FG2 + 3*FG3` and his scoring events are `FT + FG2 + FG3`, so
+    `observed_points == observed_events * E[V_observed]` exactly. The two routes
+    are therefore ONE route with the shrinkage off -- this fixture's observed
+    E[V] is exactly 2.000000 -- and every part of the gap is shrinkage.
+
+    **At the role prior, where an athlete has no evidence at all, the two routes
+    are much further apart on threes than on points.** Measurement on frozen
+    constants, no store row read: the ratio of `role_prior["threes"]` to
+    `role_prior["points_events"] * p3_league`, by minutes bucket, is
+
+        0-8 0.892 | 8-12 0.927 | 12-16 0.921 | 16-20 0.914 | 20-24 0.936
+        24-28 0.959 | 28-32 1.038 | 32-36 1.092 | 36+ 1.091
+
+    -- -10.8% to +9.2%, **changing sign between the 24-28 and 28-32 buckets**.
+    The same ratio for points runs 0.994 to 1.007, flat. So the standalone
+    threes rate takes a different position on shot diet by minutes bucket, in
+    both directions, and a model that used it for threes and the compound for
+    points would be giving two answers to one question inside one object.
+
+    Nothing is tuned to close any of this. `mean_for_market` is untouched and
+    still returns the rate route; the engine still returns the compound one;
+    both are printed.
+    """
+    distribution = _distribution()
+    projection = distribution.projection
+    minutes = float(projection.projected_minutes)
+    shapes = _shapes()
+
+    # -- one route, and the tolerance is stated -----------------------------
+    for market in (
+        "player_rebounds",
+        "player_assists",
+        "player_steals",
+        "player_turnovers",
+        "player_rebounds_assists",
+    ):
+        assert distribution.mean(market) == pytest.approx(
+            PR.mean_for_market(projection, market), rel=1e-9
+        ), market
+    assert projection.mean_minutes() == pytest.approx(minutes, abs=1e-12)
+
+    # -- two routes, and the price is the compound one ----------------------
+    severity = np.asarray(projection.value_pmf, dtype=float)
+    expected_value = float(severity @ np.array([1.0, 2.0, 3.0]))
+    events = float(projection.rates["points_events"]) * minutes
+    assert distribution.mean("player_points") == pytest.approx(
+        events * expected_value, abs=1e-9
+    ), "the priced points mean is not the compound one"
+    assert distribution.mean("player_threes") == pytest.approx(
+        events * float(severity[2]), abs=1e-9
+    ), "the priced threes mean is not the thinned one"
+
+    measured = {
+        market: distribution.mean(market) / PR.mean_for_market(projection, market) - 1.0
+        for market in (
+            "player_points",
+            "player_threes",
+            "player_pra",
+            "player_points_rebounds",
+            "player_points_assists",
+        )
+    }
+    assert measured["player_points"] == pytest.approx(0.016386, abs=1e-5)
+    assert measured["player_threes"] == pytest.approx(0.006817, abs=1e-5)
+    assert measured["player_pra"] == pytest.approx(0.009929, abs=1e-5)
+    assert measured["player_points_rebounds"] == pytest.approx(0.011395, abs=1e-5)
+    assert measured["player_points_assists"] == pytest.approx(0.013517, abs=1e-5)
+    assert all(gap > 0.0 for gap in measured.values()), (
+        "the compound route no longer runs above the rate route on this "
+        "fixture, and the direction is part of what is reported"
+    )
+
+    # -- the decomposition, which makes the gap a fact rather than a smell --
+    role = shapes.value("role_prior")
+    bucket = int(projection.minutes_bucket)
+    observed = {}
+    for stat in ("points", "points_events", "threes"):
+        weight = float(projection.prior_weight[stat])
+        observed[stat] = (
+            float(projection.rates[stat]) - (1.0 - weight) * float(role[stat][bucket])
+        ) / weight
+    assert observed["points"] / observed["points_events"] == pytest.approx(2.0, abs=1e-9), (
+        "the box-score identity points == events * E[V] does not hold on the "
+        "observed bank, so the gap is not purely shrinkage and this "
+        "decomposition is not the whole of it"
+    )
+
+    for stat, share in (("points", expected_value), ("threes", float(severity[2]))):
+        observed_share = observed[stat] / observed["points_events"]
+        rate_events = float(projection.rates["points_events"])
+        gap = (rate_events * share - float(projection.rates[stat])) * minutes
+        mix = rate_events * (share - observed_share) * minutes
+        weights = (rate_events * observed_share - float(projection.rates[stat])) * minutes
+        assert mix + weights == pytest.approx(gap, abs=1e-12), stat
+        assert distribution.mean(f"player_{stat}") - PR.mean_for_market(
+            projection, f"player_{stat}"
+        ) == pytest.approx(gap, abs=1e-9), stat
+        assert mix < 0.0 < weights, stat
+    assert float(projection.prior_weight["points"]) == pytest.approx(0.685363, abs=1e-6)
+    assert float(projection.prior_weight["points_events"]) == pytest.approx(
+        0.721897, abs=1e-6
+    )
+    assert float(projection.prior_weight["threes"]) == pytest.approx(0.765818, abs=1e-6)
+    assert shapes.value("rate_shrinkage_k")["points"] == pytest.approx(
+        102.83390031937007, abs=1e-9
+    )
+    assert shapes.value("value_mix_shrinkage_events") == pytest.approx(
+        9.220113199777744, abs=1e-9
+    )
+
+    # -- and at the prior, where the athlete has no evidence at all ---------
+    league = shapes.value("value_pmf")
+    league_value = sum((index + 1) * share for index, share in enumerate(league))
+    points_ratio = [
+        role["points"][index] / (role["points_events"][index] * league_value)
+        for index in range(len(role["points"]))
+    ]
+    threes_ratio = [
+        role["threes"][index] / (role["points_events"][index] * league[2])
+        for index in range(len(role["threes"]))
+    ]
+    assert len(threes_ratio) == 9
+    assert min(points_ratio) == pytest.approx(0.9942, abs=1e-3)
+    assert max(points_ratio) == pytest.approx(1.0072, abs=1e-3)
+    assert min(threes_ratio) == pytest.approx(0.8922, abs=1e-3)
+    assert max(threes_ratio) == pytest.approx(1.0917, abs=1e-3)
+    assert threes_ratio[5] < 1.0 < threes_ratio[6], (
+        "the standalone-versus-thinned threes disagreement no longer changes "
+        "sign between the 24-28 and 28-32 buckets, which is the measurement "
+        "saying it is a role effect and not a level offset"
+    )
+
+    # Nothing was tuned to close any of it: the check route is still the rate
+    # route, unchanged, for every one of the ten.
+    for market, components in PR.MARKET_COMPONENTS.items():
+        assert PR.mean_for_market(projection, market) == pytest.approx(
+            sum(float(projection.rates[stat]) * minutes for stat in components),
+            abs=1e-12,
+        ), market
+
+
+# --------------------------------------------------------------------------
+# The wiring: a priceable projection carries a probability
+# --------------------------------------------------------------------------
+
+
+def _wager(market: str, *, line: float, event_id: str = "e1", player: str = "Sean Bairstow"):
+    """One prop, keyed the way `reports/card_pricing.py` keys it."""
+    from cbb_betting_lab.reports import card_pricing
+
+    return card_pricing.Wager(
+        key=(event_id, market, "over", line, player),
+        event_id=event_id,
+        slate_date=DAY,
+        commence_time=f"{DAY}T23:00:00Z",
+        home_team="Home State",
+        away_team="Away Tech",
+        market=market,
+        segment="game",
+        player=player,
+        selection="over",
+        line=line,
+        tier="high_major",
+        quotes=(card_pricing.Quote(book="dk", american_odds=-110.0),),
+    )
+
+
+def _slate_model(shapes=None, *, carry_shapes: bool = True):
+    """A real `SlateModel`: the real estimator's projections, the real constants.
+
+    Not a hand-assembled double. What the card is handed here is what
+    `slate.slate_model` hands it, so the wiring under test is the shipped one.
+    """
+    from cbb_betting_lab.models import slate as SLATE
+
+    resolved = shapes or _shapes()
+    fixtures = _rates_fixture()
+    result = PR.player_projections_for(
+        day=DAY,
+        player_history=fixtures._history(),
+        prices=fixtures._prices("Sean Bairstow"),
+        shapes=resolved,
+    )
+    model = SLATE.SlateModel(
+        day=DAY,
+        matchups={},
+        players=dict(result.projections),
+        resolved=dict(result.resolved),
+        name_refusals=dict(result.name_refusals),
+        player_priced_through=str(result.priced_through),
+        shapes=resolved if carry_shapes else None,
+    )
+    return model, resolved
+
+
+def test_a_priceable_projection_now_carries_a_probability_through_the_card() -> None:
+    """The wiring, end to end, and what it does and does not change.
+
+    Until this commit `reports/gameday_card.opinions_for` gave the whole player
+    family a census bucket and no probability: a priceable projection's last
+    word was `slate.NO_DISTRIBUTION_ENGINE`, which said the engine was not
+    written. It is written, and it is now built from the projection and the
+    slate's OWN provenance-checked constants -- one `PlayerDistribution` per
+    (event, athlete), cached on the call, so ten markets on one athlete are ten
+    questions asked of one object.
+
+    Asserted here, on a fourteen-wager fixture card:
+
+    * sixteen wagers in, eleven priced and five declined into five distinct
+      buckets;
+    * the ten priced markets carry a probability, and it is BIT-IDENTICAL to
+      the number the engine gives for the same rung when built separately. The
+      engine holds no RNG and reads no clock, so equality is exact and a drift
+      would mean the card is pricing off something the engine is not;
+    * the push is stored beside it and never folded in. `p = win` understates
+      the edge by exactly the push mass, which is the conservative direction;
+      `win/(1-push)` would overstate it on precisely the whole-number lines;
+    * `player_first_basket` and `player_double_double` still print their own
+      refusals, word for word, and are never priced;
+    * a player market outside the ten (`player_blocks`) reads its own sentence
+      rather than a refusal or a missing engine;
+    * an event the model was never asked about still reads `no opinion`;
+    * a line above the count lattice ceiling REFUSES rather than returning
+      `(0, 0, 1)`, so R4's upper half is enforced where the card can see it;
+    * a points ladder read through the card is strictly decreasing, because the
+      rungs come off one object and there is no second ladder model.
+
+    **What this does not do.** Nothing is graded and no result is stated. Every
+    prop is still stopped before it can become a selection:
+    `gates.can_produce_a_selection` is CONFIRMED-only, no availability report
+    exists for Division I men's basketball, and no market is allowlisted.
+    """
+    from cbb_betting_lab.models import slate as SLATE
+    from cbb_betting_lab.reports import gameday_card as GC
+
+    model, shapes = _slate_model()
+    projection = model.players["e1"][next(iter(model.players["e1"]))]
+    reference = PD.build(projection, shapes=shapes)
+
+    rungs = {
+        market: math.floor(reference.mean(market)) + 0.5 for market in PR.PRICED_MARKETS
+    }
+    wagers = [_wager(market, line=line) for market, line in rungs.items()]
+    wagers += [
+        _wager("player_first_basket", line=0.5),
+        _wager("player_double_double", line=0.5),
+        _wager("player_blocks", line=1.5),
+        _wager("player_points", line=14.5, event_id="e9"),
+        _wager("player_points", line=400.5),
+        # An INTEGER rung. The design measures 6 such quotes on 3 lines in the
+        # store, all `player_points`, all williamhill_us: live and rare, which
+        # is the profile of a branch that ships broken. It is the only rung on
+        # this card where the push convention is visible at all.
+        _wager("player_points", line=13.0),
+    ]
+    probabilities, census = GC.opinions_for(wagers, model, day=DAY)
+
+    assert census.wagers == 16
+    assert census.priced == 11, census.declined
+    for market, line in rungs.items():
+        key = ("e1", market, "over", line, "Sean Bairstow")
+        win, push, _loss = reference.market(market, line, "over")
+        assert probabilities[key] == win, (
+            f"{market}: the card's number is not the engine's. There is one "
+            "model for this athlete and the card must be reading it"
+        )
+        assert census.push_mass[key] == push
+        assert 0.0 < probabilities[key] < 1.0, market
+
+    declined = census.declined
+    for market, sentence in PR.MARKETS_REFUSED_BY_NAME.items():
+        assert sentence in declined, market
+        assert not any(
+            ("e1", market, "over", 0.5, "Sean Bairstow") == key for key in probabilities
+        ), f"{market} was priced, and it is refused by name"
+    assert any("registered against ten markets" in reason for reason in declined), (
+        "`player_blocks` is not one of the ten and is not refused by name "
+        f"either; it must say so. It read: {sorted(declined)}"
+    )
+    # The size of that bucket, measured rather than described: 19 player
+    # markets on the board, 10 priced, 2 refused by name, 7 the model was
+    # never asked about. `player_first_team_basket` is one of the seven and is
+    # NOT `player_first_basket`, so the design's refusal does not reach it.
+    from cbb_betting_lab.markets import PLAYER_MARKETS
+
+    outside = [
+        market.key
+        for market in PLAYER_MARKETS
+        if market.key not in PR.MARKET_COMPONENTS
+        and market.key not in PR.MARKETS_REFUSED_BY_NAME
+    ]
+    assert len(PLAYER_MARKETS) == 19 and len(outside) == 7, outside
+    assert "player_first_team_basket" in outside
+    assert any("never asked about this event's athletes" in r for r in declined)
+    # R4's upper half, through the card. A line past the count lattice must
+    # REFUSE and print why; returning (0, 0, 1) would report a confident zero
+    # that is an artefact of where the lattice was truncated, and it would be
+    # the most attractive-looking number on the card.
+    assert any("above the count lattice ceiling" in r for r in declined), sorted(declined)
+    assert ("e1", "player_points", "over", 400.5, "Sean Bairstow") not in probabilities
+    assert SLATE.NO_DISTRIBUTION_ENGINE not in declined
+    assert SLATE.NO_ENGINE_CONSTANTS not in declined
+    assert not any("no probability exists for this line yet" in r for r in declined), (
+        "the sentence that said the engine was not written has survived the "
+        "commit that wrote it"
+    )
+
+    # The push, on the one rung that has one. `p = win` UNCONDITIONAL: the edge
+    # definition `p*(1+payout) - 1` has no push term, so `win/(1-push)` would
+    # overstate the edge by the push mass in the flattering direction, on
+    # precisely the whole-number lines where the market concentrates.
+    integer = ("e1", "player_points", "over", 13.0, "Sean Bairstow")
+    win, push, loss = reference.market("player_points", 13.0, "over")
+    assert push > 0.01, "the integer rung carries no push and proves nothing"
+    assert probabilities[integer] == win
+    assert census.push_mass[integer] == push
+    assert probabilities[integer] != pytest.approx(win / (1.0 - push), abs=1e-9)
+    assert win + push + loss == pytest.approx(1.0, abs=1e-12)
+
+    # D2 through the card: one object, one ladder, strictly decreasing.
+    ladder = [_wager("player_points", line=line) for line in (10.5, 12.5, 14.5, 16.5, 18.5)]
+    priced, rung_census = GC.opinions_for(ladder, model, day=DAY)
+    assert rung_census.priced == 5
+    steps = [priced[wager.key] for wager in ladder]
+    assert steps == sorted(steps, reverse=True) and len(set(steps)) == 5, steps
+
+
+def test_two_spellings_of_one_athlete_build_one_object(monkeypatch) -> None:
+    """Design 2's cache rule, asserted by counting builds rather than by comment.
+
+    "One cached `PlayerDistribution` per (event_id, athlete_id)" is a claim
+    about the KEY, and the key is the thing the store makes non-obvious: the
+    census gate over `cbb_historical_prices__card.csv` found 64 folded names
+    each carrying exactly two raw spellings — `'A.J. HOGGARD'` and
+    `'A.J. Hoggard'`, `'Tucker DeVries'` and `'Tucker Devries'` — 128 raw
+    spellings collapsing 4,396 wager keys, every one of them a book's
+    title-caser rather than one book quoting twice. Both spellings resolve to
+    one athlete id here, exactly as they would there.
+
+    Keyed on the spelling, that athlete would get TWO distribution objects on
+    one game. They would agree today, because the engine is deterministic and
+    holds no RNG — which is precisely why nothing else in this file could catch
+    the mistake, and why this counts builds instead of comparing numbers.
+    """
+    from cbb_betting_lab.reports import gameday_card as GC
+
+    model, shapes = _slate_model()
+    athlete = next(iter(model.players["e1"]))
+    resolved = dict(model.resolved)
+    resolved[("e1", "sean bairstow")] = athlete
+    resolved[("e1", "SEAN BAIRSTOW")] = athlete
+    model = replace(model, resolved=resolved)
+
+    builds: list[object] = []
+    real = PD.build
+
+    def counting(projection, *, shapes):
+        builds.append(projection.athlete_id)
+        return real(projection, shapes=shapes)
+
+    monkeypatch.setattr(PD, "build", counting)
+    _, census = GC.opinions_for(
+        [
+            _wager("player_points", line=14.5, player="Sean Bairstow"),
+            _wager("player_rebounds", line=5.5, player="sean bairstow"),
+            _wager("player_assists", line=2.5, player="SEAN BAIRSTOW"),
+        ],
+        model,
+        day=DAY,
+    )
+    assert census.priced == 3, census.declined
+    assert builds == [athlete], (
+        "three rungs on one athlete under three spellings built "
+        f"{len(builds)} distribution(s). One player, one object."
+    )
+
+
+def test_the_card_says_which_absence_it_is_when_it_cannot_reach_the_engine(
+    monkeypatch,
+) -> None:
+    """Two absences that look identical from the outside, and one is a fault.
+
+    A slate carrying a priceable projection can fail to reach a probability in
+    exactly two ways that are not about the athlete, and the card must not print
+    one sentence for both:
+
+    * the engine cannot be IMPORTED -- a lab with no model. Simulated the only
+      honest way, by removing it from `sys.modules` and from the package, so the
+      real `from ... import` inside `_player_distributions_module` is what fails
+      rather than a patched-out branch;
+    * the slate carries no CONSTANTS -- every bare mapping through
+      `SlateModel.coerce` is in this state, and so is any model assembled by
+      hand. The card does not load its own: that would be a second load site
+      with a season argument it would have to derive, and the seam records what
+      an unchecked season argument already cost once.
+
+    Neither is a refusal, neither is a pass, an avoid or a no-value call, and
+    neither may be reported as the model having no opinion.
+    """
+    from cbb_betting_lab.models import slate as SLATE
+    from cbb_betting_lab.reports import gameday_card as GC
+
+    model, _ = _slate_model(carry_shapes=False)
+    _, census = GC.opinions_for([_wager("player_points", line=14.5)], model, day=DAY)
+    assert list(census.declined) == [SLATE.NO_ENGINE_CONSTANTS]
+    assert census.priced == 0
+
+    model, _ = _slate_model()
+    import cbb_betting_lab.models as MODELS
+
+    monkeypatch.setitem(sys.modules, "cbb_betting_lab.models.player_distributions", None)
+    monkeypatch.delattr(MODELS, "player_distributions", raising=False)
+    assert GC._player_distributions_module() is None, (
+        "the engine still imports, so this test is asserting nothing"
+    )
+    _, census = GC.opinions_for([_wager("player_points", line=14.5)], model, day=DAY)
+    assert list(census.declined) == [SLATE.NO_DISTRIBUTION_ENGINE]
+    assert "player_distributions.py" in SLATE.NO_DISTRIBUTION_ENGINE
+    assert "not a pass, an avoid or a no-value call" in SLATE.NO_DISTRIBUTION_ENGINE
+
+
+# --------------------------------------------------------------------------
 # The limitations, recorded as passing assertions
 # --------------------------------------------------------------------------
 
@@ -1249,10 +1779,29 @@ def test_the_gaps_this_engine_still_has_are_the_ones_written_down() -> None:
        ROI, no interval and no comparison against a price anywhere in this
        module, and design 10's 261,870-wager reconciliation has not run. The
        engine produces probabilities under its own model and stops.
-    2. **The engine is not wired to the card.** `models/slate.py` still answers
-       `NO_DISTRIBUTION_ENGINE` for every prop, so no run has priced anything
-       through this file. Wiring it is a separate commit and it changes the
-       census.
+    2. **CLOSED, and replaced by its successor.** The engine was not wired: the
+       card answered `NO_DISTRIBUTION_ENGINE` for every prop and no run had
+       priced anything through this file. It is wired now —
+       `reports/gameday_card.opinions_for` builds one `PlayerDistribution` per
+       (event, athlete) from the slate's own provenance-checked constants — and
+       the clause's own instruction was to re-count the prop census in the same
+       commit. Re-counted, on the fixture card in
+       `test_a_priceable_projection_now_carries_a_probability_through_the_card`:
+       **16 wagers, 11 priced, 5 declined in 5 distinct buckets** (the two
+       markets refused by name, one player market outside the ten, one event the
+       model was never asked about, one line above the count lattice ceiling).
+       That is a count off a fixture and not a census of the store: design
+       10's 261,870-wager reconciliation has not run, and nothing may be graded
+       until it does.
+
+       The successor is that **nothing stores what is now priced.** Design 9's
+       `data/processed/cbb_player_lines.csv` — one row per (game_id,
+       athlete_id, market) carrying `mu`, `phi_conditional`,
+       `model_probability`, `push_mass`, `void_probability` and the rest — does
+       not exist, so the probabilities this engine produces live only inside a
+       call and no run leaves a record of what it thought. The assertion below
+       goes red the day that file appears, and whoever writes it owes the
+       per-tier report this lab requires rather than a pooled headline.
     3. **No frozen combination target.** Design 8 says combination dispersions
        are "derived from the joint, never fitted -- checked against measured
        pra/pair VMR", and `structural_check_targets` carries no pra, pair or
@@ -1292,10 +1841,18 @@ def test_the_gaps_this_engine_still_has_are_the_ones_written_down() -> None:
 
     from cbb_betting_lab.models import slate as SLATE
 
-    assert "no probability exists for this line yet" in SLATE.NO_DISTRIBUTION_ENGINE, (
-        "the seam's sentence has changed. If the engine is now wired in, this "
-        "clause has closed: say so, and re-count the prop census in the same "
-        "commit."
+    assert "could not be imported" in SLATE.NO_DISTRIBUTION_ENGINE, (
+        "the seam's sentence has changed again. It says which of two absences "
+        "the lab is in — a tree that lost the engine, or a night with no "
+        "evidence — and the two look identical from the outside."
+    )
+    assert "is not written" not in SLATE.NO_DISTRIBUTION_ENGINE
+    assert SLATE.NO_ENGINE_CONSTANTS, "the constants-absent bucket has gone"
+    assert not (REPO / "data" / "processed" / "cbb_player_lines.csv").exists(), (
+        "design 9's store now exists, so the probabilities this engine produces "
+        "outlive the call that made them. Say what is in it, report it per tier "
+        "rather than pooled, and state that design 10's wager reconciliation "
+        "still gates any grading of it."
     )
 
     document = json.loads(SHAPES.read_text(encoding="utf-8"))

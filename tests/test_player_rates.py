@@ -1,9 +1,11 @@
 """What `models/player_rates.py` must be true about before it may price anything.
 
 The estimator turns a cut player frame into a projection. Nothing here measures
-an edge, a loss or a verdict — `models/player_distributions.py` is not written,
-so no probability exists — and every number below is either read off a fixture
-or off the frozen constants.
+an edge, a loss or a verdict: a projection is a minutes lattice, seven rates and
+a value mix, and turning one into a probability is
+`models/player_distributions.py`'s job, done in another file and asserted in
+another test. Every number below is either read off a fixture or off the frozen
+constants.
 
 The properties, and the specific defect each is arranged against:
 
@@ -1299,15 +1301,37 @@ def test_projection_for_raises_on_a_name_rather_than_inventing_an_athlete() -> N
 
 
 def test_the_gaps_this_estimator_still_has_are_the_ones_written_down() -> None:
-    """Six, each of which goes red the day it is closed.
+    """Six, of which one has since closed; each goes red the day it does.
 
     The repository's form for a limitation: not a docstring claim that quietly
     becomes false, but an assertion that fails on the commit which fixes it and
     forces somebody to say so.
 
-    1. **No distribution engine.** `models/player_distributions.py` is not
-       written, so a priceable projection is a mean and a lattice and never a
-       probability. Nothing here can select a bet.
+    1. **CLOSED, and replaced by its successor.** There was no distribution
+       engine, so a priceable projection was a mean and a lattice and never a
+       probability. `models/player_distributions.py` was written and then wired
+       into `reports/gameday_card.opinions_for`, so a priceable projection now
+       carries one; this clause's own instruction was to delete it and with it
+       every sentence in this file saying no probability exists, and the one
+       such sentence was in the module docstring above.
+
+       The successor is that **this estimator still carries two routes to a
+       mean for two of the seven stats, and they do not agree.** `points` has a
+       shrunk rate here AND a compound route through `points_events` times the
+       value mix; `threes` has a shrunk rate here AND falls out of the same
+       object thinned. The design says which is the price and the fitter froze
+       both deliberately so the two could be compared rather than assumed
+       equal. Measured on this file's own fixture athlete, in
+       `tests/test_player_distributions.py::test_the_two_mean_routes_agree_
+       where_they_are_one_route_and_are_measured_where_they_are_two`: the
+       compound route runs **1.6386%** above `rates["points"] * minutes` and
+       the thinned route **0.6817%** above `rates["threes"] * minutes`, and at
+       the role prior the threes disagreement runs -10.8% to +9.2% and changes
+       sign between the 24-28 and 28-32 minutes buckets. Nothing reconciles
+       them: `points_compound_reconciliation` reconciles the compound points
+       DISPERSION and no constant anywhere reconciles either MEAN. The
+       assertion below goes red the day the frozen file stops carrying both
+       routes, because that is the day somebody chose one and owes the reason.
     2. **No cross-season carry-over.** The bank resets at every season
        boundary, because admitting one needs a decay constant nobody has
        fitted. With R2 that refuses every player for his first four
@@ -1329,11 +1353,11 @@ def test_the_gaps_this_estimator_still_has_are_the_ones_written_down() -> None:
        subject on the card path is refused under R6. It is one list away, and
        widening it changes a measured docstring in `card_matchups.py`.
     """
-    models = REPO / "src" / "cbb_betting_lab" / "models"
-    assert not (models / "player_distributions.py").exists(), (
-        "the distribution engine now exists, so a projection can carry a "
-        "probability. Delete this clause, and with it every sentence in this "
-        "file that says no probability exists."
+    role = json.loads(SHAPES.read_text(encoding="utf-8"))["constants"]["role_prior"]
+    assert {"points", "points_events", "threes"} <= set(role["value"]), (
+        "the frozen file no longer carries both routes to a points or a threes "
+        "mean. One of them was chosen: say which, say what the disagreement "
+        "measured before the choice, and re-point this clause."
     )
 
     evidence = PR.trailing_evidence(

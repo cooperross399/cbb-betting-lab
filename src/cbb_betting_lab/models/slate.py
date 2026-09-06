@@ -47,16 +47,23 @@ D. the event is not in `players` at all -> NO OPINION. The model was never
 
 ## What this module does not do, and why that is written here
 
-Nothing here measures anything. `models/player_rates.py` has since been
-written, so an athlete can now carry a projection; `models/player_distributions.py`
-has not, so **no line carries a probability** and a priceable projection's last
-word is :data:`NO_DISTRIBUTION_ENGINE`. Every structural absence is reported
-with a sentence naming the missing file (:data:`NO_RATE_ESTIMATOR`,
-:data:`NO_DISTRIBUTION_ENGINE`) rather than as a model with no opinions,
-because those two look identical from the outside and one of them is a wiring
-fault. `NO_RATE_ESTIMATOR` is kept and still reachable: the estimator is
-imported inside the call, so a tree that loses it says which absence this is
-instead of reporting a night with no evidence.
+Nothing here measures anything. `models/player_rates.py` gives an athlete a
+projection and `models/player_distributions.py` turns one into count pmfs, so
+since 2026-09-06 a priceable projection **does** carry a probability and the
+sentence that said otherwise has been re-pointed. What this module adds to that
+is one field: :attr:`SlateModel.shapes`, the frozen constants **already
+provenance-checked for the season being priced**, carried to the card so the
+engine is built from the object the guard ran on rather than from a second
+`load_player_shapes` call whose season argument the card would have to derive.
+A slate that carries a projection and no constants says so
+(:data:`NO_ENGINE_CONSTANTS`) instead of pricing.
+
+Every structural absence is still reported with a sentence naming the missing
+file (:data:`NO_RATE_ESTIMATOR`, :data:`NO_DISTRIBUTION_ENGINE`) rather than as
+a model with no opinions, because those two look identical from the outside and
+one of them is a wiring fault. Both are kept reachable: each module is imported
+inside the call that needs it, so a tree that loses one says which absence this
+is instead of reporting a night with no evidence.
 `tests/test_player_seam.py` holds that distinction as a passing assertion.
 
 ## The cut, and the one place two names meet
@@ -161,13 +168,41 @@ NO_RATE_ESTIMATOR: str = (
     "pass, an avoid or a no-value call"
 )
 
-#: A projection exists and is priceable, and there is still no probability,
-#: because the engine that would turn a projection into one is not written.
-#: This is the sentence a *priceable* prop reads today.
+#: The engine could not be imported. Re-pointed on 2026-09-06, when
+#: `models/player_distributions.py` was written and wired: until then this
+#: sentence said the file *is not written*, and a priceable projection's last
+#: word was that it carried no probability. It does now.
+#:
+#: The sentence is kept, and kept **reachable**, for the reason
+#: :data:`NO_RATE_ESTIMATOR` is: `reports/gameday_card.py` imports the engine
+#: inside the call, so a tree that loses the file says which absence this is
+#: instead of reporting a night on which the model happened to have no opinion
+#: about any prop. The two look identical from the outside and one of them is a
+#: wiring fault.
 NO_DISTRIBUTION_ENGINE: str = (
-    "the player model projects this athlete but "
-    "`src/cbb_betting_lab/models/player_distributions.py` is not written, so "
-    "no probability exists for this line yet. It is not a pass, an avoid or a "
+    "the player model projects this athlete and "
+    "`src/cbb_betting_lab/models/player_distributions.py` could not be "
+    "imported, so no engine was asked for a probability on this line. This is "
+    "the model never being asked, not the model declining, and it is not a "
+    "pass, an avoid or a no-value call"
+)
+
+#: A slate carries a priceable projection and **not** the frozen constants that
+#: projection was built from, so nothing can build a distribution from it.
+#:
+#: This is the state a `SlateModel` assembled by hand is in — `coerce` on a bare
+#: mapping of matchups, or a test double — and it is a wiring absence rather
+#: than a refusal: `slate_model` loads the constants through the provenance
+#: guard for the season it prices and hands them on in :attr:`SlateModel.shapes`,
+#: so the engine is never handed a set of constants nobody checked. Reading a
+#: file here instead, or defaulting to `DEFAULT_SHAPES_PATH` at the card, would
+#: be a second load site with a season argument the card would have to derive —
+#: and `_player_half` already records what an unchecked season argument costs.
+NO_ENGINE_CONSTANTS: str = (
+    "the player model projects this athlete and the slate carries no frozen "
+    "constants for the season it prices, so the distribution engine was handed "
+    "nothing to build from and no probability exists for this line. This is a "
+    "wiring absence, not a refusal, and it is not a pass, an avoid or a "
     "no-value call"
 )
 
@@ -327,6 +362,20 @@ class SlateModel:
     #: every run per design 13's failure mode 5, which says to stop if the
     #: per-tier resolution rate moves more than 2pp across tiers.
     resolution_census: Mapping[str, int] = field(default_factory=dict)
+    #: The frozen constants the projections above were built from, checked by
+    #: `load_player_shapes` for **this slate's season** — see
+    #: :func:`_shapes_for`, which is the only place they are opened.
+    #:
+    #: Carried rather than re-loaded downstream. `models/player_distributions.py`
+    #: opens no file and takes `shapes` as an argument for the same reason
+    #: `player_rates` does; a card that loaded its own would be a second load
+    #: site with a season argument it would have to derive, and `_player_half`
+    #: records what an unchecked season argument already cost once. `None` means
+    #: this slate was assembled without them — every bare mapping through
+    #: :meth:`coerce` is — and a prop on one reads
+    #: :data:`NO_ENGINE_CONSTANTS` rather than being priced off constants
+    #: nobody checked.
+    shapes: PlayerShapes | None = None
 
     # -- the team half ----------------------------------------------------
 
@@ -591,7 +640,7 @@ def slate_model(
         # every published team number and this commit measures nothing.
     )
 
-    players, resolved, name_refusals, player_through, census, absence = (
+    players, resolved, name_refusals, player_through, census, absence, checked = (
         _player_half(
             day=day,
             player_history=player_history,
@@ -613,6 +662,7 @@ def slate_model(
         player_priced_through=player_through,
         player_absence_reason=absence,
         resolution_census=census,
+        shapes=checked,
     )
     _assert_invariants(model, prices=prices, day=day)
     return model
@@ -684,12 +734,18 @@ def _player_half(
 
     A single "no player opinions" bucket would hide the first inside the
     second, and the first is a wiring fault.
+
+    Returns the five container fields, the absence sentence, and **the shapes
+    object the projections were actually built from** — never the argument, and
+    never `None` once a projection exists. The card builds the distribution
+    engine from that object, so the constants a price is made from are provably
+    the ones the guard ran on for this season.
     """
     estimator = _player_rates_module()
     if estimator is None:
-        return {}, {}, {}, "", {}, NO_RATE_ESTIMATOR
+        return {}, {}, {}, "", {}, NO_RATE_ESTIMATOR, None
     if player_history is None or len(player_history) == 0:
-        return {}, {}, {}, "", {}, NO_PLAYER_HISTORY
+        return {}, {}, {}, "", {}, NO_PLAYER_HISTORY, None
 
     if shapes is None:
         try:
@@ -698,7 +754,7 @@ def _player_half(
             # The provenance guard's own sentence, not a paraphrase of it. It
             # names the constant and the window, and a paraphrase would lose
             # exactly the part an operator needs.
-            return {}, {}, {}, "", {}, str(exc)
+            return {}, {}, {}, "", {}, str(exc), None
     else:
         # **A supplied `shapes` is an injection point past the provenance
         # guard, and it was open.** `load_player_shapes` refuses a season the
@@ -731,6 +787,7 @@ def _player_half(
                     "used on another is unchecked — which is how the validation "
                     "season would be priced with the constants validated on it."
                 ),
+                None,
             )
 
     result = estimator.player_projections_for(
@@ -741,7 +798,7 @@ def _player_half(
         competition=competition,
         tiers=_tiers_from(matchups),
     )
-    return _unpack(result, player_history=player_history)
+    return (*_unpack(result, player_history=player_history), shapes)
 
 
 def _unpack(result: object, *, player_history: "pd.DataFrame"):

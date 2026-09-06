@@ -30,14 +30,20 @@ Around it:
   the replication raises at runtime and nothing else in the suite notices;
 * **S10** the module keeps no memo that could fake a leak test.
 
-Nothing here measures anything. `gates.can_produce_a_selection(NO_REPORT)` is
-False and stays False, so no prop reaches a card; every number below is a
-count off a fixture, and none of it is a pass, an avoid or a no-value call.
+Nothing here measures anything. Since 2026-09-06 a priceable projection carries
+a PROBABILITY through the card rather than a sentence saying it cannot, and that
+changes exactly one thing here: the buckets a prop can land in. It still cannot
+become a bet — `gates.can_produce_a_selection(NO_REPORT)` is False and stays
+False — and it is still not graded, which design 10's wager reconciliation
+gates. Every number below is a count off a fixture, and none of it is a pass, an
+avoid or a no-value call.
 """
 
 from __future__ import annotations
 
 import ast
+import importlib.util
+import sys
 import types
 from pathlib import Path
 
@@ -45,6 +51,7 @@ import pandas as pd
 import pytest
 
 from cbb_betting_lab.competitions import CBB
+from cbb_betting_lab.gates import Availability, can_produce_a_selection
 from cbb_betting_lab.markets import FULL_GAME
 from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.models import slate
@@ -104,10 +111,13 @@ def _projection(
 ) -> types.SimpleNamespace:
     """A projection shaped like `player_rates.PlayerProjection`.
 
-    Same reasoning as `_matchup`, and with more force: `player_rates.py` is not
-    written, so there is nothing to import. The seam reads exactly two fields
-    off a projection — `priceable` and `unpriceable_reason` — and this carries
-    them plus enough of the rest to be recognisable.
+    Same reasoning as `_matchup`: the seam reads exactly two fields off a
+    projection — `priceable` and `unpriceable_reason` — and this carries them
+    plus enough of the rest to be recognisable. It is used only where a
+    projection REFUSES; the tests that price one use `_real_player_half`, which
+    builds the real estimator's output, because the distribution engine reads
+    the minutes lattice, seven rates and a value mix that a double cannot
+    honestly carry.
     """
     return types.SimpleNamespace(
         event_id="e1",
@@ -139,6 +149,39 @@ def _wager(*, event_id: str, market: str, player: str = "", line: float | None =
         tier="high_major",
         quotes=(card_pricing.Quote(book="dk", american_odds=-110.0),),
     )
+
+
+def _real_player_half(*, carry_shapes: bool = True):
+    """`(PlayerSlate, PlayerShapes)` from the real estimator and the real file.
+
+    `tests/test_player_rates.py` is loaded by path for its row builders, the way
+    `tests/test_player_distributions.py` loads it: the alternative is a second
+    fixture frame that drifts from the estimator's own, and this repository has
+    the two-copies-of-one-thing family written down five times. The shapes go
+    through `load_player_shapes`, never `json.load`, because an instance
+    existing IS the evidence that the provenance guard ran for this season.
+    """
+    from cbb_betting_lab.models import player_rates
+    from cbb_betting_lab.models.player_shapes import load_player_shapes
+
+    spec = importlib.util.spec_from_file_location(
+        "player_rates_fixtures", REPO / "tests" / "test_player_rates.py"
+    )
+    assert spec and spec.loader
+    fixtures = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = fixtures
+    spec.loader.exec_module(fixtures)
+
+    shapes = load_player_shapes(
+        REPO / "data" / "processed" / "cbb_player_shapes.json", priced_season=2024
+    )
+    result = player_rates.player_projections_for(
+        day=DAY,
+        player_history=fixtures._history(),
+        prices=fixtures._prices("Sean Bairstow"),
+        shapes=shapes,
+    )
+    return result, (shapes if carry_shapes else None)
 
 
 def _team_history(days=(EARLIER,)) -> pd.DataFrame:
@@ -173,44 +216,56 @@ def test_a_prop_prices_on_a_game_whose_spread_does_not() -> None:
 
     Event `e1` carries **no matchup at all** and a priceable projection. The
     spread on it reads `no opinion`; the prop reaches the player half, is not
-    refused for the name, is not refused for the athlete, and comes to rest on
-    the one honest remaining answer — that
-    `models/player_distributions.py` is not written, so no probability exists
-    for the line yet.
+    refused for the name, is not refused for the athlete, and — since
+    2026-09-06, when `models/player_distributions.py` was wired into the card —
+    **carries a probability**. Until then the strongest form of this test
+    available was that the prop came to rest on its own sentence rather than the
+    team half's; the engine exists now, so the test asserts the price.
 
     That last step is the whole point. Under a nested container the prop could
     not have got that far: there would have been nothing to look in. The
     distance between "the model was never asked about this game" and "the model
-    projects this athlete and the engine that would price him is not built" is
-    exactly what this seam exists to preserve, and it is a distance no census
-    that summed the two could report.
+    prices this athlete on a game it has no rating for" is exactly what this
+    seam exists to preserve, and it is a distance no census that summed the two
+    could report.
+
+    The projection is the **real** estimator's, built from a cut frame, and the
+    constants are the real frozen file loaded through the real provenance guard.
+    A hand-assembled projection would prove the seam passes objects around; this
+    proves a price comes out of the far end.
     """
+    result, shapes = _real_player_half()
     model = slate.SlateModel(
         day=DAY,
         matchups={},  # NO matchup for e1. Not a refusing one — none at all.
-        players={"e1": {4001: _projection()}},
-        resolved={("e1", "A. Player"): 4001},
-        player_priced_through=EARLIER,
+        players=dict(result.projections),
+        resolved=dict(result.resolved),
+        player_priced_through=str(result.priced_through),
+        shapes=shapes,
     )
 
     spread = _wager(event_id="e1", market="spread")
-    prop = _wager(event_id="e1", market="player_points", player="A. Player", line=14.5)
+    prop = _wager(
+        event_id="e1", market="player_points", player="Sean Bairstow", line=14.5
+    )
     probabilities, census = gameday_card.opinions_for(
         [spread, prop], model, day=DAY
     )
 
-    assert probabilities == {}, "nothing may be priced while there is no engine"
     assert census.wagers == 2
-    assert census.priced == 0
+    assert census.priced == 1
+    assert prop.key in probabilities, (
+        "the prop carries no probability on a game with no rating, which is the "
+        f"whole property this file exists for. It read: {list(census.declined)}"
+    )
+    assert 0.0 < probabilities[prop.key] < 1.0
+    assert prop.key in census.push_mass, "the push is stored beside the price"
+    assert spread.key not in probabilities
 
     reasons = list(census.declined)
-    assert any("no rating exists for this game" in r for r in reasons), (
-        "the spread must read `no opinion`: there is no matchup for this event"
-    )
-    assert slate.NO_DISTRIBUTION_ENGINE in reasons, (
-        "the prop reached the player half and was answered on its own terms. "
-        f"It instead read: {reasons}"
-    )
+    assert reasons == [
+        next(r for r in reasons if "no rating exists for this game" in r)
+    ], f"the spread must read `no opinion` and nothing else declined: {reasons}"
     assert not any("never asked about this event's athletes" in r for r in reasons), (
         "the prop was turned away at the team half, which is the exact "
         "coupling this container exists to remove"
@@ -259,33 +314,56 @@ def test_s1_a_refusing_matchup_does_not_refuse_the_prop_on_the_same_game() -> No
     concentrated before 20 November, with a 2.3x tier skew and zero low-major
     — a census of the games the team model liked, printed as a census of the
     store. The two are decoupled here and both are counted.
+
+    Since the engine was wired the decoupling can be asserted at full strength:
+    the spread is refused BY THE RATINGS MODULE and the prop on the same event
+    carries a probability in the same call. One refusal, one price, and neither
+    inherited the other's answer.
     """
+    result, shapes = _real_player_half()
     model = slate.SlateModel(
         day=DAY,
         matchups={"e1": _matchup(priceable=False)},
-        players={"e1": {4001: _projection()}},
-        resolved={("e1", "A. Player"): 4001},
-        player_priced_through=EARLIER,
+        players=dict(result.projections),
+        resolved=dict(result.resolved),
+        player_priced_through=str(result.priced_through),
+        shapes=shapes,
     )
 
     spread = _wager(event_id="e1", market="spread")
-    prop = _wager(event_id="e1", market="player_points", player="A. Player", line=14.5)
-    _, census = gameday_card.opinions_for([spread, prop], model, day=DAY)
+    prop = _wager(
+        event_id="e1", market="player_points", player="Sean Bairstow", line=14.5
+    )
+    probabilities, census = gameday_card.opinions_for([spread, prop], model, day=DAY)
 
     assert any("ratings module refuses" in r for r in census.declined)
-    assert slate.NO_DISTRIBUTION_ENGINE in census.declined
-    assert len(census.declined) == 2, (
-        "two wagers, two different reasons, and neither inherited the other's"
+    assert census.priced == 1 and prop.key in probabilities
+    assert spread.key not in probabilities
+    assert len(census.declined) == 1, (
+        "two wagers, one refusal and one price, and neither inherited the "
+        f"other's answer: {census.declined}"
     )
 
 
-def test_s1_the_four_player_buckets_are_four_different_sentences() -> None:
-    """Never asked, the name, the athlete, no engine — and never summed.
+def test_s1_the_player_buckets_are_all_different_sentences() -> None:
+    """Priced, the athlete, the name, never asked, not one of the ten.
 
     Design 7: *"a missing entry means no opinion and is a different census
-    bucket. The two are counted separately, always."* Four wagers, four
-    distinct sentences, and the refusal for the athlete is printed in the
+    bucket. The two are counted separately, always."* Five wagers, one price and
+    four distinct sentences, and the refusal for the athlete is printed in the
     projection's own words rather than paraphrased.
+
+    Until the engine was wired the first of these was a fifth SENTENCE — a
+    priceable projection reading "no probability exists for this line yet". It
+    is a probability now, and the bucket it left behind is a different fact
+    again: a player market the model is not registered against at all
+    (`player_blocks` is one of seven such in `markets.PLAYER_MARKETS`, counted
+    in `tests/test_player_distributions.py`), which was reading the
+    missing-engine sentence and never should have.
+
+    The priceable projection here is the real estimator's; the refused one is a
+    double, because a projection that refuses is exactly two fields and building
+    a real R2 refusal would test the estimator's thresholds a second time.
     """
     refusal = (
         "refused: fewer than four prior appearances / fewer than sixty prior "
@@ -295,39 +373,45 @@ def test_s1_the_four_player_buckets_are_four_different_sentences() -> None:
         "refused: this name resolves only in tonight's box score, which is a "
         "player this lab has not seen, not a name it cannot read."
     )
+    result, shapes = _real_player_half()
+    players = {event: dict(by_athlete) for event, by_athlete in result.projections.items()}
+    players["e1"][4002] = _projection(athlete_id=4002, priceable=False, reason=refusal)
     model = slate.SlateModel(
         day=DAY,
         matchups={},
-        players={
-            "e1": {
-                4001: _projection(athlete_id=4001),
-                4002: _projection(athlete_id=4002, priceable=False, reason=refusal),
-            }
-        },
-        resolved={("e1", "A. Player"): 4001, ("e1", "B. Player"): 4002},
+        players=players,
+        resolved={**result.resolved, ("e1", "B. Player"): 4002},
         name_refusals={("e1", "C. Player"): name_refusal},
-        player_priced_through=EARLIER,
+        player_priced_through=str(result.priced_through),
+        shapes=shapes,
     )
 
     wagers = [
-        _wager(event_id="e1", market="player_points", player="A. Player", line=14.5),
+        _wager(event_id="e1", market="player_points", player="Sean Bairstow", line=14.5),
         _wager(event_id="e1", market="player_points", player="B. Player", line=9.5),
         _wager(event_id="e1", market="player_points", player="C. Player", line=6.5),
         _wager(event_id="e9", market="player_points", player="D. Player", line=11.5),
+        _wager(event_id="e1", market="player_blocks", player="Sean Bairstow", line=1.5),
     ]
-    _, census = gameday_card.opinions_for(wagers, model, day=DAY)
+    probabilities, census = gameday_card.opinions_for(wagers, model, day=DAY)
 
-    assert census.wagers == 4 and census.priced == 0
+    assert census.wagers == 5 and census.priced == 1
+    assert list(probabilities) == [wagers[0].key]
     assert set(census.declined.values()) == {1}, (
-        "each wager landed in its own bucket; a bucket with two in it means "
-        f"two states collapsed into one sentence: {census.declined}"
+        "each declined wager landed in its own bucket; a bucket with two in it "
+        f"means two states collapsed into one sentence: {census.declined}"
     )
-    assert slate.NO_DISTRIBUTION_ENGINE in census.declined
     assert refusal in census.declined, "R2 must print in the projection's own words"
     assert name_refusal in census.declined, "R1a must print in its own words"
     assert any("never asked" in r for r in census.declined), (
         "an event the model was never asked about is its own bucket"
     )
+    assert any("registered against ten markets" in r for r in census.declined), (
+        "a player market outside the ten is its own bucket and must not read as "
+        "a refusal, a missing engine or an opinion"
+    )
+    assert slate.NO_DISTRIBUTION_ENGINE not in census.declined
+    assert slate.NO_ENGINE_CONSTANTS not in census.declined
 
 
 # --------------------------------------------------------------------------
@@ -1057,7 +1141,7 @@ def test_s10_the_seam_declares_no_module_level_frame_or_projection_memo() -> Non
 
 
 def test_the_gaps_this_seam_still_has_are_the_ones_written_down() -> None:
-    """Four, of which one has since closed; each goes red the day it does.
+    """Four, of which two have since closed; each goes red the day it does.
 
     The repository's form for a limitation: not a docstring claim that quietly
     becomes false, but an assertion that fails on the commit which fixes it and
@@ -1071,8 +1155,28 @@ def test_the_gaps_this_seam_still_has_are_the_ones_written_down() -> None:
        `tests/test_the_player_props_are_pre_registered.py`. The clause is
        replaced by its successor rather than deleted: the seam is now wired to
        an estimator, and what it hands the card is a projection.
-    2. **No engine.** `models/player_distributions.py` is not written, so a
-       priceable projection still yields no probability.
+    2. **CLOSED, and replaced by its successor.**
+       `models/player_distributions.py` was not written, so a priceable
+       projection yielded no probability and `NO_DISTRIBUTION_ENGINE` was the
+       last word on a prop. The engine was written and, on 2026-09-06, wired:
+       `gameday_card.opinions_for` builds one `PlayerDistribution` per (event,
+       athlete) from `SlateModel.shapes` — the constants this seam already had
+       provenance-checked for the season — and
+       `test_a_prop_prices_on_a_game_whose_spread_does_not` now asserts a
+       PRICE on a game the team model has no rating for, which is the strongest
+       form this file's central sentence has ever had. The sentence went with
+       the clause: `slate.NO_DISTRIBUTION_ENGINE` no longer says the file is not
+       written, it says the file could not be imported, and it is kept reachable
+       for the reason `NO_RATE_ESTIMATOR` is.
+
+       The successor is that **a priced prop still reaches no output.** It may
+       not be bet — `gates.can_produce_a_selection` is CONFIRMED-only and
+       Division I men's basketball has no availability report — and it may not
+       be graded, because design 10's 261,870-wager reconciliation has not run.
+       The assertion below is the first half of that and goes red the day a
+       market with no availability report can produce a selection. Clause 3 is
+       the second half: no production caller resolves `slate_model`, so no
+       shipped run has built a distribution at all.
     3. **`DEFAULT_MODEL` still names the team seam.** `slate_model` is proved
        to fit both production callers (S4) and is not yet what they resolve.
        Moving it is blocked on a gate, not on the estimator:
@@ -1096,10 +1200,15 @@ def test_the_gaps_this_seam_still_has_are_the_ones_written_down() -> None:
         "projections. Put `player_rates.py` back in MODEL_FILES in "
         "tests/test_the_player_props_are_pre_registered.py if that is deliberate."
     )
-    assert not (models / "player_distributions.py").exists(), (
-        "the distribution engine now exists, so a priceable projection can "
-        "carry a probability and `NO_DISTRIBUTION_ENGINE` is no longer the "
-        "last word on a prop. Delete this clause and the sentence with it."
+    assert (models / "player_distributions.py").exists(), (
+        "the distribution engine has been removed, so every prop is back to a "
+        "census bucket with no probability. Say so, and put the sentence back."
+    )
+    assert not can_produce_a_selection(Availability.NO_REPORT), (
+        "a market with no availability report can now produce a selection, and "
+        "since 2026-09-06 the props carry probabilities. Nothing may be bet or "
+        "graded through this engine until design 10's 261,870-wager "
+        "reconciliation has run: say what changed and what it rests on."
     )
     assert PB.DEFAULT_MODEL == "cbb_betting_lab.models.ratings:matchups_for", (
         "DEFAULT_MODEL has moved. Update the prose at price_backtest.py, "
@@ -1248,6 +1357,39 @@ def test_the_seams_player_half_actually_runs(fixture_raw_dir) -> None:
         f"projection tiers {tiers} do not match the home side's "
         f"{matchup.home_tier!r}, and the subject plays for the home team"
     )
+
+    # **And the constants travel with the slate.** The card builds the
+    # distribution engine from `model.shapes`, which is the object
+    # `load_player_shapes` checked FOR THIS SEASON; a card that opened the file
+    # itself would be a second load site with a season argument it would have to
+    # derive, and `_player_half` already records what an unchecked season
+    # argument cost once.
+    assert model.shapes is not None, (
+        "the slate carries projections and not the constants they were built "
+        "from, so nothing downstream can price them without opening the frozen "
+        "file a second time"
+    )
+    assert int(model.shapes.priced_season) == 2026
+
+    # **The wiring, end to end, on a real slate — and what it says here is a
+    # refusal, in the estimator's own words.** This subject is refused under R6:
+    # `slate.REQUIRED_PLAYER_COLUMNS` is eight columns, a value mix needs the
+    # box score, and the frame this seam declares does not carry
+    # `field_goals_made`, `three_point_field_goals_made` or `free_throws_made`.
+    # That is clause 6 of `test_player_rates.py`'s limitations reaching the
+    # card. What matters for the wiring is which sentence comes out: the
+    # PROJECTION'S, not a missing engine and not missing constants.
+    prop = _wager(event_id="e1", market="player_points", player="A Player", line=13.5)
+    probabilities, census = gameday_card.opinions_for([prop], model, day=day)
+    assert probabilities == {} and census.priced == 0
+    reason = next(iter(census.declined))
+    assert reason == projections[0].unpriceable_reason, (
+        "the card paraphrased the refusal instead of printing the estimator's "
+        f"own sentence: {reason}"
+    )
+    assert "no per-minute rate exists to shrink" in reason
+    assert slate.NO_DISTRIBUTION_ENGINE not in census.declined
+    assert slate.NO_ENGINE_CONSTANTS not in census.declined
 
 
 def test_shapes_checked_for_another_season_are_refused(fixture_raw_dir) -> None:
