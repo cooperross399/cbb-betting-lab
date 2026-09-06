@@ -297,6 +297,7 @@ from cbb_betting_lab.selection import (
     OVER,
     UNDER,
 )
+from cbb_betting_lab.models import player_census
 from cbb_betting_lab.stores import _decimal_payout as decimal_payout
 
 
@@ -1908,7 +1909,23 @@ def build_record(
     wager that reached none of the buckets has vanished from a measurement, and
     a measurement that silently lost rows still prints an interval that looks
     exactly like one that did not.
+
+    **A player wager may not be graded here until the store's wager census has
+    reconciled.** This function is design section 10's own metric — the de-vig,
+    the log loss, the Brier and the clustered intervals — and `player` is
+    already an OPTIONAL column of the frame it grades, casefolded in the de-vig
+    pair scope, so a frame of player props handed to it needs no new code to be
+    scored. Section 10 gates that on reconciling the store's wager count
+    (261,870 wagers under the book's own spelling of the athlete against 257,474
+    under a casefold, a 4,396 difference that has to be named wager by wager)
+    and says "the run stops until it reconciles". The guard is one vectorised
+    prefix test on a frame already in memory, it finds nothing on every
+    team-market run this lab has ever made, and it fails CLOSED: no receipt
+    means refused.
     """
+    player_census.guard_graded_frame(
+        inputs.graded, what="forecast_skill.build_record"
+    )
     graded = inputs.graded
     if not graded.empty:
         require_columns(graded, SKILL_COLUMNS, "the graded wager frame")

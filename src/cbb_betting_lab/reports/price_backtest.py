@@ -195,6 +195,7 @@ from cbb_betting_lab.competitions import CBB, Competition
 from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.experiment_ledger import LEDGER_FILENAME
 from cbb_betting_lab.experiment_ledger import load as load_ledger
+from cbb_betting_lab.models import player_census
 from cbb_betting_lab.stores import _decimal_payout as decimal_payout
 
 
@@ -424,7 +425,16 @@ def settled_opinions(
     The rows kept here are a superset of the settled bets; the export marks the
     bets with a boolean `selected` column computed by :func:`bet_mask` so the
     selected subset can be reported *beside* the whole, never instead of it.
+
+    **A player wager may not reach this population until the store's wager
+    census has reconciled** — design section 10's gate, in
+    `models.player_census`. This is the ROI half of grading, and the guard finds
+    nothing on a team-market run: `DEFAULT_MODEL` returns a bare mapping with no
+    player half, so no prop has ever reached here. It fails closed anyway,
+    because the day one does the question is which denominator it was counted
+    under.
     """
+    player_census.guard_graded_frame(frame, what="price_backtest.settled_opinions")
     if frame.empty or probability_column not in frame.columns or "outcome" not in frame.columns:
         return frame.iloc[0:0]
     kept = settled(frame)
