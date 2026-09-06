@@ -41,6 +41,15 @@ may become anything, anything else may not change, and nothing may become
 `pending` again. `realised_direction` is written back with the outcome and is
 not compared for the same reason.
 
+**Descriptive-only declarations are compared too, and the reason is not
+symmetry.** A quantity declared descriptive-only pays no family correction, on
+the grounds that it can never be a finding; `ExperimentLedger.record()` enforces
+that by refusing to record a hypothesis under a declared name. Delete the
+declaration on disk and the refusal has nothing to refuse, and the quantity can
+then be registered as a test — after its number was seen — with no trace that
+it was ever exempt. So a removed or rewritten declaration fails here, and so
+does a head hypothesis carrying a name either side declared.
+
 Nor is a key-by-key comparison enough on its own. Reduce each side to one
 record per key and a side that disagrees with ITSELF reads as clean, so
 `contradictions()` runs over both sides before the comparison: a ledger may
@@ -80,6 +89,12 @@ FROZEN_FIELDS = ("tested_on", "predicted_direction")
 #: head may change.
 PENDING = "pending"
 
+#: The fields a descriptive-only declaration must carry. `rationale` is one of
+#: them: a declaration with no stated reason is an exemption nobody has to
+#: justify, and the reason is what a later reader needs in order to see that
+#: promoting the quantity would be wrong.
+DESCRIPTIVE_FIELDS = ("search", "name", "declared_on", "rationale")
+
 Key = tuple[str, str, tuple[int, ...], str]
 
 
@@ -95,8 +110,39 @@ def correction_factor(count: int) -> float:
     return NormalDist().inv_cdf(1 - (ALPHA / families) / 2) / 1.96
 
 
-def read_ledger(path: Path, side: str) -> list[dict]:
-    """The `hypotheses` list, or a `LedgerError` naming what was wrong."""
+def read_descriptive(payload: dict, path: Path, side: str) -> list[dict]:
+    """The `descriptive_only` list, validated, or a `LedgerError`.
+
+    An ABSENT key is a ledger that declared nothing — every ledger written
+    before the field existed — and reads as an empty list. A key present and
+    malformed is a hard error: "there were no declarations" and "I could not
+    read the declarations" must never take the same branch, for the same reason
+    an unresolvable base ref stops the workflow instead of passing it.
+    """
+    entries = payload.get("descriptive_only")
+    if entries is None:
+        return []
+    if not isinstance(entries, list):
+        raise LedgerError(
+            f"the {side} ledger {path} has 'descriptive_only' as a "
+            f"{type(entries).__name__}, not a list"
+        )
+    for index, entry in enumerate(entries):
+        where = f"{side} descriptive-only entry {index}"
+        if not isinstance(entry, dict):
+            raise LedgerError(f"{where} is a {type(entry).__name__}, not an object")
+        for field in DESCRIPTIVE_FIELDS:
+            if field not in entry:
+                raise LedgerError(f"{where} is missing '{field}'")
+            if not isinstance(entry[field], str):
+                raise LedgerError(
+                    f"{where} has '{field}' as a {type(entry[field]).__name__}, not a string"
+                )
+    return entries
+
+
+def read_payload(path: Path, side: str) -> dict:
+    """The ledger file as a JSON object, or a `LedgerError` naming what was wrong."""
     if not path.is_file():
         raise LedgerError(f"the {side} ledger {path} does not exist")
     try:
@@ -111,6 +157,12 @@ def read_ledger(path: Path, side: str) -> list[dict]:
         raise LedgerError(
             f"the {side} ledger {path} is a {type(payload).__name__}, not a JSON object with a 'hypotheses' key"
         )
+    return payload
+
+
+def read_ledger(path: Path, side: str) -> list[dict]:
+    """The `hypotheses` list, or a `LedgerError` naming what was wrong."""
+    payload = read_payload(path, side)
     entries = payload.get("hypotheses")
     if not isinstance(entries, list):
         raise LedgerError(f"the {side} ledger {path} has no 'hypotheses' list (found {type(entries).__name__})")
@@ -174,6 +226,64 @@ def contradictions(entries: list[dict], side: str) -> tuple[list[str], dict[Key,
     return problems, first_by_key
 
 
+def declaration_key(entry: dict) -> tuple[str, str]:
+    """What makes two declarations the same quantity — `DescriptiveOnly.key()`.
+
+    No seasons and no stage, deliberately: a hypothesis must not be able to
+    slip past the refusal by declaring different seasons than the description
+    it is promoting.
+    """
+    return (entry["search"], entry["name"])
+
+
+def compare_declarations(
+    base: list[dict], head: list[dict], head_hypotheses: list[dict]
+) -> list[str]:
+    """Every way the head betrays a descriptive-only declaration.
+
+    Three ways, and the third is the one that matters. A declaration may not be
+    removed and may not be rewritten — those keep the record intact. And no
+    hypothesis on the head may carry a name declared descriptive-only on
+    EITHER side, which is what actually stops the promotion: the quantity was
+    exempted from the family correction because it could never be a finding, so
+    recording it as a test reads a look nobody counted as a result.
+    """
+    problems: list[str] = []
+    base_by_key = {declaration_key(d): d for d in base}
+    head_by_key = {declaration_key(d): d for d in head}
+
+    for entry_key, base_entry in base_by_key.items():
+        head_entry = head_by_key.get(entry_key)
+        if head_entry is None:
+            problems.append(
+                f"a descriptive-only declaration was removed: {entry_key[0]} / "
+                f"{entry_key[1]}. It is what stops that quantity from being "
+                "recorded as a hypothesis after its number was seen; delete it "
+                "and `ExperimentLedger.record()` has nothing left to refuse."
+            )
+            continue
+        for field in ("declared_on", "rationale"):
+            if head_entry[field] != base_entry[field]:
+                problems.append(
+                    f"a descriptive-only declaration was rewritten: "
+                    f"{entry_key[0]} / {entry_key[1]} — '{field}' was "
+                    f"{base_entry[field]!r}, is now {head_entry[field]!r}"
+                )
+
+    declared = set(base_by_key) | set(head_by_key)
+    for entry in head_hypotheses:
+        if (entry["search"], entry["name"]) in declared:
+            problems.append(
+                f"promoted from descriptive-only to a hypothesis: "
+                f"{entry['search']} / {entry['name']}. It paid no family "
+                "correction on the grounds that it could never be a finding, "
+                "so it may not become one. If it is genuinely a test, it has to "
+                "be pre-registered under a name that was never declared "
+                "descriptive-only, and BEFORE it is measured."
+            )
+    return problems
+
+
 def compare(base: list[dict], head: list[dict]) -> tuple[list[str], int]:
     """Every way the head betrays the base, and how many keys were checked."""
     problems: list[str] = []
@@ -226,7 +336,13 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         head = read_ledger(args.head, "head")
+        head_declared = read_descriptive(read_payload(args.head, "head"), args.head, "head")
         base = read_ledger(args.base, "base") if args.base is not None else None
+        base_declared = (
+            read_descriptive(read_payload(args.base, "base"), args.base, "base")
+            if args.base is not None
+            else []
+        )
     except LedgerError as exc:
         print(f"Ledger check FAILED: {exc}", file=sys.stderr)
         return 1
@@ -248,6 +364,7 @@ def main(argv: list[str] | None = None) -> int:
             problems.append(
                 f"base was present but nothing was compared ({len(base)} base entries, {len(head)} head entries)"
             )
+    problems.extend(compare_declarations(base_declared, head_declared, head))
 
     if problems:
         sys.stdout.flush()
@@ -263,6 +380,11 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"{compared} base hypotheses compared, all present with an identical tested_on and "
         f"predicted_direction and no measured outcome rewritten. {len(head) - len(base)} appended."
+    )
+    print(
+        f"{len(base_declared)} descriptive-only declarations compared, all "
+        f"present and unrewritten, none promoted to a hypothesis. "
+        f"{len(head_declared) - len(base_declared)} declared."
     )
     return 0
 

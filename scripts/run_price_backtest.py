@@ -135,6 +135,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from cbb_betting_lab import restatement as RESTATEMENT
 from cbb_betting_lab import stats as S
 from cbb_betting_lab.competitions import (
     DEFAULT_COMPETITION_KEY,
@@ -1065,13 +1066,26 @@ def print_half_point(record: Mapping) -> None:
 # --------------------------------------------------------------------------
 
 
-def rebuild_report_only(*, record_path: Path, report_path: Path) -> int:
+def rebuild_report_only(
+    *, record_path: Path, report_path: Path, ledger: Path | None = None
+) -> int:
     """Re-render the markdown from the record. Scores nothing, spends nothing.
 
     A full run walks every slate day of six seasons and grades every wager in
     the store. If improving a sentence cost that, nobody would improve a
     sentence — they would edit the generated file by hand, and a hand-edited
     generated file survives exactly one re-run.
+
+    **It re-reads the experiment ledger and restates the verdicts at today's
+    cumulative count.** It used to replay the record's stored correction, which
+    is the one line that let three different corrections be in force across
+    this lab's own documents at once: a record scored at 30 hypotheses kept
+    re-rendering *demonstrated deficit* long after the ledger reached 95, and a
+    re-render — the cheapest, most-run operation here — could not fix it
+    because it was the thing repeating it. Restating costs nothing: every
+    corrected bound is a stored point estimate and a stored standard error
+    apart from being recomputed. The record is not rewritten; see
+    `cbb_betting_lab.restatement` for why.
     """
     if not record_path.is_file():
         print(
@@ -1087,13 +1101,38 @@ def rebuild_report_only(*, record_path: Path, report_path: Path) -> int:
     except PB.BacktestError as exc:
         print(f"::error::{exc}", file=sys.stderr)
         return EXIT_NOTHING_TO_MEASURE
-    PB.write_report(record, report_path)
+    correction = RESTATEMENT.current(ledger)
+    was = int(record.get("looks", 1) or 1)
+    # One-directional: a re-render may only ever widen. See `restatement.widened`.
+    stated = RESTATEMENT.widened(was, correction)
+    PB.write_report(record, report_path, looks=stated)
     print(f"Wrote {report_path} from {record_path}.")
     print(
         f"The run being rendered scored {int(record.get('bets_graded', 0)):,} "
         f"graded bets from {int(record.get('wagers_graded', 0)):,} graded "
         f"wagers, generated {record.get('generated_at') or 'at an unrecorded time'}."
     )
+    if not correction.found:
+        print(
+            f"::warning::No experiment ledger at {ledger}, so the verdicts "
+            f"below stand at the {was:,} hypotheses this run was scored at. "
+            "An absent ledger is an unknown family, never an empty one, and "
+            "restating it narrower than the run published would turn a missing "
+            "file into a stronger claim.",
+            file=sys.stderr,
+        )
+    elif stated != was:
+        print(
+            f"Verdicts restated at {stated:,} cumulative hypotheses "
+            f"(x{S.bonferroni_factor(stated):.4f}); the run was scored at {was:,} "
+            f"(x{float(record.get('correction_factor', 1.0)):.4f}). The record "
+            "keeps what it measured."
+        )
+    else:
+        print(
+            f"The ledger holds {correction.looks:,} hypotheses, so "
+            "nothing needed restating."
+        )
     print("Nothing was re-scored, no table was read and no credit was spent.")
     return EXIT_OK
 
@@ -1185,8 +1224,14 @@ def main(argv: list[str] | None = None) -> int:
     report_path = PB.report_path(competition, output_dir)
 
     if args.rebuild_report_only:
+        # ONE LEDGER, and the same one a full run corrects against: it does not
+        # follow --output-dir, because a holdout run points --output-dir at
+        # data/outputs/holdout/ and "the ledger beside the outputs" would then
+        # mean a copy.
         return rebuild_report_only(
-            record_path=record_path, report_path=report_path
+            record_path=record_path,
+            report_path=report_path,
+            ledger=Path(args.ledger) if args.ledger else PB.ledger_path(OUTPUTS_DIR),
         )
 
     window = H.WINDOWS[args.window]

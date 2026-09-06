@@ -29,40 +29,42 @@ Read `docs/what_we_can_and_cannot_claim.md` first. This says what the evidence *
 
 ## The answer
 
-**No demonstrated edge in any of the 3 measured tiers** (high-major 43,228 bets, mid-major 88,344 bets, low-major 59,475 bets). 2 shows a demonstrated deficit: mid-major 88,344 bets, **-4.3%**, corrected -8.0% to -0.5% — demonstrated deficit; low-major 59,475 bets, **-4.0%**, corrected -8.0% to -0.1% — demonstrated deficit.
+**No demonstrated edge in any of the 3 measured tiers** (high-major 43,228 bets, mid-major 88,344 bets, low-major 59,475 bets). 1 shows a demonstrated deficit: mid-major 88,344 bets, **-4.3%**, corrected -8.2% to -0.4% — demonstrated deficit.
 
 Measured on 191,053 graded bets over 26,591 games and 791 days of the 2021-2026 seasons, across 32 market-and-tier cells.
 
-Every interval is corrected for 62 cumulative distinct hypotheses — the experiment ledger's count at render time, not the count when the backtest ran — which widens each one by x1.71. The correction can only ever get stricter as the search continues, which is the only direction it is allowed to move.
+Every interval is corrected for 95 cumulative distinct hypotheses — the experiment ledger's count at render time, not the count when the backtest ran — which widens each one by x1.77. The correction can only ever get stricter as the search continues, which is the only direction it is allowed to move.
 
 | Tier | Result |
 |:---|:---|
-| high-major | 43,228 bets, **-3.2%**, corrected -7.9% to +1.4% — no demonstrated edge |
-| mid-major | 88,344 bets, **-4.3%**, corrected -8.0% to -0.5% — demonstrated deficit |
-| low-major | 59,475 bets, **-4.0%**, corrected -8.0% to -0.1% — demonstrated deficit |
+| high-major | 43,228 bets, **-3.2%**, corrected -8.1% to +1.6% — no demonstrated edge |
+| mid-major | 88,344 bets, **-4.3%**, corrected -8.2% to -0.4% — demonstrated deficit |
+| low-major | 59,475 bets, **-4.0%**, corrected -8.1% to +0.0% — no demonstrated edge |
 | unplaced | not enough evidence (6 bets, below the 200 declared in advance) |
 
 Cut finer, by market **and** tier: **0 of 32 cells shows a demonstrated edge** and **3 shows a demonstrated deficit**, over the 23 that clear the floor declared in advance.
 
-- `team_total / mid_major`: 13,478 bets, **-5.8%**, corrected -9.3% to -2.4% — demonstrated deficit
-- `moneyline / low_major`: 7,561 bets, **-7.9%**, corrected -14.6% to -1.3% — demonstrated deficit
-- `total_points / low_major`: 17,903 bets, **-5.2%**, corrected -9.2% to -1.1% — demonstrated deficit
+- `team_total / mid_major`: 13,478 bets, **-5.8%**, corrected -9.4% to -2.2% — demonstrated deficit
+- `moneyline / low_major`: 7,561 bets, **-7.9%**, corrected -14.8% to -1.1% — demonstrated deficit
+- `total_points / low_major`: 17,903 bets, **-5.2%**, corrected -9.4% to -0.9% — demonstrated deficit
 
 ### The tier this lab was built expecting to be the best
 
-The reason for a fourth lab was market heterogeneity — 360 teams on a Tuesday night in January being priced with less attention than a 32-team league, so softness should appear at the low-major end. By point estimate the **worst** measured tier is **mid-major**: 88,344 bets, **-4.3%**, corrected -8.0% to -0.5% — demonstrated deficit. Whatever is different about that board, this model is not better there.
+The reason for a fourth lab was market heterogeneity — 360 teams on a Tuesday night in January being priced with less attention than a 32-team league, so softness should appear at the low-major end. By point estimate the **worst** measured tier is **mid-major**: 88,344 bets, **-4.3%**, corrected -8.2% to -0.4% — demonstrated deficit. Whatever is different about that board, this model is not better there.
 
 ### The pooled figure, which is not the answer
 
 **Pooled across Division I. This is never the headline.** High-major, mid-major and low-major are different distributions; a policy that wins in low-major games and loses in high-major ships in low-major only, if it ships at all. `docs/when_this_ends.md` applies the stopping rule to the pooled figure as well as to each tier, which is why it is computed — not so it can be quoted on its own.
 
-Pooled across every market and tier: 191,053 bets, **-4.0%**, corrected -6.3% to -1.6% — demonstrated deficit.
+Pooled across every market and tier: 191,053 bets, **-4.0%**, corrected -6.4% to -1.5% — demonstrated deficit.
 
 ### A claim this document has retracted, recorded 2026-09-04
 
 Before this block was generated, this document said of **low-major** that it was *“the only tier whose interval excludes zero, and it excludes zero on the losing side”* — a demonstrated deficit. That was measured on the core team markets alone, before the alternate ladders and the halves entered the population.
 
-**It still holds.** On today's record low-major reads 59,475 bets, **-4.0%**, corrected -8.0% to -0.1% — demonstrated deficit.
+**It no longer holds.** On today's record low-major reads 59,475 bets, **-4.0%**, corrected -8.1% to +0.0% — no demonstrated edge.
+
+**The measurement did not move; the search did.** The uncorrected 95% interval is -6.3% to -1.7% and still excludes zero. What widens it across is the family-wise correction over 95 cumulative hypotheses — x1.7689 — every one of which this lab wrote down before it was tested. An interval is paid for by the whole search that produced it, including the parts of that search that have not run yet, and this is one interval paying. A claim that dissolves once the search is counted in full was never worth the width it was first printed at.
 
 ## The model is not worthless — it is beaten by the vig
 
@@ -82,9 +84,9 @@ Each is a rule that needs no model at all. All 3 measured tiers return more than
 
 | Tier | Rows | Model minus raw market | Reading |
 |:---|---:|:---|:---|
-| high-major | 62,163 | -0.01663, corrected -0.02179 to -0.01147 | demonstrated deficit |
-| mid-major | 137,296 | -0.00962, corrected -0.01307 to -0.00616 | demonstrated deficit |
-| low-major | 94,182 | -0.00776, corrected -0.01092 to -0.00460 | demonstrated deficit |
+| high-major | 62,163 | -0.01663, corrected -0.02197 to -0.01129 | demonstrated deficit |
+| mid-major | 137,296 | -0.00962, corrected -0.01319 to -0.00604 | demonstrated deficit |
+| low-major | 94,182 | -0.00776, corrected -0.01103 to -0.00449 | demonstrated deficit |
 
 A **negative** advantage is the model scoring worse than the price it is betting into. The verdict column reads the sign the same way every other interval in this repository does; it is a Brier difference and not a return, and it is never added to one.
 

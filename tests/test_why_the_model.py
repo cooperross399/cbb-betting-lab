@@ -21,6 +21,7 @@ document against it, so the claim cannot become false again without a red build.
 
 from __future__ import annotations
 
+import copy
 import json
 import re
 import shutil
@@ -31,6 +32,7 @@ from pathlib import Path
 
 import pytest
 
+from cbb_betting_lab import restatement as RESTATEMENT
 from cbb_betting_lab import stats as S
 from cbb_betting_lab.competitions import CBB
 from cbb_betting_lab.reports import forecast_skill as FS
@@ -1141,28 +1143,35 @@ def test_the_retraction_reads_its_current_figure_from_the_record(outputs):
     off the record, so the retraction cannot become the stale paragraph that
     the hand-written version of it was.
 
-    On 2026-09-04's expanded store the retraction read *"It no longer holds"*,
-    and this test pinned that sentence. On the full store measured 2026-09-05
-    low-major is a demonstrated deficit again — 59,475 bets, -4.0%, corrected
-    -8.0% to -0.1% — so the generator emits *"It still holds"* and the pinned
-    sentence moved with the record rather than the record being made to match
-    the pin. That is the whole design: the branch below is chosen by
-    `verdict_of(current)` and nothing else, and both branches are still
-    exercised against rows this test builds, so neither can be hard-coded.
+    The sentence has moved three times, and every time the record moved first:
+
+    - 2026-09-04, expanded store: *"It no longer holds"*;
+    - 2026-09-05, full store: *"It still holds"* — low-major a demonstrated
+      deficit again at 59,475 bets, -4.0%, corrected -8.0% to -0.1% over the
+      62 hypotheses the ledger then held;
+    - 2026-09-05, after the player-prop pre-registration: *"It no longer
+      holds"*. The ledger went from 62 hypotheses to 95, the correction from
+      x1.7095 to x1.7689, and low-major's corrected upper bound crossed zero to
+      +0.0% on a record whose population, model and store did not change at
+      all.
+
+    That third move is the one worth pinning, because nothing about the
+    measurement produced it. The branch below is chosen by
+    `verdict_of(current)` and nothing else, and both branches are exercised
+    against rows this test builds, so neither can be hard-coded.
 
     What the generator compares is the tier's VERDICT against the verdict the
     retracted sentence claimed. The retracted wording also said *"the only
-    tier"*, and on the full store mid-major excludes zero as well, so the
-    sentence's exclusivity does not survive even though its sign does. The
-    generator does not read exclusivity and this test does not assert it.
+    tier"*; the generator does not read exclusivity and this test does not
+    assert it.
     """
     record = build(outputs)
     tier_key = WHY.SUPERSEDED_CLAIM["tier"]
     current = next(row for row in record["tiers"] if row["tier"] == tier_key)
-    assert WHY.verdict_of(current) == WHY.SUPERSEDED_CLAIM["verdict_claimed"], (
-        "the committed record no longer reads the verdict the retracted claim "
-        "made; re-derive this test's branch from the record rather than "
-        "re-pinning the sentence"
+    assert WHY.verdict_of(current) != WHY.SUPERSEDED_CLAIM["verdict_claimed"], (
+        "the committed record now reads the verdict the retracted claim made; "
+        "re-derive this test's branch from the record rather than re-pinning "
+        "the sentence"
     )
     rendered = WHY.render(record)
     heading = f"### A claim this document has retracted, recorded {WHY.SUPERSEDED_CLAIM['recorded_on']}"
@@ -1173,8 +1182,20 @@ def test_the_retraction_reads_its_current_figure_from_the_record(outputs):
         "the retraction does not print what the record says the tier reads "
         "today, so it is a hand-typed figure again"
     )
-    assert "**It still holds.**" in section
-    assert "**It no longer holds.**" not in section
+    assert "**It no longer holds.**" in section
+    assert "**It still holds.**" not in section
+
+    # And it says WHICH of the two things moved, read off the row. Here the
+    # uncorrected interval still excludes zero, so the correction is what
+    # widened it across and the paragraph has to say so rather than blame a
+    # population that did not change.
+    raw = WHY.printed_interval(current, bounds=("low", "high"))
+    assert not (raw.low <= 0.0 <= raw.high), (
+        "low-major's uncorrected interval now includes zero, so the retraction "
+        "takes the other branch; re-derive this assertion from the record"
+    )
+    assert "**The measurement did not move; the search did.**" in section
+    assert f"x{S.bonferroni_factor(current['looks']):.4f}" in section
 
     # A DIFFERENT row that does NOT hold. Asserting only that the
     # committed tier's figure appears is not enough: that string is also what a
@@ -1199,6 +1220,25 @@ def test_the_retraction_reads_its_current_figure_from_the_record(outputs):
     )
     assert WHY._figure(current) not in moved_section
 
+    # The other branch of the explanation: a row whose UNCORRECTED interval
+    # already spans zero. Nothing about the family can have produced that, so
+    # the paragraph must not claim the search did it — the fixed sentence this
+    # branch replaced would have blamed the population either way.
+    upstream = WHY.cell(
+        _tier(
+            name=tier_key, tier=tier_key, bets=30_000,
+            roi=-0.01, low=-0.09, high=+0.07, standard_error=0.04,
+        ),
+        looks=95,
+    )
+    assert upstream["verdict"] == S.NO_DEMONSTRATED_EDGE, upstream
+    record["tiers"] = [upstream]
+    upstream_section = WHY.render(record)
+    upstream_section = upstream_section[upstream_section.index(heading) :]
+    assert "**It no longer holds.**" in upstream_section
+    assert "**The measurement itself moved.**" in upstream_section
+    assert "**The measurement did not move; the search did.**" not in upstream_section
+
     # Flip the same tier to the reading the retracted claim made, and the
     # retraction has to follow it rather than stay retracted.
     record = build(outputs)
@@ -1216,6 +1256,8 @@ def test_the_retraction_reads_its_current_figure_from_the_record(outputs):
     section = section[section.index(heading) :]
     assert "**It still holds.**" in section
     assert "**It no longer holds.**" not in section
+    assert "**The measurement did not move; the search did.**" not in section
+    assert "**The measurement itself moved.**" not in section
     assert WHY._figure(restored) in section, (
         "the retraction prints a figure that does not move when the record "
         "does, so it is hard-coded"
@@ -1258,10 +1300,25 @@ def test_the_status_row_for_the_regression_carries_the_measured_per_tier_figures
     """The other half of the same row: having removed the wrong figure, the
     right ones have to be there and have to match the record. Read from
     `cbb_forecast_skill.json`, so the day the regression is re-run and this row
-    is not rewritten, this fails."""
+    is not rewritten, this fails.
+
+    **Compared at the experiment ledger's count, not at the record's.** This
+    test used to read `adjusted_low`/`adjusted_high` straight off the record,
+    which pinned row 13 to the correction the fit happened to be scored under —
+    x1.6041 over 30 hypotheses — and so required the row to stay stale as the
+    ledger grew past it. That is the defect decision 46 closes, in the guard
+    that was supposed to catch it. The bounds are re-derived here the way every
+    report now re-derives them: same point estimate, same standard error, the
+    ledger's cumulative count at read time.
+    """
     payload = json.loads(
         FS.record_path(CBB, OUTPUTS).read_text(encoding="utf-8")
     )
+    looks = RESTATEMENT.widened(
+        int(payload.get("looks", 1) or 1),
+        RESTATEMENT.current(RESTATEMENT.ledger_path(OUTPUTS)),
+    )
+    payload = FS.restated(payload, looks=looks, record_name="cbb_forecast_skill.json")
     text = STATUS.read_text(encoding="utf-8")
     measured = [
         tier for tier in payload["by_tier"]
@@ -1270,6 +1327,10 @@ def test_the_status_row_for_the_regression_carries_the_measured_per_tier_figures
     assert len(measured) == 3, [t["label"] for t in measured]
     for tier in measured:
         raw = tier["brier"]["advantage_over_raw"]
+        assert int(raw["looks"]) == looks, (
+            "the restatement did not reach this cell, so the comparison below "
+            "is against the record's own correction after all"
+        )
         printed = (
             f"{raw['value']:.5f}, corrected "
             f"{raw['adjusted_low']:.5f} to {raw['adjusted_high']:.5f}"
@@ -1608,3 +1669,99 @@ def test_the_splice_refuses_a_document_with_no_fence(tmp_path):
     with pytest.raises(program.WhySpliceError):
         program.splice(doc, "# Title\n\nbody\n")
     assert doc.read_text(encoding="utf-8") == "# A document with no markers\n"
+
+
+# ---------------------------------------------------------------------------
+# The re-derivation guard compares measurements, not the last bits of a double
+# ---------------------------------------------------------------------------
+
+
+def _nudge_every_float(value, steps: int = 5):
+    """`value` with every float moved `steps` units in the last place.
+
+    Stands in for the platform difference measured between this repository's
+    records and CI: `_statistics._normal_dist_inv_cdf` compiled by two
+    compilers returns doubles a unit apart, and `adjusted_low`/`adjusted_high`
+    amplify that to about five.
+    """
+    import math as _math
+
+    if isinstance(value, dict):
+        return {k: _nudge_every_float(v, steps) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_nudge_every_float(v, steps) for v in value]
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, float):
+        for _ in range(steps):
+            value = _math.nextafter(value, _math.inf)
+        return value
+    return value
+
+
+def test_a_platforms_worth_of_last_bit_difference_is_not_a_fabrication():
+    """The failure that found this: CI called an honest re-render a fabrication.
+
+    Bit-identity across machines is not a property this arithmetic has, and two
+    attempts to give it one were measured and rejected — rounding the
+    correction to a fixed number of digits only moves the boundary (3,247 of
+    4,999 family sizes change under a four-unit nudge at 15 digits), and
+    computing `inv_cdf` in pure Python still calls `math.log`, which no
+    platform must round correctly. So the guard compares measurements.
+    """
+    record = json.loads(
+        (OUTPUTS / "cbb_why_the_model.json").read_text(encoding="utf-8")
+    )
+    assert not WHY._differs(record, _nudge_every_float(record)), (
+        "five units in the last place reads as a different measurement, so "
+        "this guard still fails on any machine whose libm differs from the one "
+        "that wrote the record."
+    )
+
+
+@pytest.mark.parametrize(
+    "label,mutate",
+    [
+        (
+            "a bound moved by one part in a million",
+            lambda r: r["tiers"][0].__setitem__(
+                "adjusted_low", r["tiers"][0]["adjusted_low"] * (1 + 1e-6)
+            ),
+        ),
+        (
+            "a bound moved by one part in a hundred million",
+            lambda r: r["tiers"][0].__setitem__(
+                "adjusted_low", r["tiers"][0]["adjusted_low"] * (1 + 1e-8)
+            ),
+        ),
+        (
+            "a verdict word",
+            lambda r: r["tiers"][0].__setitem__("verdict", "demonstrated edge"),
+        ),
+        (
+            "one bet",
+            lambda r: r["tiers"][0].__setitem__("bets", r["tiers"][0]["bets"] + 1),
+        ),
+        (
+            "the correction's applied flag",
+            lambda r: r["correction"].__setitem__("applied", False),
+        ),
+        (
+            "a bound of exactly zero nudged above the floor",
+            lambda r: r["cells"][20].__setitem__("adjusted_high", 1e-11),
+        ),
+    ],
+)
+def test_the_tolerance_still_catches_everything_a_hand_could_type(label, mutate):
+    """The gate's purpose, unchanged: a figure no instrument produced.
+
+    Every one of these is orders of magnitude larger than the platform noise
+    above, and every one is smaller than anything a reader could see. If one of
+    them ever passes, the tolerance has stopped being a tolerance.
+    """
+    record = json.loads(
+        (OUTPUTS / "cbb_why_the_model.json").read_text(encoding="utf-8")
+    )
+    edited = copy.deepcopy(record)
+    mutate(edited)
+    assert WHY._differs(record, edited), f"{label} was not caught."

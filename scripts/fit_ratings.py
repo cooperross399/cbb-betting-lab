@@ -143,6 +143,7 @@ import argparse
 import json
 import math
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -150,6 +151,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from cbb_betting_lab import restatement as RESTATEMENT
 from cbb_betting_lab import stats as S
 from cbb_betting_lab.competitions import (
     CBB,
@@ -1798,6 +1800,10 @@ def render(record: dict) -> str:
         "cumulative count and never the day's."
     )
     add("")
+    provenance = RESTATEMENT.provenance_paragraph(record)
+    if provenance:
+        add(provenance)
+        add("")
 
     counts = record.get("prepared_counts", {})
     add("## The fit population, reconciled")
@@ -2375,10 +2381,52 @@ def read_record(path: Path) -> dict:
     return payload
 
 
-def write_report(record: dict, path: Path) -> Path:
+def restated(record: Mapping, *, looks: int, record_name: str = "") -> dict:
+    """The record with every fitted interval re-derived at `looks`.
+
+    The venue audit is re-derived with it. `inside_corrected` asks whether a
+    fitted home effect falls inside the **family-corrected** measured interval,
+    and the report's *"N tier(s) have a fitted home effect outside"* sentence is
+    a count of that answer — so it moves when the correction does, and a
+    restatement that widened the intervals and left the answer alone would put
+    one sentence at a narrower correction than the table it summarises.
+    """
+    moved = RESTATEMENT.restate_tree(record, looks=looks)
+    for season in moved.get("seasons_detail") or []:
+        for row in season.get("venue_audit") or []:
+            interval = row.get("measured")
+            if not interval:
+                continue
+            fitted = float(row.get("fitted_per_100", 0.0) or 0.0)
+            row["inside_corrected"] = bool(
+                float(interval.get("adjusted_low", interval.get("low", 0.0)))
+                <= fitted
+                <= float(interval.get("adjusted_high", interval.get("high", 0.0)))
+            )
+    return RESTATEMENT.stamp(moved, looks=looks, record_name=record_name)
+
+
+def record_file_name(record: Mapping) -> str:
+    """The record file a restated report points a reader back at."""
+    key = str(record.get("competition", CBB.key)) or CBB.key
+    return f"{key}_ratings_fit.json"
+
+
+def write_report(record: dict, path: Path, *, looks: int | None = None) -> Path:
+    """Render the report. With `looks`, state its readings at that family size.
+
+    `looks` is the experiment ledger's count **at render time**. Passing the
+    record's own count is a no-op, so an unchanged ledger re-renders to the
+    same bytes.
+    """
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(render(record), encoding="utf-8")
+    payload = (
+        record
+        if looks is None
+        else restated(record, looks=looks, record_name=record_file_name(record))
+    )
+    target.write_text(render(payload), encoding="utf-8")
     return target
 
 
@@ -2464,8 +2512,38 @@ def main(argv: list[str] | None = None) -> int:
         except NothingToFit as exc:
             print(f"::error::{exc}", file=sys.stderr)
             return EXIT_STALE_RECORD
-        write_report(record, markdown_path)
+        # ONE LEDGER, and the same one a full fit corrects against. Read here
+        # rather than replayed off the record: a re-render that repeats a
+        # correction the search has already outgrown is a re-render that keeps
+        # a stale verdict alive, which is exactly what happened across this
+        # lab's reports between 30 hypotheses and 95.
+        ledger = Path(args.ledger) if args.ledger else output_dir / LEDGER_FILENAME
+        correction = RESTATEMENT.current(ledger)
+        was = int(record.get("looks", 1) or 1)
+        # One-directional: a re-render may only widen. See `restatement.widened`.
+        stated = RESTATEMENT.widened(was, correction)
+        write_report(record, markdown_path, looks=stated)
         print(f"Re-rendered {markdown_path} from {json_path}. Nothing was refitted.")
+        if not correction.found:
+            print(
+                f"::warning::No experiment ledger at {ledger}, so every "
+                f"reading below stands at the {was:,} hypotheses this fit was "
+                "scored at. An absent ledger is an unknown family, never an "
+                "empty one.",
+                file=sys.stderr,
+            )
+        elif stated != was:
+            print(
+                f"Readings restated at {stated:,} cumulative "
+                f"hypotheses (x{S.bonferroni_factor(stated):.4f}); the fit was scored at "
+                f"{was:,} (x{float(record.get('correction_factor', 1.0)):.4f}). "
+                "The record keeps what it measured."
+            )
+        else:
+            print(
+                f"The ledger holds {correction.looks:,} hypotheses, so "
+                "nothing needed restating."
+            )
         return EXIT_OK
 
     print(f"{competition.title} — walk-forward ratings fit")

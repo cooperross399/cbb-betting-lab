@@ -105,6 +105,7 @@ from pathlib import Path
 import pandas as pd
 
 from cbb_betting_lab import experiment_ledger as E
+from cbb_betting_lab import restatement as RESTATEMENT
 from cbb_betting_lab import stats as S
 from cbb_betting_lab.competitions import (
     DEFAULT_COMPETITION_KEY,
@@ -417,8 +418,19 @@ def print_verdicts(record: Mapping) -> None:
 # --------------------------------------------------------------------------
 
 
-def rebuild_report_only(*, record_path: Path, report_path: Path) -> int:
-    """Re-render the markdown from the record. Scores nothing, spends nothing."""
+def rebuild_report_only(
+    *, record_path: Path, report_path: Path, ledger: Path | None = None
+) -> int:
+    """Re-render the markdown from the record. Scores nothing, spends nothing.
+
+    **It re-reads the experiment ledger and re-judges every state at today's
+    cumulative count.** It used to replay the correction stored in the record,
+    which is how this lab came to hold three different corrections across its
+    own documents at once. A replication state is the strongest word printed
+    here, and it is a judgement about a corrected interval: replaying a
+    narrower correction replays a stronger word than the search now justifies.
+    Nothing is re-scored to fix that — see `cbb_betting_lab.restatement`.
+    """
     if not record_path.is_file():
         print(
             f"::error::{record_path} does not exist, so there is no record to "
@@ -433,7 +445,11 @@ def rebuild_report_only(*, record_path: Path, report_path: Path) -> int:
     except R.ReplicationError as exc:
         print(f"::error::{exc}", file=sys.stderr)
         return EXIT_NOTHING_TO_MEASURE
-    R.write_report(record, report_path)
+    correction = RESTATEMENT.current(ledger)
+    was = int(record.get("looks", 1) or 1)
+    # One-directional: a re-render may only ever widen. See `restatement.widened`.
+    stated = RESTATEMENT.widened(was, correction)
+    R.write_report(record, report_path, looks=stated)
     print(f"Wrote {report_path} from {record_path}.")
     print(
         "The run being rendered held out season(s) "
@@ -441,6 +457,25 @@ def rebuild_report_only(*, record_path: Path, report_path: Path) -> int:
         f"{record.get('discovery_seasons')}, generated "
         f"{record.get('generated_at') or 'at an unrecorded time'}."
     )
+    if not correction.found:
+        print(
+            f"::warning::No experiment ledger at {ledger}, so every state "
+            f"below stands at the {was:,} hypotheses this run was judged at. "
+            "An absent ledger is an unknown family, never an empty one.",
+            file=sys.stderr,
+        )
+    elif stated != was:
+        print(
+            f"States and verdicts restated at {stated:,} cumulative "
+            f"hypotheses (x{S.bonferroni_factor(stated):.4f}); the run was judged at "
+            f"{was:,} (x{float(record.get('correction_factor', 1.0)):.4f}). "
+            "The record keeps what it measured."
+        )
+    else:
+        print(
+            f"The ledger holds {correction.looks:,} hypotheses, so "
+            "nothing needed restating."
+        )
     print("Nothing was re-scored, no table was read and no credit was spent.")
     return EXIT_OK
 
@@ -518,7 +553,14 @@ def main(argv: list[str] | None = None) -> int:
     report_path = R.report_path(competition, output_dir)
 
     if args.rebuild_report_only:
-        return rebuild_report_only(record_path=record_path, report_path=report_path)
+        # ONE LEDGER, and not the one beside --output-dir: a holdout run points
+        # --output-dir at data/outputs/holdout/, where "the ledger beside the
+        # outputs" would be a copy.
+        return rebuild_report_only(
+            record_path=record_path,
+            report_path=report_path,
+            ledger=Path(args.ledger) if args.ledger else PB.ledger_path(OUTPUTS_DIR),
+        )
 
     print(f"{competition.title} — replication on a held-out season")
 

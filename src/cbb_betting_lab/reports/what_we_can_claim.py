@@ -133,6 +133,7 @@ import pandas as pd
 from cbb_betting_lab import forward_evidence
 from cbb_betting_lab import gates
 from cbb_betting_lab import markets as markets_registry
+from cbb_betting_lab import restatement as RESTATEMENT
 from cbb_betting_lab import staging_provider_policy as policy_module
 from cbb_betting_lab import stats as S
 from cbb_betting_lab import verdicts as verdicts_module
@@ -1315,6 +1316,40 @@ def build_record(
 
     replication_file = replication_path(competition, outputs)
     replication_payload = _read_json(replication_file)
+    # **Re-judged at `looks`, exactly like every interval below.** A replication
+    # state is a claim about a family-corrected interval, and the record stores
+    # the state it reached under the correction its run held. Reading that state
+    # straight off the record would print a judgement at a narrower correction
+    # than the tables on this same page carry — the defect
+    # `cbb_betting_lab.restatement` exists to close, arriving through the one
+    # field on this page that is a word rather than a number.
+    if (
+        isinstance(replication_payload, Mapping)
+        and replication_payload.get("markets")
+        # Only a record this repository's replication module wrote can be
+        # re-judged; anything else is read as it stands.
+        and _as_int(replication_payload.get("record_version"))
+        == replication_report.RECORD_VERSION
+    ):
+        replication_payload = replication_report.restated(
+            replication_payload,
+            # **Floored by the record's own count, not the page's.** `looks`
+            # above is the ledger's raw count, and an absent or unreadable
+            # ledger makes that 1. For the tables below that is deliberate and
+            # loud: they are rebuilt from the stored estimate and standard
+            # error, and the document says in words that no correction could be
+            # applied. Here it would be silent and it would run `judge_cell`
+            # again, so a missing file would not just widen nothing — it would
+            # re-judge `team_total / mid_major` from *nothing to replicate* to
+            # **replicated**, printing a claim this lab has never earned. A
+            # restatement may only ever retract. `restatement.widened` is that
+            # floor, and it is the same one all four `--rebuild-report-only`
+            # paths take.
+            looks=RESTATEMENT.widened(
+                _as_int(replication_payload.get("looks")), correction
+            ),
+            record_name=replication_report.record_file_name(replication_payload),
+        )
     states = replication_states(replication_payload)
     test_label = _text(replication_payload.get("test_label"))
 

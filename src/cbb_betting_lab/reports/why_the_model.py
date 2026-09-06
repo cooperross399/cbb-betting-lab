@@ -93,11 +93,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from cbb_betting_lab import stats as S
+from cbb_betting_lab import restatement as RESTATEMENT
 from cbb_betting_lab.competitions import Competition
 from cbb_betting_lab.config import REPO_ROOT
 from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.reports import forecast_skill as FS
 from cbb_betting_lab.reports import price_backtest as PB
+from cbb_betting_lab.reports import replication as REPLICATION
 from cbb_betting_lab.reports import what_we_can_claim as WC
 
 #: Bumped whenever the record's shape changes, so a stale record fails loudly at
@@ -883,6 +885,27 @@ def build_record(
     correction = WC.correction_from_ledger(WC.experiment_ledger_path(outputs))
     looks = correction.looks
 
+    # The replication's state counts are judgements about family-corrected
+    # intervals, made under whatever correction that run held. Re-judged here at
+    # the ledger's count so this document's counts and its tables are stated at
+    # one correction rather than two. Nothing is re-scored: see
+    # `cbb_betting_lab.restatement`.
+    if (
+        isinstance(replication, Mapping)
+        and replication.get("markets")
+        and _as_int(replication.get("record_version")) == REPLICATION.RECORD_VERSION
+    ):
+        replication = REPLICATION.restated(
+            replication,
+            # Floored by the record's own count. `looks` is the ledger's raw
+            # count and an absent or unreadable ledger makes it 1, which would
+            # re-judge the held-out states on uncorrected bounds and print
+            # `replicated: 1 of 32` from a record whose own count is 0. A
+            # restatement may only ever retract; see `restatement.widened`.
+            looks=RESTATEMENT.widened(_as_int(replication.get("looks")), correction),
+            record_name=REPLICATION.record_file_name(replication),
+        )
+
     backtest_path = paths["price backtest"]
     tier_rows = _rows(backtest, "by_tier", label="price backtest", path=backtest_path)
     cell_rows = _rows(
@@ -992,12 +1015,94 @@ def rederivation_differences(
                 "from the evidence on disk produces no such section."
             )
             continue
-        if stored[key] != derived[key]:
+        if _differs(stored[key], derived[key]):
             reasons.append(
                 f"`{key}`: the record says {_short(stored[key])} and the "
                 f"evidence on disk says {_short(derived[key])}."
             )
     return reasons
+
+
+#: How far two floats may differ, relatively, and still be the same measurement.
+#:
+#: **Not a softened gate — a gate that asserts something the arithmetic has.**
+#: `==` on floats here demanded that this lab's numbers be reproducible bit for
+#: bit on every machine, and they are not. `stats.bonferroni_z` calls
+#: `NormalDist.inv_cdf`, which is `_statistics._normal_dist_inv_cdf`, a C
+#: extension; the same source compiled by Clang on arm64 and GCC on x86-64
+#: returns doubles that differ by a unit in the last place, and every
+#: `adjusted_low`/`adjusted_high` derived from it amplifies that to about five.
+#: Measured: at 95 hypotheses this repository's records carry a correction
+#: factor of 1.7689064332643192 and CI computes 1.7689064332643194, and this
+#: guard called the honest re-render of an untouched record a fabrication.
+#:
+#: Two ways to make bit-identity true were tried and measured, and neither
+#: works. Rounding the correction to a fixed number of significant digits only
+#: moves the boundary: at 15 digits, 3,247 of the 4,999 family sizes from 2 to
+#: 5,000 change their rounded value under a four-unit nudge, so it is a
+#: coincidence at 95 rather than a property. Computing `inv_cdf` in pure Python
+#: does not close it either — for these tail probabilities the algorithm calls
+#: `math.log`, which no platform is required to round correctly.
+#:
+#: So the tolerance sits where it can do no harm. A published figure is a
+#: percentage to one decimal place, and the smallest distinction this lab ever
+#: draws is a bound crossing zero, which it has measured at 1.3e-5. A relative
+#: 1e-9 is four orders of magnitude tighter than that and seven looser than the
+#: platform noise it exists to absorb. Nothing a hand could type into a record
+#: survives it: `tests/test_why_the_model.py` pins that a bound moved by a
+#: millionth is still caught.
+REDERIVATION_TOLERANCE = 1e-9
+
+#: The floor beneath which a relative tolerance has nothing to scale against.
+#:
+#: A bound of exactly 0.0 is a real value in these records — a cell with no
+#: standard error produces one — and relative tolerance around zero is
+#: meaningless: any non-zero difference is infinitely larger than zero. This is
+#: absolute and sits seven orders of magnitude below the smallest distinction
+#: this lab has ever drawn (a bound crossing zero at 1.3e-5).
+REDERIVATION_FLOOR = 1e-12
+
+
+def _differs(stored: object, derived: object) -> bool:
+    """Whether two record sections disagree about anything but the last bits.
+
+    Structure, strings, integers, booleans and `None` are compared exactly: a
+    changed verdict word, a changed bet count or a changed market name is never
+    a rounding matter. Only floats are given `REDERIVATION_TOLERANCE`, and a
+    float against a non-float is always a difference.
+    """
+    if isinstance(stored, Mapping) or isinstance(derived, Mapping):
+        if not (isinstance(stored, Mapping) and isinstance(derived, Mapping)):
+            return True
+        if set(stored) != set(derived):
+            return True
+        return any(_differs(stored[key], derived[key]) for key in stored)
+    if isinstance(stored, (list, tuple)) or isinstance(derived, (list, tuple)):
+        if not (
+            isinstance(stored, (list, tuple)) and isinstance(derived, (list, tuple))
+        ):
+            return True
+        if len(stored) != len(derived):
+            return True
+        return any(_differs(a, b) for a, b in zip(stored, derived))
+    # `bool` is an `int`, and True == 1. Compared exactly, before the numbers.
+    if isinstance(stored, bool) or isinstance(derived, bool):
+        return stored is not derived
+    if isinstance(stored, float) or isinstance(derived, float):
+        if not (
+            isinstance(stored, (int, float)) and isinstance(derived, (int, float))
+        ):
+            return True
+        if stored == derived:
+            return False
+        if math.isnan(stored) or math.isnan(derived):
+            return not (math.isnan(stored) and math.isnan(derived))
+        if math.isinf(stored) or math.isinf(derived):
+            return True
+        scale = max(abs(stored), abs(derived))
+        allowed = max(REDERIVATION_TOLERANCE * scale, REDERIVATION_FLOOR)
+        return abs(stored - derived) > allowed
+    return stored != derived
 
 
 def _short(value: object, limit: int = 240) -> str:
@@ -1201,6 +1306,53 @@ def _bets(count: int) -> str:
     return "bet" if count == 1 else "bets"
 
 
+def _why_it_no_longer_holds(current: Mapping) -> str:
+    """Which of the two things moved, read off the row rather than assumed.
+
+    This paragraph used to be one fixed sentence: *"Nothing about the model
+    changed. The population did."* On 2026-09-04 that happened to be true. On
+    2026-09-05 it stopped being true and the sentence would still have printed
+    — the player-prop pre-registration took the family from 62 hypotheses to
+    95, and low-major crossed zero on a record whose population, model and
+    store were byte-identical to the day before. A generated document that
+    states a cause it cannot read is the same defect as one that types a
+    figure it cannot re-derive.
+
+    So the branch is taken from the row. If the **uncorrected** interval still
+    excludes zero, the measurement did not move and the correction did. If it
+    includes zero on its own, something upstream moved and this function does
+    not guess what, because the record it reads cannot tell it.
+    """
+    # The UNCORRECTED pair, explicitly: `printed_interval` defaults to the
+    # corrected bounds — the pair on the page — and reading those here would
+    # ask whether the corrected interval excludes zero, which is the question
+    # this branch was reached by already answering no to.
+    raw = printed_interval(current, bounds=("low", "high"))
+    looks = _as_int(current.get("looks")) or 1
+    if not (raw.low <= 0.0 <= raw.high):
+        return (
+            "**The measurement did not move; the search did.** The uncorrected "
+            f"95% interval is {_pct(current.get('low'))} to "
+            f"{_pct(current.get('high'))} and still excludes zero. What widens "
+            f"it across is the family-wise correction over {looks:,} "
+            "cumulative hypotheses — "
+            f"x{S.bonferroni_factor(looks):.4f} — every one of which "
+            "this lab wrote down before it was tested. An interval is paid for "
+            "by the whole search that produced it, including the parts of that "
+            "search that have not run yet, and this is one interval paying. A "
+            "claim that dissolves once the search is counted in full was never "
+            "worth the width it was first printed at."
+        )
+    return (
+        "**The measurement itself moved.** The uncorrected 95% interval is "
+        f"{_pct(current.get('low'))} to {_pct(current.get('high'))} and "
+        "includes zero before any family correction is applied, so this is not "
+        "the correction widening a surviving result. What changed upstream — "
+        "the population, the model, the store — is not something the record "
+        "this document reads can say, and it does not guess."
+    )
+
+
 def _figure(claim: Mapping) -> str:
     """One cell as a sentence, **always with its sample size**.
 
@@ -1374,16 +1526,7 @@ def _retraction_lines(record: Mapping) -> list[str]:
             f"**It no longer holds.** On today's record {label} reads "
             f"{_figure(current)}."
         )
-        lines += [
-            "",
-            "Nothing about the model changed. The population did: the markets "
-            "added since are one season deep and thin, which widens every "
-            "interval they enter. A finding that survives on the narrower "
-            "population and dissolves when the wider one is measured was "
-            "fragile to the population all along, and the earlier wording did "
-            "not say so because at the time there was nothing to say it "
-            "against.",
-        ]
+        lines += ["", _why_it_no_longer_holds(current)]
     return lines
 
 

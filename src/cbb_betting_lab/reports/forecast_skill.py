@@ -254,6 +254,7 @@ improves, and a hand-edited generated file survives exactly one re-run.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -262,6 +263,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from cbb_betting_lab import restatement as RESTATEMENT
 from cbb_betting_lab import stats as S
 from cbb_betting_lab.competitions import CBB, Competition
 
@@ -2977,6 +2979,10 @@ def render(record: Mapping) -> str:
         "findings across today's tests is a lie if more were tested last week."
     )
     add("")
+    provenance = RESTATEMENT.provenance_paragraph(record)
+    if provenance:
+        add(provenance)
+        add("")
     add(
         f"**Below {int(record.get('minimum_rows', MINIMUM_ROWS)):,} scored "
         f"wagers or {int(record.get('minimum_clusters', MINIMUM_CLUSTERS)):,} "
@@ -3067,8 +3073,82 @@ def read_record(path: Path) -> dict:
     return payload
 
 
-def write_report(record: Mapping, path: Path) -> Path:
+def _restate_cell(cell: Mapping, *, looks: int) -> dict:
+    """One stored cell at `looks` — a coefficient through its own class.
+
+    A Brier advantage is a `RoiInterval` and the shared rebuild handles it. A
+    fitted coefficient is not: :meth:`Coefficient.verdict` **raises** for every
+    term but the disagreement, because a market coefficient of 0.97 excludes
+    zero on the positive side and a predicate that never asked what the null
+    was would announce it as a demonstrated edge. So a coefficient is restated
+    by rebuilding the object and asking it again, which routes `reading`,
+    `gloss` and `contains_null` through the same door they were written by.
+    """
+    if "answers_the_question" in cell:
+        coefficient = dataclasses.replace(
+            coefficient_from_row(dict(cell)), looks=int(looks)
+        )
+        out = dict(cell)
+        out.update(coefficient.to_json())
+        return out
+    return RESTATEMENT.rebuild_cell(cell, looks=looks)
+
+
+def restated(record: Mapping, *, looks: int, record_name: str = "") -> dict:
+    """The record with every interval, verdict and reading re-derived at `looks`.
+
+    The claimed-edge comparison is re-derived too: `anti_predictive_return`
+    asks whether two buckets' **family-corrected** intervals are disjoint, and
+    that question has a different answer under a wider correction. Leaving it
+    at the stored answer would put one sentence of this report at a narrower
+    correction than the table above it.
+    """
+    moved = RESTATEMENT.restate_tree(record, looks=looks, rebuild=_restate_cell)
+    for cell in _cells_with_buckets(moved):
+        cell["anti_predictive_return"] = anti_predictive_return(
+            cell.get("buckets") or []
+        )
+    return RESTATEMENT.stamp(moved, looks=looks, record_name=record_name)
+
+
+def _cells_with_buckets(record: Mapping) -> list[dict]:
+    """Every cell carrying a bucket table: each tier, the pooled fit, and both
+    of those again inside the selected-bets population."""
+    found: list[dict] = []
+
+    def walk(node: object) -> None:
+        if isinstance(node, dict):
+            if "anti_predictive_return" in node and "buckets" in node:
+                found.append(node)
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+
+    walk(record)
+    return found
+
+
+def record_file_name(record: Mapping) -> str:
+    """The record file a restated report points a reader back at."""
+    key = str(record.get("competition", CBB.key)) or CBB.key
+    return f"{key}_{REPORT_STEM}.json"
+
+
+def write_report(record: Mapping, path: Path, *, looks: int | None = None) -> Path:
+    """Render the report. With `looks`, state its readings at that family size.
+
+    `looks` is the experiment ledger's count **at render time**. Passing the
+    record's own count is a no-op, so an unchanged ledger re-renders to the
+    same bytes.
+    """
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(render(record), encoding="utf-8")
+    payload = (
+        record
+        if looks is None
+        else restated(record, looks=looks, record_name=record_file_name(record))
+    )
+    target.write_text(render(payload), encoding="utf-8")
     return target
