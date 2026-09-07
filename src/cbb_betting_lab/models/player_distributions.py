@@ -1445,6 +1445,36 @@ def _moments(pmf: np.ndarray) -> tuple[float, float]:
     return mean, variance
 
 
+def _sub_key(payload, key: str, *, where: str, path) -> float:
+    """One frozen sub-key, as a float, refusing in words when it is absent.
+
+    **A bare subscript on a frozen dict raises `KeyError`, and nothing catches
+    it.** `gameday_card.opinions_for` wraps the engine in
+    `except PlayerDistributionError` and `except (TypeError, ValueError)`;
+    `ShapesFileError` is caught only because it subclasses `ValueError`. A raw
+    `KeyError` is neither, so it escapes the card.
+
+    Measured at the shipped entry point over a four-game board on the full
+    corpus: delete `structural_check_targets.unconditional_points_vmr_regulars`
+    from a copy of the frozen file and `player_rates.missing_constants` returns
+    `[]` — it checks whole constants, not their sub-keys — sixteen projections
+    build, all thirty-two props price, and the card then dies with
+    `KeyError: 'unconditional_points_vmr_regulars'` AFTER the pricing loop, so
+    it had a full set of probabilities and threw them away.
+
+    This module already had the right pattern four lines below the first bare
+    read, and applied it to one of three. Now all of them go through here.
+    """
+    try:
+        return float(payload[key])
+    except (KeyError, TypeError, ValueError) as error:
+        raise PlayerDistributionError(
+            f"{path}: `{where}` records no `{key}`, so the engine cannot read "
+            "the constant it prices with. A value invented here would be a "
+            "number about the frozen file that did not come from it."
+        ) from error
+
+
 def population_structural_checks(
     population: Iterable[PlayerDistribution], *, shapes: PlayerShapes
 ) -> Mapping[str, float]:
@@ -1516,7 +1546,12 @@ def population_structural_checks(
     and not even the word "dispersion".
     """
     target = float(
-        shapes.value("structural_check_targets")["unconditional_points_vmr_regulars"]
+        _sub_key(
+            shapes.value("structural_check_targets"),
+            "unconditional_points_vmr_regulars",
+            where="structural_check_targets",
+            path=shapes.path,
+        )
     )
     evidence = shapes.evidence("structural_check_targets")
     try:
@@ -2385,7 +2420,12 @@ def build(projection: PlayerProjection, *, shapes: PlayerShapes) -> PlayerDistri
             "points and nothing else."
         )
 
-    event_dispersion = float(reconciliation[POINTS_EVENT_DISPERSION_KEY])
+    event_dispersion = _sub_key(
+        reconciliation,
+        POINTS_EVENT_DISPERSION_KEY,
+        where="points_compound_reconciliation",
+        path=getattr(shapes, "path", "the frozen file"),
+    )
     dispersions["points_event_dispersion_used"] = event_dispersion
 
     severity = np.zeros(4, dtype=float)
@@ -2420,11 +2460,23 @@ def build(projection: PlayerProjection, *, shapes: PlayerShapes) -> PlayerDistri
             for index, node in enumerate(minutes)
         }
     )
+    # Each stat's dispersion, read by name so a frozen file missing one refuses
+    # in words rather than raising a bare `KeyError` the card cannot catch.
+    phi_by_stat = {
+        stat: _sub_key(
+            dispersions,
+            stat,
+            where="conditional_dispersion",
+            path=getattr(shapes, "path", "the frozen file"),
+        )
+        for stat in PANJER_STATS
+        if stat not in refused_stats
+    }
     stat_parameters = {
         stat: {
             index: panjer_parameters(
                 mu=float(rates[stat]) * float(node),
-                phi=float(dispersions[stat]),
+                phi=phi_by_stat[stat],
                 materiality=materiality,
             )
             for index, node in enumerate(minutes)
