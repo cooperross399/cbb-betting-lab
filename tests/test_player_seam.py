@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import json
 import sys
 import types
 from datetime import datetime, timezone
@@ -1526,6 +1527,343 @@ def _countable_team_games(day: str) -> pd.DataFrame:
     path, _ = processed_table("cbb_team_games.csv")
     frame = pd.read_csv(path, low_memory=False)
     return frame[frame["slate_date"].astype(str) < day]
+
+
+# --------------------------------------------------------------------------
+# The three structural absences, driven through the caller that unpacks them
+# --------------------------------------------------------------------------
+
+#: A day the tracked schedule fixtures carry, in a season the frozen constants
+#: were neither fitted nor validated on. The tests below all price it, so
+#: the only thing that differs between them is which absence they arrange.
+ABSENCE_DAY = "2025-11-29"
+
+#: The real fixture game on :data:`ABSENCE_DAY`, and the two teams playing it.
+ABSENCE_GAME = 401823218
+ABSENCE_TEAMS = (2459, 91)
+
+
+def _absence_prices() -> pd.DataFrame:
+    """One quoted event on `ABSENCE_DAY`, enough for `matchups_for` to run."""
+    return pd.DataFrame({"event_id": ["e1"], "game_id": [ABSENCE_GAME]})
+
+
+def _absence_player_prices() -> pd.DataFrame:
+    """The same event, quoted as a player market the estimator can find a subject in.
+
+    `player_rates._subjects_of_the_day` reads `market`, `player` and the two
+    team ids off the price frame, so the bare two-column frame the other
+    absence tests use produces no subject at all. This one does.
+    """
+    return pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "game_id": ABSENCE_GAME,
+                "market": "player_points",
+                "player": "A Player",
+                "selection": "over",
+                "line": 13.5,
+                "book": "dk",
+                "season": season_for_slate_date(ABSENCE_DAY),
+                "slate_date": ABSENCE_DAY,
+                "home_team": ABSENCE_TEAMS[0],
+                "away_team": ABSENCE_TEAMS[1],
+            }
+        ]
+    )
+
+
+def test_s12_a_name_refused_on_an_event_with_no_survivor_still_prints_r1bs_words(
+    fixture_raw_dir,
+) -> None:
+    """Bucket C, on the only nights bucket C can be the whole event.
+
+    `models/slate.py`'s header says C — `(event, the book's spelling)` refused
+    for the name — and D — the event is not in `players` at all — "are counted
+    separately and never summed". `gameday_card._player_decline` asked D first,
+    and D is `event_id in players`, and `players` gains an entry only where a
+    resolution SUCCEEDED. So on an event where every quoted spelling was
+    refused for the name, the card printed D over C: the *name* refusal never
+    reached a reader as words, only as a count.
+
+    R1b made that certain rather than incidental. It is filed inside
+    `if len(roster) == 0`, and the roster is computed once per event before the
+    spelling loop, so R1b is all-or-nothing per event and can never be
+    accompanied by a surviving projection — its sentence therefore reached NO
+    output anywhere in `src/` or `scripts/`. `grep -rn` put the only read of a
+    name refusal's TEXT at `gameday_card.py`'s bucket-C branch;
+    `card_matchups.py` reads `len(...)` of the mapping and nothing else.
+
+    Driven here through the shipped `slate.slate_model` on a real fixture game:
+    the board quotes an athlete on teams 2459/91 and the player table carries
+    only team 55, so the seam's prior-roster window finds no row for either
+    side and R1b is the event's whole story. Measured on exactly this board,
+    with the old order put back: the seam produces
+    `name_refusals[('e1', 'A Player')] = R1B_NO_PRIOR_ROSTER`,
+    `resolution_census = {'refused_no_prior_roster': 1,
+    'quotes:refused_no_prior_roster': 1}` and `players = {}` either way — and
+    under the old order the card declined BOTH wagers below into one bucket
+    reading "the model was never asked about this event's athletes", the R1b
+    sentence appearing nowhere.
+
+    Bucket D is asserted alongside it, on the same card, so the fix cannot have
+    been "always answer C": an event nobody quoted a player market on is still
+    reported as never asked, and the two sentences are still different.
+    """
+    model = slate.slate_model(
+        day=ABSENCE_DAY,
+        history=_countable_team_games(ABSENCE_DAY),
+        player_history=_player_history(("2025-11-21",)),
+        prices=_absence_player_prices(),
+        raw_dir=fixture_raw_dir,
+    )
+
+    assert model.players == {}, (
+        "an athlete resolved, so this board no longer arranges the state under "
+        "test: pick two teams the player frame has no row for"
+    )
+    assert model.name_refusals == {("e1", "A Player"): PR.R1B_NO_PRIOR_ROSTER}
+    assert model.resolution_census.get(PR.ROUTE_REFUSED_NO_ROSTER) == 1
+    assert not model.was_asked_about_players("e1"), (
+        "`players` is empty and `was_asked_about_players` still says yes, so "
+        "the ordering this test is about no longer exists"
+    )
+
+    quoted = _wager(event_id="e1", market="player_points", player="A Player", line=13.5)
+    unquoted = _wager(event_id="e9", market="player_points", player="D Player", line=9.5)
+    probabilities, census = gameday_card.opinions_for(
+        [quoted, unquoted], model, day=ABSENCE_DAY
+    )
+
+    assert probabilities == {} and census.priced == 0
+    assert set(census.declined.values()) == {1}, (
+        "the name refusal and the never-asked bucket collapsed into one "
+        f"sentence: {census.declined}"
+    )
+    assert PR.R1B_NO_PRIOR_ROSTER in census.declined, (
+        "R1b is counted and printed every run per design 11 — it is the "
+        "positive evidence that the model is not reading tonight's roster — "
+        f"and it reached no reader: {census.declined}"
+    )
+    assert "no roster to read the name against" in PR.R1B_NO_PRIOR_ROSTER
+    assert any("never asked" in reason for reason in census.declined), (
+        "the event nobody quoted a player market on lost its own bucket, so C "
+        "has swallowed D in the other direction"
+    )
+    assert not any(
+        "never asked" in reason and "no roster to read" in reason
+        for reason in census.declined
+    )
+
+
+def test_s12_a_tree_with_no_estimator_says_so_through_the_seams_own_caller(
+    monkeypatch, fixture_raw_dir
+) -> None:
+    """`_player_half`'s NO_RATE_ESTIMATOR return, executed for the first time.
+
+    The three early returns in `_player_half` — this one, the empty-frame one
+    and the provenance guard's — were widened from six values to seven when
+    `SlateModel.shapes` landed, and a line tracer over this file,
+    `test_gameday_card.py`, `test_player_distributions.py` and
+    `test_player_rates.py` recorded all three as never executed. `grep -rn
+    NO_PLAYER_HISTORY tests/` returned nothing at all, and `NO_RATE_ESTIMATOR`
+    appeared only as a hand-set `player_absence_reason=` field value and inside
+    docstring-phrase assertions — so the module docstring's claim that a tree
+    which loses a module "says which absence this is" was held for the
+    SENTENCES' wording and not for the returns that produce them. Measured
+    here, by reverting all three to their old six-element form and running this
+    file, `test_gameday_card.py`, `test_player_distributions.py`,
+    `test_player_rates.py`, `test_the_card_runs_end_to_end_offline.py`,
+    `test_run_price_backtest.py` and `test_reachability.py`: 315 of 318 tests
+    stayed green and the only three red were the three written below.
+
+    That arity is the whole risk. `slate_model` unpacks seven values from this
+    call, so a six-tuple is `ValueError: not enough values to unpack (expected
+    7, got 6)` raised on exactly the three nights these sentences exist for:
+    a tree that has lost `player_rates.py`, a night whose player frame is empty
+    — the first slate date of any season, since `history_before` cuts strictly
+    earlier — and a season `load_player_shapes` refuses. Each of the three
+    tests here therefore drives the SEAM'S OWN CALLER rather than `_player_half`
+    directly, because the caller is where the arity is read.
+
+    The import is broken the only honest way, the way
+    `test_player_distributions.py::test_the_card_says_which_absence_it_is_when_
+    it_cannot_reach_the_engine` breaks the engine's: removed from `sys.modules`
+    and from the package, so the real `from ... import` inside
+    `_player_rates_module` is what fails rather than a patched-out branch.
+    """
+    import cbb_betting_lab.models as MODELS
+
+    monkeypatch.setitem(sys.modules, "cbb_betting_lab.models.player_rates", None)
+    monkeypatch.delattr(MODELS, "player_rates", raising=False)
+    assert slate._player_rates_module() is None, (
+        "the estimator still imports, so this test is asserting nothing"
+    )
+
+    model = slate.slate_model(
+        day=ABSENCE_DAY,
+        history=_countable_team_games(ABSENCE_DAY),
+        player_history=_player_history(("2025-11-21",)),
+        prices=_absence_prices(),
+        raw_dir=fixture_raw_dir,
+    )
+
+    assert model.player_absence_reason == slate.NO_RATE_ESTIMATOR
+    assert model.players == {} and model.resolved == {} and model.name_refusals == {}
+    assert model.resolution_census == {}
+    assert model.shapes is None, (
+        "a slate that never reached an estimator carries constants, so the "
+        "card would build an engine for projections that do not exist"
+    )
+    assert model.matchups, (
+        "the team half was discarded with the player half; losing the "
+        "estimator must cost the props and nothing else"
+    )
+    assert model.player_priced_through == "", (
+        "a stamp with no projection behind it would certify a read that never "
+        "happened; `assert_walk_forward` exempts the empty string"
+    )
+
+    # And the sentence reaches a reader, in the bucket that says which absence
+    # it is rather than as the model having no opinion.
+    prop = _wager(event_id="e1", market="player_points", player="A Player", line=13.5)
+    _, census = gameday_card.opinions_for([prop], model, day=ABSENCE_DAY)
+    assert census.priced == 0
+    reason = next(iter(census.declined))
+    assert slate.NO_RATE_ESTIMATOR in reason
+    assert "player_rates.py" in reason
+
+
+def test_s12_a_night_with_no_player_rows_is_a_different_absence_from_no_estimator(
+    fixture_raw_dir,
+) -> None:
+    """`_player_half`'s NO_PLAYER_HISTORY return, executed for the first time.
+
+    `grep -rn NO_PLAYER_HISTORY tests/` returned nothing before this test, so
+    the constant existed, was reachable, and no assertion had ever seen it come
+    out of anything. It is a real night and not a hypothetical: the cut is
+    `history_before`, which is strictly earlier, so the first slate date of any
+    season hands this seam an empty player frame while the team half still
+    prices off the prior season's rows.
+
+    The point of the bucket is that it is NOT the previous test's. Both leave
+    `players` empty; one is a lab with no model and one is a night with no
+    evidence, and `models/slate.py`'s header says they are counted separately
+    and never summed. Asserted here as two different sentences out of the same
+    caller on the same board.
+    """
+    empty = pd.DataFrame(columns=list(slate.REQUIRED_PLAYER_COLUMNS))
+    assert len(empty) == 0
+
+    model = slate.slate_model(
+        day=ABSENCE_DAY,
+        history=_countable_team_games(ABSENCE_DAY),
+        player_history=empty,
+        prices=_absence_prices(),
+        raw_dir=fixture_raw_dir,
+    )
+
+    assert model.player_absence_reason == slate.NO_PLAYER_HISTORY
+    assert model.player_absence_reason != slate.NO_RATE_ESTIMATOR, (
+        "a night with no evidence and a lab with no model print one sentence, "
+        "which is the collapse this module's header forbids"
+    )
+    assert model.players == {} and model.shapes is None
+    assert model.matchups, "the team half prices on a night with no player rows"
+
+    prop = _wager(event_id="e1", market="player_points", player="A Player", line=13.5)
+    _, census = gameday_card.opinions_for([prop], model, day=ABSENCE_DAY)
+    reason = next(iter(census.declined))
+    assert slate.NO_PLAYER_HISTORY in reason
+    assert "player_rates.py" not in reason, (
+        "an empty frame is reported as a missing estimator, which sends an "
+        "operator looking for a wiring fault that is not there"
+    )
+
+
+def test_s12_a_frozen_file_that_refuses_this_season_returns_the_guards_own_words(
+    monkeypatch, tmp_path: Path, fixture_raw_dir
+) -> None:
+    """`_player_half`'s provenance-guard return, executed for the first time.
+
+    The third widened early return, and the one whose sentence is not a
+    constant at all: it is `str(exc)` from the real `ShapesFileError`, kept
+    verbatim because the guard names the constant and the window and a
+    paraphrase would lose exactly the part an operator needs.
+
+    Driven through the REAL guard rather than a raise stubbed in. The shipped
+    `data/processed/cbb_player_shapes.json` declares `fit_seasons`
+    [2019, 2020, 2021, 2022] and `validation_season` 2023, and the schedule
+    fixtures this file can price are seasons 2025-2027 — so no day this seam
+    can actually reach `_player_half` on is a season the shipped file refuses.
+    A copy of it declaring the priced season as its validation season is
+    therefore the only way to make the shipped `load_player_shapes` refuse on a
+    day the rest of the seam can run, and it is `load_player_shapes` that
+    refuses: `_shapes_for` is left alone, its memo included, and only the file
+    it opens is redirected.
+
+    Note what is asserted about `shapes` on the way out. The return hands back
+    `None`, not the argument, so a slate whose constants were refused cannot
+    carry constants — and `gameday_card._player_decline` reads
+    `NO_ENGINE_CONSTANTS` off exactly that field. A six-element return here
+    would have made `slate_model` raise instead, on a day whose only fault is
+    that the frozen file has seen it.
+    """
+    from cbb_betting_lab.models.player_shapes import load_player_shapes
+
+    frozen = REPO / "data" / "processed" / "cbb_player_shapes.json"
+    document = json.loads(frozen.read_text(encoding="utf-8"))
+    assert int(document["validation_season"]) == 2023, (
+        "the frozen file's validation season moved; this test builds its copy "
+        "around it and the number in the docstring above is now wrong"
+    )
+    document["validation_season"] = season_for_slate_date(ABSENCE_DAY)
+    refusing = tmp_path / "refuses-this-season.json"
+    refusing.write_text(json.dumps(document), encoding="utf-8")
+
+    slate.clear_caches()
+    monkeypatch.setattr(
+        slate,
+        "load_player_shapes",
+        lambda path, *, priced_season: load_player_shapes(
+            refusing, priced_season=priced_season
+        ),
+    )
+    monkeypatch.setattr(slate, "_SHAPES_CACHE", {})
+
+    model = slate.slate_model(
+        day=ABSENCE_DAY,
+        history=_countable_team_games(ABSENCE_DAY),
+        player_history=_player_history(("2025-11-21",)),
+        prices=_absence_prices(),
+        raw_dir=fixture_raw_dir,
+    )
+
+    assert model.players == {}
+    assert model.shapes is None, (
+        "the slate carries the constants the guard just refused, so the card "
+        "would build an engine from them"
+    )
+    reason = model.player_absence_reason
+    assert reason and reason not in (
+        slate.NO_RATE_ESTIMATOR,
+        slate.NO_PLAYER_HISTORY,
+        slate.NO_PROJECTION_FORMED,
+    ), f"the guard's refusal was reported as one of the other absences: {reason}"
+    assert str(season_for_slate_date(ABSENCE_DAY)) in reason, (
+        "the guard's sentence names the season it refused and the seam must "
+        f"pass it through unparaphrased: {reason}"
+    )
+    assert "validation" in reason, (
+        f"the refusal reaching the slate is not the provenance guard's: {reason}"
+    )
+    assert model.matchups, "the team half is discarded with the constants"
+
+    prop = _wager(event_id="e1", market="player_points", player="A Player", line=13.5)
+    _, census = gameday_card.opinions_for([prop], model, day=ABSENCE_DAY)
+    assert census.priced == 0
+    assert reason in next(iter(census.declined))
 
 
 # --------------------------------------------------------------------------

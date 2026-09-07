@@ -3730,6 +3730,118 @@ def test_the_card_says_which_absence_it_is_when_it_cannot_reach_the_engine(
     assert "not a pass, an avoid or a no-value call" in SLATE.NO_DISTRIBUTION_ENGINE
 
 
+def test_an_engine_that_refuses_the_whole_subject_declines_and_does_not_kill_the_card(
+    tmp_path: Path,
+) -> None:
+    """`opinions_for`'s two engine-build handlers, driven — they held no test.
+
+    The build call in `reports/gameday_card.opinions_for` is wrapped in two
+    `except` clauses that turn a whole-OBJECT refusal into a census bucket
+    instead of a traceback, and neither was executed anywhere on this branch: a
+    line tracer over this file, `test_gameday_card.py`, `test_player_seam.py`,
+    `test_player_rates.py` and `test_player_census_reconciles.py` recorded them
+    as never run, because every card test built successfully and refused
+    per-MARKET inside `_read_player_market` instead. Measured here, by running
+    those five files with the whole `try` replaced by a bare
+    `cached = engine.build(projection, shapes=model.shapes)`: 216 of 217 tests
+    stayed green and the single red one was this test. A handler with no test is
+    a handler nobody has seen work, and this one is the difference between one
+    refused prop and a card with no spread, total or moneyline on it — the
+    outcome `models/player_distributions.build`'s own docstring records a
+    `KeyError` producing once already.
+
+    Both clauses, and they catch different things:
+
+    * **`PlayerDistributionError` and its subclasses.** Driven through the real
+      loader on a frozen file recording `residual_correlation` unfittable —
+      `player_rates._unfittable` does not read that constant, so the projection
+      stays `priceable=True` and reaches the engine, which refuses every one of
+      the ten markets at once and raises `MarketRefused`. The card must decline
+      in the FIT'S own sentence, never a paraphrase.
+    * **a bare `TypeError` or `ValueError`.** `PlayerDistributionError` is a
+      `ValueError` subclass, so this clause catches only what the engine did not
+      raise deliberately: a projection whose fields are not the numbers the
+      engine reads. Driven by taking the real estimator's projection and
+      replacing its minutes lattice with strings — the shape a slate assembled
+      by hand, or an estimator whose return changed under the card, actually
+      has. `_player_decline` lets such a slate through by design (it checks
+      `priceable` and `shapes`, not field dtypes), so this is the net under it.
+
+    Neither is a pass, an avoid or a no-value call, and neither may be reported
+    as the model having no opinion: both land in `census.declined`, `priced` is
+    zero, and every other wager on the card is still priced.
+    """
+    from cbb_betting_lab.reports import gameday_card as GC
+
+    def _refuse_a_constant_the_estimator_never_reads(document: dict) -> None:
+        document["unfittable"] = {
+            "residual_correlation": {
+                "reason": "refused: the residual copula did not stabilise.",
+                "cost": "No market can be priced.",
+            }
+        }
+
+    nothing = _shapes_with(
+        tmp_path, _refuse_a_constant_the_estimator_never_reads, name="card-refused.json"
+    )
+    model, _ = _slate_model(shapes=nothing)
+    projection = next(iter(next(iter(model.players.values())).values()))
+    assert projection.priceable, (
+        "the estimator now refuses this constant too, so the engine is never "
+        "reached and this test drives the projection's refusal instead of the "
+        "engine's; pick a constant only `player_distributions` reads"
+    )
+
+    probabilities, census = GC.opinions_for(
+        [_wager("player_points", line=14.5), _wager("player_rebounds", line=5.5)],
+        model,
+        day=DAY,
+    )
+    assert probabilities == {} and census.priced == 0
+    assert list(census.declined) == [
+        "refused: every one of the ten markets. refused: the residual copula "
+        "did not stabilise. No market can be priced."
+    ], (
+        "the card did not print the engine's own sentence for a whole-object "
+        f"refusal: {census.declined}"
+    )
+    assert census.declined[next(iter(census.declined))] == 2, (
+        "one object refused, two wagers declined against it — the cache is per "
+        "(event, athlete) and the refusal is cached with it"
+    )
+
+    # The second clause. The same real projection, with the one field the
+    # engine reads first replaced by something that is not numbers.
+    good, shapes = _slate_model()
+    athlete, real = next(iter(good.players["e1"].items()))
+    corrupt = replace(real, minutes_pmf=tuple("a" for _ in real.minutes_pmf))
+    from cbb_betting_lab.models import slate as SLATE
+
+    hand_assembled = SLATE.SlateModel(
+        day=DAY,
+        matchups={},
+        players={"e1": {athlete: corrupt}},
+        resolved=dict(good.resolved),
+        name_refusals={},
+        player_priced_through=good.player_priced_through,
+        shapes=shapes,
+    )
+    with pytest.raises(ValueError):
+        PD.build(corrupt, shapes=shapes)
+    probabilities, census = GC.opinions_for(
+        [_wager("player_points", line=14.5)], hand_assembled, day=DAY
+    )
+    assert probabilities == {} and census.priced == 0
+    reason = next(iter(census.declined))
+    assert reason.startswith("the player distribution could not be built"), (
+        f"a bare ValueError out of the engine reached no reader: {census.declined}"
+    )
+    assert "could not convert string to float" in reason, (
+        "the sentence must carry the exception's own words; a bucket that says "
+        "only 'could not be built' cannot be acted on"
+    )
+
+
 def _card_of(events: int, *, shapes=None):
     """One fixture athlete on `events` distinct events, and a wager on each.
 

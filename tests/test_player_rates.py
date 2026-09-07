@@ -1074,6 +1074,169 @@ def test_an_unfittable_constant_refuses_the_market_rather_than_substituting_a_va
     assert sentence in whole.unpriceable_reason
 
 
+#: Every constant `_unfittable` treats as fatal to the whole projection. The
+#: list is read off the module rather than retyped, so a seventh added there
+#: without a caller-level read being checked fails this file.
+WHOLE_CONSTANT_REFUSALS = (
+    "minutes_pmf",
+    "minutes_half_life",
+    "role_prior",
+    "rate_shrinkage_k",
+    "value_pmf",
+    "value_mix_shrinkage_events",
+)
+
+
+def test_every_whole_constant_refusal_refuses_in_words_and_none_raises(
+    tmp_path: Path,
+) -> None:
+    """R5 must arrive as a refusal from all six, and one of them raised.
+
+    `_unfittable`'s docstring names six constants whose refusal "makes the
+    projection itself unpriceable" — the minutes shape, the half-life, the role
+    table, the credibility table, the value mix — and `_project` consults it
+    first and turns any of them into `R5_NO_WALK_FORWARD_FIT` plus the fit's own
+    sentence. Five did that. `minutes_half_life` did not, because
+    `player_projections_for` read it with `shapes.value` at CALLER level, before
+    the subject loop and before `_project` could ever be reached, and
+    `PlayerShapes.value` RAISES on a constant the fit recorded unfittable.
+
+    Measured through the shipped `slate._player_half` on the frozen file with
+    one `unfittable` entry at a time: `minutes_half_life` raised
+    `ShapesFileError: minutes_half_life was not fitted. ... Ask 'refusal_for'
+    and refuse the market; do not substitute a value.` out of `_player_half`
+    and out of `slate_model`, while the other five each returned a projection
+    reading `refused: a constant this market needs was recorded unfittable by
+    'scripts/fit_player_model.py'...` that the card printed. The whole slate
+    went with it — `_player_half` is called with no `try` and the TEAM half is
+    already built by then, so a refusal of one player constant discarded every
+    spread, total and moneyline on the night. That is finding 1's family, one
+    module up: a refusal must refuse.
+
+    The half-life is now read with `refusal_for` and, when it is refused, no
+    row is decayed at all: `_evidence_the_half_life_refusal_leaves` empties the
+    frame first, so nothing is substituted for the constant the fit declined to
+    invent. `_project` still sees `_unfittable`'s structural refusal and still
+    returns it in the fit's words.
+    """
+    from cbb_betting_lab.competitions import CBB
+    from cbb_betting_lab.models import slate as SLATE
+
+    literals = sorted(
+        (
+            node
+            for node in ast.walk(ast.parse(inspect.getsource(PR._unfittable)))
+            if isinstance(node, ast.Tuple)
+            and node.elts
+            and all(
+                isinstance(element, ast.Constant) and isinstance(element.value, str)
+                for element in node.elts
+            )
+        ),
+        key=lambda node: (node.lineno, node.col_offset),
+    )
+    assert len(literals) == 2, (
+        "`_unfittable` no longer names its two refusal levels as literal "
+        "tuples, so this test cannot read the list off the module"
+    )
+    assert tuple(element.value for element in literals[1].elts) == (
+        WHOLE_CONSTANT_REFUSALS
+    ), (
+        "the whole-constant refusal list moved. Every one of them is read at "
+        "caller level somewhere; add the new one here and check that its read "
+        "goes through `refusal_for` rather than `value`."
+    )
+
+    sentence = "the implied value moved by more than 2x across evidence banks."
+    for constant in WHOLE_CONSTANT_REFUSALS:
+
+        def _refuse(document: dict, name: str = constant) -> None:
+            document["unfittable"] = {
+                name: {"reason": sentence, "cost": "no market prices."}
+            }
+
+        shapes = _shapes_with(tmp_path, _refuse, name=f"{constant}.json")
+        assert shapes.refusal_for(constant), f"{constant} was not actually refused"
+
+        # Through the seam's own player half, which is where the raise escaped
+        # to: `slate_model` calls it with no `try` and would have carried the
+        # ShapesFileError past the team half it had already built.
+        players, _, _, _, _, absence, _ = SLATE._player_half(
+            day=DAY,
+            player_history=_history(),
+            prices=_prices("Sean Bairstow"),
+            competition=CBB,
+            season=PRICED_SEASON,
+            shapes=shapes,
+            matchups={},
+        )
+        assert not absence, (
+            f"{constant} was reported as a structural absence rather than as a "
+            f"projection refusal: {absence}"
+        )
+        projection = next(iter(next(iter(players.values())).values()))
+        assert projection.priceable is False, f"{constant} priced anyway"
+        assert projection.unpriceable_reason.startswith(PR.R5_NO_WALK_FORWARD_FIT), (
+            f"{constant} refused under a code that is not R5: "
+            f"{projection.unpriceable_reason}"
+        )
+        assert sentence in projection.unpriceable_reason, (
+            f"{constant} refused without the fit's own words, so an operator "
+            "cannot tell which constant went or why"
+        )
+        assert constant in projection.unpriceable_reason
+
+        # And the single-subject entry point, which carried the same read.
+        one = PR.projection_for(
+            day=DAY,
+            event_id="e1",
+            game_id=999,
+            home_team_id=55,
+            away_team_id=66,
+            provider_name="Sean Bairstow",
+            roster=_history(),
+            shapes=shapes,
+            priced_through="2024-01-14",
+        )
+        assert one.priceable is False and sentence in one.unpriceable_reason, (
+            f"`projection_for` did not refuse {constant} in the fit's words"
+        )
+
+    # Nothing catches this on the way out, which is why it had to be a refusal
+    # and not a raise. Asserted structurally rather than trusted: the estimator
+    # call in `_player_half` sits under no `try`, and the team half is already
+    # built when it runs.
+    tree = ast.parse(
+        (REPO / "src" / "cbb_betting_lab" / "models" / "slate.py").read_text(
+            encoding="utf-8"
+        )
+    )
+    half = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == "_player_half"
+    )
+    guarded = {
+        id(inner)
+        for node in ast.walk(half)
+        if isinstance(node, ast.Try)
+        for inner in ast.walk(node)
+    }
+    estimator_calls = [
+        node
+        for node in ast.walk(half)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "player_projections_for"
+    ]
+    assert len(estimator_calls) == 1
+    assert id(estimator_calls[0]) not in guarded, (
+        "the estimator call is inside a `try` now. That is a second place a "
+        "refusal could turn into a swallowed exception; say which exceptions "
+        "it catches and what sentence each one produces."
+    )
+
+
 def test_the_two_markets_refused_by_name_never_become_an_eleventh() -> None:
     """`player_first_basket` and `player_double_double`, refused before the run.
 

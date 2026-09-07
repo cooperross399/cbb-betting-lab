@@ -1042,13 +1042,37 @@ def _player_decline(model: "slate.SlateModel", wager: Wager) -> str:
       wiring absence — for a market the design refuses permanently. The
       refusal is printed in the design's own words, which say plainly that it
       is a model refusal and not a data absence.
-    * **never asked** — the model holds no projection for this event at all.
-      `no opinion`, and the slate's own sentence says which absence it is: a
-      night with no player evidence, an estimator that is not written, or a
-      day in no season.
-    * **the name** — R1/R1a. The book's spelling did not resolve to exactly one
-      athlete on a **prior** roster. No athlete id exists and none is invented;
-      the refusal is filed under the spelling as the book wrote it.
+    * **the name** — R1, R1a and R1b. The book's spelling did not resolve to
+      exactly one athlete on a **prior** roster. No athlete id exists and none
+      is invented; the refusal is filed under the spelling as the book wrote
+      it. This is asked BEFORE the event, and the order is load-bearing rather
+      than tidy. `slate.SlateModel.was_asked_about_players` is
+      `event_id in players`, and `players` gains an entry only where a
+      resolution SUCCEEDED (`player_rates.player_projections_for` writes
+      `projections.setdefault(event_id, {})[athlete]` on the resolved branch
+      only) — so an event on which every quoted spelling was refused for the
+      name is not in `players` at all, and asking the event first printed the
+      *never asked* sentence over bucket C on exactly the nights bucket C
+      exists to describe. R1b makes that certain rather than incidental: it is
+      filed inside `if len(roster) == 0`, computed once per event before the
+      spelling loop, so it is all-or-nothing per event and can never be
+      accompanied by a surviving projection — its sentence reached no output
+      anywhere in `src/` or `scripts/` until this order was fixed. Measured
+      through the shipped `slate._player_half` on a price frame quoting
+      `Sean Bairstow` on teams 77/88 against a player table carrying only team
+      55: `name_refusals[('e1', 'Sean Bairstow')]` is `R1B_NO_PRIOR_ROSTER`,
+      `resolution_census` is `{'refused_no_prior_roster': 1,
+      'quotes:refused_no_prior_roster': 1}`, `players` is `{}` — and the card
+      printed "the model was never asked about this event's athletes". The
+      same board is driven by `tests/test_player_seam.py::test_s12_a_name_
+      refused_on_an_event_with_no_survivor_still_prints_r1bs_words` through
+      the shipped `slate_model`. The two buckets are disjoint by `slate`'s invariant
+      I4, so a pair carrying a name refusal never carries a projection and
+      this order can hide nothing.
+    * **never asked** — the model holds no projection for this event at all
+      *and* this spelling was not refused for the name. `no opinion`, and the
+      slate's own sentence says which absence it is: a night with no player
+      evidence, an estimator that is not written, or a day in no season.
     * **not one of the ten** — the board carries player markets this model is
       not registered against at all. Measured on `markets.PLAYER_MARKETS`: 19
       player markets, of which 10 are priced and 2 are refused by name, leaving
@@ -1093,15 +1117,21 @@ def _player_decline(model: "slate.SlateModel", wager: Wager) -> str:
             f"{', '.join(player_rates.PRICED_MARKETS)}. An unregistered market "
             "is not a refusal and it is not a pass, an avoid or a no-value call"
         )
+    # THE NAME IS ASKED BEFORE THE EVENT, and the order is the whole of the
+    # C/D separation on a night when nothing on the game resolved. See the
+    # docstring's bucket-C paragraph: `was_asked_about_players` is
+    # `event_id in players`, `players` is filled only by a resolution that
+    # SUCCEEDED, and R1b is all-or-nothing per event — so asking the event
+    # first prints D over every C on exactly the events C exists to describe.
+    refusal = model.name_refusal(wager.event_id, wager.player)
+    if refusal:
+        return refusal
     if not model.was_asked_about_players(wager.event_id):
         reason = model.player_absence_reason or slate.NO_PLAYER_SLATE
         return (
             "the model was never asked about this event's athletes, so this "
             f"prop carries no opinion: {reason}"
         )
-    refusal = model.name_refusal(wager.event_id, wager.player)
-    if refusal:
-        return refusal
     projection = model.projection_for(wager.event_id, wager.player)
     if projection is None:
         return (

@@ -923,6 +923,33 @@ def trailing_evidence(roster: pd.DataFrame, *, half_life: float) -> pd.DataFrame
     return out[columns]
 
 
+def _evidence_the_half_life_refusal_leaves(roster: pd.DataFrame) -> pd.DataFrame:
+    """The empty evidence frame, for a day whose `minutes_half_life` was refused.
+
+    `trailing_evidence` cannot be called on real rows without a half-life, and
+    an unfitted half-life may not be replaced with a plausible one: substituting
+    a value for a constant `scripts/fit_player_model.py` recorded unfittable is
+    exactly what `PlayerShapes.value` raises to prevent. So no row is decayed at
+    all — the frame handed in is emptied first, `trailing_evidence` returns at
+    its own `prepared.empty` branch before the argument is read, and the
+    half-life passed is therefore applied to nothing.
+
+    The arrangement exists because R5 has to arrive as a REFUSAL and not as a
+    traceback. `_project` consults `_unfittable` before it uses any evidence,
+    and `minutes_half_life` is one of the six whole-constant refusals it lists,
+    so every subject built on this frame comes back `priceable=False` carrying
+    :data:`R5_NO_WALK_FORWARD_FIT` and the file's own sentence. Measured on the
+    frozen file with `minutes_half_life` recorded unfittable: before this, the
+    caller-level read at `player_projections_for` raised `ShapesFileError` out
+    of `slate._player_half` — which has no `try` — and took the whole slate
+    down, team half included, while the other five whole-constant refusals
+    (`minutes_pmf`, `role_prior`, `rate_shrinkage_k`, `value_pmf`,
+    `value_mix_shrinkage_events`) each returned a refusing projection the card
+    printed. Six of six now refuse in words.
+    """
+    return trailing_evidence(roster.iloc[0:0], half_life=1.0)
+
+
 def _prepare(roster: pd.DataFrame) -> pd.DataFrame:
     """The columns the estimator shares, sorted the way the fitter sorts them.
 
@@ -1308,7 +1335,15 @@ def player_projections_for(
         return PlayerSlate(priced_through=priced_through, resolution_census={})
 
     season = season_for_slate_date(day)
-    half_life = float(shapes.value("minutes_half_life"))
+    # `refusal_for` and not `value`: this read is at CALLER level, before the
+    # subject loop and before `_project` can turn a whole-constant refusal into
+    # R5, so `value` raising here would carry an unfittable `minutes_half_life`
+    # out of this function as a `ShapesFileError` rather than refusing. Nothing
+    # catches it — `slate._player_half` calls this with no `try` — so the one
+    # constant read here would take the slate's TEAM half down with it while
+    # the other five whole-constant refusals printed on the card.
+    half_life_refusal = shapes.refusal_for("minutes_half_life")
+    half_life = None if half_life_refusal else float(shapes.value("minutes_half_life"))
     missing_columns = _missing_stat_columns(player_history)
 
     pool = prior_roster(
@@ -1339,8 +1374,12 @@ def player_projections_for(
         on_this_game = pool["_team_key"].isin(wanted) if wanted else pool["_team_key"].notna()
         roster = pool[on_this_game]
         index = _prior_index(roster, event_id=event_id)
-        evidence = trailing_evidence(
-            pool[on_this_game & (pool_seasons == season)], half_life=half_life
+        evidence = (
+            _evidence_the_half_life_refusal_leaves(roster)
+            if half_life is None
+            else trailing_evidence(
+                pool[on_this_game & (pool_seasons == season)], half_life=half_life
+            )
         )
 
         for spelling in spellings:
@@ -1738,9 +1777,17 @@ def projection_for(
             "bug family; ask `player_projections_for`, which files this as a "
             "name refusal keyed by the spelling as the book filed it."
         )
-    evidence = trailing_evidence(
-        prior[_numeric(prior, "season") == season] if len(prior) else prior,
-        half_life=float(shapes.value("minutes_half_life")),
+    # The same caller-level R5 as `player_projections_for`, and refused the
+    # same way rather than raised: this entry point is the one a caller with a
+    # roster already in hand uses, and a `ShapesFileError` here would be a
+    # refusal arriving as a traceback in a second place.
+    evidence = (
+        _evidence_the_half_life_refusal_leaves(prior)
+        if shapes.refusal_for("minutes_half_life")
+        else trailing_evidence(
+            prior[_numeric(prior, "season") == season] if len(prior) else prior,
+            half_life=float(shapes.value("minutes_half_life")),
+        )
     )
     return _project(
         day=day,
