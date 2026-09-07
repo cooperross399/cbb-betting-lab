@@ -70,6 +70,60 @@ PRICE_IDENTITY = (
 )
 
 
+#: The column naming the human a player-prop quote is about.
+SUBJECT_COLUMN = "player"
+
+#: The hidden column the fold is computed into. Never stored, never returned.
+_SUBJECT_KEY = "_subject"
+
+
+def normalise_subject(value: object) -> str:
+    """The declared spelling of a subject, for identity only. Never stored.
+
+    **The lab had no subject normalizer and the denominator depended on it.**
+    Counted over the 2024 prop store on 2026-09-06, the number of wagers this
+    lab would grade came out five different ways depending on how a name was
+    folded:
+
+        raw                          261,870
+        casefold                     257,474   <- declared here
+        strip + casefold             257,378
+        punctuation collapsed        255,553
+        NFKD to ASCII, full fold     251,949
+
+    Design section 10 names the key and never says which spelling of `player`
+    is the subject, so `best_price_per_wager` grouped on the raw string: the
+    same athlete under two spellings was two wagers. Measured, that is **4,396
+    wagers** carrying two rows apiece, 3,959 of them at two DIFFERENT prices.
+    It is this lab's own documented root-n interval defect — the one
+    `PRICE_IDENTITY` warns about for timestamps — arriving through the subject
+    field instead of the book field, and it narrows every interval built on
+    those wagers.
+
+    **Casefold, and not the fuller fold, on the evidence.** Over the 4,396
+    collapsing keys: every collapse is cross-book, **zero** are one book
+    quoting the same athlete twice, and the 64 folded names cover exactly two
+    raw spellings each. Checked against `cbb_player_games.csv` over the 1,180
+    quoted games, **zero** of the 64 groups merge two different athlete_ids —
+    so this fold never joins two people. The fuller NFKD fold counts 251,949,
+    at least 5,525 below any number the design states, and it was not adopted
+    because nothing has shown those 5,525 are the same athletes.
+
+    **What it costs, stated rather than buried.** Design section 10's "~9,170
+    subject-opinions" for `player_points` is the RAW count; under this
+    declaration it is **8,803**, so every athlete-clustered interval widens by
+    sqrt(9170/8803) = 2.1%. That is the correct direction: the raw count was
+    counting one person twice and calling it two opinions.
+
+    **It changes no published number.** Measured: all 504,394 rows carrying a
+    subject are `player_*` markets, no team market has a non-empty subject, and
+    no player market has ever been graded. `tests/test_stores.py` asserts both
+    halves.
+    """
+    text = _dedupe_value(value)
+    return text.casefold()
+
+
 def read_store(
     path: Path, *, columns: tuple[str, ...] | None = None, for_append: bool = False
 ) -> pd.DataFrame:
@@ -171,12 +225,31 @@ def best_price_per_wager(
     ]
     if not wager or odds_column not in frame.columns:
         return frame
-    ordered = frame.assign(
-        _payout=frame[odds_column].map(_decimal_payout)
-    ).sort_values("_payout", ascending=False, kind="mergesort")
+    # The subject is folded to its declared spelling **in the key only**; every
+    # other column is compared as it stands, and the returned rows are the
+    # rows that came in. See `normalise_subject`: without the fold, one
+    # athlete under two spellings is two wagers and the interval built on them
+    # is narrower than the evidence supports.
+    #
+    # A HIDDEN KEY COLUMN, not a rewrite of `player`. Replacing the column was
+    # the first attempt and it broke a downstream merge: `player` is float64
+    # NaN on team markets, folding made it an empty string, and
+    # `test_one_wager_is_one_bet_at_the_best_price` failed with "trying to
+    # merge on str and float64 columns for key 'player'". The stored data keeps
+    # what the book wrote — which is what this function's own contract already
+    # said and its implementation did not do.
+    ordered = frame.assign(_payout=frame[odds_column].map(_decimal_payout))
+    if SUBJECT_COLUMN in frame.columns:
+        ordered = ordered.assign(
+            _subject=frame[SUBJECT_COLUMN].map(normalise_subject)
+        )
+        wager = [_SUBJECT_KEY if c == SUBJECT_COLUMN else c for c in wager]
+    ordered = ordered.sort_values(
+        "_payout", ascending=False, kind="mergesort"
+    )
     return (
         ordered.drop_duplicates(subset=wager, keep="first")
-        .drop(columns=["_payout"])
+        .drop(columns=[c for c in ("_payout", _SUBJECT_KEY) if c in ordered.columns])
         .reset_index(drop=True)
     )
 
