@@ -174,9 +174,18 @@ def _player_probability_names() -> dict[str, list[str]]:
 #: `player_distributions.py` is what remains, and while it is absent no
 #: projection in this repository can become a probability, so no hypothesis
 #: below can have been looked at.
-MODEL_FILES = (
-    "src/cbb_betting_lab/models/player_distributions.py",
-)
+#: **Empty, and that is the fourth narrowing rather than a surrender.** This
+#: began as five files that had to be absent. `player_distributions.py` landed
+#: on 2026-09-06 and was the last of them, so nothing is held here by absence
+#: any more — and the ordering claim does NOT rest on absence now. It rests on
+#: the evidence below, which is stronger than a filename and cannot be
+#: satisfied by writing one.
+#:
+#: Kept as an empty tuple rather than deleted, because the loop over it is what
+#: a later session will reach for when a sixth file has to be held out, and
+#: because an empty list somebody has to justify emptying is harder to abuse
+#: than no list at all.
+MODEL_FILES: tuple[str, ...] = ()
 
 #: Its INPUTS, which do now exist. Named rather than merely allowed, so a fifth
 #: file appearing under this heading is a red test and a decision somebody
@@ -188,9 +197,35 @@ MODEL_FILES = (
 INPUT_FILES = (
     "src/cbb_betting_lab/models/player_shapes.py",
     "src/cbb_betting_lab/models/player_rates.py",
+    "src/cbb_betting_lab/models/player_distributions.py",
     "scripts/fit_player_model.py",
     "data/processed/cbb_player_shapes.json",
 )
+
+
+#: Every player-probability name in the tree, measured on 2026-09-07, with why
+#: each is not a scored claim about the 33 hypotheses.
+#:
+#: **The engine's names are here and that is the point of the narrowing.**
+#: `player_distributions.probability` and `void_probability` are P(over) and
+#: P(void) on a lattice — real probabilities, and they exist. What they are
+#: not is a SCORED comparison: there is no de-vigged fair price to hold them
+#: against and no log loss anywhere in this tree, and every one of the 33
+#: hypotheses is a claim about a mean log loss. A probability nobody has
+#: scored has met no hypothesis.
+#:
+#: `dnp_probability` is the stored did-not-play diagnostic, asserted elsewhere
+#: never to be multiplied into a price.
+PROBABILITY_NAMES_ON_THIS_COMMIT = {
+    "src/cbb_betting_lab/models/player_distributions.py": [
+        "probability",
+        "void_probability",
+    ],
+    "src/cbb_betting_lab/models/player_rates.py": [
+        "_dnp_probability",
+        "dnp_probability",
+    ],
+}
 
 
 def test_nothing_in_this_tree_can_turn_a_projection_into_a_probability() -> None:
@@ -254,6 +289,21 @@ def test_nothing_in_this_tree_can_turn_a_projection_into_a_probability() -> None
             "list, or this list is wrong."
         )
 
+    # **What the ordering rests on now that every file exists.** Absence is
+    # spent: the engine landed on 2026-09-06 and MODEL_FILES is empty. Three
+    # things carry it instead, and none can be satisfied by writing a file.
+    #
+    # 1. NOTHING HAS BEEN SCORED. There is no player de-vig and no player log
+    #    loss in this tree, and each of the 33 hypotheses is a claim about a
+    #    mean log loss. `tests/test_player_model_leakage.py` holds that scan.
+    # 2. NO ENTRY HAS AN OUTCOME. Every player-prop hypothesis is still
+    #    `pending` with an empty realised direction, asserted below.
+    # 3. THE LEDGER IS APPEND-ONLY, under its own CI job, so an entry cannot be
+    #    edited or back-dated once a number is seen.
+    #
+    # The first two are facts about this commit and go red the day they stop
+    # being true, which is the day somebody has to re-read this and say what
+    # the ordering rests on then.
     from cbb_betting_lab.models import player_rates
 
     produced = {
@@ -277,9 +327,7 @@ def test_nothing_in_this_tree_can_turn_a_projection_into_a_probability() -> None
 
     # The tree, not just the one module: this is the check the docstring above
     # used to claim and the body used not to perform.
-    assert _player_probability_names() == {
-        "src/cbb_betting_lab/models/player_rates.py": ["_dnp_probability", "dnp_probability"]
-    }, (
+    assert _player_probability_names() == PROBABILITY_NAMES_ON_THIS_COMMIT, (
         "a player probability is now named somewhere in `src/` or `scripts/`. "
         "If it is the engine, the 33 hypotheses can have been looked at and "
         "the ordering has to be re-stated from something other than the tree. "

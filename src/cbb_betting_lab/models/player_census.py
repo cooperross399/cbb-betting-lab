@@ -1297,12 +1297,29 @@ def forget_reconciliations() -> None:
 
 
 def player_markets_in(frame: pd.DataFrame) -> tuple[str, ...]:
-    """The player markets a frame carries, by name, sorted."""
+    """The player markets a frame carries that could be GRADED, by name, sorted.
+
+    **A market refused by name is not among them, and excluding it is not a
+    hole in the gate.** This gate exists to stop a player wager reaching a
+    grading number before the wager census has reconciled. A market refused by
+    name never reaches one at all: it is filtered out of every verdict table
+    and every JSON payload by `player_rates.without_markets_refused_by_name`,
+    which is a stronger guarantee than this gate gives anything else. Blocking
+    on it protects nothing and costs something real — measured, it refused
+    `forward_evidence.report_payload` on a frame whose only player market was
+    `player_double_double`, which is to say it refused a frame with nothing
+    gradeable in it, and it broke the test that proves the refusal filter is
+    wired in.
+
+    The list comes from the model that owns the refusal, never a copy here.
+    """
     if frame is None or len(frame) == 0 or "market" not in getattr(frame, "columns", ()):
         return ()
+    from cbb_betting_lab.models.player_rates import MARKETS_REFUSED_BY_NAME
+
     markets = frame["market"].astype(str)
     found = markets[markets.str.startswith(PLAYER_MARKET_PREFIX, na=False)]
-    return tuple(sorted(set(found)))
+    return tuple(sorted(set(found) - set(MARKETS_REFUSED_BY_NAME)))
 
 
 def guard_graded_frame(frame: pd.DataFrame, *, what: str) -> tuple[str, ...]:
