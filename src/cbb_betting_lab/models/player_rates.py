@@ -278,6 +278,30 @@ MARKETS_REFUSED_BY_NAME: Mapping[str, str] = {
     ),
 }
 
+def without_markets_refused_by_name(frame):
+    """`frame` without the markets this model refuses BY NAME.
+
+    **One filter, because one was not enough.** A market refused by name may
+    never carry a verdict: "no demonstrated edge" is a statement about a
+    measurement, and there is no measurement here and never will be. That was
+    closed in `forward_evidence.render_ledger` first — and the same rows reach
+    a reader through `forward_evidence.report_payload`, which renders the same
+    numbers as JSON, and through `reachability.build_record`, which builds its
+    own clustered interval and its own verdict. Fixing the markdown and leaving
+    the JSON is fixing the one path somebody happened to look at.
+
+    Lives here rather than in a report because this module owns the refusal;
+    a report that grows a new table gets the filter by importing it instead of
+    by remembering.
+    """
+    if frame is None or getattr(frame, "empty", False):
+        return frame
+    if "market" not in getattr(frame, "columns", ()):
+        return frame
+    refused = set(MARKETS_REFUSED_BY_NAME)
+    return frame[~frame["market"].isin(refused)].reset_index(drop=True)
+
+
 #: The column of the player frame that carries its day. Equal to
 #: `slate.SLATE_DAY_COLUMN` and to `walk_forward`'s default, so no call site
 #: passes `frame_day_columns` and there is one answer to what a day is.
