@@ -91,12 +91,21 @@ entry at all is **no opinion**, which is a different census bucket and is never
 summed with a refusal.
 
 R6 is added here and is not in the design, because the wiring made it real: the
-card reads only the eight columns `slate.REQUIRED_PLAYER_COLUMNS` declares, and
+card read only the eight columns `slate.REQUIRED_PLAYER_COLUMNS` declares, and
 a per-minute rate cannot be formed from them. Rather than invent a rate or fall
 back to a role table under a player's name, a subject whose frame carries no
 box-score columns is refused in a sentence that names the missing columns and
-the caller that cut them out. See
-`test_the_gaps_this_estimator_still_has_are_the_ones_written_down`.
+the caller that cut them out.
+
+The card was repaired on 2026-09-06 and now reads
+`slate.PLAYER_COLUMNS_THE_ESTIMATOR_READS` — :data:`_POOL_COLUMNS`, restated
+there — so R6 no longer fires on that path. It is **not** dead: the eight
+remain what the seam REQUIRES to exist, `slate_model` accepts a frame carrying
+only them, and a processed table built without a box-score column reaches this
+estimator column by column rather than as a whole-card refusal. R6 is the
+sentence that state produces, and
+`tests/test_player_rates.py::test_a_frame_with_no_box_score_columns_is_refused_
+not_defaulted` is where it is held.
 
 ## What it costs, measured rather than estimated
 
@@ -316,8 +325,10 @@ _POOL_COLUMNS: tuple[str, ...] = (
 
 #: The box-score columns a per-minute rate is formed from. NOT the same list as
 #: `slate.REQUIRED_PLAYER_COLUMNS`, which is the eight columns the seam
-#: declares — a frame carrying only those eight can project minutes and cannot
-#: form a rate. See R6 and the written-down gaps.
+#: requires to EXIST — a frame carrying only those eight can project minutes
+#: and cannot form a rate. They are a subset of
+#: `slate.PLAYER_COLUMNS_THE_ESTIMATOR_READS`, which is what a caller must read
+#: off the table for this estimator to reach a price. See R6.
 REQUIRED_STAT_COLUMNS: tuple[str, ...] = (
     "points",
     "rebounds",

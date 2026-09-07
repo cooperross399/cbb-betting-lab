@@ -140,6 +140,50 @@ REQUIRED_PLAYER_COLUMNS: tuple[str, ...] = (
     "minutes",
 )
 
+#: What a caller must READ off the player table for the seam to reach a price,
+#: as against what it must find there before it hands the frame on. The eight
+#: above project minutes and cannot form a per-minute rate, which is R6's whole
+#: subject; these seventeen are the columns `player_rates` narrows its day pool
+#: to (`player_rates._POOL_COLUMNS`, restated here because `slate` imports the
+#: estimator inside the call so :data:`NO_RATE_ESTIMATOR` stays reachable, and
+#: held equal to it by `test_player_seam.py::test_s11_the_columns_the_card_
+#: reads_are_the_columns_the_estimator_reads`).
+#:
+#: The distinction is not decorative and it was not free. Until 2026-09-06
+#: `reports/card_matchups.load_player_games` read the eight, and every athlete
+#: on the card path was therefore refused under R6 — measured on the tracked
+#: sample corpus over the four-game board
+#: `tests/test_player_seam.py::_card_board` builds, all 10 subjects resolved,
+#: all 10 were refused with "no per-minute rate exists to shrink", 0 props were
+#: priced and design 4's structural check was never asked. The same board over
+#: these seventeen prices all 20 props and runs the check over 10 regulars.
+#:
+#: This list is NOT the required-to-exist list, and widening that one instead
+#: would have been the wrong repair: `slate_model` raises `SlateError` on a
+#: frame missing a required column, so requiring the box score here would turn
+#: a table built without `steals` into a refusal of the whole card — team half
+#: included — where R6 refuses the athlete, names the column and lets the team
+#: half price. The absent ones are read as absent, never as zeros.
+PLAYER_COLUMNS_THE_ESTIMATOR_READS: tuple[str, ...] = (
+    "slate_date",
+    "season",
+    "game_id",
+    "athlete_id",
+    "athlete_display_name",
+    "team_id",
+    "opponent_id",
+    "did_not_play",
+    "minutes",
+    "points",
+    "rebounds",
+    "assists",
+    "steals",
+    "turnovers",
+    "field_goals_made",
+    "three_point_field_goals_made",
+    "free_throws_made",
+)
+
 #: A day in no season this lab carries. `matchups_for` returns `{}` for one
 #: rather than raising, and this matches it: an empty slate, with the reason.
 NO_SEASON: str = (

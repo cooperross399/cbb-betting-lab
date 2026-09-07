@@ -45,6 +45,7 @@ import ast
 import importlib.util
 import sys
 import types
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -54,9 +55,11 @@ from cbb_betting_lab.competitions import CBB
 from cbb_betting_lab.gates import Availability, can_produce_a_selection
 from cbb_betting_lab.markets import FULL_GAME
 from cbb_betting_lab.conferences import Tier
+from cbb_betting_lab.models import player_rates as PR
 from cbb_betting_lab.models import slate
 from cbb_betting_lab.reports import card_pricing, gameday_card
 from cbb_betting_lab.reports import price_backtest as PB
+from cbb_betting_lab.season import season_for_slate_date
 
 REPO = Path(__file__).resolve().parents[1]
 SRC = REPO / "src"
@@ -1442,13 +1445,18 @@ def test_the_seams_player_half_actually_runs(fixture_raw_dir) -> None:
     assert int(model.shapes.priced_season) == 2026
 
     # **The wiring, end to end, on a real slate — and what it says here is a
-    # refusal, in the estimator's own words.** This subject is refused under R6:
-    # `slate.REQUIRED_PLAYER_COLUMNS` is eight columns, a value mix needs the
-    # box score, and the frame this seam declares does not carry
-    # `field_goals_made`, `three_point_field_goals_made` or `free_throws_made`.
-    # That is clause 6 of `test_player_rates.py`'s limitations reaching the
-    # card. What matters for the wiring is which sentence comes out: the
-    # PROJECTION'S, not a missing engine and not missing constants.
+    # refusal, in the estimator's own words.** The frame THIS test hands in is
+    # narrower than the one the card reads: a value mix needs the box score and
+    # this frame carries no `field_goals_made`,
+    # `three_point_field_goals_made` or `free_throws_made`, so the subject is
+    # refused under R6. That state is no longer the card's — since
+    # `load_player_games` reads `slate.PLAYER_COLUMNS_THE_ESTIMATOR_READS` the
+    # card forms a rate, which
+    # `test_s11_the_card_path_can_actually_build_a_player_distribution` drives —
+    # and it is still every caller's who hands over less, which is why R6 is
+    # exercised here rather than deleted with the clause it used to cite. What
+    # matters for the wiring is which sentence comes out: the PROJECTION'S, not
+    # a missing engine and not missing constants.
     prop = _wager(event_id="e1", market="player_points", player="A Player", line=13.5)
     probabilities, census = gameday_card.opinions_for([prop], model, day=day)
     assert probabilities == {} and census.priced == 0
@@ -1518,3 +1526,312 @@ def _countable_team_games(day: str) -> pd.DataFrame:
     path, _ = processed_table("cbb_team_games.csv")
     frame = pd.read_csv(path, low_memory=False)
     return frame[frame["slate_date"].astype(str) < day]
+
+
+# --------------------------------------------------------------------------
+# S11: the shipped card path can actually reach the estimator
+# --------------------------------------------------------------------------
+
+#: A day the tracked schedule fixtures carry and the tracked player sample has
+#: prior evidence for. Season 2026 is not a season the frozen constants were
+#: fitted or validated on, which is why the other real-corpus tests in this
+#: file use it too.
+CARD_DAY = "2026-02-07"
+
+
+def _deepest_rosters(day: str, *, games: int, subjects: int):
+    """`games` fixtures on `day`, each with the `subjects` best-evidenced names.
+
+    Chosen from whichever corpus `conftest` hands over — the full processed
+    table when it is built, the tracked sample when it is not — because a day
+    and a roster hard-coded against one of them is a test that asserts
+    something on a laptop and nothing in CI. The pick is on prior appearances
+    and prior minutes ONLY, which are R2's own two thresholds: the point is to
+    hand the estimator a board it has evidence about, and nothing here reads an
+    outcome, a price or a settled result.
+
+    Returns the schedule records, a name list per record, and the corpus label
+    to print beside any count taken over it.
+    """
+    from conftest import processed_table, schedule_fixture
+
+    schedule = pd.read_parquet(schedule_fixture(season_for_slate_date(day)))
+    on_day = schedule[schedule["game_date"].astype(str) == day]
+    assert not on_day.empty, f"the schedule fixture carries no game on {day}"
+
+    path, corpus = processed_table("cbb_player_games.csv")
+    frame = pd.read_csv(
+        path,
+        usecols=[
+            "slate_date", "season", "game_id", "team_id", "athlete_display_name",
+            "minutes", "did_not_play",
+        ],
+        low_memory=False,
+    )
+    # **This season only, and strictly before the day.** The estimator's bank
+    # resets at every season boundary — admitting a carry-over needs a decay
+    # constant nobody has fitted — so an athlete whose minutes are all last
+    # season's has no projection at all, and picking him would build a board
+    # the estimator refuses under R3 while the corpus looked deep. The full
+    # processed table carries eight seasons and the tracked sample carries one,
+    # which is exactly how that reads as a corpus difference rather than as the
+    # rule it is.
+    played = frame[
+        (frame["slate_date"].astype(str) < day)
+        & (frame["season"].astype(int) == int(season_for_slate_date(day)))
+        & (~frame["did_not_play"].astype(str).str.strip().str.lower().eq("true"))
+    ]
+    evidence = (
+        played.groupby(["team_id", "athlete_display_name"])
+        .agg(games=("game_id", "count"), minutes=("minutes", "sum"))
+        .reset_index()
+    )
+    # R2's floor, restated from the estimator rather than retyped: fewer than
+    # four played games or sixty prior minutes is a role-table price wearing a
+    # player's name, and a board of those would prove nothing about the wiring.
+    regulars = evidence[
+        (evidence["games"] >= PR.MIN_PRIOR_GAMES)
+        & (evidence["minutes"] >= PR.MIN_PRIOR_MINUTES)
+    ].sort_values("minutes", ascending=False)
+    by_team: dict[int, list[str]] = {}
+    for record in regulars.to_dict("records"):
+        by_team.setdefault(int(record["team_id"]), []).append(
+            str(record["athlete_display_name"])
+        )
+
+    ranked = sorted(
+        on_day.to_dict("records"),
+        key=lambda r: -(
+            len(by_team.get(int(r["home_id"]), ()))
+            + len(by_team.get(int(r["away_id"]), ()))
+        ),
+    )[:games]
+    rosters = []
+    for record in ranked:
+        names = (
+            by_team.get(int(record["home_id"]), [])[: subjects // 2]
+            + by_team.get(int(record["away_id"]), [])[: subjects // 2]
+        )
+        rosters.append(names)
+    return ranked, rosters, corpus
+
+
+def _card_board(day: str, *, games: int = 4, subjects: int = 4):
+    """A board for `day` through the real stager: two team markets and props.
+
+    Built from provider-shaped payloads rather than assembled as a frame, so
+    the `player` column arrives where the card gets it — the provider's
+    `description` — rather than from a test that agreed with itself.
+    """
+    fixtures, rosters, corpus = _deepest_rosters(day, games=games, subjects=subjects)
+    tip = datetime.fromisoformat(f"{day}T19:00:00").replace(tzinfo=CBB.timezone)
+    payloads = []
+    for record, names in zip(fixtures, rosters):
+        home, away = str(record["home_display_name"]), str(record["away_display_name"])
+        markets = [
+            {"key": "h2h", "outcomes": [
+                {"name": home, "price": -140},
+                {"name": away, "price": 120},
+            ]},
+        ]
+        if names:
+            markets.append({"key": "player_points", "outcomes": [
+                {"name": side, "description": name, "price": -110, "point": 12.5}
+                for name in names
+                for side in ("Over", "Under")
+            ]})
+        payloads.append({
+            "id": f"evt-{int(record['id'])}",
+            "commence_time": tip.astimezone(timezone.utc)
+            .replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+            "home_team": home,
+            "away_team": away,
+            "bookmakers": [
+                {"key": "draftkings", "title": "DraftKings", "markets": markets}
+            ],
+        })
+    return gameday_card.board_from_payloads(payloads, competition=CBB), corpus
+
+
+def test_s11_the_card_path_can_actually_build_a_player_distribution(
+    fixture_raw_dir, fixture_processed_dir
+) -> None:
+    """The seam is reachable from `reports/card_matchups.py`, and was not.
+
+    **The defect, in two halves, both measured before they were repaired.**
+    `matchups_for_card` said in its own docstring that its call site was
+    identical for the team seam and for `slate.slate_model`, so that shipping
+    the player half was "a one-line change to `DEFAULT_MODEL` rather than a
+    change to the card". Driven with that swap over a four-game board carrying
+    32 `player_points` quotes on 16 athletes, on the tracked sample corpus:
+
+    * `attach_game_ids` handed the model a frame of `event_id` and `game_id`.
+      `player_rates._subjects_of_the_day` reads `market`, `player` and the two
+      team ids, so it found **no subject at all** — 0 projections, an empty
+      resolution census, 0 name refusals — and every prop was declined as *"the
+      model was never asked about this event's athletes"*, which was true.
+    * with a price frame the model could read, `load_player_games`' eight
+      columns then refused **13 of 16** subjects under R6 ("no per-minute rate
+      exists to shrink") for 0 priced props, because those eight carry no box
+      score. The same board over `slate.PLAYER_COLUMNS_THE_ESTIMATOR_READS`
+      priced 26 of 48 wagers.
+
+    Either one alone was enough to make design 4's stop rule unreachable on the
+    card: `_run_the_structural_check` returns before evaluating anything when
+    no distribution was built, so the single automatic refusal the design puts
+    on the engine's own output could not fire on the only path that ships.
+
+    **This asserts shape, not size.** The numbers above are the sample corpus's
+    and the counts here are printed rather than pinned, because `conftest`
+    hands the full processed table to a laptop and the tracked sample to CI.
+    Nothing is graded: every count is a census off a fixture board, and no ROI,
+    edge or verdict is stated or implied.
+    """
+    from cbb_betting_lab.reports import card_matchups
+
+    board, corpus = _card_board(CARD_DAY)
+    props = board.rows[board.rows["market"] == "player_points"]
+    assert not props.empty, "the fixture board carries no prop to ask about"
+    print(
+        f"player corpus={corpus} board events={board.rows['event_id'].nunique()} "
+        f"rows={len(board.rows):,} prop rows={len(props):,} "
+        f"subjects={props['player'].nunique()}"
+    )
+
+    built = card_matchups.matchups_for_card(
+        board.rows,
+        competition=CBB,
+        day=CARD_DAY,
+        processed_dir=fixture_processed_dir,
+        raw_dir=fixture_raw_dir,
+        model=slate.slate_model,
+    )
+
+    # The subjects reach the estimator at all. This is the half `attach_game_ids`
+    # deleted, and its symptom was an empty census rather than a refusal.
+    projections = [p for by in built.slate.players.values() for p in by.values()]
+    assert projections, (
+        "the card asked the seam about a board carrying "
+        f"{props['player'].nunique()} quoted athletes and got no projection: "
+        f"census={dict(built.slate.resolution_census)}, "
+        f"absence={built.slate.player_absence_reason!r}"
+    )
+    assert built.slate.resolution_census, "subjects were projected and none was counted"
+
+    # And a rate was formed. This is the half the eight columns deleted, and
+    # its symptom was R6 on every athlete.
+    priceable = [p for p in projections if p.priceable]
+    refusals = {p.unpriceable_reason for p in projections if not p.priceable}
+    assert priceable, (
+        "every athlete on the card path is refused, so no distribution is "
+        f"built: {sorted(r[:90] for r in refusals)}"
+    )
+    assert not any(r.startswith(PR.R6_NO_BOX_SCORE_COLUMNS) for r in refusals), (
+        "the card is still handing the estimator a frame with no box score"
+    )
+    assert set(slate.PLAYER_COLUMNS_THE_ESTIMATOR_READS) >= set(
+        PR.REQUIRED_STAT_COLUMNS
+    )
+
+    # Which is what design 4's stop rule needs to be ASKED on this path.
+    wagers, _, _ = card_pricing.build_wagers(board.rows, competition=CBB)
+    probabilities, census = gameday_card.opinions_for(wagers, built.slate, day=CARD_DAY)
+    priced_props = [
+        wager for wager in wagers
+        if wager.key in probabilities and str(wager.market).startswith("player_")
+    ]
+    assert priced_props, "no prop on the card carries a probability"
+    assert census.structural_check, (
+        "the card built distributions and design 4's structural check was "
+        "still not asked"
+    )
+    assert census.structural_check["population_athletes"] >= 1.0
+    print(
+        f"projections={len(projections)} priceable={len(priceable)} "
+        f"priced={census.priced:,} of {census.wagers:,} wager(s), "
+        f"props priced={len(priced_props):,}; "
+        f"{census.structural_check_line()}"
+    )
+
+
+def test_s11_the_columns_the_card_reads_are_the_columns_the_estimator_reads(
+) -> None:
+    """One list, restated once, and held equal to the one the estimator uses.
+
+    `slate.PLAYER_COLUMNS_THE_ESTIMATOR_READS` is a copy of
+    `player_rates._POOL_COLUMNS`, made because `slate` imports the estimator
+    inside the call — so that `NO_RATE_ESTIMATOR` stays reachable in a tree
+    that has lost the file — and a module-level import would trade one
+    reachable sentence for one import-time crash. A copy nobody checks is how
+    the two drift, and a drift here is silent: the card would read a column
+    short and every athlete would come back refused, which is exactly the state
+    this pair of tests exists against.
+
+    The eight are deliberately NOT grown into this list. `slate_model` raises
+    `SlateError` on a frame missing a required column, so requiring the box
+    score would turn a table built without `steals` into a refusal of the whole
+    card, team half included, where R6 refuses the athlete and names the
+    column.
+    """
+    assert tuple(slate.PLAYER_COLUMNS_THE_ESTIMATOR_READS) == tuple(PR._POOL_COLUMNS), (
+        "the seam's declared read list and the estimator's day pool have "
+        "drifted; the card would read whichever is shorter"
+    )
+    assert set(slate.REQUIRED_PLAYER_COLUMNS) < set(
+        slate.PLAYER_COLUMNS_THE_ESTIMATOR_READS
+    ), "the columns the seam requires to exist must be a subset of what it reads"
+    assert not set(PR.REQUIRED_STAT_COLUMNS) <= set(slate.REQUIRED_PLAYER_COLUMNS), (
+        "the required-to-exist list now carries the box score, so a processed "
+        "table built without one stat column refuses the whole card instead of "
+        "refusing the athlete under R6. Say why that is the better trade."
+    )
+
+
+def test_s11_the_frame_the_card_hands_the_model_is_the_stores_vocabulary() -> None:
+    """`home_team` is a team id in the frame and a school name on the board.
+
+    The translation `model_prices` makes, asserted on both sides of it, because
+    one word means two things here and the failure it produces is silent rather
+    than loud: hand the estimator the board's own frame and every quoted
+    spelling is resolved against a league-wide roster instead of two teams,
+    which is a name matched to the wrong athlete rather than a refusal.
+
+    The store is the authority on the vocabulary — `home_team`/`away_team` are
+    hoopR ids in `cbb_historical_prices__card.csv` and the school names live in
+    `home_name`/`away_name` — because that is the frame
+    `scripts/run_price_backtest.py` hands the same estimator, and two callers
+    handing one function two vocabularies is the defect this pins.
+    """
+    from conftest import schedule_fixture
+    from cbb_betting_lab.reports import card_matchups
+
+    board, _ = _card_board(CARD_DAY)
+    schedule = pd.read_parquet(schedule_fixture(season_for_slate_date(CARD_DAY)))
+    joined, _, _ = card_matchups.attach_game_ids(
+        board.rows, day=CARD_DAY, schedule=schedule
+    )
+    joined = joined.dropna(subset=["game_id"])
+    asked = card_matchups.model_prices(board.rows, joined)
+
+    assert list(asked.columns) == list(card_matchups.MODEL_PRICE_COLUMNS)
+    assert len(asked) == len(board.rows), "a quote on a joined game was dropped"
+    by_id = {int(record["id"]): record for record in schedule.to_dict("records")}
+    for record in asked.to_dict("records"):
+        fixture = by_id[int(record["game_id"])]
+        assert record["home_team"] == int(fixture["home_id"]), (
+            "the frame's `home_team` is not the fixture's team id, so the "
+            "estimator resolves every spelling against a league-wide roster"
+        )
+        assert record["away_team"] == int(fixture["away_id"])
+        assert isinstance(record["home_team"], int), (
+            "the id arrives as a float, and a float game or team id written "
+            "into a stored row no longer joins to the tables that carry ints"
+        )
+        assert record["home_name"] == str(fixture["home_display_name"])
+        assert record["away_name"] == str(fixture["away_display_name"])
+
+    props = asked[asked["market"] == "player_points"]
+    assert not props.empty and (props["player"].str.len() > 0).all(), (
+        "the athlete the book quoted did not survive into the frame the model "
+        "reads, which is the state in which no board produces a subject"
+    )

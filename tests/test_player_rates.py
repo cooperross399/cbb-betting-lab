@@ -1361,7 +1361,7 @@ def test_this_module_no_longer_tells_its_reader_the_engine_is_not_written() -> N
 
 
 def test_the_gaps_this_estimator_still_has_are_the_ones_written_down() -> None:
-    """Six, of which one has since closed; each goes red the day it does.
+    """Six, of which two have since closed; each goes red the day it does.
 
     The repository's form for a limitation: not a docstring claim that quietly
     becomes false, but an assertion that fails on the commit which fixes it and
@@ -1415,10 +1415,29 @@ def test_the_gaps_this_estimator_still_has_are_the_ones_written_down() -> None:
        ceiling" and the frozen file declares `minutes_support` and no per-market
        count ceiling at all, so the upper half of R4 is enforced on minutes and
        not on counts. It belongs in `player_distributions.py`.
-    6. **The card cannot form a rate.** `slate.REQUIRED_PLAYER_COLUMNS` is
-       eight columns and a per-minute rate needs the box score, so every
-       subject on the card path is refused under R6. It is one list away, and
-       widening it changes a measured docstring in `card_matchups.py`.
+    6. **CLOSED.** The card could not form a rate:
+       `reports/card_matchups.load_player_games` read the eight columns
+       `slate.REQUIRED_PLAYER_COLUMNS` declares, a per-minute rate needs the
+       box score, and every subject on the card path was therefore refused
+       under R6 — which also made design 4's stop rule unreachable on the only
+       path that ships. The clause's instruction was to delete it when the seam
+       declared the box-score columns and to re-measure the read cost the
+       loader quotes. Both are done: the loader reads
+       `slate.PLAYER_COLUMNS_THE_ESTIMATOR_READS`, and the cost, re-measured on
+       the 207,954,921-byte, 1,493,589-row table in `data/processed/`, best of
+       three, is 1.09 seconds for the eight, 1.33 for the seventeen and 1.77
+       for all thirty-two.
+
+       The successor is that **R6 is now reachable only from a caller that
+       hands the estimator a narrower frame than the card does**, and the
+       assertion below is what keeps it honest: the eight are still what the
+       seam REQUIRES to exist, so a processed table built without one stat
+       column still reaches this estimator column by column — refusing the
+       athlete and naming what is missing — rather than refusing the whole
+       card, team half included. It goes red the day the required list grows
+       into the read list, which is the day that trade is made.
+       `tests/test_player_seam.py::test_s11_the_card_path_can_actually_build_a_
+       player_distribution` drives the repaired path end to end.
     """
     role = json.loads(SHAPES.read_text(encoding="utf-8"))["constants"]["role_prior"]
     assert {"points", "points_events", "threes"} <= set(role["value"]), (
@@ -1458,10 +1477,18 @@ def test_the_gaps_this_estimator_still_has_are_the_ones_written_down() -> None:
 
     from cbb_betting_lab.models import slate as SLATE
 
+    assert set(PR.REQUIRED_STAT_COLUMNS) <= set(
+        SLATE.PLAYER_COLUMNS_THE_ESTIMATOR_READS
+    ), (
+        "the columns the card reads no longer carry the box score, so every "
+        "subject on the card path is refused under R6 again and design 4's "
+        "stop rule is unreachable on the only path that ships"
+    )
     assert not set(PR.REQUIRED_STAT_COLUMNS) <= set(SLATE.REQUIRED_PLAYER_COLUMNS), (
-        "the seam now declares the box-score columns, so the card path can "
-        "form a rate and R6 no longer fires there. Delete clause 6, and "
-        "re-measure the read cost `card_matchups.load_player_games` quotes."
+        "the box-score columns are now REQUIRED to exist rather than merely "
+        "read, so a processed table built without one refuses the whole card "
+        "instead of refusing the athlete under R6 with the column named. Say "
+        "why that trade is the better one, and re-point clause 6's successor."
     )
     # **Substring, over the whole signature and the source, not exact parameter
     # names.** `term not in set(parameters)` is exact membership, so

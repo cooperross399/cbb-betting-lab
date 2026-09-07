@@ -60,12 +60,46 @@ those two numbers differing is the only visible symptom of a model reading a
 table nobody handed it.
 
 The table is **required**, on the same ground the team table is: grading and
-pricing without it do not fail, they succeed quietly and wrongly. Only the
-eight columns in `slate.REQUIRED_PLAYER_COLUMNS` are read — because those are
-the columns the seam declares, and reading the other twenty-four would let a
-later change read one without declaring it. Measured on the 207,954,921-byte,
-1,493,589-row table in `data/processed/`: 1.1 seconds for the eight against
-1.8 seconds for all thirty-two, so the saving is real and it is not the reason.
+pricing without it do not fail, they succeed quietly and wrongly. The columns
+read are `slate.PLAYER_COLUMNS_THE_ESTIMATOR_READS` — the seventeen
+`player_rates` narrows its day pool to — and until 2026-09-06 they were the
+eight `slate.REQUIRED_PLAYER_COLUMNS` declares, which carry no box score.
+Measured on the tracked sample corpus over the four-game board
+`tests/test_player_seam.py::_card_board` builds — 20 `player_points` quotes on
+10 athletes — driven through this module with `models/slate.py:slate_model`: on
+the eight-column cut all 10 subjects resolve and all 10 are refused under R6
+("no per-minute rate exists to shrink"), 0 props priced and design 4's
+structural check never asked; on the seventeen the same board prices all 20
+props and the check runs over 10 regulars at a ratio of 0.9575.
+
+Re-measured on the 207,954,921-byte, 1,493,589-row table in `data/processed/`,
+best of three each: **1.09 seconds for the eight, 1.33 for the seventeen, 1.77
+for all thirty-two** — so the saving over the whole table is real, it is under
+half a second, and it was never the reason. The other fifteen are still not
+read, and a later change that needs one adds it to the seam's list rather than
+to a `usecols` here.
+
+## The model is handed the board's subjects, not only its games
+
+`attach_game_ids` resolves one `(event_id, game_id)` per event, and until this
+commit that two-column frame **was** the price frame the model was given. The
+team half reads exactly those two columns, so nothing looked wrong. The player
+half reads `market` and `player` to find the subjects of the day and
+`home_team`/`away_team` to find the roster they are resolved against, and a
+frame carrying none of them yields no subject at all: measured on the board
+above, 0 projections, an empty resolution census, 0 name refusals, and all 20
+props declined as *"the model was never asked about this event's athletes"* —
+which was true, and this frame was the reason.
+
+:func:`model_prices` is the fix: one row per board quote that joined to a game,
+in the **price store's** vocabulary rather than the board's, because that is
+the vocabulary `player_rates._subjects_of_the_day` reads and
+`scripts/run_price_backtest.py` already hands it. The one trap is that
+`home_team` names two different things in the two vocabularies — a hoopR team
+id in the store, a provider school spelling on the board — so the translation
+happens exactly once, here, off the fixture the game id was resolved from, and
+the provider's spellings travel beside the ids as `home_name`/`away_name`
+rather than being dropped or silently renamed.
 """
 
 from __future__ import annotations
@@ -98,6 +132,23 @@ PLAYER_TABLE = "player_games"
 #: Both, in the order they are read — the team table first, so a checkout with
 #: neither says the same thing it said before this commit.
 REQUIRED_TABLES: tuple[str, ...] = (REQUIRED_TABLE, PLAYER_TABLE)
+
+#: The frame handed to the model, in the vocabulary of the price store the
+#: measurement was made over rather than of the provider's board.
+#: `home_team`/`away_team` are hoopR team **ids**, as they are in
+#: `data/processed/cbb_historical_prices__card.csv`; the provider's school
+#: spellings ride beside them under the store's own `home_name`/`away_name`.
+#: See :func:`model_prices`.
+MODEL_PRICE_COLUMNS: tuple[str, ...] = (
+    "event_id",
+    "game_id",
+    "market",
+    "player",
+    "home_team",
+    "away_team",
+    "home_name",
+    "away_name",
+)
 
 
 class InputsAbsent(RuntimeError):
@@ -210,18 +261,25 @@ def load_player_games(
 ) -> pd.DataFrame:
     """The player table the player seam projects from, or a refusal naming it.
 
-    Only `slate.REQUIRED_PLAYER_COLUMNS` are read. That is not an optimisation
-    dressed as a contract: the columns the seam requires are the columns it
-    declares, and reading the other twenty-four would let a later change read
-    one without declaring it.
+    Two lists, and they are two different questions.
+    `slate.REQUIRED_PLAYER_COLUMNS` is what must EXIST — a table without one of
+    those eight cannot be cut, stamped or projected from at all, so its absence
+    refuses the run here rather than downstream. `slate.PLAYER_COLUMNS_THE_
+    ESTIMATOR_READS` is what is READ, and it is the seventeen `player_rates`
+    forms a per-minute rate from. Reading the eight was the defect: every
+    athlete on the card path was refused under R6 and the card's whole player
+    half was structurally empty while nothing in the run said so.
 
-    A missing column is refused rather than defaulted, for the reason
-    `require_columns` gives: a missing column read as a zero is how the
-    football lab's props backtest reported zero bets and had that read as a
-    finding about the model.
+    A box-score column that is missing from the file is **not** required here
+    and is **not** defaulted. It is simply absent from the frame, and R6 then
+    refuses each athlete in a sentence naming the column, while the team half
+    of the card still prices. Requiring it instead would make a table built
+    without `steals` refuse the whole card, which is the shape of defect this
+    lab has already paid for once.
 
-    Cost, measured on the 1,493,589-row table in `data/processed/`: 1.1 seconds
-    for the eight declared columns, 1.8 for all thirty-two.
+    Cost, re-measured on the 207,954,921-byte, 1,493,589-row table in
+    `data/processed/`, best of three: 1.09 seconds for the eight, 1.33 for the
+    seventeen read here, 1.77 for all thirty-two.
     """
     path = player_games_path(competition, processed_dir)
     if not path.is_file():
@@ -242,9 +300,12 @@ def load_player_games(
             "Nothing is defaulted: a missing column read as a zero is how a "
             "wiring fault becomes a finding. Nothing was priced."
         )
-    return pd.read_csv(
-        path, usecols=list(slate.REQUIRED_PLAYER_COLUMNS), low_memory=False
-    )
+    wanted = [
+        column
+        for column in slate.PLAYER_COLUMNS_THE_ESTIMATOR_READS
+        if column in header.columns
+    ]
+    return pd.read_csv(path, usecols=wanted, low_memory=False)
 
 
 def load_team_games(
@@ -325,14 +386,26 @@ def attach_game_ids(
     day: str,
     schedule: pd.DataFrame,
 ) -> tuple[pd.DataFrame, dict[str, int], int]:
-    """One `(event_id, game_id)` row per event, plus what could not be joined.
+    """One joined row per event, plus what could not be joined.
 
-    Returns the price frame the model reads — `event_id` and `game_id`, one row
-    per event — the unresolved provider spellings with their counts, and the
-    number of events whose names resolved but matched no scheduled game.
+    Returns the per-event join — `event_id`, `game_id`, and the two hoopR team
+    ids the fixture named — the unresolved provider spellings with their
+    counts, and the number of events whose names resolved but matched no
+    scheduled game.
+
+    **The team ids are carried out of here rather than re-derived.** They are
+    already in hand: `game_id` came from the fixture index, and that index
+    holds the fixture's two ids beside it. The player half needs them to know
+    which roster a quoted spelling is resolved against, and the only other
+    place to get them is a second resolution of the provider's two school
+    names — a second join, on names, in the report layer, against the rule
+    `ratings.matchups_for` states in its own docstring. A game that resolves
+    but whose fixture record carries no readable pair leaves both `None`, which
+    reaches the estimator as "no team filter" rather than as a wrong one.
     """
+    columns = ["event_id", "game_id", "home_team", "away_team"]
     if rows is None or rows.empty or "event_id" not in rows.columns:
-        return pd.DataFrame(columns=["event_id", "game_id"]), {}, 0
+        return pd.DataFrame(columns=columns), {}, 0
     wanted = ["event_id", "home_team", "away_team"]
     present = [c for c in wanted if c in rows.columns]
     events = rows[present].drop_duplicates(subset=["event_id"])
@@ -350,11 +423,92 @@ def attach_game_ids(
         if game_id is None:
             if index.resolve(home) is not None and index.resolve(away) is not None:
                 no_fixture += 1
-            out.append({"event_id": event_id, "game_id": None})
+            out.append(
+                {"event_id": event_id, "game_id": None,
+                 "home_team": None, "away_team": None}
+            )
             continue
-        out.append({"event_id": event_id, "game_id": int(game_id)})
-    frame = pd.DataFrame(out, columns=["event_id", "game_id"])
+        fixture = fixtures.game.get(int(game_id), {})
+        out.append(
+            {
+                "event_id": event_id,
+                "game_id": int(game_id),
+                "home_team": fixture.get("home_team_id"),
+                "away_team": fixture.get("away_team_id"),
+            }
+        )
+    frame = pd.DataFrame(out, columns=columns)
     return frame, dict(index.unresolved), no_fixture
+
+
+def model_prices(rows: pd.DataFrame, joined: pd.DataFrame) -> pd.DataFrame:
+    """The board's quotes in the price store's vocabulary, for the model.
+
+    One row per board quote whose event joined to a scheduled game. The team
+    half reads `event_id` and `game_id` off the first row it sees for an event
+    and ignores the rest (`matchups_for` dedupes on `event_id`), so this frame
+    is the same answer it was given before for that half. The player half reads
+    `market` and `player` to find the day's subjects, counts a subject's quotes
+    to weight the resolution census, and reads `home_team`/`away_team` to pick
+    the roster the spelling is resolved against — none of which existed on the
+    two-column frame this call site used to hand over, so no board ever
+    produced a subject and the whole player half read as a night on which
+    nobody was quoted.
+
+    **`home_team` is a team id here and a school name on the board.** The two
+    vocabularies collide on one word, and the collision is the reason this
+    function exists rather than a `rows[[...]]` at the call site: an
+    accidentally-passed board frame would resolve every spelling against a
+    league-wide roster instead of two teams, which is a name matched to the
+    wrong athlete rather than a refusal. The provider's spellings are kept
+    beside the ids as `home_name`/`away_name`, which is what the store calls
+    them, so nothing is dropped and nothing is renamed in place.
+    """
+    if rows is None or rows.empty or joined is None or joined.empty:
+        return pd.DataFrame(columns=list(MODEL_PRICE_COLUMNS))
+    fixture_of = {
+        clean_text(record.get("event_id")): record
+        for record in joined.to_dict("records")
+    }
+    out: list[dict] = []
+    for record in rows.to_dict("records"):
+        event_id = clean_text(record.get("event_id"))
+        fixture = fixture_of.get(event_id)
+        if not event_id or fixture is None:
+            continue
+        out.append(
+            {
+                "event_id": event_id,
+                "game_id": _whole(fixture.get("game_id")),
+                "market": clean_text(record.get("market")),
+                "player": clean_text(record.get("player")),
+                "home_team": _whole(fixture.get("home_team")),
+                "away_team": _whole(fixture.get("away_team")),
+                "home_name": clean_text(record.get("home_team")),
+                "away_name": clean_text(record.get("away_team")),
+            }
+        )
+    return pd.DataFrame(out, columns=list(MODEL_PRICE_COLUMNS))
+
+
+def _whole(value: object) -> object:
+    """An id as an int where it is one, and untouched where it is not.
+
+    A pandas column carrying one unjoined event holds `None` and therefore
+    floats, so a game id that went in as 401823218 comes back out of
+    :func:`attach_game_ids` as 401823218.0. `player_rates._id_key` folds the
+    two spellings together for the team join, but `PlayerProjection.game_id` is
+    STORED, and a float id written into `cbb_player_lines.csv` later is a join
+    key that no longer matches the integer one every other table carries.
+    """
+    if value is None or isinstance(value, str):
+        return value
+    try:
+        if value != value:  # NaN
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return value
 
 
 def matchups_for_card(
@@ -380,6 +534,22 @@ def matchups_for_card(
     `slate.slate_model`, which does. That is what makes the swap a one-line
     change to `DEFAULT_MODEL` rather than a change to the card.
 
+    That sentence was **false when it was written**, in two places, and both
+    are closed here. The player frame was cut to eight columns carrying no box
+    score, so `player_rates` refused every athlete under R6; and the price
+    frame was `attach_game_ids`' two columns, so the estimator found no subject
+    to refuse in the first place. Driven through this function with
+    `slate.slate_model` over the four-game board
+    `tests/test_player_seam.py::_card_board` builds on the tracked sample
+    corpus — 20 `player_points` quotes on 10 athletes — the three states are:
+    two-column price frame, 0 projections and all 20 props declined "the model
+    was never asked about this event's athletes"; eight-column player frame, 10
+    subjects resolved and all 10 refused under R6, 0 props priced; repaired, 10
+    priceable, all 20 props priced and design 4's structural check run over 10
+    regulars. What still stops a shipped nightly run is `DEFAULT_MODEL` alone —
+    it resolves the team seam, which declares no `player_history` — and that is
+    now genuinely the one-line gate this paragraph always claimed it was.
+
     Whatever the model returns is coerced to a `slate.SlateModel`, so the card
     reads one container whether the model answered with a bare mapping of
     matchups or with both halves.
@@ -403,6 +573,10 @@ def matchups_for_card(
     player_through = PB.latest_day(player_history)
     prices, unresolved, no_fixture = attach_game_ids(rows, day=day, schedule=schedule)
     joined = prices.dropna(subset=["game_id"]) if not prices.empty else prices
+    # The board's own quotes, joined to their games and translated into the
+    # store's vocabulary. `events` and `resolved` below are still counted off
+    # the per-event join, because they are counts of EVENTS.
+    asked = model_prices(rows, joined)
 
     answered: object = None
     if not joined.empty:
@@ -411,7 +585,7 @@ def matchups_for_card(
             "the gameday card's matchups_for_card",
             day=str(day),
             history=history,
-            prices=joined,
+            prices=asked,
             competition=competition,
             raw_dir=Path(raw_dir) if raw_dir else Path(RAW_DIR),
             player_history=player_history,

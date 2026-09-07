@@ -3835,6 +3835,150 @@ def test_design_4s_stop_rule_has_a_caller_on_the_pricing_path(
     assert "was not asked" in census.structural_check_line()
 
 
+def _rendered_card(model, *, tmp_path: Path, events: int, name: str) -> str:
+    """A whole card, rendered, over `events` prop wagers on the fixture athlete.
+
+    Through `board_from_payloads` and `run_card` rather than by calling the
+    renderer's private section builder, because what is under test is whether a
+    reader of the published card can tell the three states apart. A test that
+    called `OpinionCensus.structural_check_line` itself would pass on a card
+    that never printed it -- which is precisely the state this test was written
+    against, and which four tests in this file already had.
+    """
+    from cbb_betting_lab.competitions import CBB
+    from cbb_betting_lab.reports import gameday_card as GC
+    from cbb_betting_lab.staging_provider_policy import StagingProviderPolicy
+
+    payloads = [
+        {
+            "id": f"e{index}",
+            "commence_time": f"{DAY}T23:00:00Z",
+            # A DISTINCT pair of schools per event. `default_key_for` keys a
+            # wager by market, segment, player, the two schools, selection and
+            # line -- not by event id -- so eight events sharing two school
+            # names are one wager, and the card would price one distribution
+            # while the census counted eight.
+            "home_team": f"Home State {index}",
+            "away_team": f"Away Tech {index}",
+            "bookmakers": [
+                {
+                    "key": "draftkings",
+                    "title": "DraftKings",
+                    "markets": [
+                        {
+                            "key": "player_points",
+                            "outcomes": [
+                                {
+                                    "name": "Over",
+                                    "description": "Sean Bairstow",
+                                    "price": -110,
+                                    "point": 14.5,
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+        }
+        for index in range(1, events + 1)
+    ]
+    board = GC.board_from_payloads(payloads, competition=CBB)
+    assert len(board.rows) == events, "the stager refused the fixture board"
+    run = GC.run_card(
+        board,
+        competition=CBB,
+        day=DAY,
+        card_slot="morning",
+        archive_dir=tmp_path / name,
+        # An empty policy rather than the one on disk: this test asserts what
+        # the card SAYS, and `data/manual/` is never read for that.
+        policy=StagingProviderPolicy(),
+        matchups=model,
+    )
+    assert run.opinions.wagers == events, "the card priced a different board"
+    return GC.render_card(run)
+
+
+def _model_section_of(card: str) -> str:
+    """The "What the model said" section of a rendered card, and only it."""
+    head = "## What the model said"
+    assert head in card, "the card no longer carries the model's section"
+    body = card.split(head, 1)[1]
+    return head + body.split("\n## ", 1)[0]
+
+
+def test_the_card_prints_design_4s_ratio_and_not_only_stops_on_it(
+    tmp_path: Path,
+) -> None:
+    """Design 4's report half, read off the rendered card.
+
+    **The defect.** The commit that gave design 4's stop rule a caller wired
+    only the stop. `_run_the_structural_check` filled `census.structural_check`
+    and called `assert_structural_checks`, and
+    `OpinionCensus.structural_check_line` -- the only thing that says which of
+    the three states a run was in -- was called nowhere in `src/` or
+    `scripts/`: `grep -rn structural_check_line src/ scripts/` returned the
+    definition and three docstrings claiming it was printed. `_model_section`
+    emitted `summary_line()` and `table()` and nothing else, so a card whose
+    check ran over a full population and passed, a card whose population was
+    below the floor and stopped nothing, and a card that built no player
+    distribution at all published a byte-identical section. That is the exact
+    ambiguity `structural_check_line`'s own docstring exists against.
+
+    Three states, three cards, three different sentences, and the difference is
+    asserted rather than each sentence alone -- a renderer that printed the
+    same line in every state would satisfy any one of the three.
+
+    Nothing here is graded. The ratio is a structural quantity over a fixture
+    population, the target is frozen, and no ROI, edge or verdict is stated.
+    """
+    passing, wagers, _ = _card_of(PD.STRUCTURAL_CHECK_POPULATION_FLOOR)
+    card = _rendered_card(
+        passing,
+        tmp_path=tmp_path,
+        events=PD.STRUCTURAL_CHECK_POPULATION_FLOOR,
+        name="passed",
+    )
+    section = _model_section_of(card)
+    assert "a ratio of 1.0819" in section, section
+    assert "inside design 4's 15% stop" in section
+    assert f"{PD.STRUCTURAL_CHECK_POPULATION_FLOOR} of " in section
+
+    # Below the floor, on a target moved out of band: the card prints the ratio
+    # and says in terms that it stops nothing. Same fixture athlete, same
+    # renderer, and the only thing that changed is the size of the population.
+    def _move_the_target(document):
+        document["constants"]["structural_check_targets"]["value"][
+            "unconditional_points_vmr_regulars"
+        ] = 2.5
+
+    moved = _shapes_with(tmp_path, _move_the_target, name="moved-for-the-card.json")
+    small, _, _ = _card_of(PD.STRUCTURAL_CHECK_POPULATION_FLOOR - 1, shapes=moved)
+    below = _model_section_of(
+        _rendered_card(
+            small,
+            tmp_path=tmp_path,
+            events=PD.STRUCTURAL_CHECK_POPULATION_FLOOR - 1,
+            name="below",
+        )
+    )
+    assert "STOPS NOTHING" in below
+    assert "Fewer than the declared floor of " in below
+
+    # And a card that built no player distribution says that, rather than
+    # saying nothing and reading like either of the two above.
+    never = _model_section_of(
+        _rendered_card({}, tmp_path=tmp_path, events=2, name="never")
+    )
+    assert "structural check was not asked" in never
+    assert "built no player distribution" in never
+
+    assert len({section, below, never}) == 3, (
+        "two of the three states publish the same section, which is the "
+        "ambiguity this line exists to remove"
+    )
+
+
 # --------------------------------------------------------------------------
 # The limitations, recorded as passing assertions
 # --------------------------------------------------------------------------

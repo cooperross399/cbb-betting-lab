@@ -351,7 +351,9 @@ UNCONDITIONAL_POINTS_VMR_STOP: float = 0.15
 #: eight the worst of 40,000 draws is 0.8745 — 12.6% off, still inside — so the
 #: floor sits well past where the check stopped being a coin toss about which
 #: athletes the book quoted. Below it the check does not stop and does not
-#: silently pass either: it reports that it could not run, and
+#: silently pass either: it reports that it could not run — `gameday_card`'s
+#: `_model_section` prints `OpinionCensus.structural_check_line` onto every
+#: card, and until it did, this sentence described an output nothing produced.
 #: `test_the_population_floor_is_a_gap_that_is_held_open` is the passing
 #: assertion that goes red the day a run-level population makes it closable.
 STRUCTURAL_CHECK_POPULATION_FLOOR: int = 8
@@ -1500,8 +1502,10 @@ def assert_structural_checks(checks: Mapping[str, float]) -> None:
     than :data:`STRUCTURAL_CHECK_POPULATION_FLOOR` regulars is the per-athlete
     comparison wearing a population's name, which is the defect, so the check
     reports instead of stopping and the caller says so — `gameday_card`'s
-    `OpinionCensus.structural_check_line`. Widening the tolerance to make a
-    small population pass would be the one move this function exists to prevent.
+    `OpinionCensus.structural_check_line`, printed onto the card by
+    `_model_section`, which is the caller that was missing when this sentence
+    was first written. Widening the tolerance to make a small population pass
+    would be the one move this function exists to prevent.
     """
     for required in (
         "unconditional_points_vmr_ratio",

@@ -855,9 +855,11 @@ class OpinionCensus:
     #: Design 4's check (a), pooled over the regular athletes this run priced —
     #: whatever `models.player_distributions.population_structural_checks`
     #: returned, or empty when no player distribution was built at all. Design 4
-    #: asks for the ratio to be REPORTED as well as stopped on, and until it was
-    #: carried here nothing printed it: :meth:`structural_check_line` is the
-    #: report and `assert_structural_checks` is the stop.
+    #: asks for the ratio to be REPORTED as well as stopped on:
+    #: :meth:`structural_check_line` is the report and `assert_structural_checks`
+    #: is the stop. Carrying it here was not enough and the comment that said so
+    #: was wrong for a commit: the reporter had no caller in `src/` or
+    #: `scripts/` until :func:`_model_section` printed it onto the card.
     structural_check: dict[str, float] = field(default_factory=dict)
 
     def decline(self, reason: str) -> None:
@@ -1253,6 +1255,17 @@ def opinions_for(
     `scripts/run_gameday_card.py` already passes the full container. That is a
     gate on one constant, not on this function.
 
+    **That was not true when it was written, and the swap alone would have
+    priced nothing.** The card's own loader read the eight columns
+    `slate.REQUIRED_PLAYER_COLUMNS` declares, which carry no box score, so
+    every athlete came back refused under R6; and the frame it handed the model
+    as `prices` was `attach_game_ids`' `event_id` and `game_id` — no `market`,
+    no `player`, no team ids — so the estimator found no subject to refuse in
+    the first place and this function declined every prop with "the model was
+    never asked about this event's athletes". Both are closed in
+    `card_matchups.py` and measured there; the constant really is the last gate
+    now.
+
     `availability_note`'s "a market the lab prices, freezes and settles but may
     not bet" was aspirational for the player family until this commit. Two of
     its three verbs are now literally true of it — priced here, frozen by
@@ -1433,14 +1446,17 @@ def _run_the_structural_check(
     function and not a `try` around this call. This line sits outside every
     `except` `opinions_for` owns, so a `MarketRefused` raised while pooling
     would kill the card and every team wager on it; the census bucket is in the
-    returned mapping and :meth:`OpinionCensus.structural_check_line` prints it.
+    returned mapping and :func:`_model_section` prints it onto the card through
+    :meth:`OpinionCensus.structural_check_line`. That last clause is the one
+    this docstring got wrong when the stop was wired: the reporter existed, was
+    named here as though it ran, and had no caller anywhere outside a test.
 
     Silent when the card built nothing — a team-only slate is not a structural
     failure and must not read as one — and silent when the slate carries no
     checked constants, because `population_structural_checks` reads the target
     and the regulars floor out of the frozen file and there is no honest number
     without it. Both of those states leave `census.structural_check` empty, and
-    :meth:`OpinionCensus.structural_check_line` says which.
+    :meth:`OpinionCensus.structural_check_line` says which on the card.
     """
     built = [
         distribution
@@ -2212,10 +2228,33 @@ def _board_section(run: CardRun) -> list[str]:
 
 
 def _model_section(run: CardRun) -> list[str]:
+    """What the model said, what it declined, and what its own check reported.
+
+    The third of those is new and it is the half of design 4 that was written
+    and never called. `_run_the_structural_check` filled
+    `OpinionCensus.structural_check` and raised through
+    `assert_structural_checks` when the pooled ratio was off by more than 15%,
+    so the STOP was wired; `OpinionCensus.structural_check_line` — the only
+    thing that says which of the three states a run was in — was called nowhere
+    in `src/` or `scripts/`, and three docstrings said otherwise. A card whose
+    check ran over a full population and passed, a card whose population was
+    below the floor so the ratio stopped nothing, and a card that built no
+    player distribution at all rendered a byte-identical section, which is
+    precisely the ambiguity `structural_check_line`'s own docstring exists
+    against: a check that silently declines to run is indistinguishable from
+    one that passed.
+
+    It is a line and not a bullet under the decline table on purpose. The table
+    is one row per REASON A WAGER CARRIES NO OPINION; this is a statement about
+    the population the priced ones were built from, and folding it in would put
+    a structural report in a column headed "Wagers".
+    """
     lines = [
         "## What the model said",
         "",
         run.opinions.summary_line(),
+        "",
+        run.opinions.structural_check_line(),
         "",
         run.opinions.table(),
         "",
