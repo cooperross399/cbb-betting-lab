@@ -1111,3 +1111,94 @@ def test_edge_is_expected_value_per_unit_and_is_none_without_a_probability():
     assert fe.expected_value(0.6, 100) == pytest.approx(0.2)
     assert fe.expected_value(None, 100) is None
     assert fe.expected_value(0.6, "") is None
+
+
+# ---------------------------------------------------------------------------
+# A market refused by name carries no verdict
+# ---------------------------------------------------------------------------
+
+
+def test_a_market_refused_by_name_never_reaches_a_verdict_table():
+    """The Opinions table prints ROI, intervals and a Verdict, and filtered nothing.
+
+    `_bet_rows` excludes every player prop from the BETS table — a bet nobody
+    can place is not a bet — and that is a different table answering a
+    different question. The Opinions table carried the whole PLAYER family,
+    including the two markets this lab refuses to price AT ALL, for reasons
+    that have nothing to do with the number.
+
+    Latent rather than live: the committed record carries 0 rows, so no such
+    verdict has been printed. It goes live the day the player engine lets the
+    card freeze a prop, which is why it is closed first.
+    """
+    from cbb_betting_lab.models.player_rates import MARKETS_REFUSED_BY_NAME
+
+    assert MARKETS_REFUSED_BY_NAME, "no market is refused by name any more"
+    frame = pd.DataFrame(
+        [
+            {"market": key, "tier": "high_major", "edge_value": 0.05}
+            for key in list(MARKETS_REFUSED_BY_NAME) + ["player_points", "spread"]
+        ]
+    )
+    kept = fe._without_markets_refused_by_name(frame)
+    assert not set(kept["market"]) & set(MARKETS_REFUSED_BY_NAME), (
+        "a market refused by name survived into a table that carries a Verdict "
+        "column"
+    )
+    # And it filters those and nothing else.
+    assert set(kept["market"]) == {"player_points", "spread"}
+
+    # The list is read from the model, never copied here: adding one there
+    # filters it here without anybody remembering to.
+    invented = pd.DataFrame([{"market": "player_invented", "tier": "t", "edge_value": 0.1}])
+    assert len(fe._without_markets_refused_by_name(invented)) == 1
+
+
+def test_the_rendered_ledger_prints_no_verdict_for_a_refused_market():
+    """The helper working is not the same as the helper being CALLED.
+
+    Written first as a test of `_without_markets_refused_by_name` alone, which
+    passed with the call site deleted — the exact vacuity this file has been
+    finding elsewhere all day. This drives `render_ledger` and reads the
+    rendered table, so removing the filter from either table turns it red.
+    """
+    from cbb_betting_lab.models.player_rates import MARKETS_REFUSED_BY_NAME
+
+    refused = sorted(MARKETS_REFUSED_BY_NAME)[0]
+    rows = _ledger(300, profit=lambda i: 1.0 if i % 2 else -1.0, market=refused)
+    report = fe.render_ledger(rows)
+
+    table_lines = [
+        line
+        for line in report.splitlines()
+        if line.startswith("|") and refused in line
+    ]
+    assert not table_lines, (
+        f"{refused} appears in a table row of the rendered ledger:\n  "
+        + "\n  ".join(table_lines[:3])
+        + "\nThat table carries a Verdict column, and this market is refused "
+        "before any number is computed."
+    )
+
+
+def test_the_no_price_sentence_is_read_off_the_rows():
+    """It said "this lab has no price for them either" whatever the rows held.
+
+    True while the card gave every prop a census bucket and no probability.
+    False the moment the engine prices one — and printed directly above an
+    Opinions table whose ROI rows came from those very rows. A reader auditing
+    whether any player number here can be trusted would be told, by the report
+    holding the numbers, that the numbers do not exist.
+    """
+    import inspect
+
+    source = inspect.getsource(fe.render_ledger)
+    assert "model_probability" in source, (
+        "the paragraph no longer reads what the rows carry, so it is asserting "
+        "again"
+    )
+    assert "carry a model probability" in source
+    assert "This lab has no price for them either" in source, (
+        "the no-price branch is gone; it is still the truth when nothing is "
+        "priced and must still be sayable"
+    )

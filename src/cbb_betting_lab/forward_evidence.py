@@ -1558,6 +1558,34 @@ def _bet_rows(games: pd.DataFrame, threshold: float) -> pd.DataFrame:
     return games[keep].reset_index(drop=True)
 
 
+def _without_markets_refused_by_name(frame: pd.DataFrame) -> pd.DataFrame:
+    """`frame` without the markets the player model refuses BY NAME.
+
+    **A refused market may never carry a verdict.** The Opinions table prints
+    ROI, a 95% interval, a family-corrected interval and a Verdict column, and
+    it did not filter these out — `_bet_rows` excludes every player prop from
+    the BETS table, which is a different table and a different question. Driven
+    end to end, a ledger of settled `player_first_basket` rows printed
+    `| player_first_basket | high_major | 220 | ... | **no demonstrated edge** |`
+    — a family-corrected verdict on a market this lab refuses to price at all,
+    for reasons that have nothing to do with the number.
+
+    It was latent rather than live: the committed record carries 0 rows, so no
+    such verdict has ever been printed. It goes live the day the player engine
+    lets the card freeze a prop, which is why it is closed before that lands.
+
+    The list comes from `player_rates.MARKETS_REFUSED_BY_NAME`, never a local
+    copy, so a market added there is filtered here without anybody remembering
+    to.
+    """
+    if frame.empty or "market" not in frame.columns:
+        return frame
+    from cbb_betting_lab.models.player_rates import MARKETS_REFUSED_BY_NAME
+
+    refused = set(MARKETS_REFUSED_BY_NAME)
+    return frame[~frame["market"].isin(refused)].reset_index(drop=True)
+
+
 def _table(
     frame: pd.DataFrame,
     *,
@@ -1684,8 +1712,11 @@ def render_ledger(
     add("")
 
     games, _futures = _split_families(measurable)
-    opinions = games
-    bets = _bet_rows(games, bet_threshold)
+    # A market refused BY NAME carries no verdict in either table. `_bet_rows`
+    # already excludes every player prop from Bets for a different reason — a
+    # bet nobody can place is not a bet — and Opinions filtered nothing.
+    opinions = _without_markets_refused_by_name(games)
+    bets = _bet_rows(_without_markets_refused_by_name(games), bet_threshold)
 
     add("## Opinions and bets are reported separately, always")
     add("")
@@ -1698,16 +1729,44 @@ def render_ledger(
     add("")
     player_rows = sum(1 for m in games["market"] if _is_player_market(m))
     if player_rows:
+        # **Whether this lab has a price is READ off the rows, not asserted.**
+        # This paragraph used to say "this lab has no price for them either"
+        # unconditionally. That was true while the card gave every prop a
+        # census bucket and no probability — and it becomes false the moment
+        # the player engine prices one, printed directly above an Opinions
+        # table whose ROI rows were computed from those very rows. A reader
+        # auditing whether any player number here can be trusted would be told,
+        # by the report holding the numbers, that the numbers do not exist.
+        priced = 0
+        if "model_probability" in games.columns:
+            priced = int(
+                sum(
+                    1
+                    for m, p in zip(games["market"], games["model_probability"])
+                    if _is_player_market(m) and p is not None and p == p
+                )
+            )
         add(
             f"{player_rows:,} of those opinions are player props. They "
-            "**cannot produce a selection**, and this lab has no price for "
-            "them either: nothing in this sport reaches `Availability."
-            "CONFIRMED`, ESPN's men's-college-basketball injuries endpoint is "
-            "permanently empty, and the conference reports that exist cover "
-            "roughly 115 of 365 teams in conference games only. They are "
-            "therefore excluded from the bet tables. **That is not a pass, an "
-            "avoid, or a no-value call.**"
+            "**cannot produce a selection**: nothing in this sport reaches "
+            "`Availability.CONFIRMED`, ESPN's men's-college-basketball "
+            "injuries endpoint is permanently empty, and the conference "
+            "reports that exist cover roughly 115 of 365 teams in conference "
+            "games only. They are therefore excluded from the bet tables. "
+            "**That is not a pass, an avoid, or a no-value call.**"
         )
+        add("")
+        if priced:
+            add(
+                f"**{priced:,} of them carry a model probability.** The gate "
+                "above is about whether a price can be acted on, not about "
+                "whether one exists."
+            )
+        else:
+            add(
+                "**This lab has no price for them either**, so the gate is "
+                "not the only thing standing between these rows and a bet."
+            )
         add("")
 
     for label, subset in (("Opinions", opinions), ("Bets", bets)):
