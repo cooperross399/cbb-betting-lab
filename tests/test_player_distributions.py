@@ -1859,10 +1859,24 @@ def test_the_outer_cell_split_re_measures_the_numbers_that_fix_its_constants(
         covariance = (_moments(produced)[1] - variances[0] - variances[1]) / 2.0
         return covariance / math.sqrt(variances[0] * variances[1])
 
+    # **`abs=1e-15` on a value of 0.102 is BIT precision, and this arithmetic
+    # is not bit-identical across machines.** These three literals were
+    # measured on arm64/Clang; CI runs x86-64/GCC and produced
+    # 0.10209676623064635 against the first, off by 3.1e-15 — a quadrature over
+    # 800 nodes accumulating rounding in a different order, which is the same
+    # platform difference that made `why_the_model.rederivation_differences`
+    # call an honest re-render a fabrication earlier today.
+    #
+    # The tolerance is 1e-12: three orders looser than the disagreement
+    # measured, and still eight orders tighter than the 1.97e-05 and 3.6e-08
+    # SHAPE claims below, which are what this test is actually about — that six
+    # pieces beat one, and by how much. A correlation this far out has no
+    # effect on any price; the copula's own realised-versus-asked check runs at
+    # 4% relative.
     reference_correlation = _realised(6, nodes=800)
-    assert reference_correlation == pytest.approx(0.10209676623064948, abs=1e-15)
-    assert _realised(1) == pytest.approx(0.10207704656857115, abs=1e-15)
-    assert _realised(6) == pytest.approx(0.10209673007926263, abs=1e-15)
+    assert reference_correlation == pytest.approx(0.10209676623064948, abs=1e-12)
+    assert _realised(1) == pytest.approx(0.10207704656857115, abs=1e-12)
+    assert _realised(6) == pytest.approx(0.10209673007926263, abs=1e-12)
     assert abs(_realised(1) - reference_correlation) == pytest.approx(1.97e-05, rel=1e-2)
     assert abs(_realised(6) - reference_correlation) == pytest.approx(3.6e-08, rel=2e-2)
 
