@@ -1624,10 +1624,12 @@ def population_structural_checks(
         "regular_min_projected_minutes": regular_floor,
         "population_floor": float(STRUCTURAL_CHECK_POPULATION_FLOOR),
         "measured_event_dispersion": float(
-            reconciliation["measured_event_dispersion"]
+            _sub_key(reconciliation, "measured_event_dispersion",
+                     where="points_compound_reconciliation", path=shapes.path)
         ),
         "effective_event_dispersion": float(
-            reconciliation["effective_event_dispersion"]
+            _sub_key(reconciliation, "effective_event_dispersion",
+                     where="points_compound_reconciliation", path=shapes.path)
         ),
         # Read through the same module constant :func:`build` reads, so the
         # card discloses what was HANDED to the Panjer family rather than a
@@ -1635,7 +1637,8 @@ def population_structural_checks(
         # says_which_one_priced_the_card` moves the constant and watches the
         # printed number follow it.
         "points_event_dispersion_used": float(
-            reconciliation[POINTS_EVENT_DISPERSION_KEY]
+            _sub_key(reconciliation, POINTS_EVENT_DISPERSION_KEY,
+                     where="points_compound_reconciliation", path=shapes.path)
         ),
     }
 
@@ -2030,13 +2033,16 @@ class PlayerDistribution:
             ),
             "checked_at_minutes": float(self.minutes[node]),
             "measured_event_dispersion": float(
-                self.reconciliation["measured_event_dispersion"]
+                _sub_key(self.reconciliation, "measured_event_dispersion",
+                         where="points_compound_reconciliation", path="the frozen file")
             ),
             "effective_event_dispersion": float(
-                self.reconciliation["effective_event_dispersion"]
+                _sub_key(self.reconciliation, "effective_event_dispersion",
+                         where="points_compound_reconciliation", path="the frozen file")
             ),
             "compound_overstatement": float(
-                self.reconciliation["compound_overstatement"]
+                _sub_key(self.reconciliation, "compound_overstatement",
+                         where="points_compound_reconciliation", path="the frozen file")
             ),
         }
 

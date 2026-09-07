@@ -1980,8 +1980,18 @@ def build_record(
     sentence must never cost a re-run, and a report that can only be produced by
     re-running the measurement is a report nobody improves.
     """
-    universe = inputs.universe
-    bets = inputs.bets
+    # **The gate, first, on the frame this function actually grades.**
+    # `settled_opinions` was the only gated door in this module, and
+    # `scripts/run_price_backtest.py` calls it INSIDE `if args.write_graded:`
+    # while calling this on every invocation — so a default backtest run never
+    # reached the gate at all. This function is the module's ROI half: it calls
+    # `null_baseline`, `by_market_and_tier`, `pooled` and `_interval`, and the
+    # committed `cbb_price_backtest.json` carries null-baseline rows for twelve
+    # player markets, two of them refused by name, with clustered ROIs,
+    # family-corrected intervals and verdict words.
+    player_census.guard_graded_frame(inputs.universe, what="price_backtest.build_record")
+    universe = _PR.without_markets_refused_by_name(inputs.universe)
+    bets = _PR.without_markets_refused_by_name(inputs.bets)
     if not universe.empty:
         require_columns(universe, BET_COLUMNS, "the graded price universe")
     if not bets.empty:

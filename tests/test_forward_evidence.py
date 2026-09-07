@@ -1338,10 +1338,7 @@ def test_the_filtered_modules_are_driven_not_grepped():
     # over the real store, which this test has none of and must not fake.
     import inspect
 
-    body = inspect.getsource(fe.report_payload)
-    assert body.index("guard_graded_frame") < body.index(
-        "_without_markets_refused_by_name"
-    ), "report_payload filters before it gates; the gate must be first"
+    _assert_gate_precedes_filter(fe.report_payload)
 
     # reachability, which builds its own interval and its own verdict. It
     # takes a GRADED bet frame, not a ledger, so the columns it requires are
@@ -1363,10 +1360,7 @@ def test_the_filtered_modules_are_driven_not_grepped():
     with pytest.raises(player_census.WagerCountMismatch):
         RC.build_record(bets=graded)
 
-    assert (
-        inspect.getsource(RC.build_record).index("guard_graded_frame")
-        < inspect.getsource(RC.build_record).index("without_markets_refused_by_name")
-    ), "build_record filters before it gates; the gate must be first"
+    _assert_gate_precedes_filter(RC.build_record)
 
 
 
@@ -1383,3 +1377,51 @@ def _bet_column_filler(column: str, n: int):
     if column == "profit":
         return [0.0] * n
     return [""] * n
+
+
+def _assert_gate_precedes_filter(function) -> None:
+    """Every gate call precedes every filter CALL — not the import that names it.
+
+    **`str.index` returns the FIRST occurrence, and the token appears in the
+    import too.** The first version of this compared
+    `source.index("guard_graded_frame")` against
+    `source.index("without_markets_refused_by_name")`, and
+    `reachability.build_record` carries that second token three times: the new
+    call, a pre-existing `from ... import (...)`, and a pre-existing call.
+    Measured: replace BOTH filter calls with `bets = bets`, leave the import,
+    and 122 tests pass — including this assertion, whose message reads
+    "build_record filters before it gates". It could not tell a filtered
+    function from an unfiltered one.
+
+    This walks the syntax tree instead: it finds the Call nodes, requires at
+    least one of each, and compares the LAST gate call against the FIRST filter
+    call, so a filter that runs before any gate fails whatever else the file
+    says.
+    """
+    import ast
+    import inspect
+    import textwrap
+
+    tree = ast.parse(textwrap.dedent(inspect.getsource(function)))
+    gates, filters = [], []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        name = getattr(node.func, "attr", None) or getattr(node.func, "id", None)
+        if name == "guard_graded_frame":
+            gates.append(node.lineno)
+        elif name in {
+            "without_markets_refused_by_name",
+            "_without_markets_refused_by_name",
+        }:
+            filters.append(node.lineno)
+    assert gates, f"{function.__qualname__} calls no census gate at all"
+    assert filters, (
+        f"{function.__qualname__} calls no refusal filter at all, so a market "
+        "refused by name reaches whatever it builds"
+    )
+    assert max(gates) < min(filters), (
+        f"{function.__qualname__} filters at line {min(filters)} before it "
+        f"gates at line {max(gates)}. The gate must be the first statement: a "
+        "gate that runs after the de-vig is a gate on the report, not the run."
+    )
