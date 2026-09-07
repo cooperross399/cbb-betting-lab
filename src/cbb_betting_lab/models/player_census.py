@@ -105,12 +105,19 @@ invent:
   pre-match fold (NFKD to ASCII, punctuation and spacing collapsed) counts
   251,949, i.e. at least 5,525 below the design's number. This gate is
   string-level and says so.
-* **The lab has declared no subject normalizer.** The design names the key but
-  never says which spelling of `player` is the subject, and the denominator is a
-  function of that choice: 261,870 / 257,474 / 257,378 / 255,553 / 251,949 over
-  five reasonable folds. This module counts under BOTH named normalizers and
-  refuses to pick one; `SUBJECT_NORMALIZERS` is the menu and the artifact
-  records that nothing is declared.
+* **The design declares no subject normalizer and the CODE now does.** The
+  design names the key but never says which spelling of `player` is the
+  subject, and the denominator is a function of that choice: 261,870 / 257,474
+  / 257,378 / 255,553 / 251,949 over five reasonable folds. `stores.
+  normalise_subject` declared `casefold` on 2026-09-06 and this module reads
+  that declaration rather than restating it: `DECLARED_SUBJECT` runs
+  `stores.normalise_subject` against `SUBJECT_NORMALIZERS` and reports which
+  menu entry it implements, `reconcile` refuses a declaration outside the menu
+  or one that picks the book's own spelling, and `offered_by_market` -- the
+  store side of section 7's identity -- counts under the declared one and no
+  other. The frozen artifact's `declared_subject` is still null, which is a
+  different fact: it records what the DESIGN declared, and the design still
+  declares nothing.
 * **One quoted subject is genuinely ambiguous** and no fold can fix it: 'Justin
   Moore', game 401604303 (Villanova against Drexel, 2023-12-02), is two
   `athlete_id`s under one display name. It is the only one of 9,098 quoted
@@ -118,13 +125,64 @@ invent:
   and section 7's R1 refuses more than one candidate rather than picking. It is
   counted here and pinned, not folded.
 
-## 6. Where it is called
+## 6. The identity the design's own sentence could not be
+
+Design section 10's gate as written compares 261,870 against 257,474 and stops
+the run over "a 1.7% unexplained denominator". Both numbers came off ONE file:
+261,870 is the wager count under the book's own spelling of the athlete and
+257,474 is the same count with that spelling casefolded. They were never two
+stores, and since `stores.normalise_subject` declared the fold they are not two
+live spellings of a question either -- so as a gate the sentence compares a
+number with itself. Sections 1 to 5 above are still the store's own census and
+still refuse -- a 65th collision group, a market that appeared, a moved
+per-market count, an unpinned digest -- but none of that is two independently
+derived numbers.
+
+So the gate on GRADING is the accounting identity this lab uses everywhere
+else, and it has two sides that are produced by different code from different
+inputs:
+
+    offered = refused by name + no opinion + priced + unreadable
+
+* the **store** side is `offered_by_market`, this module's own count of the
+  file under the declared subject;
+* the **run** side is a `RunDisposition` the run fills one `file()` at a time
+  as it decides, with no reference to the store's count at all. Each bucket is
+  counted INDEPENDENTLY and none is a remainder, which is the property
+  `scripts/run_price_backtest.py`'s `OpinionAccounting` docstring records as
+  the difference between an identity that can fail and one that reconciles by
+  construction while a third of the rows are missing.
+
+`OFFERED_BUCKETS` is seven names and not four, because "no opinion" is four
+different facts -- an unregistered market, a spelling that resolved to nobody,
+a projection that refuses, and a model that was never asked -- and
+`models/slate.py` says of three of them that they "are counted separately and
+never summed". `NO_OPINION_BUCKETS` is the grouping the design's sentence
+names, computed as a sum over those.
+
+`reconcile_offered` raises `WagerCountMismatch` on any residual, on a per-market
+count that moved, on a market one side has and the other does not, on a wager on
+a market refused BY NAME in any bucket but its own, and on a run that filed
+nothing at all. The residual must be EXACTLY 0.
+
+The one producer today is `reports.gameday_card.opinions_for`, which is the
+only function in the tree that decides what became of a prop wager. It files
+when it is passed a ledger and files nothing when it is not, so no existing
+caller changed.
+
+## 7. Where it is called
 
 From the grading entry point BEFORE any scoring code runs, never only from a
 test: a gate that lives in the suite is a gate on the merge, not on the run.
 `GRADING_ENTRY_POINTS` names the entry points, `guard_graded_frame` is what they
 call, and `tests/test_player_census_reconciles.py` holds the assertion that
-names them, so the day a fifth one is wired the assertion has to be re-read.
+names them, so the day a sixth one is wired the assertion has to be re-read.
+
+`guard_graded_frame` asks for TWO receipts and refuses on either: the census
+(section 1 to 5) and the accounting identity (section 6). The census on its own
+would have opened every door to a run that accounted for nothing, because the
+census is a statement about the file and says nothing about what the run did
+with it.
 
 The list said TWO until 2026-09-06 and it was wrong. `forward_evidence` and
 `reachability` both build a clustered `stats.RoiInterval` over a settled wager
@@ -188,6 +246,25 @@ WAGER_KEY: tuple[str, ...] = tuple(
 #: fold the wrong column.
 SUBJECT_COLUMN = "player"
 
+#: Every column of the price store this census opens, declared in one place and
+#: read by :func:`census` rather than assembled at the call. The wager key comes
+#: first and is derived, not retyped; the five after it are what the invariants,
+#: the collision detail and the roster join need. A caller that has to build a
+#: store in this shape -- a fixture, or a re-cut of the real one -- reads this
+#: rather than agreeing with itself about the columns.
+STORE_COLUMNS_THE_CENSUS_READS: tuple[str, ...] = tuple(
+    dict.fromkeys(
+        (
+            *(column for column in stores.PRICE_IDENTITY if column != "book"),
+            "book",
+            "season",
+            "slate_date",
+            "game_id",
+            "american_odds",
+        )
+    )
+)
+
 #: Every market this census counts. A market whose key starts with this is a
 #: player prop; the two refused BY NAME are player props and are counted.
 PLAYER_MARKET_PREFIX = "player_"
@@ -246,6 +323,39 @@ SUBJECT_NORMALIZERS: Mapping[str, Subject] = {
     "raw": raw_subject,
     "casefold": casefold_subject,
 }
+
+
+def _declared_subject_name() -> str:
+    """Which member of the menu `stores.normalise_subject` actually implements.
+
+    **Recovered by running it, never retyped.** `stores.normalise_subject` is
+    the lab's declaration -- its own docstring marks `casefold` with
+    "<- declared here" against the five folds it measured -- and this module
+    counts under a menu. A literal `"casefold"` here would go on saying
+    `casefold` on the day someone moves the declaration to the NFKD fold, and
+    the denominator would move under a gate still calling it declared. So the
+    two are compared on the spellings that separate them and the answer is
+    whichever menu entry agrees on all of them; `""` means the declaration is
+    something this module does not count under, which
+    :func:`reconcile` refuses rather than guessing at.
+
+    The probes are the shapes the store's own collisions have: a title-caser's
+    upper spelling, a lower one, a period, and surrounding whitespace. Measured
+    on the 64 folded names that collapse a wager key, every one of them is a
+    capitalisation difference of this kind.
+    """
+    probes = ("A.J. HOGGARD", "a.j. hoggard", "Tucker DeVries", " AJ Storr ", "")
+    declared = [stores.normalise_subject(probe) for probe in probes]
+    for name, fold in SUBJECT_NORMALIZERS.items():
+        if [fold(probe) for probe in probes] == declared:
+            return name
+    return ""
+
+
+#: The menu entry the lab has DECLARED, found by running
+#: `stores.normalise_subject` rather than by naming it. Empty when the
+#: declaration is a fold this census does not count under.
+DECLARED_SUBJECT: str = _declared_subject_name()
 
 
 # --------------------------------------------------------------------------
@@ -576,13 +686,7 @@ def census(
 
     subject_index = WAGER_KEY.index(SUBJECT_COLUMN)
     market_index = WAGER_KEY.index("market")
-    columns = list(WAGER_KEY) + [
-        "book",
-        "season",
-        "slate_date",
-        "game_id",
-        "american_odds",
-    ]
+    columns = list(STORE_COLUMNS_THE_CENSUS_READS)
 
     quotes: Counter[str] = Counter()
     raw_keys: dict[str, set[tuple[str, ...]]] = defaultdict(set)
@@ -940,6 +1044,27 @@ def reconcile(taken: Census, expected: Expected) -> Attribution:
                 f"{expected.source_of(name)}."
             )
 
+    note("declared_subject_normalizer")
+    if DECLARED_SUBJECT not in SUBJECT_NORMALIZERS:
+        complaints.append(
+            "`stores.normalise_subject` is the lab's declared spelling of a "
+            "subject and it is not one of the folds this census counts under "
+            f"({sorted(SUBJECT_NORMALIZERS)}). Every count below is taken under "
+            "`raw` and `casefold`, so a declaration outside that menu means the "
+            "denominator this gate certifies is not the denominator the store "
+            "collapses on -- which is the whole defect in section 1, arriving "
+            "through the declaration instead of through the absence of one. "
+            "Count under the declared fold or withdraw the declaration."
+        )
+    elif DECLARED_SUBJECT == "raw":
+        complaints.append(
+            "`stores.normalise_subject` declares the book's own spelling as the "
+            "subject. Measured when this gate was written, that spelling counts "
+            "one athlete twice on 4,396 wager keys, 3,959 of them at two "
+            "different prices, and it is this lab's own root-n interval defect "
+            "arriving through the subject field."
+        )
+
     note("residual")
     if taken.residual != 0:
         complaints.append(
@@ -1160,8 +1285,15 @@ def reconciled() -> tuple[Attribution, ...]:
 
 
 def forget_reconciliations() -> None:
-    """Drop the receipts. For tests that must see the gate fail closed."""
+    """Drop both receipts. For tests that must see the gate fail closed.
+
+    Both, and never only the census one. `guard_graded_frame` asks for two
+    receipts and a test that dropped one would leave the other standing, so a
+    file that never ran the gate would find half of it already open -- which is
+    the leak this whole gate is arranged against, one level up.
+    """
     _RECONCILED.clear()
+    forget_accounting()
 
 
 def player_markets_in(frame: pd.DataFrame) -> tuple[str, ...]:
@@ -1198,4 +1330,422 @@ def guard_graded_frame(frame: pd.DataFrame, *, what: str) -> tuple[str, ...]:
             "`cbb_betting_lab.models.player_census.assert_reconciles()` first, "
             "or grade nothing."
         )
+    if not _ACCOUNTED:
+        raise WagerCountMismatch(
+            f"{what} was handed {len(found)} player market(s) {list(found)} and "
+            "no run has accounted for the props this store offers. The census "
+            "has reconciled, so the store's own count exists; what does not "
+            "exist is the run's side of it. Every prop wager the store offers "
+            "must land in exactly one of "
+            f"{list(OFFERED_BUCKETS)} and the two sides must agree with a "
+            "residual of EXACTLY 0. File one `RunDisposition` per wager as you "
+            "price and call "
+            "`cbb_betting_lab.models.player_census."
+            "assert_every_offered_prop_is_accounted()`, or grade nothing. "
+            "Design section 10: 'The run stops until it reconciles.'"
+        )
     return found
+
+
+# --------------------------------------------------------------------------
+# The pre-grading gate: every offered prop lands in exactly one bucket
+# --------------------------------------------------------------------------
+
+#: A prop wager the store offered landed here, and in nowhere else.
+#:
+#: Seven names and not four, because the four the design's sentence groups are
+#: not four facts. `models/slate.py`'s header already draws three of these lines
+#: and says of them that they "are counted separately and never summed": a
+#: spelling that resolved to nobody (C), a projection that refuses (B) and an
+#: event the model was never asked about (D) are different states of the lab,
+#: and the wiring faults this seam has had all hid in exactly one of them. A
+#: bucketing that folded C into D would have counted the R1b nights -- an event
+#: whose two team ids have no player row in the prior-roster window -- as "the
+#: model was never asked", which is the sentence a broken frame produces.
+#:
+#: :data:`NO_OPINION_BUCKETS` is the grouping the design's sentence names, and
+#: it is a sum over these rather than a bucket of its own.
+BUCKET_REFUSED_BY_NAME = "refused_by_name"
+BUCKET_UNREGISTERED_MARKET = "unregistered_market"
+BUCKET_NAME_UNRESOLVED = "name_unresolved"
+BUCKET_ATHLETE_REFUSED = "athlete_refused"
+BUCKET_NEVER_ASKED = "never_asked"
+BUCKET_PRICED = "priced"
+BUCKET_UNREADABLE = "unreadable"
+
+OFFERED_BUCKETS: tuple[str, ...] = (
+    BUCKET_REFUSED_BY_NAME,
+    BUCKET_UNREGISTERED_MARKET,
+    BUCKET_NAME_UNRESOLVED,
+    BUCKET_ATHLETE_REFUSED,
+    BUCKET_NEVER_ASKED,
+    BUCKET_PRICED,
+    BUCKET_UNREADABLE,
+)
+
+#: What the design's "no opinion" is, as a sum of the states above. A run that
+#: reported one number here would be reporting that the model said nothing, and
+#: the four reasons it said nothing are four different faults.
+NO_OPINION_BUCKETS: tuple[str, ...] = (
+    BUCKET_UNREGISTERED_MARKET,
+    BUCKET_NAME_UNRESOLVED,
+    BUCKET_ATHLETE_REFUSED,
+    BUCKET_NEVER_ASKED,
+)
+
+
+class WagerFiledTwice(WagerCountMismatch):
+    """One wager was filed into two buckets, or into one bucket twice.
+
+    A subclass of :class:`WagerCountMismatch` because it is the same fault --
+    the denominator is not what it says -- caught one step earlier, at the
+    filing rather than at the sum. Two filings of one wager inflate the
+    accounted side by one and would be indistinguishable from a wager the store
+    offered and the run never saw.
+    """
+
+
+@dataclass
+class RunDisposition:
+    """What one run did with every prop wager the store offered it.
+
+    **This is the RUN's side of the identity and it is produced by the run**, one
+    `file()` per wager as the decision is made, never derived from the store side
+    and never from a frame that has already been filtered. That is the whole
+    reason it exists: design section 10's gate as written compares 261,870
+    against 257,474, and those are one file counted twice under two folds of the
+    same column -- one number compared with itself. `stores.normalise_subject`
+    has since declared which fold is the subject, so the two are not even two
+    spellings of a live question any more. An identity needs two independently
+    derived numbers, and these are the store's own count of what it offers and
+    the run's own count of what it did.
+
+    `file()` refuses a second filing of the same wager, so "exactly one bucket"
+    is enforced rather than assumed: a run that both priced a prop and counted
+    it as refused raises at the second call, naming the wager and both buckets,
+    instead of balancing an identity that has one wager twice and one wager
+    missing.
+
+    `store_sha256` is the fingerprint of the file the run priced. The store is a
+    symlink into a shared tree, so a run that priced one file and reconciled
+    against another would otherwise account for a denominator nobody counted.
+    """
+
+    what: str
+    store_sha256: str
+    by_market: dict[str, Counter] = field(default_factory=dict)
+    reasons: dict[str, Counter] = field(default_factory=dict)
+    #: Wager key -> (market, bucket). Held so a second filing is a refusal and
+    #: not a silently inflated bucket.
+    filed: dict[object, tuple[str, str]] = field(default_factory=dict)
+
+    def file(
+        self, wager_key: object, *, market: str, bucket: str, reason: str = ""
+    ) -> None:
+        """Record what became of one offered prop wager. Raises on a repeat."""
+        if bucket not in OFFERED_BUCKETS:
+            raise WagerCountMismatch(
+                f"{bucket!r} is not one of the buckets a prop wager can land "
+                f"in ({list(OFFERED_BUCKETS)}). A bucket invented at a call "
+                "site is a bucket the identity does not sum, so the wager "
+                "would vanish from the accounting rather than from the store."
+            )
+        previous = self.filed.get(wager_key)
+        if previous is not None:
+            raise WagerFiledTwice(
+                f"{self.what} filed {wager_key!r} as {previous[1]} on "
+                f"{previous[0]} and again as {bucket} on {market}. Every wager "
+                "the store offers lands in exactly one bucket; two filings "
+                "inflate the accounted side by one and hide a wager the run "
+                "never saw."
+            )
+        self.filed[wager_key] = (str(market), str(bucket))
+        self.by_market.setdefault(str(market), Counter())[str(bucket)] += 1
+        if reason:
+            self.reasons.setdefault(str(bucket), Counter())[str(reason)] += 1
+
+    # -- what it counted, all derived so no two of them can disagree ------
+
+    @property
+    def total(self) -> int:
+        return sum(sum(counts.values()) for counts in self.by_market.values())
+
+    def bucket(self, name: str) -> int:
+        return sum(int(counts.get(name, 0)) for counts in self.by_market.values())
+
+    def market_total(self, market: str) -> int:
+        return int(sum(self.by_market.get(market, Counter()).values()))
+
+    @property
+    def no_opinion(self) -> int:
+        return sum(self.bucket(name) for name in NO_OPINION_BUCKETS)
+
+    def summary_line(self) -> str:
+        return (
+            f"{self.total:,} prop wager(s) accounted by {self.what}: "
+            f"{self.bucket(BUCKET_PRICED):,} priced, "
+            f"{self.bucket(BUCKET_REFUSED_BY_NAME):,} refused by name, "
+            f"{self.no_opinion:,} no opinion "
+            f"({self.bucket(BUCKET_NAME_UNRESOLVED):,} name unresolved, "
+            f"{self.bucket(BUCKET_ATHLETE_REFUSED):,} athlete refused, "
+            f"{self.bucket(BUCKET_NEVER_ASKED):,} never asked, "
+            f"{self.bucket(BUCKET_UNREGISTERED_MARKET):,} unregistered market), "
+            f"{self.bucket(BUCKET_UNREADABLE):,} unreadable."
+        )
+
+
+@dataclass(frozen=True)
+class OfferedAttribution:
+    """What the pre-grading gate returns when it does not raise. Never a bool."""
+
+    census: Census
+    run: RunDisposition
+    offered: int
+    accounted: int
+    by_market: tuple[tuple[str, int, int], ...]
+
+    @property
+    def residual(self) -> int:
+        """Offered minus accounted. Must be exactly 0, not small."""
+        return self.offered - self.accounted
+
+    def table(self) -> str:
+        head = (
+            f"{'market':26s} {'offered':>9s} {'accounted':>10s} "
+            f"{'residual':>9s}   buckets"
+        )
+        lines = [head]
+        for market, offered, accounted in self.by_market:
+            counts = self.run.by_market.get(market, Counter())
+            spelled = ", ".join(
+                f"{name}={counts[name]:,}" for name in OFFERED_BUCKETS if counts[name]
+            )
+            lines.append(
+                f"{market:26s} {offered:9,d} {accounted:10,d} "
+                f"{offered - accounted:9,d}   {spelled or '-'}"
+            )
+        lines.append(
+            f"{'-- all --':26s} {self.offered:9,d} {self.accounted:10,d} "
+            f"{self.residual:9,d}"
+        )
+        return "\n".join(lines)
+
+    def report(self) -> str:
+        return (
+            f"The store offers {self.offered:,} prop wager(s) under the "
+            f"declared subject `{DECLARED_SUBJECT}` and {self.run.what} "
+            f"accounted for {self.accounted:,} of them, residual "
+            f"{self.residual}.\n{self.run.summary_line()}\n{self.table()}"
+        )
+
+
+def offered_by_market(taken: Census) -> Mapping[str, int]:
+    """The store's own count of the prop wagers it offers, per market.
+
+    Under the DECLARED subject and no other. `wagers_raw` is carried through
+    this module beside it because both counts are correct counts of the same
+    rows, but only one of them is the denominator the lab collapses quotes on,
+    and an identity built on the other would be an identity about a spelling
+    nobody declared.
+    """
+    if DECLARED_SUBJECT == "raw":
+        return {count.market: count.wagers_raw for count in taken.by_market}
+    return {count.market: count.wagers_folded for count in taken.by_market}
+
+
+def reconcile_offered(taken: Census, run: RunDisposition) -> OfferedAttribution:
+    """Raise unless every prop wager the store offers landed in exactly one bucket.
+
+    Returns an :class:`OfferedAttribution` or raises
+    :class:`WagerCountMismatch`. There is no third outcome and no bool, for the
+    reason :class:`Attribution` gives: a bool is one keystroke from being
+    dropped.
+
+    **The two sides are derived independently.** `taken` is a count of the file,
+    market by market, taken by :func:`census` with `usecols=` and
+    `chunksize=`. `run` is what a run filed as it priced, one call per wager,
+    with no reference to the store's count at all. Neither is computed from the
+    other and no term is a remainder -- which is exactly what design section
+    10's own gate could not say for itself, and what
+    `scripts/run_price_backtest.py`'s `OpinionAccounting` docstring records as
+    the defect that made an identity reconcile by construction while a third of
+    the rows were missing.
+
+    Seven clauses:
+
+    1. the run priced a different file from the one this census counted;
+    2. a market the store offers that the run filed nothing for, or a market the
+       run filed that the store does not offer;
+    3. a per-market count that does not match, named market by market;
+    4. a total residual that is not exactly 0;
+    5. a wager on a market refused BY NAME in any bucket but
+       :data:`BUCKET_REFUSED_BY_NAME` -- a refused market that was priced, or
+       given a verdict, or called a pass;
+    6. a wager filed as priced on a market the model is not registered against;
+    7. a run that filed nothing at all, which is a run that did not account and
+       must not be mistaken for a run with nothing to account for.
+    """
+    complaints: list[str] = []
+
+    if run.store_sha256 != taken.source_sha256:
+        complaints.append(
+            f"{run.what} priced a store whose sha256 is {run.store_sha256} and "
+            f"this census counted {taken.source_sha256}. {taken.source_path} is "
+            "a symlink into a shared tree, so an unpinned identity accounts for "
+            "a denominator nobody counted."
+        )
+
+    offered = dict(offered_by_market(taken))
+    if not run.filed:
+        complaints.append(
+            f"{run.what} filed no prop wager at all, and the store offers "
+            f"{sum(offered.values()):,} on {len(offered)} market(s). A run that "
+            "accounted for nothing is not a run with nothing to account for, "
+            "and the difference between the two is the whole of what this gate "
+            "is for."
+        )
+
+    absent = sorted(set(offered) - set(run.by_market))
+    surplus = sorted(set(run.by_market) - set(offered))
+    if absent or surplus:
+        complaints.append(
+            f"The markets {run.what} accounted for are not the markets the "
+            f"store offers. Offered and unaccounted: {absent}. Accounted and "
+            f"not offered: {surplus}. A market the store offers and the run "
+            "never saw is every wager on it dropped in silence; a market the "
+            "run saw and the store does not offer is a wager counted against a "
+            "denominator it is not in."
+        )
+
+    rows: list[tuple[str, int, int]] = []
+    for market in sorted(set(offered) | set(run.by_market)):
+        want = int(offered.get(market, 0))
+        got = run.market_total(market)
+        rows.append((market, want, got))
+        if want != got:
+            complaints.append(
+                f"{market}: the store offers {want:,} wager(s) under the "
+                f"declared subject `{DECLARED_SUBJECT}` and {run.what} "
+                f"accounted for {got:,} (residual {want - got:+,}). Buckets: "
+                + (
+                    ", ".join(
+                        f"{name}={run.by_market.get(market, Counter())[name]:,}"
+                        for name in OFFERED_BUCKETS
+                        if run.by_market.get(market, Counter())[name]
+                    )
+                    or "none"
+                )
+                + "."
+            )
+
+    total_offered = sum(offered.values())
+    total_accounted = run.total
+    if total_offered != total_accounted:
+        complaints.append(
+            f"The store offers {total_offered:,} prop wager(s) and {run.what} "
+            f"accounted for {total_accounted:,}, a residual of "
+            f"{total_offered - total_accounted:+,}. The residual must be "
+            "EXACTLY 0, not small: a wager that reached none of the "
+            f"{len(OFFERED_BUCKETS)} buckets vanished between the store and the "
+            "run, and a silent drop is how a biased subset becomes the record "
+            "of a season."
+        )
+
+    refused = set(MARKETS_REFUSED_BY_NAME)
+    for market in sorted(refused & set(run.by_market)):
+        wrong = {
+            name: int(count)
+            for name, count in run.by_market[market].items()
+            if name != BUCKET_REFUSED_BY_NAME and count
+        }
+        if wrong:
+            complaints.append(
+                f"{market} is refused BY NAME and {run.what} filed {wrong} on "
+                "it. A market refused by name is never priced, never given a "
+                "verdict, and is not a pass, an avoid or a no-value call. Every "
+                f"wager on it belongs in `{BUCKET_REFUSED_BY_NAME}` and in no "
+                "other bucket."
+            )
+    priced_markets = set(PRICED_MARKETS)
+    for market, counts in sorted(run.by_market.items()):
+        if int(counts.get(BUCKET_PRICED, 0)) and market not in priced_markets:
+            complaints.append(
+                f"{run.what} filed {counts[BUCKET_PRICED]:,} wager(s) as priced "
+                f"on {market}, which is not one of the {len(PRICED_MARKETS)} "
+                "markets the model is registered against "
+                f"({', '.join(PRICED_MARKETS)}). A price on an unregistered "
+                "market came from somewhere this lab has not declared."
+            )
+
+    attribution = OfferedAttribution(
+        census=taken,
+        run=run,
+        offered=total_offered,
+        accounted=total_accounted,
+        by_market=tuple(rows),
+    )
+    if complaints:
+        raise WagerCountMismatch(
+            "The offered props do not reconcile with what the run did with "
+            "them, so nothing may be graded. Design section 10: 'The run stops "
+            "until it reconciles.'\n\n"
+            + "\n\n".join(f"  * {line}" for line in complaints)
+            + "\n\n"
+            + attribution.table()
+        )
+    return attribution
+
+
+#: Set by :func:`assert_every_offered_prop_is_accounted`, read by
+#: :func:`guard_graded_frame`, keyed by the digest of the store that was
+#: accounted for. A dict and not a file, for the reason :data:`_RECONCILED` is:
+#: a file on disk would be a grant, it would outlive the store changing under
+#: it, and a later run would grade on somebody else's tick.
+_ACCOUNTED: dict[str, OfferedAttribution] = {}
+
+
+def assert_every_offered_prop_is_accounted(
+    run: RunDisposition,
+) -> OfferedAttribution:
+    """The pre-grading gate. Reconcile the run against the store, or raise.
+
+    Takes no store path and re-reads nothing: the census it compares against is
+    the one :func:`assert_reconciles` already took and pinned for this process,
+    looked up by the digest the run recorded. A second scan of a 977,613,435-byte
+    file would be twelve more seconds and, worse, a second chance for the two
+    sides to be counted off two different files.
+
+    So the census gate runs first and this one runs on its result. A run that
+    calls this without having reconciled is refused by name rather than
+    silently taking its own census, because "the store I priced was never
+    counted" and "the store I priced does not reconcile" are different faults
+    and only one of them is fixed by running the census.
+    """
+    attribution = _RECONCILED.get(run.store_sha256)
+    if attribution is None:
+        raise WagerCountMismatch(
+            f"{run.what} accounted for {run.total:,} prop wager(s) on a store "
+            f"whose sha256 is {run.store_sha256}, and no wager census has "
+            "reconciled against that store in this process"
+            + (
+                f" (reconciled here: {sorted(_RECONCILED)})"
+                if _RECONCILED
+                else " (none has reconciled here at all)"
+            )
+            + ". The store's own count is one side of this identity and it "
+            "does not exist yet. Call "
+            "`cbb_betting_lab.models.player_census.assert_reconciles()` first."
+        )
+    accounted = reconcile_offered(attribution.census, run)
+    _ACCOUNTED[run.store_sha256] = accounted
+    return accounted
+
+
+def accounted() -> tuple[OfferedAttribution, ...]:
+    """Every run that has accounted for the store's props in this process."""
+    return tuple(_ACCOUNTED.values())
+
+
+def forget_accounting() -> None:
+    """Drop the accounting receipts. For tests that must see the gate fail closed."""
+    _ACCOUNTED.clear()

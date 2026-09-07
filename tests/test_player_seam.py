@@ -56,6 +56,7 @@ from cbb_betting_lab.competitions import CBB
 from cbb_betting_lab.gates import Availability, can_produce_a_selection
 from cbb_betting_lab.markets import FULL_GAME
 from cbb_betting_lab.conferences import Tier
+from cbb_betting_lab.models import player_census as PC
 from cbb_betting_lab.models import player_rates as PR
 from cbb_betting_lab.models import slate
 from cbb_betting_lab.reports import card_pricing, gameday_card
@@ -112,16 +113,25 @@ def _projection(
     athlete_id: object = 4001,
     priceable: bool = True,
     reason: str = "",
+    player_tier: str = Tier.HIGH_MAJOR.value,
 ) -> types.SimpleNamespace:
     """A projection shaped like `player_rates.PlayerProjection`.
 
-    Same reasoning as `_matchup`: the seam reads exactly two fields off a
-    projection — `priceable` and `unpriceable_reason` — and this carries them
-    plus enough of the rest to be recognisable. It is used only where a
-    projection REFUSES; the tests that price one use `_real_player_half`, which
-    builds the real estimator's output, because the distribution engine reads
-    the minutes lattice, seven rates and a value mix that a double cannot
-    honestly carry.
+    Same reasoning as `_matchup`: it carries the fields the card actually reads
+    off a projection and enough of the rest to be recognisable. It is used only
+    where a projection REFUSES; the tests that price one use
+    `_real_player_half`, which builds the real estimator's output, because the
+    distribution engine reads the minutes lattice, seven rates and a value mix
+    that a double cannot honestly carry.
+
+    **Five fields, not two.** The docstring here said "exactly two" —
+    `priceable` and `unpriceable_reason` — and that stopped being true when
+    design 13's failure mode 5 was given a caller: `opinions_for` now runs
+    `player_rates.resolution_census` over the slate's projections, and that
+    reads `player_tier`, `resolution_route` and `team_id` as well. A double
+    missing them raised `AttributeError` out of the card, which is the same
+    fault as a double that carries a field the estimator does not: it tests a
+    path no price can take.
     """
     return types.SimpleNamespace(
         event_id="e1",
@@ -132,6 +142,9 @@ def _projection(
         priceable=priceable,
         unpriceable_reason=reason,
         priced_through=EARLIER,
+        player_tier=player_tier,
+        resolution_route=PR.ROUTE_EXACT,
+        team_id=None,
     )
 
 
@@ -1679,9 +1692,19 @@ def test_s12_a_name_refused_on_an_event_with_no_survivor_still_prints_r1bs_words
 
     quoted = _wager(event_id="e1", market="player_points", player="A Player", line=13.5)
     unquoted = _wager(event_id="e9", market="player_points", player="D Player", line=9.5)
+    # The buckets design section 10's pre-grading identity counts, filed by the
+    # card as it decides. C and D are two of them, so this separation is now a
+    # structural fact the gate sums rather than a difference between two
+    # sentences a reader has to notice.
+    run = PC.RunDisposition(what="a card", store_sha256="not a store")
     probabilities, census = gameday_card.opinions_for(
-        [quoted, unquoted], model, day=ABSENCE_DAY
+        [quoted, unquoted], model, day=ABSENCE_DAY, dispositions=run
     )
+    assert run.filed[quoted.key][1] == PC.BUCKET_NAME_UNRESOLVED
+    assert run.filed[unquoted.key][1] == PC.BUCKET_NEVER_ASKED
+    assert run.bucket(PC.BUCKET_NAME_UNRESOLVED) == 1
+    assert run.bucket(PC.BUCKET_NEVER_ASKED) == 1
+    assert run.no_opinion == 2 and run.bucket(PC.BUCKET_PRICED) == 0
 
     assert probabilities == {} and census.priced == 0
     assert set(census.declined.values()) == {1}, (
@@ -2525,3 +2548,225 @@ def test_s12_an_incomplete_frozen_file_refuses_the_player_half_instead_of_raisin
             model=slate.slate_model,
         )
     assert "role_prior" in str(raised.value)
+
+
+# --------------------------------------------------------------------------
+# S13: design section 10's pre-grading identity, over a real board
+# --------------------------------------------------------------------------
+
+
+def _store_shaped(rows: pd.DataFrame, day: str) -> pd.DataFrame:
+    """A board's rows in the price store's own columns, and nothing invented.
+
+    The three columns the store carries and a staged board does not are the
+    three the store is constant in: `snapshot_phase` is 'card' on all 504,394
+    player rows, `segment` is 'game' on all of them, and `season` is the one
+    `season_for_slate_date` returns for the day being carded. `game_id` is the
+    event id, which is what this fixture has; nothing here reads a box score
+    through it and `player_census` uses it only to look a roster up.
+    """
+    out = rows.copy()
+    out["snapshot_phase"] = "card"
+    out["season"] = str(season_for_slate_date(day))
+    out["game_id"] = out["event_id"].astype(str)
+    return out[list(PC.STORE_COLUMNS_THE_CENSUS_READS)]
+
+
+def test_s13_every_prop_the_store_offers_lands_in_exactly_one_bucket(
+    tmp_path, fixture_raw_dir, fixture_processed_dir
+) -> None:
+    """Design section 10's gate, restated as an identity with two sides.
+
+    **What the design's own wording could not gate.** Section 10 says to
+    reconcile 261,870 wagers against 257,474 and stop the run over "a 1.7%
+    unexplained denominator". Measured off ONE file: 261,870 is the wager count
+    under the book's own spelling of the athlete and 257,474 is the same count
+    with that spelling casefolded. They were never two stores, and since
+    `stores.normalise_subject` declared the fold -- `player_census.
+    DECLARED_SUBJECT` recovers `casefold` by running it, and this test asserts
+    that -- they are not two live spellings of a question either. A gate needs
+    two independently derived numbers.
+
+    So the gate is the accounting identity this lab uses everywhere else, with
+    the store on one side and the run on the other:
+
+        offered = refused by name + no opinion + priced + unreadable
+
+    counted INDEPENDENTLY rather than one derived as the remainder, refusing on
+    any residual. This test drives both sides at their own call sites over the
+    same four-game board `_card_board` builds:
+
+    * the store side is `player_census.census` over a CSV written from the
+      board's own rows, read with `usecols=` and `chunksize=` like the real
+      977,613,435-byte store;
+    * the run side is the shipped `gameday_card.opinions_for`, filing one
+      bucket per player wager as it decides, with no reference to the store's
+      count at all.
+
+    Nothing here is graded. Every number is a count of rows or of wagers, and
+    no ROI, edge, log loss, interval or verdict is computed or implied. The
+    counts are printed rather than pinned, because `conftest` hands the full
+    processed table to a laptop and the tracked sample to CI.
+
+    The same board is run twice, because the card has two ways out of the player
+    branch and an identity that only ever sees one of them is an identity with a
+    branch nobody counts: once against the slate the seam built, where every
+    prop prices, and once against a bare mapping with no player half, where
+    every prop declines. Both must balance and neither may be balanced by the
+    other's arithmetic.
+
+    Mutation 1: delete `account(player_census.BUCKET_PRICED, "")` from the
+    priced branch of `opinions_for` -- RED here.
+    Mutation 2: delete `account(bucket, reason)` from the decline branch -- RED
+    on the second run below.
+    Mutation 3: file the same wager twice -- RED with `WagerFiledTwice`, made
+    below rather than described.
+    """
+    from cbb_betting_lab.reports import card_matchups
+
+    board, corpus = _card_board(CARD_DAY)
+    props = board.rows[board.rows["market"].astype(str).str.startswith("player_")]
+    assert not props.empty, "the fixture board carries no prop to account for"
+
+    built = card_matchups.matchups_for_card(
+        board.rows,
+        competition=CBB,
+        day=CARD_DAY,
+        processed_dir=fixture_processed_dir,
+        raw_dir=fixture_raw_dir,
+        model=slate.slate_model,
+    )
+
+    # The store side: the board's rows as a price store, counted by the gate's
+    # own census. Written whole and read in chunks, exactly as the real one is.
+    store = tmp_path / "prices.csv"
+    _store_shaped(board.rows, CARD_DAY).to_csv(store, index=False)
+    roster = tmp_path / "roster.csv"
+    pd.DataFrame(
+        [], columns=["game_id", "athlete_id", "athlete_display_name"]
+    ).to_csv(roster, index=False)
+    taken = PC.census(store, roster=roster)
+    offered = dict(PC.offered_by_market(taken))
+    assert offered, "the census found no player market on a board carrying props"
+
+    # The run side: the shipped card, filing as it decides.
+    run = PC.RunDisposition(
+        what="gameday_card.opinions_for", store_sha256=taken.source_sha256
+    )
+    wagers, _, _ = card_pricing.build_wagers(board.rows, competition=CBB)
+    probabilities, census = gameday_card.opinions_for(
+        wagers, built.slate, day=CARD_DAY, dispositions=run
+    )
+
+    # Neither side was computed from the other, and the identity holds exactly.
+    attribution = PC.reconcile_offered(taken, run)
+    assert attribution.residual == 0
+    assert attribution.offered == attribution.accounted == run.total
+
+    # And the buckets are the run's own decisions, not a relabelling of one
+    # number: what `opinions_for` priced is what it filed as priced.
+    priced_props = sum(
+        1
+        for wager in wagers
+        if wager.key in probabilities and str(wager.market).startswith("player_")
+    )
+    assert run.bucket(PC.BUCKET_PRICED) == priced_props
+    assert run.total == sum(
+        1 for wager in wagers if str(wager.market).startswith("player_")
+    )
+    assert set(run.filed) == {
+        wager.key for wager in wagers if str(wager.market).startswith("player_")
+    }, "a prop wager was filed under a key that is not its own"
+    assert PC.DECLARED_SUBJECT == "casefold", (
+        "`stores.normalise_subject` no longer implements the fold this gate "
+        "counts the offered side under, so the two sides are counting "
+        "different denominators"
+    )
+    print(
+        f"corpus={corpus} offered={attribution.offered:,} accounted="
+        f"{attribution.accounted:,} residual={attribution.residual}; "
+        f"{run.summary_line()}"
+    )
+
+    # The other way out of the player branch: the same board against a model
+    # with no player half. Every prop declines, every decline is filed, and the
+    # identity balances on the decline path as exactly as it does on the priced
+    # one -- so a run that files only what it prices cannot pass this gate.
+    declining = PC.RunDisposition(
+        what="opinions_for with no player half", store_sha256=taken.source_sha256
+    )
+    declined_probabilities, _ = gameday_card.opinions_for(
+        wagers, {}, day=CARD_DAY, dispositions=declining
+    )
+    assert not any(
+        str(wager.market).startswith("player_")
+        for wager in wagers
+        if wager.key in declined_probabilities
+    ), "a prop priced off a model with no player half"
+    assert PC.reconcile_offered(taken, declining).residual == 0
+    assert declining.bucket(PC.BUCKET_PRICED) == 0
+    assert declining.no_opinion == declining.total == attribution.offered
+
+    # A wager that reaches no bucket is refused, not absorbed. Dropping one
+    # filing is the mutation the identity exists to catch, and it is made here
+    # rather than described.
+    short = PC.RunDisposition(what="a run that lost one", store_sha256=taken.source_sha256)
+    dropped = None
+    for key, (market, bucket) in run.filed.items():
+        if dropped is None:
+            dropped = (key, market, bucket)
+            continue
+        short.file(key, market=market, bucket=bucket)
+    with pytest.raises(PC.WagerCountMismatch) as raised:
+        PC.reconcile_offered(taken, short)
+    message = str(raised.value)
+    assert "residual" in message and dropped[1] in message
+    assert "EXACTLY 0" in message
+
+    # And a wager filed twice is refused at the filing, not balanced at the sum.
+    with pytest.raises(PC.WagerFiledTwice):
+        run.file(dropped[0], market=dropped[1], bucket=PC.BUCKET_UNREADABLE)
+
+
+def test_s13_a_market_refused_by_name_is_never_priced_in_the_identity(tmp_path) -> None:
+    """The refused pair has one bucket and the gate refuses any other.
+
+    Design section 6 refuses `player_first_basket` and `player_double_double` BY
+    NAME, in words ending "Not a pass, not an avoid, not a no-value call". The
+    census counts their 723 wagers on the real store and carries `priced=False`
+    with them; this is the other half — a run that put one of them in any bucket
+    but :data:`player_census.BUCKET_REFUSED_BY_NAME` is refused by name, so a
+    refused market cannot be graded through the identity that gates grading.
+
+    Nothing here is graded and no probability is computed.
+    """
+    market = sorted(PR.MARKETS_REFUSED_BY_NAME)[0]
+    rows = [
+        {
+            "event_id": "E1", "market": market, "segment": "game",
+            "player": "Al Jones", "selection": "over", "line": "0.5",
+            "snapshot_phase": "card", "book": "draftkings", "season": "2024",
+            "slate_date": "2024-01-02", "game_id": "G1", "american_odds": "-110",
+        }
+    ]
+    store = tmp_path / "p.csv"
+    pd.DataFrame(rows, columns=list(PC.STORE_COLUMNS_THE_CENSUS_READS)).to_csv(
+        store, index=False
+    )
+    roster = tmp_path / "r.csv"
+    pd.DataFrame(
+        [], columns=["game_id", "athlete_id", "athlete_display_name"]
+    ).to_csv(roster, index=False)
+    taken = PC.census(store, roster=roster)
+
+    good = PC.RunDisposition(what="a run", store_sha256=taken.source_sha256)
+    good.file(("E1", market), market=market, bucket=PC.BUCKET_REFUSED_BY_NAME)
+    assert PC.reconcile_offered(taken, good).residual == 0
+
+    for bucket in (PC.BUCKET_PRICED, PC.BUCKET_NEVER_ASKED, PC.BUCKET_UNREADABLE):
+        wrong = PC.RunDisposition(what="a run", store_sha256=taken.source_sha256)
+        wrong.file(("E1", market), market=market, bucket=bucket)
+        with pytest.raises(PC.WagerCountMismatch) as raised:
+            PC.reconcile_offered(taken, wrong)
+        assert "refused BY NAME" in str(raised.value), str(raised.value)
+        assert "not a pass, an avoid or a no-value call" in str(raised.value)

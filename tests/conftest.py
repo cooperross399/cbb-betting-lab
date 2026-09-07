@@ -49,9 +49,11 @@ when it is on disk and the sample when it is not, saying which. Nothing
 skips: both branches run every assertion, and the printed sample size says
 which corpus the number is over.
 
-**A wager-census receipt.** `reconcile_a_fixture_census` runs design section
-10's gate over a two-quote fixture store so a test may render a report over a
-ledger that holds a player prop. It is here rather than in one test file
+**A wager-census receipt.** `reconcile_a_fixture_census` runs both halves of
+design section 10's gate over a two-quote fixture store -- the census of the
+file, and the accounting identity that every prop the store offers landed in
+exactly one bucket of the run -- so a test may render a report over a ledger
+that holds a player prop. It is here rather than in one test file
 because two files need it and the artifact shape it writes is exactly the
 shape `player_census.load_expected` reads; a second copy of that shape would
 drift from the first. Its own docstring says what the caller owes it.
@@ -469,4 +471,23 @@ def reconcile_a_fixture_census(directory: Path):
     expected.write_text(
         _json.dumps(census_expected_record(taken), indent=1), encoding="utf-8"
     )
-    return PC.assert_reconciles(store=store, roster=roster, expected=expected)
+    attribution = PC.assert_reconciles(store=store, roster=roster, expected=expected)
+
+    # The second receipt. `guard_graded_frame` asks for both, because the census
+    # is one file counted twice under two folds of one column and an identity
+    # needs two independently derived numbers. The run side is hand-filed here
+    # -- one wager, priced -- because what a caller of this helper needs is a
+    # receipt and not a second accounting test; the filing done by the shipped
+    # `gameday_card.opinions_for` over a real board, one bucket per wager, is
+    # `tests/test_player_seam.py`'s subject and stays there.
+    run = PC.RunDisposition(
+        what="conftest.reconcile_a_fixture_census",
+        store_sha256=attribution.census.source_sha256,
+    )
+    run.file(
+        ("E1", "player_points", "over", "10.5"),
+        market="player_points",
+        bucket=PC.BUCKET_PRICED,
+    )
+    PC.assert_every_offered_prop_is_accounted(run)
+    return attribution

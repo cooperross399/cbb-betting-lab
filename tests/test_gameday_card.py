@@ -2089,6 +2089,7 @@ def test_a_market_refused_by_name_is_refused_by_name_on_the_card():
     refusal is a statement about the market and holds whatever his evidence
     looks like — which is why this test can pass `None` as the model.
     """
+    from cbb_betting_lab.models import player_census as PC
     from cbb_betting_lab.models import player_rates as PR
 
     assert PR.MARKETS_REFUSED_BY_NAME, "no market is refused by name any more"
@@ -2096,7 +2097,13 @@ def test_a_market_refused_by_name_is_refused_by_name_on_the_card():
         wager = SimpleNamespace(
             market=market, event_id="e1", player="Some Player", selection="over"
         )
-        said = GC._player_decline(None, wager)
+        bucket, said = GC._player_decline(None, wager)
+        assert bucket == PC.BUCKET_REFUSED_BY_NAME, (
+            f"the card files {market} in the {bucket!r} bucket of design 10's "
+            "pre-grading identity. A market refused by name has its own bucket "
+            "and is never priced, never given a verdict and never called a "
+            "pass, an avoid or a no-value call."
+        )
         assert said == reason, (
             f"the card declines {market} with {said[:90]!r}, which is not the "
             "model's refusal. A market refused before the run must never be "

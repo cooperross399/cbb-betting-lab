@@ -4333,12 +4333,22 @@ def test_an_engine_that_refuses_the_whole_subject_declines_and_does_not_kill_the
         "engine's; pick a constant only `player_distributions` reads"
     )
 
+    from cbb_betting_lab.models import player_census as PC
+
+    run = PC.RunDisposition(what="a card", store_sha256="not a store")
     probabilities, census = GC.opinions_for(
         [_wager("player_points", line=14.5), _wager("player_rebounds", line=5.5)],
         model,
         day=DAY,
+        dispositions=run,
     )
     assert probabilities == {} and census.priced == 0
+    # And the bucket it lands in for design section 10's pre-grading identity:
+    # the ENGINE refused the subject, so both wagers are the athlete's refusal
+    # and neither is an unreadable row. The two are different facts and the
+    # gate sums them apart.
+    assert run.bucket(PC.BUCKET_ATHLETE_REFUSED) == 2
+    assert run.bucket(PC.BUCKET_UNREADABLE) == 0 and run.bucket(PC.BUCKET_PRICED) == 0
     assert list(census.declined) == [
         "refused: every one of the ten markets. refused: the residual copula "
         "did not stabilise. No market can be priced."
@@ -4999,4 +5009,198 @@ def test_the_gaps_this_engine_still_has_are_the_ones_written_down(
     assert "threes" not in document["constants"]["points_compound_reconciliation"]["value"], (
         "the fit now reconciles the thinned three-point marginal, so the ~5% "
         "narrowness has a number it can fail against. Check it."
+    )
+
+
+# --------------------------------------------------------------------------
+# The two guards between a malformed prop and the engine
+# --------------------------------------------------------------------------
+
+
+def test_a_prop_with_no_side_or_no_line_is_a_bucket_and_not_a_dead_card() -> None:
+    """The two guards between a malformed prop and the engine, driven at the card.
+
+    `_read_player_market` refuses a selection that names no side of the line and
+    a prop with no line at all, and **both returns were executed by no test on
+    this branch**: every player wager any test built carried `over`/`under` and
+    a numeric line, so the two census buckets they produce were asserted
+    nowhere. `_read_player_market` is called with no `try` around it and
+    `_player_decline` checks the market, the event, the name and the projection
+    and never the selection or the line — so with the guards removed or
+    reordered, `float(line)` on `None` is a `TypeError` raised inside
+    `opinions_for`'s player branch, which no handler there covers, and the whole
+    card dies rather than filing one bucket.
+
+    Both wagers here reach the guards: the subject is priceable, the engine is
+    importable and the slate carries its constants, so nothing upstream declines
+    them first. They are filed in the row-level bucket of design section 10's
+    pre-grading identity, because the athlete has a distribution and it is the
+    rung that cannot be read off it.
+
+    Mutation: delete `if wager.selection not in (OVER, UNDER)` — RED, with the
+    selection reaching `distribution.market` and the card raising. Delete
+    `if line is None` — RED with a `TypeError` out of `opinions_for`.
+    """
+    from cbb_betting_lab.models import player_census as PC
+    from cbb_betting_lab.reports import gameday_card as GC
+
+    model, _ = _slate_model()
+    sideless = replace(
+        _wager("player_points", line=14.5),
+        selection="yes",
+        key=("e1", "player_points", "yes", 14.5, "Sean Bairstow"),
+    )
+    lineless = replace(
+        _wager("player_points", line=14.5),
+        line=None,
+        key=("e1", "player_points", "over", None, "Sean Bairstow"),
+    )
+    run = PC.RunDisposition(what="a card", store_sha256="not a store")
+    probabilities, census = GC.opinions_for(
+        [sideless, lineless], model, day=DAY, dispositions=run
+    )
+
+    assert probabilities == {} and census.priced == 0 and census.wagers == 2
+    assert "the selection does not name a side of this player line" in census.declined
+    assert any(
+        "there is no rung to price" in reason for reason in census.declined
+    ), sorted(census.declined)
+    assert len(census.declined) == 2, (
+        "the two malformed rows collapsed into one bucket, so one of the two "
+        f"guards is not the one that answered: {sorted(census.declined)}"
+    )
+    assert run.bucket(PC.BUCKET_UNREADABLE) == 2, (
+        f"a row that cannot be read is not a statement about the athlete: "
+        f"{run.by_market}"
+    )
+    assert run.bucket(PC.BUCKET_ATHLETE_REFUSED) == 0
+
+    # And a well-formed wager on the same subject still prices, so neither
+    # guard is refusing the athlete.
+    priced, good_census = GC.opinions_for(
+        [_wager("player_points", line=14.5)], model, day=DAY
+    )
+    assert good_census.priced == 1 and priced
+
+
+def _two_tier_model(tiers: "tuple[tuple[str, bool], ...]"):
+    """A slate whose athletes carry the tiers and priceability given, per event.
+
+    Built from the real estimator's projection and then re-tiered, one event
+    each, because `player_rates.resolution_census` reads
+    `projection.player_tier` and `projection.priceable` and nothing else about
+    a subject. Nothing here is a price: the projections are the fixture's own
+    and the only fields moved are the two the join census counts.
+    """
+    from cbb_betting_lab.models import slate as SLATE
+
+    model, resolved = _slate_model()
+    athlete, real = next(iter(model.players["e1"].items()))
+    players: dict = {}
+    lookup: dict = {}
+    for index, (tier, priceable) in enumerate(tiers, start=1):
+        projection = replace(
+            real,
+            player_tier=tier,
+            team_id=None,
+            priceable=priceable,
+            unpriceable_reason=(
+                "" if priceable else "refused: this fixture subject is refused."
+            ),
+        )
+        players[f"e{index}"] = {athlete: projection}
+        lookup[(f"e{index}", "Sean Bairstow")] = athlete
+    wide = SLATE.SlateModel(
+        day=DAY,
+        matchups={},
+        players=players,
+        resolved=lookup,
+        name_refusals={},
+        player_priced_through=model.player_priced_through,
+        shapes=model.shapes,
+    )
+    wagers = [
+        _wager("player_points", line=14.5, event_id=f"e{index}")
+        for index in range(1, len(tiers) + 1)
+    ]
+    return wide, wagers, resolved
+
+
+def test_design_13s_per_tier_resolution_gate_has_a_caller_on_the_pricing_path(
+    tmp_path: Path,
+) -> None:
+    """It runs on a card, it reports, and it stops the run when it fires.
+
+    **The defect, and it is design 4's defect wearing a different design
+    clause.** Design 13's failure mode 5 asks for two things: print the per-tier
+    resolution rate every run, and stop the run when the priceable rate moves
+    more than 2pp across tiers. `player_rates.resolution_census` is the first
+    and `player_rates.assert_tier_resolution_holds` is the second, and
+    `grep -rn` over `src/` and `scripts/` found BOTH only in their own
+    definitions and in `tests/test_player_rates.py` — so the rate was printed on
+    no run and the stop could not fire on a card, on a backtest, or on anything
+    else. The measurement the rule exists against is in the module's own words:
+    the team-name version of this join failed on 20.5% of provider names with
+    46.7% of the misses at the low-major end, and a join that fails on half the
+    low-major board is a biased sample rather than a smaller one.
+
+    Driven at the card's own entry point, both halves:
+
+    * a board whose two tiers resolve at 100% and 50% raises out of
+      `opinions_for` — the run stops, and the message carries both rates;
+    * a board inside the tolerance renders, and the card SAYS the rate rather
+      than only not stopping.
+
+    Nothing here is graded. Every number is a count of subjects, and no ROI,
+    edge, interval or verdict is stated.
+
+    Mutation: delete `player_rates.assert_tier_resolution_holds(...)` from
+    `_run_the_resolution_check` — RED on the first half. Delete
+    `_run_the_resolution_check(model, census)` from `opinions_for` — RED on
+    both. Delete `run.opinions.tier_resolution_line()` from `_model_section` —
+    RED on the rendered half.
+    """
+    from cbb_betting_lab.reports import gameday_card as GC
+
+    # Half one: the stop. 100% against 50% is 50 percentage points, against a
+    # declared tolerance of 2.
+    stopped, wagers, _ = _two_tier_model(
+        (("high_major", True), ("high_major", True), ("low_major", True), ("low_major", False))
+    )
+    with pytest.raises(PR.PlayerRatesError) as raised:
+        GC.opinions_for(wagers, stopped, day=DAY)
+    message = str(raised.value)
+    assert "percentage points across tiers" in message, message
+    assert f"more than the declared {PR.TIER_RESOLUTION_TOLERANCE_POINTS}pp" in message
+    assert "biased sample rather than a smaller one" in message
+
+    # Half two: the report, off a rendered card. Two tiers, both resolving in
+    # full, so the check runs and passes and the card has to say so.
+    holding, wagers, _ = _two_tier_model(
+        (("high_major", True), ("high_major", True), ("low_major", True), ("low_major", True))
+    )
+    _, census = GC.opinions_for(wagers, holding, day=DAY)
+    assert set(census.tier_resolution) == {"high_major", "low_major"}
+    section = _model_section_of(
+        _rendered_card(holding, tmp_path=tmp_path, events=4, name="tiers")
+    )
+    assert "Design 13's per-tier resolution rate" in section, section
+    assert "moves 0.00 percentage points across tiers" in section
+    assert "high_major 100.0% of 2" in section and "low_major 100.0% of 2" in section
+
+    # And the third state, which must not read like the second: one tier
+    # carries every subject, so the check has nothing to compare.
+    lone, wagers, _ = _two_tier_model((("high_major", True), ("high_major", False)))
+    _, census = GC.opinions_for(wagers, lone, day=DAY)
+    assert census.tier_resolution_line().endswith(
+        "Fewer than two tiers carry a subject, so the 2pp check has nothing to "
+        "compare and STOPS NOTHING on this card."
+    ), census.tier_resolution_line()
+
+    # And a card with no player projection at all says which absence that is,
+    # rather than printing a rate over nothing.
+    empty = GC.OpinionCensus()
+    assert empty.tier_resolution_line() == (
+        "Design 13's per-tier resolution rate was not asked: this card holds "
+        "no player projection to tier."
     )

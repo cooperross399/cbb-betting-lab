@@ -518,7 +518,7 @@ def test_a_clause_whose_expectation_is_absent_is_refused_not_counted_as_checked(
     compared while `note()` still appended the clause to `Attribution.checked`
     and counted it into `declared_checks` or `pinned_checks`. Those two counts
     are what `test_the_gate_reconciles_the_store_it_is_pinned_to` asserts as
-    "52 clauses ran", and both come off the `sources` block rather than off the
+    "53 clauses ran", and both come off the `sources` block rather than off the
     value sections — so a record with every value deleted reproduced them in
     full.
 
@@ -529,7 +529,9 @@ def test_a_clause_whose_expectation_is_absent_is_refused_not_counted_as_checked(
     `len(checked) == 30`, `pinned_checks == 30`, `declared_checks == 0` and
     `"quotes[player_points]" in checked` True -- while exactly ONE of the thirty
     clauses had compared anything, because `wagers_raw` is a fifth section the
-    probe leaves alone. The realistic version is not
+    probe leaves alone. Thirty was the clause count on the day that was
+    measured; the declared-subject clause has since made it thirty-one, which
+    is what the assertions below read. The realistic version is not
     the emptied record: it is a regenerated `data/processed/
     cbb_player_census.json` that drops one `quotes[...]`, `totals.priced_raw` or
     `subjects.folded` while keeping its `sources` row, which left both that test
@@ -540,10 +542,11 @@ def test_a_clause_whose_expectation_is_absent_is_refused_not_counted_as_checked(
     Held now: an absent expectation is a complaint naming the clause, and
     `Attribution.compared_checks` says how many comparisons actually ran beside
     the `len(checked)` that says how many were attempted. On this fixture the
-    two are 24 and 30 — one market gives two clauses, plus six totals, twelve
-    invariants and four subject counts, and the six that need no expectation
-    (the digest, the residual, the two collision clauses, the roster and the
-    null key fields) are attempted and compared against nothing by design.
+    two are 24 and 31 — one market gives two clauses, plus six totals, twelve
+    invariants and four subject counts, and the seven that need no expectation
+    (the digest, the declared subject normalizer, the residual, the two
+    collision clauses, the roster and the null key fields) are attempted and
+    compared against nothing by design.
     """
     taken, _, _ = take(tmp_path, [quote(), quote(book="fanduel", american_odds="-105")])
     good = write_expected(tmp_path / "good.json", taken)
@@ -553,13 +556,13 @@ def test_a_clause_whose_expectation_is_absent_is_refused_not_counted_as_checked(
         "single-market fixture; two per market, six totals, twelve invariants "
         "and four subject counts is 24"
     )
-    assert len(attribution.checked) == 30
+    assert len(attribution.checked) == 31
     assert (
         attribution.declared_checks + attribution.pinned_checks
         == len(attribution.checked)
     ), "the source split must partition the clauses attempted, not a subset"
-    assert attribution.pinned_checks == 30 and attribution.declared_checks == 0, (
-        "this fixture's artifact carries an empty `sources` block, so all 30 "
+    assert attribution.pinned_checks == 31 and attribution.declared_checks == 0, (
+        "this fixture's artifact carries an empty `sources` block, so all 31 "
         "clauses are PINNED -- which is the pair of numbers the probe in the "
         "docstring reproduced with every value section emptied"
     )
@@ -611,6 +614,58 @@ def test_a_clause_whose_expectation_is_absent_is_refused_not_counted_as_checked(
         "the digest matched, so this refusal has exactly one cause and it is "
         "the one this test is about"
     )
+
+
+def test_a_market_that_appeared_or_vanished_stops_the_run(tmp_path):
+    """The market SETS are compared, not only the counts inside them.
+
+    A market that appeared is a market nobody registered a hypothesis for; a
+    market that vanished is a denominator that moved without anyone saying so.
+    Neither shows up in a total: a market with zero wagers changes no sum, so
+    the totals clause is blind to exactly the case this one is for.
+
+    **It was executed by no test until this one.** Every fixture in this file
+    builds its expectations artifact FROM the census it will be compared
+    against, so the two market sets agree by construction and nothing
+    constructed the disagreement. Measured before this test was written:
+    `if False and (absent or surplus):` left the whole file GREEN at 20 passed,
+    with the real 978 MB store on disk.
+
+    Both directions are driven, and the vanished half is driven on its own so
+    that the "counted as checked and never compared" complaint it also raises
+    cannot be the thing that makes the assertion pass.
+
+    Mutation: `if False and (absent or surplus):` — RED on the first case here.
+    """
+    taken, _, _ = take(tmp_path, [quote()])
+    assert [m.market for m in taken.by_market] == ["player_points"]
+
+    # DECLARED AND ABSENT. The artifact says the store carries a market it does
+    # not. Every other clause passes, so this refusal has exactly one cause.
+    declared = write_expected(
+        tmp_path / "appeared.json",
+        taken,
+        **{"wagers_raw": {"player_points": 1, "player_assists": 0}},
+    )
+    with pytest.raises(PC.WagerCountMismatch) as raised:
+        PC.reconcile(taken, PC.load_expected(declared))
+    message = str(raised.value)
+    assert "The store's markets are not the census's" in message, message
+    assert "player_assists" in message
+    assert "a denominator that moved without anyone saying so" in message
+    assert "counted as checked and never compared" not in message, (
+        "this refusal has a second cause, so it does not hold the clause it "
+        "is about"
+    )
+
+    # PRESENT AND UNDECLARED, the other direction: the store carries a market
+    # the artifact never registered.
+    surplus = write_expected(
+        tmp_path / "vanished.json", taken, **{"wagers_raw": {}}
+    )
+    with pytest.raises(PC.WagerCountMismatch) as raised:
+        PC.reconcile(taken, PC.load_expected(surplus))
+    assert "Present and undeclared: ['player_points']" in str(raised.value)
 
 
 def test_the_store_is_pinned_by_its_digest(tmp_path):
@@ -824,6 +879,17 @@ def test_no_player_wager_can_be_graded_until_this_gate_has_run(tmp_path):
     `forecast_skill.build_record` — RED. Same for `settled_opinions`,
     `render_ledger`, `report_payload` and `reachability.build_record` — RED,
     one at a time.
+
+    **Two receipts, and the second one is the gate with two independently
+    derived numbers.** The census is the store counted twice under two folds of
+    one column -- 261,870 and 257,474 are one file, not two stores, and since
+    `stores.normalise_subject` declared the fold they are not even two live
+    spellings of a question. So each door is driven three times here: with no
+    receipt at all, with the census reconciled and nothing accounted, and with
+    both. The middle state is the one that used to open every door.
+
+    Mutation: delete `if not _ACCOUNTED:` from `guard_graded_frame` — RED on the
+    middle loop below, five times over.
     """
     from cbb_betting_lab import forward_evidence as FE
     from cbb_betting_lab import reachability as RE
@@ -880,7 +946,11 @@ def test_no_player_wager_can_be_graded_until_this_gate_has_run(tmp_path):
             "— the `what=` label is what tells an operator which door shut."
         )
 
-    # And with the gate run, the same call is allowed through.
+    # The census on its own is NOT enough, and this is the half of the gate
+    # design section 10's own wording could not carry. Reconciling 261,870
+    # against 257,474 is one file counted twice under two folds of one column,
+    # so with the census run and nothing else every one of the five doors
+    # would have opened on a run that had accounted for nothing.
     store = write_store(tmp_path / "p.csv", [quote()])
     roster = write_roster(tmp_path / "r.csv", (("G1", "1", "Al Jones"),))
     taken = PC.census(store, roster=roster)
@@ -888,6 +958,29 @@ def test_no_player_wager_can_be_graded_until_this_gate_has_run(tmp_path):
         store=store, roster=roster, expected=write_expected(tmp_path / "e.json", taken)
     )
     assert len(PC.reconciled()) == 1
+    assert PC.accounted() == ()
+    for name, call in refusals.items():
+        with pytest.raises(
+            PC.WagerCountMismatch, match="no run has accounted for the props"
+        ) as raised:
+            call()
+        assert "residual of EXACTLY 0" in str(raised.value), (
+            f"{name} refused for the second receipt without saying what the "
+            "identity is. The operator has to be told what to produce."
+        )
+
+    # And with BOTH halves run, the same call is allowed through. The store
+    # offers one wager -- two books on one athlete at one line is one bet --
+    # and the run files one, priced.
+    run = PC.RunDisposition(
+        what="a test", store_sha256=taken.source_sha256
+    )
+    run.file(("E1", "player_points", "over", "10.5"), market="player_points",
+             bucket=PC.BUCKET_PRICED)
+    accounted = PC.assert_every_offered_prop_is_accounted(run)
+    assert accounted.offered == 1 and accounted.accounted == 1
+    assert accounted.residual == 0
+    assert len(PC.accounted()) == 1
     assert PC.guard_graded_frame(props, what="a test") == ("player_points",)
 
 
@@ -1192,7 +1285,7 @@ def test_the_gate_reconciles_the_store_it_is_pinned_to():
     assert taken.segments == ("game",)
     assert taken.snapshot_phases == ("card",)
     assert attribution.declared_checks == 23
-    assert attribution.pinned_checks == 29
+    assert attribution.pinned_checks == 30
     # And the 52 are 52 clauses that COMPARED something. `declared_checks` and
     # `pinned_checks` partition the clauses attempted, by where the expectation
     # came from, and both are read off the artifact's `sources` block; an
@@ -1200,13 +1293,14 @@ def test_the_gate_reconciles_the_store_it_is_pinned_to():
     # comparison silently did not run. See
     # `test_a_clause_whose_expectation_is_absent_is_refused_not_counted_as_
     # checked` for the measurement.
-    assert len(attribution.checked) == 52
+    assert len(attribution.checked) == 53
     assert attribution.compared_checks == 46, (
-        f"{attribution.compared_checks} of the 52 clauses compared a value "
+        f"{attribution.compared_checks} of the 53 clauses compared a value "
         "against the artifact. Twelve markets give 24, plus six totals, twelve "
-        "invariants and four subject counts; the remaining six -- the digest, "
-        "the residual, the two collision clauses, the roster and the null key "
-        "fields -- need no expectation and are checked unconditionally."
+        "invariants and four subject counts; the remaining seven -- the digest, "
+        "the declared subject normalizer, the residual, the two collision "
+        "clauses, the roster and the null key fields -- need no expectation and "
+        "are checked unconditionally."
     )
     assert sum(c.odds_disagreements for c in taken.collisions) == 3959, (
         "the collapsing keys that carry two different american_odds are the "
@@ -1237,12 +1331,30 @@ def test_the_limitations_this_gate_ships_with():
        are removed; an approximation of R1's pre-match fold counts 251,949, at
        least 5,525 below the design's number. The gate must run a second time,
        on resolved athletes, against a third declared number.
-    2. **No subject normalizer is declared.** Five reasonable folds give five
-       denominators and the design names none of them.
+    2. **The DESIGN declares no subject normalizer; the code now does.** Five
+       reasonable folds give five denominators and the design names none of
+       them. `stores.normalise_subject` declared `casefold` on 2026-09-06,
+       `DECLARED_SUBJECT` recovers which menu entry that is by running it, and
+       `reconcile` refuses a declaration outside the menu -- so the half of
+       this clause that said "make reconcile compare against that one by name"
+       has been done. What is still open is the artifact: `declared_subject` is
+       null in `data/processed/cbb_player_census.json`, so the gate's frozen
+       record of what was declared does not carry the declaration, and the raw
+       count is still counted beside the folded one because neither headline is
+       a grading denominator.
     3. **Design section 10 is written as an equality that can never hold.**
        Implemented as an attribution, and the disagreement is reported.
     4. **Nothing has been graded.** No de-vig, no log loss, no interval and no
        verdict exists anywhere in this tree for a player prop.
+    5. **No shipped script files a disposition, so no run can pass the second
+       half of this gate.** `reports.gameday_card.opinions_for` is the only
+       producer of a `RunDisposition` and it files only when one is passed to
+       it; `scripts/run_price_backtest.py` and `scripts/run_gameday_card.py`
+       pass none. That is the gate failing CLOSED and it is the true state of
+       this branch — nothing may be graded — rather than a hole: a run that
+       cannot say what became of every prop the store offered must not grade
+       one. The day a script files them, wire `assert_every_offered_prop_is_
+       accounted` into it and re-point this clause.
 
     Each clause goes red the day it closes, and the instruction is to re-point
     it at the next limitation, never to delete it.
@@ -1258,11 +1370,22 @@ def test_the_limitations_this_gate_ships_with():
 
     expected = PC.load_expected(ARTIFACT_PATH)
     assert expected.declared_subject is None, (
-        "CLAUSE 2 HAS CLOSED: the lab has declared a subject normalizer. Make "
-        "reconcile compare against that one by name and say what the other is "
-        "for; do not delete this."
+        "CLAUSE 2 HAS CLOSED FURTHER: the frozen artifact now records a "
+        "declared subject. Re-point this at whatever is still undeclared -- the "
+        "athlete-level fold is the obvious next one -- and do not delete it."
     )
     assert set(PC.SUBJECT_NORMALIZERS) == {"raw", "casefold"}
+    # The half that HAS closed, asserted positively so it cannot rot back into
+    # prose: the code's declaration is read, not retyped, and the store side of
+    # the pre-grading identity counts under it.
+    assert PC.DECLARED_SUBJECT == "casefold"
+    assert PC.SUBJECT_NORMALIZERS[PC.DECLARED_SUBJECT]("A.J. HOGGARD") == (
+        stores.normalise_subject("A.J. HOGGARD")
+    ), (
+        "`DECLARED_SUBJECT` names a fold `stores.normalise_subject` does not "
+        "implement, so the offered side of the identity counts a denominator "
+        "the lab has not declared"
+    )
 
     assert expected.totals["total_raw"] != expected.totals["total_folded"], (
         "CLAUSE 3 HAS CLOSED: the two counts are now equal, so section 10's "
@@ -1289,4 +1412,22 @@ def test_the_limitations_this_gate_ships_with():
         "CLAUSE 4 HAS CLOSED: player_census.py names "
         f"{sorted(named & forbidden)}. This module counts rows and refuses; it "
         "states no result. Grading belongs in its own commit, gated on this one."
+    )
+
+    scripts = sorted((REPO / "scripts").glob("*.py"))
+    assert scripts, "the scripts directory is empty, so this scan proves nothing"
+    filing = [
+        path.name
+        for path in scripts
+        if "RunDisposition(" in path.read_text(encoding="utf-8")
+        or "assert_every_offered_prop_is_accounted" in path.read_text(encoding="utf-8")
+    ]
+    assert not filing, (
+        f"CLAUSE 5 HAS CLOSED: {filing} now file a disposition. Check that the "
+        "script also calls `assert_every_offered_prop_is_accounted` before it "
+        "grades, and re-point this clause; do not delete it."
+    )
+    assert PC.accounted() == (), (
+        "a disposition receipt survived into this test, so the gate would look "
+        "open in a file that never ran it"
     )
