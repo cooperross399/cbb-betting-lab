@@ -926,6 +926,67 @@ class OpinionCensus:
             "so it is inside design 4's 15% stop."
         )
 
+    def event_dispersion_line(self) -> str:
+        """Which of the frozen file's two event dispersions priced this card.
+
+        **A disclosure, not a check.** Nothing stops on it and no number in it
+        is produced: the frozen file freezes two candidates for the scoring-
+        event count's Panjer dispersion under `points_compound_reconciliation`
+        and says in terms that "the choice belongs to the model, not to the
+        fit". `models.player_distributions.POINTS_EVENT_DISPERSION_KEY` makes
+        that choice, and the paragraph that argues for it concedes the choice
+        moves design 4's produced ratio by 0.167 — the whole width of the stop
+        budget — offering as the thing that keeps it honest that both numbers
+        are printed beside each other on every run.
+
+        **They were not.** The only mapping carrying both keys was
+        `PlayerDistribution.structural_checks`, which has no caller in `src/`
+        or `scripts/`; `population_structural_checks` returned nine keys and
+        neither dispersion was among them. Rendered, a card that priced eight
+        player props carried neither number and not the word "dispersion" at
+        all, so a reviewer asking which dispersion priced the card had nothing
+        to read and a later refit could move `measured_event_dispersion`
+        without changing anything anyone could see.
+
+        Two states, and they are two different facts. No player distribution
+        was built, so no dispersion was chosen. Or one was, and the sentence
+        names which frozen key it came from at full precision — the key name is
+        recovered by matching the value the engine USED against the two
+        candidates, never retyped here, so moving
+        `POINTS_EVENT_DISPERSION_KEY` moves this sentence with it.
+        """
+        checks = self.structural_check
+        used = checks.get("points_event_dispersion_used")
+        if used is None:
+            return (
+                "No scoring-event dispersion was chosen on this card: it built "
+                "no player distribution."
+            )
+        candidates = {
+            name: checks[name]
+            for name in ("effective_event_dispersion", "measured_event_dispersion")
+            if name in checks
+        }
+        chosen = [name for name, value in candidates.items() if value == used]
+        other = [name for name, value in candidates.items() if value != used]
+        if len(chosen) != 1 or len(other) != 1:
+            # The mapping carried the used value and not the pair it has to be
+            # disclosed against. Say so rather than printing one number as
+            # though the choice had been shown.
+            return (
+                f"The compound points sum was priced at an event dispersion of "
+                f"{used!r}, and the frozen file's two candidates for it are not "
+                "both on this run's structural check, so which one that is "
+                "cannot be shown here."
+            )
+        return (
+            "Scoring-event dispersion: this card priced the compound points "
+            f"sum at `{chosen[0]}` = {used!r}, and the frozen file's other "
+            f"candidate `{other[0]}` = {candidates[other[0]]!r} was not used. "
+            "The file freezes both and leaves the choice to the model, so both "
+            "are printed here rather than only in the constant's docstring."
+        )
+
     def table(self) -> str:
         if not self.declined:
             return "The model had an opinion on every priced wager."
@@ -2278,6 +2339,16 @@ def _model_section(run: CardRun) -> list[str]:
     is one row per REASON A WAGER CARRIES NO OPINION; this is a statement about
     the population the priced ones were built from, and folding it in would put
     a structural report in a column headed "Wagers".
+
+    `OpinionCensus.event_dispersion_line` is the fourth line and the same shape
+    of repair one level down. `POINTS_EVENT_DISPERSION_KEY` chooses between two
+    frozen candidates for the scoring-event dispersion, concedes the choice
+    moves design 4's produced ratio by 0.167, and twice offered as its
+    justification that both numbers are "printed beside each other on every
+    run" — and nothing printed either. A rendered card carried neither number
+    and not the word "dispersion". It is a DISCLOSURE and not a check: nothing
+    stops on it, and it is here because the argument for the constant is made
+    out of it.
     """
     lines = [
         "## What the model said",
@@ -2285,6 +2356,8 @@ def _model_section(run: CardRun) -> list[str]:
         run.opinions.summary_line(),
         "",
         run.opinions.structural_check_line(),
+        "",
+        run.opinions.event_dispersion_line(),
         "",
         run.opinions.table(),
         "",

@@ -292,12 +292,74 @@ OUTER_CELL_PIECES: int = 6
 OUTER_CELL_RATIO: float = 4.0
 
 #: Iterative-proportional-fitting sweeps that put the joint's marginals back on
-#: the count pmfs, so the copula provably does not move a mean. Eight, measured
-#: on the fixture's points-by-rebounds joint at its modal node: the worst
-#: marginal error is 3.8e-11 at zero sweeps, 1.7e-14 at two and 2.8e-17 at four,
-#: and does not improve after that. Eight is twice what the measurement needs,
-#: which costs a few array multiplies on an object that has already had a
-#: quadrature run over it.
+#: the count pmfs, so the copula provably does not move a mean. **Declared for
+#: accuracy, and eight is a measured floor with reserve — not a measured
+#: optimum, and not twice anything.**
+#:
+#: *What is measured.* The worst absolute difference between a FITTED joint's
+#: marginal and the count pmf it has to reproduce, over every axis, in the
+#: shipped configuration. Over the test fixture athlete and the frozen file's
+#: own nine role-prior athletes, every minutes node each of them carries (437
+#: of them) and all four couplings this engine builds — 1,748 joints — the
+#: worst runs
+#:
+#:     4.2419e-06  4.5909e-08  4.6486e-10  2.4287e-12  4.1189e-14  9.9920e-16
+#:
+#: at 0, 1, 2, 3, 4 and 5 sweeps, and then stops: six, seven and eight all read
+#: 1.2212e-15, the double-precision floor of a sum of tens of thousands of
+#: terms rather than a residual error. **Five is where the measurement lands
+#: and eight is 1.6x it.** Four is not enough — 4.1189e-14 is 34x the floor.
+#:
+#: *Why the reserve is kept rather than trimmed to five.* Iterative
+#: proportional fitting on a two-way table contracts by the square of the
+#: correlation per sweep, and these correlations are FROZEN, so the rate is the
+#: same for every athlete on every card and only the STARTING error varies.
+#: Measured at the fixture's modal node against `1/rho^2`: `points|rebounds`
+#: contracts 91.07, 91.60 and 88.65 against 90.30, `rebounds|assists` 310.84
+#: and 313.00 against 295.47, `points|assists` 3752.52 against 3620.81. Across
+#: those ten athletes the starting error varies 37x — 1.1443e-07 on the
+#: fixture's worst node against 4.2419e-06 on the 6.73-minute role prior — so
+#: three spare sweeps at ~90x each are 7.4e5 of headroom on the one quantity
+#: that moves. They cost 0.373 ms of the 38.999 ms one `player_pra` coupling
+#: takes at that node — 131 us per sweep, read off the best of 25 runs of
+#: :func:`coupled_sum_pmf` at 0, 5, 8, 40 and 80 sweeps, 1.0% of the
+#: quadrature; a wall clock is the one figure here the test does not assert,
+#: because a timing assertion fails on a busy machine rather than on a defect.
+#: And they move no priced number: between five sweeps and eight, no rung of
+#: any of the four coupled markets moves by more than 2.776e-17.
+#:
+#: *It is bounded above as well.* Past the floor the last bits random-walk
+#: rather than fall — 5 through 24 sweeps read 2.776e-17 with occasional
+#: 4.163e-17 and 5.551e-17 at that node — so raising it buys nothing either.
+#:
+#: *What the measurement does NOT settle.* Eight is enough BECAUSE the frozen
+#: correlations are small. Driving the same fixture pair through
+#: :func:`coupled_sum_pmf` with the matrix replaced by a synthetic one, eight
+#: sweeps leave the worst marginal at 8.327e-17 at `rho` = 0.3, 2.083e-13 at
+#: 0.5, 4.090e-11 at 0.7 and 1.970e-09 at 0.9 — the last of which alone would
+#: miss D3's 1e-9. The largest correlation this engine couples is
+#: `points|rebounds` = 0.10523131793586692, and the test asserts that, so a
+#: refit that raises it goes red here rather than inheriting this constant.
+#:
+#: *The three figures this comment used to quote never reproduced.* It said the
+#: worst marginal error on the fixture's points-by-rebounds joint at its modal
+#: node was "3.8e-11 at zero sweeps, 1.7e-14 at two and 2.8e-17 at four, and
+#: does not improve after that. Eight is twice what the measurement needs."
+#: That exact object reads 8.3624e-10, 1.9158e-12 and 2.3592e-16 — out by 22x,
+#: 113x and 8.4x — and it DOES improve after four, by a further 8.5x to
+#: 2.7756e-17 at five. Nothing on this branch moved them: the whole tree at
+#: commit 0985942, the commit that wrote them, was exported and driven through
+#: its own fixture and returns that column bit for bit, and
+#: `data/processed/cbb_player_shapes.json` is byte-identical between that
+#: commit and this one. No node of the 45 carries the quoted triple either —
+#: the zero-sweep column runs 2.4217e-10 to 9.8037e-08 split and 3.4190e-09 to
+#: 1.5978e-04 undivided, a relative rather than absolute reading runs 1.7349e-05
+#: to 1.5016e-03, and the `pra` joint at the modal node reads 2.0832e-09,
+#: 9.2646e-12 and 2.4425e-15. **The constant was right and the measurement was
+#: wrong**, which is the same defect :func:`_split_outer_cells` thirty lines
+#: below was repaired for and which this one was left with.
+#: `test_the_marginal_sweep_count_re_measures_the_curve_it_sits_on` measures
+#: every figure above and asserts this comment still quotes it.
 MARGINAL_SWEEPS: int = 8
 
 #: Where the latent normal is truncated when a cut point is infinite.
@@ -363,8 +425,22 @@ STRUCTURAL_CHECK_POPULATION_FLOOR: int = 8
 #: The frozen file freezes both candidates under
 #: `points_compound_reconciliation` and says in terms that "the choice belongs
 #: to the model, not to the fit". This engine takes
-#: `effective_event_dispersion` = 1.1059306970490195 and prints
-#: `measured_event_dispersion` = 1.3799506487253412 beside it on every run.
+#: `effective_event_dispersion` = 1.1059306970490195 and puts
+#: `measured_event_dispersion` = 1.3799506487253412 on the card beside it:
+#: :func:`population_structural_checks` returns both, plus the value actually
+#: handed to the family under `points_event_dispersion_used`, and
+#: `gameday_card`'s `OpinionCensus.event_dispersion_line` prints all of it in
+#: the card's model section on every run that builds a player distribution.
+#:
+#: **That sentence used to say "prints ... beside it on every run" and nothing
+#: printed either number.** The only mapping carrying the two keys was
+#: :meth:`PlayerDistribution.structural_checks`, which has no caller in `src/`
+#: or `scripts/`; the mapping the card does print came from
+#: :func:`population_structural_checks` and had neither. Rendered, a card that
+#: priced eight player props carried neither figure and not the word
+#: "dispersion" anywhere in it. The disclosure was offered twice below as the
+#: reason this choice does not need design 4's stop rule to adjudicate it, so
+#: it is now made rather than described.
 #:
 #: The reason is an identity, not a preference. For a mixture with a mean linear
 #: in minutes and a constant conditional VMR, `VMR_unconditional = VMR_conditional
@@ -403,7 +479,10 @@ STRUCTURAL_CHECK_POPULATION_FLOOR: int = 8
 #: :meth:`PlayerDistribution.phi_conditional` reports the athlete's, not this
 #: one. Design 4 declares a tolerance for (a) and for nothing else, so that one
 #: is report-only. Both numbers appear in
-#: :meth:`PlayerDistribution.structural_checks`.
+#: :meth:`PlayerDistribution.structural_checks` — which is a PER-ATHLETE report
+#: with no caller in `src/` or `scripts/`, so "appear in" is a statement about
+#: that mapping and not about anything a run prints. The two dispersions
+#: themselves are on the card; this pair of three-point numbers is not.
 #:
 #: **The sentence in the frozen file that reads as a prohibition on this line,
 #: quoted and answered.** `points_compound_reconciliation`'s note ends:
@@ -451,8 +530,13 @@ STRUCTURAL_CHECK_POPULATION_FLOOR: int = 8
 #: 2.8377415929483303 against the file's own measured 2.328891545818532 — 21.8%
 #: wide, the 22% overstatement the note itself names — while the population
 #: ratio moves from 0.9209 to 1.0875. Both are inside design 4's 15% stop, so
-#: the stop rule does not decide this either way, and the engine prints
-#: `measured_event_dispersion` beside `effective_event_dispersion` on every run.
+#: the stop rule does not decide this either way, and the card prints
+#: `measured_event_dispersion` beside `effective_event_dispersion` and beside
+#: the one that priced it — through `OpinionCensus.event_dispersion_line`, on
+#: every run that builds a player distribution.
+#: `test_the_card_prints_both_event_dispersions_and_says_which_one_priced_the_
+#: card` renders a card and reads them off it, and moves this constant to watch
+#: the printed number follow.
 #: `test_the_file_says_this_number_must_not_be_handed_to_a_panjer_family` reads
 #: the sentence out of the frozen file, re-measures both sides of the identity,
 #: and goes red the day a refit rewrites the note — at which point this answer
@@ -1419,6 +1503,17 @@ def population_structural_checks(
     here raises on population size: with no regulars at all the ratio is NaN and
     `population_athletes` is 0, and :func:`assert_structural_checks` reads the
     census before it reads the ratio.
+
+    **It also carries the scoring-event dispersion disclosure, and that is not
+    a check.** `measured_event_dispersion`, `effective_event_dispersion` and
+    `points_event_dispersion_used` are three frozen numbers, nothing stops on
+    any of them, and they ride here for one reason:
+    :data:`POINTS_EVENT_DISPERSION_KEY` argues for its choice by promising the
+    two candidates are printed beside each other, and this is the only mapping
+    a run prints. Until this commit that promise was false — the two keys
+    existed on :meth:`PlayerDistribution.structural_checks`, which has no
+    caller in `src/` or `scripts/`, so a rendered card carried neither number
+    and not even the word "dispersion".
     """
     target = float(
         shapes.value("structural_check_targets")["unconditional_points_vmr_regulars"]
@@ -1464,6 +1559,25 @@ def population_structural_checks(
     else:
         produced = float("nan")
 
+    # The scoring-event dispersion disclosure, carried on the run-level mapping
+    # because that is the only mapping anything prints. It is not a check and
+    # nothing stops on it: three frozen numbers, one of which is a copy of
+    # another, saying which candidate the compound points sum was priced at.
+    # `POINTS_EVENT_DISPERSION_KEY` argued for its choice by promising both
+    # numbers were "printed beside each other on every run", and for four
+    # commits nothing printed either — `PlayerDistribution.structural_checks`
+    # carried them and has no caller in `src/` or `scripts/`, and the mapping
+    # the card DOES print came from here and had neither key.
+    #
+    # It cannot raise here even though it reads the file: every member of
+    # `population` was made by :func:`build`, which reads
+    # `points_compound_reconciliation` off the same `shapes` before it prices
+    # anything, so a file that would refuse it produces no distributions and
+    # `gameday_card._run_the_structural_check` returns before this line. The
+    # read is unconditional anyway, so an empty population still discloses the
+    # choice the engine would have made.
+    reconciliation = shapes.value("points_compound_reconciliation")
+
     return {
         "unconditional_points_vmr": produced,
         "unconditional_points_vmr_target": target,
@@ -1474,6 +1588,20 @@ def population_structural_checks(
         "population_points_refused": float(refused),
         "regular_min_projected_minutes": regular_floor,
         "population_floor": float(STRUCTURAL_CHECK_POPULATION_FLOOR),
+        "measured_event_dispersion": float(
+            reconciliation["measured_event_dispersion"]
+        ),
+        "effective_event_dispersion": float(
+            reconciliation["effective_event_dispersion"]
+        ),
+        # Read through the same module constant :func:`build` reads, so the
+        # card discloses what was HANDED to the Panjer family rather than a
+        # name retyped here. `test_the_card_prints_both_event_dispersions_and_
+        # says_which_one_priced_the_card` moves the constant and watches the
+        # printed number follow it.
+        "points_event_dispersion_used": float(
+            reconciliation[POINTS_EVENT_DISPERSION_KEY]
+        ),
     }
 
 

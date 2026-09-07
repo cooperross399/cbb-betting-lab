@@ -1925,6 +1925,451 @@ def test_the_outer_cell_split_re_measures_the_numbers_that_fix_its_constants(
         )
 
 
+def _declared_comment(name: str) -> str:
+    """The `#:` block immediately above a module-level constant, as one line.
+
+    A `#:` block is a comment, not a docstring, so nothing can read it at run
+    time: the figures that justify `MARGINAL_SWEEPS` are invisible to
+    `__doc__`, which is half of why they sat unreproduced. This lifts them out
+    of the source so a test can assert the constant's OWN paragraph still
+    quotes what was measured, rather than that the number appears somewhere in
+    a 4,000-line module.
+    """
+    lines = MODULE.read_text(encoding="utf-8").splitlines()
+    index = next(i for i, line in enumerate(lines) if line.startswith(f"{name}:"))
+    block: list[str] = []
+    while index > 0 and lines[index - 1].lstrip().startswith("#:"):
+        index -= 1
+        block.append(lines[index].lstrip()[2:])
+    assert block, f"{name} carries no `#:` block at all"
+    return " ".join(" ".join(reversed(block)).split())
+
+
+def test_the_marginal_sweep_count_re_measures_the_curve_it_sits_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`MARGINAL_SWEEPS` = 8, against the curve rather than one point of it.
+
+    **The defect this is arranged against.** The `#:` block on the constant was
+    its only evidence and its three figures did not reproduce. It said that on
+    this fixture's points-by-rebounds joint at its modal node the worst
+    marginal error is "3.8e-11 at zero sweeps, 1.7e-14 at two and 2.8e-17 at
+    four, and does not improve after that. Eight is twice what the measurement
+    needs." Re-measured on exactly that object, in the shipped configuration,
+    it is 8.3624e-10, 1.9158e-12 and 2.3592e-16 -- out by 22x, 113x and 8.4x --
+    and it DOES improve after four, by a further 8.5x to the floor at five.
+    Nothing on this branch moved them: the whole tree at commit 0985942, the
+    commit that wrote the three figures, was exported with `git archive` and
+    driven through its own copy of this fixture, and returns that column bit
+    for bit (`data/processed/cbb_player_shapes.json` is byte-identical between
+    that commit and this one, so it is the same fixture). No node of the 45
+    carries the quoted triple in any reading -- split, undivided, relative, or
+    on the `pra` joint -- and `grep` found the three strings only in that one
+    comment, so nothing could go red on them. **The constant was right and the
+    measurement was wrong**, which this test settles by measuring the curve the
+    constant sits on instead of one point of it.
+
+    Everything below is a QUADRATURE ACCURACY measurement on fixture joints and
+    on the frozen file's own role priors. No probability here is a price, an
+    edge or a result, and the one price-time reading exists to bound what the
+    whole question is worth: nothing any rung can see.
+
+    Eight claims, each of which the constant's comment now states and this
+    test measures:
+
+    1. **The object the old comment named**, re-measured. The fixture's
+       points-by-rebounds joint at its modal node (index 31, 32.0 minutes),
+       worst absolute marginal error over both axes of the FITTED joint, runs
+       8.3624e-10, 1.7447e-10, 1.9158e-12, 2.0914e-14, 2.3592e-16 and then the
+       double-precision floor at five sweeps -- 2.7756e-17 measured here, which
+       is asserted as a bound rather than a value because it is a multiple of
+       machine epsilon and not a residual. Past the floor it random-walks in
+       the last bits rather than falling -- 5 through 24 sweeps all sit there
+       -- so the constant is bounded above as well as below.
+    2. **The shortcut clause 4 needs is exact.** The joint handed to
+       `_fit_marginals` is the quadrature's output and does not depend on
+       `MARGINAL_SWEEPS`, so a captured joint refitted at `s` sweeps and a
+       whole `coupled_sum_pmf` re-run at `s` sweeps are the same array. That is
+       asserted, not assumed: without it clause 4 measures 1,748 joints it
+       never checked belong to the engine.
+    3. **The rate is a frozen constant, not a property of the fixture.**
+       Iterative proportional fitting on a two-way table contracts by the
+       square of the correlation per sweep. Measured at the modal node against
+       `1/rho^2` off the engine's own matrix: `points|rebounds` 91.07, 91.60
+       and 88.65 against 90.30; `rebounds|assists` 310.84 and 313.00 against
+       295.47; `points|assists` 3752.52 against 3620.81.
+    4. **The curve the constant actually sits on.** Worst over the fixture
+       athlete and the frozen file's own nine role-prior athletes, every
+       minutes node each of them carries (437 of them) and all four couplings
+       the engine builds -- 1,748 joints -- the column is 4.2419e-06,
+       4.5909e-08, 4.6486e-10, 2.4287e-12, 4.1189e-14 and then the floor.
+       Five is where it lands; four is 34x above it; eight is 1.6x five and
+       NOT "twice what the measurement needs". The starting error is the only
+       thing that varies with the athlete and it varies 37x -- 1.1443e-07 on
+       the fixture's own worst node against 4.2419e-06 on the 6.73-minute role
+       prior -- which is the quantity the reserve is sized against.
+    5. **What the measurement does not settle, and the reserve it buys.**
+       Eight is enough because the frozen correlations are small: with the
+       matrix replaced by a synthetic one, eight sweeps leave the worst
+       marginal at 2.083e-13 at `rho` = 0.5, 4.090e-11 at 0.7 and 1.970e-09 at
+       0.9 -- the last of which alone would miss D3's 1e-9. The largest
+       correlation this engine couples is `points|rebounds` =
+       0.10523131793586692, and that is asserted, so a refit that raises it
+       goes red here.
+    6. **Three spare sweeps move no priced number.** Between five sweeps and
+       eight, no rung of any of the four coupled markets moves by more than
+       2.776e-17, mixed over the whole minutes lattice. So the reserve is free
+       in output as well as nearly free in time.
+    7. **The constant IS the sweep count**, read off the AST. This is the one
+       claim no output can carry: five sweeps and eight produce identical
+       rungs, so a `_fit_marginals` that capped its loop would satisfy every
+       measurement above while spending the reserve the comment argues for.
+    8. **The constant's own comment still quotes every figure measured here.**
+       A negative tripwire was refused for the same reason the outer-cell test
+       refuses one: banning the superseded strings would go red on the
+       paragraph that records them as superseded. The check is positive, and
+       it reads the `#:` block above the constant rather than the module, so a
+       figure that migrated elsewhere does not satisfy it.
+    """
+    # Read BEFORE anything is monkeypatched. Claim 6 sets `MARGINAL_SWEEPS`
+    # itself, so an assertion at the end of this test reads the patched value
+    # and passes on any shipped constant at all -- which is the shape of
+    # green-test defect this file has written down twice.
+    shipped = PD.MARGINAL_SWEEPS
+    engine = _distribution()
+    node = engine.price_node()
+    assert node == 31 and float(engine.minutes[node]) == 32.0, (
+        "the comment names the modal node of this fixture's minutes lattice; "
+        f"it is now {node} at {float(engine.minutes[node])} minutes and every "
+        "figure below is about a different object"
+    )
+
+    fit_marginals = PD._fit_marginals
+    seen: dict = {}
+
+    def _capture(joint, marginals):
+        seen["joint"] = np.array(joint, copy=True)
+        seen["targets"] = [np.array(target, copy=True) for target in marginals]
+        return fit_marginals(joint, marginals)
+
+    def _worst(joint: np.ndarray, targets) -> float:
+        """The worst absolute marginal error of one joint, over every axis."""
+        return max(
+            float(
+                np.abs(
+                    joint.sum(axis=tuple(i for i in range(joint.ndim) if i != axis))
+                    - targets[axis]
+                ).max()
+            )
+            for axis in range(joint.ndim)
+        )
+
+    def _quadrature(distribution, components, index, correlation=None):
+        """The joint and its targets, straight out of `coupled_sum_pmf`.
+
+        Captured at zero sweeps only to skip work the capture discards; the
+        joint `_fit_marginals` is HANDED is the quadrature's output either way,
+        which is claim 2.
+        """
+        monkeypatch.setattr(PD, "MARGINAL_SWEEPS", 0)
+        monkeypatch.setattr(PD, "_fit_marginals", _capture)
+        matrix = (
+            distribution._correlation_matrix(components)
+            if correlation is None
+            else correlation
+        )
+        PD.coupled_sum_pmf(
+            [distribution.node_component_pmf(stat, index) for stat in components],
+            matrix,
+        )
+        monkeypatch.setattr(PD, "_fit_marginals", fit_marginals)
+        return seen["joint"], seen["targets"]
+
+    def _curve(joint, targets, sweeps) -> list[float]:
+        out = []
+        for count in sweeps:
+            monkeypatch.setattr(PD, "MARGINAL_SWEEPS", int(count))
+            out.append(_worst(fit_marginals(joint, targets), targets))
+        return out
+
+    # -- claim 1: the object the old comment named -------------------------
+    pair = ("points", "rebounds")
+    joint, targets = _quadrature(engine, pair, node)
+    modal = _curve(joint, targets, range(0, 6))
+    for sweeps, expected in enumerate(
+        (8.3624e-10, 1.7447e-10, 1.9158e-12, 2.0914e-14, 2.3592e-16)
+    ):
+        assert modal[sweeps] == pytest.approx(expected, rel=1e-3), (
+            f"at {sweeps} sweeps the fixture's points-by-rebounds joint at its "
+            f"modal node is out by {modal[sweeps]:.4e}; the constant's comment "
+            f"quotes {expected:.4e} and must be re-measured"
+        )
+    assert modal[5] <= 1e-16, (
+        f"five sweeps now leave {modal[5]:.4e}; the comment says five reaches "
+        "the double-precision floor (2.7756e-17 when measured) and the whole "
+        "argument for eight is that it is 1.6x that"
+    )
+    assert modal[4] / modal[5] >= 4.0, (
+        "the superseded comment said the error 'does not improve after' four "
+        f"sweeps. It falls a further {modal[4] / modal[5]:.1f}x (8.5x when "
+        "measured), which is the sentence this test exists to keep false"
+    )
+    # And it is bounded above: past the floor the last bits random-walk rather
+    # than fall, which is why the comment says raising the constant buys
+    # nothing either.
+    tail = _curve(joint, targets, range(5, 25))
+    assert max(tail) <= 1e-16, (
+        f"sweeps 5 through 24 now reach {max(tail):.4e}; the comment says they "
+        "sit on the floor (2.776e-17 with occasional 4.163e-17 and 5.551e-17) "
+        "and that more sweeps therefore buy nothing"
+    )
+
+    # -- claim 2: the captured joint is the joint --------------------------
+    for sweeps in (3, 8):
+        monkeypatch.setattr(PD, "MARGINAL_SWEEPS", int(sweeps))
+        monkeypatch.setattr(PD, "_fit_marginals", _capture)
+        PD.coupled_sum_pmf(
+            [engine.node_component_pmf(stat, node) for stat in pair],
+            engine._correlation_matrix(pair),
+        )
+        monkeypatch.setattr(PD, "_fit_marginals", fit_marginals)
+        assert np.array_equal(seen["joint"], joint), (
+            "the joint handed to `_fit_marginals` moved with `MARGINAL_SWEEPS`, "
+            "so the captured-once measurement below is measuring joints the "
+            "engine would not have built"
+        )
+
+    # -- claim 3: the contraction is one over the squared correlation ------
+    for components, quoted in (
+        (("points", "rebounds"), (91.07, 91.60, 88.65)),
+        (("rebounds", "assists"), (310.84, 313.00)),
+        (("points", "assists"), (3752.52,)),
+    ):
+        matrix = engine._correlation_matrix(components)
+        rho = float(matrix[0, 1])
+        row = _curve(*_quadrature(engine, components, node), range(0, 5))
+        # The first sweep fits one axis only, so the geometric rate starts at
+        # the second; that is why the comment quotes ratios and not a rate.
+        measured = [row[i + 1] / row[i + 2] for i in range(len(quoted))]
+        for got, expect in zip(measured, quoted):
+            assert got == pytest.approx(expect, rel=5e-3), (
+                f"{'|'.join(components)} now contracts {got:.2f} per sweep; the "
+                f"comment quotes {expect:.2f}"
+            )
+            assert got == pytest.approx(1.0 / (rho * rho), rel=0.1), (
+                f"{'|'.join(components)} contracts {got:.2f} per sweep against "
+                f"1/rho^2 = {1.0 / (rho * rho):.2f}. The comment's whole reason "
+                "for a reserve is that the RATE is frozen and only the starting "
+                "error varies with the athlete"
+            )
+
+    # -- claim 4: the curve, over the file's own population ----------------
+    shapes = _shapes()
+    population = [engine] + [
+        _role_prior_athlete(shapes, bucket) for bucket in range(9)
+    ]
+    couplings = [
+        ("points", "rebounds", "assists"),
+        ("points", "rebounds"),
+        ("points", "assists"),
+        ("rebounds", "assists"),
+    ]
+    assert sum(athlete.minutes.size for athlete in population) == 437, (
+        "the comment counts 437 minutes nodes across these ten athletes; the "
+        "population has changed and the joint count with it"
+    )
+    joints = []
+    fixtures_own = 0
+    for athlete in population:
+        for components in couplings:
+            for index in range(athlete.minutes.size):
+                joints.append(_quadrature(athlete, components, index))
+                fixtures_own += int(athlete is engine)
+    assert len(joints) == 1748, (
+        f"the comment quotes 1,748 joints and this population builds "
+        f"{len(joints)}"
+    )
+    worst_at = []
+    for sweeps in range(0, 9):
+        monkeypatch.setattr(PD, "MARGINAL_SWEEPS", int(sweeps))
+        worst_at.append(
+            max(_worst(fit_marginals(one, target), target) for one, target in joints)
+        )
+    # The starting error is the ONE quantity that varies with the athlete, and
+    # the comment's argument for a reserve is built on how much it varies.
+    monkeypatch.setattr(PD, "MARGINAL_SWEEPS", 0)
+    fixture_start = max(
+        _worst(fit_marginals(one, target), target)
+        for one, target in joints[:fixtures_own]
+    )
+    assert fixture_start == pytest.approx(1.1443e-07, rel=1e-3), (
+        f"the fixture athlete's own worst starting error is now "
+        f"{fixture_start:.4e}; the comment quotes 1.1443e-07 as the bottom of "
+        "the 37x spread the reserve is sized against"
+    )
+    assert worst_at[0] / fixture_start == pytest.approx(37.0, abs=1.0), (
+        "the starting error's spread across the ten athletes has moved off the "
+        f"37x the comment quotes: it is now "
+        f"{worst_at[0] / fixture_start:.1f}x"
+    )
+    for sweeps, expected in enumerate(
+        (4.2419e-06, 4.5909e-08, 4.6486e-10, 2.4287e-12, 4.1189e-14)
+    ):
+        assert worst_at[sweeps] == pytest.approx(expected, rel=1e-3), (
+            f"the worst of the 1,748 joints at {sweeps} sweeps is now "
+            f"{worst_at[sweeps]:.4e}; the comment quotes {expected:.4e}"
+        )
+    assert worst_at[4] >= 1e-14, (
+        "four sweeps now reach the floor on every one of the 1,748 joints, so "
+        "the comment's 'four is not enough' has stopped being true"
+    )
+    for sweeps in (5, 6, 7, 8):
+        assert worst_at[sweeps] <= 5e-15, (
+            f"{sweeps} sweeps leave {worst_at[sweeps]:.4e}, above the "
+            "double-precision floor the comment says five reaches"
+        )
+    assert worst_at[4] / worst_at[5] >= 10.0
+
+    # -- claim 5: what the reserve is for ---------------------------------
+    largest = max(
+        abs(float(engine._correlation_matrix(components)[i, j]))
+        for components in couplings
+        if len(components) == 2
+        for i in range(2)
+        for j in range(i + 1, 2)
+    )
+    assert largest == float(
+        shapes.value("residual_correlation")["points|rebounds"]
+    ) == 0.10523131793586692, (
+        "the largest correlation this engine couples has moved. Eight sweeps "
+        "are enough BECAUSE it is small -- the contraction is 1/rho^2 -- so "
+        "`MARGINAL_SWEEPS` has to be re-measured against the new one"
+    )
+    # A synthetic matrix, never a fitted one: this is a numerical probe of what
+    # the sweep count would cost at a correlation nothing in the tree produces,
+    # and no price is taken from it.
+    at_three_tenths = _curve(
+        *_quadrature(
+            engine, pair, node, np.array([[1.0, 0.3], [0.3, 1.0]])
+        ),
+        [8],
+    )[0]
+    assert at_three_tenths <= 1e-15, (
+        f"eight sweeps at rho = 0.3 now leave {at_three_tenths:.4e}; the "
+        "comment quotes 8.327e-17, which is the floor, and the point of the "
+        "row is that 0.3 is still covered and 0.5 is not"
+    )
+    for rho, expected in ((0.5, 2.083e-13), (0.7, 4.090e-11), (0.9, 1.970e-09)):
+        synthetic = np.array([[1.0, rho], [rho, 1.0]])
+        eight = _curve(*_quadrature(engine, pair, node, synthetic), [8])[0]
+        assert eight == pytest.approx(expected, rel=1e-2), (
+            f"at a correlation of {rho} eight sweeps now leave {eight:.4e}; the "
+            f"comment quotes {expected:.4e} as what the constant does NOT cover"
+        )
+    assert eight > 1e-9, (
+        "the comment says eight sweeps at rho = 0.9 alone would miss D3's 1e-9, "
+        f"and it now leaves {eight:.4e}"
+    )
+
+    # -- claim 6: the reserve moves no priced number -----------------------
+    coupled = (
+        "player_points_rebounds",
+        "player_points_assists",
+        "player_rebounds_assists",
+        "player_pra",
+    )
+    priced = {}
+    for sweeps in (5, 8):
+        monkeypatch.setattr(PD, "MARGINAL_SWEEPS", int(sweeps))
+        built = _distribution()
+        priced[sweeps] = {
+            market: np.array(built.count_pmf(market)) for market in coupled
+        }
+    monkeypatch.setattr(PD, "MARGINAL_SWEEPS", shipped)
+    for market in coupled:
+        five, eight_rungs = priced[5][market], priced[8][market]
+        assert five.shape == eight_rungs.shape
+        moved = float(np.abs(five - eight_rungs).max())
+        assert moved <= 1e-16, (
+            f"{market} moves by {moved:.4e} between five sweeps and eight; the "
+            "comment says the three spare sweeps move no rung by more than "
+            "2.776e-17, which is why the reserve is free"
+        )
+
+    # -- claim 7: the constant IS the sweep count -------------------------
+    # Structural, and it is the one claim above that no output can carry:
+    # five sweeps and eight produce identical rungs, so a `_fit_marginals`
+    # that quietly capped the loop would satisfy every measurement here while
+    # spending the reserve the comment argues for. The loop's own bound is
+    # read off the AST instead.
+    tree = ast.parse(MODULE.read_text(encoding="utf-8"), filename=str(MODULE))
+    fitter = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == "_fit_marginals"
+    )
+    bounds = [
+        node.iter
+        for node in ast.walk(fitter)
+        if isinstance(node, ast.For)
+        and isinstance(node.iter, ast.Call)
+        and isinstance(node.iter.func, ast.Name)
+        and node.iter.func.id == "range"
+    ]
+    assert len(bounds) == 1, (
+        f"`_fit_marginals` now has {len(bounds)} counted loops; the sweep "
+        "count is supposed to be the only one"
+    )
+    assert [ast.dump(argument) for argument in bounds[0].args] == [
+        ast.dump(ast.Name(id="MARGINAL_SWEEPS", ctx=ast.Load()))
+    ], (
+        "the sweep loop no longer runs exactly `MARGINAL_SWEEPS` times: it is "
+        f"bounded by `{ast.unparse(bounds[0])}`. Five sweeps and eight produce "
+        "identical rungs, so a cap here is invisible to every other assertion "
+        "in this test and would silently spend the reserve"
+    )
+
+    # -- claim 8: the comment still quotes every figure --------------------
+    comment = _declared_comment("MARGINAL_SWEEPS")
+    for figure in (
+        "4.2419e-06",
+        "4.5909e-08",
+        "4.6486e-10",
+        "2.4287e-12",
+        "4.1189e-14",
+        "9.9920e-16",
+        "1.2212e-15",
+        "8.3624e-10",
+        "1.9158e-12",
+        "2.3592e-16",
+        "2.7756e-17",
+        "91.07",
+        "88.65",
+        "310.84",
+        "3752.52",
+        "0.10523131793586692",
+        "2.083e-13",
+        "1.970e-09",
+        "1.1443e-07",
+        "437",
+        "37x",
+        "1,748",
+    ):
+        assert figure in comment, (
+            f"{figure} is measured by this test and no longer appears in "
+            "`MARGINAL_SWEEPS`' own comment. Re-measuring without editing the "
+            "prose is how the last three figures came to be wrong"
+        )
+    assert shipped == 8, (
+        f"`MARGINAL_SWEEPS` is now {shipped}. Every figure above is "
+        "measured on the curve and not on the shipped value, so the curve does "
+        "not move when the constant does -- what has to move with it is the "
+        "comment's argument: five is the measured floor, eight is the reserve "
+        "it keeps, and a new value needs its own sentence about which of those "
+        "it is"
+    )
+
+
 # --------------------------------------------------------------------------
 # Where the constants come from, and what the engine refuses
 # --------------------------------------------------------------------------
@@ -4089,6 +4534,132 @@ def test_the_card_prints_design_4s_ratio_and_not_only_stops_on_it(
         "two of the three states publish the same section, which is the "
         "ambiguity this line exists to remove"
     )
+
+
+def test_the_card_prints_both_event_dispersions_and_says_which_one_priced_the_card(
+    tmp_path: Path,
+) -> None:
+    """`POINTS_EVENT_DISPERSION_KEY`'s disclosure, read off a rendered card.
+
+    **The defect.** The constant justifies its choice twice by promising the
+    disclosure -- "This engine takes `effective_event_dispersion` =
+    1.1059306970490195 and prints `measured_event_dispersion` =
+    1.3799506487253412 beside it on every run", and again at the end of the
+    paragraph that answers the frozen file's apparent prohibition -- and
+    nothing printed either number. The only mapping carrying the two keys was
+    `PlayerDistribution.structural_checks`, which has no caller in `src/` or
+    `scripts/`. The mapping a run does print came from
+    `population_structural_checks`, which returned nine keys and neither
+    dispersion. Rendered, the eight-prop card built below carried neither
+    figure and not the word "dispersion" anywhere in it.
+
+    It is load-bearing rather than decorative: the same paragraph concedes the
+    choice moves design 4's produced ratio by 0.167, "the whole width of design
+    4's stop budget", and offers the printed-beside disclosure as the thing
+    that keeps the choice honest given the stop rule cannot decide it.
+
+    Four claims:
+
+    1. **Both frozen numbers reach a published card**, at full precision, in
+       its model section, with the name of the key that priced it. Read
+       through `run_card` and `render_card`, never by calling the reporter: a
+       test that called `OpinionCensus.event_dispersion_line` itself would pass
+       on a card that printed nothing, which is exactly the state this repair
+       is against and which the ratio line was in until last commit.
+    2. **The sentence follows the engine rather than repeating a literal.**
+       Moving `POINTS_EVENT_DISPERSION_KEY` moves the number the card says it
+       priced at, the name it gives that number, and which candidate is named
+       as unused. That is asserted on a card BELOW the population floor,
+       because the swap is not cosmetic: on this fixture population -- eight
+       copies of one athlete, which is not the frozen file's nine role priors
+       the constant's 0.9209/1.0875 pair is measured over -- it moves the
+       pooled ratio from 1.0819 to 1.2596 and design 4's stop fires. Both of
+       those are structural checks over a fixture, not results.
+    3. **A card that built no player distribution says so**, so the two states
+       do not publish the same sentence; that is the ambiguity
+       `structural_check_line` exists against, one level down.
+    4. **Nothing stops on the disclosure.** It is three frozen constants, and
+       `assert_structural_checks` still refuses a mapping that carries them
+       without a population.
+
+    Nothing here is graded. Every number is a frozen constant read out of
+    `data/processed/cbb_player_shapes.json` and reprinted, or a structural
+    check over a fixture card that says so. No ROI, edge or verdict is stated,
+    and no market refused by name is priced.
+    """
+    from cbb_betting_lab.reports import gameday_card as GC
+
+    shapes = _shapes()
+    reconciliation = shapes.value("points_compound_reconciliation")
+    effective = float(reconciliation["effective_event_dispersion"])
+    measured = float(reconciliation["measured_event_dispersion"])
+    assert PD.POINTS_EVENT_DISPERSION_KEY == "effective_event_dispersion"
+
+    # -- claim 1: both numbers, on a published card -----------------------
+    passing, _, _ = _card_of(PD.STRUCTURAL_CHECK_POPULATION_FLOOR)
+    section = _model_section_of(
+        _rendered_card(
+            passing,
+            tmp_path=tmp_path,
+            events=PD.STRUCTURAL_CHECK_POPULATION_FLOOR,
+            name="dispersion",
+        )
+    )
+    assert repr(effective) in section, section
+    assert repr(measured) in section, section
+    assert "priced the compound points sum at `effective_event_dispersion`" in section
+    assert "other candidate `measured_event_dispersion`" in section
+    assert "was not used" in section
+
+    # -- claim 2: it follows the constant ---------------------------------
+    below = PD.STRUCTURAL_CHECK_POPULATION_FLOOR - 1
+    original = PD.POINTS_EVENT_DISPERSION_KEY
+    try:
+        PD.POINTS_EVENT_DISPERSION_KEY = "measured_event_dispersion"
+        swapped_model, swapped_wagers, _ = _card_of(below)
+        swapped = _model_section_of(
+            _rendered_card(
+                swapped_model, tmp_path=tmp_path, events=below, name="swapped"
+            )
+        )
+        _, swapped_census = GC.opinions_for(swapped_wagers, swapped_model, day=DAY)
+        stopped = swapped_census.structural_check["unconditional_points_vmr_ratio"]
+        # The card at the floor, with the constant swapped: design 4's stop
+        # fires on this fixture population. Built here rather than asserted
+        # from the ratio alone, because the point of claim 2 is that the swap
+        # reaches the priced object and not only the printed sentence.
+        at_floor, floor_wagers, _ = _card_of(PD.STRUCTURAL_CHECK_POPULATION_FLOOR)
+        with pytest.raises(PD.StructuralCheckFailed, match="a ratio of 1.2596"):
+            GC.opinions_for(floor_wagers, at_floor, day=DAY)
+    finally:
+        PD.POINTS_EVENT_DISPERSION_KEY = original
+    assert PD.POINTS_EVENT_DISPERSION_KEY == "effective_event_dispersion"
+
+    assert "priced the compound points sum at `measured_event_dispersion`" in swapped
+    assert "other candidate `effective_event_dispersion`" in swapped
+    assert repr(measured) in swapped and repr(effective) in swapped
+    assert stopped == pytest.approx(1.2596, abs=1e-3), (
+        "the swap no longer moves the fixture card's pooled ratio, so claim 2 "
+        "is asserting a printed sentence over an unchanged object"
+    )
+
+    # -- claim 3: the state where no dispersion was chosen ----------------
+    never = _model_section_of(
+        _rendered_card({}, tmp_path=tmp_path, events=2, name="no-dispersion")
+    )
+    assert "No scoring-event dispersion was chosen on this card" in never
+    assert repr(effective) not in never and repr(measured) not in never
+    assert "priced the compound points sum at" not in never
+
+    # -- claim 4: it is a disclosure and nothing stops on it --------------
+    with pytest.raises(PD.PlayerDistributionError, match="POPULATION quantity"):
+        PD.assert_structural_checks(
+            {
+                "measured_event_dispersion": measured,
+                "effective_event_dispersion": effective,
+                "points_event_dispersion_used": effective,
+            }
+        )
 
 
 # --------------------------------------------------------------------------
