@@ -1431,9 +1431,22 @@ def _assert_gate_precedes_filter(function) -> None:
             "_without_markets_refused_by_name",
         }:
             continue
+        # **No escape hatch for a non-name argument.** The previous version
+        # read `if passed_name is None or target.id == passed_name`, and the
+        # disjunction SKIPPED the check whenever the argument was not a bare
+        # name — a `.copy()`, a slice, a keyword-only call. Reproduced:
+        # `unused = _PR.without_markets_refused_by_name(bets.copy())` kept this
+        # green, and a 300-row `player_double_double` frame then came back from
+        # `build_record` with a verdict. That is the third version of this
+        # assertion defeated the same way: it proved a construct was PRESENT,
+        # not that the frame flowing on was the filtered one.
+        #
+        # The filter must take a bare name and bind the result back to THAT
+        # name, so the frame every later line sees is the filtered one.
         passed = value.args[0] if value.args else None
-        passed_name = getattr(passed, "attr", None) or getattr(passed, "id", None)
-        if passed_name is None or target.id == passed_name:
+        if not isinstance(passed, ast.Name):
+            continue
+        if target.id == passed.id:
             bound_filters.append(node.lineno)
 
     gates, filters = [], list(bound_filters)

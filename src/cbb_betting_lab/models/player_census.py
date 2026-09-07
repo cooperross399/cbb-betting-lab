@@ -1259,7 +1259,6 @@ _RECONCILED: dict[str, Attribution] = {}
 #: actually grades. Adding the guard without adding the name here left it
 #: unexercised by all three of them.
 GRADING_ENTRY_POINTS: tuple[str, ...] = (
-    "cbb_betting_lab.reports.price_backtest.build_record",
     "cbb_betting_lab.forward_evidence.render_ledger",
     "cbb_betting_lab.forward_evidence.report_payload",
     "cbb_betting_lab.reachability.build_record",

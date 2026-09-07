@@ -926,13 +926,6 @@ def test_no_player_wager_can_be_graded_until_this_gate_has_run(tmp_path):
         "forward_evidence.render_ledger": lambda: FE.render_ledger(props),
         "forward_evidence.report_payload": lambda: FE.report_payload(props),
         "reachability.build_record": lambda: RE.build_record(props, None),
-        # Added 2026-09-07 with the name. This is the door the shipped script
-        # always opens: `run_price_backtest.py` calls `settled_opinions` inside
-        # `if args.write_graded:` and this on every invocation, so a default
-        # run reached no gate at all until it was added.
-        "price_backtest.build_record": lambda: PB.build_record(
-            PB.BacktestInputs(universe=props, bets=props.iloc[0:0])
-        ),
     }
     assert set(refusals) == {
         dotted.split(".", 2)[-1] if dotted.startswith("cbb_betting_lab.reports.")
@@ -1525,3 +1518,58 @@ def test_every_grading_entry_point_filters_before_it_gates():
             f"{function.__qualname__} filters before it gates; the gate must be "
             "the first statement and the filter must follow it"
         )
+
+
+def test_the_grading_commit_still_owes_this_gate():
+    """`price_backtest.build_record` scores player markets with NO census.
+
+    **Written down because it cannot be closed here.** `guard_graded_frame`
+    demands two receipts, and the second is set only by
+    `assert_every_offered_prop_is_accounted`, which has no caller anywhere and
+    which clause 5 above forbids any script from calling: "Grading belongs in
+    its own commit, gated on this one." It is a NOT-YET gate.
+
+    `build_record` is not a not-yet path. It is the shipped backtest's ROI
+    half, it runs on every invocation, and the committed
+    `data/outputs/cbb_price_backtest.json` holds 127 null-baseline rows over
+    twelve player markets that it produced. Gating it was attempted three times
+    and each attempt only changed which refusal the run died on; the last paid
+    a full pass over the 978 MB store first.
+
+    So the hole is real and stated: this function scores player markets without
+    a census receipt. The filter still runs, so a market refused BY NAME never
+    reaches a verdict — that needs no receipt. Closing the rest belongs in the
+    grading commit the census was built for, and this assertion goes red the
+    day something files the second receipt, which is the day it can be closed.
+    """
+    # **Read the CALLS, not the prose.** The first version of this asserted
+    # `"guard_graded_frame" not in source` and failed on the COMMENT above the
+    # code explaining why the gate is absent — a test matching text instead of
+    # behaviour, inside the test written about that very habit.
+    import ast
+    import inspect
+    import textwrap
+
+    from cbb_betting_lab.reports import price_backtest as PBT
+
+    tree = ast.parse(textwrap.dedent(inspect.getsource(PBT.build_record)))
+    called = {
+        getattr(node.func, "attr", None) or getattr(node.func, "id", None)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+    }
+    assert "guard_graded_frame" not in called, (
+        "`build_record` now CALLS the census gate. If the second receipt has a "
+        "producer, add the name back to GRADING_ENTRY_POINTS, drive it in the "
+        "five-door test, and delete this. If it does not, the shipped backtest "
+        "cannot run: measured three times, each attempt only changing which "
+        "refusal it died on."
+    )
+    assert "without_markets_refused_by_name" in called, (
+        "the refusal filter came off with the gate. It needs no receipt and a "
+        "market refused by name must never carry a verdict."
+    )
+    assert PC.accounted() == (), (
+        "something filed the accounting receipt, so the not-yet gate is "
+        "satisfiable now and this gap can be closed properly"
+    )

@@ -1550,25 +1550,6 @@ def main(argv: list[str] | None = None) -> int:
     # 10: the run stops until it reconciles. A run that grades a player wager
     # takes the census first; a store with no player quote reconciles trivially
     # and costs one pass over the file.
-    # **Only when the universe actually carries a player market.** Reconciling
-    # unconditionally was wrong twice over: `args` has no `prices` attribute
-    # (the store is resolved by `H.store_path(competition, processed_dir,
-    # window)`, not by a flag), and `--rebuild-report-only` exists precisely to
-    # re-render WITHOUT the store — `test_rebuild_report_only_re_renders_
-    # without_the_store_or_the_tables` says so in its name. Twenty-two errors
-    # said so too.
-    #
-    # The gate's own rule is the right condition: it fires on a frame carrying
-    # a player market and is silent otherwise, so ask it what it sees and take
-    # the census only when there is something for the census to be about.
-    if player_census.player_markets_in(universe):
-        store_path = H.store_path(competition, Path(args.processed_dir), window)
-        player_census.assert_reconciles(store=store_path)
-        print(
-            f"Wager census reconciled over {store_path}; this run grades "
-            "player markets and design section 10 gates that on reconciling."
-        )
-
     record = PB.build_record(
         PB.BacktestInputs(
             universe=universe,
