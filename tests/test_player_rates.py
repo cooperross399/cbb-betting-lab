@@ -851,15 +851,9 @@ def test_a_subject_is_counted_once_however_many_rungs_it_carries() -> None:
     assert slate.resolution_census["quotes:exact"] == 9
 
 
-def test_the_per_tier_resolution_rate_is_reported_every_run() -> None:
-    """Design 13, failure mode 5, and the gate that goes with it.
-
-    Reported over resolved subjects only, because design 9 tiers a player by
-    his OWN team and an unresolved name has none. The refused names are
-    reported beside it with their count rather than distributed across the
-    tiers, and the 2pp check is stated as being over the resolved.
-    """
-    frame = pd.concat(
+def _census_history() -> pd.DataFrame:
+    """The two-athlete history the per-tier census tests are built on."""
+    return pd.concat(
         [
             _history(athlete_id=4001.0, name="High Major", team_id=55),
             pd.DataFrame(
@@ -878,6 +872,17 @@ def test_the_per_tier_resolution_rate_is_reported_every_run() -> None:
         ],
         ignore_index=True,
     )
+
+
+def test_the_per_tier_resolution_rate_is_reported_every_run() -> None:
+    """Design 13, failure mode 5, and the gate that goes with it.
+
+    Reported over resolved subjects only, because design 9 tiers a player by
+    his OWN team and an unresolved name has none. The refused names are
+    reported beside it with their count rather than distributed across the
+    tiers, and the 2pp check is stated as being over the resolved.
+    """
+    frame = _census_history()
     tiers = TierTable(
         team_tier={55: Tier.HIGH_MAJOR, 66: Tier.LOW_MAJOR},
         conference_tier={},
@@ -898,16 +903,92 @@ def test_the_per_tier_resolution_rate_is_reported_every_run() -> None:
     assert census[Tier.LOW_MAJOR.value]["priceable"] == 0
     assert PR.untiered_name_refusals(slate) == 1
 
-    with pytest.raises(PR.PlayerRatesError) as raised:
-        PR.assert_tier_resolution_holds(census)
-    assert "percentage points across tiers" in str(raised.value)
-    assert "20.5%" in str(raised.value), "the gate cites the defect it exists for"
+    # **It reports; it does not stop.** Cooper's declaration of 2026-09-07.
+    # The number is the PRICEABLE rate and design 13's 2pp threshold is for the
+    # RESOLUTION rate; measured on a real eight-game board the spread is
+    # 7.50pp, so raising stopped every card.
+    wide = PR.report_tier_priceable_rates(census)
+    assert wide is not None
+    assert wide.gated is False, "this reports until the census can tier a refusal"
+    assert wide.spread_points > wide.tolerance_points, (
+        "this fixture is meant to exceed the threshold, so a report rather than "
+        "a raise is what is being asserted"
+    )
+    assert "reports and does not stop" in wide.line()
+    assert "%" in wide.line() and "pp" in wide.line()
 
     flat = {
         Tier.HIGH_MAJOR.value: {"subjects": 100, "priceable": 90},
         Tier.LOW_MAJOR.value: {"subjects": 100, "priceable": 91},
     }
-    PR.assert_tier_resolution_holds(flat)
+    narrow = PR.report_tier_priceable_rates(flat)
+    assert narrow is not None and narrow.spread_points == 1.0
+    assert narrow.gated is False
+
+    # Fewer than two tiers carrying a subject: nothing to compare, and None
+    # rather than a spread of zero, which would read as agreement.
+    assert PR.report_tier_priceable_rates(
+        {Tier.HIGH_MAJOR.value: {"subjects": 10, "priceable": 9}}
+    ) is None
+
+
+def test_the_gate_design_13_asks_for_is_held_open() -> None:
+    """The real gate waits on a census that can tier a name refusal.
+
+    Design 13 failure mode 5 stops the run when the RESOLUTION rate moves more
+    than 2pp across tiers. That rate cannot be computed per tier here: design 9
+    tiers a player by his OWN team, an unresolved name has no athlete and
+    therefore no team, and tiering the R1/R1a rows by the event's two sides
+    would reintroduce a read from the team side. `resolution_census` counts a
+    name refusal in no tier at all.
+
+    So the priceable rate reports instead, and this assertion holds the gap
+    open: it goes RED the day the census gains a per-tier refused-name count,
+    which is the day design 13's gate can be written against the quantity it
+    was declared for. The threshold is already carried on the report.
+    """
+    # **Read off what the census PRODUCES, not what its prose says.** The first
+    # version of this grepped the source for "name_refusals" and matched the
+    # docstring paragraph explaining why refusals are excluded — text, not
+    # behaviour, which is the trap this session has hit repeatedly.
+    #
+    # A census that could tier a refusal would carry a per-tier count of them.
+    # These are the keys it carries today, over a real slate.
+    # **Built by the module, not typed here.** The first version read a
+    # hardcoded `{"subjects", "priceable"} | ROUTES`, so adding a
+    # `refused_names` counter to the census left this green — a test reading a
+    # constant instead of the thing it is about, for the fifth time this
+    # session. This drives `resolution_census` and reads the keys it returns.
+    tiers = TierTable(
+        team_tier={55: Tier.HIGH_MAJOR, 66: Tier.LOW_MAJOR},
+        conference_tier={},
+        team_margin={},
+        conference_margin={},
+        seasons=(2023,),
+    )
+    slate = PR.player_projections_for(
+        day=DAY,
+        player_history=_census_history(),
+        prices=_prices("High Major", "Low Major", "Nobody At All"),
+        shapes=_shapes(),
+        tiers=tiers,
+    )
+    census = PR.resolution_census(slate.projections, tiers=tiers)
+    counters: set = set()
+    for counts in census.values():
+        counters |= set(counts)
+    assert counters, "the census produced no tier; nothing would be asserted"
+    assert not {key for key in counters if "refus" in key or "unresolved" in key}, (
+        f"`resolution_census` now carries {sorted(counters)} per tier, which "
+        "includes a refused-name count — so it CAN tier a refusal. Design 13's "
+        "gate can now be written against the RESOLUTION rate it was declared "
+        "for: write it, set `gated=True`, and delete this assertion in the "
+        "same commit."
+    )
+    assert PR.TIER_RESOLUTION_TOLERANCE_POINTS == 2.0, (
+        "the threshold design 13 declared is kept so the gate has its number "
+        "the day it can be written"
+    )
 
 
 # --------------------------------------------------------------------------

@@ -4431,7 +4431,7 @@ def _card_of(events: int, *, shapes=None):
 def test_design_4s_stop_rule_has_a_caller_on_the_pricing_path(
     tmp_path: Path,
 ) -> None:
-    """It runs on a card, it reports, and it stops the run when it fires.
+    """It runs on a card and it reports. It does NOT stop — see the body.
 
     **The defect.** `assert_structural_checks` had no caller anywhere outside
     this file: `build()` did not call it, `opinions_for` built one
@@ -5129,7 +5129,7 @@ def _two_tier_model(tiers: "tuple[tuple[str, bool], ...]"):
 def test_design_13s_per_tier_resolution_gate_has_a_caller_on_the_pricing_path(
     tmp_path: Path,
 ) -> None:
-    """It runs on a card, it reports, and it stops the run when it fires.
+    """It runs on a card and it reports. It does NOT stop — see the body.
 
     **The defect, and it is design 4's defect wearing a different design
     clause.** Design 13's failure mode 5 asks for two things: print the per-tier
@@ -5154,7 +5154,7 @@ def test_design_13s_per_tier_resolution_gate_has_a_caller_on_the_pricing_path(
     Nothing here is graded. Every number is a count of subjects, and no ROI,
     edge, interval or verdict is stated.
 
-    Mutation: delete `player_rates.assert_tier_resolution_holds(...)` from
+    Mutation: delete `player_rates.report_tier_priceable_rates(...)` from
     `_run_the_resolution_check` — RED on the first half. Delete
     `_run_the_resolution_check(model, census)` from `opinions_for` — RED on
     both. Delete `run.opinions.tier_resolution_line()` from `_model_section` —
@@ -5162,17 +5162,36 @@ def test_design_13s_per_tier_resolution_gate_has_a_caller_on_the_pricing_path(
     """
     from cbb_betting_lab.reports import gameday_card as GC
 
-    # Half one: the stop. 100% against 50% is 50 percentage points, against a
-    # declared tolerance of 2.
-    stopped, wagers, _ = _two_tier_model(
+    # Half one: **it reports and does not stop** — Cooper's declaration of
+    # 2026-09-07. 100% against 50% is fifty percentage points, twenty-five
+    # times the threshold, and the run continues.
+    #
+    # It stopped before, and stopping was wrong: the quantity is the PRICEABLE
+    # rate and design 13's 2pp is declared for the RESOLUTION rate. Measured on
+    # a real eight-game board the spread is 7.50pp, so the card stopped every
+    # night — read as "the model refuses tonight" when the truth was "the
+    # threshold is measuring the wrong thing". The resolution rate cannot be
+    # gated in its place: an unresolved name carries no athlete, so no team and
+    # no tier, and `resolution_census` files it in no tier at all.
+    wide, wagers, _ = _two_tier_model(
         (("high_major", True), ("high_major", True), ("low_major", True), ("low_major", False))
     )
-    with pytest.raises(PR.PlayerRatesError) as raised:
-        GC.opinions_for(wagers, stopped, day=DAY)
-    message = str(raised.value)
-    assert "percentage points across tiers" in message, message
-    assert f"more than the declared {PR.TIER_RESOLUTION_TOLERANCE_POINTS}pp" in message
-    assert "biased sample rather than a smaller one" in message
+    _probabilities, census = GC.opinions_for(wagers, wide, day=DAY)
+    reported = census.tier_priceable
+    assert reported is not None, (
+        "the per-tier priceable rate reached no census, so design 13's "
+        "first half — print it every run — is unmet again"
+    )
+    assert reported.gated is False
+    assert reported.spread_points > reported.tolerance_points, (
+        "this fixture is built to exceed the threshold; a report rather than a "
+        "raise is the whole claim"
+    )
+    assert reported.tolerance_points == PR.TIER_RESOLUTION_TOLERANCE_POINTS, (
+        "the threshold design 13 declared is carried on the report, so the day "
+        "the census can tier a refusal the gate has its number already"
+    )
+    assert "reports and does not stop" in reported.line()
 
     # Half two: the report, off a rendered card. Two tiers, both resolving in
     # full, so the check runs and passes and the card has to say so.

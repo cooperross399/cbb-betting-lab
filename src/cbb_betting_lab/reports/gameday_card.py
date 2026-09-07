@@ -876,6 +876,12 @@ class OpinionCensus:
     #: folded into a tier, which would be a read from the team side.
     untiered_name_refusals: int = 0
 
+    #: What the per-tier priceable check found, or None when fewer than two
+    #: tiers carried a subject. It REPORTS: design 13's 2pp threshold is for
+    #: the resolution rate and this is the priceable rate, and on a real board
+    #: the spread is 7.50pp, so gating on it stopped every card.
+    tier_priceable: object = None
+
     def decline(self, reason: str) -> None:
         self.declined[reason] = self.declined.get(reason, 0) + 1
 
@@ -1759,7 +1765,16 @@ def _run_the_resolution_check(
         ).items()
     }
     census.untiered_name_refusals = len(model.name_refusals)
-    player_rates.assert_tier_resolution_holds(census.tier_resolution)
+    # **Reports, does not stop** — Cooper's declaration of 2026-09-07. The
+    # number this computes is the PRICEABLE rate and design 13's 2pp threshold
+    # is for the RESOLUTION rate; measured on a real eight-game board the
+    # spread is 7.50pp, so raising stopped every card. It reports until
+    # `resolution_census` can attribute a name refusal to a tier, at which
+    # point the gate design 13 asks for can be written against the right
+    # quantity and the threshold is already carried on the result.
+    census.tier_priceable = player_rates.report_tier_priceable_rates(
+        census.tier_resolution
+    )
 
 
 def _month_of(day: str) -> int:

@@ -173,7 +173,8 @@ __all__ = [
     "mean_for_market",
     "refusal_census",
     "resolution_census",
-    "assert_tier_resolution_holds",
+    "report_tier_priceable_rates",
+    "TierPriceableRates",
     "STAT_KEYS",
     "SETTLEMENT_COLUMN",
     "MARKET_COMPONENTS",
@@ -2075,19 +2076,69 @@ def untiered_name_refusals(slate: PlayerSlate) -> int:
     return len(slate.name_refusals)
 
 
-def assert_tier_resolution_holds(
+@dataclass(frozen=True)
+class TierPriceableRates:
+    """The per-tier priceable rate, its spread, and whether anything stopped."""
+
+    by_tier: Mapping[str, float]
+    spread_points: float
+    tolerance_points: float
+    gated: bool
+
+    def line(self) -> str:
+        """One sentence for the card, naming the quantity it actually is."""
+        rates = ", ".join(
+            f"{tier} {rate:.2f}%" for tier, rate in sorted(self.by_tier.items())
+        )
+        stopped = "stops the run" if self.gated else "reports and does not stop"
+        return (
+            f"Priceable rate per tier: {rates} -- a spread of "
+            f"{self.spread_points:.2f}pp. This {stopped}."
+        )
+
+
+def report_tier_priceable_rates(
     census: Mapping[str, Mapping[str, int]],
     *,
     tolerance_points: float = TIER_RESOLUTION_TOLERANCE_POINTS,
-) -> None:
-    """Stop the run when the priceable rate moves more than 2pp across tiers.
+) -> "TierPriceableRates | None":
+    """The priceable rate per tier. **Reports; does not stop the run.**
 
-    Design 13, failure mode 5. A gate, not a price: it refuses to let a run
-    continue, and it can never turn a refusal into an opinion. Computed over
-    resolved subjects, over the three real tiers only —
-    :attr:`Tier.UNPLACED` is reported separately by
-    `conferences` convention and folding it in would let a first-D-I-season
-    roster move the check.
+    **It measures a different quantity from the one design 13 gates.** Design
+    13 failure mode 5 stops the run when the RESOLUTION rate -- the name join,
+    the fraction of quoted subjects resolving to exactly one prior-roster
+    athlete -- moves more than 2pp across tiers. What is computed here is
+    `priceable / subjects` over subjects that ALREADY resolved, which is the
+    R2-to-R6 refusal rate: too few prior games, too few prior minutes, too low
+    a projection. A tier can join every name and price few of them.
+
+    Measured through the shipped path over an eight-game board on 2026-02-07,
+    160 subjects and 352 wagers: high-major 39/40 = 97.50%, low-major
+    57/59 = 96.61%, mid-major 54/60 = 90.00% -- a spread of **7.50pp** against
+    a 2pp threshold written for something else. Raising on that stopped every
+    card, and a gate that always fires is not a gate; it reads as "the model
+    refuses tonight" when the truth is "the threshold is measuring the wrong
+    thing".
+
+    **Why the resolution rate is not gated here instead.** It cannot be tiered
+    from this census. Design 9 tiers a player by his OWN team, which an
+    unresolved name does not have, and tiering the R1/R1a rows by the event's
+    two teams would reintroduce a read from the team side. `resolution_census`
+    therefore attributes a name refusal to no tier at all, and
+    `untiered_name_refusals` counts them separately.
+
+    **This reports until the census can tier a refusal** -- Cooper's
+    declaration of 2026-09-07, taken because the alternatives were a gate that
+    always fires and a threshold invented here for a quantity nobody has
+    declared one for. `TIER_RESOLUTION_TOLERANCE_POINTS` is kept and carried on
+    the result, so the day the census can tier a refusal the gate has its
+    number already, and
+    `tests/test_player_rates.py::test_the_gate_design_13_asks_for_is_held_open`
+    goes red on that day.
+
+    Computed over the three real tiers only: :attr:`Tier.UNPLACED` is reported
+    separately by `conferences` convention and folding it in would let a
+    first-D-I-season roster move the number.
     """
     rates: dict[str, float] = {}
     for tier, counts in census.items():
@@ -2097,16 +2148,11 @@ def assert_tier_resolution_holds(
         if subjects:
             rates[tier] = 100.0 * int(counts.get("priceable", 0)) / subjects
     if len(rates) < 2:
-        return
+        return None
     spread = max(rates.values()) - min(rates.values())
-    if spread > float(tolerance_points):
-        raise PlayerRatesError(
-            "the priceable rate moves "
-            f"{spread:.2f} percentage points across tiers "
-            f"({ {t: round(r, 2) for t, r in sorted(rates.items())} }), which "
-            f"is more than the declared {tolerance_points}pp. A resolution "
-            "rate that runs with tier is a biased sample rather than a smaller "
-            "one -- the team-name version of this defect lost 20.5% of names "
-            "with 46.7% of the misses at the low-major end -- and the run "
-            "stops rather than reporting a census of the games it could read."
-        )
+    return TierPriceableRates(
+        by_tier={tier: round(rate, 2) for tier, rate in sorted(rates.items())},
+        spread_points=round(spread, 2),
+        tolerance_points=float(tolerance_points),
+        gated=False,
+    )
