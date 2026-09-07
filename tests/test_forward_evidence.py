@@ -43,6 +43,34 @@ from cbb_betting_lab.settlement import Outcome  # noqa: E402
 NOW = datetime(2027, 1, 20, 12, 0, tzinfo=timezone.utc)
 
 
+@pytest.fixture
+def census_receipt(tmp_path):
+    """A wager-census receipt for this process, dropped again afterwards.
+
+    `render_ledger` and `report_payload` are declared grading entry points as
+    of 2026-09-06 — the Opinions table prints ROI, a 95% interval, a
+    family-corrected interval and a Verdict per market and per tier over every
+    settled row, player props included, and neither function was named in
+    `player_census.GRADING_ENTRY_POINTS` nor called the guard. Both now refuse
+    a ledger carrying a player market until design section 10's census has
+    reconciled in this process.
+
+    The receipt is process-global, so this fixture clears it on both sides: a
+    leak forward would make the gate look shut in a file that never ran it, and
+    a leak backward would let a test that means to see the refusal see a pass.
+    """
+    from conftest import reconcile_a_fixture_census
+
+    from cbb_betting_lab.models import player_census
+
+    player_census.forget_reconciliations()
+    try:
+        yield reconcile_a_fixture_census(tmp_path)
+    finally:
+        player_census.forget_reconciliations()
+
+
+
 def key_for(row):
     """The injected key. One callable, so the map and the snapshot cannot drift."""
     return selection_key(
@@ -989,12 +1017,19 @@ def test_opinions_and_bets_are_reported_separately():
     assert opinions == 600 and wagers == 300
 
 
-def test_a_player_prop_is_an_opinion_and_never_a_bet_and_never_called_a_pass():
+def test_a_player_prop_is_an_opinion_and_never_a_bet_and_never_called_a_pass(
+    census_receipt,
+):
     """Nothing in this sport reaches `Availability.CONFIRMED`.
 
     A prop is priced, frozen and settled and cannot produce a selection, so it
     can never be counted as a bet — and the report must say that in the gate's
     own words rather than describing it as a pass, an avoid or a no-value call.
+
+    Takes `census_receipt` because `render_ledger` is a declared grading entry
+    point as of 2026-09-06 and refuses a player ledger with no receipt. The
+    refusal is asserted next door; this test is about what the report says once
+    the gate has been satisfied, which is the run an operator actually makes.
     """
     ledger = _ledger(300, profit=lambda i: 1.0, market="player_points", edge=0.20)
     report = fe.render_ledger(ledger)
@@ -1154,7 +1189,7 @@ def test_a_market_refused_by_name_never_reaches_a_verdict_table():
     assert len(fe._without_markets_refused_by_name(invented)) == 1
 
 
-def test_the_rendered_ledger_prints_no_verdict_for_a_refused_market():
+def test_the_rendered_ledger_prints_no_verdict_for_a_refused_market(census_receipt):
     """The helper working is not the same as the helper being CALLED.
 
     Written first as a test of `_without_markets_refused_by_name` alone, which

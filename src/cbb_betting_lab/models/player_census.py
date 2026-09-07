@@ -124,7 +124,27 @@ From the grading entry point BEFORE any scoring code runs, never only from a
 test: a gate that lives in the suite is a gate on the merge, not on the run.
 `GRADING_ENTRY_POINTS` names the entry points, `guard_graded_frame` is what they
 call, and `tests/test_player_census_reconciles.py` holds the assertion that
-names them, so the day a second one is wired the assertion has to be re-read.
+names them, so the day a fifth one is wired the assertion has to be re-read.
+
+The list said TWO until 2026-09-06 and it was wrong. `forward_evidence` and
+`reachability` both build a clustered `stats.RoiInterval` over a settled wager
+frame and both print a family-corrected Verdict per market, and neither was
+named or guarded. Measured 2026-09-06 with the guard lines deleted and nothing
+else changed: `scripts/run_forward_evidence.py --settle` over a night holding
+one `player_points` prop exited **0** and wrote
+`| player_points | unplaced | 1 | 1 games | +87.0% | -inf% to +inf% | -inf% to
++inf% | **not enough evidence** — 1 bets, below 200 |` into the Opinions table
+and the matching `roi`/`adjusted_low`/`verdict` entry into the JSON, with
+`reconciled() == ()`. Below the floor, so no number was claimed — but the door
+was open, and a 240-row fixture ledger through `render_ledger` came out with a
+ROI, a family-corrected interval and a verdict string on the same path. The
+test that claimed to cover "the whole of the grading surface" could not see
+them: it scanned for one spelling of a verb list
+(`log_loss|logloss|brier|de_?vig|fair_price|scorable|settled_opinions|roi_interval`)
+and neither module contains any of those tokens. The scan now looks for what a
+grader DOES — constructs a `RoiInterval`, calls `stats.interval_two_way` or
+`interval_by_cluster`, or names a scoring verb — and the test says in its own
+name that a lexical scan is a floor and not a proof.
 """
 
 from __future__ import annotations
@@ -1074,7 +1094,9 @@ def reconcile(taken: Census, expected: Expected) -> Attribution:
 _RECONCILED: dict[str, Attribution] = {}
 
 #: The entry points through which a player wager could reach a grading number.
-#: Found by reading the tree, not by guessing a filename that does not exist:
+#: Found by reading the tree for what BUILDS an interval or PRINTS a verdict,
+#: not by matching one spelling of one verb -- which is the mistake the first
+#: version of this list made, and it cost two of the four:
 #:
 #: * `reports.forecast_skill.build_record` is design section 10's own metric --
 #:   it de-vigs, scores log loss and Brier, and builds the clustered intervals.
@@ -1085,13 +1107,29 @@ _RECONCILED: dict[str, Attribution] = {}
 #: * `reports.price_backtest.settled_opinions` is the ROI half: the population
 #:   the market-against-model regression runs over. One production caller,
 #:   `scripts/run_price_backtest.py`.
+#: * `forward_evidence.render_ledger` prints the Opinions table: ROI, a 95%
+#:   interval, a family-corrected interval and a Verdict, per market and per
+#:   tier, over EVERY settled row -- `_bet_rows` excludes player props from the
+#:   BETS table and from that table only, because a prop nobody can place is
+#:   not a bet, and the evidence still belongs in Opinions. Added 2026-09-06.
+#: * `forward_evidence.report_payload` is the same computation as JSON. Guarded
+#:   separately, not by delegation: `write_report` calls both and
+#:   `reports.what_we_can_claim` calls this one alone. Added 2026-09-06.
+#: * `reachability.build_record` splits that same forward ledger by market,
+#:   tier and price survival and turns each cell into a clustered interval and
+#:   a verdict sentence. `scripts/run_reachability.py` defaults `--bets` to
+#:   `data/processed/cbb_forward_evidence.csv`. Added 2026-09-06.
 #:
 #: Each name is `module.function`, and each function calls `guard_graded_frame`
-#: before it reads a probability. `tests/test_player_census_reconciles.py`
-#: asserts BOTH that these two do call it and that no third grading function
-#: exists in the tree, so the day one is written the assertion has to be
-#: re-read rather than a new door opening quietly.
+#: as its FIRST statement, before it reads a probability or derives a column.
+#: `tests/test_player_census_reconciles.py` asserts that every name here calls
+#: it first, that each refuses a player frame with no receipt, and -- as a
+#: floor rather than a proof, in the test's own name -- that no module outside
+#: the pinned list builds an interval or scores a probability.
 GRADING_ENTRY_POINTS: tuple[str, ...] = (
+    "cbb_betting_lab.forward_evidence.render_ledger",
+    "cbb_betting_lab.forward_evidence.report_payload",
+    "cbb_betting_lab.reachability.build_record",
     "cbb_betting_lab.reports.forecast_skill.build_record",
     "cbb_betting_lab.reports.price_backtest.settled_opinions",
 )

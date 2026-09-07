@@ -5,10 +5,27 @@ event/market/player/selection/line) against the brief's 257,474. A 1.7%
 unexplained denominator is a wrong-denominator error of the same family. The run
 stops until it reconciles."*
 
-**Nothing in this file grades anything and nothing here states a result.** There
-is no probability, no de-vig, no log loss, no ROI, no interval and no verdict in
-it. Every number below is a count of rows in a table, and each says how it was
-counted.
+**Nothing in this file grades anything and nothing here states a result.** It
+de-vigs nothing, scores no log loss, builds no interval and prints no verdict.
+Every number below is a count of rows in a table, and each says how it was
+counted. The one probability in the file is the `model_probability` column of
+:data:`TEAM_WAGER`, a fixture value that exists because
+`price_backtest.require_columns` refuses a frame missing it, and every entry
+point it is handed either refuses before reading it or is asserted about
+without being run.
+
+**The declared grading surface was wrong until 2026-09-06 and this file is
+where it was wrong.** `player_census.GRADING_ENTRY_POINTS` named two functions
+and `test_..._are_the_whole_of_the_grading_surface` claimed to prove no third
+existed. There were five. `forward_evidence.render_ledger`,
+`forward_evidence.report_payload` and `reachability.build_record` each build a
+clustered `stats.RoiInterval` over settled wagers and print a family-corrected
+Verdict per market, none of them was declared, none called the guard, and the
+scan could not see them because it matched one spelling of one verb list. The
+replacement scan looks for what a grader DOES, the pinned list says which kind
+each module is, and the completeness claim is gone: a lexical scan is a floor,
+and `test_a_lexical_scan_cannot_be_exhaustive_and_this_is_the_module_it_misses`
+holds that gap open with a module that grades and is not seen.
 
 The numbers over the real store, measured 2026-09-06 with `usecols=` and
 `chunksize=500_000` and never on the whole 977,613,435-byte file:
@@ -41,6 +58,8 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
+
+from conftest import census_expected_record  # noqa: E402  (tests/ is on sys.path under pytest)
 
 from cbb_betting_lab import stores  # noqa: E402
 from cbb_betting_lab.models import player_census as PC  # noqa: E402
@@ -109,48 +128,15 @@ def write_expected(path: Path, taken: PC.Census, **overrides) -> Path:
     Built from the census rather than typed out, because what these tests
     exercise is the COMPARISON: every one of them moves one side and watches
     `reconcile` raise.
+
+    The shape comes from `conftest.census_expected_record`, which is the one
+    copy of it in this repository. `conftest.reconcile_a_fixture_census` needs
+    the same shape to hand a report test a receipt, and two spellings of an
+    artifact whose missing section reads as a reconciled clause is exactly the
+    drift `reconcile`'s "counted as checked and never compared" complaint
+    exists to catch.
     """
-    record = {
-        "schema_version": 1,
-        "declared_subject": None,
-        "source": {
-            "path": taken.source_path,
-            "sha256": taken.source_sha256,
-            "bytes": taken.source_bytes,
-        },
-        "quotes": {m.market: m.quotes for m in taken.by_market},
-        "wagers_raw": {m.market: m.wagers_raw for m in taken.by_market},
-        "totals": {
-            "total_raw": taken.total_raw,
-            "total_folded": taken.total_folded,
-            "priced_raw": taken.priced_raw,
-            "priced_folded": taken.priced_folded,
-            "refused_raw": taken.refused_raw,
-            "refused_folded": taken.refused_folded,
-        },
-        "subjects": {
-            "raw": taken.subjects_raw,
-            "folded": taken.subjects_folded,
-            "player_points_raw": taken.points_subjects_raw,
-            "player_points_folded": taken.points_subjects_folded,
-        },
-        "invariants": {
-            "rows_scanned": taken.rows_scanned,
-            "player_quotes": taken.player_quotes,
-            "events": taken.events,
-            "game_ids": taken.game_ids,
-            "slate_dates": taken.slate_dates,
-            "events_with_two_game_ids": taken.events_with_two_game_ids,
-            "books": len(taken.books),
-            "collision_groups": len(taken.collisions),
-            "ambiguous_subjects": len(taken.ambiguous_subjects),
-            "seasons": list(taken.seasons),
-            "segments": list(taken.segments),
-            "snapshot_phases": list(taken.snapshot_phases),
-        },
-        "sources": {},
-        "notes": {},
-    }
+    record = census_expected_record(taken)
     for key, value in overrides.items():
         section, _, field = key.partition(".")
         if field:
@@ -733,28 +719,59 @@ def test_the_frozen_artifact_says_where_every_number_came_from():
 # --------------------------------------------------------------------------
 
 
+#: One settled team wager with every column `reachability.build_record` and
+#: `price_backtest` require, so the "a team frame is waved through" half of the
+#: gate test is driven through the real entry points and not around them.
+TEAM_WAGER = {
+    "event_id": "e1",
+    "slate_date": "2026-01-02",
+    "market": "spreads",
+    "segment": "game",
+    "selection": "home",
+    "line": "-3.5",
+    "american_odds": "-110",
+    "tier": "high_major",
+    "model_probability": 0.55,
+    "outcome": "won",
+    "profit_units": 1.0,
+}
+
+
 def test_no_player_wager_can_be_graded_until_this_gate_has_run(tmp_path):
-    """The two grading entry points refuse a player frame with no receipt.
+    """All five grading entry points refuse a player frame with no receipt.
 
     `forecast_skill.build_record` is design section 10's own metric — it de-vigs,
     scores log loss and Brier and builds the clustered intervals — and it
     already carries `player` as an optional column, casefolded in the de-vig
     pair scope. A frame of player props handed to it needs NO new code to be
-    graded. `price_backtest.settled_opinions` is the ROI half. Both call
-    `guard_graded_frame` before they read a probability, and it fails closed.
+    graded. `price_backtest.settled_opinions` is the ROI half.
+
+    The other three were added 2026-09-06 and are the repair to a completeness
+    claim that was wrong. `forward_evidence.render_ledger` and
+    `forward_evidence.report_payload` print ROI, a 95% interval, a
+    family-corrected interval and a Verdict per market and per tier over every
+    settled row — `_bet_rows` excludes player props from the BETS table and
+    from that table only — and `reachability.build_record` splits the same
+    forward ledger by market and turns each cell into an interval and a verdict
+    sentence. None of the three was declared, none called a guard, and the scan
+    that claimed to see "the whole of the grading surface" matched none of
+    them.
+
+    Every one of the five is driven HERE, at its own call site, because a test
+    that asserts a helper works passes with the call deleted.
 
     Mutation: delete the `player_census.guard_graded_frame(...)` line from
-    `forecast_skill.build_record` — RED. Same for `settled_opinions` — RED.
+    `forecast_skill.build_record` — RED. Same for `settled_opinions`,
+    `render_ledger`, `report_payload` and `reachability.build_record` — RED,
+    one at a time.
     """
+    from cbb_betting_lab import forward_evidence as FE
+    from cbb_betting_lab import reachability as RE
     from cbb_betting_lab.reports import forecast_skill as FS
     from cbb_betting_lab.reports import price_backtest as PB
 
-    team = pd.DataFrame(
-        {"market": ["spreads"], "model_probability": [0.5], "outcome": ["won"]}
-    )
-    props = pd.DataFrame(
-        {"market": ["player_points"], "model_probability": [0.5], "outcome": ["won"]}
-    )
+    team = pd.DataFrame([TEAM_WAGER])
+    props = pd.DataFrame([dict(TEAM_WAGER, market="player_points")])
 
     assert PC.reconciled() == ()
     # A team frame passes with no receipt at all: the guard costs one prefix
@@ -763,10 +780,45 @@ def test_no_player_wager_can_be_graded_until_this_gate_has_run(tmp_path):
     assert PC.player_markets_in(team) == ()
     assert isinstance(PB.settled_opinions(team), pd.DataFrame)
     assert isinstance(FS.build_record(FS.SkillInputs(graded=team.iloc[0:0])), dict)
-    with pytest.raises(PC.WagerCountMismatch, match="no wager census has reconciled"):
-        PB.settled_opinions(props)
-    with pytest.raises(PC.WagerCountMismatch, match="no wager census has reconciled"):
-        FS.build_record(FS.SkillInputs(graded=props))
+    # The other three are NOT driven over a team frame here, deliberately:
+    # `render_ledger`, `report_payload` and `reachability.build_record` all go
+    # on to build an interval and print a verdict once the guard lets them
+    # through, and this file computes neither. That half is already proved
+    # where those reports are tested: counted by walking the AST 2026-09-06,
+    # 16 tests in `tests/test_forward_evidence.py` call `render_ledger`,
+    # `report_payload` or `write_report` and 14 in
+    # `tests/test_reachability.py` call `build_record`, all 30 over team
+    # ledgers with `reconciled() == ()`, and all 30 pass. That is the guard
+    # costing nothing on a team run. Two further tests in the first file take
+    # a receipt, because their ledgers hold a prop.
+
+    refusals = {
+        "price_backtest.settled_opinions": lambda: PB.settled_opinions(props),
+        "forecast_skill.build_record": lambda: FS.build_record(
+            FS.SkillInputs(graded=props)
+        ),
+        "forward_evidence.render_ledger": lambda: FE.render_ledger(props),
+        "forward_evidence.report_payload": lambda: FE.report_payload(props),
+        "reachability.build_record": lambda: RE.build_record(props, None),
+    }
+    assert set(refusals) == {
+        dotted.split(".", 2)[-1] if dotted.startswith("cbb_betting_lab.reports.")
+        else dotted[len("cbb_betting_lab."):]
+        for dotted in PC.GRADING_ENTRY_POINTS
+    }, (
+        "a declared entry point is not driven here. Every name in "
+        "GRADING_ENTRY_POINTS has to be called at its own call site, or the "
+        "gate is asserted about and not run."
+    )
+    for name, call in refusals.items():
+        with pytest.raises(
+            PC.WagerCountMismatch, match="no wager census has reconciled"
+        ) as raised:
+            call()
+        assert name in str(raised.value), (
+            f"{name} refused, but named {str(raised.value)[:80]!r} as the caller "
+            "— the `what=` label is what tells an operator which door shut."
+        )
 
     # And with the gate run, the same call is allowed through.
     store = write_store(tmp_path / "p.csv", [quote()])
@@ -821,57 +873,216 @@ def test_the_guard_is_the_first_thing_each_entry_point_does(tmp_path):
         )
 
 
-def test_the_two_declared_entry_points_are_the_whole_of_the_grading_surface():
-    """Every module in the tree that names a grading verb, pinned with a reason.
+#: What a grading number is MADE of, rather than one spelling of one verb.
+#: A grader either builds a clustered interval (`stats.interval_two_way`,
+#: `stats.interval_by_cluster`, a `RoiInterval` constructed or read back),
+#: scores a probability (`log_loss`, `brier`, a de-vig, a fair price), or turns
+#: one into a sentence (`row_verdict`, `reachability_verdict`, `.verdict()`).
+#:
+#: The first version of this list was the verb half alone --
+#: `log_loss|logloss|brier|de_?vig|fair_price|scorable|settled_opinions|roi_interval`
+#: -- and it matched NINE modules while `forward_evidence.py` and
+#: `reachability.py` both built clustered `stats.RoiInterval`s over settled
+#: wagers and printed a family-corrected Verdict per market. Measured over
+#: `git show 1fd4843:<file>`, the source as it stood before this commit: the
+#: old pattern matched NEITHER file, because both spell the type
+#: `stats.RoiInterval` in camel case and neither de-vigs or scores a log loss.
+#: A scan for a spelling finds the modules that share a vocabulary, not the
+#: modules that grade.
+GRADING_TOKENS = re.compile(
+    r"\b(interval_two_way|interval_by_cluster|RoiInterval|row_verdict"
+    r"|reachability_verdict|log_loss|logloss|brier|de_?vig|fair_price"
+    r"|scorable|settled_opinions|roi_interval)\b|\.verdict\s*\(",
+    re.IGNORECASE,
+)
 
-    Nine modules, measured 2026-09-06 by the regexp below over `src/` and
-    `scripts/`. Two of them GRADE and carry the guard; the rest read a record
-    that has already been built, or call the two that do. The day a tenth
-    appears this goes red and its author has to say which kind it is — which is
-    how "whatever entry point a later commit adds" stays covered without this
-    file guessing a filename.
 
-    Mutation: add a new module under src/ naming `log_loss` — RED.
-    """
-    pattern = re.compile(
-        r"\b(log_loss|logloss|brier|de_?vig|fair_price|scorable|settled_opinions"
-        r"|roi_interval)\b",
-        re.IGNORECASE,
-    )
-    found = sorted(
+def _modules_naming_a_grading_token() -> list[str]:
+    """Every `.py` under `src/` and `scripts/` that names one. Repo-relative."""
+    return sorted(
         path.relative_to(REPO).as_posix()
         for base in ("src", "scripts")
         for path in (REPO / base).rglob("*.py")
-        if pattern.search(path.read_text(encoding="utf-8"))
+        if GRADING_TOKENS.search(path.read_text(encoding="utf-8"))
     )
-    grades_and_is_guarded = {
-        "src/cbb_betting_lab/reports/forecast_skill.py":
-            "design section 10's metric; guarded in build_record",
-        "src/cbb_betting_lab/reports/price_backtest.py":
-            "the ROI half; guarded in settled_opinions",
-    }
-    reads_an_already_built_record_or_calls_one_that_grades = {
-        "src/cbb_betting_lab/models/player_census.py": "this gate, naming the verbs",
-        "src/cbb_betting_lab/reports/what_we_can_claim.py": "reads the written records",
-        "src/cbb_betting_lab/reports/why_the_model.py": "reads cbb_forecast_skill.json",
-        "src/cbb_betting_lab/restatement.py": "the vocabulary of derived words",
-        "scripts/build_skill_frame.py": "builds the frame; grades nothing",
-        "scripts/run_forecast_skill.py": "calls forecast_skill.build_record",
-        "scripts/run_price_backtest.py": "calls price_backtest.settled_opinions",
-    }
-    known = set(grades_and_is_guarded) | set(
-        reads_an_already_built_record_or_calls_one_that_grades
+
+
+#: Grades a frame of wagers, and therefore carries `guard_graded_frame`. These
+#: four hold the five names in `player_census.GRADING_ENTRY_POINTS`.
+GRADES_A_WAGER_FRAME_AND_IS_GUARDED = {
+    "src/cbb_betting_lab/forward_evidence.py":
+        "the Opinions table: ROI, a 95% interval, a family-corrected interval "
+        "and a Verdict per market and per tier, over every settled row "
+        "including player props; guarded in render_ledger and report_payload",
+    "src/cbb_betting_lab/reachability.py":
+        "the same forward ledger split by market, tier and price survival, "
+        "each cell an interval and each tier a verdict sentence; guarded in "
+        "build_record",
+    "src/cbb_betting_lab/reports/forecast_skill.py":
+        "design section 10's metric; guarded in build_record",
+    "src/cbb_betting_lab/reports/price_backtest.py":
+        "the ROI half; guarded in settled_opinions",
+}
+
+#: Builds an interval over something that is not a wager, so no player wager
+#: can reach a number through it and the guard would refuse nothing.
+BUILDS_AN_INTERVAL_OVER_SOMETHING_THAT_IS_NOT_A_WAGER = {
+    "src/cbb_betting_lab/stats.py":
+        "the arithmetic itself. It is handed a frame and a profit column and "
+        "has no idea what a market is; gating here would gate the ratings fit",
+    "scripts/fit_ratings.py":
+        "mean_interval and mean_by_cluster over margin_error, total_error and "
+        "points per 100 -- model error on scored GAMES, no market, no stake, "
+        "no profit_units of its own",
+}
+
+#: Reads a record somebody else already graded, or calls one of the four above.
+READS_A_BUILT_RECORD_OR_CALLS_ONE_THAT_GRADES = {
+    "src/cbb_betting_lab/models/player_census.py": "this gate, naming the verbs",
+    "src/cbb_betting_lab/reports/card_pricing.py":
+        "one docstring line about how a night clusters; grades nothing",
+    "src/cbb_betting_lab/reports/replication.py":
+        "rebuilds a RoiInterval from a stored backtest row to restate it",
+    "src/cbb_betting_lab/reports/retention_probe.py":
+        "its own RetentionVerdict enum, which is a credit-cost word and not an "
+        "interval",
+    "src/cbb_betting_lab/reports/what_we_can_claim.py": "reads the written records",
+    "src/cbb_betting_lab/reports/why_the_model.py": "reads cbb_forecast_skill.json",
+    "src/cbb_betting_lab/restatement.py": "the vocabulary of derived words",
+    "scripts/build_skill_frame.py": "builds the frame; grades nothing",
+    "scripts/run_forecast_skill.py": "calls forecast_skill.build_record",
+    "scripts/run_price_backtest.py": "calls price_backtest.settled_opinions",
+    "scripts/run_weekly_loop.py":
+        "calls forward_evidence's own helpers for the demotion check, over "
+        "`measurable_bets` -- which is `fe._bet_rows`, and that excludes every "
+        "player prop before an interval is built",
+}
+
+
+def test_no_module_outside_this_pinned_list_builds_an_interval_or_scores_one():
+    """Every module naming a grading token, pinned with what kind it is.
+
+    Seventeen modules, measured 2026-09-06 by :data:`GRADING_TOKENS` over
+    `src/` and `scripts/`. Four GRADE a frame of wagers and carry the guard;
+    two build an interval over something that is not a wager; eleven read a
+    record somebody else graded or call one of the four. The day an eighteenth
+    appears this goes red and its author has to say which of the three it is.
+
+    **This replaces a check that called itself "the whole of the grading
+    surface" and was not.** It scanned for one verb list, matched nine modules,
+    and `forward_evidence.py` and `reachability.py` — both of which build a
+    clustered `stats.RoiInterval` over settled wagers and print a
+    family-corrected Verdict per market — contained none of those tokens at
+    `1fd4843`, the commit before this one. Measured with the guard lines
+    deleted and nothing else changed: a 240-row `player_points` fixture ledger
+    rendered ONE table row through `render_ledger` carrying 240 bets, 3
+    day-clusters, a ROI, a 95% interval, a family-corrected interval and a
+    verdict string, plus the matching `roi`/`adjusted_low`/`verdict` entry from
+    `report_payload`, with `player_census.reconciled() == ()` and nothing
+    raised. The fixture's own return is a property of the fixture and is not
+    restated here; this file computes no interval and prints no verdict.
+
+    It is a floor and not a proof, and the name says so:
+    `test_a_lexical_scan_cannot_be_exhaustive_and_this_is_the_module_it_misses`
+    below holds that gap open with a module that grades and is not seen.
+
+    Mutation: add a module under `src/` naming `interval_two_way` -- RED.
+    """
+    found = _modules_naming_a_grading_token()
+    known = (
+        set(GRADES_A_WAGER_FRAME_AND_IS_GUARDED)
+        | set(BUILDS_AN_INTERVAL_OVER_SOMETHING_THAT_IS_NOT_A_WAGER)
+        | set(READS_A_BUILT_RECORD_OR_CALLS_ONE_THAT_GRADES)
     )
     assert set(found) == known, (
         f"The grading surface moved. New: {sorted(set(found) - known)}. Gone: "
-        f"{sorted(known - set(found))}. Each new one is either a grader, and "
-        "must call player_census.guard_graded_frame before it reads a "
-        "probability, or a reader of an already-built record, and must be named "
-        "here with that reason."
+        f"{sorted(known - set(found))}. Each new one is a grader of wagers, and "
+        "must call player_census.guard_graded_frame as its first statement and "
+        "be named in player_census.GRADING_ENTRY_POINTS; or it builds an "
+        "interval over something that is not a wager; or it reads a record "
+        "somebody else graded. Say which, here, with the reason."
     )
-    for module in grades_and_is_guarded:
+    for module in GRADES_A_WAGER_FRAME_AND_IS_GUARDED:
         source = (REPO / module).read_text(encoding="utf-8")
         assert "guard_graded_frame" in source, module
+
+    # And the declared entry points live in exactly those four modules, so the
+    # two lists cannot drift apart without one of them going red.
+    declared_modules = {
+        "src/" + dotted.rsplit(".", 1)[0].replace(".", "/") + ".py"
+        for dotted in PC.GRADING_ENTRY_POINTS
+    }
+    assert declared_modules == set(GRADES_A_WAGER_FRAME_AND_IS_GUARDED), (
+        f"GRADING_ENTRY_POINTS names {sorted(declared_modules)} and the scan "
+        f"calls {sorted(GRADES_A_WAGER_FRAME_AND_IS_GUARDED)} the graders."
+    )
+
+
+def test_a_lexical_scan_cannot_be_exhaustive_and_this_is_the_module_it_misses(tmp_path):
+    """The limitation, written down as a passing assertion rather than a claim.
+
+    The scan above reads source text. It finds a grader that SPELLS one of
+    :data:`GRADING_TOKENS`, and it cannot find one that reaches the same
+    arithmetic without spelling it — through `getattr`, through a re-export,
+    through a name assembled at runtime. That is not hypothetical: it is the
+    shape of the defect this whole section repairs. The old scan matched
+    `roi_interval` and `forward_evidence.py` spells the type `stats.RoiInterval`
+    in camel case, so a module that graded every settled wager on the board and
+    printed a family-corrected Verdict per market was invisible to a check
+    whose own name said "the whole of the grading surface".
+
+    So this test WRITES the module the scan cannot see and asserts two things:
+    that `GRADING_TOKENS` finds nothing in its source, and that the callable it
+    resolves at run time **is** `stats.interval_two_way` — identity, the lab's
+    one implementation of a clustered interval. It is not a straw man and it is
+    not run over data: nothing in this file computes an interval or prints a
+    verdict, which is a promise the module docstring makes and this test keeps.
+
+    **This is a limitation clause and it is meant to go RED.** The day the
+    check is strengthened — an AST walk of the call graph, an import-graph
+    scan, a registry a grader has to register with — this test fails, and
+    whoever strengthened it must delete it and rewrite the completeness
+    sentence in `player_census.GRADING_ENTRY_POINTS`' docstring. Until then the
+    pinned list is a FLOOR, the guard on the four graders is the gate, and "the
+    whole of the grading surface" is a sentence this file does not say.
+    """
+    hidden = tmp_path / "a_grader_the_scan_cannot_see.py"
+    hidden.write_text(
+        "from cbb_betting_lab import stats\n"
+        "\n"
+        "def clustered():\n"
+        "    return getattr(stats, 'interval_' + 'two_way')\n"
+        "\n"
+        "def grade(frame):\n"
+        "    return getattr(clustered()(frame, looks=1), 'ver' + 'dict')()\n",
+        encoding="utf-8",
+    )
+
+    assert GRADING_TOKENS.search(hidden.read_text(encoding="utf-8")) is None, (
+        "the scan now sees a grader that names none of its tokens. If that is "
+        "because the check became structural, delete this test and re-read the "
+        "completeness claim in player_census.GRADING_ENTRY_POINTS."
+    )
+    assert "guard_graded_frame" not in hidden.read_text(encoding="utf-8")
+
+    sys.path.insert(0, str(tmp_path))
+    try:
+        module = importlib.import_module(hidden.stem)
+        reached = module.clustered()
+    finally:
+        sys.path.remove(str(tmp_path))
+        sys.modules.pop(hidden.stem, None)
+
+    from cbb_betting_lab import stats
+
+    assert reached is stats.interval_two_way, (
+        "the module the scan misses no longer reaches the lab's clustered "
+        "interval, so it has stopped demonstrating anything and this "
+        "limitation clause needs rewriting rather than keeping."
+    )
+    assert callable(getattr(module, "grade")), (
+        "the grading path is gone from the fixture module"
+    )
 
 
 # --------------------------------------------------------------------------

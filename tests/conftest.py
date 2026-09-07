@@ -1,7 +1,7 @@
 """Suite-wide hooks and the shared real-data corpus.
 
-Four things live here, and all four exist because absence used to read as a
-pass.
+Five things live here, and the first four exist because absence used to read as
+a pass.
 
 **The guard manifest at collection.** `pytest_collection_modifyitems` runs
 after collection and before any test, and it stops the run with exit code 1
@@ -48,6 +48,13 @@ absent — 80 tests in CI, waiting on data CI can never have.
 when it is on disk and the sample when it is not, saying which. Nothing
 skips: both branches run every assertion, and the printed sample size says
 which corpus the number is over.
+
+**A wager-census receipt.** `reconcile_a_fixture_census` runs design section
+10's gate over a two-quote fixture store so a test may render a report over a
+ledger that holds a player prop. It is here rather than in one test file
+because two files need it and the artifact shape it writes is exactly the
+shape `player_census.load_expected` reads; a second copy of that shape would
+drift from the first. Its own docstring says what the caller owes it.
 """
 
 from __future__ import annotations
@@ -341,3 +348,125 @@ def fixture_processed_dir() -> Path:
     real one when built, else the tracked sample."""
     path, _ = processed_table("cbb_team_games.csv")
     return path.parent
+
+
+def census_expected_record(taken) -> dict:
+    """A `cbb_player_census.json`-shaped record built FROM a census.
+
+    The one place this repository spells the artifact
+    `player_census.load_expected` reads. It lives here because two test files
+    need it — `tests/test_player_census_reconciles.py`, which moves exactly one
+    number in it at a time and watches `reconcile` raise, and
+    `reconcile_a_fixture_census` below, which needs a receipt and not a second
+    reconciliation test. Two copies of this shape would drift, and the half
+    that drifts silently is the half where a dropped section reads as a
+    reconciled clause rather than a missing one — which is the complaint
+    `reconcile` raises about `invariants` when a regenerated artifact loses it.
+    """
+    return {
+        "schema_version": 1,
+        "declared_subject": None,
+        "source": {
+            "path": taken.source_path,
+            "sha256": taken.source_sha256,
+            "bytes": taken.source_bytes,
+        },
+        "quotes": {m.market: m.quotes for m in taken.by_market},
+        "wagers_raw": {m.market: m.wagers_raw for m in taken.by_market},
+        "totals": {
+            "total_raw": taken.total_raw,
+            "total_folded": taken.total_folded,
+            "priced_raw": taken.priced_raw,
+            "priced_folded": taken.priced_folded,
+            "refused_raw": taken.refused_raw,
+            "refused_folded": taken.refused_folded,
+        },
+        "subjects": {
+            "raw": taken.subjects_raw,
+            "folded": taken.subjects_folded,
+            "player_points_raw": taken.points_subjects_raw,
+            "player_points_folded": taken.points_subjects_folded,
+        },
+        "invariants": {
+            "rows_scanned": taken.rows_scanned,
+            "player_quotes": taken.player_quotes,
+            "events": taken.events,
+            "game_ids": taken.game_ids,
+            "slate_dates": taken.slate_dates,
+            "events_with_two_game_ids": taken.events_with_two_game_ids,
+            "books": len(taken.books),
+            "collision_groups": len(taken.collisions),
+            "ambiguous_subjects": len(taken.ambiguous_subjects),
+            "seasons": list(taken.seasons),
+            "segments": list(taken.segments),
+            "snapshot_phases": list(taken.snapshot_phases),
+        },
+        "sources": {},
+        "notes": {},
+    }
+
+
+def reconcile_a_fixture_census(directory: Path):
+    """Run the wager-census gate over a two-row fixture store; return the receipt.
+
+    `player_census.guard_graded_frame` fails CLOSED: every name in
+    `player_census.GRADING_ENTRY_POINTS` refuses a frame carrying a player
+    market until a census has reconciled in **this process**. Five names carry
+    it as of 2026-09-06 and three were added that day —
+    `forward_evidence.render_ledger`, `forward_evidence.report_payload` and
+    `reachability.build_record`, all three of which print a family-corrected
+    Verdict per market and none of which was declared or guarded before. So a
+    test that renders a report over a ledger holding a player prop is now
+    either a test of a run that reconciled, which is what an operator does, or
+    a test of the refusal. This helper is the first of those; the refusal is
+    asserted directly in `tests/test_player_census_reconciles.py` and at the
+    script level in `tests/test_run_forward_evidence.py`.
+
+    The store is two quotes and the expected artifact is built FROM the census
+    rather than typed out, because what a caller needs here is a receipt and
+    not a second reconciliation test. The comparison itself — every way the two
+    sides can disagree, one moved number at a time — is
+    `tests/test_player_census_reconciles.py`'s subject and stays there.
+
+    **The caller must call `player_census.forget_reconciliations()` afterwards.**
+    The receipt is process-global and a leak would make the gate look shut in a
+    file that never ran it, which is the failure mode this whole gate exists
+    against.
+    """
+    import json as _json
+
+    import pandas as pd
+
+    from cbb_betting_lab.models import player_census as PC
+
+    quotes = [
+        {
+            "event_id": "E1",
+            "market": "player_points",
+            "segment": "game",
+            "player": name,
+            "selection": "over",
+            "line": "10.5",
+            "snapshot_phase": "card",
+            "book": book,
+            "season": "2024",
+            "slate_date": "2024-01-02",
+            "game_id": "G1",
+            "american_odds": "-110",
+        }
+        for name, book in (("Al Jones", "draftkings"), ("Al Jones", "fanduel"))
+    ]
+    store = directory / "census_prices.csv"
+    pd.DataFrame(quotes).to_csv(store, index=False)
+    roster = directory / "census_roster.csv"
+    pd.DataFrame(
+        [("G1", "1", "Al Jones")],
+        columns=["game_id", "athlete_id", "athlete_display_name"],
+    ).to_csv(roster, index=False)
+
+    taken = PC.census(store, roster=roster)
+    expected = directory / "census_expected.json"
+    expected.write_text(
+        _json.dumps(census_expected_record(taken), indent=1), encoding="utf-8"
+    )
+    return PC.assert_reconciles(store=store, roster=roster, expected=expected)
