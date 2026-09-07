@@ -1122,30 +1122,46 @@ def test_every_whole_constant_refusal_refuses_in_words_and_none_raises(
     from cbb_betting_lab.competitions import CBB
     from cbb_betting_lab.models import slate as SLATE
 
-    literals = sorted(
-        (
-            node
-            for node in ast.walk(ast.parse(inspect.getsource(PR._unfittable)))
-            if isinstance(node, ast.Tuple)
-            and node.elts
-            and all(
-                isinstance(element, ast.Constant) and isinstance(element.value, str)
-                for element in node.elts
-            )
-        ),
-        key=lambda node: (node.lineno, node.col_offset),
-    )
-    assert len(literals) == 2, (
-        "`_unfittable` no longer names its two refusal levels as literal "
-        "tuples, so this test cannot read the list off the module"
-    )
-    assert tuple(element.value for element in literals[1].elts) == (
-        WHOLE_CONSTANT_REFUSALS
-    ), (
+    assert tuple(PR.CONSTANTS_THE_ESTIMATOR_READS) == WHOLE_CONSTANT_REFUSALS, (
         "the whole-constant refusal list moved. Every one of them is read at "
         "caller level somewhere; add the new one here and check that its read "
         "goes through `refusal_for` rather than `value`."
     )
+    # The list `_unfittable` iterates is that module constant, by name, and not
+    # a literal tuple beside it. It WAS a literal until 2026-09-07 and this
+    # test read it out of the AST; the same six names are now also the list
+    # `missing_constants` asks the incomplete-file question of, and two copies
+    # of them is a name added to one question and not the other — the seam
+    # checking for a constant `_unfittable` will not refuse on, or the reverse.
+    names = {
+        node.id
+        for node in ast.walk(ast.parse(inspect.getsource(PR._unfittable)))
+        if isinstance(node, ast.Name)
+    }
+    assert "CONSTANTS_THE_ESTIMATOR_READS" in names, (
+        "`_unfittable` no longer reads `CONSTANTS_THE_ESTIMATOR_READS`, so the "
+        "list it refuses on and the list `missing_constants` checks for are "
+        "two copies again. One of them will grow a seventh name alone."
+    )
+    literals = [
+        node
+        for node in ast.walk(ast.parse(inspect.getsource(PR._unfittable)))
+        if isinstance(node, ast.Tuple)
+        and node.elts
+        and all(
+            isinstance(element, ast.Constant) and isinstance(element.value, str)
+            for element in node.elts
+        )
+    ]
+    assert len(literals) == 1, (
+        "`_unfittable` names more than the per-stat level as a literal tuple. "
+        "The whole-constant level is `CONSTANTS_THE_ESTIMATOR_READS`; a second "
+        f"literal is a copy of it: {[[e.value for e in t.elts] for t in literals]}"
+    )
+    assert tuple(element.value for element in literals[0].elts) == (
+        "role_prior",
+        "rate_shrinkage_k",
+    ), "the per-stat refusal level moved"
 
     sentence = "the implied value moved by more than 2x across evidence banks."
     for constant in WHOLE_CONSTANT_REFUSALS:
@@ -1234,6 +1250,68 @@ def test_every_whole_constant_refusal_refuses_in_words_and_none_raises(
         "the estimator call is inside a `try` now. That is a second place a "
         "refusal could turn into a swallowed exception; say which exceptions "
         "it catches and what sentence each one produces."
+    )
+
+
+def test_the_half_life_refusal_substitutes_no_half_life(tmp_path: Path) -> None:
+    """R5's refusal path decays nothing, and cannot start decaying in silence.
+
+    `_evidence_the_half_life_refusal_leaves` empties the roster and calls
+    `trailing_evidence` for its column and index shape. The value it passed in
+    place of the constant the fit declined to invent was `1.0` — a perfectly
+    plausible half-life in days — and the only thing stopping it being applied
+    was that `trailing_evidence` returns at its `prepared.empty` branch before
+    the argument is read. That is a property of the CALLEE, and a guard whose
+    floor comes only from the thing it guards cannot see that thing get the
+    floor wrong: the day `trailing_evidence` grew a read of `half_life` above
+    that branch, every day with an unfitted half-life would have been decayed
+    at one day and reported as evidence, under a constant `PlayerShapes.value`
+    raises specifically to stop being substituted.
+
+    Two things are held. The sentinel is not a half-life — it is negative, and
+    pandas' own `.ewm` refuses it with `halflife must satisfy: halflife > 0`,
+    so a future read of it raises instead of decaying something plausible. And
+    the refusal path's own boundary check: the frame it returns is empty, and
+    it raises rather than handing a decayed row on.
+
+    Driven at the seam's caller as well as at the helper, because the sentence
+    that matters is the one the card prints: with `minutes_half_life` recorded
+    unfittable, the athlete comes back `priceable=False` under R5 with no
+    projected minutes, not with minutes decayed at a number nobody fitted.
+    """
+    assert PR._NOT_A_HALF_LIFE < 0.0, (
+        "the refusal path passes a positive number in place of an unfitted "
+        "half-life again, so a callee that read it would decay rows at it"
+    )
+    with pytest.raises(ValueError, match="halflife"):
+        PR.trailing_evidence(_history(), half_life=PR._NOT_A_HALF_LIFE)
+
+    empty = PR._evidence_the_half_life_refusal_leaves(_history())
+    assert len(empty) == 0, "the refusal path returned decayed rows"
+
+    def _refuse(document: dict) -> None:
+        document["unfittable"] = {
+            "minutes_half_life": {
+                "reason": "the implied value moved by more than 2x across banks.",
+                "cost": "no market prices.",
+            }
+        }
+
+    shapes = _shapes_with(tmp_path, _refuse, name="no-half-life.json")
+    projection = _one(
+        PR.player_projections_for(
+            day=DAY,
+            player_history=_history(),
+            prices=_prices("Sean Bairstow"),
+            shapes=shapes,
+        )
+    )
+    assert projection.priceable is False
+    assert projection.unpriceable_reason.startswith(PR.R5_NO_WALK_FORWARD_FIT)
+    assert projection.projected_minutes != projection.projected_minutes, (
+        "an athlete on a day with no fitted half-life came back with projected "
+        f"minutes of {projection.projected_minutes}, which was decayed at "
+        "something. The refusal path is supposed to decay nothing at all."
     )
 
 

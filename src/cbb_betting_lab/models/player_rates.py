@@ -347,6 +347,43 @@ _POOL_COLUMNS: tuple[str, ...] = (
     "free_throws_made",
 )
 
+#: Everything the estimator reads off the PRICE frame, and nothing else.
+#: `_subjects_of_the_day` reads the first four to find the day's distinct
+#: (event, spelling) pairs at all, and the last three off the first row it sees
+#: for an event, to say which game the projection is stored against and which
+#: two rosters a spelling is resolved against.
+#:
+#: Declared because the absence of these was the break nobody predicted. Until
+#: 2026-09-06 `reports/card_matchups` handed this estimator the two-column
+#: frame `attach_game_ids` returns — `event_id` and `game_id` — and
+#: `_subjects_of_the_day`'s first two guards returned an empty subject set
+#: without a word. Re-measured on 2026-09-07 by putting that frame back at the
+#: card's own entry point, over the four-game board
+#: `tests/test_player_seam.py::_card_board` builds on the full processed corpus
+#: — 4 events, 32 `player_points` rows, 16 quoted subjects: 0 projections, an
+#: empty resolution census and 0 name refusals, which reached the card as
+#: census bucket D, the sentence for a night on which nobody was quoted, on a
+#: night on which sixteen athletes were.
+#:
+#: The last two are not optional and their absence is not a smaller fault than
+#: the first four's: with no `home_team`/`away_team` the roster filter falls
+#: back to every athlete the pool carries, so a spelling resolves against a
+#: league-wide roster instead of two teams — a name matched to the wrong
+#: athlete rather than a refusal.
+#:
+#: Restated as `slate.PRICE_COLUMNS_THE_ESTIMATOR_READS`, which is what a
+#: caller must supply, and held equal to it by
+#: `tests/test_player_seam.py::test_s12_the_price_columns_the_card_supplies_
+#: are_the_price_columns_the_estimator_reads`.
+_SUBJECT_COLUMNS: tuple[str, ...] = (
+    "event_id",
+    "market",
+    "player",
+    "game_id",
+    "home_team",
+    "away_team",
+)
+
 #: The box-score columns a per-minute rate is formed from. NOT the same list as
 #: `slate.REQUIRED_PLAYER_COLUMNS`, which is the eight columns the seam
 #: requires to EXIST — a frame carrying only those eight can project minutes
@@ -363,6 +400,79 @@ REQUIRED_STAT_COLUMNS: tuple[str, ...] = (
     "three_point_field_goals_made",
     "free_throws_made",
 )
+
+#: The whole-constant reads: every name this estimator asks `PlayerShapes.value`
+#: for on the path to a price, and which every market needs. Declared in one
+#: place because it is read twice for two different questions and the two used
+#: to be one hard-coded tuple inside :func:`_unfittable`.
+#:
+#: * Was it recorded UNFITTABLE? Then R5: the projection exists, is
+#:   `priceable=False`, and carries the fit's own sentence. That is a refusal
+#:   and it reaches the card.
+#: * Is it ABSENT from the file altogether? Then the file is incomplete, which
+#:   is a different fact and is not a refusal: `PlayerShapes.value` raises
+#:   `ShapesFileError` for a name the `constants` block does not carry, from
+#:   inside the subject loop (`_rates` at `role_prior`, `_project` at
+#:   `value_pmf`, `minutes_lattice` at `minutes_pmf`), and nothing on the way
+#:   out catches it — `slate._player_half` has no `try` — so an incomplete
+#:   frozen file took the whole slate down, TEAM HALF INCLUDED, rather than
+#:   refusing the player half in words. :func:`missing_constants` is what the
+#:   seam asks before it builds anything, and it is the same list.
+#:
+#: `dnp_base_rate` is deliberately not here: it is a stored diagnostic that
+#: never multiplies into a price, and `_dnp_probability` already answers `nan`
+#: for a file that does not carry it.
+CONSTANTS_THE_ESTIMATOR_READS: tuple[str, ...] = (
+    "minutes_pmf",
+    "minutes_half_life",
+    "role_prior",
+    "rate_shrinkage_k",
+    "value_pmf",
+    "value_mix_shrinkage_events",
+)
+
+#: The sentence a seam prints for a frozen file that carries neither a value
+#: nor a refusal for a constant every market needs. Not R5: R5 is the fit
+#: saying *it could not fit this and here is what that costs*, and it arrives
+#: as a priceable=False projection. This is the file not saying anything at
+#: all, which is a wiring fault, and a wiring fault reported as a refusal is a
+#: model declining for a reason nobody can act on.
+NO_SUCH_CONSTANT = (
+    "the frozen player constants carry neither a fitted value nor an "
+    "`unfittable` entry for a constant every player market needs, so the "
+    "estimator was not asked and no athlete carries a projection. This is an "
+    "incomplete frozen file, not the model declining, and it is not a pass, an "
+    "avoid or a no-value call. Re-run `scripts/fit_player_model.py`. Missing"
+)
+
+
+def missing_constants(shapes: PlayerShapes) -> list[str]:
+    """Which of :data:`CONSTANTS_THE_ESTIMATOR_READS` the file cannot answer for.
+
+    A constant is answerable when the file carries a fitted value for it OR
+    records it unfittable with a reason. Either way a caller gets a sentence
+    rather than a traceback. A name in neither block is the incomplete-file
+    state, and this is the boundary question the seam asks before it builds
+    anything, so that state refuses the player half in words instead of
+    raising `ShapesFileError` out of the subject loop and taking the team half
+    with it.
+
+    Measured against the shipped `data/processed/cbb_player_shapes.json`: none
+    of the six is missing, so this returns `[]` on every real run and the cost
+    is six dict lookups. `tests/test_player_seam.py::test_s12_an_incomplete_
+    frozen_file_refuses_the_player_half_instead_of_raising` deletes
+    `role_prior` from a copy of that file and drives the shipped card path over
+    it, in both directions: with this check the player half is refused in words
+    naming `role_prior` and the four events on the board still price, and with
+    it answering `[]` the same run raises `ShapesFileError` out of
+    `matchups_for_card`.
+    """
+    constants = shapes.constants
+    return [
+        name
+        for name in CONSTANTS_THE_ESTIMATOR_READS
+        if name not in constants and shapes.refusal_for(name) is None
+    ]
 
 
 # --------------------------------------------------------------------------
@@ -947,6 +1057,23 @@ def trailing_evidence(roster: pd.DataFrame, *, half_life: float) -> pd.DataFrame
     return out[columns]
 
 
+#: Not a half-life, and not a substitute for one. It is what the refusal path
+#: passes `trailing_evidence` in place of a constant the fit recorded
+#: unfittable, and it is negative so that it cannot be applied: pandas'
+#: `.ewm(halflife=...)` raises `ValueError: halflife must satisfy: halflife > 0`
+#: on it. The refusal path hands `trailing_evidence` an empty frame, which
+#: returns before the argument is read — but *that* is a property of the
+#: callee, and a guard whose floor comes only from the thing it is guarding
+#: cannot see that thing get the floor wrong. The value it used to pass was
+#: `1.0`, a perfectly plausible half-life in days; the day `trailing_evidence`
+#: grew a read of the argument above its `prepared.empty` branch, every
+#: refused-half-life day would have been decayed at one day and reported as
+#: evidence. Measured on the shipped file, both spellings return the same empty
+#: frame today, and only this one cannot start returning something else in
+#: silence.
+_NOT_A_HALF_LIFE: float = -1.0
+
+
 def _evidence_the_half_life_refusal_leaves(roster: pd.DataFrame) -> pd.DataFrame:
     """The empty evidence frame, for a day whose `minutes_half_life` was refused.
 
@@ -954,9 +1081,18 @@ def _evidence_the_half_life_refusal_leaves(roster: pd.DataFrame) -> pd.DataFrame
     an unfitted half-life may not be replaced with a plausible one: substituting
     a value for a constant `scripts/fit_player_model.py` recorded unfittable is
     exactly what `PlayerShapes.value` raises to prevent. So no row is decayed at
-    all — the frame handed in is emptied first, `trailing_evidence` returns at
-    its own `prepared.empty` branch before the argument is read, and the
-    half-life passed is therefore applied to nothing.
+    all — the frame handed in is emptied first, and what is passed in the
+    argument's place is :data:`_NOT_A_HALF_LIFE`, which is negative and which
+    `.ewm` refuses, rather than a number that would decay something plausibly
+    if it were ever read.
+
+    The emptiness is then asserted rather than assumed, on the frames in this
+    function's own hands: a `trailing_evidence` that started reading its
+    argument before its `prepared.empty` branch would raise here, on the
+    sentinel, and a `trailing_evidence` that started returning rows for an
+    empty frame is caught by the check below. Both are the seam's rule applied
+    one level down — state what you require of what you are handed, and refuse
+    at the boundary rather than assume the other layer supplied it.
 
     The arrangement exists because R5 has to arrive as a REFUSAL and not as a
     traceback. `_project` consults `_unfittable` before it uses any evidence,
@@ -971,7 +1107,17 @@ def _evidence_the_half_life_refusal_leaves(roster: pd.DataFrame) -> pd.DataFrame
     `value_mix_shrinkage_events`) each returned a refusing projection the card
     printed. Six of six now refuse in words.
     """
-    return trailing_evidence(roster.iloc[0:0], half_life=1.0)
+    evidence = trailing_evidence(roster.iloc[0:0], half_life=_NOT_A_HALF_LIFE)
+    if len(evidence):
+        raise PlayerRatesError(
+            f"the refusal path for an unfitted `minutes_half_life` was handed "
+            f"{len(evidence):,} row(s) of trailing evidence off an empty "
+            "frame. Every row of it was decayed at a half-life nobody fitted, "
+            "and a projection built on it would be R5 wearing a number. "
+            "`trailing_evidence` returning anything for an empty roster is "
+            "the assumption this refusal rests on, and it no longer holds."
+        )
+    return evidence
 
 
 def _prepare(roster: pd.DataFrame) -> pd.DataFrame:
@@ -1340,7 +1486,17 @@ def player_projections_for(
     the day's PLAYER-family rows. That is what stops the resolution census
     double-counting the roughly 7.2 ladder rungs a points subject carries
     (design 13, failure mode 2 — quoted, not re-measured here). A market
-    refused by name contributes its subjects to the census and no projection.
+    refused by name contributes **no subject at all**: not a projection, and
+    not a census row either. This sentence used to say it contributed its
+    subjects to the census, which is not what `_subjects_of_the_day` does and
+    has not been since it started excluding `MARKETS_REFUSED_BY_NAME` — a
+    subject quoted only on a refused market is not a subject of this model, and
+    the per-tier resolution rate design 13 stops the run on at 2pp would
+    otherwise be computed over a board including two markets nobody prices.
+    The distinction is load-bearing now rather than descriptive:
+    `slate._assert_invariants` I6 holds `resolved | name_refusals` against
+    :func:`subjects_quoted`, so a reader who believed the old sentence and
+    "fixed" one side would break a correct run.
 
     Returns a :class:`PlayerSlate`. A subject with no entry in `projections` is
     **no opinion**; an entry with `priceable=False` is a **refusal**; a pair in
@@ -1561,6 +1717,33 @@ def _subjects_of_the_day(prices: pd.DataFrame):
     return subjects, quotes, events
 
 
+def subjects_quoted(prices: pd.DataFrame) -> set[tuple[str, str]]:
+    """The distinct (event, spelling) pairs this estimator will be asked about.
+
+    :func:`_subjects_of_the_day`'s answer, flattened, and **not a second
+    reading of the price frame**: it is that function, called. It exists so the
+    seam can hold the union invariant three docstrings assert — that `resolved`
+    and `name_refusals` together are exactly the day's distinct player-market
+    pairs — against the same definition of *the day's pairs* the estimator
+    priced from, rather than against a copy of the market-family rule written a
+    second time in `models/slate.py`. A second copy there would have to know
+    that a market refused by name contributes no subject, and the day it
+    stopped knowing it, the invariant would fail on a correct run.
+
+    The estimator lands every spelling in exactly one bucket — `refusals` on an
+    empty prior roster or an unresolved name, `resolved` otherwise — so a pair
+    in neither is a subject that fell out of the loop silently, and a pair in
+    the union that is not quoted is a subject invented from nowhere. Neither
+    has ever been observed; `slate._assert_invariants` I6 is what would see it.
+    """
+    subjects, _, _ = _subjects_of_the_day(prices)
+    return {
+        (event_id, spelling)
+        for event_id, spellings in subjects.items()
+        for spelling in spellings
+    }
+
+
 def _project(
     *,
     day: str,
@@ -1711,6 +1894,13 @@ def _unfittable(shapes: PlayerShapes) -> tuple[dict[str, str], str]:
 
     The shipped file's `unfittable` block is empty, so no market is refused by
     the fit today and this path is exercised against a synthetic file.
+
+    The six whole-constant names are :data:`CONSTANTS_THE_ESTIMATOR_READS`,
+    read from there rather than retyped here. They were a second copy until
+    2026-09-07, and the two questions asked of that list — *was it refused* and
+    *is it absent* — are asked in two files, so a name added to one copy and
+    not the other is a constant the seam checks for and this function does not
+    refuse on, or the reverse.
     """
     refused: dict[str, str] = {}
     for constant in ("role_prior", "rate_shrinkage_k"):
@@ -1718,14 +1908,7 @@ def _unfittable(shapes: PlayerShapes) -> tuple[dict[str, str], str]:
             sentence = shapes.refusal_for(f"{constant}.{stat}")
             if sentence:
                 refused[stat] = sentence
-    for constant in (
-        "minutes_pmf",
-        "minutes_half_life",
-        "role_prior",
-        "rate_shrinkage_k",
-        "value_pmf",
-        "value_mix_shrinkage_events",
-    ):
+    for constant in CONSTANTS_THE_ESTIMATOR_READS:
         sentence = shapes.refusal_for(constant)
         if sentence:
             return refused, f"{constant}: {sentence}"

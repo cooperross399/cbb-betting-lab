@@ -692,13 +692,34 @@ def test_s4_the_latest_day_this_module_reads_is_the_harnesss_definition() -> Non
         assert "could not be imported" in sentence, sentence
         assert "is not written" not in sentence, sentence
     half = slate._player_half.__doc__ or ""
-    first_bullet = half.split("*", 2)[1] if "*" in half else half
-    assert "could not be imported" in first_bullet, (
-        "`_player_half`'s first bullet no longer describes NO_RATE_ESTIMATOR in "
-        "that sentence's own terms. It read 'the estimator is not written' while "
-        "the sentence said 'could not be imported' — a tree that LOST a file "
-        "and a lab that never had one are different facts, and the bullet is "
-        f"what a reader meets first. It reads: {first_bullet.strip()!r}"
+    # Each bullet is its own text and not the prose that follows the list: the
+    # paragraph after it names two of these constants, and a split that swept
+    # it into the last bullet would report every constant as named twice.
+    bullets = [bullet.split("\n\n")[0] for bullet in half.split("\n    * ")[1:]]
+    assert len(bullets) >= 5, (
+        "`_player_half`'s docstring lists fewer than the five absences it "
+        f"returns; a return with no bullet is an absence nobody documented: {bullets}"
+    )
+    named = {
+        constant: [bullet for bullet in bullets if constant in bullet]
+        for constant in ("NO_SUBJECT_COLUMNS", "NO_RATE_ESTIMATOR", "NO_PLAYER_HISTORY")
+    }
+    for constant, matches in named.items():
+        assert len(matches) == 1, (
+            f"`_player_half`'s docstring names {constant} in {len(matches)} "
+            "bullet(s) and must name it in exactly one. A return with no "
+            f"bullet is an absence nobody documented: {bullets}"
+        )
+    # Found by the constant it names rather than by position, because the
+    # position moved: the price frame's check was added ahead of this one, and
+    # a test that asserted "the first bullet" would have failed on a correct
+    # docstring while passing on one whose estimator bullet had drifted.
+    assert "could not be imported" in named["NO_RATE_ESTIMATOR"][0], (
+        "`_player_half`'s NO_RATE_ESTIMATOR bullet no longer describes that "
+        "sentence in its own terms. It read 'the estimator is not written' "
+        "while the sentence said 'could not be imported' — a tree that LOST a "
+        "file and a lab that never had one are different facts. It reads: "
+        f"{named['NO_RATE_ESTIMATOR'][0].strip()!r}"
     )
 
 
@@ -1498,7 +1519,7 @@ def test_shapes_checked_for_another_season_are_refused(fixture_raw_dir) -> None:
         day=day,  # season 2026
         history=_countable_team_games(day),
         player_history=_player_history(("2025-11-21",)),
-        prices=pd.DataFrame({"event_id": ["e1"], "game_id": [401823218]}),
+        prices=_absence_prices(),
         shapes=wrong,
         raw_dir=fixture_raw_dir,
     )
@@ -1513,7 +1534,7 @@ def test_shapes_checked_for_another_season_are_refused(fixture_raw_dir) -> None:
         day=day,
         history=_countable_team_games(day),
         player_history=_player_history(("2025-11-21",)),
-        prices=pd.DataFrame({"event_id": ["e1"], "game_id": [401823218]}),
+        prices=_absence_prices(),
         shapes=right,
         raw_dir=fixture_raw_dir,
     )
@@ -1544,8 +1565,34 @@ ABSENCE_TEAMS = (2459, 91)
 
 
 def _absence_prices() -> pd.DataFrame:
-    """One quoted event on `ABSENCE_DAY`, enough for `matchups_for` to run."""
-    return pd.DataFrame({"event_id": ["e1"], "game_id": [ABSENCE_GAME]})
+    """One quoted event on `ABSENCE_DAY`, in the vocabulary the seam requires.
+
+    A spread and no player market: the board state the absence tests below are
+    about is the tree, the night or the frozen file, not the board.
+
+    It used to be `event_id` and `game_id` alone, which was enough for
+    `matchups_for` and is no longer enough for the seam: since 2026-09-07
+    `slate_model` checks the price frame against
+    `slate.PRICE_COLUMNS_THE_ESTIMATOR_READS` before it builds anything and
+    reports :data:`slate.NO_SUBJECT_COLUMNS` for a frame the estimator cannot
+    form a subject from. Widening it here is not a workaround: every real
+    caller supplies these — `cbb_historical_prices__card.csv` carries all six
+    and `card_matchups.MODEL_PRICE_COLUMNS` builds all six — and a fixture
+    poorer than the store meant each of these tests could have been passing on
+    the price frame's absence rather than on its own subject.
+    """
+    return pd.DataFrame(
+        [
+            {
+                "event_id": "e1",
+                "game_id": ABSENCE_GAME,
+                "market": "spreads",
+                "player": "",
+                "home_team": ABSENCE_TEAMS[0],
+                "away_team": ABSENCE_TEAMS[1],
+            }
+        ]
+    )
 
 
 def _absence_player_prices() -> pd.DataFrame:
@@ -2173,3 +2220,308 @@ def test_s11_the_frame_the_card_hands_the_model_is_the_stores_vocabulary() -> No
         "the athlete the book quoted did not survive into the frame the model "
         "reads, which is the state in which no board produces a subject"
     )
+
+
+# --------------------------------------------------------------------------
+# S12 — the third frame, declared and checked at the boundary
+# --------------------------------------------------------------------------
+
+
+def test_s12_the_price_columns_the_card_supplies_are_the_price_columns_the_estimator_reads(
+) -> None:
+    """The third declared list, held against its reader and against both callers.
+
+    Two frames reaching this seam had a declared column list and a boundary
+    check — `REQUIRED_PLAYER_COLUMNS` and `PLAYER_COLUMNS_THE_ESTIMATOR_READS`
+    — and the third had neither, so the layer below assumed a vocabulary the
+    layer above never promised. That is the shape of every wiring fault this
+    seam has had, and it is what
+    `slate.PRICE_COLUMNS_THE_ESTIMATOR_READS` closes.
+
+    A copy nobody checks is how two lists drift, and a drift here is silent in
+    the worst direction: a frame short of `market` or `player` produces no
+    subject at all, and a frame short of `home_team`/`away_team` resolves every
+    spelling against a league-wide roster instead of two teams — a name matched
+    to the wrong athlete rather than a refusal.
+
+    Both shipped suppliers are held to it: `card_matchups.MODEL_PRICE_COLUMNS`,
+    which the card builds, and the real header of
+    `data/processed/cbb_historical_prices__card.csv`, which
+    `scripts/run_price_backtest.py` hands the same estimator. Two callers
+    handing one function two vocabularies is the defect this pins.
+    """
+    from cbb_betting_lab.reports import card_matchups
+
+    assert tuple(slate.PRICE_COLUMNS_THE_ESTIMATOR_READS) == tuple(PR._SUBJECT_COLUMNS), (
+        "the seam's declared price-frame list and the columns "
+        "`_subjects_of_the_day` reads have drifted; the seam would refuse a "
+        "frame the estimator can read, or accept one it cannot"
+    )
+    assert set(card_matchups.MODEL_PRICE_COLUMNS) >= set(
+        slate.PRICE_COLUMNS_THE_ESTIMATOR_READS
+    ), (
+        "the card builds a price frame missing a column the seam requires, so "
+        "every card run would report the player half as a wiring absence"
+    )
+
+    store = REPO / "data" / "processed" / "cbb_historical_prices__card.csv"
+    if store.is_file():
+        header = pd.read_csv(store, nrows=0)
+        missing = [
+            column
+            for column in slate.PRICE_COLUMNS_THE_ESTIMATOR_READS
+            if column not in header.columns
+        ]
+        assert not missing, (
+            f"{store} carries no {missing}, so the backtest's own price frame "
+            "would be refused by the seam it feeds"
+        )
+
+
+def test_s12_a_price_frame_that_forms_no_subject_is_a_refusal_not_an_absence_of_quotes(
+    monkeypatch, fixture_raw_dir, fixture_processed_dir
+) -> None:
+    """The break nobody predicted, refused in words at the boundary.
+
+    `attach_game_ids` returns one row per event, and that frame — not the
+    board's quotes — was what the card handed the model. `player_rates.
+    _subjects_of_the_day` returns an empty subject set for a frame with no
+    `market` or no `player` column, so the day came back with 0 projections, an
+    empty resolution census and 0 name refusals, and `_unpack` reported
+    `NO_PROJECTION_FORMED` — *"either no player market was quoted or every
+    quoted subject was refused for the name"* — for a board carrying quotes on
+    real athletes. A fact about the wiring, printed as a fact about the board.
+
+    Reproduced here at the card's own entry point by putting the historical
+    two-column frame back, on a board that does carry props. What the seam says
+    now is :data:`slate.NO_SUBJECT_COLUMNS` with the missing columns named, and
+    the team half still prices — which is the trade this check makes
+    deliberately: a price frame is not the player table, and refusing the whole
+    slate for it would delete every spread on the card.
+
+    Mutation: delete the `if price_frame_refusal:` return in `_player_half` —
+    this test goes red on the sentence, reporting `NO_PROJECTION_FORMED`.
+    """
+    from cbb_betting_lab.reports import card_matchups
+
+    board, corpus = _card_board(CARD_DAY)
+    props = board.rows[board.rows["market"] == "player_points"]
+    assert not props.empty, "the fixture board carries no prop to ask about"
+
+    def _the_frame_the_card_used_to_hand_over(rows, joined):
+        return joined[["event_id", "game_id"]].copy()
+
+    monkeypatch.setattr(
+        card_matchups, "model_prices", _the_frame_the_card_used_to_hand_over
+    )
+    built = card_matchups.matchups_for_card(
+        board.rows,
+        competition=CBB,
+        day=CARD_DAY,
+        processed_dir=fixture_processed_dir,
+        raw_dir=fixture_raw_dir,
+        model=slate.slate_model,
+    )
+
+    reason = built.slate.player_absence_reason
+    assert reason.startswith(slate.NO_SUBJECT_COLUMNS), (
+        "a price frame the estimator cannot form a subject from was reported "
+        f"as something other than a wiring absence: {reason!r}"
+    )
+    assert reason != slate.NO_PROJECTION_FORMED
+    for column in ("market", "player", "home_team", "away_team"):
+        assert column in reason.rsplit("Missing", 1)[-1], (
+            f"the refusal does not name the missing {column!r}, so an operator "
+            f"cannot act on it: {reason!r}"
+        )
+    assert not built.slate.players and not built.slate.resolution_census
+
+    # And the team half is untouched. This is the half a `SlateError` here
+    # would have deleted, and the reason the check refuses the player half in
+    # words rather than raising.
+    assert built.matchups, (
+        "the price frame's refusal took the team half with it, which is the "
+        "trade `REQUIRED_PLAYER_COLUMNS` argues against in the other direction"
+    )
+    print(
+        f"corpus={corpus} events={len(built.matchups):,} priced by the team "
+        f"half; player half refused: {reason[:80]}..."
+    )
+
+
+def test_s12_the_union_of_the_two_name_buckets_is_the_boards_quoted_pairs(
+    monkeypatch, fixture_raw_dir, fixture_processed_dir
+) -> None:
+    """I6: the half of the disjointness claim that was checked nowhere.
+
+    Three docstrings assert that `resolved` and `name_refusals` are disjoint
+    AND that their union is exactly the day's distinct player-market (event,
+    spelling) pairs — `SlateModel`'s own, `player_projections_for`'s ("`models/
+    slate.py` asserts ... that their union is exactly the day's distinct
+    pairs") and `player_rates.subjects_quoted`'s. Only the disjointness half was
+    checked: `_assert_invariants` I4 intersected the two and stopped. A subject
+    that fell out of the estimator's loop into neither bucket was an athlete
+    the book quoted, projected on nobody, counted in no census and named in no
+    sentence — the silent direction of the same defect the resolution census
+    exists to make loud.
+
+    Held here at the card's own entry point, in three parts: the union agrees
+    with `subjects_quoted` on the real board; a pair removed from `resolved`
+    raises; a pair added to `name_refusals` that nobody quoted raises. The two
+    doctored runs go through the shipped `slate_model`, because the invariant
+    is asserted there and a test that called `_assert_invariants` directly
+    would pass with the call site deleted.
+    """
+    from cbb_betting_lab.reports import card_matchups
+
+    board, corpus = _card_board(CARD_DAY)
+    seen: dict[str, object] = {}
+    real = PR.player_projections_for
+
+    def _record(**kwargs):
+        seen["prices"] = kwargs["prices"]
+        result = real(**kwargs)
+        seen["result"] = result
+        return result
+
+    monkeypatch.setattr(PR, "player_projections_for", _record)
+    built = card_matchups.matchups_for_card(
+        board.rows,
+        competition=CBB,
+        day=CARD_DAY,
+        processed_dir=fixture_processed_dir,
+        raw_dir=fixture_raw_dir,
+        model=slate.slate_model,
+    )
+    quoted = PR.subjects_quoted(seen["prices"])
+    union = set(built.slate.resolved) | set(built.slate.name_refusals)
+    assert quoted, "the board produced no subject, so the invariant is vacuous here"
+    assert union == quoted, (
+        f"{len(quoted - union)} quoted pair(s) reached neither bucket and "
+        f"{len(union - quoted)} pair(s) in neither census were counted anyway"
+    )
+    print(f"corpus={corpus} union={len(union)} pair(s) == quoted={len(quoted)}")
+
+    from dataclasses import replace as _replace
+
+    dropped = dict(seen["result"].resolved)
+    lost = sorted(dropped)[0]
+    dropped.pop(lost)
+    monkeypatch.setattr(
+        PR,
+        "player_projections_for",
+        lambda **kwargs: _replace(real(**kwargs), resolved=dropped),
+    )
+    with pytest.raises(slate.SlateError) as raised:
+        card_matchups.matchups_for_card(
+            board.rows,
+            competition=CBB,
+            day=CARD_DAY,
+            processed_dir=fixture_processed_dir,
+            raw_dir=fixture_raw_dir,
+            model=slate.slate_model,
+        )
+    assert "reached neither bucket" in str(raised.value), str(raised.value)
+    assert "no census counted" in str(raised.value)
+
+    invented = dict(seen["result"].name_refusals)
+    invented[("no-such-event", "no such athlete")] = "refused"
+    monkeypatch.setattr(
+        PR,
+        "player_projections_for",
+        lambda **kwargs: _replace(real(**kwargs), name_refusals=invented),
+    )
+    with pytest.raises(slate.SlateError) as raised:
+        card_matchups.matchups_for_card(
+            board.rows,
+            competition=CBB,
+            day=CARD_DAY,
+            processed_dir=fixture_processed_dir,
+            raw_dir=fixture_raw_dir,
+            model=slate.slate_model,
+        )
+    assert "manufactured out of a name" in str(raised.value), str(raised.value)
+
+
+def test_s12_an_incomplete_frozen_file_refuses_the_player_half_instead_of_raising(
+    monkeypatch, tmp_path: Path, fixture_raw_dir, fixture_processed_dir
+) -> None:
+    """A constant the file does not carry is a wiring fault, not a traceback.
+
+    `load_player_shapes` checks PROVENANCE and never completeness, so a frozen
+    file that lost `role_prior` loads, passes the guard, and then raises
+    `ShapesFileError: ... carries no constant named 'role_prior'` from inside
+    `_rates`, on the first athlete of the first event. Nothing on the way out
+    catches it — `slate._player_half` has no `try` — so an incomplete file took
+    the whole slate down, TEAM HALF INCLUDED, on a card whose spreads were fine.
+    That is the crash-instead-of-refusal shape `minutes_half_life` was repaired
+    for at caller level, wearing an absent constant instead of a refused one.
+
+    A constant recorded UNFITTABLE is a different fact and keeps its different
+    answer: R5, a `priceable=False` projection carrying the fit's own sentence,
+    which the card prints. This is the file saying nothing at all.
+
+    Both halves are driven here through `matchups_for_card` — the shipped card
+    path — and the second half is the measurement: with
+    `missing_constants` answering `[]`, the same run raises `ShapesFileError`
+    out of the card.
+    """
+    from cbb_betting_lab.models.player_shapes import ShapesFileError, load_player_shapes
+    from cbb_betting_lab.reports import card_matchups
+
+    frozen = REPO / "data" / "processed" / "cbb_player_shapes.json"
+    document = json.loads(frozen.read_text(encoding="utf-8"))
+    assert "role_prior" in document["constants"], (
+        "the frozen file no longer carries `role_prior`; this test deletes it "
+        "to build the incomplete-file state and has nothing to delete"
+    )
+    del document["constants"]["role_prior"]
+    incomplete = tmp_path / "incomplete.json"
+    incomplete.write_text(json.dumps(document), encoding="utf-8")
+
+    slate.clear_caches()
+    monkeypatch.setattr(
+        slate,
+        "load_player_shapes",
+        lambda path, *, priced_season: load_player_shapes(
+            incomplete, priced_season=priced_season
+        ),
+    )
+    monkeypatch.setattr(slate, "_SHAPES_CACHE", {})
+
+    board, corpus = _card_board(CARD_DAY)
+    built = card_matchups.matchups_for_card(
+        board.rows,
+        competition=CBB,
+        day=CARD_DAY,
+        processed_dir=fixture_processed_dir,
+        raw_dir=fixture_raw_dir,
+        model=slate.slate_model,
+    )
+    reason = built.slate.player_absence_reason
+    assert reason.startswith(PR.NO_SUCH_CONSTANT), (
+        f"an incomplete frozen file was reported as something else: {reason!r}"
+    )
+    assert "role_prior" in reason, (
+        f"the refusal does not name the constant that is missing: {reason!r}"
+    )
+    assert not built.slate.players and built.slate.shapes is None
+    assert built.matchups, "the incomplete file took the team half with it"
+    assert PR.missing_constants(
+        load_player_shapes(incomplete, priced_season=season_for_slate_date(CARD_DAY))
+    ) == ["role_prior"]
+    print(f"corpus={corpus} incomplete file refused: {reason[:70]}...")
+
+    # What the check is worth, measured on the same run: without it the card
+    # raises out of the subject loop and the team half goes with it.
+    monkeypatch.setattr(PR, "missing_constants", lambda shapes: [])
+    with pytest.raises(ShapesFileError) as raised:
+        card_matchups.matchups_for_card(
+            board.rows,
+            competition=CBB,
+            day=CARD_DAY,
+            processed_dir=fixture_processed_dir,
+            raw_dir=fixture_raw_dir,
+            model=slate.slate_model,
+        )
+    assert "role_prior" in str(raised.value)

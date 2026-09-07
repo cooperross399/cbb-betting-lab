@@ -139,6 +139,15 @@ REQUIRED_TABLES: tuple[str, ...] = (REQUIRED_TABLE, PLAYER_TABLE)
 #: `data/processed/cbb_historical_prices__card.csv`; the provider's school
 #: spellings ride beside them under the store's own `home_name`/`away_name`.
 #: See :func:`model_prices`.
+#:
+#: This is the SUPPLY side of `slate.PRICE_COLUMNS_THE_ESTIMATOR_READS`, and
+#: since 2026-09-07 the seam checks that list before it builds anything: a
+#: frame short of one of those six is `slate.NO_SUBJECT_COLUMNS`, refused in
+#: words naming the column, rather than zero subjects reported as a night on
+#: which nobody was quoted. `tests/test_player_seam.py::test_s12_the_price_
+#: columns_the_card_supplies_are_the_price_columns_the_estimator_reads` holds
+#: this tuple over that one, so a column dropped here fails at the card rather
+#: than emptying the player half of every run.
 MODEL_PRICE_COLUMNS: tuple[str, ...] = (
     "event_id",
     "game_id",

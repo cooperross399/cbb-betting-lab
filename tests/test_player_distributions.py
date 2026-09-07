@@ -584,9 +584,12 @@ def test_threes_is_the_same_object_thinned_and_not_a_second_count() -> None:
     """Design 4: threes "falls out as the three-point component of the same object".
 
     Thinning an (a,b,0) member at `q` keeps the family and produces
-    `VMR = 1 + q*(phi - 1)` for every member, so the three-point marginal's
-    width is a consequence of the shared scoring-event count rather than a
-    second fitted number. `rates["threes"]` and
+    `VMR = 1 + q*(phi - 1)`. This exercises the ONE member the shipped
+    `effective_event_dispersion` of 1.1059306970490195 selects — the negative
+    binomial — on the real fixture, and says so rather than saying "every
+    member": the claim held for all three is the next test's, and until
+    2026-09-07 this docstring made it while `thin`'s binomial arm ran in no
+    test on this branch. `rates["threes"]` and
     `conditional_dispersion["threes"]` are therefore CHECK quantities, and both
     are computed and reported here and neither is used to form the price.
     """
@@ -627,6 +630,99 @@ def test_threes_is_the_same_object_thinned_and_not_a_second_count() -> None:
     assert distribution.diagnostics()["threes_mean_relative_gap"] == pytest.approx(
         0.006817, abs=1e-5
     )
+
+
+def test_thinning_keeps_the_family_and_the_dispersion_identity_on_all_three_arms(
+) -> None:
+    """`VMR = 1 + q*(phi - 1)`, held for every (a,b,0) member and not for one.
+
+    The binomial arm of `thin` -- the four statements building the thinned
+    `PanjerParameters` -- was executed by no test on this branch, because the
+    shipped `effective_event_dispersion` of 1.1059306970490195 selects the
+    negative binomial and every existing thinning test goes through the real
+    fixture. Design 4's claim that `player_threes` "falls out as the
+    three-point component of the same object" rests on those statements as much
+    as on the two that were covered, and a `b=(trials + 1) * probability / used`
+    that lost its `+ 1` would emit a wrong pmf for every three-point price the
+    day a refit moved the dispersion below `1 - POISSON_BAND`.
+
+    Each arm is checked twice: the identity, and the produced pmf against the
+    distribution the thinned member is supposed to BE, computed here from
+    `math.comb`/`math.exp`/`math.lgamma` rather than from the recursion under
+    test. Measured, worst absolute pmf error across the three: binomial
+    1.67e-16, Poisson 3.47e-18, negative binomial 5.55e-17.
+    """
+    floor = 1e-6
+    size = 24
+    cases = {
+        # phi < 1 - POISSON_BAND: binomial. n = round(3.0/0.3) = 10, p = 0.3.
+        "binomial": PD.panjer_parameters(mu=3.0, phi=0.7, materiality=floor),
+        "poisson": PD.panjer_parameters(mu=3.0, phi=1.0, materiality=floor),
+        "negative_binomial": PD.panjer_parameters(mu=3.0, phi=1.6, materiality=floor),
+    }
+    keep = 0.5
+    worst: dict[str, float] = {}
+    for family, parameters in cases.items():
+        assert parameters.family == family, (
+            f"the fixture for the {family} arm selected {parameters.family}; "
+            "the arm this test exists for is not the one being run"
+        )
+        thinned = PD.thin(parameters, keep)
+        assert thinned.family == family, "thinning changed the family"
+        assert thinned.mu == pytest.approx(parameters.mu * keep, rel=1e-12)
+        assert thinned.phi_used == pytest.approx(
+            1.0 + keep * (parameters.phi_used - 1.0), rel=1e-12
+        ), (
+            f"the {family} arm does not produce `1 + q*(phi - 1)`, which is the "
+            "identity design 4's 'same object' claim is made of"
+        )
+
+        produced = PD.compound_pmf(thinned, severity=(0.0, 1.0), size=size)
+        mean, variance = _moments(produced)
+        assert variance / mean == pytest.approx(thinned.phi_used, rel=1e-6), (
+            f"the {family} arm's produced pmf does not carry the dispersion its "
+            "parameters declare"
+        )
+
+        if family == "binomial":
+            trials, probability = int(thinned.trials), 1.0 - thinned.phi_used
+            assert (trials, probability) == (10, pytest.approx(0.15, abs=1e-12)), (
+                "the thinned binomial is not n=10 at p=0.15, so the arithmetic "
+                "below is being compared against a different distribution"
+            )
+            exact = [
+                math.comb(trials, k)
+                * probability**k
+                * (1.0 - probability) ** (trials - k)
+                if k <= trials
+                else 0.0
+                for k in range(size + 1)
+            ]
+        elif family == "poisson":
+            mu = thinned.mu
+            exact = [
+                math.exp(-mu + k * math.log(mu) - math.lgamma(k + 1.0))
+                for k in range(size + 1)
+            ]
+        else:
+            shape, beta = thinned.shape_r, thinned.scale_beta
+            odds = beta / (1.0 + beta)
+            exact = [
+                math.exp(
+                    math.lgamma(shape + k)
+                    - math.lgamma(shape)
+                    - math.lgamma(k + 1.0)
+                    + shape * math.log(1.0 - odds)
+                    + k * math.log(odds)
+                )
+                for k in range(size + 1)
+            ]
+        worst[family] = float(np.max(np.abs(np.asarray(exact) - produced)))
+        assert worst[family] < 1e-12, (
+            f"the thinned {family} is not the {family} it claims to be: worst "
+            f"absolute pmf error {worst[family]:.3e}"
+        )
+    print(f"worst absolute pmf error by arm: {worst}")
 
 
 def test_the_points_threes_correlation_identity_matches_a_brute_force_joint() -> None:

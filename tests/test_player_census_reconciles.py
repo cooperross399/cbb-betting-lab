@@ -448,6 +448,66 @@ def test_a_mismatch_stops_the_run_and_the_message_carries_both_numbers(tmp_path)
     assert "player_points" in message
 
 
+def test_each_subject_count_is_compared_and_a_moved_one_stops_the_run(tmp_path):
+    """All four `subjects[...]` clauses, moved one at a time, must refuse.
+
+    The clause counted itself as compared and could not fail. `carried` and
+    `note` put all four into `Attribution.compared_checks`, and
+    `test_the_gate_reconciles_the_store_it_is_pinned_to` asserts the total
+    including "four subject counts" -- but the only mismatch any test moved was
+    `wagers_raw.player_points`, so the four `complaints.append` at
+    `player_census.py`'s `subjects[...]` block ran in no test at all.
+
+    Measured on the module as it stood: `if False and want is not None and
+    value != want:` on that comparison left this file, `test_gameday_card.py`
+    and `test_player_seam.py` fully green -- 114 tests -- including the run
+    against the real store. So the gate could ship comparing the four athlete
+    cluster counts against nothing while still reporting 46 comparisons, and
+    certify a store whose clusters had moved. They are the denominator every
+    athlete-clustered interval is widened to, which is why the clause's own
+    message says "a change here moves every athlete-clustered interval".
+
+    Held here one clause at a time rather than all four at once: a single moved
+    number that raised would leave the other three as vacuous as they were.
+    """
+    taken, _, _ = take(tmp_path, [quote(), quote(book="fanduel")])
+    truth = {
+        "raw": taken.subjects_raw,
+        "folded": taken.subjects_folded,
+        "player_points_raw": taken.points_subjects_raw,
+        "player_points_folded": taken.points_subjects_folded,
+    }
+    # The artifact as written reconciles, so every raise below is the moved
+    # number and not the fixture.
+    PC.reconcile(taken, PC.load_expected(write_expected(tmp_path / "ok.json", taken)))
+
+    for clause, value in truth.items():
+        moved = write_expected(
+            tmp_path / f"moved_{clause}.json",
+            taken,
+            **{f"subjects.{clause}": int(value) + 7},
+        )
+        with pytest.raises(PC.WagerCountMismatch) as raised:
+            PC.reconcile(taken, PC.load_expected(moved))
+        message = str(raised.value)
+        assert f"subjects[{clause}]: {value:,}, expected {int(value) + 7:,}" in message, (
+            f"the {clause} mismatch did not name the clause and both numbers: "
+            f"{message}"
+        )
+        assert "athlete-clustered interval" in message, (
+            "the message no longer says what a moved cluster count moves"
+        )
+        # And only this clause complained: a mismatch that dragged the other
+        # three in with it would let any one of them stay uncompared.
+        others = [
+            other for other in truth if other != clause and f"subjects[{other}]:" in message
+        ]
+        assert not others, (
+            f"moving subjects[{clause}] also complained about {others}, so a "
+            "single vacuous clause would be hidden behind its neighbours"
+        )
+
+
 def test_a_clause_whose_expectation_is_absent_is_refused_not_counted_as_checked(
     tmp_path,
 ):
