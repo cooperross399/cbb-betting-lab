@@ -26,7 +26,9 @@ from __future__ import annotations
 import math
 from datetime import datetime, timezone
 
+import json
 import pandas as pd
+from pathlib import Path
 import pytest
 
 import cbb_betting_lab.settlement  # noqa: E402,F401  (an ImportError here is a failure, never a skip)
@@ -1237,3 +1239,134 @@ def test_the_no_price_sentence_is_read_off_the_rows():
         "the no-price branch is gone; it is still the truth when nothing is "
         "priced and must still be sayable"
     )
+
+
+#: Every module that builds a `stats.RoiInterval` or prints a verdict, and how
+#: a market refused BY NAME is kept out of it.
+#:
+#: **A roster with an inverse, because naming three doors found a fourth.**
+#: `render_ledger` was fixed first. `report_payload` renders the same numbers
+#: as JSON and was left unfiltered, so the refused market kept its verdict in
+#: the data while the markdown no longer showed one. `reachability.build_record`
+#: builds its own clustered interval and its own verdict and knew nothing about
+#: the refusal at all. Three doors, found one at a time, which is exactly the
+#: failure mode a list of known doors has.
+#:
+#: So the test below scans the tree for the construct and requires every module
+#: carrying it to be accounted for here. A new one fails until somebody says
+#: which case it is.
+VERDICT_PRODUCING_MODULES = {
+    # Filtered: a graded frame reaches these and a refused market must not.
+    "forward_evidence.py": "filtered",
+    "reachability.py": "filtered",
+    # These score team markets only. A player prop never reaches them: the
+    # model has been scored on ten markets and every one is a team market, and
+    # `price_backtest` is the thing that scores them.
+    "reports/price_backtest.py": "team markets only",
+    "reports/replication.py": "team markets only",
+    "reports/forecast_skill.py": "team markets only",
+    "reports/retention_probe.py": "team markets only",
+    # These re-render a record somebody else computed; they add no interval of
+    # their own to a market that was not already in it.
+    "reports/what_we_can_claim.py": "renders a record",
+    "reports/why_the_model.py": "renders a record",
+    "restatement.py": "renders a record",
+    # The construct itself.
+    "stats.py": "defines the interval",
+}
+
+
+def test_every_verdict_producing_module_is_accounted_for():
+    """A fourth door must fail this test rather than open quietly."""
+    import subprocess
+
+    repo = Path(__file__).resolve().parents[1]
+    listing = subprocess.run(
+        ["git", "ls-files", "-z", "src/cbb_betting_lab"],
+        cwd=repo, capture_output=True, check=True,
+    )
+    found = set()
+    for name in listing.stdout.decode("utf-8").split("\0"):
+        if not name.endswith(".py"):
+            continue
+        text = (repo / name).read_text(encoding="utf-8", errors="replace")
+        if "RoiInterval(" in text or ".verdict()" in text:
+            found.add(name.split("src/cbb_betting_lab/", 1)[-1])
+
+    assert found == set(VERDICT_PRODUCING_MODULES), (
+        "the set of modules that build an interval or print a verdict has "
+        f"changed.\n  new: {sorted(found - set(VERDICT_PRODUCING_MODULES))}"
+        f"\n  gone: {sorted(set(VERDICT_PRODUCING_MODULES) - found)}\n"
+        "Say which case each new one is: does a graded frame reach it, and if "
+        "so does a market refused by name get filtered out first?"
+    )
+
+
+
+def test_the_filtered_modules_are_driven_not_grepped():
+    """Grepping for the filter's NAME matches its import, not its use.
+
+    Written first as `assert "without_markets_refused_by_name" in text`, which
+    stayed green with the call deleted from `reachability.build_record` — the
+    import line still carried the name. It is the third time today a test has
+    proved a helper exists rather than that it is called, so both filtered
+    modules are driven with a refused-market row and read for a verdict.
+    """
+    from cbb_betting_lab import reachability as RC
+    from cbb_betting_lab.models.player_rates import MARKETS_REFUSED_BY_NAME
+
+    refused = sorted(MARKETS_REFUSED_BY_NAME)[0]
+
+    # forward_evidence, through the JSON render this session left unfiltered.
+    payload = fe.report_payload(
+        _ledger(300, profit=lambda i: 1.0 if i % 2 else -1.0, market=refused)
+    )
+    markets = {
+        str(row.get("market"))
+        for row in payload.get("rows", []) or []
+        if isinstance(row, dict)
+    }
+    assert refused not in markets, (
+        f"{refused} carries a row in the JSON payload, and every row there "
+        "has an ROI, a family-corrected interval and a verdict"
+    )
+
+    # reachability, which builds its own interval and its own verdict. It
+    # takes a GRADED bet frame, not a ledger, so the columns it requires are
+    # supplied rather than defaulted — `require_columns` refuses a missing one
+    # on purpose and this test must not route around that.
+    from cbb_betting_lab.reports import price_backtest as PB
+
+    ledger = _ledger(300, profit=lambda i: 1.0 if i % 2 else -1.0, market=refused)
+    graded = pd.DataFrame(
+        {
+            column: (
+                ledger[column]
+                if column in ledger.columns
+                else _bet_column_filler(column, len(ledger))
+            )
+            for column in PB.BET_COLUMNS
+        }
+    )
+    record = RC.build_record(bets=graded)
+    printed = json.dumps(record)
+    assert refused not in printed, (
+        f"{refused} reaches the reachability record, which prints a clustered "
+        "ROI and a verdict word for every market in it"
+    )
+
+
+
+def _bet_column_filler(column: str, n: int):
+    """A plausible value for a graded-bet column the ledger fixture lacks.
+
+    Only for columns `require_columns` demands and the ledger does not carry;
+    nothing here is a price, an odds or an outcome the test then measures.
+    """
+    if column == "slate_date":
+        return ["2027-01-12"] * n
+    if column in {"model_probability", "edge_value", "implied_probability"}:
+        return [0.5] * n
+    if column == "profit":
+        return [0.0] * n
+    return [""] * n

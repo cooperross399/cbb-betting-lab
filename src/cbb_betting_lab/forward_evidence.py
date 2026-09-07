@@ -1579,12 +1579,11 @@ def _without_markets_refused_by_name(frame: pd.DataFrame) -> pd.DataFrame:
     copy, so a market added there is filtered here without anybody remembering
     to.
     """
-    if frame.empty or "market" not in frame.columns:
-        return frame
-    from cbb_betting_lab.models.player_rates import MARKETS_REFUSED_BY_NAME
+    from cbb_betting_lab.models.player_rates import (
+        without_markets_refused_by_name,
+    )
 
-    refused = set(MARKETS_REFUSED_BY_NAME)
-    return frame[~frame["market"].isin(refused)].reset_index(drop=True)
+    return without_markets_refused_by_name(frame)
 
 
 def _table(
@@ -2015,6 +2014,13 @@ def report_payload(
     suspects = frozenset(str(s) for s in settlement_suspects)
     measurable = _measurable(_with_ledger_columns(ledger), competition)
     games, _futures = _split_families(measurable)
+    # **The same filter the markdown takes.** This function renders the same
+    # numbers as data, and it was left unfiltered when `render_ledger` was
+    # fixed — so a market refused BY NAME kept a family-corrected verdict in
+    # the JSON while the markdown no longer showed one. Two renderers reading
+    # one computation is this module's own stated design; filtering one of them
+    # is how they come to disagree in public.
+    games = _without_markets_refused_by_name(games)
     bets = _bet_rows(games, bet_threshold)
     rows = []
     if not games.empty:

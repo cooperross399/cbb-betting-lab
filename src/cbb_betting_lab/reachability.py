@@ -984,6 +984,20 @@ def build_record(
     if not bets.empty:
         PB.require_columns(bets, PB.BET_COLUMNS, "the graded bet frame")
 
+    # **A market refused BY NAME carries no verdict here either.** This module
+    # builds its own clustered `RoiInterval` and prints its own verdict, and it
+    # knew nothing about the refusal — so a `player_first_basket` row reaching
+    # a graded bet frame got a family-corrected interval and a verdict word,
+    # for a market this lab refuses to price at all. `forward_evidence` was
+    # fixed first and this was the second door; the filter now lives in
+    # `player_rates`, which owns the refusal, so a third reader gets it by
+    # importing rather than by remembering.
+    from cbb_betting_lab.models.player_rates import (
+        without_markets_refused_by_name,
+    )
+
+    bets = without_markets_refused_by_name(bets)
+
     labelled, provenance = attach_survival(bets, store)
     tiers = tier_map_from_bets(labelled)
     rows = split_by_reachability(labelled, looks=looks)
