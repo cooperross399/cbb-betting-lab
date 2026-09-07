@@ -121,6 +121,7 @@ from cbb_betting_lab import stats as S
 from cbb_betting_lab import stores
 from cbb_betting_lab.competitions import CBB, Competition
 from cbb_betting_lab.models import player_census
+from cbb_betting_lab.models import player_rates as _PR
 from cbb_betting_lab.reports import price_backtest as PB
 
 #: Bumped whenever the record's shape changes, so a stale record fails loudly
@@ -978,7 +979,14 @@ def build_record(
     `tests/test_reachability.py` that call this function drive team ledgers
     through it with `player_census.reconciled() == ()` and pass.
     """
+    # **Gate first, then filter — in that order, and the order is guarded.** A market refused by
+    # name can never be graded, so it must not reach a verdict — and it must
+    # not make the gate refuse a frame with nothing gradeable in it either.
+    # Both hold only if the filter runs FIRST; excluding refused markets
+    # inside the gate instead let them past two entry points that do not
+    # filter at all.
     player_census.guard_graded_frame(bets, what="reachability.build_record")
+    bets = _PR.without_markets_refused_by_name(bets)
     bets = pd.DataFrame() if bets is None else bets
     store = pd.DataFrame(columns=list(LM.CAPTURE_COLUMNS)) if store is None else store
     if not bets.empty:

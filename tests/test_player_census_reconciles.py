@@ -1431,3 +1431,90 @@ def test_the_limitations_this_gate_ships_with():
         "a disposition receipt survived into this test, so the gate would look "
         "open in a file that never ran it"
     )
+
+
+def test_every_grading_entry_point_filters_before_it_gates():
+    """Both halves, at all five doors, because fixing one door moved the bug.
+
+    Commit 6549cd7 made `player_markets_in` subtract the markets refused by
+    name, so `guard_graded_frame` returned `()` on a frame whose only player
+    market was refused. The justification was that such a market "is filtered
+    out of every verdict table and every JSON payload" — true of THREE entry
+    points. `GRADING_ENTRY_POINTS` names five, and `forecast_skill` and
+    `price_backtest` never called the filter, so for those two the gate was the
+    only thing keeping a refused market out.
+
+    Measured at the shipped entry point with no receipt: a 16-row
+    `player_double_double` frame through `forecast_skill.build_record` returned
+    a Brier score, a de-vigged advantage and a verdict.
+
+    So the filter runs BEFORE the gate at each door, and both halves are
+    asserted at each: a refused market is silently dropped rather than scored,
+    and a market that CAN be graded is refused without a receipt.
+    """
+    from cbb_betting_lab.models.player_rates import MARKETS_REFUSED_BY_NAME
+
+    assert PC.reconciled() == (), (
+        "this test needs a process with no receipt; something reconciled first"
+    )
+    refused = sorted(MARKETS_REFUSED_BY_NAME)[0]
+
+    def _frame(market: str, n: int = 16) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "market": [market] * n,
+                "tier": ["high_major"] * n,
+                "selection": ["over", "under"] * (n // 2),
+                "american_odds": [-110] * n,
+                "outcome": ["won", "lost"] * (n // 2),
+                "book": ["dk"] * n,
+                "event_id": [f"e{i}" for i in range(n)],
+                "player": ["A Player"] * n,
+                "line": [10.5] * n,
+                "profit_units": [1.0, -1.0] * (n // 2),
+                "model_probability": [0.5] * n,
+                "slate_date": ["2024-01-05"] * n,
+            }
+        )
+
+    # The gate itself sees a refused market again — the subtraction is gone.
+    assert PC.player_markets_in(_frame(refused)) == (refused,), (
+        "the gate no longer counts a market refused by name, which is what let "
+        "two entry points score one"
+    )
+
+    # Half one: a market that CAN be graded is refused without a receipt.
+    from cbb_betting_lab.reports import forecast_skill as FS
+    from cbb_betting_lab.reports import price_backtest as PBT
+
+    with pytest.raises(PC.WagerCountMismatch):
+        FS.build_record(FS.SkillInputs(graded=_frame("player_points")))
+    with pytest.raises(PC.WagerCountMismatch):
+        PBT.settled_opinions(_frame("player_points"))
+
+    # Half two: a refused market is refused too, and that is FAIL-CLOSED
+    # rather than a nuisance. The gate is required by its own test to be the
+    # first statement in each entry point — "a gate that runs after the de-vig
+    # is a gate on the report, not on the run" — so it sees the frame before
+    # anything is filtered. With no receipt it refuses everything player-shaped,
+    # including markets that could never be graded anyway.
+    with pytest.raises(PC.WagerCountMismatch):
+        FS.build_record(FS.SkillInputs(graded=_frame(refused)))
+    with pytest.raises(PC.WagerCountMismatch):
+        PBT.settled_opinions(_frame(refused))
+
+    # And the filter still runs, immediately after the gate, so a receipt does
+    # not let a refused market be scored. Asserted on the source rather than by
+    # driving it, because driving it needs a reconciled census over the real
+    # store and this test has none: the ORDER is what matters and the order is
+    # what is read.
+    import inspect
+
+    for function in (FS.build_record, PBT.settled_opinions):
+        body = inspect.getsource(function)
+        gate_at = body.index("guard_graded_frame")
+        filter_at = body.index("without_markets_refused_by_name")
+        assert gate_at < filter_at, (
+            f"{function.__qualname__} filters before it gates; the gate must be "
+            "the first statement and the filter must follow it"
+        )

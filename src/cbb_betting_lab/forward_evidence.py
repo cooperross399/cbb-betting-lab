@@ -1670,6 +1670,7 @@ def render_ledger(
     `price_backtest.settled_opinions`' rule too.
     """
     player_census.guard_graded_frame(ledger, what="forward_evidence.render_ledger")
+    ledger = _without_markets_refused_by_name(ledger)
     looks = max(int(families), 1) if families else 1
     suspects = frozenset(str(s) for s in settlement_suspects)
     frame = _with_ledger_columns(ledger)
@@ -2010,6 +2011,7 @@ def report_payload(
     ungated call writes a family-corrected verdict per player market into JSON.
     """
     player_census.guard_graded_frame(ledger, what="forward_evidence.report_payload")
+    ledger = _without_markets_refused_by_name(ledger)
     looks = max(int(families), 1) if families else 1
     suspects = frozenset(str(s) for s in settlement_suspects)
     measurable = _measurable(_with_ledger_columns(ledger), competition)

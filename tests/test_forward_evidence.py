@@ -1317,19 +1317,31 @@ def test_the_filtered_modules_are_driven_not_grepped():
 
     refused = sorted(MARKETS_REFUSED_BY_NAME)[0]
 
-    # forward_evidence, through the JSON render this session left unfiltered.
-    payload = fe.report_payload(
-        _ledger(300, profit=lambda i: 1.0 if i % 2 else -1.0, market=refused)
-    )
-    markets = {
-        str(row.get("market"))
-        for row in payload.get("rows", []) or []
-        if isinstance(row, dict)
-    }
-    assert refused not in markets, (
-        f"{refused} carries a row in the JSON payload, and every row there "
-        "has an ROI, a family-corrected interval and a verdict"
-    )
+    # **The census gate now answers first, and refusing is the right answer.**
+    # `guard_graded_frame` is required by its own test to be the FIRST
+    # statement in every grading entry point — a gate that runs after the
+    # de-vig is a gate on the report, not on the run — so with no receipt it
+    # refuses anything player-shaped, including a market that could never be
+    # graded anyway. Fail-closed. This test used to drive straight through to
+    # the filter; it cannot any more, and that is a stronger position.
+    from cbb_betting_lab.models import player_census
+
+    assert player_census.reconciled() == ()
+    with pytest.raises(player_census.WagerCountMismatch):
+        fe.report_payload(
+            _ledger(300, profit=lambda i: 1.0 if i % 2 else -1.0, market=refused)
+        )
+
+    # And the filter still runs immediately after the gate, so a receipt does
+    # not let a refused market into the payload. The ORDER is the claim, and
+    # the order is what is read — driving it would need a reconciled census
+    # over the real store, which this test has none of and must not fake.
+    import inspect
+
+    body = inspect.getsource(fe.report_payload)
+    assert body.index("guard_graded_frame") < body.index(
+        "_without_markets_refused_by_name"
+    ), "report_payload filters before it gates; the gate must be first"
 
     # reachability, which builds its own interval and its own verdict. It
     # takes a GRADED bet frame, not a ledger, so the columns it requires are
@@ -1348,12 +1360,13 @@ def test_the_filtered_modules_are_driven_not_grepped():
             for column in PB.BET_COLUMNS
         }
     )
-    record = RC.build_record(bets=graded)
-    printed = json.dumps(record)
-    assert refused not in printed, (
-        f"{refused} reaches the reachability record, which prints a clustered "
-        "ROI and a verdict word for every market in it"
-    )
+    with pytest.raises(player_census.WagerCountMismatch):
+        RC.build_record(bets=graded)
+
+    assert (
+        inspect.getsource(RC.build_record).index("guard_graded_frame")
+        < inspect.getsource(RC.build_record).index("without_markets_refused_by_name")
+    ), "build_record filters before it gates; the gate must be first"
 
 
 

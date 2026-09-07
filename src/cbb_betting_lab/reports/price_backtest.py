@@ -196,6 +196,7 @@ from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.experiment_ledger import LEDGER_FILENAME
 from cbb_betting_lab.experiment_ledger import load as load_ledger
 from cbb_betting_lab.models import player_census
+from cbb_betting_lab.models import player_rates as _PR
 from cbb_betting_lab.stores import _decimal_payout as decimal_payout
 
 
@@ -434,7 +435,14 @@ def settled_opinions(
     because the day one does the question is which denominator it was counted
     under.
     """
+    # The gate runs first (its own test requires it to be the first
+    # statement: a gate after the de-vig is a gate on the report, not on the
+    # run). The refusal filter runs immediately after, so a receipt never lets
+    # a refused market be scored. See `player_census.player_markets_in`. This is
+    # one of the two entry points that never called the refusal filter, so
+    # subtracting refused markets inside the gate let them be scored here.
     player_census.guard_graded_frame(frame, what="price_backtest.settled_opinions")
+    frame = _PR.without_markets_refused_by_name(frame)
     if frame.empty or probability_column not in frame.columns or "outcome" not in frame.columns:
         return frame.iloc[0:0]
     kept = settled(frame)

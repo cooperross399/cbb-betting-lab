@@ -1297,29 +1297,33 @@ def forget_reconciliations() -> None:
 
 
 def player_markets_in(frame: pd.DataFrame) -> tuple[str, ...]:
-    """The player markets a frame carries that could be GRADED, by name, sorted.
+    """Every player market a frame carries, by name, sorted. Refused ones too.
 
-    **A market refused by name is not among them, and excluding it is not a
-    hole in the gate.** This gate exists to stop a player wager reaching a
-    grading number before the wager census has reconciled. A market refused by
-    name never reaches one at all: it is filtered out of every verdict table
-    and every JSON payload by `player_rates.without_markets_refused_by_name`,
-    which is a stronger guarantee than this gate gives anything else. Blocking
-    on it protects nothing and costs something real — measured, it refused
-    `forward_evidence.report_payload` on a frame whose only player market was
-    `player_double_double`, which is to say it refused a frame with nothing
-    gradeable in it, and it broke the test that proves the refusal filter is
-    wired in.
+    **A market refused by name is NOT excluded here, and excluding it was a
+    real defect.** Commit 6549cd7 subtracted `MARKETS_REFUSED_BY_NAME` on the
+    argument that such a market "is filtered out of every verdict table and
+    every JSON payload", which is true of three entry points and there are
+    five: `reports/forecast_skill.py` and `reports/price_backtest.py` never
+    call `without_markets_refused_by_name`, so for those two this gate was the
+    ONLY thing keeping a refused market out, and subtracting it here removed
+    that.
 
-    The list comes from the model that owns the refusal, never a copy here.
+    Measured at the shipped entry point with no receipt: a 16-row
+    `player_double_double` frame through `forecast_skill.build_record` returned
+    a record carrying a Brier score, a de-vigged advantage and a VERDICT, for a
+    market this lab refuses to price at all. That is the hard rule this session
+    closed twice already, reintroduced by a fix to a different problem.
+
+    The problem that subtraction solved — the gate blocking a frame with
+    nothing gradeable in it — is solved where it belongs instead: each entry
+    point filters refused markets BEFORE it gates, so the gate never sees one
+    and never has to reason about it.
     """
     if frame is None or len(frame) == 0 or "market" not in getattr(frame, "columns", ()):
         return ()
-    from cbb_betting_lab.models.player_rates import MARKETS_REFUSED_BY_NAME
-
     markets = frame["market"].astype(str)
     found = markets[markets.str.startswith(PLAYER_MARKET_PREFIX, na=False)]
-    return tuple(sorted(set(found) - set(MARKETS_REFUSED_BY_NAME)))
+    return tuple(sorted(set(found)))
 
 
 def guard_graded_frame(frame: pd.DataFrame, *, what: str) -> tuple[str, ...]:
