@@ -295,6 +295,35 @@ MARKETS_REFUSED_BY_NAME: Mapping[str, str] = {
     ),
 }
 
+def _frozen(payload, key, *, where: str):
+    """One frozen sub-key, refusing in words when it is absent.
+
+    **`missing_constants` checks WHOLE constants, never their sub-keys.** So a
+    frozen file missing `role_prior.points` or `minutes_pmf.support_low` loads,
+    passes the provenance guard, passes `missing_constants`, and then raises a
+    bare `KeyError` from deep inside the estimator.
+
+    That is worse here than in `player_distributions`, where the equivalent
+    reads were fixed first: these fire inside `matchups_for_card`, BEFORE any
+    price exists, and `scripts/run_gameday_card.py` handles only
+    `(card_matchups.InputsAbsent, PB.ModelNotWired)` there — so the card exits
+    on a raw traceback with no `decision=` line at all, where the reads already
+    fixed exit with `decision=refused` and a sentence. Measured over a deletion
+    sweep of every constant and sub-key: seventeen sub-keys escaped this way.
+
+    `PlayerRatesError` subclasses `ValueError`, which the card does catch.
+    """
+    try:
+        return payload[key]
+    except (KeyError, TypeError) as error:
+        raise PlayerRatesError(
+            f"the frozen shapes file records no `{where}.{key}`, so the "
+            "estimator cannot read the constant it prices with. A value "
+            "invented here would be a number about the file that did not come "
+            "from it."
+        ) from error
+
+
 def without_markets_refused_by_name(frame):
     """`frame` without the markets this model refuses BY NAME.
 
@@ -1303,7 +1332,8 @@ def minutes_lattice(
     30.19, 33.46, 36.22.
     """
     table = shapes.value("minutes_pmf")
-    low, high = int(table["support_low"]), int(table["support_high"])
+    low = int(_frozen(table, "support_low", where="minutes_pmf"))
+    high = int(_frozen(table, "support_high", where="minutes_pmf"))
     if (low, high) != MINUTES_SUPPORT:
         raise PlayerRatesError(
             f"{shapes.path}: the minutes pmf declares support ({low}, {high}) "
@@ -1311,7 +1341,7 @@ def minutes_lattice(
             "the number of minutes, so a support that moved would silently "
             "renumber every rung."
         )
-    rows = table["pmf"]
+    rows = _frozen(table, "pmf", where="minutes_pmf")
     if not 0 <= int(bucket) < len(rows):
         raise PlayerRatesError(
             f"Bucket {bucket} is outside the {len(rows)} the frozen file "
@@ -1875,8 +1905,11 @@ def _rates(
         rate, weight = shrink_rate(
             bank_stat=float(row[f"bank_{stat}"]),
             prior_minutes=float(row["prior_minutes"]),
-            prior_rate=float(priors[stat][bucket]),
-            k=float(ks[stat]),
+            prior_rate=float(
+                _frozen(_frozen(priors, stat, where="role_prior"), bucket,
+                        where=f"role_prior.{stat}")
+            ),
+            k=float(_frozen(ks, stat, where="rate_shrinkage_k")),
         )
         rates[stat] = rate
         weights[stat] = weight

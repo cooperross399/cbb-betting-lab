@@ -926,6 +926,13 @@ def test_no_player_wager_can_be_graded_until_this_gate_has_run(tmp_path):
         "forward_evidence.render_ledger": lambda: FE.render_ledger(props),
         "forward_evidence.report_payload": lambda: FE.report_payload(props),
         "reachability.build_record": lambda: RE.build_record(props, None),
+        # Added 2026-09-07 with the name. This is the door the shipped script
+        # always opens: `run_price_backtest.py` calls `settled_opinions` inside
+        # `if args.write_graded:` and this on every invocation, so a default
+        # run reached no gate at all until it was added.
+        "price_backtest.build_record": lambda: PB.build_record(
+            PB.BacktestInputs(universe=props, bets=props.iloc[0:0])
+        ),
     }
     assert set(refusals) == {
         dotted.split(".", 2)[-1] if dotted.startswith("cbb_betting_lab.reports.")

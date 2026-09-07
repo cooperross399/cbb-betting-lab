@@ -1403,22 +1403,52 @@ def _assert_gate_precedes_filter(function) -> None:
     import textwrap
 
     tree = ast.parse(textwrap.dedent(inspect.getsource(function)))
-    gates, filters = [], []
+
+    # **A filter whose result is thrown away filters nothing.** The first AST
+    # version collected Call nodes by name, so replacing
+    # `bets = without_markets_refused_by_name(bets)` with the bare expression
+    # `without_markets_refused_by_name(bets)` kept the Call, kept this green,
+    # and filtered nothing — 122 tests passed while a 300-row
+    # `player_first_basket` frame came back from `build_record` with a verdict.
+    # That is the same failure as the `str.index` version this replaced: it
+    # proved the helper was NAMED, not that it did the work.
+    #
+    # So a filter call counts only when its value is BOUND — the parent node is
+    # an assignment whose target is a plain name — and the name it binds must
+    # be the name it was given, or the frame that flows on is not the filtered
+    # one.
+    bound_filters: list[int] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+            continue
+        target = node.targets[0]
+        value = node.value
+        if not isinstance(target, ast.Name) or not isinstance(value, ast.Call):
+            continue
+        called = getattr(value.func, "attr", None) or getattr(value.func, "id", None)
+        if called not in {
+            "without_markets_refused_by_name",
+            "_without_markets_refused_by_name",
+        }:
+            continue
+        passed = value.args[0] if value.args else None
+        passed_name = getattr(passed, "attr", None) or getattr(passed, "id", None)
+        if passed_name is None or target.id == passed_name:
+            bound_filters.append(node.lineno)
+
+    gates, filters = [], list(bound_filters)
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
         name = getattr(node.func, "attr", None) or getattr(node.func, "id", None)
         if name == "guard_graded_frame":
             gates.append(node.lineno)
-        elif name in {
-            "without_markets_refused_by_name",
-            "_without_markets_refused_by_name",
-        }:
-            filters.append(node.lineno)
     assert gates, f"{function.__qualname__} calls no census gate at all"
     assert filters, (
-        f"{function.__qualname__} calls no refusal filter at all, so a market "
-        "refused by name reaches whatever it builds"
+        f"{function.__qualname__} binds no refusal filter at all. A call whose "
+        "result is discarded is not a filter: the frame that flows on is the "
+        "unfiltered one, and a market refused by name reaches whatever this "
+        "builds."
     )
     assert max(gates) < min(filters), (
         f"{function.__qualname__} filters at line {min(filters)} before it "

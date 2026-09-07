@@ -1251,7 +1251,15 @@ _RECONCILED: dict[str, Attribution] = {}
 #: it first, that each refuses a player frame with no receipt, and -- as a
 #: floor rather than a proof, in the test's own name -- that no module outside
 #: the pinned list builds an interval or scores a probability.
+#: **`price_backtest.build_record` was added on 2026-09-07 and it is the one
+#: the shipped script always runs.** `settled_opinions` was the module's only
+#: named door, and `scripts/run_price_backtest.py` calls it inside
+#: `if args.write_graded:` while calling `build_record` on every invocation --
+#: so every test that iterates this tuple walked past the function that
+#: actually grades. Adding the guard without adding the name here left it
+#: unexercised by all three of them.
 GRADING_ENTRY_POINTS: tuple[str, ...] = (
+    "cbb_betting_lab.reports.price_backtest.build_record",
     "cbb_betting_lab.forward_evidence.render_ledger",
     "cbb_betting_lab.forward_evidence.report_payload",
     "cbb_betting_lab.reachability.build_record",
