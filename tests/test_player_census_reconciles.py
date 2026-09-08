@@ -1323,7 +1323,7 @@ def test_the_gate_reconciles_the_store_it_is_pinned_to():
 
 
 def test_the_limitations_this_gate_ships_with():
-    """Four things this gate cannot do. Assertions, so they cannot rot into prose.
+    """Five things this gate cannot do. Assertions, so they cannot rot into prose.
 
     1. **The denominator it certifies is a STRING count, not an athlete count.**
        The price store carries no `athlete_id` column. The graded denominator is
@@ -1346,15 +1346,24 @@ def test_the_limitations_this_gate_ships_with():
        Implemented as an attribution, and the disagreement is reported.
     4. **Nothing has been graded.** No de-vig, no log loss, no interval and no
        verdict exists anywhere in this tree for a player prop.
-    5. **No shipped script files a disposition, so no run can pass the second
-       half of this gate.** `reports.gameday_card.opinions_for` is the only
-       producer of a `RunDisposition` and it files only when one is passed to
-       it; `scripts/run_price_backtest.py` and `scripts/run_gameday_card.py`
-       pass none. That is the gate failing CLOSED and it is the true state of
-       this branch — nothing may be graded — rather than a hole: a run that
-       cannot say what became of every prop the store offered must not grade
-       one. The day a script files them, wire `assert_every_offered_prop_is_
-       accounted` into it and re-point this clause.
+    5. **A script files dispositions now, and the scripts that GRADE still do
+       not.** This clause used to read "no shipped script files a disposition,
+       so no run can pass the second half of this gate", and it closed on
+       2026-09-07: `scripts/run_prop_accounting.py` walks the store forward,
+       hands `reports.gameday_card.opinions_for` a `RunDisposition` so the card
+       files one bucket per prop as it decides, and calls
+       `assert_every_offered_prop_is_accounted` on the result. It is re-pointed
+       here rather than deleted, at the half that is still open: **the runs
+       that turn wagers into numbers file nothing.**
+       `scripts/run_price_backtest.py` and `scripts/run_gameday_card.py` both
+       call `opinions_for` and both pass `dispositions=None`, so neither can
+       produce the second receipt, and the accounting run is a separate
+       invocation whose receipt lives for one process and does not outlive it.
+       That is still the gate failing CLOSED on the shipped grading path, and
+       it is the true state of this branch: nothing may be graded. The day
+       `run_price_backtest.py` files a disposition, check that it also calls
+       `assert_every_offered_prop_is_accounted` before it scores, and re-point
+       this clause again.
 
     Each clause goes red the day it closes, and the instruction is to re-point
     it at the next limitation, never to delete it.
@@ -1416,17 +1425,37 @@ def test_the_limitations_this_gate_ships_with():
 
     scripts = sorted((REPO / "scripts").glob("*.py"))
     assert scripts, "the scripts directory is empty, so this scan proves nothing"
-    filing = [
-        path.name
-        for path in scripts
-        if "RunDisposition(" in path.read_text(encoding="utf-8")
-        or "assert_every_offered_prop_is_accounted" in path.read_text(encoding="utf-8")
-    ]
-    assert not filing, (
-        f"CLAUSE 5 HAS CLOSED: {filing} now file a disposition. Check that the "
-        "script also calls `assert_every_offered_prop_is_accounted` before it "
-        "grades, and re-point this clause; do not delete it."
+    sources = {path.name: path.read_text(encoding="utf-8") for path in scripts}
+    filing = sorted(
+        name for name, text in sources.items() if "RunDisposition(" in text
     )
+    assert filing == ["run_prop_accounting.py"], (
+        f"{filing} file a disposition. A script that files one must also call "
+        "`assert_every_offered_prop_is_accounted` on what it filed, or it has "
+        "produced half an identity and nothing checks the other half; add it "
+        "here in the same commit."
+    )
+    for name in filing:
+        assert "assert_every_offered_prop_is_accounted" in sources[name], (
+            f"{name} files dispositions and never reconciles them. Counting "
+            "what a run did with every prop and then not comparing it against "
+            "what the store offered is the accounting that reconciles by "
+            "construction, one lab over."
+        )
+
+    # The half that is still open, asserted so it goes red the day it closes:
+    # the runs that produce numbers over these wagers file nothing, so neither
+    # can pass the second half of the gate. `dispositions=` is the only way in
+    # and both leave it at its default.
+    for name in ("run_price_backtest.py", "run_gameday_card.py"):
+        assert "dispositions" not in sources[name], (
+            f"CLAUSE 5 HAS MOVED: {name} now passes a disposition to "
+            "`opinions_for`. Check that it calls "
+            "`assert_every_offered_prop_is_accounted` before it scores "
+            "anything, add its entry point back to GRADING_ENTRY_POINTS if it "
+            "gained one, and re-point this clause; do not delete it."
+        )
+
     assert PC.accounted() == (), (
         "a disposition receipt survived into this test, so the gate would look "
         "open in a file that never ran it"
@@ -1524,10 +1553,15 @@ def test_the_grading_commit_still_owes_this_gate():
     """`price_backtest.build_record` scores player markets with NO census.
 
     **Written down because it cannot be closed here.** `guard_graded_frame`
-    demands two receipts, and the second is set only by
-    `assert_every_offered_prop_is_accounted`, which has no caller anywhere and
-    which clause 5 above forbids any script from calling: "Grading belongs in
-    its own commit, gated on this one." It is a NOT-YET gate.
+    demands two receipts. The second is set only by
+    `assert_every_offered_prop_is_accounted`, and as of 2026-09-07 it has a
+    caller — `scripts/run_prop_accounting.py`, which is clause 5 above closing
+    and being re-pointed. That producer is a **separate invocation**: its
+    receipt lives for the length of its own process and is gone before the
+    backtest starts, so `build_record` is no closer to carrying one than it was
+    when nothing filed the second receipt at all. What has changed is that the
+    receipt is now producible, so the remaining work is wiring rather than a
+    missing gate.
 
     `build_record` is not a not-yet path. It is the shipped backtest's ROI
     half, it runs on every invocation, and the committed
@@ -1539,8 +1573,9 @@ def test_the_grading_commit_still_owes_this_gate():
     So the hole is real and stated: this function scores player markets without
     a census receipt. The filter still runs, so a market refused BY NAME never
     reaches a verdict — that needs no receipt. Closing the rest belongs in the
-    grading commit the census was built for, and this assertion goes red the
-    day something files the second receipt, which is the day it can be closed.
+    grading commit the census was built for, and it is a commit that now has
+    the receipt it was waiting on: `scripts/run_prop_accounting.py` files one,
+    over the whole store, and prints what became of every prop.
     """
     # **Read the CALLS, not the prose.** The first version of this asserted
     # `"guard_graded_frame" not in source` and failed on the COMMENT above the

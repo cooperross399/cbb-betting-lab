@@ -1,0 +1,201 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-08T02:49:28+00:00",
+  "what": "scripts/run_prop_accounting.py (cbb_betting_lab.models.slate:slate_model)",
+  "model": "cbb_betting_lab.models.slate:slate_model",
+  "store": {
+    "path": "/private/tmp/wt-grading/data/processed/cbb_historical_prices__card.csv",
+    "sha256": "143d7d307d9bc3b21989d7857aac6a52f8abd010da2c1e0ea2df8c0f0b82b78b",
+    "bytes": 977613435,
+    "rows_scanned": 3863325,
+    "player_quotes": 504394,
+    "events": 1180,
+    "slate_dates": 140
+  },
+  "declared_subject": "casefold",
+  "slate_days_priced": 140,
+  "offered": 257474,
+  "accounted": 257474,
+  "residual": 0,
+  "buckets": {
+    "refused_by_name": 723,
+    "unregistered_market": 0,
+    "name_unresolved": 6154,
+    "athlete_refused": 4377,
+    "never_asked": 0,
+    "priced": 246218,
+    "unreadable": 2
+  },
+  "no_opinion": 10531,
+  "by_market": [
+    {
+      "market": "player_assists",
+      "offered": 33630,
+      "accounted": 33630,
+      "buckets": {
+        "name_unresolved": 1112,
+        "athlete_refused": 754,
+        "priced": 31764
+      }
+    },
+    {
+      "market": "player_double_double",
+      "offered": 2,
+      "accounted": 2,
+      "buckets": {
+        "refused_by_name": 2
+      }
+    },
+    {
+      "market": "player_first_basket",
+      "offered": 721,
+      "accounted": 721,
+      "buckets": {
+        "refused_by_name": 721
+      }
+    },
+    {
+      "market": "player_points",
+      "offered": 78213,
+      "accounted": 78213,
+      "buckets": {
+        "name_unresolved": 1772,
+        "athlete_refused": 1324,
+        "priced": 75115,
+        "unreadable": 2
+      }
+    },
+    {
+      "market": "player_points_assists",
+      "offered": 6903,
+      "accounted": 6903,
+      "buckets": {
+        "name_unresolved": 64,
+        "priced": 6839
+      }
+    },
+    {
+      "market": "player_points_rebounds",
+      "offered": 7943,
+      "accounted": 7943,
+      "buckets": {
+        "name_unresolved": 114,
+        "priced": 7829
+      }
+    },
+    {
+      "market": "player_pra",
+      "offered": 23613,
+      "accounted": 23613,
+      "buckets": {
+        "name_unresolved": 350,
+        "athlete_refused": 610,
+        "priced": 22653
+      }
+    },
+    {
+      "market": "player_rebounds",
+      "offered": 52710,
+      "accounted": 52710,
+      "buckets": {
+        "name_unresolved": 1387,
+        "athlete_refused": 974,
+        "priced": 50349
+      }
+    },
+    {
+      "market": "player_rebounds_assists",
+      "offered": 6436,
+      "accounted": 6436,
+      "buckets": {
+        "name_unresolved": 76,
+        "priced": 6360
+      }
+    },
+    {
+      "market": "player_steals",
+      "offered": 11310,
+      "accounted": 11310,
+      "buckets": {
+        "name_unresolved": 176,
+        "athlete_refused": 10,
+        "priced": 11124
+      }
+    },
+    {
+      "market": "player_threes",
+      "offered": 25179,
+      "accounted": 25179,
+      "buckets": {
+        "name_unresolved": 921,
+        "athlete_refused": 691,
+        "priced": 23567
+      }
+    },
+    {
+      "market": "player_turnovers",
+      "offered": 10814,
+      "accounted": 10814,
+      "buckets": {
+        "name_unresolved": 182,
+        "athlete_refused": 14,
+        "priced": 10618
+      }
+    }
+  ],
+  "by_tier": {
+    "high_major": {
+      "refused_by_name": 411,
+      "name_unresolved": 2170,
+      "athlete_refused": 2460,
+      "priced": 92001
+    },
+    "low_major": {
+      "refused_by_name": 10,
+      "name_unresolved": 126,
+      "priced": 3586
+    },
+    "mid_major": {
+      "refused_by_name": 302,
+      "name_unresolved": 3858,
+      "athlete_refused": 1917,
+      "priced": 150631,
+      "unreadable": 2
+    }
+  },
+  "reasons": {
+    "athlete_refused": {
+      "wagers": 4377,
+      "distinct_sentences": 2,
+      "commonest": {
+        "refused: fewer than four prior appearances / fewer than sixty prior minutes; this would be a role-table price wearing a player's name.": 3861,
+        "refused: this athlete carries no minutes projection, or one below eight minutes. Below eight the distribution is dominated by whether he plays at all, which this lab cannot know at sixty minutes to tip -- the projection would be a statement about the coach and would be published as one about the player. Not a pass, not an avoid, not a no-value call.": 516
+      }
+    },
+    "name_unresolved": {
+      "wagers": 6154,
+      "distinct_sentences": 2,
+      "commonest": {
+        "refused: this name resolves only in tonight's box score, which is a player this lab has not seen, not a name it cannot read. The clause after the comma is the design's and this module cannot check it: the roster searched is a PRIOR roster, so a spelling that reaches no prior athlete is a debutant and an unreadable spelling at once, and separating the two would need the box score of the game being priced. `providers/player_names.py` measured 372 unreachable spellings on 2026-09-05, against 9,584 (game, player) pairs, on a settlement-time join this module may not make.": 6144,
+        "refused: this lab could not read the book's spelling of this player as exactly one athlete on either roster.": 10
+      }
+    },
+    "refused_by_name": {
+      "wagers": 723,
+      "distinct_sentences": 2,
+      "commonest": {
+        "refused: this market settles on the scorer of the game's first field goal, which is decided by the starting five and the opening tip. Neither is knowable at T-60 in this sport, no tip-winner data exists in any table here, and a per-minute rate says nothing about minute zero. It is also a mutually exclusive family -- the probabilities across a game's players must sum to at most one, and the store quotes 422 names over 1,180 games, a partial field, so no normalisation exists and independently priced names would over-sum with nothing looking wrong. This is a model refusal, not a data absence: `first_basket_athlete_id` is present on 100% of game-segment rows and the market is perfectly settleable. Not a pass, not an avoid, not a no-value call.": 721,
+        "refused: the store holds two quotes on one player-game. There is nothing to measure, and pricing it would add a pre-registered hypothesis -- widening every other interval in the lab -- in exchange for a sample of one.": 2
+      }
+    },
+    "unreadable": {
+      "wagers": 2,
+      "distinct_sentences": 1,
+      "commonest": {
+        "refused: R4, line above the count lattice ceiling. This lattice runs to 83 and the line is 89.5. Returning (0, 0, 1) there would report a confident zero that is an artefact of where the lattice was truncated.": 2
+      }
+    }
+  },
+  "rows_that_became_no_wager": 0,
+  "row_refusal_reasons": {}
+}
