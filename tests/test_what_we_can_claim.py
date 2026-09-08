@@ -1039,6 +1039,71 @@ def test_the_rendered_report_states_each_refusal_in_the_models_own_words():
         )[2], f"{market} is still listed under the availability gate"
 
 
+def test_a_player_market_whose_prices_are_in_the_store_is_not_called_unbought(
+    tmp_path: Path,
+):
+    """*A starved fetch and an unquoted market look identical.* Not here.
+
+    Until 2026-09-07 the player branch of `unmeasured_markets` fired before the
+    `bought` check and told every reader that no historical price had been
+    bought for `player_points` — while 148,673 `player_points` quotes sat in
+    `data/processed/cbb_historical_prices__card.csv`. That is the confusion the
+    brief names outright, in the one document whose job is to stop a number
+    being misread, and it understated what this lab holds rather than
+    overstating it, which is why it survived a document written to catch the
+    other direction.
+
+    Three states, three sentences, driven over a store built here:
+
+    * bought and priceable — the prices exist and are scored by
+      `cbb_prop_grading`, which is a log loss and not a return;
+    * bought and refused BY NAME — never priced whatever the store holds;
+    * not bought — no price, in the words this document has always used.
+
+    Mutation: move the `bought` check back below the player branch — RED.
+    """
+    from cbb_betting_lab.models import player_rates as PR
+
+    processed = tmp_path / "processed"
+    processed.mkdir()
+    refused = sorted(PR.MARKETS_REFUSED_BY_NAME)[0]
+    pd.DataFrame(
+        {"market": ["player_points", refused, "spread"]}
+    ).to_csv(processed / "cbb_historical_prices__card.csv", index=False)
+
+    rows = {
+        row["market"]: row["reason"]
+        for row in WC.unmeasured_markets([], processed_dir=processed)
+    }
+    assert "**have** been bought" in rows["player_points"], rows["player_points"]
+    assert "cbb_prop_grading" in rows["player_points"]
+    assert "refused by the model BY NAME" in rows[refused]
+    # Bought, not refused, and the model is not registered against it: the
+    # sentence must not borrow the scored one. No market is in this state on
+    # the real store — it holds the ten the model prices and the two it
+    # refuses — so it is driven here.
+    pd.DataFrame({"market": ["player_points", refused, "player_blocks"]}).to_csv(
+        processed / "cbb_historical_prices__card.csv", index=False
+    )
+    widened = {
+        row["market"]: row["reason"]
+        for row in WC.unmeasured_markets([], processed_dir=processed)
+    }
+    assert "is not registered against it" in widened["player_blocks"]
+    assert "cbb_prop_grading" not in widened["player_blocks"], (
+        "a market nothing has scored borrowed the sentence that says it was "
+        "scored"
+    )
+    assert "no historical price has been bought" in rows["player_rebounds"], (
+        "a player market with nothing in the store lost the sentence that is "
+        "still true of it"
+    )
+    # And the availability gate is still stated as a SECOND bar wherever a
+    # price exists, never as the reason there is none.
+    assert "Availability.CONFIRMED" in rows["player_points"]
+    assert "Availability.CONFIRMED" in rows["player_rebounds"]
+
+
 def test_nothing_in_this_repository_calls_a_player_prop_priced():
     """The same false claim was in six places, so it is guarded repo-wide.
 

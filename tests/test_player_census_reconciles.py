@@ -853,7 +853,7 @@ TEAM_WAGER = {
 
 
 def test_no_player_wager_can_be_graded_until_this_gate_has_run(tmp_path):
-    """All five grading entry points refuse a player frame with no receipt.
+    """All six grading entry points refuse a player frame with no receipt.
 
     `forecast_skill.build_record` is design section 10's own metric — it de-vigs,
     scores log loss and Brier and builds the clustered intervals — and it
@@ -875,10 +875,16 @@ def test_no_player_wager_can_be_graded_until_this_gate_has_run(tmp_path):
     Every one of the five is driven HERE, at its own call site, because a test
     that asserts a helper works passes with the call deleted.
 
+    The sixth arrived 2026-09-07 with the grading commit:
+    `reports.prop_grading.build_record` is design section 10's scoring — two
+    de-vigs, log loss, Brier, calibration by decile, three-way clustered
+    intervals and a verdict per market and per tier — over a population that is
+    nothing BUT player props.
+
     Mutation: delete the `player_census.guard_graded_frame(...)` line from
     `forecast_skill.build_record` — RED. Same for `settled_opinions`,
-    `render_ledger`, `report_payload` and `reachability.build_record` — RED,
-    one at a time.
+    `render_ledger`, `report_payload`, `reachability.build_record` and
+    `prop_grading.build_record` — RED, one at a time.
 
     **Two receipts, and the second one is the gate with two independently
     derived numbers.** The census is the store counted twice under two folds of
@@ -889,12 +895,13 @@ def test_no_player_wager_can_be_graded_until_this_gate_has_run(tmp_path):
     both. The middle state is the one that used to open every door.
 
     Mutation: delete `if not _ACCOUNTED:` from `guard_graded_frame` — RED on the
-    middle loop below, five times over.
+    middle loop below, six times over.
     """
     from cbb_betting_lab import forward_evidence as FE
     from cbb_betting_lab import reachability as RE
     from cbb_betting_lab.reports import forecast_skill as FS
     from cbb_betting_lab.reports import price_backtest as PB
+    from cbb_betting_lab.reports import prop_grading as PG
 
     team = pd.DataFrame([TEAM_WAGER])
     props = pd.DataFrame([dict(TEAM_WAGER, market="player_points")])
@@ -926,6 +933,14 @@ def test_no_player_wager_can_be_graded_until_this_gate_has_run(tmp_path):
         "forward_evidence.render_ledger": lambda: FE.render_ledger(props),
         "forward_evidence.report_payload": lambda: FE.report_payload(props),
         "reachability.build_record": lambda: RE.build_record(props, None),
+        # Added 2026-09-07 with the grading commit. It is the door design
+        # section 10 was written for, and it is the only one of the six whose
+        # every row is a player wager: the guard is not a cheap prefix test
+        # that finds nothing here, it either lets the whole run through or
+        # stops it.
+        "prop_grading.build_record": lambda: PG.build_record(
+            PG.PropGradingInputs(graded=props)
+        ),
     }
     assert set(refusals) == {
         dotted.split(".", 2)[-1] if dotted.startswith("cbb_betting_lab.reports.")
@@ -1075,6 +1090,10 @@ GRADES_A_WAGER_FRAME_AND_IS_GUARDED = {
         "design section 10's metric; guarded in build_record",
     "src/cbb_betting_lab/reports/price_backtest.py":
         "the ROI half; guarded in settled_opinions",
+    "src/cbb_betting_lab/reports/prop_grading.py":
+        "design section 10's scoring of the player-prop model -- two de-vigs, "
+        "log loss, Brier, calibration by decile, three-way clustered intervals "
+        "and a verdict per market and per tier; guarded in build_record",
 }
 
 #: Builds an interval over something that is not a wager, so no player wager
@@ -1105,6 +1124,10 @@ READS_A_BUILT_RECORD_OR_CALLS_ONE_THAT_GRADES = {
     "scripts/build_skill_frame.py": "builds the frame; grades nothing",
     "scripts/run_forecast_skill.py": "calls forecast_skill.build_record",
     "scripts/run_price_backtest.py": "calls price_backtest.settled_opinions",
+    "scripts/run_prop_grading.py":
+        "the wiring for the module above: it prices, files its dispositions "
+        "and settles, and every number it prints comes back from "
+        "prop_grading.build_record",
     "scripts/run_weekly_loop.py":
         "calls forward_evidence's own helpers for the demotion check, over "
         "`measurable_bets` -- which is `fe._bet_rows`, and that excludes every "
@@ -1115,11 +1138,15 @@ READS_A_BUILT_RECORD_OR_CALLS_ONE_THAT_GRADES = {
 def test_no_module_outside_this_pinned_list_builds_an_interval_or_scores_one():
     """Every module naming a grading token, pinned with what kind it is.
 
-    Seventeen modules, measured 2026-09-06 by :data:`GRADING_TOKENS` over
-    `src/` and `scripts/`. Four GRADE a frame of wagers and carry the guard;
-    two build an interval over something that is not a wager; eleven read a
-    record somebody else graded or call one of the four. The day an eighteenth
+    Nineteen modules, measured 2026-09-07 by :data:`GRADING_TOKENS` over
+    `src/` and `scripts/`. FIVE grade a frame of wagers and carry the guard;
+    two build an interval over something that is not a wager; twelve read a
+    record somebody else graded or call one of the five. The day a twentieth
     appears this goes red and its author has to say which of the three it is.
+
+    The fifth grader and the twelfth reader arrived together on 2026-09-07:
+    `reports/prop_grading.py` is design section 10's metric and
+    `scripts/run_prop_grading.py` is its wiring.
 
     **This replaces a check that called itself "the whole of the grading
     surface" and was not.** It scanned for one verb list, matched nine modules,
@@ -1346,22 +1373,26 @@ def test_the_limitations_this_gate_ships_with():
        Implemented as an attribution, and the disagreement is reported.
     4. **Nothing has been graded.** No de-vig, no log loss, no interval and no
        verdict exists anywhere in this tree for a player prop.
-    5. **A script files dispositions now, and the scripts that GRADE still do
-       not.** This clause used to read "no shipped script files a disposition,
-       so no run can pass the second half of this gate", and it closed on
-       2026-09-07: `scripts/run_prop_accounting.py` walks the store forward,
-       hands `reports.gameday_card.opinions_for` a `RunDisposition` so the card
-       files one bucket per prop as it decides, and calls
-       `assert_every_offered_prop_is_accounted` on the result. It is re-pointed
-       here rather than deleted, at the half that is still open: **the runs
-       that turn wagers into numbers file nothing.**
-       `scripts/run_price_backtest.py` and `scripts/run_gameday_card.py` both
-       call `opinions_for` and both pass `dispositions=None`, so neither can
-       produce the second receipt, and the accounting run is a separate
-       invocation whose receipt lives for one process and does not outlive it.
-       That is still the gate failing CLOSED on the shipped grading path, and
-       it is the true state of this branch: nothing may be graded. The day
-       `run_price_backtest.py` files a disposition, check that it also calls
+    5. **A grading run files its own dispositions now, and the SHIPPED card
+       and backtest still do not.** This clause has been re-pointed twice. It
+       began as "no shipped script files a disposition, so no run can pass the
+       second half of this gate"; on 2026-09-07 `scripts/run_prop_accounting.
+       py` closed that and it was re-pointed at "the runs that turn wagers into
+       numbers file nothing"; and `scripts/run_prop_grading.py` closed THAT on
+       the same day — it walks the store forward, hands
+       `reports.gameday_card.opinions_for` a `RunDisposition`, calls
+       `assert_every_offered_prop_is_accounted`, and only then scores anything.
+
+       It is re-pointed again rather than deleted, at the half that is still
+       open: **the two shipped runs that price props every night file
+       nothing.** `scripts/run_price_backtest.py` and
+       `scripts/run_gameday_card.py` both call `opinions_for` with
+       `dispositions=None`, so neither can produce the second receipt in its
+       own process, and a receipt from the grading run does not outlive it.
+       `price_backtest.build_record` therefore still scores player markets with
+       no census — `test_the_grading_commit_still_owes_this_gate` holds that
+       open — and the card still prices props it has filed no disposition for.
+       The day either of them files one, check that it also calls
        `assert_every_offered_prop_is_accounted` before it scores, and re-point
        this clause again.
 
@@ -1429,7 +1460,7 @@ def test_the_limitations_this_gate_ships_with():
     filing = sorted(
         name for name, text in sources.items() if "RunDisposition(" in text
     )
-    assert filing == ["run_prop_accounting.py"], (
+    assert filing == ["run_prop_accounting.py", "run_prop_grading.py"], (
         f"{filing} file a disposition. A script that files one must also call "
         "`assert_every_offered_prop_is_accounted` on what it filed, or it has "
         "produced half an identity and nothing checks the other half; add it "
@@ -1463,7 +1494,7 @@ def test_the_limitations_this_gate_ships_with():
 
 
 def test_every_grading_entry_point_filters_before_it_gates():
-    """Both halves, at all five doors, because fixing one door moved the bug.
+    """Both halves, at all six doors, because fixing one door moved the bug.
 
     Commit 6549cd7 made `player_markets_in` subtract the markets refused by
     name, so `guard_graded_frame` returned `()` on a frame whose only player
@@ -1515,11 +1546,14 @@ def test_every_grading_entry_point_filters_before_it_gates():
     # Half one: a market that CAN be graded is refused without a receipt.
     from cbb_betting_lab.reports import forecast_skill as FS
     from cbb_betting_lab.reports import price_backtest as PBT
+    from cbb_betting_lab.reports import prop_grading as PG
 
     with pytest.raises(PC.WagerCountMismatch):
         FS.build_record(FS.SkillInputs(graded=_frame("player_points")))
     with pytest.raises(PC.WagerCountMismatch):
         PBT.settled_opinions(_frame("player_points"))
+    with pytest.raises(PC.WagerCountMismatch):
+        PG.build_record(PG.PropGradingInputs(graded=_frame("player_points")))
 
     # Half two: a refused market is refused too, and that is FAIL-CLOSED
     # rather than a nuisance. The gate is required by its own test to be the
@@ -1531,6 +1565,8 @@ def test_every_grading_entry_point_filters_before_it_gates():
         FS.build_record(FS.SkillInputs(graded=_frame(refused)))
     with pytest.raises(PC.WagerCountMismatch):
         PBT.settled_opinions(_frame(refused))
+    with pytest.raises(PC.WagerCountMismatch):
+        PG.build_record(PG.PropGradingInputs(graded=_frame(refused)))
 
     # And the filter still runs, immediately after the gate, so a receipt does
     # not let a refused market be scored. Asserted on the source rather than by
@@ -1539,7 +1575,7 @@ def test_every_grading_entry_point_filters_before_it_gates():
     # what is read.
     import inspect
 
-    for function in (FS.build_record, PBT.settled_opinions):
+    for function in (FS.build_record, PBT.settled_opinions, PG.build_record):
         body = inspect.getsource(function)
         gate_at = body.index("guard_graded_frame")
         filter_at = body.index("without_markets_refused_by_name")

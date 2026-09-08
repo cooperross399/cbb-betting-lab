@@ -12,20 +12,36 @@ commit the estimator, `models/player_rates.py`. So the ordering is no longer
 carried by the tree being empty, and this file says what it is carried by
 instead.
 
-What still holds without argument: `models/player_distributions.py` does not
-exist, and **nothing in this repository can turn a projection into a
-probability without it**. `player_rates.py` produces a mean, a 46-long minutes
-lattice and a refusal census; it produces no `P(over)`, no de-vigged
-comparison and no log loss, so not one of the 33 hypotheses below can have been
-looked at. That is the same claim the empty tree used to make, narrowed to the
-file that actually stands between a projection and a graded number.
+**On 2026-09-07 the last of those narrowings was spent.**
+`reports/prop_grading.py` de-vigs, scores a mean log loss and a Brier, and
+prints a verdict per market and per tier, and `scripts/run_prop_grading.py`
+runs it over the whole store. So every one of the 33 hypotheses below has now
+been looked at, and the ordering can no longer be carried by anything about the
+tree being empty. That is the state this file was always going to reach, and
+its own docstring said so.
 
-What the rest rests on, now that the inputs exist, is
-`test_the_directions_could_not_have_been_written_after_the_numbers`: every
-entry is `pending` with an empty realised direction, the ledger is append-only
-under its own CI job, and the constants were fitted on 2019-2022 and validated
-on 2023 with a price-season floor at 2024 that their loader refuses to cross.
-None of those is a promise and none can be satisfied by deleting a line.
+What carries it instead, and none of these can be satisfied by writing or
+deleting a file:
+
+* **The constants could not have been tuned on what they are graded against.**
+  Every hypothesis names season 2024 and nothing else; the frozen shapes file
+  was fitted on 2019-2022, validated on 2023, and carries a price-season floor
+  at 2024 that its loader refuses to cross. A constant that had seen the graded
+  season would make the whole family unfalsifiable.
+* **The ledger is append-only**, under its own CI job, keyed on
+  `(search, name, seasons, stage)` and diffed against the PR base — so a
+  direction cannot be edited or a cell dropped once a number is seen.
+* **The scoring path is NAMED here.** The two files above are pinned by name
+  and by the probability names they bind, so a second, unnamed scorer appearing
+  anywhere in `src/` or `scripts/` is a red build.
+
+**`pending` is not part of that evidence and this file no longer treats it as
+if it were.** All 95 entries in the ledger are `pending`, including the four
+core-team hypotheses the price backtest measured on 2026-09-05: this lab's
+convention is that the ledger records the registration and the record on disk
+carries the result. Reading `pending` as "nothing has been measured" would have
+been a false inference from a true field, which is the same shape of mistake the
+rest of this repository is arranged against.
 
 The rest pins the shape the design named, so a later session cannot quietly
 grow or shrink the family:
@@ -161,7 +177,10 @@ def _player_probability_names() -> dict[str, list[str]]:
                 name
                 for name in _bound_names(path.read_text(encoding="utf-8"))
                 if _is_a_player_probability_name(
-                    name, in_a_player_file="player" in path.name.lower()
+                    name,
+                    in_a_player_file=(
+                        "player" in path.name.lower() or "prop" in path.name.lower()
+                    ),
                 )
             )
             if hits:
@@ -203,19 +222,21 @@ INPUT_FILES = (
 )
 
 
-#: Every player-probability name in the tree, measured on 2026-09-07, with why
-#: each is not a scored claim about the 33 hypotheses.
+#: Every player-probability name in the tree, measured on 2026-09-07 AFTER the
+#: grading commit, with why each one is there.
 #:
-#: **The engine's names are here and that is the point of the narrowing.**
-#: `player_distributions.probability` and `void_probability` are P(over) and
-#: P(void) on a lattice — real probabilities, and they exist. What they are
-#: not is a SCORED comparison: there is no de-vigged fair price to hold them
-#: against and no log loss anywhere in this tree, and every one of the 33
-#: hypotheses is a claim about a mean log loss. A probability nobody has
-#: scored has met no hypothesis.
+#: **This is no longer a list of things that are not a scored claim.** The
+#: first four are still the engine's own lattice reads and the stored
+#: did-not-play diagnostic. The rest are the scoring path itself:
+#: `reports/prop_grading.py` is design section 10's metric — two de-vigs, a
+#: mean log loss, a Brier, calibration by decile and a verdict per market and
+#: per tier — and `scripts/run_prop_grading.py` is the wiring that prices the
+#: store and hands it a frame.
 #:
-#: `dnp_probability` is the stored did-not-play diagnostic, asserted elsewhere
-#: never to be multiplied into a price.
+#: Pinned so that a SECOND scoring path, written anywhere in `src/` or
+#: `scripts/` under any name carrying `player` or a probability token, is a red
+#: build. That is what this list is for now: the family was registered before
+#: the scorer existed, and there is exactly one scorer.
 PROBABILITY_NAMES_ON_THIS_COMMIT = {
     "src/cbb_betting_lab/models/player_distributions.py": [
         "probability",
@@ -225,54 +246,66 @@ PROBABILITY_NAMES_ON_THIS_COMMIT = {
         "_dnp_probability",
         "dnp_probability",
     ],
+    "src/cbb_betting_lab/reports/prop_grading.py": [
+        "DEVIG_METHODS",
+        "DEVIG_POWER",
+        "DEVIG_PROPORTIONAL",
+        "DEVIG_SENTENCE",
+        "DevigCensus",
+        "PROBABILITY_FLOOR",
+        "SEARCH_VS_DEVIG",
+        "devig",
+        "devig_census",
+        "devigged",
+        "log_loss",
+        "no_control_probability",
+        "no_model_probability",
+        "probability",
+    ],
+    "scripts/run_prop_grading.py": [
+        "control_probabilities",
+        "probabilities",
+        "probability",
+    ],
 }
 
+#: The two files the scoring path is allowed to live in. A third would be a
+#: second scorer, and two scorers can disagree about what the 33 hypotheses
+#: were answered with.
+THE_SCORING_PATH = (
+    "src/cbb_betting_lab/reports/prop_grading.py",
+    "scripts/run_prop_grading.py",
+)
 
-def test_nothing_in_this_tree_can_turn_a_projection_into_a_probability() -> None:
-    """The registration precedes the thing it registers, narrowed twice.
 
-    This test used to assert that all five files were absent, and it said in
-    its own docstring that the commit which builds the model is expected to
-    change it. That commit has now landed for four of them: the frozen
-    constants, their fitter, their loader and the estimator are on disk. The
-    assertion is narrowed rather than deleted, because deleting it is exactly
-    what it exists to make difficult.
+def test_the_scoring_path_is_the_one_named_here_and_there_is_only_one() -> None:
+    """The tree CAN now turn a projection into a scored number. Exactly once.
 
-    What it now says: `player_distributions.py` does not exist. Without it
-    there is no `P(over)`, no de-vigged fair price to compare one against and
-    no log loss, and every one of the 33 hypotheses below is a claim about a
-    mean log loss. So no number has met them, and could not have.
+    This test used to be called
+    `test_nothing_in_this_tree_can_turn_a_projection_into_a_probability` and it
+    asserted, over the whole of `src/` and `scripts/`, that no player
+    probability existed anywhere. That claim is false as of 2026-09-07 and the
+    name is renamed rather than the assertion loosened: a test whose NAME says
+    something untrue is worse than no test, and this file's whole subject is
+    the difference between a prediction and a description.
 
-    The second narrowing is a check on the first, because "the file is absent"
-    is a claim about a name and a name is the cheapest thing in a repository to
-    change. So this now READS THE TREE, which until 2026-09-06 it only said it
-    did: the docstring claimed "nothing anywhere in `src/` or `scripts/`
-    produces a player probability" while the body inspected two things, the
-    `player_rates` module namespace and the fields of `PlayerProjection`, and
-    walked nothing. The docstring asserted the broad property and the code
-    asserted the narrow one, which is the house rule exactly inverted.
+    What it asserts now:
 
-    What the body does now: every `.py` under `src/cbb_betting_lab/` and
-    `scripts/` is parsed and every name it binds at any depth is collected —
-    function, class, assignment, annotated assignment, attribute store,
-    argument. A name is a player probability when it carries one of
-    `PROBABILITY_TOKENS` **and** is either written in a file whose own name
-    says `player` or says `player` itself. Measured on this commit, the whole
-    tree holds exactly two such names, `dnp_probability` and `_dnp_probability`
-    in `models/player_rates.py`, and both are the stored did-not-play
-    diagnostic that is never multiplied into a price.
+    1. Every input the model reads is on disk and named, so a fifth appearing
+       under that heading is a decision somebody makes on purpose.
+    2. The scoring path is exactly the two files in :data:`THE_SCORING_PATH`.
+       A third file binding a player probability anywhere in `src/` or
+       `scripts/` is red — two scorers can disagree about what the 33
+       hypotheses were answered with, and nothing in a report would say which
+       one produced the number on the page.
+    3. The estimator itself still exposes no probability but the stored
+       did-not-play diagnostic, and a `PlayerProjection` still carries neither
+       a model probability nor a push mass. The scoring lives downstream of the
+       projection, which is what makes the control constructible from the same
+       object.
 
-    It is not vacuous. It is the assertion that goes red when a later session
-    writes the de-vig and the P(over) into `models/player_probability.py`, or
-    into `reports/player_card.py`, or as a `player_over_probability` in any
-    file at all — every route in this finding's failure scenario, none of which
-    touches `MODEL_FILES`, `player_rates`' namespace or `PlayerProjection`.
-
-    **The gap this scan still has, asserted open at the end of the body rather
-    than described here**: it judges names, so a player probability written
-    under a name that mentions neither `player` nor any of the six tokens is
-    invisible to it. Widening a file-absence claim from one path to the whole
-    tree is not the same as reading the code, and this does the first.
+    Mutation: write a `player_over_probability` into any module under `src/` —
+    RED, by name and by file.
     """
     for relative in MODEL_FILES:
         assert not (_REPO / relative).exists(), (
@@ -288,22 +321,12 @@ def test_nothing_in_this_tree_can_turn_a_projection_into_a_probability() -> None
             "not on disk. Either it was removed, in which case take it off this "
             "list, or this list is wrong."
         )
+    for relative in THE_SCORING_PATH:
+        assert (_REPO / relative).exists(), (
+            f"{relative} is named as the scoring path and is not on disk. If it "
+            "was renamed, rename it here; if the scoring was removed, say so."
+        )
 
-    # **What the ordering rests on now that every file exists.** Absence is
-    # spent: the engine landed on 2026-09-06 and MODEL_FILES is empty. Three
-    # things carry it instead, and none can be satisfied by writing a file.
-    #
-    # 1. NOTHING HAS BEEN SCORED. There is no player de-vig and no player log
-    #    loss in this tree, and each of the 33 hypotheses is a claim about a
-    #    mean log loss. `tests/test_player_model_leakage.py` holds that scan.
-    # 2. NO ENTRY HAS AN OUTCOME. Every player-prop hypothesis is still
-    #    `pending` with an empty realised direction, asserted below.
-    # 3. THE LEDGER IS APPEND-ONLY, under its own CI job, so an entry cannot be
-    #    edited or back-dated once a number is seen.
-    #
-    # The first two are facts about this commit and go red the day they stop
-    # being true, which is the day somebody has to re-read this and say what
-    # the ordering rests on then.
     from cbb_betting_lab.models import player_rates
 
     produced = {
@@ -313,26 +336,35 @@ def test_nothing_in_this_tree_can_turn_a_projection_into_a_probability() -> None
     }
     assert produced == {"dnp_probability"}, (
         f"the estimator now exposes {sorted(produced)}. `dnp_probability` is a "
-        "stored diagnostic that is never multiplied into a price; anything else "
-        "with a probability in its name is a price, and this family was "
-        "registered before one existed."
+        "stored diagnostic that is never multiplied into a price, and the "
+        "scoring lives downstream of the projection rather than inside it."
     )
     fields = {
         field.name for field in dataclasses.fields(player_rates.PlayerProjection)
     }
     assert "model_probability" not in fields and "push_mass" not in fields, (
-        "a projection now carries a probability, so the thing the 33 "
-        "hypotheses predict about exists. Say what the ordering rests on."
+        "a projection now carries a probability. The control is built by "
+        "replacing a projection's RATES and reading the same engine; a "
+        "projection that carried its own probability would make that "
+        "substitution mean something different."
     )
 
-    # The tree, not just the one module: this is the check the docstring above
-    # used to claim and the body used not to perform.
-    assert _player_probability_names() == PROBABILITY_NAMES_ON_THIS_COMMIT, (
-        "a player probability is now named somewhere in `src/` or `scripts/`. "
-        "If it is the engine, the 33 hypotheses can have been looked at and "
-        "the ordering has to be re-stated from something other than the tree. "
-        "If it is a diagnostic that never reaches a price, add it to `ALLOWED` "
-        "and say in one line why it is not a price."
+    # The tree, read rather than described.
+    found = _player_probability_names()
+    assert found == PROBABILITY_NAMES_ON_THIS_COMMIT, (
+        "the set of player probability names in this tree moved. New: "
+        f"{sorted(set(found) - set(PROBABILITY_NAMES_ON_THIS_COMMIT))}. Gone: "
+        f"{sorted(set(PROBABILITY_NAMES_ON_THIS_COMMIT) - set(found))}. If a "
+        "second scoring path was written, say why this family may be answered "
+        "twice; if a name moved inside the one that exists, update this list."
+    )
+    scoring_files = set(found) - {
+        "src/cbb_betting_lab/models/player_distributions.py",
+        "src/cbb_betting_lab/models/player_rates.py",
+    }
+    assert scoring_files == set(THE_SCORING_PATH), (
+        f"{sorted(scoring_files)} score a player prop and "
+        f"{sorted(THE_SCORING_PATH)} are the declared scoring path."
     )
 
     # The gap in that scan, held open. Red here means somebody taught the scan
@@ -348,15 +380,14 @@ def test_the_directions_could_not_have_been_written_after_the_numbers() -> None:
     """What the ordering rests on now that the inputs exist.
 
     A pre-registration is worth nothing unless the direction was fixed before
-    the measurement. With the constants now on disk, three independent things
-    have to hold, and none of them is a promise:
+    the measurement. The measurement has now happened, so two independent
+    things have to hold, and neither of them is a promise:
 
-    * **Nothing has been measured.** Every entry is `pending` with an empty
-      realised direction, so no number has met these hypotheses yet.
     * **The ledger is append-only**, enforced by
       `scripts/check_ledger_append_only.py` and its own CI job, so these
       entries cannot be edited or back-dated into the middle of the file after
-      a result is seen.
+      a result is seen — which matters more now than it did before the scoring
+      landed, not less.
     * **The constants could not have been tuned on what they will be graded
       against.** Every hypothesis names season 2024 and nothing else. The
       frozen shapes file was fitted on 2019-2022, validated on 2023, and
@@ -388,15 +419,46 @@ def test_the_directions_could_not_have_been_written_after_the_numbers() -> None:
     assert shapes["never_runs_at_price_time"] is True
 
 
-def test_nothing_player_shaped_has_been_measured() -> None:
-    """Every entry is `pending` with no realised direction.
+def test_pending_is_this_ledgers_convention_and_not_evidence_of_anything() -> None:
+    """Every entry is `pending`, and so is every entry this lab HAS measured.
 
-    A pre-registered hypothesis that already carries an outcome was not
-    pre-registered.
+    This test was called `test_nothing_player_shaped_has_been_measured` and its
+    docstring said a pending entry means no number has met the hypothesis. That
+    was never true of this ledger and is now visibly untrue: all 95 entries are
+    `pending` with an empty realised direction, including the four core-team
+    hypotheses the price backtest measured on 2026-09-05 and the 32 the
+    replication appended. The convention here is that the LEDGER records the
+    registration and the RECORD on disk carries the result.
+
+    So the field is asserted — an entry that acquired an outcome would mean the
+    convention changed and every reader of this ledger needs to know — but it
+    is asserted as a convention and never again as evidence that a family is
+    unmeasured. Reading it the other way is a false inference from a true
+    field, which is the shape of mistake the rest of this repository is
+    arranged against.
     """
-    for entry in _player_entries(_tracked()):
+    payload = _tracked()
+    for entry in _player_entries(payload):
         assert entry["outcome"] == "pending", entry["name"]
         assert entry["realised_direction"] == "", entry["name"]
+
+    every = payload["hypotheses"]
+    assert len(every) == 95
+    assert {entry["outcome"] for entry in every} == {"pending"}, (
+        "some entries now carry an outcome and some do not, so `pending` has "
+        "become a claim about which ones were measured. Say what the new "
+        "convention is, here, before any report leans on it."
+    )
+    measured_but_pending = [
+        entry["name"]
+        for entry in every
+        if entry["search"] == "core_team_markets"
+    ]
+    assert measured_but_pending, (
+        "the core-team hypotheses are gone from the ledger. They are the "
+        "worked example this test rests on: measured on 2026-09-05, published "
+        "in `cbb_price_backtest.json`, and still `pending` here."
+    )
 
 
 def test_thirty_market_by_tier_cells_are_registered() -> None:

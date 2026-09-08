@@ -32,6 +32,7 @@ from __future__ import annotations
 import ast
 import importlib.util
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -64,6 +65,7 @@ REQUIRED_GUARDS: tuple[str, ...] = (
     "tests/test_player_seam.py",
     "tests/test_player_model_leakage.py",
     "tests/test_player_census_reconciles.py",
+    "tests/test_prop_grading.py",
 )
 
 #: A guard with fewer test functions than this has been hollowed out.
@@ -461,3 +463,111 @@ def test_the_tracked_module_floor_knows_what_git_tracks() -> None:
     assert "tests/test_the_guards_exist.py" in modules
     for guard in REQUIRED_GUARDS:
         assert guard in modules, f"{guard} is a required guard that git does not track"
+
+
+# ---------------------------------------------------------------------------
+# A cited guard has to exist
+# ---------------------------------------------------------------------------
+
+#: Where a claim about the suite is made. `tests/` is deliberately NOT here: a
+#: test may legitimately name a synthetic module it writes into a `tmp_path` —
+#: `tests/test_two_tests.py` in this very file and `tests/test_x.py` in
+#: `tests/test_workflows.py` are both that — and a guard that could not tell
+#: those from a broken citation would be answered by adding an exemption list
+#: nobody reads. What is scanned is the code and the documents that make claims
+#: ABOUT the suite, which is where the defect has actually happened.
+CITING_TREES: tuple[str, ...] = ("src", "scripts", "docs", "CLAUDE.md")
+
+#: A citation is allowed to name a file that does not exist when the same line
+#: says so. Three do, and all three are corrections of exactly this defect:
+#: `models/ratings.py`, `reports/price_backtest.py` and `stores.py` each record
+#: the name they used to cite. The rule is the one
+#: `tests/test_what_we_can_claim.py` uses for the phrase it forbids — a
+#: correction has to be able to say what it corrected.
+CITATION_DISCLAIMERS: tuple[str, ...] = (
+    "never existed",
+    "does not exist",
+    "there is no such file",
+)
+
+CITED_TEST_FILE = re.compile(r"tests/test_[A-Za-z0-9_]+\.py")
+
+
+def test_no_module_or_document_cites_a_test_file_that_is_not_on_disk() -> None:
+    """*Do not cite a test that is not on disk.*
+
+    CLAUDE.md records nine such citations found and corrected on 2026-09-04 and
+    says the table is where the tenth goes — but nothing checked. The tenth
+    turned up on 2026-09-07 in `stores.normalise_subject`, whose docstring
+    asserted that `tests/test_stores.py` held both halves of a claim about the
+    subject fold; there is no such file and there never was, and `git log
+    --all -- tests/test_stores.py` is empty.
+
+    A cited test is evidence in this repository's prose. A citation that
+    resolves to nothing is a claim held up by a filename, which is the cheapest
+    thing here to write and the cheapest to get wrong.
+
+    Mutation: add ``see `tests/test_nothing.py``` to any module under `src/` —
+    RED.
+    """
+    scanned = 0
+    broken: list[str] = []
+    tracked = tracked_files()
+    for name in sorted(tracked):
+        if not name.endswith((".py", ".md")):
+            continue
+        if not any(
+            name == tree or name.startswith(tree + "/") for tree in CITING_TREES
+        ):
+            continue
+        scanned += 1
+        for number, line in enumerate((REPO / name).read_text(encoding="utf-8").splitlines(), 1):
+            for cited in CITED_TEST_FILE.findall(line):
+                if (REPO / cited).is_file():
+                    continue
+                if any(mark in line for mark in CITATION_DISCLAIMERS):
+                    continue
+                broken.append(f"{name}:{number} cites {cited}")
+    assert scanned > 50, (
+        f"only {scanned} files were scanned, so this guard is watching less "
+        "than it thinks it is"
+    )
+    assert not broken, (
+        "these cite a test file that is not on disk:\n  "
+        + "\n  ".join(broken)
+        + "\nEither the test was renamed — re-point the citation — or it never "
+        "existed, in which case say so on the same line, as three corrections "
+        "in this repository already do."
+    )
+
+
+def test_the_disclaimer_exemption_is_real_and_is_used_by_exactly_the_three() -> None:
+    """The exemption is not a hole: it is three recorded corrections.
+
+    Asserted positively so that a fourth appearing is a line somebody has to
+    justify, and so that a citation quietly gaining a disclaimer instead of a
+    fix is visible in a diff.
+    """
+    disclaimed: dict[str, list[str]] = {}
+    for name in sorted(tracked_files()):
+        if not name.endswith((".py", ".md")):
+            continue
+        if not any(
+            name == tree or name.startswith(tree + "/") for tree in CITING_TREES
+        ):
+            continue
+        for line in (REPO / name).read_text(encoding="utf-8").splitlines():
+            for cited in CITED_TEST_FILE.findall(line):
+                if (REPO / cited).is_file():
+                    continue
+                if any(mark in line for mark in CITATION_DISCLAIMERS):
+                    disclaimed.setdefault(name, []).append(cited)
+    assert disclaimed == {
+        "src/cbb_betting_lab/models/ratings.py": ["tests/test_ratings_are_walk_forward.py"],
+        "src/cbb_betting_lab/reports/price_backtest.py": ["tests/test_price_backtest.py"],
+        "src/cbb_betting_lab/stores.py": ["tests/test_stores.py"],
+    }, (
+        f"the set of disclaimed citations moved: {disclaimed}. A NEW one is a "
+        "docstring naming a test that was never written; say why the name is "
+        "worth keeping at all rather than deleting the sentence."
+    )

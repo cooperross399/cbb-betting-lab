@@ -206,7 +206,7 @@ anything, and why the build order puts it third rather than last.
 
 Generated from the measurement records on disk, so it cannot drift from them. The hand-written rules — written before the first measurement, which is the whole point of them — live in `docs/what_we_can_and_cannot_claim.md`. **This file is re-rendered from its own run record and is never edited by hand.**
 
-- Generated: 2026-09-06T20:56:55+00:00
+- Generated: 2026-09-08T08:39:44+00:00
 - Sample floor: **200 bets**, declared in advance. Below it this document prints a phrase and not a number.
 
 **The only result that survives is a loss.** 32 market-and-tier cell(s) across 10 market(s) are measured against real prices. None excludes zero on the winning side; 3 exclude(s) it on the **losing** side after correcting for everything this lab has ever tested, which is a **demonstrated deficit**: `team_total` / mid_major (historical price backtest, bets) at -5.8% over 13,478 bets across 384 days; `moneyline` / low_major (historical price backtest, bets) at -7.9% over 7,561 bets across 632 days; `total_points` / low_major (historical price backtest, bets) at -5.2% over 17,903 bets across 7,131 games. A demonstrated deficit is a finding, not a null result, and it is the finding this lab has.
@@ -300,12 +300,16 @@ Every modelling policy is a **recorded verdict read from disk**, never an assert
 
 ## Not measured against real prices
 
-- **19 market(s)** — no historical price has been bought for it and no forward opinion on it has settled, so this lab has no price for it. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either.
-  - `player_points` (settles on `player_points`), `player_rebounds` (settles on `player_rebounds`), `player_assists` (settles on `player_assists`), `player_threes` (settles on `player_threes_made`), `player_blocks` (settles on `player_blocks`), `player_steals` (settles on `player_steals`), `player_turnovers` (settles on `player_turnovers`), `player_field_goals` (settles on `player_field_goals_made`), `player_frees_made` (settles on `player_free_throws_made`), `player_frees_attempts` (settles on `player_free_throws_attempted`), `player_pra` (settles on `player_pra`), `player_points_rebounds` (settles on `player_points_rebounds`), `player_points_assists` (settles on `player_points_assists`), `player_rebounds_assists` (settles on `player_rebounds_assists`), `player_blocks_steals` (settles on `player_blocks_steals`), `player_double_double` (settles on `player_double_double`), `player_triple_double` (settles on `player_triple_double`), `player_first_basket` (settles on `player_first_basket`), `player_first_team_basket` (settles on `player_first_team_basket`)
+- **10 market(s)** — historical prices for it **have** been bought, and they are scored against a de-vigged two-sided fair price in `cbb_prop_grading.{json,md}` — a mean-log-loss comparison rather than a return, so it produces no ROI claim in this document and appears here. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either.
+  - `player_points` (settles on `player_points`), `player_rebounds` (settles on `player_rebounds`), `player_assists` (settles on `player_assists`), `player_threes` (settles on `player_threes_made`), `player_steals` (settles on `player_steals`), `player_turnovers` (settles on `player_turnovers`), `player_pra` (settles on `player_pra`), `player_points_rebounds` (settles on `player_points_rebounds`), `player_points_assists` (settles on `player_points_assists`), `player_rebounds_assists` (settles on `player_rebounds_assists`)
+- **7 market(s)** — no historical price has been bought for it and no forward opinion on it has settled, so this lab has no price for it. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either.
+  - `player_blocks` (settles on `player_blocks`), `player_field_goals` (settles on `player_field_goals_made`), `player_frees_made` (settles on `player_free_throws_made`), `player_frees_attempts` (settles on `player_free_throws_attempted`), `player_blocks_steals` (settles on `player_blocks_steals`), `player_triple_double` (settles on `player_triple_double`), `player_first_team_basket` (settles on `player_first_team_basket`)
 - **3 market(s)** — historical prices for it **have** been bought and no measurement has scored them yet. That is a step this lab has not run, not a market the provider does not serve.
   - `moneyline_h2` (settles on `half_margin`), `spread_h2` (settles on `half_margin`), `total_points_h2` (settles on `half_total`)
 - **2 market(s)** — no historical price has been bought for it and no forward opinion on it has settled.
   - `team_total_h1` (settles on `half_team_score`), `team_total_h2` (settles on `half_team_score`)
+- **2 market(s)** — **refused by the model BY NAME**, so it is never priced and never scored whatever the store holds. Its own section below carries the model's own words for why.
+  - `player_double_double` (settles on `player_double_double`), `player_first_basket` (settles on `player_first_basket`)
 - **1 market(s)** — a futures market, served under a separate provider sport key, settling on a clock measured in months. Nothing has been bought for it and nothing has settled.
   - `championship_winner` (settles on `tournament_champion`)
 

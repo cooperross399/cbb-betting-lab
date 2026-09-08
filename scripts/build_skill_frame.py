@@ -79,7 +79,11 @@ things hold the export at zero anyway, and each is a separate fact:
 * nothing may be bet. `gates.can_produce_a_selection` is CONFIRMED-only and
   Division I men's basketball has no availability report;
 * nothing may be graded through the engine until design 10's 261,870-wager
-  reconciliation has run, and it has not.
+  reconciliation has run **in the grading process itself**. It has now run in
+  one: `scripts/run_prop_grading.py` files both receipts and scores the store
+  against a de-vigged fair price. It has never run in a process that builds
+  THIS frame, and a receipt does not outlive the process that filed it, so
+  nothing reaches this export through the engine.
 
 So the count is unchanged at zero, and the day it moves it will be because one
 of those three changed — which is a decision somebody makes, not a drift. The

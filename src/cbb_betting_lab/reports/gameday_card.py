@@ -1474,11 +1474,16 @@ def opinions_for(
     now.
 
     `availability_note`'s "a market the lab prices, freezes and settles but may
-    not bet" was aspirational for the player family until this commit. Two of
-    its three verbs are now literally true of it — priced here, frozen by
-    `run_card`. The third is not this branch's to claim: nothing this engine
-    produces has been graded, and design 10's 261,870-wager reconciliation
-    gates any grading of it.
+    not bet" was aspirational for the player family until 2026-09-06. Two of
+    its three verbs became literally true of it then — priced here, frozen by
+    `run_card` — and the third arrived on 2026-09-07:
+    `scripts/run_prop_grading.py` drives this function with a `RunDisposition`,
+    passes design 10's reconciliation with both receipts, settles what it
+    priced and scores it in `reports/prop_grading.py`. **What is still not
+    true is that a SHIPPED run does any of that**: `run_gameday_card.py` and
+    `run_price_backtest.py` both call this function with `dispositions=None`,
+    so neither can produce the second receipt in its own process, and
+    `tests/test_player_census_reconciles.py`'s clause 5 holds that half open.
 
     **`dispositions` is design section 10's pre-grading gate, filled here.**
     This is the only function in the tree that decides what became of a prop

@@ -52,6 +52,7 @@ from cbb_betting_lab.competitions import CBB
 from cbb_betting_lab.experiment_ledger import load as load_ledger
 from cbb_betting_lab.reports import forecast_skill as FS
 from cbb_betting_lab.reports import price_backtest as PB
+from cbb_betting_lab.reports import prop_grading as PG
 from cbb_betting_lab.reports import replication as REPL
 from cbb_betting_lab.reports import what_we_can_claim as WC
 from cbb_betting_lab.reports import why_the_model as WTM
@@ -432,6 +433,7 @@ DOCUMENTS_THAT_STATE_A_CORRECTION: tuple[str, ...] = (
     "data/outputs/cbb_forecast_skill.md",
     "data/outputs/cbb_forward_evidence.md",
     "data/outputs/cbb_price_backtest.md",
+    "data/outputs/cbb_prop_grading.md",
     "data/outputs/cbb_ratings_fit.md",
     "data/outputs/cbb_reachability.md",
     "data/outputs/cbb_what_we_can_claim.md",
@@ -520,6 +522,13 @@ def test_the_roster_names_every_document_that_states_a_correction():
             "replication",
         ),
         ("cbb_forecast_skill.json", "cbb_forecast_skill.md", "forecast_skill"),
+        # Added 2026-09-07 with the grading commit. Its record carries a second
+        # derived layer the others do not — the headline comparison and the
+        # answered-hypothesis table are functions of several cells at once — so
+        # a re-render that moved only the stored intervals would leave both
+        # stale on the page beside fresh bounds. `prop_grading.restated`
+        # re-derives them, and this is the gate that says so.
+        ("cbb_prop_grading.json", "cbb_prop_grading.md", "prop_grading"),
     ],
 )
 def test_the_committed_report_is_the_record_rendered_at_todays_count(
@@ -527,9 +536,12 @@ def test_the_committed_report_is_the_record_rendered_at_todays_count(
 ):
     """The gate that fails the day a hypothesis is registered and nothing is
     re-rendered — which is the day the reports used to quietly go stale."""
-    renderer = {"price_backtest": PB, "replication": REPL, "forecast_skill": FS}[
-        module
-    ]
+    renderer = {
+        "price_backtest": PB,
+        "replication": REPL,
+        "forecast_skill": FS,
+        "prop_grading": PG,
+    }[module]
     record = json.loads((OUTPUTS / record_name).read_text(encoding="utf-8"))
     looks = RESTATEMENT.widened(
         int(record.get("looks", 1) or 1),

@@ -6,20 +6,27 @@ half and says in its own assertions why the others are absent rather than
 leaving them looking done.
 
 **Carried here.** L1 poisoned future, L2 the stamp, L3 the frame the estimator
-reads, L4 constant provenance, L5 identity sensitivity, L8's mechanical half,
-and L9's estimator-level and player-season clauses.
+reads, L4 constant provenance, L5 identity sensitivity, **L6 the identity-blind
+role-prior control**, **L7 the seeded leak with a calibrated floor**, L8's
+mechanical half, and L9's estimator-level and player-season clauses.
 
-**Refused for this commit, with the reason.** L6 (the identity-blind
-role-prior control) and L7 (a seeded leak with a calibrated floor) are
-mean-log-loss comparisons against settled outcomes: they need
-`models/player_distributions.py`, the de-vig and the grading path, and their
-outputs are measured numbers this build may not state. L8's *direction* half —
-"small and in the direction of slightly worse" — is the same. L9(d), "the
-fitted dispersions match the unfiltered constants to 1%", cannot be written at
-all: `data/processed/cbb_player_shapes.json` records no unfiltered counterpart
-for any dispersion constant, so the comparison would require a refit inside a
-test. Each of those is a passing assertion at the bottom of this file that goes
-red the day the thing it waits for arrives.
+**L6 and L7 arrived on 2026-09-07 with the grading path.** They were refused
+for four commits on the ground that a mean-log-loss comparison against settled
+outcomes needs `models/player_distributions.py`, a de-vig and a scorer, and
+that their outputs are measured numbers the build could not state.
+`reports/prop_grading.py` is all three, so they are written here rather than
+left as a note that goes on being true. This file's own instruction was *"Write
+them; do not delete this."*
+
+**Still refused, with the reason.** L8's *direction* half — "small and in the
+direction of slightly worse" — is now a question of COST rather than of
+capability: it needs the whole store scored a second time at a lagged cut, a
+second four-hour run and a second record, and half a comparison is worse than
+none. L9(d), "the fitted dispersions match the unfiltered constants to 1%",
+cannot be written at all: `data/processed/cbb_player_shapes.json` records no
+unfiltered counterpart for any dispersion constant, so the comparison would
+require a refit inside a test. Both are passing assertions at the bottom of
+this file that go red the day the thing they wait for arrives.
 
 **Every check here owes a leaking counterpart, and carries one.** A leak test
 whose leaking case has quietly stopped leaking goes on passing while it proves
@@ -775,6 +782,312 @@ def test_permuting_identity_within_a_game_moves_the_projection() -> None:
 
 
 # --------------------------------------------------------------------------
+# L6 -- the identity-blind role-prior control
+# --------------------------------------------------------------------------
+
+
+def _scored_frame(
+    *,
+    pairs: int,
+    model_over,
+    control_over=0.50,
+    contaminated: set | None = None,
+) -> "pd.DataFrame":
+    """A graded prop population: both sides of `pairs` wagers, over 40 games.
+
+    The outcome is DRAWN FROM the true probability by a fixed rule rather than
+    alternated, so a model told the truth scores better than one told 0.5 and
+    the comparison below is about information rather than about arithmetic.
+    `model_over` is called with the wager's index and returns what the model
+    said; `contaminated` names the indices whose model probability is replaced
+    by the realised outcome, which is L7's seeded leak.
+    """
+    from datetime import date as _date, timedelta as _timedelta
+
+    truth = [0.35 + 0.30 * ((index * 7919) % 101) / 100.0 for index in range(pairs)]
+    # A deterministic pseudo-random draw: no seed to remember, no RNG version to
+    # depend on, and the same population on every machine.
+    won = [(((index * 2654435761) % 1000) / 1000.0) < truth[index] for index in range(pairs)]
+    rows: list[dict] = []
+    for index in range(pairs):
+        said = float(model_over(index, truth[index]))
+        if contaminated is not None and index in contaminated:
+            said = 1.0 if won[index] else 0.0
+        common = {
+            # Forty games, forty days and one athlete apiece: every one of the
+            # three cluster arms clears the declared 30-cluster floor, so this
+            # harness measures the scorer rather than the floor.
+            "event_id": f"E{index % 40}",
+            "slate_date": (_date(2024, 1, 1) + _timedelta(days=index % 40)).isoformat(),
+            "market": "player_points",
+            "segment": "game",
+            "player": f"Player {index}",
+            "line": 10.5,
+            "book": "draftkings",
+            "tier": "high_major",
+            "american_odds": -110,
+        }
+        for side, hit, probability, control in (
+            ("over", won[index], said, control_over),
+            ("under", not won[index], 1.0 - said, 1.0 - control_over),
+        ):
+            rows.append(
+                dict(
+                    common,
+                    selection=side,
+                    outcome="won" if hit else "lost",
+                    model_probability=probability,
+                    model_push_mass=0.0,
+                    control_probability=control,
+                    control_push_mass=0.0,
+                )
+            )
+    return pd.DataFrame(rows)
+
+
+def _advantage(frame, key: str) -> dict:
+    """One cell's advantage over one baseline, through the shipped scorer."""
+    from cbb_betting_lab.reports import prop_grading as PG
+
+    record = PG.build_record(PG.PropGradingInputs(graded=frame), looks=1)
+    cell = next(c for c in record["by_tier"] if c["tier"] == "high_major")
+    return cell["advantages"][key]
+
+
+def test_l6_the_control_is_identity_blind_and_is_scored_before_the_model(tmp_path):
+    """The negative control, and the two properties that make it one.
+
+    **Refused for four commits and written here.** L6 asks for the
+    identity-blind role-prior control priced over the whole store with its mean
+    log loss printed BEFORE the headline. `scripts/run_prop_grading.py` prices
+    it in the same loop as the model, off the same `SlateModel` on the same
+    walk-forward cut, and `reports/prop_grading.render` prints it above the
+    model in every tier section. What this test holds is the two things that
+    make it a control rather than a second model:
+
+    1. **It is blind to identity.** Two athletes in the same projected-minutes
+       bucket get the same per-minute rates, whatever their own banks say. That
+       is `shrink_rate` at credibility weight zero, and it is L5's identity
+       sensitivity run backwards: L5 asserts the MODEL moves when identity is
+       permuted, and this asserts the control does not.
+    2. **It can leak no more than the model can.** It is a
+       `dataclasses.replace` of the model's own projection, so it carries the
+       same `priced_through` stamp and was formed from the same cut frame. A
+       control built by a second estimator could have been handed the whole
+       season and would have made the model look worse for a reason that is
+       not the model.
+
+    Mutation: give `identity_blind` the projection's own rates back — RED on
+    the first half, because the control then moves with identity.
+    """
+    from conftest import reconcile_a_fixture_census
+
+    module_path = REPO / "scripts" / "run_prop_grading.py"
+    spec = importlib.util.spec_from_file_location("run_prop_grading_l6", module_path)
+    assert spec is not None and spec.loader is not None
+    run = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = run
+    spec.loader.exec_module(run)
+
+    priced = _price(_settled())
+    projections = [
+        projection
+        for by_athlete in priced.projections.values()
+        for projection in by_athlete.values()
+        if projection.priceable
+    ]
+    assert projections, "the fixture priced nobody, so this test checks nothing"
+    shapes = _shapes()
+    blind = [run.identity_blind(projection, shapes=shapes) for projection in projections]
+    assert all(one is not None for one in blind)
+
+    # 1. Identity-blind: the rates depend on the projected-minutes bucket and
+    # on nothing else. Asserted by SUBSTITUTION rather than by looking for two
+    # athletes who happen to share a bucket -- on this eight-day fixture none
+    # do, and a check that only fires on a coincidence is a check that can stop
+    # firing without anybody editing it.
+    import dataclasses as _dataclasses
+
+    first, second = projections[0], projections[1]
+    assert first.rates != second.rates, (
+        "two athletes on this fixture carry identical rates, so swapping them "
+        "would prove nothing about the control"
+    )
+    swapped = _dataclasses.replace(
+        first, rates=dict(second.rates), prior_weight=dict(second.prior_weight)
+    )
+    assert (
+        run.identity_blind(swapped, shapes=shapes).rates
+        == run.identity_blind(first, shapes=shapes).rates
+    ), (
+        "giving the control a different athlete's banked rates moved it, so it "
+        "still knows who he is. It is the role prior at the bucket and nothing "
+        "else."
+    )
+    # And it moves when the ROLE moves, or it is blind to everything and is a
+    # constant rather than a control.
+    other_bucket = (first.minutes_bucket + 1) % 9
+    moved = _dataclasses.replace(first, minutes_bucket=other_bucket)
+    assert (
+        run.identity_blind(moved, shapes=shapes).rates
+        != run.identity_blind(first, shapes=shapes).rates
+    ), (
+        "the control did not move when the projected-minutes bucket did, so it "
+        "is not a ROLE prior -- it is one number for everybody"
+    )
+    # And the model does NOT agree with it, or there is nothing to control for.
+    assert any(
+        projection.rates != control.rates
+        for projection, control in zip(projections, blind)
+    )
+    assert all(set(control.prior_weight.values()) == {0.0} for control in blind)
+
+    # 2. It can leak no more than the model: same stamp, same cut.
+    for projection, control in zip(projections, blind):
+        assert control.priced_through == projection.priced_through < DAY
+        assert control.minutes_pmf == projection.minutes_pmf
+        assert control.event_id == projection.event_id
+
+    # And it is SCORED, before the model, on the rendered page.
+    from cbb_betting_lab.models import player_census as PC
+    from cbb_betting_lab.reports import prop_grading as PG
+
+    PC.forget_reconciliations()
+    reconcile_a_fixture_census(tmp_path)
+    try:
+        frame = _scored_frame(pairs=300, model_over=lambda index, truth: truth)
+        record = PG.build_record(PG.PropGradingInputs(graded=frame), looks=1)
+        report = PG.render(record)
+        control_at = report.index("identity-blind role-prior control (conditional)")
+        model_at = report.index("**the model (conditional)**")
+        assert control_at < model_at, (
+            "the model's own number is printed above the control's, which is "
+            "the order design section 10 forbids"
+        )
+        cell = next(c for c in record["by_tier"] if c["tier"] == "high_major")
+        assert cell["baselines"]["control__conditional"]["log_loss"] > 0
+    finally:
+        PC.forget_reconciliations()
+
+
+# --------------------------------------------------------------------------
+# L7 -- the seeded leak, with the floor measured rather than assumed
+# --------------------------------------------------------------------------
+
+#: Where the seeded leak was MEASURED to separate from noise, on 2026-09-07,
+#: over 300 two-sided wagers (600 rows) on 40 games, 40 days and 300 athletes,
+#: with the model otherwise told the truth and the family correction at one
+#: look. Contamination is counted in wagers rather than as a share, because at
+#: this sample size the answer sits between two and three of them and a
+#: rounded percentage would not be reproducible.
+#:
+#: Measured, `devig_proportional__conditional`, corrected interval:
+#:
+#:     0 of 300   +0.01505   -0.00468 to +0.03478   no demonstrated edge
+#:     1 of 300   +0.01855   -0.00152 to +0.03862   no demonstrated edge
+#:     2 of 300   +0.02014   -0.00037 to +0.04065   no demonstrated edge
+#:     3 of 300   +0.02366   +0.00270 to +0.04462   demonstrated edge
+#:     9 of 300   +0.03612   +0.01275 to +0.05948   demonstrated edge
+#:    30 of 300   +0.08340   +0.01716 to +0.14963   demonstrated edge
+#:
+#: **This is a property of the harness below and not of the shipped record.**
+#: It says how much contamination this scorer would notice at THIS sample size
+#: under the STRONGEST possible seed — the model handed the realised outcome —
+#: so it is a ceiling on the detector's sensitivity. A subtler leak needs more
+#: contamination than this, never less, which is the honest direction for a
+#: floor to be wrong in.
+SEEDED_LEAK_PAIRS = 300
+SEEDED_LEAK_SEPARATES_AT = 3
+SEEDED_LEAK_INVISIBLE_AT = 2
+
+
+def test_l7_a_seeded_leak_separates_from_noise_and_here_is_where(tmp_path):
+    """Realised outcomes injected into 1%, 3% and 10% of wagers.
+
+    **Refused for four commits and written here.** The point of a seeded leak
+    is that a leak detector nobody has calibrated is a detector that says
+    nothing when it stays quiet: without this, "the model shows no demonstrated
+    edge" and "a leak of any size would have been invisible" are the same
+    output.
+
+    The seed is the strongest possible one — the model is told the realised
+    outcome on a share of wagers — so this measures the CEILING of the
+    detector's sensitivity. A subtler leak needs more contamination than this,
+    never less, and a floor measured against the strongest seed is therefore
+    the honest direction to be wrong in.
+
+    What it asserts:
+
+    * the measured advantage rises monotonically with contamination, which is
+      what a detector that responds to leakage at all must do;
+    * at :data:`SEEDED_LEAK_INVISIBLE_AT` contaminated wagers out of
+      :data:`SEEDED_LEAK_PAIRS` the family-corrected interval still spans zero,
+      so a leak that small is INVISIBLE here and this file says so;
+    * at :data:`SEEDED_LEAK_SEPARATES_AT` and above it does not.
+
+    The measured table is in the constants' own comment, so a later session can
+    see the shape of the response rather than two thresholds.
+
+    Mutation: score the model against the vigged implied probability instead of
+    the de-vigged one — RED, because the uncontaminated model then already
+    reads as an edge and the floor is meaningless.
+    """
+    from conftest import reconcile_a_fixture_census
+
+    from cbb_betting_lab import stats as S
+    from cbb_betting_lab.models import player_census as PC
+
+    pairs = SEEDED_LEAK_PAIRS
+    key = "devig_proportional__conditional"
+    PC.forget_reconciliations()
+    reconcile_a_fixture_census(tmp_path)
+    try:
+        measured: dict[int, dict] = {}
+        for count in (0, SEEDED_LEAK_INVISIBLE_AT, SEEDED_LEAK_SEPARATES_AT, 9, 30):
+            # Contaminated wagers are spread evenly through the population
+            # rather than taken from the front, so the leak is not confined to
+            # a handful of games and cannot be absorbed by one cluster.
+            step = pairs // count if count else 0
+            seeded = {index * step for index in range(count)} if count else set()
+            frame = _scored_frame(
+                pairs=pairs,
+                model_over=lambda index, truth: truth,
+                contaminated=seeded,
+            )
+            measured[count] = _advantage(frame, key)
+
+        counts = sorted(measured)
+        values = [measured[count]["value"] for count in counts]
+        assert values == sorted(values), (
+            f"the measured advantage {values} does not rise with contamination "
+            f"{counts}. A detector that does not respond to a seeded leak "
+            "cannot be said to have failed to find one."
+        )
+        assert measured[0]["verdict"] == S.NO_DEMONSTRATED_EDGE, (
+            "an uncontaminated model that tells the truth about a de-vigged "
+            "market already reads as an edge, so the floor below measures "
+            "nothing"
+        )
+        assert measured[SEEDED_LEAK_INVISIBLE_AT]["adjusted_low"] <= 0.0, (
+            f"a {SEEDED_LEAK_INVISIBLE_AT}-wager seeded leak in "
+            f"{pairs} is now visible. That is a MORE sensitive detector than "
+            "the one measured here, which is good news and makes the recorded "
+            "floor wrong: re-measure it and move the constant."
+        )
+        assert measured[SEEDED_LEAK_SEPARATES_AT]["adjusted_low"] > 0.0, (
+            f"a {SEEDED_LEAK_SEPARATES_AT}-wager seeded leak in {pairs} no "
+            "longer separates from noise, so this scorer would not notice a "
+            "leak of that size. That is a finding about the detector and it "
+            "has to be reported, not tuned away."
+        )
+        assert measured[30]["adjusted_low"] > measured[SEEDED_LEAK_SEPARATES_AT][
+            "adjusted_low"
+        ]
+    finally:
+        PC.forget_reconciliations()
+
+
+# --------------------------------------------------------------------------
 # L8 -- the lag test, mechanical half
 # --------------------------------------------------------------------------
 
@@ -956,25 +1269,33 @@ def test_a_player_season_is_selected_on_prior_season_evidence_only() -> None:
 
 
 def test_the_leak_tests_this_commit_cannot_carry_are_the_ones_written_down() -> None:
-    """L6, L7, L8's direction and L9(d), each with what it waits for.
+    """L8's direction half and L9(d), each with what it still waits for.
 
-    1. **L6, the negative control.** The identity-blind role-prior control
-       priced over the whole store, its mean log loss printed BEFORE the
-       headline. It is ledger entries H31 to H33 and it needs the distribution
-       engine, the de-vig and the grading path. What this commit can already
-       build is the control PROJECTION — `shrink_rate` with `k` large enough
-       that `w` is nil is exactly it — so the control is not invented later by
-       somebody who has already seen the headline.
-    2. **L7, the seeded leak with a calibrated floor.** Realised outcomes
-       injected into 1%, 3% and 10% of cells, recording the contamination at
-       which the calibration diagnostic separates from noise. It needs settled
-       outcomes and the calibration diagnostic, and its output is a measured
-       number this build may not state.
-    3. **L8's direction half.** "Small and in the direction of slightly worse"
-       is a scored comparison; the mechanical half is above.
-    4. **L9(d).** "The fitted dispersions match the unfiltered constants to 1%"
-       cannot be written: the frozen file records no unfiltered counterpart for
-       any dispersion constant. It needs a fitter change — an
+    **This clause has been re-pointed, not deleted.** It used to name four
+    things and two of them landed on 2026-09-07 with `reports/prop_grading.py`:
+
+    * **L6, the negative control**, is `test_l6_the_control_is_identity_blind_
+      and_is_scored_before_the_model` below and is priced over the whole store
+      by `scripts/run_prop_grading.py`, with its mean log loss printed BEFORE
+      the model's in every section of the report.
+    * **L7, the seeded leak with a calibrated floor**, is
+      `test_l7_a_seeded_leak_separates_from_noise_and_here_is_where` below,
+      which measures the contamination at which the scorer separates from
+      noise and states the number.
+
+    What is still open:
+
+    1. **L8's direction half.** "Small and in the direction of slightly worse"
+       is a scored comparison of the model at two cuts, and the mechanical half
+       above already shows the two cuts differ. What it needs now is not a
+       capability but a COST: the whole store scored a second time at a lagged
+       cut, which is a second multi-hour run and a second record. Half of it —
+       scoring the lagged cut on this file's eight-day fixture — would be a
+       number about a fixture rather than about the model, and this file does
+       not print those.
+    2. **L9(d).** "The fitted dispersions match the unfiltered constants to 1%"
+       cannot be written at all: the frozen file records no unfiltered
+       counterpart for any dispersion constant. It needs a fitter change — an
        `unfiltered_value` beside each dispersion — and therefore a refit.
     """
     # **The landmark moved, because the engine was the wrong one.** This
@@ -995,24 +1316,46 @@ def test_the_leak_tests_this_commit_cannot_carry_are_the_ones_written_down() -> 
         "narrowing has to be re-read rather than left pointing at nothing."
     )
 
+    # The scoring path exists and is exactly the two files the pre-registration
+    # test pins. A THIRD one appearing is what this scan is for now: L6, L7 and
+    # L8's direction half are all comparisons against a de-vigged fair price,
+    # and two scorers can disagree about which one produced the number on the
+    # page.
+    # One file, not two, and the difference is worth stating: this scan looks
+    # for a SCORING name (`log_loss`, `brier`, `devig`, `fair_price`) and
+    # `scripts/run_prop_grading.py` binds none of them — it prices, files its
+    # dispositions and settles, and every number it prints comes back from the
+    # module. The pre-registration file's scan looks for a PROBABILITY name and
+    # sees both. Two scans, two halves, and neither is the whole surface.
     scoring = _player_scoring_names()
-    assert scoring == {}, (
-        "a player scoring path now exists: "
-        f"{ {k: v for k, v in sorted(scoring.items())} }. L6 (the "
-        "identity-blind control priced over the store), L7 (the seeded leak "
-        "with a calibrated floor at 1%, 3% and 10%) and L8's direction half "
-        "are each a mean log loss against a de-vigged fair price, and every "
-        "one of them can now be written. Write them; do not delete this."
+    assert set(scoring) == {
+        "src/cbb_betting_lab/reports/prop_grading.py",
+    }, (
+        "the player scoring surface moved: "
+        f"{ {k: v for k, v in sorted(scoring.items())} }. If a second scorer "
+        "was written, say why this family may be answered twice; if the one "
+        "that exists was renamed, rename it here and in "
+        "`tests/test_the_player_props_are_pre_registered.py`, which pins the "
+        "same two files."
     )
 
-    # The control projection is constructible today, off the public helpers.
+    # The control projection is constructible off the public helpers, which is
+    # what made L6 writable without a second estimator.
     rate, weight = PR.shrink_rate(
         bank_stat=500.0, prior_minutes=200.0, prior_rate=0.31, k=1e12
     )
     assert weight == pytest.approx(0.0, abs=1e-9)
-    assert rate == pytest.approx(0.31, abs=1e-9), (
-        "the identity-blind control is the role prior at the projected-minutes "
-        "bucket, and it is buildable from this module's public helpers"
+    assert rate == pytest.approx(0.31, abs=1e-9)
+
+    # L8's direction half: the two cuts differ (above), and nothing in this
+    # repository has scored them against each other. The day a second record
+    # appears at a lagged cut, write it.
+    assert not (
+        REPO / "data" / "outputs" / "cbb_prop_grading_lagged.json"
+    ).exists(), (
+        "a lagged-cut record now exists, so L8's direction half can be "
+        "written: compare the two records' mean log loss per tier and assert "
+        "the lagged one is worse. Write it; do not delete this."
     )
 
     document = json.loads(SHAPES.read_text(encoding="utf-8"))
@@ -1683,11 +2026,12 @@ def test_an_undeclared_player_frame_is_a_gap_and_the_shipped_pricer_declares_it(
     )
 
 
-#: What a player scoring path would be CALLED. A de-vigged comparison scored by
-#: log loss is the thing L6, L7 and L8 wait for, and these are the names it
-#: would carry. Measured against this tree on 2026-09-07: zero matches outside
-#: `reports/forecast_skill.py`, which is the TEAM markets' de-vig and predates
-#: every player file here.
+#: What a player scoring path is CALLED. A de-vigged comparison scored by log
+#: loss is what L6, L7 and L8 waited for, and these are the names it carries.
+#: Measured against this tree on 2026-09-07 after the grading commit: two files
+#: match, `reports/prop_grading.py` and `scripts/run_prop_grading.py`.
+#: `reports/forecast_skill.py` does not, because it is the TEAM markets' de-vig
+#: and binds no name carrying `player`.
 _SCORING_TOKENS = ("log_loss", "logloss", "devig", "de_vig", "fair_price", "brier")
 
 
@@ -1709,7 +2053,15 @@ def _player_scoring_names() -> dict:
     for root in roots:
         for path in sorted(root.rglob("*.py")):
             relative = path.relative_to(REPO).as_posix()
-            player_file = "player" in path.name
+            # A `prop` file is a player file here. In this lab every prop is a
+            # player prop -- the market prefix is `player_` -- and under the old
+            # rule this scan walked straight past `reports/prop_grading.py` and
+            # `scripts/run_prop_grading.py`, which are the scoring path L6, L7
+            # and L8 were waiting for. The same widening is made, for the same
+            # reason, in `tests/test_the_player_props_are_pre_registered.py`, so
+            # the two scans cannot drift into disagreeing about what a player
+            # number is.
+            player_file = "player" in path.name or "prop" in path.name
             try:
                 tree = ast.parse(path.read_text(encoding="utf-8"))
             except SyntaxError:  # pragma: no cover - a file this tree cannot parse

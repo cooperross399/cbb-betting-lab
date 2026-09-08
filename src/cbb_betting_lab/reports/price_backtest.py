@@ -2007,8 +2007,14 @@ def build_record(
     # So the gate comes off and the FILTER stays, because the filter needs no
     # receipt: a market refused by name must never carry a verdict, and that is
     # true today. The hole this leaves is real and is written down rather than
-    # papered over: `build_record` scores player markets with no census, and
-    # closing it belongs in the grading commit the census was built for.
+    # papered over: `build_record` scores player markets with no census.
+    #
+    # **The grading commit has since landed and this hole is still open.**
+    # `scripts/run_prop_grading.py` files both receipts and scores the prop
+    # store, but a receipt lives for the length of ONE process and this
+    # function runs in another. Closing it means `run_price_backtest.py`
+    # filing its own dispositions, which is a change to the shipped nightly
+    # path and not a change to this line.
     # `test_the_grading_commit_still_owes_this_gate` holds it open.
     universe = _PR.without_markets_refused_by_name(inputs.universe)
     bets = _PR.without_markets_refused_by_name(inputs.bets)
