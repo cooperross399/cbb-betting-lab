@@ -977,10 +977,32 @@ def test_the_leak_tests_this_commit_cannot_carry_are_the_ones_written_down() -> 
        any dispersion constant. It needs a fitter change — an
        `unfiltered_value` beside each dispersion — and therefore a refit.
     """
+    # **The landmark moved, because the engine was the wrong one.** This
+    # asserted `player_distributions.py` is absent, and the engine landed on
+    # 2026-09-06. But building a distribution is not what L6, L7 and L8 wait
+    # for: each is a SCORED comparison — a mean log loss against a de-vigged
+    # fair price — and measured on this commit there is no player scoring path
+    # at all. `devig` exists only in `reports/forecast_skill.py` and runs on
+    # team markets; nothing computes a player log loss; `PlayerProjection`
+    # carries neither `model_probability` nor `push_mass`.
+    #
+    # So the assertion is narrowed to what they actually wait for, in the shape
+    # this file's instruction demanded — "Write them; do not delete this."
     models = REPO / "src" / "cbb_betting_lab" / "models"
-    assert not (models / "player_distributions.py").exists(), (
-        "the distribution engine exists, so L6, L7 and L8's direction half can "
-        "now be written. Write them; do not delete this."
+    assert (models / "player_distributions.py").exists(), (
+        "the distribution engine is gone. It landed on 2026-09-06 and these "
+        "three leak tests were narrowed against it; if it was removed, this "
+        "narrowing has to be re-read rather than left pointing at nothing."
+    )
+
+    scoring = _player_scoring_names()
+    assert scoring == {}, (
+        "a player scoring path now exists: "
+        f"{ {k: v for k, v in sorted(scoring.items())} }. L6 (the "
+        "identity-blind control priced over the store), L7 (the seeded leak "
+        "with a calibrated floor at 1%, 3% and 10%) and L8's direction half "
+        "are each a mean log loss against a de-vigged fair price, and every "
+        "one of them can now be written. Write them; do not delete this."
     )
 
     # The control projection is constructible today, off the public helpers.
@@ -1659,3 +1681,53 @@ def test_an_undeclared_player_frame_is_a_gap_and_the_shipped_pricer_declares_it(
     assert "player_priced_through" in str(leaked.value), (
         "the guard must name which of the two stamps reached the day it bet on"
     )
+
+
+#: What a player scoring path would be CALLED. A de-vigged comparison scored by
+#: log loss is the thing L6, L7 and L8 wait for, and these are the names it
+#: would carry. Measured against this tree on 2026-09-07: zero matches outside
+#: `reports/forecast_skill.py`, which is the TEAM markets' de-vig and predates
+#: every player file here.
+_SCORING_TOKENS = ("log_loss", "logloss", "devig", "de_vig", "fair_price", "brier")
+
+
+def _player_scoring_names() -> dict:
+    """Every name in `src/` or `scripts/` that would score a player prop.
+
+    A name counts when it carries a scoring token AND is either written in a
+    file whose own name says `player` or says `player` itself — the same rule
+    `test_the_player_props_are_pre_registered` uses for probabilities, so the
+    two tests cannot drift into disagreeing about what a player number is.
+    """
+    import ast
+
+    roots = (
+        REPO / "src" / "cbb_betting_lab",
+        REPO / "scripts",
+    )
+    found: dict = {}
+    for root in roots:
+        for path in sorted(root.rglob("*.py")):
+            relative = path.relative_to(REPO).as_posix()
+            player_file = "player" in path.name
+            try:
+                tree = ast.parse(path.read_text(encoding="utf-8"))
+            except SyntaxError:  # pragma: no cover - a file this tree cannot parse
+                continue
+            names = set()
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    names.add(node.name)
+                elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+                    names.add(node.id)
+                elif isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Store):
+                    names.add(node.attr)
+            hits = sorted(
+                name
+                for name in names
+                if any(token in name.lower() for token in _SCORING_TOKENS)
+                and (player_file or "player" in name.lower())
+            )
+            if hits:
+                found[relative] = hits
+    return found

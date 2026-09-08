@@ -45,18 +45,47 @@ D. the event is not in `players` at all -> NO OPINION. The model was never
    from them: `ratings.matchups_for`'s docstring already makes the same
    distinction for the team half, in the same words.
 
+D is the bucket every wiring fault on this seam has hidden in, because from the
+outside a layer that was never asked and a layer that was asked with the wrong
+thing produce the identical answer: nothing. So a frame that cannot reach the
+estimator is refused **in words, at the boundary, before anything is built**,
+and never allowed to arrive as D. Three frames arrive here and each has a
+declared list of what the layer below reads off it —
+:data:`REQUIRED_PLAYER_COLUMNS` and :data:`PLAYER_COLUMNS_THE_ESTIMATOR_READS`
+for the player table, :data:`PRICE_COLUMNS_THE_ESTIMATOR_READS` for the price
+frame — and the constants have one too, `player_rates.
+CONSTANTS_THE_ESTIMATOR_READS`, asked through `missing_constants`. Each list
+lives in one place, is named for what reads it, and is checked in
+:func:`slate_model` before `matchups_for` is called. The measured cost of not
+doing this, three times. Two are re-measured at the card's own entry point
+over the four-game board `tests/test_player_seam.py::_card_board` builds: a
+price frame of `event_id` and `game_id` gave 0 subjects on a board quoting 16
+athletes and every prop read "the model was never asked", and a frozen file
+missing one constant raised `ShapesFileError` out of the subject loop and
+deleted the team half of the night with it. The third — a player frame of eight
+columns refusing its subjects under R6 while the card said nothing — is
+`test_s11_the_card_path_can_actually_build_a_player_distribution`'s
+measurement, recorded there rather than restated here.
+
 ## What this module does not do, and why that is written here
 
-Nothing here measures anything. `models/player_rates.py` has since been
-written, so an athlete can now carry a projection; `models/player_distributions.py`
-has not, so **no line carries a probability** and a priceable projection's last
-word is :data:`NO_DISTRIBUTION_ENGINE`. Every structural absence is reported
-with a sentence naming the missing file (:data:`NO_RATE_ESTIMATOR`,
-:data:`NO_DISTRIBUTION_ENGINE`) rather than as a model with no opinions,
-because those two look identical from the outside and one of them is a wiring
-fault. `NO_RATE_ESTIMATOR` is kept and still reachable: the estimator is
-imported inside the call, so a tree that loses it says which absence this is
-instead of reporting a night with no evidence.
+Nothing here measures anything. `models/player_rates.py` gives an athlete a
+projection and `models/player_distributions.py` turns one into count pmfs, so
+since 2026-09-06 a priceable projection **does** carry a probability and the
+sentence that said otherwise has been re-pointed. What this module adds to that
+is one field: :attr:`SlateModel.shapes`, the frozen constants **already
+provenance-checked for the season being priced**, carried to the card so the
+engine is built from the object the guard ran on rather than from a second
+`load_player_shapes` call whose season argument the card would have to derive.
+A slate that carries a projection and no constants says so
+(:data:`NO_ENGINE_CONSTANTS`) instead of pricing.
+
+Every structural absence is still reported with a sentence naming the missing
+file (:data:`NO_RATE_ESTIMATOR`, :data:`NO_DISTRIBUTION_ENGINE`) rather than as
+a model with no opinions, because those two look identical from the outside and
+one of them is a wiring fault. Both are kept reachable: each module is imported
+inside the call that needs it, so a tree that loses one says which absence this
+is instead of reporting a night with no evidence.
 `tests/test_player_seam.py` holds that distinction as a passing assertion.
 
 ## The cut, and the one place two names meet
@@ -133,6 +162,90 @@ REQUIRED_PLAYER_COLUMNS: tuple[str, ...] = (
     "minutes",
 )
 
+#: What a caller must READ off the player table for the seam to reach a price,
+#: as against what it must find there before it hands the frame on. The eight
+#: above project minutes and cannot form a per-minute rate, which is R6's whole
+#: subject; these seventeen are the columns `player_rates` narrows its day pool
+#: to (`player_rates._POOL_COLUMNS`, restated here because `slate` imports the
+#: estimator inside the call so :data:`NO_RATE_ESTIMATOR` stays reachable, and
+#: held equal to it by `test_player_seam.py::test_s11_the_columns_the_card_
+#: reads_are_the_columns_the_estimator_reads`).
+#:
+#: The distinction is not decorative and it was not free. Until 2026-09-06
+#: `reports/card_matchups.load_player_games` read the eight, and every athlete
+#: on the card path was therefore refused under R6 — measured on the tracked
+#: sample corpus over the four-game board
+#: `tests/test_player_seam.py::_card_board` builds, all 10 subjects resolved,
+#: all 10 were refused with "no per-minute rate exists to shrink", 0 props were
+#: priced and design 4's structural check was never asked. The same board over
+#: these seventeen prices all 20 props and runs the check over 10 regulars.
+#:
+#: This list is NOT the required-to-exist list, and widening that one instead
+#: would have been the wrong repair: `slate_model` raises `SlateError` on a
+#: frame missing a required column, so requiring the box score here would turn
+#: a table built without `steals` into a refusal of the whole card — team half
+#: included — where R6 refuses the athlete, names the column and lets the team
+#: half price. The absent ones are read as absent, never as zeros.
+PLAYER_COLUMNS_THE_ESTIMATOR_READS: tuple[str, ...] = (
+    "slate_date",
+    "season",
+    "game_id",
+    "athlete_id",
+    "athlete_display_name",
+    "team_id",
+    "opponent_id",
+    "did_not_play",
+    "minutes",
+    "points",
+    "rebounds",
+    "assists",
+    "steals",
+    "turnovers",
+    "field_goals_made",
+    "three_point_field_goals_made",
+    "free_throws_made",
+)
+
+#: What a caller must supply on the PRICE frame for the estimator to form a
+#: subject. `player_rates._SUBJECT_COLUMNS`, restated here for the same reason
+#: the seventeen above are — `slate` imports the estimator inside the call so
+#: :data:`NO_RATE_ESTIMATOR` stays reachable — and held equal to it by
+#: `test_player_seam.py::test_s12_the_price_columns_the_card_supplies_are_the_
+#: price_columns_the_estimator_reads`.
+#:
+#: This list exists because the price frame was the break nobody predicted.
+#: Both other frames the seam hands on had a declared list and a boundary
+#: check; this one had neither, and `reports/card_matchups` handed the
+#: estimator `attach_game_ids`' two columns — `event_id` and `game_id` — for as
+#: long as the card path existed. `_subjects_of_the_day` returns an empty
+#: subject set for a frame with no `market` or no `player` column, so the day
+#: came back with 0 projections, an empty resolution census and 0 name
+#: refusals, and every prop on it was declined as *the model was never asked* —
+#: census bucket D, which is the sentence for a night on which nobody was
+#: quoted. Re-measured on 2026-09-07 by restoring that frame at the card's own
+#: entry point over the four-game board `tests/test_player_seam.py::_card_board`
+#: builds on the full processed corpus: 32 `player_points` rows on 16 quoted
+#: subjects, and all of it reported as bucket D.
+#:
+#: So this is checked, like the other two, BEFORE anything is built, and a
+#: frame the estimator cannot form a subject from is :data:`NO_SUBJECT_COLUMNS`
+#: — a wiring absence named in words — and never zero subjects reported as an
+#: absence of quotes.
+#:
+#: It refuses the PLAYER HALF and not the slate, and that is the same trade
+#: :data:`REQUIRED_PLAYER_COLUMNS` makes in the other direction: a board with
+#: no player market at all is a real and common state, the team half prices on
+#: it, and raising `SlateError` here would turn a two-column price frame into a
+#: refusal of every spread on the card.
+PRICE_COLUMNS_THE_ESTIMATOR_READS: tuple[str, ...] = (
+    "event_id",
+    "market",
+    "player",
+    "game_id",
+    "home_team",
+    "away_team",
+)
+
 #: A day in no season this lab carries. `matchups_for` returns `{}` for one
 #: rather than raising, and this matches it: an empty slate, with the reason.
 NO_SEASON: str = (
@@ -145,6 +258,27 @@ NO_PLAYER_HISTORY: str = (
     "no player history was handed to the seam for this day, so no athlete "
     "carries a projection. This is the model never being asked, not the model "
     "declining"
+)
+
+#: The price frame handed to the seam carries no column the estimator can form
+#: a subject from, so the estimator was not asked. Distinct from
+#: :data:`NO_PROJECTION_FORMED`, and the distinction is the whole of why this
+#: sentence exists: that one says *the estimator was handed rows and formed no
+#: projection on them*, which is a fact about the board, and it is what the
+#: seam printed on every card run whose price frame carried `event_id` and
+#: `game_id` and nothing else. A fact about the wiring reported as a fact about
+#: the board is the defect family this module is arranged against, one layer up
+#: from where it was first found.
+#:
+#: The missing column names are appended by the caller: a sentence that says
+#: *something was missing* is not a sentence an operator can act on.
+NO_SUBJECT_COLUMNS: str = (
+    "the price frame handed to the seam carries no column the estimator can "
+    "form a subject from, so no athlete was resolved, none was refused and the "
+    "estimator was never asked. This is a wiring absence, not a night on which "
+    "nobody was quoted, and it is not a pass, an avoid or a no-value call. "
+    "`reports/card_matchups.model_prices` builds the frame this seam wants. "
+    "Missing"
 )
 
 #: The estimator could not be imported. Distinct from
@@ -161,13 +295,41 @@ NO_RATE_ESTIMATOR: str = (
     "pass, an avoid or a no-value call"
 )
 
-#: A projection exists and is priceable, and there is still no probability,
-#: because the engine that would turn a projection into one is not written.
-#: This is the sentence a *priceable* prop reads today.
+#: The engine could not be imported. Re-pointed on 2026-09-06, when
+#: `models/player_distributions.py` was written and wired: until then this
+#: sentence said the file *is not written*, and a priceable projection's last
+#: word was that it carried no probability. It does now.
+#:
+#: The sentence is kept, and kept **reachable**, for the reason
+#: :data:`NO_RATE_ESTIMATOR` is: `reports/gameday_card.py` imports the engine
+#: inside the call, so a tree that loses the file says which absence this is
+#: instead of reporting a night on which the model happened to have no opinion
+#: about any prop. The two look identical from the outside and one of them is a
+#: wiring fault.
 NO_DISTRIBUTION_ENGINE: str = (
-    "the player model projects this athlete but "
-    "`src/cbb_betting_lab/models/player_distributions.py` is not written, so "
-    "no probability exists for this line yet. It is not a pass, an avoid or a "
+    "the player model projects this athlete and "
+    "`src/cbb_betting_lab/models/player_distributions.py` could not be "
+    "imported, so no engine was asked for a probability on this line. This is "
+    "the model never being asked, not the model declining, and it is not a "
+    "pass, an avoid or a no-value call"
+)
+
+#: A slate carries a priceable projection and **not** the frozen constants that
+#: projection was built from, so nothing can build a distribution from it.
+#:
+#: This is the state a `SlateModel` assembled by hand is in — `coerce` on a bare
+#: mapping of matchups, or a test double — and it is a wiring absence rather
+#: than a refusal: `slate_model` loads the constants through the provenance
+#: guard for the season it prices and hands them on in :attr:`SlateModel.shapes`,
+#: so the engine is never handed a set of constants nobody checked. Reading a
+#: file here instead, or defaulting to `DEFAULT_SHAPES_PATH` at the card, would
+#: be a second load site with a season argument the card would have to derive —
+#: and `_player_half` already records what an unchecked season argument costs.
+NO_ENGINE_CONSTANTS: str = (
+    "the player model projects this athlete and the slate carries no frozen "
+    "constants for the season it prices, so the distribution engine was handed "
+    "nothing to build from and no probability exists for this line. This is a "
+    "wiring absence, not a refusal, and it is not a pass, an avoid or a "
     "no-value call"
 )
 
@@ -235,14 +397,31 @@ def _latest_day(frame: "pd.DataFrame | None", *, day_column: str = SLATE_DAY_COL
     never makes it; this reads a maximum off a frame somebody else already cut,
     which is what the stamp is. It is written here rather than imported because
     `models/` importing `reports/` is an edge that does not exist in this tree
-    and this file may not create it — `reports/price_backtest.py` imports
-    nothing from `models/`, and the seam is what would make that circular.
+    and this file may not create it.
+
+    **The reason was stated wrongly and is corrected here.** It used to read
+    "`reports/price_backtest.py` imports nothing from `models/`, and the seam is
+    what would make that circular". That stopped being true on commit 0d4f195,
+    which added `from cbb_betting_lab.models import player_census` to
+    `price_backtest.py` (and the same import to `reports/forecast_skill.py`);
+    `player_census` imports `models/player_rates`, so `reports` already depends
+    on `models` at module scope. The dependency runs one way — reports on models
+    — and importing back the other way from here would close it into
+    `models -> reports -> models`, which is the edge the duplication exists to
+    prevent, not one it would create. Today it would not even raise: nothing on
+    the return path imports `slate`, so a reader who checks the old sentence,
+    finds it false and "fixes" the duplication gets a tree that works and a
+    layering rule that no longer has a floor.
+
+    Two copies of "strictly earlier" is the football lab's defect 13, so the
+    copy is not left to be trusted: `tests/test_player_seam.py` asserts this
+    agrees with `price_backtest.latest_day` on the same frames, and asserts the
+    edge is still absent, so the two are provably one definition rather than two
+    that happen to agree today.
 
     A blank and the string `"nan"` — what a missing day looks like after a CSV
     round trip — are not days, and a stamp reading `"nan"` would sort above
-    every real date and fail every run. `tests/test_player_seam.py` asserts
-    this agrees with `price_backtest.latest_day` on the same frames, so the two
-    are provably one definition rather than two that happen to agree today.
+    every real date and fail every run.
     """
     if frame is None or len(frame) == 0:
         return ""
@@ -260,6 +439,34 @@ def _rows_reaching(frame: "pd.DataFrame | None", day: str) -> int:
     if SLATE_DAY_COLUMN not in getattr(frame, "columns", ()):
         return 0
     return int((frame[SLATE_DAY_COLUMN].astype(str) >= str(day)).sum())
+
+
+def _price_frame_refusal(prices: "pd.DataFrame | None") -> str:
+    """:data:`NO_SUBJECT_COLUMNS` naming what is absent, or `""`.
+
+    The third of the seam's three boundary checks, and the last one written:
+    the two frames the caller CUT were both checked before anything was built
+    and the frame it JOINED was not, so the layer below assumed a vocabulary
+    the layer above had never promised. That is the shape every wiring fault on
+    this seam has had — each layer assuming another supplies something and
+    nobody checking at the boundary — and this is the boundary.
+
+    An empty frame is not refused. A day with no quotes at all is a real state,
+    `_subjects_of_the_day` returns empty for it either way, and the columns of
+    a zero-row frame say nothing about what the caller can build; the same rule
+    `slate_model` already applies to `REQUIRED_PLAYER_COLUMNS`, which is
+    checked only on a frame with rows.
+    """
+    if prices is None or len(prices) == 0:
+        return ""
+    missing = [
+        column
+        for column in PRICE_COLUMNS_THE_ESTIMATOR_READS
+        if column not in getattr(prices, "columns", ())
+    ]
+    if not missing:
+        return ""
+    return f"{NO_SUBJECT_COLUMNS}: {', '.join(missing)}."
 
 
 def _refuse_a_frame_that_reaches_the_day(
@@ -310,6 +517,11 @@ class SlateModel:
     `projection_for` a dict lookup rather than a match, and it is what stops
     the resolution census double-counting the ~7.2 ladder rungs a points
     subject carries.
+
+    Both halves of that sentence are checked before a slate leaves
+    :func:`slate_model` — disjointness by invariant I4 and the union by I6,
+    against `player_rates.subjects_quoted` — and the union half was checked
+    nowhere until 2026-09-07 while three docstrings asserted it.
     """
 
     day: str = ""
@@ -327,6 +539,20 @@ class SlateModel:
     #: every run per design 13's failure mode 5, which says to stop if the
     #: per-tier resolution rate moves more than 2pp across tiers.
     resolution_census: Mapping[str, int] = field(default_factory=dict)
+    #: The frozen constants the projections above were built from, checked by
+    #: `load_player_shapes` for **this slate's season** — see
+    #: :func:`_shapes_for`, which is the only place they are opened.
+    #:
+    #: Carried rather than re-loaded downstream. `models/player_distributions.py`
+    #: opens no file and takes `shapes` as an argument for the same reason
+    #: `player_rates` does; a card that loaded its own would be a second load
+    #: site with a season argument it would have to derive, and `_player_half`
+    #: records what an unchecked season argument already cost once. `None` means
+    #: this slate was assembled without them — every bare mapping through
+    #: :meth:`coerce` is — and a prop on one reads
+    #: :data:`NO_ENGINE_CONSTANTS` rather than being priced off constants
+    #: nobody checked.
+    shapes: PlayerShapes | None = None
 
     # -- the team half ----------------------------------------------------
 
@@ -521,6 +747,29 @@ def slate_model(
     for a day in no season this lab carries, matching `matchups_for`'s own
     `return {}` rather than raising.
 
+    ## What the seam requires of the frames it is handed, and where it says so
+
+    Three frames arrive and each one has a DECLARED list of what the layer
+    below reads off it, in one place, named for what reads it:
+    :data:`REQUIRED_PLAYER_COLUMNS` (what must exist),
+    :data:`PLAYER_COLUMNS_THE_ESTIMATOR_READS` (what is read), and
+    :data:`PRICE_COLUMNS_THE_ESTIMATOR_READS` (what a subject is formed from).
+    All three are checked HERE, before `matchups_for` is called and before
+    anything is built, because every wiring fault this seam has had was the
+    same shape: each layer assuming another supplied something, and nobody
+    checking at the boundary. The card handed over a price frame of `event_id`
+    and `game_id` and the day came back with zero subjects; the card's loader
+    read eight columns and every athlete came back refused under R6; the
+    estimator was called with no tiers and every projection read `unplaced`.
+    None of the three raised, and none of them was visible in the output.
+
+    A missing column REFUSES rather than defaults, and which half it refuses
+    differs by frame and is argued at each list: the player table's eight
+    refuse the whole slate (a table that cannot be cut or stamped is not a
+    board), the seventeen refuse the athlete under R6 with the column named,
+    and the price frame's six refuse the player half in words
+    (:data:`NO_SUBJECT_COLUMNS`) while the team half still prices.
+
     ## The one argument this deliberately does **not** pass
 
     `matchups_for` declares `player_games`, live dead wiring into
@@ -574,6 +823,14 @@ def slate_model(
                 "hand the result to a card."
             )
 
+    # The third frame, checked on the same rule and in the same place: what the
+    # caller JOINED, not what it cut. This is computed here — before
+    # `matchups_for`, before `_player_half`, before anything is built — rather
+    # than discovered inside the estimator, because the estimator's answer for
+    # a frame it cannot read is an empty subject set, which is indistinguishable
+    # from a board nobody quoted a player on.
+    price_frame_refusal = _price_frame_refusal(prices)
+
     season = season_for_slate_date(day)
     if not season:
         # `matchups_for` returns `{}` here rather than raising, and so does
@@ -591,7 +848,7 @@ def slate_model(
         # every published team number and this commit measures nothing.
     )
 
-    players, resolved, name_refusals, player_through, census, absence = (
+    players, resolved, name_refusals, player_through, census, absence, checked = (
         _player_half(
             day=day,
             player_history=player_history,
@@ -600,6 +857,7 @@ def slate_model(
             season=int(season),
             shapes=shapes,
             matchups=matchups,
+            price_frame_refusal=price_frame_refusal,
         )
     )
 
@@ -613,6 +871,7 @@ def slate_model(
         player_priced_through=player_through,
         player_absence_reason=absence,
         resolution_census=census,
+        shapes=checked,
     )
     _assert_invariants(model, prices=prices, day=day)
     return model
@@ -661,6 +920,27 @@ def _tiers_from(matchups: "Mapping[str, ratings.Matchup]") -> TierTable:
     )
 
 
+def _no_player_half(reason: str):
+    """An empty player half carrying one sentence, in :func:`_player_half`'s shape.
+
+    Written because the shape is the thing that broke. `_player_half` returns a
+    positional tuple, and when the checked `shapes` object was added to it its
+    three early returns were each widened by hand — three copies of one arity,
+    none of which any test executed, against a caller that unpacks a fixed
+    seven. A six-element tuple on any of those lines is `ValueError: not enough
+    values to unpack` raised on exactly the nights those sentences exist for: a
+    tree that has lost the estimator, the first slate date of a season, and a
+    season the frozen constants refuse. There are five of them now, and they
+    are one line.
+
+    One place, so the next field is added once. `shapes` is `None` here and is
+    not the argument: an absence that returned the constants it was handed
+    would tell a card the engine may be built, on a slate carrying nothing to
+    build from.
+    """
+    return {}, {}, {}, "", {}, reason, None
+
+
 def _player_half(
     *,
     day: str,
@@ -670,26 +950,65 @@ def _player_half(
     season: int,
     shapes: PlayerShapes | None,
     matchups: "Mapping[str, ratings.Matchup]",
+    price_frame_refusal: str = "",
 ):
     """The player half, or the full sentence saying which absence this is.
 
-    Three absences, and they are not the same fact:
+    Five absences, and they are not the same fact:
 
-    * the estimator is not written (:data:`NO_RATE_ESTIMATOR`) — a lab with no
-      model;
-    * the estimator is written and was handed no rows
+    * the price frame carries no column a subject can be formed from
+      (:data:`NO_SUBJECT_COLUMNS`) — a caller that handed the seam a frame in
+      the wrong vocabulary. Checked on the frames in the seam's hands by
+      :func:`_price_frame_refusal` and passed in, so the decision is made
+      before anything is built rather than inferred from an empty answer;
+    * `models/player_rates.py` could not be imported (:data:`NO_RATE_ESTIMATOR`)
+      — a tree that has lost its estimator;
+    * the estimator imported and was handed no rows
       (:data:`NO_PLAYER_HISTORY`) — a night with no evidence;
     * the frozen constants refuse this season — the provenance guard firing,
-      reported in the guard's own words rather than paraphrased.
+      reported in the guard's own words rather than paraphrased;
+    * the frozen constants carry neither a value nor a refusal for something
+      every market needs (`player_rates.NO_SUCH_CONSTANT`) — an incomplete
+      file, which used to reach the card as a `ShapesFileError` raised out of
+      the subject loop and took the TEAM half down with it.
 
-    A single "no player opinions" bucket would hide the first inside the
-    second, and the first is a wiring fault.
+    A single "no player opinions" bucket would hide every one of them inside
+    the others, and three of the five are wiring faults — a caller in the wrong
+    vocabulary, a tree that has lost a module, a file that is incomplete —
+    while one is a real night with no evidence and one is a guard firing
+    correctly. They are not summed and they do not share a sentence.
+
+    **The order is the order the questions can be answered in, and it is not
+    arbitrary.** The seam asks about the frames in its own hands first, because
+    that is the only question it can answer without importing, reading or
+    building anything, and because a caller holding a frame in the wrong
+    vocabulary gets the same answer whether or not this tree still has an
+    estimator. Then the tree, then the night, then the file.
+
+    The :data:`NO_RATE_ESTIMATOR` bullet used to describe the estimator as
+    never having been written, which is not what that sentence says and has not
+    been true of this tree since the estimator landed. `NO_DISTRIBUTION_ENGINE`
+    was re-pointed off exactly that wording on 2026-09-06 and this bullet was
+    missed; a docstring describing a check the constant does not make is the
+    defect findings 7, 14 and 8 are all instances of. It is named by its
+    constant here and not by its position, because its position has since
+    moved: the price frame's check was added ahead of it.
+    `tests/test_player_seam.py::test_s4_the_latest_day_this_module_reads_is_the_
+    harnesss_definition` now holds the bullets against the sentences.
+
+    Returns the five container fields, the absence sentence, and **the shapes
+    object the projections were actually built from** — never the argument, and
+    never `None` once a projection exists. The card builds the distribution
+    engine from that object, so the constants a price is made from are provably
+    the ones the guard ran on for this season.
     """
+    if price_frame_refusal:
+        return _no_player_half(price_frame_refusal)
     estimator = _player_rates_module()
     if estimator is None:
-        return {}, {}, {}, "", {}, NO_RATE_ESTIMATOR
+        return _no_player_half(NO_RATE_ESTIMATOR)
     if player_history is None or len(player_history) == 0:
-        return {}, {}, {}, "", {}, NO_PLAYER_HISTORY
+        return _no_player_half(NO_PLAYER_HISTORY)
 
     if shapes is None:
         try:
@@ -698,7 +1017,7 @@ def _player_half(
             # The provenance guard's own sentence, not a paraphrase of it. It
             # names the constant and the window, and a paraphrase would lose
             # exactly the part an operator needs.
-            return {}, {}, {}, "", {}, str(exc)
+            return _no_player_half(str(exc))
     else:
         # **A supplied `shapes` is an injection point past the provenance
         # guard, and it was open.** `load_player_shapes` refuses a season the
@@ -717,21 +1036,24 @@ def _player_half(
         # comparison: it must be the season of the day being priced.
         declared = getattr(shapes, "priced_season", None)
         if declared is None or int(declared) != int(season):
-            return (
-                {},
-                {},
-                {},
-                "",
-                {},
-                (
-                    f"the player shapes handed to the slate were checked for "
-                    f"season {declared!r} and this slate prices season "
-                    f"{int(season)}. The provenance guard runs on the season it "
-                    "is given, so a set of constants checked for one season and "
-                    "used on another is unchecked — which is how the validation "
-                    "season would be priced with the constants validated on it."
-                ),
+            return _no_player_half(
+                f"the player shapes handed to the slate were checked for "
+                f"season {declared!r} and this slate prices season "
+                f"{int(season)}. The provenance guard runs on the season it "
+                "is given, so a set of constants checked for one season and "
+                "used on another is unchecked — which is how the validation "
+                "season would be priced with the constants validated on it."
             )
+
+    # The constants the estimator READS, asked of the object in the seam's
+    # hands and asked before the subject loop. `load_player_shapes` checks
+    # provenance and never completeness, so a file that lost `role_prior`
+    # loads, passes the guard, and raises `ShapesFileError` out of `_rates` on
+    # the first athlete — through this function, which has no `try`, and out of
+    # `slate_model`, which takes the team half with it.
+    missing = estimator.missing_constants(shapes)
+    if missing:
+        return _no_player_half(f"{estimator.NO_SUCH_CONSTANT}: {', '.join(missing)}.")
 
     result = estimator.player_projections_for(
         day=day,
@@ -741,7 +1063,7 @@ def _player_half(
         competition=competition,
         tiers=_tiers_from(matchups),
     )
-    return _unpack(result, player_history=player_history)
+    return (*_unpack(result, player_history=player_history), shapes)
 
 
 def _unpack(result: object, *, player_history: "pd.DataFrame"):
@@ -779,7 +1101,7 @@ def _unpack(result: object, *, player_history: "pd.DataFrame"):
 
 
 def _assert_invariants(model: SlateModel, *, prices: "pd.DataFrame", day: str) -> None:
-    """The five things that must hold before a slate leaves this function.
+    """The six things that must hold before a slate leaves this function.
 
     Each one is a state that would otherwise be discovered downstream as a
     plausible number rather than as an error.
@@ -842,6 +1164,41 @@ def _assert_invariants(model: SlateModel, *, prices: "pd.DataFrame", day: str) -
                 f"athlete {athlete_id!r}, which carries no projection. A "
                 "resolution that reaches nothing is a name matched to an "
                 "athlete the model never projected."
+            )
+
+    # I6. The union. Three docstrings assert that `resolved` and
+    # `name_refusals` together are EXACTLY the day's distinct player-market
+    # (event, spelling) pairs — this container's own, `player_projections_for`'s
+    # ("`models/slate.py` asserts ... that their union is exactly the day's
+    # distinct pairs") and `player_rates.subjects_quoted`'s — and until
+    # 2026-09-07 only the disjointness half above was checked. Two states it
+    # sees, and both are silent: a subject that fell out of the loop into
+    # neither bucket, which is an athlete the book quoted and this model never
+    # counted in any census; and a pair in the union that nothing quoted, which
+    # is a wager manufactured out of a name.
+    #
+    # The day's pairs are read through the estimator's own `subjects_quoted`,
+    # never re-derived here. A copy in this file would have to know that a
+    # market refused BY NAME contributes no subject, and the day it stopped
+    # knowing that, this invariant would raise on a correct run — which is how
+    # a check comes to be deleted.
+    estimator = _player_rates_module()
+    if estimator is not None and (model.resolved or model.name_refusals):
+        quoted_pairs = estimator.subjects_quoted(prices)
+        union = set(model.resolved) | set(model.name_refusals)
+        unaccounted = sorted(quoted_pairs - union)
+        invented = sorted(union - quoted_pairs)
+        if unaccounted or invented:
+            raise SlateError(
+                f"the player half of the slate for {day} resolved or refused "
+                f"{len(union):,} (event, spelling) pair(s) against "
+                f"{len(quoted_pairs):,} quoted on the board: "
+                f"{len(unaccounted)} quoted pair(s) reached neither bucket "
+                f"(first {unaccounted[:3]}) and {len(invented)} pair(s) in "
+                f"neither census are counted anyway (first {invented[:3]}). A "
+                "subject in neither bucket is an athlete the book quoted and "
+                "no census counted; a pair in the union nobody quoted is a "
+                "wager manufactured out of a name."
             )
 
 

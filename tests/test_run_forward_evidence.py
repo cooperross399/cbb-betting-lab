@@ -283,7 +283,31 @@ class Lab:
 
 @pytest.fixture()
 def lab(tmp_path) -> Lab:
-    return Lab(tmp_path).with_tables().with_schedule()
+    """A lab whose process has run design section 10's wager census.
+
+    `a_night()` freezes a `player_points` prop, and as of 2026-09-06
+    `forward_evidence.render_ledger` and `forward_evidence.report_payload` are
+    declared grading entry points that refuse a player ledger until the census
+    has reconciled — so the report stage of `--settle` stops on a night that
+    holds a prop. That refusal is the point of the gate and is asserted
+    directly in `test_the_report_stage_refuses_a_prop_when_no_census_has_run`
+    below; every other test in this file is about settlement, idempotence and
+    counters, and each one is the run an operator makes after reconciling.
+
+    The receipt is process-global. It is cleared on both sides so it cannot
+    leak into a file that never ran the gate, or out of the one test here that
+    means to see the gate closed.
+    """
+    from conftest import reconcile_a_fixture_census
+
+    from cbb_betting_lab.models import player_census
+
+    player_census.forget_reconciliations()
+    reconcile_a_fixture_census(tmp_path)
+    try:
+        yield Lab(tmp_path).with_tables().with_schedule()
+    finally:
+        player_census.forget_reconciliations()
 
 
 def a_night() -> list[dict]:
@@ -813,6 +837,54 @@ def test_the_report_lands_on_the_paths_claude_md_pins(lab):
     assert markdown.is_file() and payload.is_file()
     assert lab.ledger.name == "cbb_forward_evidence.csv"
     assert json.loads(payload.read_text())["no_pooled_division_one_headline"] is True
+
+
+def test_the_report_stage_refuses_a_prop_when_no_census_has_run(tmp_path, capsys):
+    """The census gate, driven through the shell command and not through a helper.
+
+    Every other test in this file takes the `lab` fixture, which reconciles a
+    fixture census first. This one builds the same lab WITHOUT one and runs the
+    same `--settle`, so what is proved is the wiring: the guard reached from
+    `main` -> `render` -> `forward_evidence.write_report` ->
+    `render_ledger`, over a night whose four frozen opinions include one
+    `player_points` prop.
+
+    `render_ledger` and `report_payload` were added to
+    `player_census.GRADING_ENTRY_POINTS` on 2026-09-06. Before that they were
+    not declared and called no guard, and the scan that claimed to cover "the
+    whole of the grading surface" could not see them — it matched one spelling
+    of one verb list and `forward_evidence.py` contains none of those tokens.
+    Measured with the two guard lines deleted and nothing else changed, this
+    exact `--settle` run exited **0**, wrote both report files, and put
+    `| player_points | unplaced | 1 | 1 games | +87.0% | -inf% to +inf% |
+    -inf% to +inf% | **not enough evidence** — 1 bets, below 200 |` in the
+    Opinions table and the matching `roi`/`adjusted_low`/`verdict` row in the
+    JSON, with `player_census.reconciled() == ()`. Below the floor, so no
+    number was claimed — but the door was open, and the row count is the
+    fixture's, not a finding.
+
+    Mutation: delete the `player_census.guard_graded_frame(...)` line from
+    `render_ledger` — RED here, and the run exits 0 with a report on disk.
+    """
+    from cbb_betting_lab.models import player_census
+
+    player_census.forget_reconciliations()
+    lab = Lab(tmp_path).with_tables().with_schedule()
+    lab.freeze(a_night())
+
+    assert player_census.reconciled() == (), "a receipt leaked in from another test"
+    with pytest.raises(player_census.WagerCountMismatch) as raised:
+        lab.run("--settle")
+
+    message = str(raised.value)
+    assert "forward_evidence.render_ledger" in message, message
+    assert "player_points" in message, message
+    assert "no wager census has reconciled" in message, message
+    assert not (lab.outputs / fe.REPORT_MARKDOWN_FILENAME).exists(), (
+        "the report was written before the gate refused, so the gate is on the "
+        "document and not on the run"
+    )
+    capsys.readouterr()
 
 
 def test_the_report_says_it_is_uncorrected_when_nothing_has_been_hypothesised(lab, capsys):

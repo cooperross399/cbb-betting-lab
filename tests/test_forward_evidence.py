@@ -45,6 +45,34 @@ from cbb_betting_lab.settlement import Outcome  # noqa: E402
 NOW = datetime(2027, 1, 20, 12, 0, tzinfo=timezone.utc)
 
 
+@pytest.fixture
+def census_receipt(tmp_path):
+    """A wager-census receipt for this process, dropped again afterwards.
+
+    `render_ledger` and `report_payload` are declared grading entry points as
+    of 2026-09-06 — the Opinions table prints ROI, a 95% interval, a
+    family-corrected interval and a Verdict per market and per tier over every
+    settled row, player props included, and neither function was named in
+    `player_census.GRADING_ENTRY_POINTS` nor called the guard. Both now refuse
+    a ledger carrying a player market until design section 10's census has
+    reconciled in this process.
+
+    The receipt is process-global, so this fixture clears it on both sides: a
+    leak forward would make the gate look shut in a file that never ran it, and
+    a leak backward would let a test that means to see the refusal see a pass.
+    """
+    from conftest import reconcile_a_fixture_census
+
+    from cbb_betting_lab.models import player_census
+
+    player_census.forget_reconciliations()
+    try:
+        yield reconcile_a_fixture_census(tmp_path)
+    finally:
+        player_census.forget_reconciliations()
+
+
+
 def key_for(row):
     """The injected key. One callable, so the map and the snapshot cannot drift."""
     return selection_key(
@@ -991,12 +1019,19 @@ def test_opinions_and_bets_are_reported_separately():
     assert opinions == 600 and wagers == 300
 
 
-def test_a_player_prop_is_an_opinion_and_never_a_bet_and_never_called_a_pass():
+def test_a_player_prop_is_an_opinion_and_never_a_bet_and_never_called_a_pass(
+    census_receipt,
+):
     """Nothing in this sport reaches `Availability.CONFIRMED`.
 
     A prop is priced, frozen and settled and cannot produce a selection, so it
     can never be counted as a bet — and the report must say that in the gate's
     own words rather than describing it as a pass, an avoid or a no-value call.
+
+    Takes `census_receipt` because `render_ledger` is a declared grading entry
+    point as of 2026-09-06 and refuses a player ledger with no receipt. The
+    refusal is asserted next door; this test is about what the report says once
+    the gate has been satisfied, which is the run an operator actually makes.
     """
     ledger = _ledger(300, profit=lambda i: 1.0, market="player_points", edge=0.20)
     report = fe.render_ledger(ledger)
@@ -1156,7 +1191,7 @@ def test_a_market_refused_by_name_never_reaches_a_verdict_table():
     assert len(fe._without_markets_refused_by_name(invented)) == 1
 
 
-def test_the_rendered_ledger_prints_no_verdict_for_a_refused_market():
+def test_the_rendered_ledger_prints_no_verdict_for_a_refused_market(census_receipt):
     """The helper working is not the same as the helper being CALLED.
 
     Written first as a test of `_without_markets_refused_by_name` alone, which
@@ -1282,19 +1317,28 @@ def test_the_filtered_modules_are_driven_not_grepped():
 
     refused = sorted(MARKETS_REFUSED_BY_NAME)[0]
 
-    # forward_evidence, through the JSON render this session left unfiltered.
-    payload = fe.report_payload(
-        _ledger(300, profit=lambda i: 1.0 if i % 2 else -1.0, market=refused)
-    )
-    markets = {
-        str(row.get("market"))
-        for row in payload.get("rows", []) or []
-        if isinstance(row, dict)
-    }
-    assert refused not in markets, (
-        f"{refused} carries a row in the JSON payload, and every row there "
-        "has an ROI, a family-corrected interval and a verdict"
-    )
+    # **The census gate now answers first, and refusing is the right answer.**
+    # `guard_graded_frame` is required by its own test to be the FIRST
+    # statement in every grading entry point — a gate that runs after the
+    # de-vig is a gate on the report, not on the run — so with no receipt it
+    # refuses anything player-shaped, including a market that could never be
+    # graded anyway. Fail-closed. This test used to drive straight through to
+    # the filter; it cannot any more, and that is a stronger position.
+    from cbb_betting_lab.models import player_census
+
+    assert player_census.reconciled() == ()
+    with pytest.raises(player_census.WagerCountMismatch):
+        fe.report_payload(
+            _ledger(300, profit=lambda i: 1.0 if i % 2 else -1.0, market=refused)
+        )
+
+    # And the filter still runs immediately after the gate, so a receipt does
+    # not let a refused market into the payload. The ORDER is the claim, and
+    # the order is what is read — driving it would need a reconciled census
+    # over the real store, which this test has none of and must not fake.
+    import inspect
+
+    _assert_gate_precedes_filter(fe.report_payload)
 
     # reachability, which builds its own interval and its own verdict. It
     # takes a GRADED bet frame, not a ledger, so the columns it requires are
@@ -1313,12 +1357,10 @@ def test_the_filtered_modules_are_driven_not_grepped():
             for column in PB.BET_COLUMNS
         }
     )
-    record = RC.build_record(bets=graded)
-    printed = json.dumps(record)
-    assert refused not in printed, (
-        f"{refused} reaches the reachability record, which prints a clustered "
-        "ROI and a verdict word for every market in it"
-    )
+    with pytest.raises(player_census.WagerCountMismatch):
+        RC.build_record(bets=graded)
+
+    _assert_gate_precedes_filter(RC.build_record)
 
 
 
@@ -1335,3 +1377,94 @@ def _bet_column_filler(column: str, n: int):
     if column == "profit":
         return [0.0] * n
     return [""] * n
+
+
+def _assert_gate_precedes_filter(function) -> None:
+    """Every gate call precedes every filter CALL — not the import that names it.
+
+    **`str.index` returns the FIRST occurrence, and the token appears in the
+    import too.** The first version of this compared
+    `source.index("guard_graded_frame")` against
+    `source.index("without_markets_refused_by_name")`, and
+    `reachability.build_record` carries that second token three times: the new
+    call, a pre-existing `from ... import (...)`, and a pre-existing call.
+    Measured: replace BOTH filter calls with `bets = bets`, leave the import,
+    and 122 tests pass — including this assertion, whose message reads
+    "build_record filters before it gates". It could not tell a filtered
+    function from an unfiltered one.
+
+    This walks the syntax tree instead: it finds the Call nodes, requires at
+    least one of each, and compares the LAST gate call against the FIRST filter
+    call, so a filter that runs before any gate fails whatever else the file
+    says.
+    """
+    import ast
+    import inspect
+    import textwrap
+
+    tree = ast.parse(textwrap.dedent(inspect.getsource(function)))
+
+    # **A filter whose result is thrown away filters nothing.** The first AST
+    # version collected Call nodes by name, so replacing
+    # `bets = without_markets_refused_by_name(bets)` with the bare expression
+    # `without_markets_refused_by_name(bets)` kept the Call, kept this green,
+    # and filtered nothing — 122 tests passed while a 300-row
+    # `player_first_basket` frame came back from `build_record` with a verdict.
+    # That is the same failure as the `str.index` version this replaced: it
+    # proved the helper was NAMED, not that it did the work.
+    #
+    # So a filter call counts only when its value is BOUND — the parent node is
+    # an assignment whose target is a plain name — and the name it binds must
+    # be the name it was given, or the frame that flows on is not the filtered
+    # one.
+    bound_filters: list[int] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+            continue
+        target = node.targets[0]
+        value = node.value
+        if not isinstance(target, ast.Name) or not isinstance(value, ast.Call):
+            continue
+        called = getattr(value.func, "attr", None) or getattr(value.func, "id", None)
+        if called not in {
+            "without_markets_refused_by_name",
+            "_without_markets_refused_by_name",
+        }:
+            continue
+        # **No escape hatch for a non-name argument.** The previous version
+        # read `if passed_name is None or target.id == passed_name`, and the
+        # disjunction SKIPPED the check whenever the argument was not a bare
+        # name — a `.copy()`, a slice, a keyword-only call. Reproduced:
+        # `unused = _PR.without_markets_refused_by_name(bets.copy())` kept this
+        # green, and a 300-row `player_double_double` frame then came back from
+        # `build_record` with a verdict. That is the third version of this
+        # assertion defeated the same way: it proved a construct was PRESENT,
+        # not that the frame flowing on was the filtered one.
+        #
+        # The filter must take a bare name and bind the result back to THAT
+        # name, so the frame every later line sees is the filtered one.
+        passed = value.args[0] if value.args else None
+        if not isinstance(passed, ast.Name):
+            continue
+        if target.id == passed.id:
+            bound_filters.append(node.lineno)
+
+    gates, filters = [], list(bound_filters)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        name = getattr(node.func, "attr", None) or getattr(node.func, "id", None)
+        if name == "guard_graded_frame":
+            gates.append(node.lineno)
+    assert gates, f"{function.__qualname__} calls no census gate at all"
+    assert filters, (
+        f"{function.__qualname__} binds no refusal filter at all. A call whose "
+        "result is discarded is not a filter: the frame that flows on is the "
+        "unfiltered one, and a market refused by name reaches whatever this "
+        "builds."
+    )
+    assert max(gates) < min(filters), (
+        f"{function.__qualname__} filters at line {min(filters)} before it "
+        f"gates at line {max(gates)}. The gate must be the first statement: a "
+        "gate that runs after the de-vig is a gate on the report, not the run."
+    )

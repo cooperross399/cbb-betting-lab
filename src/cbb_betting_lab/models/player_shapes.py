@@ -135,6 +135,38 @@ class PlayerShapes:
         """
         return self.constants[name]["held_out_value"]
 
+    def evidence(self, name: str) -> Mapping[str, Any]:
+        """What the fit recorded ABOUT a constant: its population, its counts.
+
+        A sibling of :meth:`value`, and it exists because some of these blocks
+        carry the **definition of the population a value was measured over**,
+        which a consumer has to honour to compare anything to it.
+        `structural_check_targets` is the case that forced it: its value
+        `unconditional_points_vmr_regulars` is pooled within-player over 242,634
+        rows whose `regular_min_projected_minutes` is 15.0, and that 15.0 lives
+        here rather than in `value`. A consumer that hard-coded it would be
+        holding a floor that no longer came from the file it is a fact about.
+
+        Returns an empty mapping when the fit recorded no evidence block, so a
+        caller can tell "no evidence recorded" from a value; it never invents
+        one. Raises through :meth:`refusal_for` exactly as `value` does, because
+        evidence about a constant the fit refused to invent is not evidence.
+        """
+        refusal = self.refusal_for(name)
+        if refusal is not None:
+            raise ShapesFileError(
+                f"{name} was not fitted, so there is no evidence about it. "
+                f"{refusal} Ask `refusal_for` and refuse the market."
+            )
+        try:
+            entry = self.constants[name]
+        except KeyError as error:
+            raise ShapesFileError(
+                f"{self.path} carries no constant named {name!r}. The constants it "
+                f"does carry are: {', '.join(sorted(self.constants))}."
+            ) from error
+        return entry.get("evidence") or {}
+
     def refusal_for(self, name: str) -> str | None:
         """The full-sentence reason a constant could not be fitted, or None.
 

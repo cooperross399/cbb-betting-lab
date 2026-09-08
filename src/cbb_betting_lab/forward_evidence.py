@@ -175,6 +175,7 @@ from cbb_betting_lab import season, stats, stores
 from cbb_betting_lab.competitions import CBB, Competition
 from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.config import DATA_DIR
+from cbb_betting_lab.models import player_census
 from cbb_betting_lab.providers import player_names
 from cbb_betting_lab.selection import (
     AWAY,
@@ -1647,7 +1648,29 @@ def render_ledger(
     figure.** High-major, mid-major and low-major are different distributions,
     fitted and measured separately; a policy that wins in low-major games and
     loses in high-major ships in low-major only, if it ships at all.
+
+    **This is a grading entry point and it is gated on the wager census.** The
+    Opinions table below prints a market's ROI, its 95% interval, its
+    family-corrected interval and a Verdict, per market and per tier, over
+    every settled row this ledger carries — player props included, because
+    `_bet_rows` excludes them from the BETS table and from that table only. So
+    a ledger of settled `player_points` rows reaches a family-corrected verdict
+    here. Design section 10 gates that on reconciling the store's wager count,
+    and this function was not in `player_census.GRADING_ENTRY_POINTS` and
+    called no guard. Measured 2026-09-06 with this line deleted and nothing
+    else changed: a 240-row `player_points` fixture ledger came out of here as
+    one table row carrying 240 bets, 3 day-clusters, a ROI, a 95% interval, a
+    family-corrected interval and a verdict string, with
+    `player_census.reconciled() == ()` and nothing raised. The guard is the
+    first statement, before any column is derived, and it fails closed.
+
+    The guard is on the ledger it was HANDED, not on the rows that survive
+    `_measurable`. Whether a player row settles is a different question from
+    whether this process is allowed to grade one, which is
+    `price_backtest.settled_opinions`' rule too.
     """
+    player_census.guard_graded_frame(ledger, what="forward_evidence.render_ledger")
+    ledger = _without_markets_refused_by_name(ledger)
     looks = max(int(families), 1) if families else 1
     suspects = frozenset(str(s) for s in settlement_suspects)
     frame = _with_ledger_columns(ledger)
@@ -1978,7 +2001,17 @@ def report_payload(
     Two renderers reading two computations is how a JSON summary and a markdown
     report come to disagree in public, which is the shape of the football lab's
     `_bonferroni_factor`-in-four-files defect applied to prose.
+
+    **Gated on the wager census for the same reason `render_ledger` is**, and
+    guarded separately rather than by delegation: `write_report` calls both,
+    `reports/what_we_can_claim.py` calls this one alone, and a gate on one
+    render of a computation is a gate on a document rather than on the run.
+    Every `rows` entry carries `roi`, `low`, `high`, `adjusted_low`,
+    `adjusted_high` and `verdict` for one market and one tier, so an
+    ungated call writes a family-corrected verdict per player market into JSON.
     """
+    player_census.guard_graded_frame(ledger, what="forward_evidence.report_payload")
+    ledger = _without_markets_refused_by_name(ledger)
     looks = max(int(families), 1) if families else 1
     suspects = frozenset(str(s) for s in settlement_suspects)
     measurable = _measurable(_with_ledger_columns(ledger), competition)

@@ -120,6 +120,8 @@ from cbb_betting_lab import line_movement as LM
 from cbb_betting_lab import stats as S
 from cbb_betting_lab import stores
 from cbb_betting_lab.competitions import CBB, Competition
+from cbb_betting_lab.models import player_census
+from cbb_betting_lab.models import player_rates as _PR
 from cbb_betting_lab.reports import price_backtest as PB
 
 #: Bumped whenever the record's shape changes, so a stale record fails loudly
@@ -960,7 +962,31 @@ def build_record(
     `RoiInterval`, a frame or a timestamp read from a clock — it is JSON, and
     `scripts/run_reachability.py --rerender` rebuilds the whole report from it
     without touching the store.
+
+    **This is a grading entry point and it is gated on the wager census.**
+    `split_by_market` builds one `_interval` per market x tier x reachability
+    bucket and `reachability_verdict` turns those into a sentence, so a bets
+    frame carrying `player_points` gets a clustered ROI, a family-corrected
+    interval and a verdict here — and the frame this runs over is the forward
+    ledger: `scripts/run_reachability.py` defaults `--bets` to
+    `data/processed/cbb_forward_evidence.csv`, the same table
+    `forward_evidence` writes. It was not in
+    `player_census.GRADING_ENTRY_POINTS` and called no guard. The guard is the
+    first statement, before `attach_survival` reads a column, and it fails
+    closed. It costs one vectorised prefix test and has refused nothing this
+    lab has run: the committed `data/outputs/cbb_reachability.json` carries 0
+    `by_market_tier_and_reachability` rows and 0 verdicts, and the 14 tests in
+    `tests/test_reachability.py` that call this function drive team ledgers
+    through it with `player_census.reconciled() == ()` and pass.
     """
+    # **Gate first, then filter — in that order, and the order is guarded.** A market refused by
+    # name can never be graded, so it must not reach a verdict — and it must
+    # not make the gate refuse a frame with nothing gradeable in it either.
+    # Both hold only if the filter runs FIRST; excluding refused markets
+    # inside the gate instead let them past two entry points that do not
+    # filter at all.
+    player_census.guard_graded_frame(bets, what="reachability.build_record")
+    bets = _PR.without_markets_refused_by_name(bets)
     bets = pd.DataFrame() if bets is None else bets
     store = pd.DataFrame(columns=list(LM.CAPTURE_COLUMNS)) if store is None else store
     if not bets.empty:

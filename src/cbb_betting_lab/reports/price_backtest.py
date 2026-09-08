@@ -195,6 +195,8 @@ from cbb_betting_lab.competitions import CBB, Competition
 from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.experiment_ledger import LEDGER_FILENAME
 from cbb_betting_lab.experiment_ledger import load as load_ledger
+from cbb_betting_lab.models import player_census
+from cbb_betting_lab.models import player_rates as _PR
 from cbb_betting_lab.stores import _decimal_payout as decimal_payout
 
 
@@ -424,7 +426,23 @@ def settled_opinions(
     The rows kept here are a superset of the settled bets; the export marks the
     bets with a boolean `selected` column computed by :func:`bet_mask` so the
     selected subset can be reported *beside* the whole, never instead of it.
+
+    **A player wager may not reach this population until the store's wager
+    census has reconciled** — design section 10's gate, in
+    `models.player_census`. This is the ROI half of grading, and the guard finds
+    nothing on a team-market run: `DEFAULT_MODEL` returns a bare mapping with no
+    player half, so no prop has ever reached here. It fails closed anyway,
+    because the day one does the question is which denominator it was counted
+    under.
     """
+    # The gate runs first (its own test requires it to be the first
+    # statement: a gate after the de-vig is a gate on the report, not on the
+    # run). The refusal filter runs immediately after, so a receipt never lets
+    # a refused market be scored. See `player_census.player_markets_in`. This is
+    # one of the two entry points that never called the refusal filter, so
+    # subtracting refused markets inside the gate let them be scored here.
+    player_census.guard_graded_frame(frame, what="price_backtest.settled_opinions")
+    frame = _PR.without_markets_refused_by_name(frame)
     if frame.empty or probability_column not in frame.columns or "outcome" not in frame.columns:
         return frame.iloc[0:0]
     kept = settled(frame)
@@ -1962,8 +1980,38 @@ def build_record(
     sentence must never cost a re-run, and a report that can only be produced by
     re-running the measurement is a report nobody improves.
     """
-    universe = inputs.universe
-    bets = inputs.bets
+    # **The gate, first, on the frame this function actually grades.**
+    # `settled_opinions` was the only gated door in this module, and
+    # `scripts/run_price_backtest.py` calls it INSIDE `if args.write_graded:`
+    # while calling this on every invocation — so a default backtest run never
+    # reached the gate at all. This function is the module's ROI half: it calls
+    # `null_baseline`, `by_market_and_tier`, `pooled` and `_interval`, and the
+    # committed `cbb_price_backtest.json` carries null-baseline rows for twelve
+    # player markets, two of them refused by name, with clustered ROIs,
+    # family-corrected intervals and verdict words.
+    # **NOT gated, and the reason is the gate's own design.**
+    # `guard_graded_frame` demands TWO receipts. The second is set only by
+    # `assert_every_offered_prop_is_accounted`, which has NO caller anywhere in
+    # src/ or scripts/, and `tests/test_player_census_reconciles.py` clause 5
+    # asserts that no script may call it: "Grading belongs in its own commit,
+    # gated on this one." It is a NOT-YET gate, unsatisfiable by design until
+    # that commit lands.
+    #
+    # This function is not a not-yet path. It is the shipped backtest's ROI
+    # half, it runs on every invocation, and the committed record holds 127
+    # null-baseline rows over twelve player markets that it produced. Gating it
+    # therefore cannot be satisfied and simply stops the run: measured three
+    # times, each attempt only changing which of the two refusals it died on,
+    # the last one paying a full pass over the 978 MB store before dying.
+    #
+    # So the gate comes off and the FILTER stays, because the filter needs no
+    # receipt: a market refused by name must never carry a verdict, and that is
+    # true today. The hole this leaves is real and is written down rather than
+    # papered over: `build_record` scores player markets with no census, and
+    # closing it belongs in the grading commit the census was built for.
+    # `test_the_grading_commit_still_owes_this_gate` holds it open.
+    universe = _PR.without_markets_refused_by_name(inputs.universe)
+    bets = _PR.without_markets_refused_by_name(inputs.bets)
     if not universe.empty:
         require_columns(universe, BET_COLUMNS, "the graded price universe")
     if not bets.empty:

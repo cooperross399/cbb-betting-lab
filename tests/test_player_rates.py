@@ -1,9 +1,11 @@
 """What `models/player_rates.py` must be true about before it may price anything.
 
 The estimator turns a cut player frame into a projection. Nothing here measures
-an edge, a loss or a verdict — `models/player_distributions.py` is not written,
-so no probability exists — and every number below is either read off a fixture
-or off the frozen constants.
+an edge, a loss or a verdict: a projection is a minutes lattice, seven rates and
+a value mix, and turning one into a probability is
+`models/player_distributions.py`'s job, done in another file and asserted in
+another test. Every number below is either read off a fixture or off the frozen
+constants.
 
 The properties, and the specific defect each is arranged against:
 
@@ -849,15 +851,9 @@ def test_a_subject_is_counted_once_however_many_rungs_it_carries() -> None:
     assert slate.resolution_census["quotes:exact"] == 9
 
 
-def test_the_per_tier_resolution_rate_is_reported_every_run() -> None:
-    """Design 13, failure mode 5, and the gate that goes with it.
-
-    Reported over resolved subjects only, because design 9 tiers a player by
-    his OWN team and an unresolved name has none. The refused names are
-    reported beside it with their count rather than distributed across the
-    tiers, and the 2pp check is stated as being over the resolved.
-    """
-    frame = pd.concat(
+def _census_history() -> pd.DataFrame:
+    """The two-athlete history the per-tier census tests are built on."""
+    return pd.concat(
         [
             _history(athlete_id=4001.0, name="High Major", team_id=55),
             pd.DataFrame(
@@ -876,6 +872,17 @@ def test_the_per_tier_resolution_rate_is_reported_every_run() -> None:
         ],
         ignore_index=True,
     )
+
+
+def test_the_per_tier_resolution_rate_is_reported_every_run() -> None:
+    """Design 13, failure mode 5, and the gate that goes with it.
+
+    Reported over resolved subjects only, because design 9 tiers a player by
+    his OWN team and an unresolved name has none. The refused names are
+    reported beside it with their count rather than distributed across the
+    tiers, and the 2pp check is stated as being over the resolved.
+    """
+    frame = _census_history()
     tiers = TierTable(
         team_tier={55: Tier.HIGH_MAJOR, 66: Tier.LOW_MAJOR},
         conference_tier={},
@@ -896,16 +903,92 @@ def test_the_per_tier_resolution_rate_is_reported_every_run() -> None:
     assert census[Tier.LOW_MAJOR.value]["priceable"] == 0
     assert PR.untiered_name_refusals(slate) == 1
 
-    with pytest.raises(PR.PlayerRatesError) as raised:
-        PR.assert_tier_resolution_holds(census)
-    assert "percentage points across tiers" in str(raised.value)
-    assert "20.5%" in str(raised.value), "the gate cites the defect it exists for"
+    # **It reports; it does not stop.** Cooper's declaration of 2026-09-07.
+    # The number is the PRICEABLE rate and design 13's 2pp threshold is for the
+    # RESOLUTION rate; measured on a real eight-game board the spread is
+    # 7.50pp, so raising stopped every card.
+    wide = PR.report_tier_priceable_rates(census)
+    assert wide is not None
+    assert wide.gated is False, "this reports until the census can tier a refusal"
+    assert wide.spread_points > wide.tolerance_points, (
+        "this fixture is meant to exceed the threshold, so a report rather than "
+        "a raise is what is being asserted"
+    )
+    assert "reports and does not stop" in wide.line()
+    assert "%" in wide.line() and "pp" in wide.line()
 
     flat = {
         Tier.HIGH_MAJOR.value: {"subjects": 100, "priceable": 90},
         Tier.LOW_MAJOR.value: {"subjects": 100, "priceable": 91},
     }
-    PR.assert_tier_resolution_holds(flat)
+    narrow = PR.report_tier_priceable_rates(flat)
+    assert narrow is not None and narrow.spread_points == 1.0
+    assert narrow.gated is False
+
+    # Fewer than two tiers carrying a subject: nothing to compare, and None
+    # rather than a spread of zero, which would read as agreement.
+    assert PR.report_tier_priceable_rates(
+        {Tier.HIGH_MAJOR.value: {"subjects": 10, "priceable": 9}}
+    ) is None
+
+
+def test_the_gate_design_13_asks_for_is_held_open() -> None:
+    """The real gate waits on a census that can tier a name refusal.
+
+    Design 13 failure mode 5 stops the run when the RESOLUTION rate moves more
+    than 2pp across tiers. That rate cannot be computed per tier here: design 9
+    tiers a player by his OWN team, an unresolved name has no athlete and
+    therefore no team, and tiering the R1/R1a rows by the event's two sides
+    would reintroduce a read from the team side. `resolution_census` counts a
+    name refusal in no tier at all.
+
+    So the priceable rate reports instead, and this assertion holds the gap
+    open: it goes RED the day the census gains a per-tier refused-name count,
+    which is the day design 13's gate can be written against the quantity it
+    was declared for. The threshold is already carried on the report.
+    """
+    # **Read off what the census PRODUCES, not what its prose says.** The first
+    # version of this grepped the source for "name_refusals" and matched the
+    # docstring paragraph explaining why refusals are excluded — text, not
+    # behaviour, which is the trap this session has hit repeatedly.
+    #
+    # A census that could tier a refusal would carry a per-tier count of them.
+    # These are the keys it carries today, over a real slate.
+    # **Built by the module, not typed here.** The first version read a
+    # hardcoded `{"subjects", "priceable"} | ROUTES`, so adding a
+    # `refused_names` counter to the census left this green — a test reading a
+    # constant instead of the thing it is about, for the fifth time this
+    # session. This drives `resolution_census` and reads the keys it returns.
+    tiers = TierTable(
+        team_tier={55: Tier.HIGH_MAJOR, 66: Tier.LOW_MAJOR},
+        conference_tier={},
+        team_margin={},
+        conference_margin={},
+        seasons=(2023,),
+    )
+    slate = PR.player_projections_for(
+        day=DAY,
+        player_history=_census_history(),
+        prices=_prices("High Major", "Low Major", "Nobody At All"),
+        shapes=_shapes(),
+        tiers=tiers,
+    )
+    census = PR.resolution_census(slate.projections, tiers=tiers)
+    counters: set = set()
+    for counts in census.values():
+        counters |= set(counts)
+    assert counters, "the census produced no tier; nothing would be asserted"
+    assert not {key for key in counters if "refus" in key or "unresolved" in key}, (
+        f"`resolution_census` now carries {sorted(counters)} per tier, which "
+        "includes a refused-name count — so it CAN tier a refusal. Design 13's "
+        "gate can now be written against the RESOLUTION rate it was declared "
+        "for: write it, set `gated=True`, and delete this assertion in the "
+        "same commit."
+    )
+    assert PR.TIER_RESOLUTION_TOLERANCE_POINTS == 2.0, (
+        "the threshold design 13 declared is kept so the gate has its number "
+        "the day it can be written"
+    )
 
 
 # --------------------------------------------------------------------------
@@ -1070,6 +1153,247 @@ def test_an_unfittable_constant_refuses_the_market_rather_than_substituting_a_va
     assert whole.priceable is False
     assert whole.unpriceable_reason.startswith(PR.R5_NO_WALK_FORWARD_FIT)
     assert sentence in whole.unpriceable_reason
+
+
+#: Every constant `_unfittable` treats as fatal to the whole projection. The
+#: list is read off the module rather than retyped, so a seventh added there
+#: without a caller-level read being checked fails this file.
+WHOLE_CONSTANT_REFUSALS = (
+    "minutes_pmf",
+    "minutes_half_life",
+    "role_prior",
+    "rate_shrinkage_k",
+    "value_pmf",
+    "value_mix_shrinkage_events",
+)
+
+
+def test_every_whole_constant_refusal_refuses_in_words_and_none_raises(
+    tmp_path: Path,
+) -> None:
+    """R5 must arrive as a refusal from all six, and one of them raised.
+
+    `_unfittable`'s docstring names six constants whose refusal "makes the
+    projection itself unpriceable" — the minutes shape, the half-life, the role
+    table, the credibility table, the value mix — and `_project` consults it
+    first and turns any of them into `R5_NO_WALK_FORWARD_FIT` plus the fit's own
+    sentence. Five did that. `minutes_half_life` did not, because
+    `player_projections_for` read it with `shapes.value` at CALLER level, before
+    the subject loop and before `_project` could ever be reached, and
+    `PlayerShapes.value` RAISES on a constant the fit recorded unfittable.
+
+    Measured through the shipped `slate._player_half` on the frozen file with
+    one `unfittable` entry at a time: `minutes_half_life` raised
+    `ShapesFileError: minutes_half_life was not fitted. ... Ask 'refusal_for'
+    and refuse the market; do not substitute a value.` out of `_player_half`
+    and out of `slate_model`, while the other five each returned a projection
+    reading `refused: a constant this market needs was recorded unfittable by
+    'scripts/fit_player_model.py'...` that the card printed. The whole slate
+    went with it — `_player_half` is called with no `try` and the TEAM half is
+    already built by then, so a refusal of one player constant discarded every
+    spread, total and moneyline on the night. That is finding 1's family, one
+    module up: a refusal must refuse.
+
+    The half-life is now read with `refusal_for` and, when it is refused, no
+    row is decayed at all: `_evidence_the_half_life_refusal_leaves` empties the
+    frame first, so nothing is substituted for the constant the fit declined to
+    invent. `_project` still sees `_unfittable`'s structural refusal and still
+    returns it in the fit's words.
+    """
+    from cbb_betting_lab.competitions import CBB
+    from cbb_betting_lab.models import slate as SLATE
+
+    assert tuple(PR.CONSTANTS_THE_ESTIMATOR_READS) == WHOLE_CONSTANT_REFUSALS, (
+        "the whole-constant refusal list moved. Every one of them is read at "
+        "caller level somewhere; add the new one here and check that its read "
+        "goes through `refusal_for` rather than `value`."
+    )
+    # The list `_unfittable` iterates is that module constant, by name, and not
+    # a literal tuple beside it. It WAS a literal until 2026-09-07 and this
+    # test read it out of the AST; the same six names are now also the list
+    # `missing_constants` asks the incomplete-file question of, and two copies
+    # of them is a name added to one question and not the other — the seam
+    # checking for a constant `_unfittable` will not refuse on, or the reverse.
+    names = {
+        node.id
+        for node in ast.walk(ast.parse(inspect.getsource(PR._unfittable)))
+        if isinstance(node, ast.Name)
+    }
+    assert "CONSTANTS_THE_ESTIMATOR_READS" in names, (
+        "`_unfittable` no longer reads `CONSTANTS_THE_ESTIMATOR_READS`, so the "
+        "list it refuses on and the list `missing_constants` checks for are "
+        "two copies again. One of them will grow a seventh name alone."
+    )
+    literals = [
+        node
+        for node in ast.walk(ast.parse(inspect.getsource(PR._unfittable)))
+        if isinstance(node, ast.Tuple)
+        and node.elts
+        and all(
+            isinstance(element, ast.Constant) and isinstance(element.value, str)
+            for element in node.elts
+        )
+    ]
+    assert len(literals) == 1, (
+        "`_unfittable` names more than the per-stat level as a literal tuple. "
+        "The whole-constant level is `CONSTANTS_THE_ESTIMATOR_READS`; a second "
+        f"literal is a copy of it: {[[e.value for e in t.elts] for t in literals]}"
+    )
+    assert tuple(element.value for element in literals[0].elts) == (
+        "role_prior",
+        "rate_shrinkage_k",
+    ), "the per-stat refusal level moved"
+
+    sentence = "the implied value moved by more than 2x across evidence banks."
+    for constant in WHOLE_CONSTANT_REFUSALS:
+
+        def _refuse(document: dict, name: str = constant) -> None:
+            document["unfittable"] = {
+                name: {"reason": sentence, "cost": "no market prices."}
+            }
+
+        shapes = _shapes_with(tmp_path, _refuse, name=f"{constant}.json")
+        assert shapes.refusal_for(constant), f"{constant} was not actually refused"
+
+        # Through the seam's own player half, which is where the raise escaped
+        # to: `slate_model` calls it with no `try` and would have carried the
+        # ShapesFileError past the team half it had already built.
+        players, _, _, _, _, absence, _ = SLATE._player_half(
+            day=DAY,
+            player_history=_history(),
+            prices=_prices("Sean Bairstow"),
+            competition=CBB,
+            season=PRICED_SEASON,
+            shapes=shapes,
+            matchups={},
+        )
+        assert not absence, (
+            f"{constant} was reported as a structural absence rather than as a "
+            f"projection refusal: {absence}"
+        )
+        projection = next(iter(next(iter(players.values())).values()))
+        assert projection.priceable is False, f"{constant} priced anyway"
+        assert projection.unpriceable_reason.startswith(PR.R5_NO_WALK_FORWARD_FIT), (
+            f"{constant} refused under a code that is not R5: "
+            f"{projection.unpriceable_reason}"
+        )
+        assert sentence in projection.unpriceable_reason, (
+            f"{constant} refused without the fit's own words, so an operator "
+            "cannot tell which constant went or why"
+        )
+        assert constant in projection.unpriceable_reason
+
+        # And the single-subject entry point, which carried the same read.
+        one = PR.projection_for(
+            day=DAY,
+            event_id="e1",
+            game_id=999,
+            home_team_id=55,
+            away_team_id=66,
+            provider_name="Sean Bairstow",
+            roster=_history(),
+            shapes=shapes,
+            priced_through="2024-01-14",
+        )
+        assert one.priceable is False and sentence in one.unpriceable_reason, (
+            f"`projection_for` did not refuse {constant} in the fit's words"
+        )
+
+    # Nothing catches this on the way out, which is why it had to be a refusal
+    # and not a raise. Asserted structurally rather than trusted: the estimator
+    # call in `_player_half` sits under no `try`, and the team half is already
+    # built when it runs.
+    tree = ast.parse(
+        (REPO / "src" / "cbb_betting_lab" / "models" / "slate.py").read_text(
+            encoding="utf-8"
+        )
+    )
+    half = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == "_player_half"
+    )
+    guarded = {
+        id(inner)
+        for node in ast.walk(half)
+        if isinstance(node, ast.Try)
+        for inner in ast.walk(node)
+    }
+    estimator_calls = [
+        node
+        for node in ast.walk(half)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "player_projections_for"
+    ]
+    assert len(estimator_calls) == 1
+    assert id(estimator_calls[0]) not in guarded, (
+        "the estimator call is inside a `try` now. That is a second place a "
+        "refusal could turn into a swallowed exception; say which exceptions "
+        "it catches and what sentence each one produces."
+    )
+
+
+def test_the_half_life_refusal_substitutes_no_half_life(tmp_path: Path) -> None:
+    """R5's refusal path decays nothing, and cannot start decaying in silence.
+
+    `_evidence_the_half_life_refusal_leaves` empties the roster and calls
+    `trailing_evidence` for its column and index shape. The value it passed in
+    place of the constant the fit declined to invent was `1.0` — a perfectly
+    plausible half-life in days — and the only thing stopping it being applied
+    was that `trailing_evidence` returns at its `prepared.empty` branch before
+    the argument is read. That is a property of the CALLEE, and a guard whose
+    floor comes only from the thing it guards cannot see that thing get the
+    floor wrong: the day `trailing_evidence` grew a read of `half_life` above
+    that branch, every day with an unfitted half-life would have been decayed
+    at one day and reported as evidence, under a constant `PlayerShapes.value`
+    raises specifically to stop being substituted.
+
+    Two things are held. The sentinel is not a half-life — it is negative, and
+    pandas' own `.ewm` refuses it with `halflife must satisfy: halflife > 0`,
+    so a future read of it raises instead of decaying something plausible. And
+    the refusal path's own boundary check: the frame it returns is empty, and
+    it raises rather than handing a decayed row on.
+
+    Driven at the seam's caller as well as at the helper, because the sentence
+    that matters is the one the card prints: with `minutes_half_life` recorded
+    unfittable, the athlete comes back `priceable=False` under R5 with no
+    projected minutes, not with minutes decayed at a number nobody fitted.
+    """
+    assert PR._NOT_A_HALF_LIFE < 0.0, (
+        "the refusal path passes a positive number in place of an unfitted "
+        "half-life again, so a callee that read it would decay rows at it"
+    )
+    with pytest.raises(ValueError, match="halflife"):
+        PR.trailing_evidence(_history(), half_life=PR._NOT_A_HALF_LIFE)
+
+    empty = PR._evidence_the_half_life_refusal_leaves(_history())
+    assert len(empty) == 0, "the refusal path returned decayed rows"
+
+    def _refuse(document: dict) -> None:
+        document["unfittable"] = {
+            "minutes_half_life": {
+                "reason": "the implied value moved by more than 2x across banks.",
+                "cost": "no market prices.",
+            }
+        }
+
+    shapes = _shapes_with(tmp_path, _refuse, name="no-half-life.json")
+    projection = _one(
+        PR.player_projections_for(
+            day=DAY,
+            player_history=_history(),
+            prices=_prices("Sean Bairstow"),
+            shapes=shapes,
+        )
+    )
+    assert projection.priceable is False
+    assert projection.unpriceable_reason.startswith(PR.R5_NO_WALK_FORWARD_FIT)
+    assert projection.projected_minutes != projection.projected_minutes, (
+        "an athlete on a day with no fitted half-life came back with projected "
+        f"minutes of {projection.projected_minutes}, which was decayed at "
+        "something. The refusal path is supposed to decay nothing at all."
+    )
 
 
 def test_the_two_markets_refused_by_name_never_become_an_eleventh() -> None:
@@ -1298,16 +1622,105 @@ def test_projection_for_raises_on_a_name_rather_than_inventing_an_athlete() -> N
 # --------------------------------------------------------------------------
 
 
+def test_this_module_no_longer_tells_its_reader_the_engine_is_not_written() -> None:
+    """The sweep clause 1 ordered, held against the FILE and not against a test.
+
+    `test_the_gaps_this_estimator_still_has_are_the_ones_written_down`'s clause
+    1 said: delete this clause, and with it every sentence in this file that
+    says no probability exists. It was read as applying to the test module's own
+    docstring, which was the only sentence swept, and `models/player_rates.py`
+    got zero commits on the branch that wrote the engine — so the estimator, the
+    file every projection comes from, went on telling its reader in two places
+    that `models/player_distributions.py` is not written: the module docstring
+    and `mean_for_market`. Both were false from commit 0985942 onward.
+
+    Measured before the repair: `git log origin/main..HEAD --
+    src/cbb_betting_lab/models/player_rates.py` printed nothing, so the file had
+    no commit on the branch that wrote the engine; `grep -n` on it put "is not
+    written" at lines 7 and 1204 and "no engine exists" at line 8.
+
+    This holds the file rather than the prose about the file. What is banned is
+    the wording the two false sentences actually used; the module may still say
+    the engine exists, name it, describe what it does, and describe in the PAST
+    tense what these lines used to claim. It is a tripwire on the exact wording,
+    not a proof that no paraphrase can be reintroduced, and it says so rather
+    than pretending otherwise. It would have gone red on commit 0985942, which
+    is the commit it exists for.
+
+    A third candidate, `"no probability exists"`, is deliberately NOT banned.
+    The comment on :data:`MARKETS_REFUSED_BY_NAME` QUOTES the card's old
+    sentence — "no probability exists for this line yet" — to say what a
+    first-basket wager used to fall through to, and a substring ban cannot tell
+    a quotation of a repaired defect from a fresh claim of it. Banning it would
+    force out the one place the module records what went wrong, which is the
+    opposite of what this test is for. The two bans below are enough: both
+    false sentences carried `"is not written"`, and one carried
+    `"no engine exists"` as well.
+    """
+    source = MODULE.read_text(encoding="utf-8")
+    engine = REPO / "src" / "cbb_betting_lab" / "models" / "player_distributions.py"
+    assert engine.is_file(), (
+        "the distribution engine has been removed. The sentences banned below "
+        "would be TRUE again: put them back, in this module and in "
+        "`models/slate.py`'s NO_DISTRIBUTION_ENGINE, rather than leaving a file "
+        "that claims a downstream price nothing can produce."
+    )
+    for absent in ("is not written", "no engine exists"):
+        assert absent not in source, (
+            f"`models/player_rates.py` says {absent!r} again, and "
+            f"{engine.name} exists and is wired into "
+            "`reports/gameday_card.opinions_for`. A file that understates what "
+            "the lab holds is the same defect as commit dcaab15's six sentences "
+            "that overstated it."
+        )
+    # The other half: the file has to still say the true thing. A module that
+    # simply deleted the paragraph would pass the ban above and leave a reader
+    # with no idea where a projection goes next.
+    assert "player_distributions" in source, (
+        "the estimator no longer names the engine anywhere, so nothing tells a "
+        "reader what turns one of these projections into a price"
+    )
+
+
 def test_the_gaps_this_estimator_still_has_are_the_ones_written_down() -> None:
-    """Six, each of which goes red the day it is closed.
+    """Six, of which two have since closed; each goes red the day it does.
 
     The repository's form for a limitation: not a docstring claim that quietly
     becomes false, but an assertion that fails on the commit which fixes it and
     forces somebody to say so.
 
-    1. **No distribution engine.** `models/player_distributions.py` is not
-       written, so a priceable projection is a mean and a lattice and never a
-       probability. Nothing here can select a bet.
+    1. **CLOSED, and replaced by its successor.** There was no distribution
+       engine, so a priceable projection was a mean and a lattice and never a
+       probability. `models/player_distributions.py` was written and then wired
+       into `reports/gameday_card.opinions_for`, so a priceable projection now
+       carries one; this clause's own instruction was to delete it and with it
+       every sentence saying no probability exists. That instruction was read
+       as covering THIS file only, and this file's module docstring was the
+       only sentence swept — so `models/player_rates.py`, which got zero
+       commits on the branch that wrote the engine, went on saying it in two
+       places (its module docstring and `mean_for_market`) for three commits.
+       Both are repaired, and
+       `test_this_module_no_longer_tells_its_reader_the_engine_is_not_written`
+       is the tripwire, held against the ESTIMATOR's source rather than
+       against this file's prose.
+
+       The successor is that **this estimator still carries two routes to a
+       mean for two of the seven stats, and they do not agree.** `points` has a
+       shrunk rate here AND a compound route through `points_events` times the
+       value mix; `threes` has a shrunk rate here AND falls out of the same
+       object thinned. The design says which is the price and the fitter froze
+       both deliberately so the two could be compared rather than assumed
+       equal. Measured on this file's own fixture athlete, in
+       `tests/test_player_distributions.py::test_the_two_mean_routes_agree_
+       where_they_are_one_route_and_are_measured_where_they_are_two`: the
+       compound route runs **1.6386%** above `rates["points"] * minutes` and
+       the thinned route **0.6817%** above `rates["threes"] * minutes`, and at
+       the role prior the threes disagreement runs -10.8% to +9.2% and changes
+       sign between the 24-28 and 28-32 minutes buckets. Nothing reconciles
+       them: `points_compound_reconciliation` reconciles the compound points
+       DISPERSION and no constant anywhere reconciles either MEAN. The
+       assertion below goes red the day the frozen file stops carrying both
+       routes, because that is the day somebody chose one and owes the reason.
     2. **No cross-season carry-over.** The bank resets at every season
        boundary, because admitting one needs a decay constant nobody has
        fitted. With R2 that refuses every player for his first four
@@ -1324,16 +1737,35 @@ def test_the_gaps_this_estimator_still_has_are_the_ones_written_down() -> None:
        ceiling" and the frozen file declares `minutes_support` and no per-market
        count ceiling at all, so the upper half of R4 is enforced on minutes and
        not on counts. It belongs in `player_distributions.py`.
-    6. **The card cannot form a rate.** `slate.REQUIRED_PLAYER_COLUMNS` is
-       eight columns and a per-minute rate needs the box score, so every
-       subject on the card path is refused under R6. It is one list away, and
-       widening it changes a measured docstring in `card_matchups.py`.
+    6. **CLOSED.** The card could not form a rate:
+       `reports/card_matchups.load_player_games` read the eight columns
+       `slate.REQUIRED_PLAYER_COLUMNS` declares, a per-minute rate needs the
+       box score, and every subject on the card path was therefore refused
+       under R6 — which also made design 4's stop rule unreachable on the only
+       path that ships. The clause's instruction was to delete it when the seam
+       declared the box-score columns and to re-measure the read cost the
+       loader quotes. Both are done: the loader reads
+       `slate.PLAYER_COLUMNS_THE_ESTIMATOR_READS`, and the cost, re-measured on
+       the 207,954,921-byte, 1,493,589-row table in `data/processed/`, best of
+       three, is 1.09 seconds for the eight, 1.33 for the seventeen and 1.77
+       for all thirty-two.
+
+       The successor is that **R6 is now reachable only from a caller that
+       hands the estimator a narrower frame than the card does**, and the
+       assertion below is what keeps it honest: the eight are still what the
+       seam REQUIRES to exist, so a processed table built without one stat
+       column still reaches this estimator column by column — refusing the
+       athlete and naming what is missing — rather than refusing the whole
+       card, team half included. It goes red the day the required list grows
+       into the read list, which is the day that trade is made.
+       `tests/test_player_seam.py::test_s11_the_card_path_can_actually_build_a_
+       player_distribution` drives the repaired path end to end.
     """
-    models = REPO / "src" / "cbb_betting_lab" / "models"
-    assert not (models / "player_distributions.py").exists(), (
-        "the distribution engine now exists, so a projection can carry a "
-        "probability. Delete this clause, and with it every sentence in this "
-        "file that says no probability exists."
+    role = json.loads(SHAPES.read_text(encoding="utf-8"))["constants"]["role_prior"]
+    assert {"points", "points_events", "threes"} <= set(role["value"]), (
+        "the frozen file no longer carries both routes to a points or a threes "
+        "mean. One of them was chosen: say which, say what the disagreement "
+        "measured before the choice, and re-point this clause."
     )
 
     evidence = PR.trailing_evidence(
@@ -1367,10 +1799,18 @@ def test_the_gaps_this_estimator_still_has_are_the_ones_written_down() -> None:
 
     from cbb_betting_lab.models import slate as SLATE
 
+    assert set(PR.REQUIRED_STAT_COLUMNS) <= set(
+        SLATE.PLAYER_COLUMNS_THE_ESTIMATOR_READS
+    ), (
+        "the columns the card reads no longer carry the box score, so every "
+        "subject on the card path is refused under R6 again and design 4's "
+        "stop rule is unreachable on the only path that ships"
+    )
     assert not set(PR.REQUIRED_STAT_COLUMNS) <= set(SLATE.REQUIRED_PLAYER_COLUMNS), (
-        "the seam now declares the box-score columns, so the card path can "
-        "form a rate and R6 no longer fires there. Delete clause 6, and "
-        "re-measure the read cost `card_matchups.load_player_games` quotes."
+        "the box-score columns are now REQUIRED to exist rather than merely "
+        "read, so a processed table built without one refuses the whole card "
+        "instead of refusing the athlete under R6 with the column named. Say "
+        "why that trade is the better one, and re-point clause 6's successor."
     )
     # **Substring, over the whole signature and the source, not exact parameter
     # names.** `term not in set(parameters)` is exact membership, so

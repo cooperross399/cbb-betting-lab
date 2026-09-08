@@ -148,7 +148,7 @@ from cbb_betting_lab.gates import (
     tip_state,
 )
 from cbb_betting_lab.markets import FUTURES, MARKETS_BY_KEY, PLAYER, per_event_provider_keys
-from cbb_betting_lab.models import distributions, player_rates, slate
+from cbb_betting_lab.models import distributions, player_census, player_rates, slate
 from cbb_betting_lab.population import VenueState
 from cbb_betting_lab.providers import staging, team_names
 from cbb_betting_lab.providers.odds_api import (
@@ -852,6 +852,35 @@ class OpinionCensus:
     push_mass: dict[tuple, float] = field(default_factory=dict)
     #: Frozen key -> the prior's weight in the rating behind the price.
     prior_weight: dict[tuple, float] = field(default_factory=dict)
+    #: Design 4's check (a), pooled over the regular athletes this run priced —
+    #: whatever `models.player_distributions.population_structural_checks`
+    #: returned, or empty when no player distribution was built at all. Design 4
+    #: asks for the ratio to be REPORTED as well as stopped on:
+    #: :meth:`structural_check_line` is the report and `assert_structural_checks`
+    #: is the stop. Carrying it here was not enough and the comment that said so
+    #: was wrong for a commit: the reporter had no caller in `src/` or
+    #: `scripts/` until :func:`_model_section` printed it onto the card.
+    structural_check: dict[str, float] = field(default_factory=dict)
+    #: Design 13's failure mode 5, per tier: whatever
+    #: `models.player_rates.resolution_census` returned over the athletes this
+    #: run holds a projection for, or empty when it holds none. Design 13 asks
+    #: for the per-tier resolution rate to be PRINTED every run and for the run
+    #: to STOP when it moves more than 2pp across tiers;
+    #: :meth:`tier_resolution_line` is the print and
+    #: `player_rates.assert_tier_resolution_holds` is the stop, and neither had
+    #: a caller anywhere in `src/` or `scripts/` until :func:`opinions_for`
+    #: called them.
+    tier_resolution: dict[str, dict[str, int]] = field(default_factory=dict)
+    #: Name refusals carry no tier, because they carry no athlete and design 9
+    #: tiers a player by his OWN team. Counted beside the census rather than
+    #: folded into a tier, which would be a read from the team side.
+    untiered_name_refusals: int = 0
+
+    #: What the per-tier priceable check found, or None when fewer than two
+    #: tiers carried a subject. It REPORTS: design 13's 2pp threshold is for
+    #: the resolution rate and this is the priceable rate, and on a real board
+    #: the spread is 7.50pp, so gating on it stopped every card.
+    tier_priceable: object = None
 
     def decline(self, reason: str) -> None:
         self.declined[reason] = self.declined.get(reason, 0) + 1
@@ -861,6 +890,192 @@ class OpinionCensus:
             f"{self.priced:,} of {self.wagers:,} priced wager(s) carry a "
             "modelled opinion. An absent opinion is **not** a probability of "
             "zero: it is the model declining, or never being asked."
+        )
+
+    def structural_check_line(self) -> str:
+        """Design 4's "report the ratio", said in one sentence or not at all.
+
+        Three states, and they are three different facts. No player
+        distribution was built, so the check was never asked. Fewer regulars
+        than `STRUCTURAL_CHECK_POPULATION_FLOOR`, so it ran and may not stop —
+        printed with the count, because a check that silently declines to run is
+        indistinguishable from one that passed and that is the shape of the
+        defect this whole path exists against. Or it ran over a population and
+        the run is still going, which means it passed.
+
+        A fourth number rides on the head line whenever it is not zero: the
+        regulars whose `player_points` the fit refused. They were built, they
+        are not below the minutes floor and they still carry no points mixture,
+        so they are out of both sums — and a population that quietly shrank
+        because a constant was refused would otherwise read exactly like a
+        population that was small.
+        """
+        checks = self.structural_check
+        if not checks:
+            return (
+                "Design 4's structural check was not asked: this card built no "
+                "player distribution."
+            )
+        athletes = int(checks.get("population_athletes", 0))
+        floor = int(checks.get("population_floor", 0))
+        offered = int(checks.get("population_athletes_offered", 0))
+        below = int(checks.get("population_below_regular_floor", 0))
+        minutes = float(checks.get("regular_min_projected_minutes", 0.0))
+        refused = int(checks.get("population_points_refused", 0))
+        head = (
+            f"Design 4's structural check (a): {athletes:,} of {offered:,} "
+            f"athlete(s) priced are regulars at {minutes:.1f}+ projected "
+            f"minutes ({below:,} below, counted apart and never pooled)"
+        )
+        if refused:
+            head += (
+                f", and {refused:,} regular(s) whose `player_points` the fit "
+                "refused, counted apart as well"
+            )
+        if athletes < floor:
+            return (
+                f"{head}. Fewer than the declared floor of {floor}, so the "
+                "ratio is reported and STOPS NOTHING — pooled over this few it "
+                "would be the per-athlete number the floor exists against."
+            )
+        return (
+            f"{head}. Pooled unconditional points VMR "
+            f"{checks['unconditional_points_vmr']:.4f} against the frozen "
+            f"{checks['unconditional_points_vmr_target']:.4f}, a ratio of "
+            f"{checks['unconditional_points_vmr_ratio']:.4f}. The run continued, "
+            "so it is inside design 4's 15% stop."
+        )
+
+    def tier_resolution_line(self) -> str:
+        """Design 13's failure mode 5, said in one sentence or not at all.
+
+        Design 13: print the per-tier resolution rate every run, and stop the
+        run if the priceable rate moves more than 2pp across tiers. A resolution
+        rate that runs with tier is a biased sample rather than a smaller one —
+        the team-name version of this join lost 20.5% of provider names with
+        46.7% of the misses at the low-major end, which is the measurement the
+        rule is written against.
+
+        Three states, and they are three different facts. No athlete carries a
+        projection, so there was nothing to tier. One tier carries subjects, so
+        the check has nothing to compare and `assert_tier_resolution_holds`
+        returns without looking — said in terms, because a check that cannot run
+        must never read like one that passed. Or two or more tiers carry
+        subjects, the spread is printed, and the run is still going, which means
+        it is inside the declared tolerance.
+
+        `Tier.UNPLACED` is reported and never folded into the comparison: a
+        first-Division-I-season roster would otherwise move a check about the
+        join.
+        """
+        census = self.tier_resolution
+        refused = self.untiered_name_refusals
+        tail = (
+            f" {refused:,} name(s) were refused before any tier could be read "
+            "and are counted apart: an unresolved spelling carries no athlete, "
+            "so it carries no team and no tier."
+            if refused
+            else ""
+        )
+        if not census:
+            return (
+                "Design 13's per-tier resolution rate was not asked: this card "
+                "holds no player projection to tier." + tail
+            )
+        rates = {
+            tier: 100.0 * int(counts.get("priceable", 0)) / int(counts["subjects"])
+            for tier, counts in sorted(census.items())
+            if tier != Tier.UNPLACED.value and int(counts.get("subjects", 0))
+        }
+        spelled = ", ".join(
+            f"{tier} {rates[tier]:.1f}% of "
+            f"{int(census[tier]['subjects']):,}"
+            for tier in sorted(rates)
+        )
+        unplaced = census.get(Tier.UNPLACED.value)
+        aside = (
+            f" {int(unplaced['subjects']):,} unplaced subject(s) are reported "
+            "and never folded into the comparison."
+            if unplaced and int(unplaced.get("subjects", 0))
+            else ""
+        )
+        if len(rates) < 2:
+            return (
+                f"Design 13's per-tier resolution rate: {spelled or 'nothing'}. "
+                "Fewer than two tiers carry a subject, so the 2pp check has "
+                "nothing to compare and STOPS NOTHING on this card."
+                + aside
+                + tail
+            )
+        spread = max(rates.values()) - min(rates.values())
+        return (
+            f"Design 13's per-tier resolution rate: {spelled}. The priceable "
+            f"rate moves {spread:.2f} percentage points across tiers, against "
+            f"the declared {player_rates.TIER_RESOLUTION_TOLERANCE_POINTS}pp. "
+            "The run continued, so it is inside it."
+            + aside
+            + tail
+        )
+
+    def event_dispersion_line(self) -> str:
+        """Which of the frozen file's two event dispersions priced this card.
+
+        **A disclosure, not a check.** Nothing stops on it and no number in it
+        is produced: the frozen file freezes two candidates for the scoring-
+        event count's Panjer dispersion under `points_compound_reconciliation`
+        and says in terms that "the choice belongs to the model, not to the
+        fit". `models.player_distributions.POINTS_EVENT_DISPERSION_KEY` makes
+        that choice, and the paragraph that argues for it concedes the choice
+        moves design 4's produced ratio by 0.167 — the whole width of the stop
+        budget — offering as the thing that keeps it honest that both numbers
+        are printed beside each other on every run.
+
+        **They were not.** The only mapping carrying both keys was
+        `PlayerDistribution.structural_checks`, which has no caller in `src/`
+        or `scripts/`; `population_structural_checks` returned nine keys and
+        neither dispersion was among them. Rendered, a card that priced eight
+        player props carried neither number and not the word "dispersion" at
+        all, so a reviewer asking which dispersion priced the card had nothing
+        to read and a later refit could move `measured_event_dispersion`
+        without changing anything anyone could see.
+
+        Two states, and they are two different facts. No player distribution
+        was built, so no dispersion was chosen. Or one was, and the sentence
+        names which frozen key it came from at full precision — the key name is
+        recovered by matching the value the engine USED against the two
+        candidates, never retyped here, so moving
+        `POINTS_EVENT_DISPERSION_KEY` moves this sentence with it.
+        """
+        checks = self.structural_check
+        used = checks.get("points_event_dispersion_used")
+        if used is None:
+            return (
+                "No scoring-event dispersion was chosen on this card: it built "
+                "no player distribution."
+            )
+        candidates = {
+            name: checks[name]
+            for name in ("effective_event_dispersion", "measured_event_dispersion")
+            if name in checks
+        }
+        chosen = [name for name, value in candidates.items() if value == used]
+        other = [name for name, value in candidates.items() if value != used]
+        if len(chosen) != 1 or len(other) != 1:
+            # The mapping carried the used value and not the pair it has to be
+            # disclosed against. Say so rather than printing one number as
+            # though the choice had been shown.
+            return (
+                f"The compound points sum was priced at an event dispersion of "
+                f"{used!r}, and the frozen file's two candidates for it are not "
+                "both on this run's structural check, so which one that is "
+                "cannot be shown here."
+            )
+        return (
+            "Scoring-event dispersion: this card priced the compound points "
+            f"sum at `{chosen[0]}` = {used!r}, and the frozen file's other "
+            f"candidate `{other[0]}` = {candidates[other[0]]!r} was not used. "
+            "The file freezes both and leaves the choice to the model, so both "
+            "are printed here rather than only in the constant's docstring."
         )
 
     def table(self) -> str:
@@ -947,11 +1162,50 @@ def _read_market(
     )
 
 
-def _player_decline(model: "slate.SlateModel", wager: Wager) -> str:
-    """Why this prop carries no probability, in the bucket it actually belongs to.
+def _player_distributions_module():
+    """`models.player_distributions`, or `None` if it cannot be imported.
 
-    Four states, counted separately and never summed, and the separation is the
-    deliverable of the seam this reads:
+    Imported inside the call, for the reason `slate._player_rates_module` is: a
+    module-scope import binds the answer once per process and would make an
+    engine that fails to import take the whole card down, so a card that could
+    still price every spread would print nothing at all.
+    :data:`slate.NO_DISTRIBUTION_ENGINE` is the sentence that says which of the
+    two states the lab is in, and it is reachable only because of this.
+    """
+    try:
+        from cbb_betting_lab.models import player_distributions  # noqa: PLC0415
+    except ImportError:
+        return None
+    return player_distributions
+
+
+def _player_decline(
+    model: "slate.SlateModel", wager: Wager
+) -> tuple[str, str]:
+    """`(bucket, reason)` for a prop that carries no probability; `("", "")` when it can be priced.
+
+    The bucket is one of `models.player_census.OFFERED_BUCKETS`, read from that
+    module and never spelled here, and it is returned rather than derived from
+    the sentence because the sentences are the model's own words and a
+    classifier over them would go wrong the first time one was reworded. It is
+    what design section 10's pre-grading gate counts: every prop wager the store
+    offers lands in exactly one bucket and the buckets must sum to the store's
+    own count with a residual of exactly 0.
+
+    **Seven** states, counted separately and never summed, and the separation
+    is the deliverable of the seam this reads. Seven and not six: the bullets
+    below have been seven since `player_first_team_basket` and the six other
+    unregistered markets got their own sentence, and the head count was not
+    moved with them. They map onto the identity's buckets as
+    :data:`~models.player_census.BUCKET_REFUSED_BY_NAME`,
+    :data:`~models.player_census.BUCKET_UNREGISTERED_MARKET`,
+    :data:`~models.player_census.BUCKET_NAME_UNRESOLVED`,
+    :data:`~models.player_census.BUCKET_ATHLETE_REFUSED` for the athlete's own
+    refusal, and :data:`~models.player_census.BUCKET_NEVER_ASKED` for the three
+    absences — the event nobody was asked about, the subject with no
+    projection, and the two structural absences of the engine and its
+    constants, which are one bucket with three sentences counted apart inside
+    it because all three are the model holding nothing to refuse:
 
     * **refused by name** — `player_first_basket` or `player_double_double`.
       This is asked FIRST, before anything about the athlete, because it is a
@@ -962,49 +1216,165 @@ def _player_decline(model: "slate.SlateModel", wager: Wager) -> str:
       wiring absence — for a market the design refuses permanently. The
       refusal is printed in the design's own words, which say plainly that it
       is a model refusal and not a data absence.
-    * **never asked** — the model holds no projection for this event at all.
-      `no opinion`, and the slate's own sentence says which absence it is: a
-      night with no player evidence, an estimator that is not written, or a
-      day in no season.
-    * **the name** — R1/R1a. The book's spelling did not resolve to exactly one
-      athlete on a **prior** roster. No athlete id exists and none is invented;
-      the refusal is filed under the spelling as the book wrote it.
-    * **the athlete** — R2 to R5, printed in the projection's own words.
-    * **no engine** — the athlete is projected and priceable, and there is
-      still no probability, because `models/player_distributions.py` is not
-      written. This is the one bucket that is a statement about the lab rather
-      than about the player, and it goes away in the commit that adds the
-      engine.
+    * **the name** — R1, R1a and R1b. The book's spelling did not resolve to
+      exactly one athlete on a **prior** roster. No athlete id exists and none
+      is invented; the refusal is filed under the spelling as the book wrote
+      it. This is asked BEFORE the event, and the order is load-bearing rather
+      than tidy. `slate.SlateModel.was_asked_about_players` is
+      `event_id in players`, and `players` gains an entry only where a
+      resolution SUCCEEDED (`player_rates.player_projections_for` writes
+      `projections.setdefault(event_id, {})[athlete]` on the resolved branch
+      only) — so an event on which every quoted spelling was refused for the
+      name is not in `players` at all, and asking the event first printed the
+      *never asked* sentence over bucket C on exactly the nights bucket C
+      exists to describe. R1b makes that certain rather than incidental: it is
+      filed inside `if len(roster) == 0`, computed once per event before the
+      spelling loop, so it is all-or-nothing per event and can never be
+      accompanied by a surviving projection — its sentence reached no output
+      anywhere in `src/` or `scripts/` until this order was fixed. Measured
+      through the shipped `slate._player_half` on a price frame quoting
+      `Sean Bairstow` on teams 77/88 against a player table carrying only team
+      55: `name_refusals[('e1', 'Sean Bairstow')]` is `R1B_NO_PRIOR_ROSTER`,
+      `resolution_census` is `{'refused_no_prior_roster': 1,
+      'quotes:refused_no_prior_roster': 1}`, `players` is `{}` — and the card
+      printed "the model was never asked about this event's athletes". The
+      same board is driven by `tests/test_player_seam.py::test_s12_a_name_
+      refused_on_an_event_with_no_survivor_still_prints_r1bs_words` through
+      the shipped `slate_model`. The two buckets are disjoint by `slate`'s invariant
+      I4, so a pair carrying a name refusal never carries a projection and
+      this order can hide nothing.
+    * **never asked** — the model holds no projection for this event at all
+      *and* this spelling was not refused for the name. `no opinion`, and the
+      slate's own sentence says which absence it is: a night with no player
+      evidence, an estimator that is not written, or a day in no season.
+    * **not one of the ten** — the board carries player markets this model is
+      not registered against at all. Measured on `markets.PLAYER_MARKETS`: 19
+      player markets, of which 10 are priced and 2 are refused by name, leaving
+      **seven** — `player_blocks`, `player_field_goals`, `player_frees_made`,
+      `player_frees_attempts`, `player_blocks_steals`, `player_triple_double`
+      and `player_first_team_basket`. The model was never asked about any of
+      them and the frozen file carries a constant for none of them:
+      `player_rates.STAT_KEYS` is seven names and blocks, field goals, free
+      throws and a triple-double are not among them. Until 2026-09-06 all seven
+      read *no engine*, which said the engine was not written — true of the lab
+      then and never true of these.
 
-    None of these is a pass, an avoid or a no-value call, and the missing
-    entry is never counted as a refusal: `ratings.matchups_for`'s docstring
-    draws the same line for the team half, in the same words.
+      `player_first_team_basket` is worth naming separately: it is a DIFFERENT
+      key from `player_first_basket` and is not in `MARKETS_REFUSED_BY_NAME`, so
+      the design's first-basket refusal does not cover it and it lands here
+      instead. Every word of that refusal — the opening tip, the mutually
+      exclusive family, the partial field — applies to it as well, and this
+      bucket says only that the model was never asked. Refusing it by name is a
+      decision for whoever owns that mapping, not an edit to make in passing.
+    * **the athlete** — R2 to R5, printed in the projection's own words.
+    * **no engine** — `models/player_distributions.py` could not be imported.
+      A statement about the lab rather than about the player, and reachable
+      because the import is made inside the call.
+    * **no constants** — the slate carries a priceable projection and not the
+      frozen constants it was built from, so nothing can be built from it.
+      A `SlateModel` assembled by hand or coerced from a bare mapping is in this
+      state; one built by `slate.slate_model` never is.
+
+    Returning `""` means every one of those is answered and the wager can be
+    read off a distribution — see :func:`_read_player_market`. None of these is
+    a pass, an avoid or a no-value call, and the missing entry is never counted
+    as a refusal: `ratings.matchups_for`'s docstring draws the same line for the
+    team half, in the same words.
     """
     refused = player_rates.MARKETS_REFUSED_BY_NAME.get(clean_text(wager.market))
     if refused:
-        return refused
+        return player_census.BUCKET_REFUSED_BY_NAME, refused
+    if clean_text(wager.market) not in player_rates.MARKET_COMPONENTS:
+        return player_census.BUCKET_UNREGISTERED_MARKET, (
+            "the player model is registered against ten markets and this is "
+            "not one of them, so it was never asked about this line: "
+            f"{', '.join(player_rates.PRICED_MARKETS)}. An unregistered market "
+            "is not a refusal and it is not a pass, an avoid or a no-value call"
+        )
+    # THE NAME IS ASKED BEFORE THE EVENT, and the order is the whole of the
+    # C/D separation on a night when nothing on the game resolved. See the
+    # docstring's bucket-C paragraph: `was_asked_about_players` is
+    # `event_id in players`, `players` is filled only by a resolution that
+    # SUCCEEDED, and R1b is all-or-nothing per event — so asking the event
+    # first prints D over every C on exactly the events C exists to describe.
+    refusal = model.name_refusal(wager.event_id, wager.player)
+    if refusal:
+        return player_census.BUCKET_NAME_UNRESOLVED, refusal
     if not model.was_asked_about_players(wager.event_id):
         reason = model.player_absence_reason or slate.NO_PLAYER_SLATE
-        return (
+        return player_census.BUCKET_NEVER_ASKED, (
             "the model was never asked about this event's athletes, so this "
             f"prop carries no opinion: {reason}"
         )
-    refusal = model.name_refusal(wager.event_id, wager.player)
-    if refusal:
-        return refusal
     projection = model.projection_for(wager.event_id, wager.player)
     if projection is None:
-        return (
+        return player_census.BUCKET_NEVER_ASKED, (
             "the model projects athletes on this event and holds no projection "
             "for this subject, so it has no opinion on him. An absent "
             "projection is not a probability of zero"
         )
     if not bool(getattr(projection, "priceable", False)):
-        return clean_text(getattr(projection, "unpriceable_reason", "")) or (
+        return player_census.BUCKET_ATHLETE_REFUSED, clean_text(
+            getattr(projection, "unpriceable_reason", "")
+        ) or (
             "the player model refuses this subject and recorded no reason, "
             "which is itself a fault: a refusal with no sentence is a silence"
         )
-    return slate.NO_DISTRIBUTION_ENGINE
+    if _player_distributions_module() is None:
+        return player_census.BUCKET_NEVER_ASKED, slate.NO_DISTRIBUTION_ENGINE
+    if getattr(model, "shapes", None) is None:
+        return player_census.BUCKET_NEVER_ASKED, slate.NO_ENGINE_CONSTANTS
+    return "", ""
+
+
+def _read_player_market(
+    wager: Wager, distribution: object
+) -> tuple[float | None, float, str]:
+    """`(probability, push_mass, reason)` for one prop off one cached object.
+
+    The player half of :func:`_read_market`, and deliberately the same shape,
+    the same push convention and the same three-way return. **The push counts
+    against the bet**: `forward_evidence.expected_value` is `p·(1+payout) − 1`
+    and has no push term, so `p = win` understates the edge by exactly the push
+    mass — the conservative direction — while `win/(1-push)` would overstate it
+    in the flattering direction on precisely the whole-number lines. All ten
+    player markets carry `push_possible=True`, `settlement._settle_player_column`
+    settles 14 rebounds against a line of 14 as a returned stake, and the engine
+    puts exact lattice mass there rather than a density at an integer.
+
+    One `PlayerDistribution` per (event, athlete) is the caller's cache, and it
+    is what makes a points rung and a pra rung on one player two questions asked
+    of one object rather than two models that can disagree.
+
+    Two refusals reach this function as `MarketRefused` and are printed in the
+    engine's own words: R4's line above the count lattice ceiling, and R5's
+    market whose constant the fit would not invent. The two markets refused BY
+    NAME never get here — `_player_decline` asks about them first, before
+    anything about the athlete — and that ordering is asserted in
+    `tests/test_gameday_card.py`. A refusal is never turned into `(0, 0, 1)`:
+    a confident zero that is an artefact of where a lattice was truncated would
+    be the most attractive-looking number on the card.
+    """
+    engine = _player_distributions_module()
+    if engine is None:  # pragma: no cover - the caller has already asked
+        return None, 0.0, slate.NO_DISTRIBUTION_ENGINE
+    if wager.selection not in (OVER, UNDER):
+        return None, 0.0, "the selection does not name a side of this player line"
+    line = normalise_line(wager.line)
+    if line is None:
+        return (
+            None,
+            0.0,
+            "a player prop with no line cannot be read off a count "
+            "distribution: there is no rung to price",
+        )
+    try:
+        win, push, _ = distribution.market(
+            clean_text(wager.market), float(line), wager.selection
+        )
+    except engine.PlayerDistributionError as exc:
+        return None, 0.0, str(exc)
+    return float(win), float(push), ""
 
 
 def opinions_for(
@@ -1012,6 +1382,7 @@ def opinions_for(
     matchups: "Mapping[str, object] | slate.SlateModel | None",
     *,
     day: str,
+    dispositions: "player_census.RunDisposition | None" = None,
 ) -> tuple[dict[tuple, float], OpinionCensus]:
     """The probability map, keyed by the frozen selection key, and why not.
 
@@ -1049,10 +1420,97 @@ def opinions_for(
     which nesting the projections inside `Matchup` made unrepresentable. The
     player branch therefore has to stay **above** the matchup lookup below;
     moving it under makes that state unreachable again.
+
+    **Since 2026-09-06 that branch prices rather than only declining.** A
+    priceable projection plus the slate's own provenance-checked constants build
+    one `models.player_distributions.PlayerDistribution` per (event, athlete),
+    cached here beside `joints`, and every rung on that athlete is read off it.
+    **What that changes for the card, stated correctly.** This paragraph used to
+    say it changes one number — `census.priced` — and nothing else, and gave the
+    selection gate as the reason. That is wrong twice over, and the same
+    docstring conceded it four lines later by saying "prices, freezes and
+    settles" is now literally true of the player family.
+
+    Three outputs move, not one:
+
+    * `census.priced` counts the props;
+    * the returned `probabilities` map now carries a player key per priced rung;
+    * `census.push_mass` carries the exact lattice mass on the line beside it,
+      which is new for this family — all ten player markets are
+      `push_possible=True` and a whole-number rebounds line settles as a
+      returned stake.
+
+    And the freeze is **not** behind the selection gate. `run_card` freezes from
+    :func:`_rows_to_freeze`, which takes the WAGERS and never consults
+    `result.selections`: its three filters are tip state, complete strata and
+    best price. `forward_evidence.write_snapshot` is then handed this whole
+    `probabilities` map, computes `edge = expected_value(probability,
+    american_odds)` per row, and appends `model_probability` and `edge` to
+    `priced_snapshots/<day>.csv`. So a player rung this function prices becomes a
+    dated, per-wager model-against-price number on disk, in a file that is
+    append-only within the day — the first such row can never be re-priced or
+    withdrawn. Driven end to end in
+    `tests/test_player_distributions.py::test_a_priced_prop_reaches_the_freeze_
+    and_the_selection_gate_is_not_what_stops_it`.
+
+    What the selection gate DOES stop is a bet: `gates.can_produce_a_selection`
+    is `CONFIRMED`-only and no availability feed exists for Division I men's
+    basketball, so no prop can become a selection. It stops nothing upstream of
+    that. What stops a shipped nightly run from writing those rows today is
+    `price_backtest.DEFAULT_MODEL`, which still resolves the team seam —
+    `card_matchups.py` documents moving it as a one-line swap, and
+    `scripts/run_gameday_card.py` already passes the full container. That is a
+    gate on one constant, not on this function.
+
+    **That was not true when it was written, and the swap alone would have
+    priced nothing.** The card's own loader read the eight columns
+    `slate.REQUIRED_PLAYER_COLUMNS` declares, which carry no box score, so
+    every athlete came back refused under R6; and the frame it handed the model
+    as `prices` was `attach_game_ids`' `event_id` and `game_id` — no `market`,
+    no `player`, no team ids — so the estimator found no subject to refuse in
+    the first place and this function declined every prop with "the model was
+    never asked about this event's athletes". Both are closed in
+    `card_matchups.py` and measured there; the constant really is the last gate
+    now.
+
+    `availability_note`'s "a market the lab prices, freezes and settles but may
+    not bet" was aspirational for the player family until this commit. Two of
+    its three verbs are now literally true of it — priced here, frozen by
+    `run_card`. The third is not this branch's to claim: nothing this engine
+    produces has been graded, and design 10's 261,870-wager reconciliation
+    gates any grading of it.
+
+    **`dispositions` is design section 10's pre-grading gate, filled here.**
+    This is the only function in the tree that decides what became of a prop
+    wager, so it is the only one that can say which bucket the wager landed in,
+    and the gate needs that from the RUN rather than from the frame the run left
+    behind — a frame carries a probability or a blank, and a blank cannot say
+    whether the name failed to resolve, the athlete was refused or the market is
+    refused by name. When a `models.player_census.RunDisposition` is passed, one
+    `file()` call is made per player wager, in exactly one bucket, before the
+    loop moves on; `file()` raises on a second filing of the same wager, so
+    "exactly one bucket" is enforced at the call and not assumed at the sum.
+    Passing nothing files nothing and changes no output, which is what every
+    caller that is not about to grade does.
+
+    **This function RAISES `StructuralCheckFailed`.** Design 4's stop rule — the
+    single automatic refusal the design puts on the engine's own output — is
+    evaluated once, after the loop, over the regular athletes this card priced,
+    by :func:`_run_the_structural_check`. It had no caller anywhere outside a
+    test until this commit, so a card could price ten markets on an athlete
+    whose assembled mixture missed a frozen target it cannot influence and
+    nothing said a word. It is a raise and not a census line on purpose: see
+    `models.player_distributions.StructuralCheckFailed`.
     """
     probabilities: dict[tuple, float] = {}
     census = OpinionCensus()
     joints: dict[tuple[str, str], distributions.GameDistribution | str] = {}
+    # One `PlayerDistribution` per (event_id, athlete_id), built once and read
+    # many times — design 2's rule, and the player half of `joints` above. A
+    # points rung, a threes rung and a pra rung on one athlete are three
+    # questions asked of one object, so they cannot disagree; the football lab
+    # shipped a ladder whose -6.5 beat its -7.5 because it had two.
+    players: dict[tuple, object] = {}
     in_prior_regime = _month_of(day) in PRIOR_REGIME_MONTHS
     model = slate.SlateModel.coerce(matchups, day=day)
 
@@ -1060,7 +1518,86 @@ def opinions_for(
         census.wagers += 1
         market = MARKETS_BY_KEY.get(wager.market)
         if market is not None and market.family == PLAYER:
-            census.decline(_player_decline(model, wager))
+
+            def account(bucket: str, why: str, _wager: Wager = wager) -> None:
+                """File this wager in one bucket of the pre-grading identity.
+
+                A closure over the wager rather than five call sites repeating
+                the same four arguments: the identity is only as good as its
+                being filed on EVERY path out of the player branch, and five
+                hand-copied calls is the shape the widened early returns in
+                `models/slate.py` had when three of them ran in no test.
+                """
+                if dispositions is not None:
+                    dispositions.file(
+                        _wager.key,
+                        market=clean_text(_wager.market),
+                        bucket=bucket,
+                        reason=why,
+                    )
+
+            bucket, reason = _player_decline(model, wager)
+            if reason:
+                census.decline(reason)
+                account(bucket, reason)
+                continue
+            projection = model.projection_for(wager.event_id, wager.player)
+            # Keyed on (event, athlete) and NOT on the book's spelling: two
+            # spellings of one athlete on one game are one subject — the price
+            # store holds 64 folded names carrying two raw spellings each, 4,396
+            # wager keys of a book's title-caser — and building a second object
+            # for the second spelling would give one player two models whose
+            # rungs could disagree.
+            #
+            # The id comes from `resolved`, which is the mapping `players` is
+            # keyed by and the one the seam's own invariant I5 ties to it, not
+            # from `projection.athlete_id`: a projection whose field disagreed
+            # with its container key would otherwise be built twice under one
+            # subject. `_player_decline` has already established that this pair
+            # resolves to a priceable projection, so the id is never `None` here.
+            subject = (
+                clean_text(wager.event_id),
+                model.resolved.get((clean_text(wager.event_id), clean_text(wager.player))),
+            )
+            cached = players.get(subject)
+            if cached is None:
+                engine = _player_distributions_module()
+                try:
+                    cached = engine.build(projection, shapes=model.shapes)
+                except engine.PlayerDistributionError as exc:
+                    # Every one of the ten markets refused, R4's lower half, a
+                    # lattice that carries mass at zero minutes: the engine's own
+                    # sentence, never a paraphrase and never a price.
+                    cached = str(exc)
+                except (TypeError, ValueError) as exc:
+                    cached = (
+                        "the player distribution could not be built for this "
+                        f"subject ({exc})"
+                    )
+                players[subject] = cached
+            if isinstance(cached, str):
+                # The engine refused the whole subject: every one of the ten
+                # markets, R4's lower half, a lattice carrying mass at zero
+                # minutes. That is a refusal OF THE ATHLETE and is filed as one
+                # -- the same bucket an R2-R6 projection refusal lands in, one
+                # level down, and never the row-level bucket.
+                census.decline(cached)
+                account(player_census.BUCKET_ATHLETE_REFUSED, cached)
+                continue
+            probability, push, reason = _read_player_market(wager, cached)
+            if probability is None:
+                said = reason or "the model has no reader for this market"
+                # The athlete HAS a distribution and this rung could not be read
+                # off it: no side named, no line to price, or the engine
+                # refusing this market on this subject (R4's ceiling, R5's
+                # constant). A row-level absence, not a statement about him.
+                census.decline(said)
+                account(player_census.BUCKET_UNREADABLE, said)
+                continue
+            probabilities[wager.key] = probability
+            census.push_mass[wager.key] = push
+            census.priced += 1
+            account(player_census.BUCKET_PRICED, "")
             continue
         if market is not None and market.family == FUTURES:
             census.decline(
@@ -1130,7 +1667,114 @@ def opinions_for(
         if prior is not None:
             census.prior_weight[wager.key] = prior
         census.priced += 1
+
+    # Design 4's stop rule, on the only population a run ever has: the athletes
+    # this card actually built a distribution for. It runs AFTER the loop and
+    # not inside it because the thing being checked is a pooled number over a
+    # population — the frozen target is `pooled_vmr` over 242,634 rows of
+    # regulars — and there is no population until the loop has finished. It ran
+    # nowhere at all until this commit: `assert_structural_checks` had no caller
+    # outside its own test file, so design 4's single automatic refusal on the
+    # engine's own output could not fire on a card, a backtest or anything else.
+    _run_the_structural_check(players, model, census)
+    _run_the_resolution_check(model, census)
     return probabilities, census
+
+
+def _run_the_structural_check(
+    players: Mapping[tuple, object],
+    model: "slate.SlateModel",
+    census: OpinionCensus,
+) -> None:
+    """Report design 4's ratio, and stop the run when it is off by over 15%.
+
+    `players` is the (event, athlete) cache `opinions_for` filled, so its values
+    are one `PlayerDistribution` per subject the card priced, plus the refusal
+    STRINGS for the subjects whose engine declined. The strings are dropped
+    here: a refused subject produced no mixture, so it has no VMR to pool, and
+    counting it would be pooling an absence.
+
+    An object whose `player_points` alone is refused is the same fact one level
+    down, and it is `population_structural_checks` that drops it — not this
+    function and not a `try` around this call. This line sits outside every
+    `except` `opinions_for` owns, so a `MarketRefused` raised while pooling
+    would kill the card and every team wager on it; the census bucket is in the
+    returned mapping and :func:`_model_section` prints it onto the card through
+    :meth:`OpinionCensus.structural_check_line`. That last clause is the one
+    this docstring got wrong when the stop was wired: the reporter existed, was
+    named here as though it ran, and had no caller anywhere outside a test.
+
+    Silent when the card built nothing — a team-only slate is not a structural
+    failure and must not read as one — and silent when the slate carries no
+    checked constants, because `population_structural_checks` reads the target
+    and the regulars floor out of the frozen file and there is no honest number
+    without it. Both of those states leave `census.structural_check` empty, and
+    :meth:`OpinionCensus.structural_check_line` says which on the card.
+    """
+    built = [
+        distribution
+        for distribution in players.values()
+        if not isinstance(distribution, str)
+    ]
+    if not built or model.shapes is None:
+        return
+    engine = _player_distributions_module()
+    census.structural_check = dict(
+        engine.population_structural_checks(built, shapes=model.shapes)
+    )
+    engine.assert_structural_checks(census.structural_check)
+
+
+def _run_the_resolution_check(
+    model: "slate.SlateModel", census: OpinionCensus
+) -> None:
+    """Report design 13's per-tier resolution rate, and stop the run at 2pp.
+
+    Design 13's failure mode 5 asks for two things and **neither had a caller**.
+    `player_rates.resolution_census` is the report and
+    `player_rates.assert_tier_resolution_holds` is the stop, and
+    `grep -rn` over `src/` and `scripts/` found both only in
+    `tests/test_player_rates.py` — so the single automatic refusal design 13
+    puts on the JOIN could not fire on a card, a backtest or anything else, in
+    exactly the way design 4's could not until it was given one. The two are
+    the same shape of defect and are repaired here side by side.
+
+    Computed over RESOLVED subjects, which is a limitation and not a choice:
+    design 9 tiers a player by `conferences.tier_table` on his own team, and an
+    unresolved spelling has no team. `player_rates.resolution_census`'s own
+    docstring records that, and the refused names are counted apart by
+    `untiered_name_refusals` rather than tiered off the event's two sides —
+    which would put a read from the team half back into the player half.
+
+    `tiers=None`, so each athlete is tiered by `projection.player_tier`, the
+    tier the estimator recorded for him when it resolved him. A `TierTable`
+    built here would be a second tiering of the same athlete and could disagree
+    with the one in the projection.
+
+    Silent when the model holds no projection: a team-only slate is not a
+    biased join and must not read as one. That state leaves
+    `census.tier_resolution` empty and
+    :meth:`OpinionCensus.tier_resolution_line` says so on the card.
+    """
+    if not model.players:
+        return
+    census.tier_resolution = {
+        tier: dict(counts)
+        for tier, counts in player_rates.resolution_census(
+            model.players, tiers=None
+        ).items()
+    }
+    census.untiered_name_refusals = len(model.name_refusals)
+    # **Reports, does not stop** — Cooper's declaration of 2026-09-07. The
+    # number this computes is the PRICEABLE rate and design 13's 2pp threshold
+    # is for the RESOLUTION rate; measured on a real eight-game board the
+    # spread is 7.50pp, so raising stopped every card. It reports until
+    # `resolution_census` can attribute a name refusal to a tier, at which
+    # point the gate design 13 asks for can be written against the right
+    # quantity and the threshold is already carried on the result.
+    census.tier_priceable = player_rates.report_tier_priceable_rates(
+        census.tier_resolution
+    )
 
 
 def _month_of(day: str) -> int:
@@ -1889,10 +2533,54 @@ def _board_section(run: CardRun) -> list[str]:
 
 
 def _model_section(run: CardRun) -> list[str]:
+    """What the model said, what it declined, and what its own check reported.
+
+    The third of those is new and it is the half of design 4 that was written
+    and never called. `_run_the_structural_check` filled
+    `OpinionCensus.structural_check` and raised through
+    `assert_structural_checks` when the pooled ratio was off by more than 15%,
+    so the STOP was wired; `OpinionCensus.structural_check_line` — the only
+    thing that says which of the three states a run was in — was called nowhere
+    in `src/` or `scripts/`, and three docstrings said otherwise. A card whose
+    check ran over a full population and passed, a card whose population was
+    below the floor so the ratio stopped nothing, and a card that built no
+    player distribution at all rendered a byte-identical section, which is
+    precisely the ambiguity `structural_check_line`'s own docstring exists
+    against: a check that silently declines to run is indistinguishable from
+    one that passed.
+
+    It is a line and not a bullet under the decline table on purpose. The table
+    is one row per REASON A WAGER CARRIES NO OPINION; this is a statement about
+    the population the priced ones were built from, and folding it in would put
+    a structural report in a column headed "Wagers".
+
+    `OpinionCensus.tier_resolution_line` is the fourth line and the same repair
+    for design 13's failure mode 5, whose report half and stop half BOTH had no
+    caller: `player_rates.resolution_census` and
+    `player_rates.assert_tier_resolution_holds` appeared nowhere in `src/` or
+    `scripts/`, so the per-tier join rate the design says to print every run was
+    printed on no run and the 2pp stop could not fire on anything.
+
+    `OpinionCensus.event_dispersion_line` is the fifth line and the same shape
+    of repair one level down. `POINTS_EVENT_DISPERSION_KEY` chooses between two
+    frozen candidates for the scoring-event dispersion, concedes the choice
+    moves design 4's produced ratio by 0.167, and twice offered as its
+    justification that both numbers are "printed beside each other on every
+    run" — and nothing printed either. A rendered card carried neither number
+    and not the word "dispersion". It is a DISCLOSURE and not a check: nothing
+    stops on it, and it is here because the argument for the constant is made
+    out of it.
+    """
     lines = [
         "## What the model said",
         "",
         run.opinions.summary_line(),
+        "",
+        run.opinions.structural_check_line(),
+        "",
+        run.opinions.tier_resolution_line(),
+        "",
+        run.opinions.event_dispersion_line(),
         "",
         run.opinions.table(),
         "",
