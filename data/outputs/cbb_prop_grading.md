@@ -97,33 +97,33 @@ Mean push mass on the scored rows: model 0.0000, control 0.0000. That is how muc
 
 **Calibration by decile — the model.**
 
-| Predicted band | Wagers | Mean predicted | Realised | Gap (pp) |
-|:---|---:|---:|---:|---:|
-| 0%-10% | 340 | 5.5% | 9.7% | -4.2 |
-| 10%-20% | 701 | 16.0% | 25.7% | -9.7 |
-| 20%-30% | 3,874 | 26.5% | 36.2% | -9.7 |
-| 30%-40% | 17,812 | 36.1% | 42.0% | -5.8 |
-| 40%-50% | 42,767 | 45.4% | 48.0% | -2.6 |
-| 50%-60% | 42,767 | 54.6% | 52.0% | +2.6 |
-| 60%-70% | 17,812 | 63.9% | 58.0% | +5.8 |
-| 70%-80% | 3,874 | 73.5% | 63.8% | +9.7 |
-| 80%-90% | 701 | 84.0% | 74.3% | +9.7 |
-| 90%-100% | 340 | 94.5% | 90.3% | +4.2 |
+| Predicted band | Wagers | Quotes | Mean predicted | Realised | Gap (pp) |
+|:---|---:|---:|---:|---:|---:|
+| 0%-10% | 332 | 340 | 5.5% | 9.7% | -4.2 |
+| 10%-20% | 559 | 701 | 16.0% | 25.7% | -9.7 |
+| 20%-30% | 1,724 | 3,874 | 26.5% | 36.2% | -9.7 |
+| 30%-40% | 6,377 | 17,812 | 36.1% | 42.0% | -5.8 |
+| 40%-50% | 14,193 | 42,767 | 45.4% | 48.0% | -2.6 |
+| 50%-60% | 14,193 | 42,767 | 54.6% | 52.0% | +2.6 |
+| 60%-70% | 6,377 | 17,812 | 63.9% | 58.0% | +5.8 |
+| 70%-80% | 1,724 | 3,874 | 73.5% | 63.8% | +9.7 |
+| 80%-90% | 559 | 701 | 84.0% | 74.3% | +9.7 |
+| 90%-100% | 332 | 340 | 94.5% | 90.3% | +4.2 |
 
 **Calibration by decile — the de-vigged fair price (proportional).**
 
-| Predicted band | Wagers | Mean predicted | Realised | Gap (pp) |
-|:---|---:|---:|---:|---:|
-| 0%-10% | 50 | 8.6% | 18.0% | -9.4 |
-| 10%-20% | 511 | 15.7% | 20.4% | -4.7 |
-| 20%-30% | 623 | 24.6% | 28.9% | -4.3 |
-| 30%-40% | 7,145 | 36.9% | 37.3% | -0.4 |
-| 40%-50% | 52,391 | 46.3% | 45.8% | +0.5 |
-| 50%-60% | 61,939 | 53.2% | 53.6% | -0.4 |
-| 60%-70% | 7,145 | 63.1% | 62.7% | +0.4 |
-| 70%-80% | 623 | 75.4% | 71.1% | +4.3 |
-| 80%-90% | 511 | 84.3% | 79.6% | +4.7 |
-| 90%-100% | 50 | 91.4% | 82.0% | +9.4 |
+| Predicted band | Wagers | Quotes | Mean predicted | Realised | Gap (pp) |
+|:---|---:|---:|---:|---:|---:|
+| 0%-10% | 50 | 50 | 8.6% | 18.0% | -9.4 |
+| 10%-20% | 500 | 511 | 15.7% | 20.4% | -4.7 |
+| 20%-30% | 612 | 623 | 24.6% | 28.9% | -4.3 |
+| 30%-40% | 3,353 | 7,145 | 36.9% | 37.3% | -0.4 |
+| 40%-50% | 19,188 | 52,391 | 46.3% | 45.8% | +0.5 |
+| 50%-60% | 22,160 | 61,939 | 53.2% | 53.6% | -0.4 |
+| 60%-70% | 3,353 | 7,145 | 63.1% | 62.7% | +0.4 |
+| 70%-80% | 612 | 623 | 75.4% | 71.1% | +4.3 |
+| 80%-90% | 500 | 511 | 84.3% | 79.6% | +4.7 |
+| 90%-100% | 50 | 50 | 91.4% | 82.0% | +9.4 |
 
 #### high_major — the far ladder, unbenchmarked
 
@@ -172,33 +172,33 @@ Mean push mass on the scored rows: model 0.0000, control 0.0000. That is how muc
 
 **Calibration by decile — the model.**
 
-| Predicted band | Wagers | Mean predicted | Realised | Gap (pp) |
-|:---|---:|---:|---:|---:|
-| 0%-10% | 321 | 5.4% | 7.2% | -1.7 |
-| 10%-20% | 766 | 15.9% | 24.8% | -8.9 |
-| 20%-30% | 5,512 | 26.5% | 33.5% | -7.0 |
-| 30%-40% | 27,215 | 36.1% | 42.2% | -6.1 |
-| 40%-50% | 68,380 | 45.4% | 48.3% | -2.9 |
-| 50%-60% | 68,380 | 54.6% | 51.7% | +2.9 |
-| 60%-70% | 27,215 | 63.9% | 57.8% | +6.1 |
-| 70%-80% | 5,512 | 73.5% | 66.5% | +7.0 |
-| 80%-90% | 766 | 84.1% | 75.2% | +8.9 |
-| 90%-100% | 321 | 94.6% | 92.8% | +1.7 |
+| Predicted band | Wagers | Quotes | Mean predicted | Realised | Gap (pp) |
+|:---|---:|---:|---:|---:|---:|
+| 0%-10% | 319 | 321 | 5.4% | 7.2% | -1.7 |
+| 10%-20% | 620 | 766 | 15.9% | 24.8% | -8.9 |
+| 20%-30% | 2,372 | 5,512 | 26.5% | 33.5% | -7.0 |
+| 30%-40% | 9,903 | 27,215 | 36.1% | 42.2% | -6.1 |
+| 40%-50% | 23,873 | 68,380 | 45.4% | 48.3% | -2.9 |
+| 50%-60% | 23,873 | 68,380 | 54.6% | 51.7% | +2.9 |
+| 60%-70% | 9,903 | 27,215 | 63.9% | 57.8% | +6.1 |
+| 70%-80% | 2,372 | 5,512 | 73.5% | 66.5% | +7.0 |
+| 80%-90% | 620 | 766 | 84.1% | 75.2% | +8.9 |
+| 90%-100% | 319 | 321 | 94.6% | 92.8% | +1.7 |
 
 **Calibration by decile — the de-vigged fair price (proportional).**
 
-| Predicted band | Wagers | Mean predicted | Realised | Gap (pp) |
-|:---|---:|---:|---:|---:|
-| 0%-10% | 59 | 8.4% | 6.8% | +1.6 |
-| 10%-20% | 545 | 15.6% | 21.1% | -5.5 |
-| 20%-30% | 631 | 24.8% | 27.6% | -2.7 |
-| 30%-40% | 11,056 | 37.0% | 35.9% | +1.1 |
-| 40%-50% | 83,197 | 46.3% | 46.3% | -0.1 |
-| 50%-60% | 96,609 | 53.2% | 53.2% | +0.0 |
-| 60%-70% | 11,056 | 63.0% | 64.1% | -1.1 |
-| 70%-80% | 631 | 75.2% | 72.4% | +2.7 |
-| 80%-90% | 545 | 84.4% | 78.9% | +5.5 |
-| 90%-100% | 59 | 91.6% | 93.2% | -1.6 |
+| Predicted band | Wagers | Quotes | Mean predicted | Realised | Gap (pp) |
+|:---|---:|---:|---:|---:|---:|
+| 0%-10% | 59 | 59 | 8.4% | 6.8% | +1.6 |
+| 10%-20% | 537 | 545 | 15.6% | 21.1% | -5.5 |
+| 20%-30% | 625 | 631 | 24.8% | 27.6% | -2.7 |
+| 30%-40% | 5,177 | 11,056 | 37.0% | 35.9% | +1.1 |
+| 40%-50% | 31,033 | 83,197 | 46.3% | 46.3% | -0.1 |
+| 50%-60% | 35,486 | 96,609 | 53.2% | 53.2% | +0.0 |
+| 60%-70% | 5,177 | 11,056 | 63.0% | 64.1% | -1.1 |
+| 70%-80% | 625 | 631 | 75.2% | 72.4% | +2.7 |
+| 80%-90% | 537 | 545 | 84.4% | 78.9% | +5.5 |
+| 90%-100% | 59 | 59 | 91.6% | 93.2% | -1.6 |
 
 #### mid_major — the far ladder, unbenchmarked
 
@@ -247,33 +247,33 @@ Mean push mass on the scored rows: model 0.0000, control 0.0000. That is how muc
 
 **Calibration by decile — the model.**
 
-| Predicted band | Wagers | Mean predicted | Realised | Gap (pp) |
-|:---|---:|---:|---:|---:|
-| 0%-10% | 5 | — | — | below the 30-row floor, so no frequency |
-| 10%-20% | 22 | — | — | below the 30-row floor, so no frequency |
-| 20%-30% | 92 | 26.6% | 43.5% | -16.9 |
-| 30%-40% | 626 | 35.8% | 37.1% | -1.2 |
-| 40%-50% | 1,397 | 45.2% | 44.7% | +0.5 |
-| 50%-60% | 1,397 | 54.8% | 55.3% | -0.5 |
-| 60%-70% | 626 | 64.2% | 62.9% | +1.2 |
-| 70%-80% | 92 | 73.4% | 56.5% | +16.9 |
-| 80%-90% | 22 | — | — | below the 30-row floor, so no frequency |
-| 90%-100% | 5 | — | — | below the 30-row floor, so no frequency |
+| Predicted band | Wagers | Quotes | Mean predicted | Realised | Gap (pp) |
+|:---|---:|---:|---:|---:|---:|
+| 0%-10% | 5 | 5 | — | — | below the 30-wager floor, so no frequency |
+| 10%-20% | 21 | 22 | — | — | below the 30-wager floor, so no frequency |
+| 20%-30% | 53 | 92 | 26.6% | 43.5% | -16.9 |
+| 30%-40% | 303 | 626 | 35.8% | 37.1% | -1.2 |
+| 40%-50% | 648 | 1,397 | 45.2% | 44.7% | +0.5 |
+| 50%-60% | 648 | 1,397 | 54.8% | 55.3% | -0.5 |
+| 60%-70% | 303 | 626 | 64.2% | 62.9% | +1.2 |
+| 70%-80% | 53 | 92 | 73.4% | 56.5% | +16.9 |
+| 80%-90% | 21 | 22 | — | — | below the 30-wager floor, so no frequency |
+| 90%-100% | 5 | 5 | — | — | below the 30-wager floor, so no frequency |
 
 **Calibration by decile — the de-vigged fair price (proportional).**
 
-| Predicted band | Wagers | Mean predicted | Realised | Gap (pp) |
-|:---|---:|---:|---:|---:|
-| 0%-10% | 1 | — | — | below the 30-row floor, so no frequency |
-| 10%-20% | 17 | — | — | below the 30-row floor, so no frequency |
-| 20%-30% | 19 | — | — | below the 30-row floor, so no frequency |
-| 30%-40% | 265 | 37.0% | 30.6% | +6.5 |
-| 40%-50% | 1,714 | 46.3% | 42.5% | +3.8 |
-| 50%-60% | 1,966 | 53.2% | 56.5% | -3.3 |
-| 60%-70% | 265 | 63.0% | 69.4% | -6.5 |
-| 70%-80% | 19 | — | — | below the 30-row floor, so no frequency |
-| 80%-90% | 17 | — | — | below the 30-row floor, so no frequency |
-| 90%-100% | 1 | — | — | below the 30-row floor, so no frequency |
+| Predicted band | Wagers | Quotes | Mean predicted | Realised | Gap (pp) |
+|:---|---:|---:|---:|---:|---:|
+| 0%-10% | 1 | 1 | — | — | below the 30-wager floor, so no frequency |
+| 10%-20% | 17 | 17 | — | — | below the 30-wager floor, so no frequency |
+| 20%-30% | 19 | 19 | — | — | below the 30-wager floor, so no frequency |
+| 30%-40% | 140 | 265 | 37.0% | 30.6% | +6.5 |
+| 40%-50% | 840 | 1,714 | 46.3% | 42.5% | +3.8 |
+| 50%-60% | 959 | 1,966 | 53.2% | 56.5% | -3.3 |
+| 60%-70% | 140 | 265 | 63.0% | 69.4% | -6.5 |
+| 70%-80% | 19 | 19 | — | — | below the 30-wager floor, so no frequency |
+| 80%-90% | 17 | 17 | — | — | below the 30-wager floor, so no frequency |
+| 90%-100% | 1 | 1 | — | — | below the 30-wager floor, so no frequency |
 
 ## Per market and tier
 
@@ -329,25 +329,25 @@ The reading below is the cell's own verdict, not a second judgment of the same i
 | player_props_vs_devig | player_assists / low_major | lower | 234 | — | — | not enough evidence (19 game cluster(s), below the 30 declared in advance) |
 | player_props_vs_devig | player_threes / high_major | lower | 4,304 | -0.0112 | -0.0270 to +0.0047 | no demonstrated edge |
 | player_props_vs_devig | player_threes / mid_major | lower | 7,230 | -0.0082 | -0.0189 to +0.0026 | no demonstrated edge |
-| player_props_vs_devig | player_threes / low_major | lower | 190 | — | — | not enough evidence (190 bets, below the 200 declared in advance) |
+| player_props_vs_devig | player_threes / low_major | lower | 190 | — | — | not enough evidence (190 wagers, below the 200 declared in advance) |
 | player_props_vs_devig | player_pra / high_major | lower | 4,308 | -0.0167 | -0.0311 to -0.0023 | demonstrated deficit |
 | player_props_vs_devig | player_pra / mid_major | lower | 7,252 | -0.0089 | -0.0204 to +0.0025 | no demonstrated edge |
-| player_props_vs_devig | player_pra / low_major | lower | 164 | — | — | not enough evidence (164 bets, below the 200 declared in advance) |
+| player_props_vs_devig | player_pra / low_major | lower | 164 | — | — | not enough evidence (164 wagers, below the 200 declared in advance) |
 | player_props_vs_devig | player_steals / high_major | lower | 3,720 | +0.0020 | -0.0117 to +0.0157 | no demonstrated edge |
 | player_props_vs_devig | player_steals / mid_major | lower | 6,364 | +0.0022 | -0.0077 to +0.0120 | no demonstrated edge |
-| player_props_vs_devig | player_steals / low_major | lower | 190 | — | — | not enough evidence (190 bets, below the 200 declared in advance) |
+| player_props_vs_devig | player_steals / low_major | lower | 190 | — | — | not enough evidence (190 wagers, below the 200 declared in advance) |
 | player_props_vs_devig | player_turnovers / high_major | lower | 3,904 | -0.0016 | -0.0156 to +0.0123 | no demonstrated edge |
 | player_props_vs_devig | player_turnovers / mid_major | lower | 6,442 | -0.0089 | -0.0201 to +0.0024 | no demonstrated edge |
-| player_props_vs_devig | player_turnovers / low_major | lower | 190 | — | — | not enough evidence (9 day cluster(s), below the 30 declared in advance) |
+| player_props_vs_devig | player_turnovers / low_major | lower | 190 | — | — | not enough evidence (190 wagers, below the 200 declared in advance) |
 | player_props_vs_devig | player_points_rebounds / high_major | lower | 2,720 | -0.0080 | -0.0242 to +0.0082 | no demonstrated edge |
 | player_props_vs_devig | player_points_rebounds / mid_major | lower | 4,846 | -0.0061 | -0.0204 to +0.0082 | no demonstrated edge |
-| player_props_vs_devig | player_points_rebounds / low_major | lower | 180 | — | — | not enough evidence (180 bets, below the 200 declared in advance) |
+| player_props_vs_devig | player_points_rebounds / low_major | lower | 180 | — | — | not enough evidence (180 wagers, below the 200 declared in advance) |
 | player_props_vs_devig | player_points_assists / high_major | lower | 2,228 | -0.0140 | -0.0328 to +0.0049 | no demonstrated edge |
 | player_props_vs_devig | player_points_assists / mid_major | lower | 4,370 | -0.0072 | -0.0208 to +0.0064 | no demonstrated edge |
-| player_props_vs_devig | player_points_assists / low_major | lower | 170 | — | — | not enough evidence (170 bets, below the 200 declared in advance) |
+| player_props_vs_devig | player_points_assists / low_major | lower | 170 | — | — | not enough evidence (170 wagers, below the 200 declared in advance) |
 | player_props_vs_devig | player_rebounds_assists / high_major | lower | 2,134 | -0.0015 | -0.0251 to +0.0222 | no demonstrated edge |
 | player_props_vs_devig | player_rebounds_assists / mid_major | lower | 4,012 | -0.0032 | -0.0181 to +0.0117 | no demonstrated edge |
-| player_props_vs_devig | player_rebounds_assists / low_major | lower | 160 | — | — | not enough evidence (160 bets, below the 200 declared in advance) |
+| player_props_vs_devig | player_rebounds_assists / low_major | lower | 160 | — | — | not enough evidence (160 wagers, below the 200 declared in advance) |
 | player_props_vs_role_prior | high_major | lower | 46,370 | +0.1130 | +0.0659 to +0.1601 | demonstrated edge |
 | player_props_vs_role_prior | mid_major | lower | 74,174 | +0.1154 | +0.0913 to +0.1394 | demonstrated edge |
 | player_props_vs_role_prior | low_major | lower | 2,060 | +0.0449 | -0.0364 to +0.1262 | no demonstrated edge |

@@ -945,7 +945,15 @@ def test_a_registered_hypothesis_with_no_cell_refuses_the_record(receipt):
 
 
 def test_the_answered_readings_are_re_derived_when_the_correction_moves(receipt):
-    """A stale reading beside a fresh interval on one page is decision 46's defect."""
+    """A stale reading beside a fresh interval on one page is decision 46's defect.
+
+    The reading a hypothesis carries is `verdict_of` asked about the comparison
+    that hypothesis registered -- NOT the headline row's own verdict, which is
+    what this test used to assert. The row's verdict reads the sign of one
+    interval and applies none of `verdict_of`'s other three rules, so the old
+    assertion passed only because it compared the table against the very thing
+    the table was wrong to print.
+    """
     frame = a_population(pairs=600, model_over=0.75, over_won=True)
     record = G.build_record(
         inputs_for(frame, hypotheses=_registered()), looks=1
@@ -958,11 +966,10 @@ def test_the_answered_readings_are_re_derived_when_the_correction_moves(receipt)
             for c in moved["by_market_and_tier"] + moved["by_tier"]
             if c["tier"] == after["tier"] and c.get("market", "") == after["market"]
         )
-        row = (cell.get("advantages") or {}).get(after["comparison"] or "")
-        if row:
-            assert after["reading"] == row["verdict"], (
-                "the answered table printed a reading the cell no longer holds"
-            )
+        against = "control" if after["search"] == G.SEARCH_VS_CONTROL else "market"
+        assert after["reading"] == G.verdict_of(cell, against=against), (
+            "the answered table printed a reading the cell no longer holds"
+        )
 
 
 # --------------------------------------------------------------------------
@@ -1217,3 +1224,214 @@ def test_the_run_writes_nothing_under_data_manual_and_creates_no_grant():
         "writes nothing under `data/manual/`", ""
     )
     assert "grant(" not in source.replace("creates no\n`grant()`", "")
+
+
+# --------------------------------------------------------------------------
+# 11. The reading a table prints
+#
+# Every number below was already right. What was wrong was the WORD printed
+# beside it, in three tables, each of which took a shortcut past the one
+# function that is allowed to decide what a cell may be called. A verdict is
+# the part a reader quotes, so a table that derives it a second way is a
+# second answer to a question this module answers once.
+# --------------------------------------------------------------------------
+
+
+def _a_tier_cell(receipt) -> dict:
+    """One real tier cell, built the way the run builds it."""
+    record = G.build_record(inputs_for(a_population(pairs=400)), looks=1)
+    return record["by_tier"][0]
+
+
+def test_the_far_ladder_prints_no_edge_under_the_heading_that_forbids_one(receipt):
+    """`UNBENCHMARKED_SENTENCE` promises, in those words, that whatever the
+    interval below says it is NOT an edge and is not reported as one. The
+    advantage table under it printed each row's own verdict, which reads the
+    sign of the corrected bounds and knows nothing about where the row lives.
+    """
+    record = G.build_record(inputs_for(a_population(pairs=400)), looks=1)
+    tier = record["by_tier"][0]
+    # A far-ladder cell that DOES carry an edge on every comparison. Built by
+    # taking a real cell and moving it past the cut, so every other key is
+    # whatever the run would have written.
+    far = json.loads(json.dumps(tier))
+    far["benchmarked"] = False
+    far["enough_evidence"] = True
+    for row in far["advantages"].values():
+        row["verdict"] = S.DEMONSTRATED_EDGE
+        row["enough_evidence"] = True
+    far["verdict"] = G.verdict_of(far)
+    tier["unbenchmarked_cell"] = far
+
+    page = G.render(record)
+    assert G.UNBENCHMARKED_SENTENCE in page, "the fixture did not reach the far block"
+    start = page.index("the far ladder")
+    block = page[start:]
+    end = block.find("\n## ")
+    block = block if end < 0 else block[:end]
+    assert S.DEMONSTRATED_EDGE not in block, (
+        "the far-ladder block printed 'demonstrated edge' under a heading "
+        "promising in its own words that it never would"
+    )
+    assert G.UNBENCHMARKED in block
+
+
+def test_the_far_ladder_suppresses_a_deficit_for_the_same_reason(receipt):
+    """Not because a deficit is unflattering: past the cut the SIGN is a
+    statement about which rungs a book hung two sides on, either way."""
+    cell = {"benchmarked": False}
+    assert G.reading_of(cell, {"verdict": S.DEMONSTRATED_DEFICIT}) == G.UNBENCHMARKED
+    assert G.reading_of(cell, {"verdict": S.DEMONSTRATED_EDGE}) == G.UNBENCHMARKED
+    # A refusal is not rewritten: it already says there is no number.
+    phrase = "not enough evidence (7 day cluster(s), below the 30 declared)"
+    assert G.reading_of(cell, {"verdict": phrase}) == phrase
+    # And a benchmarked cell is left entirely alone.
+    assert (
+        G.reading_of({"benchmarked": True}, {"verdict": S.DEMONSTRATED_EDGE})
+        == S.DEMONSTRATED_EDGE
+    )
+
+
+def test_a_calibration_bin_counts_wagers_and_prints_both_counts(receipt):
+    """Rows are quotes. A wager hung at three books lands in one bin three
+    times, and the column that used to be headed *Wagers* held that count."""
+    one_book = a_population(pairs=300)
+    three_books = pd.concat(
+        [one_book.assign(book=name) for name in ("draftkings", "fanduel", "betmgm")],
+        ignore_index=True,
+    )
+    record = G.build_record(inputs_for(three_books), looks=1)
+    bins = record["by_tier"][0]["calibration"][
+        f"model__{G.CONVENTION_CONDITIONAL}"
+    ]
+    counted = [row for row in bins if row["rows"]]
+    assert counted, "the fixture produced no populated calibration bin"
+    for row in counted:
+        assert row["wagers"] * 3 == row["rows"], (
+            "three books quoting one wager is three rows and one bet"
+        )
+        assert row["enough_wagers"] == (row["wagers"] >= G.MINIMUM_BUCKET), (
+            "the floor is a floor on bets"
+        )
+
+    page = G.render(record)
+    assert "| Predicted band | Wagers | Quotes |" in page
+    assert f"below the {G.MINIMUM_BUCKET}-wager floor" in page or all(
+        row["enough_wagers"] for row in counted
+    )
+    for row in counted:
+        assert f"| {row['bin']} | {row['wagers']:,} | {row['rows']:,} |" in page, (
+            "the rendered row did not carry the two counts in the two columns"
+        )
+
+
+def test_a_bin_over_the_row_floor_but_under_the_wager_floor_gets_no_frequency(receipt):
+    """The floor moved from quotes to bets, which can only ever refuse more.
+
+    25 wagers hung at three books is 75 rows: over the 30-row floor the first
+    version of this table used, and under the 30-WAGER floor it uses now.
+    """
+    rows = []
+    for index in range(G.MINIMUM_BUCKET - 5):
+        for book in ("draftkings", "fanduel", "betmgm"):
+            rows += pair(
+                event=f"E{index}",
+                day=f"2024-01-{(index % 20) + 1:02d}",
+                player=f"Player {index}",
+                book=book,
+                model_over=0.65,
+                control_over=0.5,
+            )
+    record = G.build_record(inputs_for(pd.DataFrame(rows)), looks=1)
+    bins = record["by_tier"][0]["calibration"][f"model__{G.CONVENTION_CONDITIONAL}"]
+    over = [row for row in bins if row["rows"] >= G.MINIMUM_BUCKET]
+    assert over, "the fixture did not clear the ROW floor anywhere"
+    assert all(not row["enough_wagers"] for row in over), (
+        "a bin cleared the old row floor on bets that do not clear the new one, "
+        "and it still printed a frequency"
+    )
+    page = G.render(record)
+    assert f"below the {G.MINIMUM_BUCKET}-wager floor" in page
+
+
+def test_a_control_hypothesis_is_read_against_the_control_family(receipt):
+    """`verdict_of` rule 4 -- a demonstrated edge needs EVERY comparison to
+    show one -- was applied to the de-vig family and to nothing else, so the
+    three control hypotheses were read off their headline row alone."""
+    record = G.build_record(
+        inputs_for(a_population(pairs=600, model_over=0.75, over_won=True),
+                   hypotheses=_registered()),
+        looks=1,
+    )
+    tier = record["by_tier"][0]
+    # The verdicts are SET rather than fitted: this test is about the rule that
+    # reads them, and a fixture tuned until an edge appeared would be testing
+    # the fixture. Every other key on the cell is the run's own.
+    for key in G.CONTROL_KEYS:
+        tier["advantages"][key]["verdict"] = S.DEMONSTRATED_EDGE
+        tier["advantages"][key]["enough_evidence"] = True
+    assert G.verdict_of(tier, against="control") == S.DEMONSTRATED_EDGE
+
+    # Now let ONE convention disagree. The headline is unchanged and still says
+    # edge; the cell has not shown the same thing twice.
+    other = next(k for k in G.CONTROL_KEYS if k != tier["control_headline"])
+    tier["advantages"][other]["verdict"] = S.NO_DEMONSTRATED_EDGE
+    assert G.verdict_of(tier, against="control") == S.NO_DEMONSTRATED_EDGE, (
+        "one control convention disagreed and the cell still claimed an edge"
+    )
+
+    answered = G.answered_hypotheses(
+        record["hypotheses"],
+        by_tier=record["by_tier"],
+        by_market_and_tier=record["by_market_and_tier"],
+    )
+    control = [a for a in answered if a["search"] == G.SEARCH_VS_CONTROL
+               and a["tier"] == tier["tier"]]
+    assert control, "no control hypothesis found for this tier"
+    assert all(a["reading"] == S.NO_DEMONSTRATED_EDGE for a in control), (
+        "the answered table read the headline row instead of the cell"
+    )
+
+
+def test_a_market_hypothesis_is_never_answered_with_the_control_comparison(receipt):
+    """The two comparisons answer different questions and the ledger's own
+    `search` says which. Beating a role prior is not beating a price."""
+    record = G.build_record(
+        inputs_for(a_population(pairs=600, model_over=0.75, over_won=True),
+                   hypotheses=_registered()),
+        looks=1,
+    )
+    answered = G.answered_hypotheses(
+        record["hypotheses"],
+        by_tier=record["by_tier"],
+        by_market_and_tier=record["by_market_and_tier"],
+    )
+    seen = 0
+    for entry in answered:
+        # A cell with no advantages names no headline, and the empty string is
+        # the honest answer there rather than a comparison it did not make.
+        if not entry["comparison"]:
+            continue
+        seen += 1
+        if entry["search"] == G.SEARCH_VS_CONTROL:
+            assert entry["comparison"] in G.CONTROL_KEYS
+        else:
+            assert entry["comparison"] in G.HEADLINE_KEYS
+    assert seen, "every hypothesis came back with an empty comparison"
+
+
+def test_verdict_of_refuses_a_comparison_this_record_does_not_carry():
+    """Fail closed: a typo in the comparison name must not silently fall back
+    to the market's verdict, which is the more flattering of the two here."""
+    with pytest.raises(G.PropGradingError):
+        G.verdict_of({"advantages": {}}, against="devig")
+
+
+def test_a_version_one_record_is_refused_rather_than_re_rendered(tmp_path):
+    """A version-1 calibration table has only the quote count, and rendering it
+    would print the overstated sample the bump exists to retire."""
+    path = tmp_path / "cbb_prop_grading.json"
+    path.write_text(json.dumps({"record_version": 1}), encoding="utf-8")
+    with pytest.raises(G.PropGradingError) as caught:
+        G.read_record(path)
+    assert "version 1" in str(caught.value)

@@ -191,7 +191,13 @@ REPORT_STEM = "prop_grading"
 
 #: Bumped when the record's shape changes, so a stale record fails loudly at
 #: re-render rather than rendering a report with holes in it.
-RECORD_VERSION = 1
+#:
+#: 2 -- every calibration bin carries `wagers` beside `rows` and its floor is
+#: taken on the wagers. A version-1 record has only the quote count, and the
+#: renderer that filled a *Wagers* column from it is the reason this bumped:
+#: re-rendering one would print the same overstated sample the bump exists to
+#: retire, so a version-1 record is refused and the measurement is re-run.
+RECORD_VERSION = 2
 
 #: What a scored row must carry. A **missing column raises**: the football lab's
 #: backtest read a missing settlement column as a zero through
@@ -363,6 +369,16 @@ HEADLINE_KEYS: tuple[str, ...] = tuple(
 CONTROL_KEYS: tuple[str, ...] = tuple(
     key for key in ADVANTAGE_KEYS if key.startswith("control__")
 )
+
+#: The two comparisons a cell can be read against, each as
+#: `(which headline the cell stores, which family must agree)`. They are named
+#: here rather than chosen at each call site so that a reader asking for the
+#: control cannot be answered with the market's verdict, which is what happened
+#: while the answered-hypotheses table picked its own headline by hand.
+COMPARISONS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "market": ("headline", HEADLINE_KEYS),
+    "control": ("control_headline", CONTROL_KEYS),
+}
 
 
 # --------------------------------------------------------------------------
@@ -966,10 +982,19 @@ def calibration_by_decile(frame: pd.DataFrame, *, name: str) -> list[dict]:
 
     The bins are DECLARED at the tenths and never computed as quantiles of the
     sample: quantiles move with the data, so the same model measured twice
-    produces two incomparable tables. A bin below :data:`MINIMUM_BUCKET` rows
-    carries its count and no frequency — the point estimate of nine
+    produces two incomparable tables. A bin below :data:`MINIMUM_BUCKET`
+    **wagers** carries its counts and no frequency — the point estimate of nine
     observations invites a reader to follow the shape of the line rather than
     the sample sizes under it.
+
+    **Each bin carries both counts and the floor is taken on the wagers.** A
+    row here is one quote, so a wager hung at five books lands in the same bin
+    five times: the mean is over quotes, but the independent unit under it is
+    the wager, and a floor applied to quotes lets a bin of 30 rows clear it on
+    11 bets. Measured on this store a high-major tier's scored population is
+    130,988 quotes over 46,370 wagers -- 2.82 quotes per bet, and 4.38 in the
+    worst cell -- so a table that headed the quote count *Wagers*, which the
+    first version of this one did, overstated its own sample by that much.
     """
     if frame.empty:
         return []
@@ -982,17 +1007,19 @@ def calibration_by_decile(frame: pd.DataFrame, *, name: str) -> list[dict]:
             (probability < high) if index < 9 else (probability <= high)
         )
         count = int(inside.sum())
+        wagers = wagers_in(frame.loc[inside])
         row = {
             "bin": f"{low:.0%}-{high:.0%}",
             "low": low,
             "high": high,
             "rows": count,
-            "enough_rows": count >= MINIMUM_BUCKET,
+            "wagers": wagers,
+            "enough_wagers": wagers >= MINIMUM_BUCKET,
             "predicted": None,
             "realised": None,
             "gap_points": None,
         }
-        if count >= MINIMUM_BUCKET:
+        if wagers >= MINIMUM_BUCKET:
             predicted = float(probability[inside].mean())
             realised = float(won[inside].mean())
             row["predicted"] = predicted
@@ -1190,8 +1217,17 @@ def _least_favourable(advantages: Mapping, keys: Sequence[str]) -> str:
     return min(present, key=lambda key: float(advantages[key]["value"]))
 
 
-def verdict_of(cell: Mapping) -> str:
+def verdict_of(cell: Mapping, *, against: str = "market") -> str:
     """The one sentence this cell is permitted to be described by.
+
+    `against` picks WHICH comparison is being read: `"market"` for the
+    de-vigged fair price, which is the only one that bears on whether anything
+    could be bet, or `"control"` for the identity-blind role prior. The four
+    rules below are the same either way; what changes is the headline they read
+    and the family they check for agreement. The parameter exists because the
+    answered-hypotheses table used to skip this function entirely for the three
+    control hypotheses and print the headline row's raw verdict, which applied
+    neither rule 2 nor rule 4 to them.
 
     Four rules, in this order:
 
@@ -1208,12 +1244,18 @@ def verdict_of(cell: Mapping) -> str:
        point estimate, and a cell whose weakest comparison excludes zero on the
        winning side while another does not has not shown the same thing twice.
     """
+    if against not in COMPARISONS:
+        raise PropGradingError(
+            f"verdict_of was asked to read {against!r}, and the only "
+            f"comparisons this record carries are {sorted(COMPARISONS)}."
+        )
+    headline_key, family = COMPARISONS[against]
     if not cell.get("advantages"):
         return (
             f"not enough evidence ({int(cell.get('rows', 0)):,} wagers, below "
             f"the {MINIMUM_ROWS:,} declared in advance)"
         )
-    headline = cell.get("headline") or ""
+    headline = cell.get(headline_key) or ""
     row = cell["advantages"].get(headline) or {}
     if not cell.get("enough_evidence"):
         return (
@@ -1227,11 +1269,37 @@ def verdict_of(cell: Mapping) -> str:
     verdict = str(row.get("verdict") or S.NO_DEMONSTRATED_EDGE)
     if verdict == S.DEMONSTRATED_EDGE:
         every = [
-            cell["advantages"][key].get("verdict") for key in HEADLINE_KEYS
+            cell["advantages"][key].get("verdict") for key in family
             if key in cell["advantages"]
         ]
         if any(one != S.DEMONSTRATED_EDGE for one in every):
             return S.NO_DEMONSTRATED_EDGE
+    return verdict
+
+
+def reading_of(cell: Mapping, row: Mapping) -> str:
+    """What ONE comparison inside `cell` is permitted to be read as.
+
+    :func:`verdict_of` decides the cell. This decides a single row of its
+    advantage table, and it exists because a row's own `verdict` reads nothing
+    but the sign of its corrected bounds and knows nothing about where the row
+    lives. Printed unfiltered under the far-ladder heading, a row reading
+    *demonstrated edge* contradicts :data:`UNBENCHMARKED_SENTENCE` three lines
+    above it -- which promises, in those words, that whatever the interval
+    below says it is NOT an edge and is not reported as one. The heading was
+    right and the column was wrong.
+
+    A deficit is suppressed for the same reason an edge is, and not because it
+    is unflattering: past :data:`BENCHMARKED_RUNGS` the sign of the difference
+    is a statement about which rungs a book chose to hang two sides on, and
+    that is true whichever way it points. It is exactly rule 2 of
+    :func:`verdict_of`, applied one row lower down.
+    """
+    verdict = str(row.get("verdict") or "")
+    if cell.get("benchmarked", True):
+        return verdict
+    if verdict in (S.DEMONSTRATED_EDGE, S.DEMONSTRATED_DEFICIT):
+        return UNBENCHMARKED
     return verdict
 
 
@@ -1499,10 +1567,15 @@ def answered_hypotheses(
                 "and may not be added to, dropped or reworded; if a market or "
                 "a tier was renamed, the rename is the thing to undo."
             )
-        if market:
-            headline = cell.get("headline")
-        else:
-            headline = cell.get("control_headline")
+        # WHICH comparison this hypothesis registered, taken from the
+        # ledger's own `search` and never inferred from whether the cell
+        # happens to name a market. The two agree on this record -- all 30
+        # de-vig hypotheses are (market x tier) and all 3 control hypotheses
+        # are per tier -- and the day they stop agreeing, the ledger is the
+        # side that is right.
+        against = "control" if search == SEARCH_VS_CONTROL else "market"
+        headline_key, _family = COMPARISONS[against]
+        headline = cell.get(headline_key)
         row = (cell.get("advantages") or {}).get(headline or "")
         answered.append(
             {
@@ -1517,14 +1590,19 @@ def answered_hypotheses(
                 "adjusted_low": float(row["adjusted_low"]) if row else None,
                 "adjusted_high": float(row["adjusted_high"]) if row else None,
                 "enough_evidence": bool(row.get("enough_evidence")) if row else False,
-                # The reading is the ANSWER's own words and never a
-                # re-derivation: a second predicate over the bounds would be
-                # free to disagree with `RoiInterval.verdict`, which is the one
-                # function in this repository that reads the sign.
-                "reading": str(row.get("verdict", "")) if row else (
-                    f"not enough evidence ({int(cell.get('rows', 0)):,} wagers, "
-                    f"below the {MINIMUM_ROWS:,} declared in advance)"
-                ),
+                # The reading is `verdict_of`, which is the one function that
+                # decides what a cell may be described by, asked about the
+                # comparison this hypothesis registered. It used to be the
+                # headline ROW's own verdict plus a refusal sentence written
+                # out again here, and that had three consequences: the far
+                # ladder's refusal (rule 2) and the every-comparison
+                # requirement (rule 4) were skipped for every hypothesis, the
+                # two copies of the refusal sentence drifted -- this one said
+                # "bets" where `verdict_of` said "wagers" -- and a cell refused
+                # for too few clusters was reported here as refused for too few
+                # bets. Neither reason was false; they were two answers to one
+                # question, which is how a table gets quoted against itself.
+                "reading": verdict_of(cell, against=against),
             }
         )
     return answered
@@ -1649,7 +1727,7 @@ def _advantage_table(cell: Mapping) -> list[str]:
         lines.append(
             f"| {name} | {estimate} | {interval} | {corrected} | "
             f"{int(row.get('rows', 0)):,} | {_cluster_cell(row)} | "
-            f"{row.get('verdict', '')} |"
+            f"{reading_of(cell, row)} |"
         )
     lines.append("")
     return lines
@@ -1661,18 +1739,24 @@ def _calibration_table(rows: Sequence[Mapping], *, what: str) -> list[str]:
     lines = [
         f"**Calibration by decile — {what}.**",
         "",
-        "| Predicted band | Wagers | Mean predicted | Realised | Gap (pp) |",
-        "|:---|---:|---:|---:|---:|",
+        "| Predicted band | Wagers | Quotes | Mean predicted | Realised | "
+        "Gap (pp) |",
+        "|:---|---:|---:|---:|---:|---:|",
     ]
     for row in rows:
-        if not row.get("enough_rows"):
+        # `wagers` is read without a default on purpose. `read_record` refuses
+        # a record written before this column existed, so the only way to
+        # arrive here without it is a schema drift, and a renderer that filled
+        # it with the quote count is the defect this column was added to fix.
+        counts = f"{int(row['wagers']):,} | {int(row['rows']):,}"
+        if not row.get("enough_wagers"):
             lines.append(
-                f"| {row['bin']} | {int(row['rows']):,} | — | — | "
-                f"below the {MINIMUM_BUCKET}-row floor, so no frequency |"
+                f"| {row['bin']} | {counts} | — | — | "
+                f"below the {MINIMUM_BUCKET}-wager floor, so no frequency |"
             )
             continue
         lines.append(
-            f"| {row['bin']} | {int(row['rows']):,} | {row['predicted']:.1%} | "
+            f"| {row['bin']} | {counts} | {row['predicted']:.1%} | "
             f"{row['realised']:.1%} | {row['gap_points']:+.1f} |"
         )
     lines.append("")
