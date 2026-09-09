@@ -138,6 +138,30 @@ class RoiInterval:
         return self.roi + bonferroni_z(self.looks) * self.standard_error
 
     @property
+    def minimum_detectable_effect(self) -> float:
+        """The smallest true effect this cell could have demonstrated.
+
+        `no demonstrated edge` says the corrected interval spans zero. It does
+        **not** say the effect is zero, and the gap between those two readings
+        is the whole reason this exists: an interval spanning zero at +/-0.5%
+        and one spanning zero at +/-10% carry the same verdict and completely
+        different evidence. Printed beside a null, this is the number that
+        tells them apart -- and without it a reader cannot distinguish *we
+        looked and there is nothing* from *we could not have seen it*.
+
+        It is the corrected half-width, `bonferroni_z(looks) * standard_error`,
+        because an estimate has to clear exactly that to exclude zero. So it is
+        not a second statistic: it is the bound already being applied, stated
+        from the other side.
+
+        NaN when no standard error was recorded, which is a cell that could
+        detect nothing at all rather than a cell that could detect everything.
+        """
+        if not self.standard_error:
+            return float("nan")
+        return bonferroni_z(self.looks) * self.standard_error
+
+    @property
     def enough_evidence(self) -> bool:
         return self.bets >= MINIMUM_BETS
 
