@@ -52,6 +52,7 @@ from cbb_betting_lab.competitions import CBB
 from cbb_betting_lab.experiment_ledger import load as load_ledger
 from cbb_betting_lab.reports import forecast_skill as FS
 from cbb_betting_lab.reports import price_backtest as PB
+from cbb_betting_lab.models import player_rates as PR  # noqa: E402
 from cbb_betting_lab.reports import prop_grading as PG
 from cbb_betting_lab.reports import replication as REPL
 from cbb_betting_lab.reports import what_we_can_claim as WC
@@ -289,6 +290,15 @@ def test_the_rebuild_flag_reads_the_ledger_rather_than_replaying_the_record(
     Reproduced by giving the same record two different ledgers and requiring
     two different reports. Before decision 46 both renders were identical, and
     the identical one was the stale one.
+
+    **Both ledgers are sized from the record's own `looks`.** They used to be
+    40 and 400 against a record scored at 30, and the small one silently
+    stopped being a restatement the day that record was re-run at 95: the
+    restatement may only ever widen, so a ledger below the record's own count
+    correctly leaves it alone, and the report then names 95 where the test
+    demanded 40. The property under test is that the RENDER reads the ledger;
+    the two counts only have to differ from each other and sit above the
+    record.
     """
     script = _load_script("run_price_backtest")
     outputs = tmp_path / "outputs"
@@ -299,14 +309,16 @@ def test_the_rebuild_flag_reads_the_ledger_rather_than_replaying_the_record(
     PB.write_record(record, PB.record_path(CBB, outputs))
     report = PB.report_path(CBB, outputs)
 
+    scored_at = int(record.get("looks", 1) or 1)
+    fewer, more = scored_at + 10, scored_at + 310
     small = tmp_path / "small.json"
     small.write_text(
-        json.dumps({"hypotheses": [_hypothesis(i) for i in range(40)]}),
+        json.dumps({"hypotheses": [_hypothesis(i) for i in range(fewer)]}),
         encoding="utf-8",
     )
     big = tmp_path / "big.json"
     big.write_text(
-        json.dumps({"hypotheses": [_hypothesis(i) for i in range(400)]}),
+        json.dumps({"hypotheses": [_hypothesis(i) for i in range(more)]}),
         encoding="utf-8",
     )
 
@@ -319,8 +331,8 @@ def test_the_rebuild_flag_reads_the_ledger_rather_than_replaying_the_record(
     ) == 0
     at_four_hundred = report.read_text(encoding="utf-8")
 
-    assert "40 cumulative hypotheses" in at_forty
-    assert "400 cumulative hypotheses" in at_four_hundred
+    assert f"{fewer:,} cumulative hypotheses" in at_forty
+    assert f"{more:,} cumulative hypotheses" in at_four_hundred
     assert at_forty != at_four_hundred, (
         "the re-render produced the same report against two different ledgers, "
         "so it is replaying the correction stored in the record. That single "
@@ -1022,3 +1034,111 @@ def test_the_status_row_counts_the_decision_log_rather_than_quoting_it():
         f"docs/project_status.md states {stated_classes.group(1)} defect "
         f"classes and docs/ported_defects.md holds {len(classes)}."
     )
+
+
+# --------------------------------------------------------------------------
+# A committed record may not carry a market the code now refuses by name
+#
+# `test_the_committed_report_is_the_record_rendered_at_todays_count` proves
+# report == render(record). Nothing proves record == what today's code would
+# produce, and that second gap is not cheap to close in general: a record is a
+# function of the code AND a 978 MB store, and re-deriving it costs an hour.
+#
+# This closes the sliver of it that costs nothing. `MARKETS_REFUSED_BY_NAME` is
+# a filter applied on every verdict-producing path, so a market it names can
+# never appear in a record today's code wrote. If one appears, the record
+# predates the filter -- which is exactly what happened: the price backtest's
+# record was generated 2026-09-05, the filter landed 2026-09-07 in #45, and the
+# stale record kept publishing `player_first_basket` blind-rule rows carrying
+# `demonstrated deficit` for two months.
+# --------------------------------------------------------------------------
+
+
+def _every_committed_record():
+    for path in sorted(OUTPUTS.rglob("*.json")):
+        if path.name == "experiment_ledger.json":
+            continue
+        try:
+            yield path, json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:  # pragma: no cover - a corrupt record
+            continue
+
+
+def _betting_claims_about(payload, refused: set) -> list:
+    """Rows that give a refused market a claim about its BETTING value.
+
+    The line is not "names the market". Two committed records must name these
+    markets and are right to: `cbb_prop_accounting.json` counts 721 wagers into
+    a `refused_by_name` bucket, and `cbb_what_we_can_claim.json` says in words
+    that they are never priced. A census that could not name what it refuses
+    would not be a census.
+
+    Nor is the line "carries a verdict". `cbb_retention_probe.json` calls
+    `player_first_basket` RETAINED_BUT_THIN, and that is a fact about the
+    ARCHIVE -- the store really does hold those quotes -- not a call on the
+    bet. Suppressing it would hide something true about the data.
+
+    The line is a claim about what the market is WORTH: an ROI, or one of the
+    reserved verdict phrases. That is the thing this lab may not say about a
+    market it refuses to price.
+    """
+    reserved = {S.DEMONSTRATED_EDGE, S.DEMONSTRATED_DEFICIT, S.NO_DEMONSTRATED_EDGE}
+    found, stack = [], [payload]
+    while stack:
+        node = stack.pop()
+        if isinstance(node, dict):
+            if node.get("market") in refused and (
+                "roi" in node or str(node.get("verdict", "")) in reserved
+            ):
+                found.append(node)
+            stack.extend(node.values())
+        elif isinstance(node, list):
+            stack.extend(node)
+    return found
+
+
+def test_no_committed_record_prices_a_market_refused_by_name():
+    """A priced refusal in a committed record is a record older than the filter.
+
+    `player_first_basket` and `player_double_double` are refused because this
+    lab has no defensible way to price them, so an ROI on one -- even a blind
+    rule's -- is a number about a market it says it never prices.
+    `without_markets_refused_by_name` is applied on every verdict-producing
+    path, so today's code cannot produce these rows.
+
+    They are here because the price backtest's record was generated
+    2026-09-05 and the filter landed 2026-09-07 in #45. The report is a pure
+    function of the record and that is gated; the RECORD is a function of the
+    code and the store, and nothing gated that. This is the sliver of the
+    second gap that costs nothing to check.
+    """
+    refused = set(PR.MARKETS_REFUSED_BY_NAME)
+    assert refused, "the refusal list is empty, so this test proves nothing"
+    offenders = {}
+    for path, payload in _every_committed_record():
+        rows = _betting_claims_about(payload, refused)
+        if rows:
+            offenders[path.relative_to(OUTPUTS).as_posix()] = len(rows)
+    assert not offenders, (
+        f"committed records put a price on a market this lab refuses: "
+        f"{offenders}. Today's code cannot produce these rows — the records "
+        "predate the filter and have to be RE-RUN, never hand-edited."
+    )
+
+
+def test_the_refusal_gate_still_lets_a_census_name_what_it_refuses():
+    """The gate above must not be so broad that it forbids counting.
+
+    A census that names a refused market, and a probe that says the archive
+    retains it, are both correct and neither is a price. If this test ever goes
+    red the gate has been widened into one that would force the accounting
+    identity to hide a bucket it is required to publish.
+    """
+    refused = set(PR.MARKETS_REFUSED_BY_NAME)
+    market = sorted(refused)[0]
+    census = {"market": market, "bucket": "refused_by_name", "wagers": 721}
+    archive = {"market": market, "verdict": "RETAINED_BUT_THIN"}
+    priced = {"market": market, "bets": 292, "roi": -0.27, "verdict": S.DEMONSTRATED_DEFICIT}
+    assert _betting_claims_about(census, refused) == []
+    assert _betting_claims_about(archive, refused) == []
+    assert _betting_claims_about(priced, refused) == [priced]
