@@ -74,9 +74,50 @@ SEASON = 2026
 
 from conftest import processed_table  # noqa: E402  (tests/ is on sys.path under pytest)
 
-TEAM_GAMES, CORPUS = processed_table("cbb_team_games.csv")
-PLAYER_GAMES, _ = processed_table("cbb_player_games.csv")
-GAME_SEGMENTS, _ = processed_table("cbb_game_segments.csv")
+TEAM_GAMES, _TEAM_CORPUS = processed_table("cbb_team_games.csv")
+PLAYER_GAMES, _PLAYER_CORPUS = processed_table("cbb_player_games.csv")
+GAME_SEGMENTS, _SEGMENT_CORPUS = processed_table("cbb_game_segments.csv")
+
+#: All three tables, or none of them. `processed_table` resolves each file on
+#: its own, so a half-built `data/processed` gives this module a FULL player
+#: table beside a SAMPLED segments table -- 196,876 player rows against 399
+#: games -- and the tests then join a season's players onto a fixture's games.
+#: The symptom is a `KeyError` from deep inside a `.loc`, several hundred lines
+#: from the cause, and the header above it still reads "the full 2026 tables"
+#: because `CORPUS` used to be the FIRST table's label standing in for all
+#: three. Read straight, that state is indistinguishable from a broken branch,
+#: and it was reported as one before it was diagnosed.
+_CORPORA = {
+    "cbb_team_games.csv": _TEAM_CORPUS,
+    "cbb_player_games.csv": _PLAYER_CORPUS,
+    "cbb_game_segments.csv": _SEGMENT_CORPUS,
+}
+
+
+def one_corpus(corpora: dict) -> str:
+    """The single corpus these tables came from, or a refusal naming them.
+
+    A function rather than a bare module-level `assert` so that the refusal
+    itself can be tested. As an inline assertion it could be deleted and no
+    test in this file would notice, because a consistent checkout never
+    evaluates the failing branch -- which is the same shape of hole as the
+    unfiltered `_rows` two tests above it were using.
+    """
+    labels = set(corpora.values())
+    if len(labels) != 1:
+        raise AssertionError(
+            "This module's tables did not resolve to the same corpus: "
+            + ", ".join(f"{name} is {label}" for name, label in sorted(corpora.items()))
+            + ". A full table joined onto a sampled one is a population "
+            "nobody chose, and the symptom is a KeyError from inside a `.loc` "
+            "hundreds of lines from the cause. Either build every table under "
+            "data/processed or build none of them and let all of them fall "
+            "back to tests/fixtures/real_data."
+        )
+    return labels.pop()
+
+
+CORPUS = one_corpus(_CORPORA)
 
 #: How many player-game rows the prop assertions run over. The full 2025-26
 #: player table is 196,876 rows and every prop assertion would walk it once per
@@ -144,6 +185,31 @@ def segments() -> pd.DataFrame:
 def _rows(frame: pd.DataFrame, limit: int | None = None) -> list[dict]:
     subset = frame if limit is None else frame.head(limit)
     return subset.to_dict("records")
+
+
+def _rows_with_a_segment(
+    played: pd.DataFrame, segments: pd.DataFrame, *, limit: int | None = None
+) -> list[dict]:
+    """Player rows whose game HAS a segment row, which not every game does.
+
+    25 of 6,299 games in 2025-26 record no halftime score, and
+    `build_game_segments` writes them no row at all -- 0.4% of a season, by
+    design, and `test_a_game_with_no_segment_row_cannot_settle_a_first_basket`
+    is the test that owns that behaviour. A test about something *else* has no
+    business picking a row blind and tripping over it, which two tests here
+    did: they took the first player row in file order and looked its game up
+    directly, and passed only because the first rows in file order happen to
+    land on games that have one.
+
+    The filter runs before the limit, so a caller asking for 200 rows gets 200
+    usable ones rather than 200 candidates of which some are unusable.
+    """
+    usable = played[played["game_id"].isin(segments.index)]
+    assert not usable.empty, (
+        "no player row in this corpus names a game with a segment row, so "
+        "the two tables are not describing the same games"
+    )
+    return _rows(usable, limit=limit)
 
 
 # --------------------------------------------------------------------------
@@ -693,7 +759,7 @@ def test_the_first_basket_is_refused_when_the_rows_are_different_games(
     played, segments
 ):
     """A cross-game join grades every row and is wrong about all of them."""
-    rows = _rows(played, limit=200)
+    rows = _rows_with_a_segment(played, segments, limit=200)
     row = rows[0]
     other = next(
         candidate for candidate in rows if candidate["game_id"] != row["game_id"]
@@ -875,7 +941,7 @@ def test_a_row_whose_side_is_unknown_still_refuses_rather_than_guessing(
 ):
     """`home_away` is how the handler picks a team's column. Missing it must
     not silently grade against the other team's first basket."""
-    row = dict(_rows(played, limit=1)[0])
+    row = dict(_rows_with_a_segment(played, segments, limit=1)[0])
     game_id = row["game_id"]
     segment = dict(segments.loc[game_id])
     row["home_away"] = ""
@@ -886,6 +952,61 @@ def test_a_row_whose_side_is_unknown_still_refuses_rather_than_guessing(
 
     assert result.outcome is Outcome.UNSETTLEABLE
     assert result.actual is None
+
+
+def test_a_mixed_corpus_is_refused_before_a_single_row_is_joined():
+    """The guard that would have saved an hour: a full player table beside a
+    sampled segments table fails at import with both names, rather than at a
+    `.loc` several hundred lines later."""
+    with pytest.raises(AssertionError) as caught:
+        one_corpus(
+            {
+                "cbb_team_games.csv": "full",
+                "cbb_player_games.csv": "full",
+                "cbb_game_segments.csv": "sample",
+            }
+        )
+    message = str(caught.value)
+    assert "cbb_game_segments.csv is sample" in message
+    assert "cbb_player_games.csv is full" in message
+    assert "data/processed" in message and "real_data" in message, (
+        "the refusal has to say how to get out of the state it refuses"
+    )
+    # and it stays quiet when they agree
+    assert one_corpus({"a": "sample", "b": "sample"}) == "sample"
+    assert one_corpus({"a": "full"}) == "full"
+
+
+def test_some_played_game_really_has_no_segment_row(played, segments, capsys):
+    """The hazard `_rows_with_a_segment` exists for is present in this corpus.
+
+    Without this, the helper is unfalsifiable: replacing it with a bare
+    `_rows` leaves the two tests that use it passing, because the first rows
+    in file order happen to land on games that do have a segment. That is how
+    the defect survived in the first place, so the filter is checked here
+    against a corpus that genuinely contains a row it must exclude -- in the
+    full 2025-26 tables 25 of 6,299 games record no halftime and get no
+    segment row, and the tracked sample carries one such game of 400.
+    """
+    orphans = set(played["game_id"]) - set(segments.index)
+    print(
+        f"\n  games with played rows and no segment row: {len(orphans):,} of "
+        f"{played['game_id'].nunique():,} ({CORPUS} corpus)."
+    )
+    assert orphans, (
+        "no played game lacks a segment row in this corpus, so nothing here "
+        "exercises the filter and it could be deleted unnoticed"
+    )
+    kept = {row["game_id"] for row in _rows_with_a_segment(played, segments)}
+    assert kept, "the helper returned nothing"
+    assert not (kept & orphans), (
+        "`_rows_with_a_segment` returned a row whose game has no segment row, "
+        "which is the whole thing it exists to prevent"
+    )
+    assert kept == set(played["game_id"]) - orphans, (
+        "the helper dropped games that DO have a segment row; it is meant to "
+        "filter the unusable ones, not to sample"
+    )
 
 
 def test_a_game_with_no_segment_row_cannot_settle_a_first_basket(played, segments):
