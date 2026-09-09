@@ -154,8 +154,16 @@ player-prop row is an opinion and can never be a bet — nothing reaches
 endpoint is permanently empty and the conference reports cover ~115 of 365 teams
 in conference games only — so it can never produce a selection, and it is
 reported in the gate's own words. The gate is the reason it cannot be bet, not
-evidence that a price for it exists: no player prop has ever been priced here.
-**That is not a pass, an avoid, or a no-value call.**
+evidence that a price for it exists: no player prop has ever been frozen into
+this ledger. **That sentence was narrowed on 2026-09-07 and the narrowing is
+the point.** It used to read *"no player prop has ever been priced here"*, and
+that stopped being true twice over: `reports/gameday_card.opinions_for` has
+priced props since 2026-09-06, and `reports/prop_grading.py` has scored them
+against a de-vigged fair price since 2026-09-07. What is still true, and is
+asserted rather than asserted-about — `tests/test_player_distributions.py`
+scans `priced_snapshots/` for a player row — is that none of it has reached
+THIS ledger: no shipped run passes a `RunDisposition`, so no shipped run
+freezes a prop here. **That is not a pass, an avoid, or a no-value call.**
 """
 
 from __future__ import annotations

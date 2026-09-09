@@ -23,6 +23,32 @@ demonstrated deficit**, 20 are *no demonstrated edge*, and 9 sit below the
 honest word for this lab's state is no longer *unmeasured*. It is *measured*,
 and the finding is a loss.
 
+**The player-prop model has been scored, and it loses to the market.**
+`data/outputs/cbb_prop_grading.{json,md}`, 2026-09-08, design section 10. The
+store offered **257,474 prop wagers** under the declared casefold and the run
+accounted for every one of them with a residual of **exactly 0**; 484,790
+book-quotes settled, **342,678** paired two-sided at their own book, and
+**339,660 rows over 122,604 distinct wagers** were scored against a de-vigged
+fair price. **No tier shows a demonstrated edge.** The model's mean log loss is
+ABOVE the de-vigged price's in all three — high-major 0.68839 against 0.68265,
+mid-major 0.68793 against 0.68339, low-major 0.67955 against 0.67379 — and the
+headline advantage, which is the least favourable of the two de-vigs and the two
+push conventions, is **-0.0057** (corrected -0.0139 to +0.0024), **-0.0045**
+(-0.0102 to +0.0011) and **-0.0065** (-0.0386 to +0.0256). Uncorrected, the
+first two exclude zero on the LOSING side; the family correction is what makes
+them *no demonstrated edge* rather than a deficit, and that is the correction
+working rather than the measurement moving. Of the 30 registered
+market-and-tier cells, **20 are no demonstrated edge, 1 is a demonstrated
+deficit — `player_pra` / high-major at -0.0167, corrected -0.0311 to -0.0023
+over 4,308 wagers on 350 game clusters — and 9 sit below a declared floor and
+carry a phrase rather than a number.** The model does beat its own
+identity-blind role-prior control decisively in high-major (+0.1130, corrected
++0.0659 to +0.1601) and mid-major (+0.1154, +0.0913 to +0.1394), which says its
+per-athlete evidence is worth something over a role table and says nothing
+whatever about the market. Against the VIGGED price — the handicapped
+comparison, printed as a diagnostic and never a headline — the model is worse by
+point estimate in every tier.
+
 **Which correction the figures below carry.** Every interval in this file is the
 family-corrected one at the experiment ledger's **cumulative count of 95
 distinct hypotheses, ×1.7689** — the same correction every generated report in
@@ -108,7 +134,8 @@ M and the commit of 2026-09-03.
 | 18 | Promotion criteria pre-registered on disk; demotion one direction only | **done** | `data/manual/promotion_criteria.json`, declared 2026-09-01 before any challenger was measured. There is no `grant()` in `promotion.py` or `staging_provider_policy.py`, and a test sweeps for one. |
 | 19 | The weekly loop runs unattended and re-renders the claims doc itself | **done** | `Weekly Refit and Measure`, Mondays 11:00 UTC, `contents: read` and no credential — it measures what is already bought and cannot spend. 43 tests. It re-renders the fenced block inside `docs/what_we_can_and_cannot_claim.md`; a missing fence is an error and never an append. |
 | 20 | `CLAUDE.md` has a "Current operating state" a future session can read, contract strings pinned | **done** | `test_contract_strings.py` pins all 14. |
-| 21 | `docs/decision_log.md` and `docs/ported_defects.md` complete | **done** | 48 decisions, **28 defect classes** (A-AB) with the regression test for each. S-W are the ladders-and-halves rebuild that died before persistence and cost 1,199,926 credits; decision 27 is Cooper's call not to re-buy it, with the number attached. |
+| 21 | `docs/decision_log.md` and `docs/ported_defects.md` complete | **done** | 56 decisions, **28 defect classes** (A-AB) with the regression test for each. S-W are the ladders-and-halves rebuild that died before persistence and cost 1,199,926 credits; decision 27 is Cooper's call not to re-buy it, with the number attached. |
+| 22 | Player props scored against a de-vigged fair price, per tier, the 33 pre-registered hypotheses answered | **done** | `reports/prop_grading.py` + `scripts/run_prop_grading.py`, `data/outputs/cbb_prop_grading.{json,md}`, 44 tests. Both de-vigs (proportional and power) from one pairing pass joined on event, market, athlete, line **and book**, with the headline the least favourable to the model; both push conventions scored for the same reason (measured push mass **0.0000** — the store carries 6 quotes on 3 integer lines, so the choice was worth nothing here); the de-vigged fair price and the identity-blind role-prior control printed BEFORE the model in every section; mean log loss, Brier and calibration by decile; intervals clustered by game, day **and athlete** with the widest winning. **The calibration is the shape of the finding**: the model is monotonically overconfident on both sides — in high-major it says 84.0% and wins 74.3% over 701 rows, and says 26.5% and wins 36.2% over 3,874. Coverage is reported beside every verdict and measured **98.7% at the money, 50.7% one rung out, 13.2% two, 4.7% three and 1.1% four**, which is design section 10's own claim reproduced; the **184 rows past three rungs are reported apart as UNBENCHMARKED** and are never an edge. Median overround removed **1.0758**, median power exponent 1.1208; **no probability was clipped** and the control declined **0** of the wagers the model priced. `player_first_basket` and `player_double_double` are filtered immediately after the census gate and are never scored, never given a verdict, and are not a pass, an avoid or a no-value call. |
 
 ## What is actually waiting on Cooper
 

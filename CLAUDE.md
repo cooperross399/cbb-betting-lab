@@ -329,6 +329,66 @@ did"* — would have been a false cause today.
   Reachability has no in-season store to split on. Futures cannot be bought at
   all — no historical bulk endpoint.
 
+### The player-prop model, scored — 2026-09-08
+
+**Design section 10 has run and the model loses to the market.**
+`data/outputs/cbb_prop_grading.{json,md}`, re-renderable for free with
+`scripts/run_prop_grading.py --rebuild-report-only`.
+
+- **The identity closed before anything was scored.** The store offered
+  **257,474** prop wagers under the declared casefold; the run accounted for
+  257,474 with a residual of **exactly 0** and filed both of design section
+  10's receipts in its own process. 484,790 book-quotes settled, **342,678**
+  paired two-sided at their own book, **339,660 rows over 122,604 distinct
+  wagers** scored. 0 pushes, 2,834 voids, 0 unsettleable, **no probability
+  clipped**, and the control declined **0** of the wagers the model priced.
+- **No tier shows a demonstrated edge, and the model's log loss is worse than
+  the price's in all three.** high-major 0.68839 against 0.68265, mid-major
+  0.68793 against 0.68339, low-major 0.67955 against 0.67379. The headline
+  advantage — the least favourable of two de-vigs and two push conventions — is
+  **-0.0057** (corrected -0.0139 to +0.0024) over 46,370 wagers, **-0.0045**
+  (-0.0102 to +0.0011) over 74,174, and **-0.0065** (-0.0386 to +0.0256) over
+  2,060. **Uncorrected, high-major and mid-major exclude zero on the losing
+  side**; the family correction at 95 hypotheses is what makes them *no
+  demonstrated edge* rather than a deficit, which is the correction working and
+  not the measurement moving.
+- **One cell is a demonstrated deficit**: `player_pra` / high-major, -0.0167,
+  corrected **-0.0311 to -0.0023** over 4,308 wagers on 350 game clusters. Of
+  the 30 registered market-and-tier cells, 20 are *no demonstrated edge*, that
+  one is a deficit, and 9 sit below a declared floor and carry a phrase.
+- **It beats its own control, and that is not the same claim.** The
+  identity-blind role-prior control loses by **+0.1130** (corrected +0.0659 to
+  +0.1601) in high-major and **+0.1154** (+0.0913 to +0.1394) in mid-major, and
+  by nothing demonstrable in low-major. That says the per-athlete evidence is
+  worth something over a role table; it says nothing whatever about the market,
+  and the report prints that sentence beside every one of them.
+- **Against the VIGGED price it is also worse by point estimate in every
+  tier** (-0.0025, -0.0013, -0.0032, all spanning zero). That comparison is a
+  diagnostic and is never a headline: it hands the model the whole hold.
+- **The calibration is the shape of the finding.** Monotonically overconfident
+  on both sides: high-major says 84.0% and wins 74.3% over 701 rows, says 26.5%
+  and wins 36.2% over 3,874. The de-vigged price is close to calibrated on the
+  same rows.
+- **Coverage reproduces the design's own claim**: two-sided coverage is
+  **98.7% at the money**, 50.7% one rung out, 13.2% two, 4.7% three and **1.1%
+  four**. The 184 scored rows past three rungs are reported apart as
+  **UNBENCHMARKED** and are never an edge.
+- **`player_first_basket` and `player_double_double` are refused BY NAME**, are
+  filtered immediately after the census gate, and appear in no cell, no verdict
+  and no hypothesis.
+
+**The ledger's 33 entries stay `pending`, and so do all 95.** This lab's
+convention is that the ledger records the registration and the record on disk
+carries the result; decision 54 says why, and
+`tests/test_the_player_props_are_pre_registered.py` no longer reads the field as
+evidence that nothing was measured.
+
+**What this does NOT unblock.** Nothing is allowlisted, no prop can reach
+`Availability.CONFIRMED`, and `price_backtest.build_record` still scores player
+markets with no census receipt — a receipt lives for one process and the grading
+run is a different one. `test_the_grading_commit_still_owes_this_gate` and
+clause 5 of `tests/test_player_census_reconciles.py` hold both halves open.
+
 ### The winner's curse, measured
 
 **Overall calibration is not evidence, and this run is why.** Overall the model

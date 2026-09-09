@@ -1259,6 +1259,12 @@ VERDICT_PRODUCING_MODULES = {
     # Filtered: a graded frame reaches these and a refused market must not.
     "forward_evidence.py": "filtered",
     "reachability.py": "filtered",
+    # Added 2026-09-07: design section 10's scoring of the player-prop model.
+    # It is the only module here whose whole population is player props, so the
+    # filter is not a precaution on it -- it is the thing that keeps
+    # `player_first_basket` and `player_double_double` out of a table that is
+    # otherwise entirely about markets like them.
+    "reports/prop_grading.py": "filtered",
     # These score team markets only. A player prop never reaches them: the
     # model has been scored on ten markets and every one is a team market, and
     # `price_backtest` is the thing that scores them.
@@ -1361,6 +1367,24 @@ def test_the_filtered_modules_are_driven_not_grepped():
         RC.build_record(bets=graded)
 
     _assert_gate_precedes_filter(RC.build_record)
+
+    # prop_grading, the third filtered door and the only one whose population
+    # is nothing but player props.
+    from cbb_betting_lab.reports import prop_grading as PG
+
+    with pytest.raises(player_census.WagerCountMismatch):
+        PG.build_record(
+            PG.PropGradingInputs(
+                graded=pd.DataFrame(
+                    {
+                        column: _bet_column_filler(column, 8)
+                        for column in (*PG.GRADED_COLUMNS, "market")
+                    }
+                ).assign(market=refused)
+            )
+        )
+
+    _assert_gate_precedes_filter(PG.build_record)
 
 
 

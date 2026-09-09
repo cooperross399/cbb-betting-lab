@@ -1258,12 +1258,21 @@ _RECONCILED: dict[str, Attribution] = {}
 #: so every test that iterates this tuple walked past the function that
 #: actually grades. Adding the guard without adding the name here left it
 #: unexercised by all three of them.
+#: **`reports.prop_grading.build_record` was added on 2026-09-07 and it is the
+#: one design section 10 was written for.** It de-vigs two ways, scores the log
+#: loss, the Brier and the calibration, builds the three-way clustered
+#: intervals and prints a verdict per market and per tier over a population
+#: that is nothing BUT player props. It is the first entry point in this tuple
+#: for which the guard is not a cheap prefix test that finds nothing: every row
+#: it is ever handed is a player wager, so the gate either lets the whole run
+#: through or stops it.
 GRADING_ENTRY_POINTS: tuple[str, ...] = (
     "cbb_betting_lab.forward_evidence.render_ledger",
     "cbb_betting_lab.forward_evidence.report_payload",
     "cbb_betting_lab.reachability.build_record",
     "cbb_betting_lab.reports.forecast_skill.build_record",
     "cbb_betting_lab.reports.price_backtest.settled_opinions",
+    "cbb_betting_lab.reports.prop_grading.build_record",
 )
 
 

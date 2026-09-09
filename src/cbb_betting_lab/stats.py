@@ -36,7 +36,7 @@ pins the fix against a cluster bootstrap. The sibling lab is not touched — the
 finding is recorded in `docs/ported_defects.md` instead, per Cooper's
 instruction.
 
-## Two cluster units, and why the wider one wins
+## Three cluster units, and why the widest one wins
 
 Dependence in this sport runs **within a game**: the same possessions settle
 every market on it. That makes the game the canonical cluster.
@@ -47,6 +47,17 @@ slate correlated, and then the day is the honest unit. This lab cannot know in
 advance which applies, so `interval_two_way` computes both and reports the
 **wider**. Choosing the narrower after seeing both is exactly the move this
 whole document set exists to prevent.
+
+**The third unit is the ATHLETE, and on a player-prop population it is not
+optional.** One subject supplies a whole ladder across ten markets on one
+night: `player_points` carries a mean 7.19 lines per subject on the 2024 card
+store, so 78,984 wagers are about 8,803 subject-opinions under the declared
+casefold. Neither of the first two arms absorbs that — a game holds two entire
+rosters, and one athlete's rungs are spread across the days he plays — so
+`interval_three_way` adds it and takes the widest of the three. Design section
+10 says the athlete is not optional; measured on a synthetic ladder in
+`tests/test_clustered_interval_is_not_too_narrow.py`, the two-way interval is
+more than twice too narrow on a population shaped like this one.
 """
 
 from __future__ import annotations
@@ -284,6 +295,70 @@ def interval_two_way(
         cluster_unit="day",
     )
     return by_game if by_game.standard_error >= by_day.standard_error else by_day
+
+
+#: The third cluster unit, and it is not optional on a player-prop population.
+#: One athlete supplies a whole ladder: measured on the 2024 card store,
+#: `player_points` carries a mean 7.19 lines per subject, so 78,984 wagers are
+#: about 8,803 subject-opinions under the declared casefold. A naive
+#: `s/sqrt(n)` over the wagers is several times too narrow, and the game and
+#: the day do not absorb it -- a game holds two teams' rosters, so clustering
+#: by game splits one athlete's ladder from nobody and leaves the correlation
+#: between his ten markets inside a cluster that also holds nine other players.
+SUBJECT_CLUSTER_UNIT = "athlete"
+
+
+def interval_three_way(
+    bets: pd.DataFrame,
+    *,
+    game_column: str = "event_id",
+    day_column: str = "slate_date",
+    subject_column: str = "subject",
+    profit_column: str = "profit_units",
+    looks: int = 1,
+) -> RoiInterval:
+    """Cluster by game, by day **and** by athlete, and report the widest.
+
+    :func:`interval_two_way` with the third unit design section 10 names for
+    the player family. The rule is the same and the reason it is the same is
+    the point: this lab cannot know in advance which dependence dominates, so
+    it computes all three and takes the widest, because choosing a narrower one
+    after seeing all three is the move the rest of this repository exists to
+    prevent.
+
+    **The athlete is not a refinement of the game.** A game supplies two
+    rosters and an athlete supplies one ladder across ten markets on one night;
+    neither partition nests inside the other, so neither standard error bounds
+    the other and both have to be computed. On a population where one athlete
+    appears on many nights the athlete clustering is also the only one of the
+    three that crosses days.
+
+    **A frame whose subjects are all blank degrades to the two-way answer, and
+    cannot narrow it.** A team market has no athlete, so every such row groups
+    under one nameless key; `interval_by_cluster` with a single cluster reports
+    a standard error of 0.0 and infinite bounds, and 0.0 never wins the
+    comparison below. So the arm is silent rather than wrong on a population it
+    does not describe. It can never make the answer NARROWER either, whatever
+    the subjects look like, because the widest of the three is taken. Callers on
+    this lab's prop population always carry a subject.
+    """
+    if bets.empty:
+        return RoiInterval(0.0, 0.0, 0.0, 0, 0, looks=looks)
+    widest = interval_two_way(
+        bets,
+        game_column=game_column,
+        day_column=day_column,
+        profit_column=profit_column,
+        looks=looks,
+    )
+    by_subject = interval_by_cluster(
+        bets.groupby(subject_column).agg(
+            profit=(profit_column, "sum"), bets=(profit_column, "size")
+        ),
+        looks=looks,
+        cluster_unit=SUBJECT_CLUSTER_UNIT,
+    )
+    return by_subject if by_subject.standard_error > widest.standard_error else widest
 
 
 def bets_needed_to_detect(edge: float, *, spread: float = 1.0) -> int:

@@ -87,6 +87,7 @@ REQUIRED_GUARD_MODULES: tuple[str, ...] = (
     "tests/test_player_seam.py",
     "tests/test_player_model_leakage.py",
     "tests/test_player_census_reconciles.py",
+    "tests/test_prop_grading.py",
 )
 
 

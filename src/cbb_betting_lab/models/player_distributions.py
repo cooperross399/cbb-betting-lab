@@ -6,10 +6,13 @@ lattice, seven per-minute rates and the athlete's own 1/2/3 scoring mix — and
 turns it into count pmfs and, per line, `(win, push, loss)`.
 
 It states **no result**. There is no de-vig here, no log loss, no ROI, no
-comparison against a price and no interval. Those belong to the grading commit,
-which is gated on design 10's wager reconciliation and has not run. Every
-number this module produces is a probability under its own model or a
-structural check against a frozen target, and the two are never mixed.
+comparison against a price and no interval. Those belong to
+`reports/prop_grading.py`, which landed on 2026-09-07 and is gated on design
+10's wager reconciliation — this sentence used to say that commit "has not
+run", and it has. Every number this module produces is a probability under its
+own model or a structural check against a frozen target, and the two are never
+mixed; what the scorer does with them is not this module's business and cannot
+be reached from inside it.
 
 ## The defect this file is arranged against
 
@@ -1365,10 +1368,13 @@ def price_line(
     profile of a branch that ships broken.
 
     The three legs are unconditional. Forming `win / (1 - push)` is a grading
-    decision about what a de-vigged two-sided fair price implies, and it belongs
-    to the grading commit; a reader that renormalised here would be offering a
-    different bet from the one `settlement._grade_against_line` settles, which
-    tests equality BEFORE the inequality precisely so a push is a decision.
+    decision about what a de-vigged two-sided fair price implies, and it is
+    made in `reports/prop_grading.prepared` — which scores BOTH conventions and
+    headlines the less favourable, because a two-way de-vig knows nothing about
+    a push and the choice is therefore not free. A reader that renormalised
+    HERE would be offering a different bet from the one
+    `settlement._grade_against_line` settles, which tests equality BEFORE the
+    inequality precisely so a push is a decision.
 
     A DECLARED DEVIATION from one of the two contracts, which orders the tuple
     `(over, under, push)`. There is one push convention in this repository and

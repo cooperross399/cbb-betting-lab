@@ -115,10 +115,27 @@ def normalise_subject(value: object) -> str:
     sqrt(9170/8803) = 2.1%. That is the correct direction: the raw count was
     counting one person twice and calling it two opinions.
 
-    **It changes no published number.** Measured: all 504,394 rows carrying a
-    subject are `player_*` markets, no team market has a non-empty subject, and
-    no player market has ever been graded. `tests/test_stores.py` asserts both
-    halves.
+    **It changed no published number when it was declared, and it changes one
+    now.** Measured 2026-09-06: all 504,394 rows carrying a subject are
+    `player_*` markets and no team market has a non-empty subject, so the fold
+    could not move a team number then and cannot now.
+
+    The second half of that sentence — *"and no player market has ever been
+    graded"* — was true on 2026-09-06 and is **false as of 2026-09-07**:
+    `reports/prop_grading.py` scores the player family against a de-vigged
+    two-sided fair price, and this fold is what its wager denominator and its
+    athlete-clustered interval are both taken under. So the declaration is now
+    load-bearing rather than free, in exactly the direction its own arithmetic
+    predicted: 8,803 subject-opinions rather than 9,170.
+
+    **The test this docstring used to cite did not exist.** It named
+    `tests/test_stores.py` as asserting both halves; there is no such file and
+    there never was. The properties that ARE asserted, and where:
+    `tests/test_prop_grading.py::test_two_spellings_of_one_athlete_are_one_
+    wager_and_not_two` holds the fold in the grading denominator, and
+    `tests/test_player_census_reconciles.py` holds it in the census the
+    grading is gated on — that file's clause 2 reads the declaration by
+    RUNNING it rather than by retyping the word.
     """
     text = _dedupe_value(value)
     return text.casefold()

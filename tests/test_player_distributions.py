@@ -5096,15 +5096,37 @@ def test_the_gaps_this_engine_still_has_are_the_ones_written_down(
         "that design 10's 261,870-wager reconciliation still gates grading any "
         "of it; do not delete this clause."
     )
-    assert "no player prop has ever been priced here" in (
+    # **Re-pointed on 2026-09-07, exactly as this assertion's own message
+    # said to.** The sentence used to be "no player prop has ever been priced
+    # here", and it stopped being true twice: `gameday_card.opinions_for` has
+    # priced props since 2026-09-06 and `reports/prop_grading.py` has scored
+    # them since 2026-09-07. The claim that survives is narrower and is the one
+    # the archive scan above is the floor for — nothing has been FROZEN into
+    # this ledger — so the two now say the same thing.
+    assert "no player prop has ever been frozen into" in (
         forward_evidence.__doc__ or ""
     ), (
         "`forward_evidence`'s module docstring no longer carries the sentence "
         "the assertion above is the floor for. It is the same claim one module "
-        "up — inside the module that would do the recording — and it was "
-        "unguarded until this commit. If a prop has now been priced there, "
-        "rewrite both together; if the sentence was merely reworded, re-point "
-        "this assertion at the new words."
+        "up — inside the module that would do the recording. If a prop has now "
+        "been frozen there, rewrite both together; if the sentence was merely "
+        "reworded, re-point this assertion at the new words."
+    )
+    # The wider claim may be QUOTED — the correction has to be able to say what
+    # it corrected — and may not be asserted. Same rule, same reason, as
+    # `tests/test_what_we_can_claim.py::test_nothing_in_this_repository_calls_
+    # a_player_prop_priced`.
+    asserting = [
+        line
+        for line in (forward_evidence.__doc__ or "").splitlines()
+        if "no player prop has ever been priced" in line
+        and '*"no player prop has ever been priced here"*' not in line
+    ]
+    assert not asserting, (
+        "the wider claim came back, unquoted: "
+        f"{asserting}. Props are priced by `gameday_card.opinions_for` and "
+        "scored by `reports/prop_grading.py`; a module docstring saying "
+        "otherwise is a false sentence in the tree."
     )
 
     document = json.loads(SHAPES.read_text(encoding="utf-8"))

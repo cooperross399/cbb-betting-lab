@@ -1171,18 +1171,65 @@ def unmeasured_markets(
             # **Not "priced, frozen and settled".** This sentence used to say
             # that a market with no bought price and no settled opinion was
             # nevertheless priced — a contradiction inside one sentence, in the
-            # direction that overstates what this lab has. Measured
-            # 2026-09-06: the model has been scored on ten markets and every
-            # one of them is a team market; no player market has ever been
-            # priced by anything here. The availability gate is a SECOND and
-            # independent bar, and it is stated as one.
-            reason = (
-                "no historical price has been bought for it and no forward "
-                "opinion on it has settled, so this lab has no price for it. "
-                "It is also gated: nothing in this sport reaches "
-                "`Availability.CONFIRMED`, so a price would not produce a "
-                "selection either"
-            )
+            # direction that overstates what this lab has. The availability
+            # gate is a SECOND and independent bar, and it is stated as one.
+            #
+            # **And it now READS THE STORE, which it did not.** Until
+            # 2026-09-07 this branch fired before the `bought` check below and
+            # told every reader that no historical price had been bought for
+            # `player_points` — while 148,673 `player_points` quotes sat in
+            # `data/processed/cbb_historical_prices__card.csv`. That is the
+            # confusion the brief names outright: *a starved fetch and an
+            # unquoted market look identical*, in the one document whose job is
+            # to stop a number being misread. The three states are three
+            # sentences now.
+            if market.key in markets_refused_by_name_keys():
+                # The standing denial sits under this whole section, so it is
+                # not repeated here in a second wording: `tests/
+                # test_what_we_can_claim.py` permits exactly two sentences to
+                # use those words and a third phrasing of them is how a line
+                # that reads as a no-value call with a hedge in it gets in.
+                reason = (
+                    "**refused by the model BY NAME**, so it is never priced "
+                    "and never scored whatever the store holds. Its own "
+                    "section below carries the model's own words for why"
+                )
+            elif market.key in bought and market.key in player_markets_priced():
+                reason = (
+                    "historical prices for it **have** been bought, and they "
+                    "are scored against a de-vigged two-sided fair price in "
+                    "`cbb_prop_grading.{json,md}` — a mean-log-loss comparison "
+                    "rather than a return, so it produces no ROI claim in this "
+                    "document and appears here. It is also gated: nothing in "
+                    "this sport reaches `Availability.CONFIRMED`, so a price "
+                    "would not produce a selection either"
+                )
+            elif market.key in bought:
+                # Bought, not refused by name, and the model is not registered
+                # against it — so nothing has scored it and this sentence must
+                # not borrow the one above. Measured 2026-09-06: the store
+                # holds twelve player markets, the ten the model prices and the
+                # two it refuses, so no market reaches this branch today. It is
+                # written because the day one does, the difference between
+                # *scored* and *bought and never asked* is the whole point of
+                # this section.
+                reason = (
+                    "historical prices for it **have** been bought and the "
+                    "player model is not registered against it, so nothing has "
+                    "scored them. That is a market this lab has not asked "
+                    "about, not a market the provider does not serve. It is "
+                    "also gated: nothing in this sport reaches "
+                    "`Availability.CONFIRMED`, so a price would not produce a "
+                    "selection either"
+                )
+            else:
+                reason = (
+                    "no historical price has been bought for it and no forward "
+                    "opinion on it has settled, so this lab has no price for "
+                    "it. It is also gated: nothing in this sport reaches "
+                    "`Availability.CONFIRMED`, so a price would not produce a "
+                    "selection either"
+                )
         elif market.family == markets_registry.FUTURES:
             reason = (
                 "a futures market, served under a separate provider sport key, "
@@ -1296,6 +1343,36 @@ def markets_refused_by_name() -> list[dict]:
 # The record
 # ---------------------------------------------------------------------------
 
+
+
+def player_markets_priced() -> frozenset[str]:
+    """The ten markets the player model is registered against, from the model.
+
+    Imported inside the call, like every other player import in this tree: this
+    document must render on a checkout where the player model cannot be
+    imported, and an absent model then means no market is priced rather than a
+    report that will not render.
+    """
+    try:
+        from cbb_betting_lab.models import player_rates  # noqa: PLC0415
+    except ImportError:  # pragma: no cover - the model is on disk
+        return frozenset()
+    return frozenset(player_rates.PRICED_MARKETS)
+
+
+def markets_refused_by_name_keys() -> frozenset[str]:
+    """The markets the player model refuses BY NAME, read from the model.
+
+    Imported inside the call for the reason every other player import in this
+    tree is: the claims document must render on a checkout where the player
+    model cannot be imported, and an absent model means no market is refused by
+    name rather than a report that will not render.
+    """
+    try:
+        from cbb_betting_lab.models import player_rates  # noqa: PLC0415
+    except ImportError:  # pragma: no cover - the model is on disk
+        return frozenset()
+    return frozenset(player_rates.MARKETS_REFUSED_BY_NAME)
 
 
 def markets_with_bought_prices(processed_dir: Path | str | None) -> set[str]:
