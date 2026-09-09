@@ -80,8 +80,11 @@ mid-range is flat**: from six feet to the arc every band sits between 0.738 and
 "long mid" would be drawing a line the sport does not draw, so this one does
 not. The gradient that does exist beyond the arc -- 1.060 falling to 0.917 as
 the shot gets deeper -- earns its split, and the corners earn theirs: beyond
-`|y| >= 21` feet the median shot sits 6 feet from the baseline rather than 13,
-and points per attempt rise from about 0.99 to about 1.06.
+`|y| >= 21` feet the median attempt sits **9.2 ft from the baseline** against
+**26.2 ft** for a three inside that line, and points per attempt rise from
+**0.990 to 1.062**. An earlier draft of this paragraph said 6 ft against 13,
+which reproduces on no measure -- from the hoop's own x-line the same pair is
+4.0 and 21.0 -- and it survived because nothing recomputed it.
 
 ## The frame, and the two traps in it
 
@@ -152,6 +155,10 @@ __all__ = [
 #: is 47 - 5.25 and not a fitted number. The coordinates agree: field goal
 #: attempts in 2025-26 run from -46.75 to +46.75, which is the same floor.
 HOOP_X = 41.75
+
+#: The baseline, in the same frame. A regulation floor is 94 ft long, so the
+#: baseline sits 47 ft from centre court and the hoop 5.25 ft inside it.
+BASELINE_X = 47.0
 
 #: Half the floor's width. Attempts run from -25.0 to +25.0 in `coordinate_y`.
 HALF_WIDTH = 25.0
@@ -252,7 +259,11 @@ MINIMUM_ZONE_ATTEMPTS = 25
 
 #: Bumped when the record's shape changes, so a stale record fails loudly at
 #: re-render rather than rendering a report with holes in it.
-RECORD_VERSION = 1
+#: 2 -- every profile row carries `share_ranked_of`. A version-1 record has
+#: only `ranked_of`, and the renderer printed the share rank against it: a
+#: rank over every team, divided by a count of the teams above the attempt
+#: floor. They agree only while no team is under it.
+RECORD_VERSION = 2
 
 
 class ShotZoneError(RuntimeError):
@@ -381,8 +392,14 @@ def attacking_frame(attempts: pd.DataFrame) -> pd.DataFrame:
     y = pd.to_numeric(frame["coordinate_y"], errors="coerce")
     frame["x"] = np.where(is_home, x, -x)
     frame["y"] = np.where(is_home, y, -y)
-    frame["baseline_feet"] = HOOP_X - frame["x"]
-    frame["distance"] = np.hypot(frame["baseline_feet"], frame["y"])
+    # Distance from the hoop ALONG X, which is not the distance from the
+    # baseline: the baseline is at `BASELINE_X` and the hoop stands
+    # `BASELINE_X - HOOP_X` = 5.25 ft in front of it. This was called
+    # `baseline_feet`, and the module's own docstring then quoted a corner
+    # boundary "from the baseline" that was measured from here instead.
+    frame["x_from_hoop"] = HOOP_X - frame["x"]
+    frame["baseline_feet"] = BASELINE_X - frame["x"]
+    frame["distance"] = np.hypot(frame["x_from_hoop"], frame["y"])
     value = pd.to_numeric(frame["score_value"], errors="coerce")
     scored = frame["scoring_play"].fillna(False).astype(bool)
     frame["shot_value"] = value
@@ -577,6 +594,18 @@ def zone_profile(frame: pd.DataFrame, zones: pd.Series, *, side: str) -> list[di
     grouped["ranked_of"] = grouped.groupby("zone")["points_per_attempt"].transform(
         lambda s: int(s.notna().sum())
     )
+    # The two ranks are over DIFFERENT populations and so need different
+    # denominators. `rank` is over the teams with a rate to rank -- a zone
+    # under the floor has `points_per_attempt` NaN and takes no rank -- while
+    # `share_rank` is over every team present, because an attempt share is a
+    # count over a team's own total and is well measured however small the
+    # numerator is: three corner threes out of eighteen hundred really is the
+    # lowest rate in the country. Printing the share rank against `ranked_of`
+    # is a rank counted one way against a field counted another, and once any
+    # team falls under the floor it prints ranks like 365/364.
+    grouped["share_ranked_of"] = grouped.groupby("zone")["attempt_share"].transform(
+        lambda s: int(s.notna().sum())
+    )
     out = []
     for row in grouped.itertuples(index=False):
         out.append(
@@ -593,6 +622,7 @@ def zone_profile(frame: pd.DataFrame, zones: pd.Series, *, side: str) -> list[di
                 "rank": None if pd.isna(row.rank) else int(row.rank),
                 "share_rank": None if pd.isna(row.share_rank) else int(row.share_rank),
                 "ranked_of": int(row.ranked_of),
+                "share_ranked_of": int(row.share_ranked_of),
                 "enough_attempts": bool(row.attempts >= MINIMUM_ZONE_ATTEMPTS),
             }
         )
@@ -851,10 +881,22 @@ def render_matchup(
     for key in _zone_order(record):
         o, d = offense_rows.get(key), defense_rows.get(key)
         if not o or not d:
+            # A team with no row in a zone took no shots there, and dropping
+            # the row would leave a reader unable to tell zero from missing --
+            # in a table whose whole job is to show where shots come from,
+            # "never from here" is the strongest reading on the page.
+            side = off_name if not o else def_name
+            lines.append(
+                f"| {labels[key]} | — | — | — | — | — | — | "
+                f"{_ppa_cell(league[key]['points_per_attempt'])} |"
+            )
+            lines.append(
+                f"| *{labels[key]}: {side} attempted none* | | | | | | | |"
+            )
             continue
         lines.append(
             f"| {labels[key]} | {o['attempt_share']:.1%} | "
-            f"{_rank_cell(o['share_rank'], o['ranked_of'])} | "
+            f"{_rank_cell(o['share_rank'], o['share_ranked_of'])} | "
             f"{_ppa_cell(o['points_per_attempt'])} | "
             f"{_rank_cell(o['rank'], o['ranked_of'])} | "
             f"{_ppa_cell(d['points_per_attempt'])} | "

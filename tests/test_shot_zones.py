@@ -18,6 +18,7 @@ Organised by the way it would be wrong:
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -42,7 +43,7 @@ def shot(
     home=10,
     away=20,
     team=10,
-    feet_from_baseline=2.0,
+    feet_from_hoop=2.0,
     y=0.0,
     made=True,
     value=2,
@@ -55,7 +56,10 @@ def shot(
     carry -- so a test never has to hand-write a coordinate and get the
     rotation wrong in the same file that checks the rotation.
     """
-    x = SZ.HOOP_X - feet_from_baseline
+    # From the HOOP, not the baseline: the baseline is 5.25 ft further out.
+    # This argument was called `feet_from_baseline` and measured from here,
+    # which is where the module's own mislabelled `baseline_feet` came from.
+    x = SZ.HOOP_X - feet_from_hoop
     if team != home:  # the away team's own frame is the mirror of this one
         x, y = -x, -y
     return {
@@ -132,7 +136,7 @@ def a_full_profile(team, opponent, *, made=True, repeat=1):
         for feet, y, value in places:
             rows += enough(
                 team=team, home=team, away=opponent,
-                feet_from_baseline=feet, y=y, value=value, made=made,
+                feet_from_hoop=feet, y=y, value=value, made=made,
             )
     return rows
 
@@ -193,15 +197,19 @@ def test_charted_share_counts_games_and_not_shots():
 
 def test_the_away_team_is_rotated_so_left_stays_left():
     """A mirror puts the hoop in the right place and swaps every corner."""
-    left_home = shot(team=10, home=10, away=20, feet_from_baseline=2.0, y=23.0, value=3)
-    left_away = shot(team=20, home=10, away=20, feet_from_baseline=2.0, y=23.0, value=3)
+    left_home = shot(team=10, home=10, away=20, feet_from_hoop=2.0, y=23.0, value=3)
+    left_away = shot(team=20, home=10, away=20, feet_from_hoop=2.0, y=23.0, value=3)
     frame = SZ.attacking_frame(a_season([left_home, left_away]))
     assert frame["y"].nunique() == 1, (
         "both shots were taken 23 feet to the same side of the floor and the "
         "frame put them on opposite sides -- that is a reflection, not a "
         "rotation, and it swaps left and right for every away team"
     )
-    assert (frame["baseline_feet"] == 2.0).all()
+    assert (frame["x_from_hoop"] == 2.0).all()
+    assert (frame["baseline_feet"] == SZ.BASELINE_X - SZ.HOOP_X + 2.0).all(), (
+        "`baseline_feet` has to measure from the baseline; it is 5.25 ft "
+        "further out than `x_from_hoop` and was for a while the same number"
+    )
     assert (frame["distance"] > SZ.ARC).all()
 
 
@@ -262,7 +270,7 @@ def test_every_attempt_lands_in_exactly_one_zone():
     rows = []
     for feet in np.arange(0.0, 40.0, 0.5):
         for y in np.arange(-24.0, 25.0, 1.0):
-            rows.append(shot(feet_from_baseline=float(feet), y=float(y)))
+            rows.append(shot(feet_from_hoop=float(feet), y=float(y)))
     frame = SZ.attacking_frame(a_season(rows))
     zones = SZ.assign_zones(frame)
     assert zones.isin(SZ.ZONE_KEYS).all(), "a shot fell outside every zone"
@@ -289,7 +297,7 @@ def test_every_attempt_lands_in_exactly_one_zone():
     ],
 )
 def test_the_boundaries_are_the_measured_ones(feet, y, expected):
-    frame = SZ.attacking_frame(a_season([shot(feet_from_baseline=feet, y=y)]))
+    frame = SZ.attacking_frame(a_season([shot(feet_from_hoop=feet, y=y)]))
     assert SZ.assign_zones(frame).iloc[0] == expected
 
 
@@ -298,7 +306,7 @@ def test_the_mid_range_is_one_zone():
     that split it would draw a line the sport does not draw."""
     assert "short_mid" not in SZ.ZONE_KEYS and "long_mid" not in SZ.ZONE_KEYS
     frame = SZ.attacking_frame(
-        a_season([shot(feet_from_baseline=f, y=0.0) for f in (7.0, 12.0, 18.0, 21.0)])
+        a_season([shot(feet_from_hoop=f, y=0.0) for f in (7.0, 12.0, 18.0, 21.0)])
     )
     assert set(SZ.assign_zones(frame)) == {"mid_range"}
 
@@ -316,8 +324,8 @@ def test_a_zone_below_the_floor_takes_no_rank():
     for feet, y, value in ((2.0, 0.0, 2), (5.0, 0.0, 2), (12.0, 0.0, 2),
                            (2.0, 23.0, 3), (23.0, 8.0, 3)):
         rows += enough(team=20, home=20, away=10,
-                       feet_from_baseline=feet, y=y, value=value)
-    rows += [shot(team=20, home=20, away=10, feet_from_baseline=30.0, value=3)
+                       feet_from_hoop=feet, y=y, value=value)
+    rows += [shot(team=20, home=20, away=10, feet_from_hoop=30.0, value=3)
              for _ in range(3)]
     record = a_record(rows)
     thin = [r for r in record["offense"] if not r["enough_attempts"]]
@@ -380,9 +388,9 @@ def test_the_defensive_rank_counts_the_right_way_round():
     rows = []
     # The DEFENDER is the team that did not shoot. `stingy` defends 30 missed
     # rim attempts and allows nothing; `leaky` defends 30 made ones.
-    rows += [shot(team=leaky, home=leaky, away=stingy, feet_from_baseline=2.0,
+    rows += [shot(team=leaky, home=leaky, away=stingy, feet_from_hoop=2.0,
                   made=False) for _ in range(30)]
-    rows += [shot(team=stingy, home=stingy, away=leaky, feet_from_baseline=2.0,
+    rows += [shot(team=stingy, home=stingy, away=leaky, feet_from_hoop=2.0,
                   made=True) for _ in range(30)]
     record = a_record(rows)
     by_team = {r["team_id"]: r for r in record["defense"] if r["zone"] == "rim"}
@@ -397,9 +405,9 @@ def test_the_defensive_rank_counts_the_right_way_round():
 
 def test_the_offensive_rank_counts_the_other_way():
     good, bad = 10, 20
-    rows = [shot(team=good, home=good, away=bad, feet_from_baseline=2.0, made=True)
+    rows = [shot(team=good, home=good, away=bad, feet_from_hoop=2.0, made=True)
             for _ in range(30)]
-    rows += [shot(team=bad, home=bad, away=good, feet_from_baseline=2.0, made=False)
+    rows += [shot(team=bad, home=bad, away=good, feet_from_hoop=2.0, made=False)
              for _ in range(30)]
     record = a_record(rows)
     by_team = {r["team_id"]: r for r in record["offense"] if r["zone"] == "rim"}
@@ -462,7 +470,7 @@ def test_the_geometry_refusal_fires_when_the_coordinates_describe_another_floor(
     """Threes charted at the rim mean the coordinates and the labels came
     from different places."""
     rows = a_full_profile(10, 20)
-    rows += [shot(team=10, home=10, away=20, feet_from_baseline=2.0, y=0.0, value=3)
+    rows += [shot(team=10, home=10, away=20, feet_from_hoop=2.0, y=0.0, value=3)
              for _ in range(len(rows))]
     with pytest.raises(SZ.GeometryDoesNotReconstruct) as caught:
         a_record(rows)
@@ -496,3 +504,121 @@ def test_every_committed_record_is_a_fully_charted_season():
             f"{record['coverage']['share']:.1%}"
         )
         assert record["descriptive_only"] is True
+
+
+# --------------------------------------------------------------------------
+# 8. A rank is only as good as the field it is printed against
+#
+# Both ranks in the matchup table were divided by `ranked_of`, the count of
+# teams with enough attempts to earn a POINTS-PER-ATTEMPT rank. The share rank
+# is over every team present, because an attempt share is a count over a
+# team's own total and is well measured however small its numerator. The two
+# agree exactly while every team clears the floor, which is the only state the
+# 2025-26 record is in -- so the defect was invisible in the only season this
+# module is allowed to describe.
+# --------------------------------------------------------------------------
+
+
+def _thin_and_thick_season():
+    """Two teams, and one of them takes almost no corner threes.
+
+    Team 10 clears the floor in the corner; team 20 takes three there. Both
+    clear it at the rim, so the zone that separates the two denominators is
+    the corner and nothing else moves.
+    """
+    rows = []
+    for team, home, away in ((10, 10, 20), (20, 10, 20)):
+        rows += [
+            shot(team=team, home=home, away=away, feet_from_hoop=1.0, y=0.0, value=2)
+            for _ in range(SZ.MINIMUM_ZONE_ATTEMPTS)
+        ]
+    rows += [
+        shot(team=10, home=10, away=20, feet_from_hoop=4.0, y=23.0, value=3)
+        for _ in range(SZ.MINIMUM_ZONE_ATTEMPTS)
+    ]
+    rows += [
+        shot(team=20, home=10, away=20, feet_from_hoop=4.0, y=23.0, value=3)
+        for _ in range(3)
+    ]
+    return rows
+
+
+def test_the_two_ranks_are_divided_by_the_fields_they_were_taken_over():
+    """`ranked_of` counts teams with a rate; `share_ranked_of` counts teams."""
+    record = a_record(_thin_and_thick_season())
+    corner = [r for r in record["offense"] if r["zone"] == "corner_three"]
+    assert len(corner) == 2, "the fixture did not put both teams in the corner"
+    thin = next(r for r in corner if r["attempts"] < SZ.MINIMUM_ZONE_ATTEMPTS)
+    assert thin["points_per_attempt"] is None and thin["rank"] is None, (
+        "a zone under the floor carries no rate and takes no rank"
+    )
+    assert thin["share_rank"] is not None, (
+        "an attempt share is measured however small its numerator, so the "
+        "share rank survives the floor -- which is the whole reason it needs "
+        "a denominator of its own"
+    )
+    for row in corner:
+        assert row["ranked_of"] == 1, "only one team has a corner rate"
+        assert row["share_ranked_of"] == 2, "both teams have a corner share"
+        assert row["share_ranked_of"] > row["ranked_of"], (
+            "the fixture is supposed to pull the two denominators apart"
+        )
+
+
+def test_no_rendered_rank_is_larger_than_the_field_it_is_printed_against():
+    """`365/364` is the shape of this defect on a real season."""
+    import re
+
+    record = a_record(_thin_and_thick_season())
+    page = SZ.render_matchup(record, offense=20, defense=10)
+    printed = re.findall(r"(\d+)/(\d+)", page)
+    assert printed, "the matchup table printed no ranks at all"
+    for rank, of in printed:
+        assert int(rank) <= int(of), (
+            f"the table printed rank {rank} out of a field of {of}, which is "
+            "a rank counted over one population and divided by another"
+        )
+
+
+def test_a_zone_a_team_never_shot_from_is_printed_rather_than_dropped():
+    """Zero and missing are different, and the row said neither."""
+    rows = [
+        shot(team=t, home=10, away=20, feet_from_hoop=1.0, y=0.0, value=2)
+        for t in (10, 20)
+        for _ in range(SZ.MINIMUM_ZONE_ATTEMPTS)
+    ]
+    record = a_record(rows)
+    page = SZ.render_matchup(record, offense=10, defense=20)
+    labels = {z["key"]: z["label"] for z in record["zones"]}
+    for key, label in labels.items():
+        assert label in page, (
+            f"{key} vanished from the matchup table. A team that never shot "
+            "from a zone is the strongest reading on a page about where shots "
+            "come from, and dropping the row prints it as though the zone did "
+            "not exist."
+        )
+    assert "attempted none" in page
+
+
+def test_the_baseline_is_not_the_hoop():
+    """5.25 ft apart, and one number was doing both jobs."""
+    assert SZ.BASELINE_X - SZ.HOOP_X == pytest.approx(5.25)
+    frame = SZ.attacking_frame(
+        a_season([shot(team=10, home=10, away=20, feet_from_hoop=0.0, y=0.0)])
+    )
+    assert float(frame["x_from_hoop"].iloc[0]) == pytest.approx(0.0), (
+        "a shot at the rim is zero feet from the hoop"
+    )
+    assert float(frame["baseline_feet"].iloc[0]) == pytest.approx(5.25), (
+        "and 5.25 feet from the baseline, which is where the hoop stands"
+    )
+
+
+def test_a_version_one_shot_zone_record_is_refused(tmp_path):
+    """A version-1 record has no `share_ranked_of`, and rendering one would
+    print the share rank against the wrong field again."""
+    path = tmp_path / "cbb_shot_zones_2026.json"
+    path.write_text(json.dumps({"record_version": 1}), encoding="utf-8")
+    with pytest.raises(SZ.ShotZoneError) as caught:
+        SZ.read_record(path)
+    assert "version 1" in str(caught.value)
