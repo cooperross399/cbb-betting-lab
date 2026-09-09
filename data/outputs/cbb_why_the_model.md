@@ -2,7 +2,7 @@
 
 Every figure below is read from a record on disk by `scripts/run_why_the_model.py`, never typed. The records, and the moment each stamped itself with:
 
-- **price backtest** — `data/outputs/cbb_price_backtest.json`, generated 2026-09-05T13:13:24Z
+- **price backtest** — `data/outputs/cbb_price_backtest.json`, generated 2026-09-09T21:56:51Z
 - **forecast skill** — `data/outputs/cbb_forecast_skill.json`, generated 2026-09-05T15:56:38Z
 - **held-out replication** — `data/outputs/holdout/cbb_replication.json`, generated 2026-09-05T16:56:49Z
 
@@ -51,10 +51,10 @@ Before this block was generated, this document said of **low-major** that it was
 
 The worst blind sides that clear the 200-bet floor declared in advance:
 
-- `low_major / player_threes / always over`: 227 bets, **-40.0%**
-- `high_major / player_rebounds / always over`: 15,706 bets, **-30.7%**
-- `high_major / player_threes / always over`: 6,771 bets, **-28.3%**
-- `mid_major / player_first_basket / always over`: 292 bets, **-27.2%**
+- `low_major / player_threes / always over`: 241 bets, **-42.1%**
+- `high_major / player_rebounds / always over`: 15,862 bets, **-31.5%**
+- `high_major / player_threes / always over`: 6,787 bets, **-27.9%**
+- `mid_major / player_rebounds / always over`: 25,079 bets, **-25.3%**
 - `high_major / alternate_total_points / always under`: 6,618 bets, **-25.3%**
 
 Each is a rule that needs no model at all. All 3 measured tiers return more than every one of them. That is what *the model carries information* means here, and it is a different statement from *the model beats the price* — which is the one the next section tests.
