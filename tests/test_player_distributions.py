@@ -1653,6 +1653,87 @@ def test_the_realised_correlation_is_reported_and_the_two_copula_routes_agree() 
     )
 
 
+#: How close the D3 mean identity has to come before it counts as closed.
+#: `mean(points + rebounds)` equals `mean(points) + mean(rebounds)` exactly in
+#: exact arithmetic, so what is left is rounding on means of order ten, where
+#: one ULP is about 1.8e-15.
+#:
+#: This was `pytest.approx(0.0, abs=1e-16)`, against a pinned `1.421e-14` for
+#: the three-component market -- the only 1e-16 in a file whose other 45
+#: tolerance assertions are 1e-12 or 1e-15. At that width it did not test that
+#: the identity closes. It tested that the same floating-point operations
+#: happened in the same order, and they do not: adding one unrelated test
+#: module to the suite moved the two-component gap from 0.0 to 3.553e-15 on
+#: x86-64 CI while arm64 stayed at 0.0, because an extra import changes
+#: allocation and a numpy reduction reassociates. Both results are exact to
+#: within two ULPs of their operands.
+#:
+#: The bound is 1e-12 because that is six orders BELOW the magnitude this same
+#: test measures for a split that genuinely does not close -- the quoted
+#: 1.291e-06 and 7.550e-07 below. `test_the_closing_bound_cannot_hide_a_real_
+#: failure` pins that gap, so this number cannot be widened later into one
+#: that admits the thing it exists to catch.
+MEAN_IDENTITY_CLOSES = 1e-12
+
+#: The smallest gap this test elsewhere records for an identity that does NOT
+#: close. The bound above has to stay far under it.
+MEAN_IDENTITY_FAILS_AT = 7.550e-07
+
+
+def test_the_closing_bound_cannot_hide_a_real_failure() -> None:
+    """A tolerance is only honest while it still refuses something.
+
+    `MEAN_IDENTITY_CLOSES` was widened once, from a bit-exact 1e-16 that no
+    two machines agreed on. This is the assertion that stops it being widened
+    again into a number that would accept a split which does not close.
+    """
+    assert MEAN_IDENTITY_CLOSES < MEAN_IDENTITY_FAILS_AT / 1000, (
+        f"the closing bound {MEAN_IDENTITY_CLOSES:.1e} is within three orders "
+        f"of {MEAN_IDENTITY_FAILS_AT:.3e}, the smallest gap this test records "
+        "for an identity that does not close. At that width it would accept "
+        "the failure it exists to catch."
+    )
+    # And it stays above the rounding it must tolerate: means of order ten,
+    # one ULP about 1.8e-15, and a reassociated sum measured at 3.553e-15.
+    assert MEAN_IDENTITY_CLOSES > 1e-14
+
+
+def test_the_identity_check_reads_the_declared_bound() -> None:
+    """That the bound is right is worth nothing unless it is the one used.
+
+    `test_the_closing_bound_cannot_hide_a_real_failure` proves the NUMBER is
+    defensible. It cannot prove the identity assertion reads it: replacing
+    `gap <= MEAN_IDENTITY_CLOSES` with `gap <= 1.0` leaves both of these tests
+    passing, because nothing in this suite makes the identity fail and an
+    inert assertion is invisible. A mutant demonstrated exactly that, so the
+    call site is pinned here.
+    """
+    import ast
+
+    tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+    target = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef)
+        and node.name
+        == "test_the_outer_cell_split_re_measures_the_numbers_that_fix_its_constants"
+    )
+    compared = [
+        ast.unparse(compare.comparators[0])
+        for node in ast.walk(target)
+        if isinstance(node, ast.Assert)
+        for compare in [node.test]
+        if isinstance(compare, ast.Compare)
+        and ast.unparse(compare.left) == "gap"
+    ]
+    assert compared == ["MEAN_IDENTITY_CLOSES"], (
+        "the D3 mean identity is compared against "
+        f"{compared} rather than the declared bound. A literal there is a "
+        "bound nobody reviewed, and a wide one is an assertion that cannot "
+        "fail."
+    )
+
+
 def test_the_outer_cell_split_re_measures_the_numbers_that_fix_its_constants(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1937,11 +2018,11 @@ def test_the_outer_cell_split_re_measures_the_numbers_that_fix_its_constants(
         ):
             parts = sum(engine.mean(f"player_{stat}") for stat in components)
             gap = abs(engine.mean(market) - parts)
-            expected = 0.0 if market == "player_points_rebounds" else 1.421e-14
-            assert gap == pytest.approx(expected, abs=1e-16), (
-                f"{label}/{market}: the D3 mean identity is out by {gap:.4e}. "
+            assert gap <= MEAN_IDENTITY_CLOSES, (
+                f"{label}/{market}: the D3 mean identity is out by {gap:.4e}, "
+                f"above the {MEAN_IDENTITY_CLOSES:.1e} that counts as closed. "
                 "The docstring's claim is that `_fit_marginals` closes it with "
-                "the split and without it alike, to the same two numbers."
+                "the split and without it alike."
             )
     engine._cache.clear()
 
