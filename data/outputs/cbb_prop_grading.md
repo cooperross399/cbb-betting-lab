@@ -80,14 +80,14 @@ Probabilities are clipped into [1e-06, 0.999999] before any log is taken, becaus
 | **the model (conditional)** | what is being tested | 0.68839 | 0.24754 |
 | **the model (unconditional)** | what is being tested | 0.68839 | 0.24754 |
 
-| Comparison | Advantage (baseline − model log loss) | 95% interval | Family-corrected | Wagers | Clusters | Reading |
-|:---|---:|:---|:---|---:|---:|:---|
-| de-vig proportional / conditional | -0.0057 | -0.0103 to -0.0012 | -0.0138 to +0.0024 | 46,370 | 106 days | no demonstrated edge |
-| **de-vig proportional / unconditional — HEADLINE, least favourable to the model** | -0.0057 | -0.0103 to -0.0012 | -0.0139 to +0.0024 | 46,370 | 106 days | no demonstrated edge |
-| de-vig power / conditional | -0.0055 | -0.0102 to -0.0007 | -0.0138 to +0.0029 | 46,370 | 106 days | no demonstrated edge |
-| de-vig power / unconditional | -0.0055 | -0.0102 to -0.0007 | -0.0138 to +0.0029 | 46,370 | 106 days | no demonstrated edge |
-| control / conditional | +0.1130 | +0.0863 to +0.1396 | +0.0659 to +0.1601 | 46,370 | 541 athletes | demonstrated edge |
-| control / unconditional | +0.1130 | +0.0863 to +0.1396 | +0.0659 to +0.1601 | 46,370 | 541 athletes | demonstrated edge |
+| Comparison | Advantage (baseline − model log loss) | 95% interval | Family-corrected | Wagers | Clusters | Could detect | Reading |
+|:---|---:|:---|:---|---:|---:|---:|:---|
+| de-vig proportional / conditional | -0.0057 | -0.0103 to -0.0012 | -0.0138 to +0.0024 | 46,370 | 106 days | ±0.0081 | no demonstrated edge |
+| **de-vig proportional / unconditional — HEADLINE, least favourable to the model** | -0.0057 | -0.0103 to -0.0012 | -0.0139 to +0.0024 | 46,370 | 106 days | ±0.0081 | no demonstrated edge |
+| de-vig power / conditional | -0.0055 | -0.0102 to -0.0007 | -0.0138 to +0.0029 | 46,370 | 106 days | ±0.0084 | no demonstrated edge |
+| de-vig power / unconditional | -0.0055 | -0.0102 to -0.0007 | -0.0138 to +0.0029 | 46,370 | 106 days | ±0.0084 | no demonstrated edge |
+| control / conditional | +0.1130 | +0.0863 to +0.1396 | +0.0659 to +0.1601 | 46,370 | 541 athletes | ±0.0471 | demonstrated edge |
+| control / unconditional | +0.1130 | +0.0863 to +0.1396 | +0.0659 to +0.1601 | 46,370 | 541 athletes | ±0.0471 | demonstrated edge |
 
 **high_major: no demonstrated edge.**
 
@@ -131,14 +131,14 @@ Mean push mass on the scored rows: model 0.0000, control 0.0000. That is how muc
 
 114 scored wager(s) past 3 rungs. Reading: **not enough evidence (114 wagers, below the 200 declared in advance)**.
 
-| Comparison | Advantage (baseline − model log loss) | 95% interval | Family-corrected | Wagers | Clusters | Reading |
-|:---|---:|:---|:---|---:|---:|:---|
-| de-vig proportional / conditional | — | — | — | 114 | 9 days | not enough evidence (9 day cluster(s), below the 30 declared in advance) |
-| de-vig proportional / unconditional | — | — | — | 114 | 9 days | not enough evidence (9 day cluster(s), below the 30 declared in advance) |
-| **de-vig power / conditional — HEADLINE, least favourable to the model** | — | — | — | 114 | 9 days | not enough evidence (9 day cluster(s), below the 30 declared in advance) |
-| de-vig power / unconditional | — | — | — | 114 | 9 days | not enough evidence (9 day cluster(s), below the 30 declared in advance) |
-| control / conditional | — | — | — | 114 | 9 days | not enough evidence (9 day cluster(s), below the 30 declared in advance) |
-| control / unconditional | — | — | — | 114 | 9 days | not enough evidence (9 day cluster(s), below the 30 declared in advance) |
+| Comparison | Advantage (baseline − model log loss) | 95% interval | Family-corrected | Wagers | Clusters | Could detect | Reading |
+|:---|---:|:---|:---|---:|---:|---:|:---|
+| de-vig proportional / conditional | — | — | — | 114 | 9 days | — | not enough evidence (9 day cluster(s), below the 30 declared in advance) |
+| de-vig proportional / unconditional | — | — | — | 114 | 9 days | — | not enough evidence (9 day cluster(s), below the 30 declared in advance) |
+| **de-vig power / conditional — HEADLINE, least favourable to the model** | — | — | — | 114 | 9 days | — | not enough evidence (9 day cluster(s), below the 30 declared in advance) |
+| de-vig power / unconditional | — | — | — | 114 | 9 days | — | not enough evidence (9 day cluster(s), below the 30 declared in advance) |
+| control / conditional | — | — | — | 114 | 9 days | — | not enough evidence (9 day cluster(s), below the 30 declared in advance) |
+| control / unconditional | — | — | — | 114 | 9 days | — | not enough evidence (9 day cluster(s), below the 30 declared in advance) |
 
 ### mid_major
 
@@ -155,14 +155,14 @@ Mean push mass on the scored rows: model 0.0000, control 0.0000. That is how muc
 | **the model (conditional)** | what is being tested | 0.68793 | 0.24737 |
 | **the model (unconditional)** | what is being tested | 0.68793 | 0.24737 |
 
-| Comparison | Advantage (baseline − model log loss) | 95% interval | Family-corrected | Wagers | Clusters | Reading |
-|:---|---:|:---|:---|---:|---:|:---|
-| **de-vig proportional / conditional — HEADLINE, least favourable to the model** | -0.0045 | -0.0077 to -0.0014 | -0.0102 to +0.0011 | 74,174 | 124 days | no demonstrated edge |
-| de-vig proportional / unconditional | -0.0045 | -0.0077 to -0.0014 | -0.0102 to +0.0011 | 74,174 | 124 days | no demonstrated edge |
-| de-vig power / conditional | -0.0044 | -0.0076 to -0.0012 | -0.0101 to +0.0013 | 74,174 | 124 days | no demonstrated edge |
-| de-vig power / unconditional | -0.0044 | -0.0076 to -0.0012 | -0.0101 to +0.0013 | 74,174 | 124 days | no demonstrated edge |
-| control / conditional | +0.1154 | +0.1018 to +0.1290 | +0.0913 to +0.1394 | 74,174 | 709 athletes | demonstrated edge |
-| control / unconditional | +0.1154 | +0.1018 to +0.1290 | +0.0913 to +0.1394 | 74,174 | 709 athletes | demonstrated edge |
+| Comparison | Advantage (baseline − model log loss) | 95% interval | Family-corrected | Wagers | Clusters | Could detect | Reading |
+|:---|---:|:---|:---|---:|---:|---:|:---|
+| **de-vig proportional / conditional — HEADLINE, least favourable to the model** | -0.0045 | -0.0077 to -0.0014 | -0.0102 to +0.0011 | 74,174 | 124 days | ±0.0056 | no demonstrated edge |
+| de-vig proportional / unconditional | -0.0045 | -0.0077 to -0.0014 | -0.0102 to +0.0011 | 74,174 | 124 days | ±0.0056 | no demonstrated edge |
+| de-vig power / conditional | -0.0044 | -0.0076 to -0.0012 | -0.0101 to +0.0013 | 74,174 | 124 days | ±0.0057 | no demonstrated edge |
+| de-vig power / unconditional | -0.0044 | -0.0076 to -0.0012 | -0.0101 to +0.0013 | 74,174 | 124 days | ±0.0057 | no demonstrated edge |
+| control / conditional | +0.1154 | +0.1018 to +0.1290 | +0.0913 to +0.1394 | 74,174 | 709 athletes | ±0.0241 | demonstrated edge |
+| control / unconditional | +0.1154 | +0.1018 to +0.1290 | +0.0913 to +0.1394 | 74,174 | 709 athletes | ±0.0241 | demonstrated edge |
 
 **mid_major: no demonstrated edge.**
 
@@ -206,14 +206,14 @@ Mean push mass on the scored rows: model 0.0000, control 0.0000. That is how muc
 
 70 scored wager(s) past 3 rungs. Reading: **not enough evidence (70 wagers, below the 200 declared in advance)**.
 
-| Comparison | Advantage (baseline − model log loss) | 95% interval | Family-corrected | Wagers | Clusters | Reading |
-|:---|---:|:---|:---|---:|---:|:---|
-| de-vig proportional / conditional | — | — | — | 70 | 11 days | not enough evidence (11 day cluster(s), below the 30 declared in advance) |
-| de-vig proportional / unconditional | — | — | — | 70 | 11 days | not enough evidence (11 day cluster(s), below the 30 declared in advance) |
-| **de-vig power / conditional — HEADLINE, least favourable to the model** | — | — | — | 70 | 11 days | not enough evidence (11 day cluster(s), below the 30 declared in advance) |
-| de-vig power / unconditional | — | — | — | 70 | 11 days | not enough evidence (11 day cluster(s), below the 30 declared in advance) |
-| control / conditional | — | — | — | 70 | 11 days | not enough evidence (11 day cluster(s), below the 30 declared in advance) |
-| control / unconditional | — | — | — | 70 | 11 days | not enough evidence (11 day cluster(s), below the 30 declared in advance) |
+| Comparison | Advantage (baseline − model log loss) | 95% interval | Family-corrected | Wagers | Clusters | Could detect | Reading |
+|:---|---:|:---|:---|---:|---:|---:|:---|
+| de-vig proportional / conditional | — | — | — | 70 | 11 days | — | not enough evidence (11 day cluster(s), below the 30 declared in advance) |
+| de-vig proportional / unconditional | — | — | — | 70 | 11 days | — | not enough evidence (11 day cluster(s), below the 30 declared in advance) |
+| **de-vig power / conditional — HEADLINE, least favourable to the model** | — | — | — | 70 | 11 days | — | not enough evidence (11 day cluster(s), below the 30 declared in advance) |
+| de-vig power / unconditional | — | — | — | 70 | 11 days | — | not enough evidence (11 day cluster(s), below the 30 declared in advance) |
+| control / conditional | — | — | — | 70 | 11 days | — | not enough evidence (11 day cluster(s), below the 30 declared in advance) |
+| control / unconditional | — | — | — | 70 | 11 days | — | not enough evidence (11 day cluster(s), below the 30 declared in advance) |
 
 ### low_major
 
@@ -230,14 +230,14 @@ Mean push mass on the scored rows: model 0.0000, control 0.0000. That is how muc
 | **the model (conditional)** | what is being tested | 0.67955 | 0.24301 |
 | **the model (unconditional)** | what is being tested | 0.67955 | 0.24301 |
 
-| Comparison | Advantage (baseline − model log loss) | 95% interval | Family-corrected | Wagers | Clusters | Reading |
-|:---|---:|:---|:---|---:|---:|:---|
-| de-vig proportional / conditional | -0.0058 | -0.0238 to +0.0123 | -0.0376 to +0.0261 | 2,060 | 101 athletes | no demonstrated edge |
-| de-vig proportional / unconditional | -0.0058 | -0.0238 to +0.0123 | -0.0376 to +0.0261 | 2,060 | 101 athletes | no demonstrated edge |
-| **de-vig power / conditional — HEADLINE, least favourable to the model** | -0.0065 | -0.0246 to +0.0116 | -0.0386 to +0.0256 | 2,060 | 101 athletes | no demonstrated edge |
-| de-vig power / unconditional | -0.0065 | -0.0246 to +0.0116 | -0.0386 to +0.0256 | 2,060 | 101 athletes | no demonstrated edge |
-| control / conditional | +0.0449 | -0.0010 to +0.0908 | -0.0364 to +0.1262 | 2,060 | 101 athletes | no demonstrated edge |
-| control / unconditional | +0.0449 | -0.0010 to +0.0908 | -0.0364 to +0.1262 | 2,060 | 101 athletes | no demonstrated edge |
+| Comparison | Advantage (baseline − model log loss) | 95% interval | Family-corrected | Wagers | Clusters | Could detect | Reading |
+|:---|---:|:---|:---|---:|---:|---:|:---|
+| de-vig proportional / conditional | -0.0058 | -0.0238 to +0.0123 | -0.0376 to +0.0261 | 2,060 | 101 athletes | ±0.0319 | no demonstrated edge |
+| de-vig proportional / unconditional | -0.0058 | -0.0238 to +0.0123 | -0.0376 to +0.0261 | 2,060 | 101 athletes | ±0.0319 | no demonstrated edge |
+| **de-vig power / conditional — HEADLINE, least favourable to the model** | -0.0065 | -0.0246 to +0.0116 | -0.0386 to +0.0256 | 2,060 | 101 athletes | ±0.0321 | no demonstrated edge |
+| de-vig power / unconditional | -0.0065 | -0.0246 to +0.0116 | -0.0386 to +0.0256 | 2,060 | 101 athletes | ±0.0321 | no demonstrated edge |
+| control / conditional | +0.0449 | -0.0010 to +0.0908 | -0.0364 to +0.1262 | 2,060 | 101 athletes | ±0.0813 | no demonstrated edge |
+| control / unconditional | +0.0449 | -0.0010 to +0.0908 | -0.0364 to +0.1262 | 2,060 | 101 athletes | ±0.0813 | no demonstrated edge |
 
 **low_major: no demonstrated edge.**
 

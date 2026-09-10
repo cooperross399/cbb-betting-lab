@@ -1629,6 +1629,29 @@ def _pct(value: float | None) -> str:
     return "—" if value is None else f"{value:.1%}"
 
 
+def _detectable_cell(row: Mapping | None) -> str:
+    """The smallest advantage this comparison could have demonstrated.
+
+    In log-loss units, not percent: this table's estimate is
+    `(baseline mean log loss) - (model mean log loss)`, so its detectable
+    effect is on the same scale and printing a percentage here would invite a
+    reader to compare it against the ROI column of a different report.
+
+    Same construction as `price_backtest.mde_cell` and the same reason. Twenty
+    of this record's thirty cells read *no demonstrated edge*, and those three
+    words cover both a comparison that looked hard and found nothing and one
+    that could not have seen an advantage twice the size of anything this lab
+    has ever measured. Derived from the row's own `looks`, never stored, so it
+    moves when the correction does.
+    """
+    if not row or not row.get("enough_evidence"):
+        return "—"
+    error = float(row.get("standard_error", 0.0) or 0.0)
+    if not error:
+        return "—"
+    return f"±{S.bonferroni_z(int(row.get('looks', 1) or 1)) * error:.4f}"
+
+
 def _advantage_cells(row: Mapping | None) -> tuple[str, str, str]:
     """The estimate, its interval and the corrected interval — or three dashes.
 
@@ -1711,8 +1734,8 @@ def _baseline_table(cell: Mapping) -> list[str]:
 def _advantage_table(cell: Mapping) -> list[str]:
     lines = [
         "| Comparison | Advantage (baseline − model log loss) | 95% interval | "
-        "Family-corrected | Wagers | Clusters | Reading |",
-        "|:---|---:|:---|:---|---:|---:|:---|",
+        "Family-corrected | Wagers | Clusters | Could detect | Reading |",
+        "|:---|---:|:---|:---|---:|---:|---:|:---|",
     ]
     advantages = cell.get("advantages") or {}
     headline = cell.get("headline")
@@ -1727,7 +1750,7 @@ def _advantage_table(cell: Mapping) -> list[str]:
         lines.append(
             f"| {name} | {estimate} | {interval} | {corrected} | "
             f"{int(row.get('rows', 0)):,} | {_cluster_cell(row)} | "
-            f"{reading_of(cell, row)} |"
+            f"{_detectable_cell(row)} | {reading_of(cell, row)} |"
         )
     lines.append("")
     return lines
