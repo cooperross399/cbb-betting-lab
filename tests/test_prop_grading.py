@@ -980,7 +980,7 @@ def test_the_answered_readings_are_re_derived_when_the_correction_moves(receipt)
 def test_a_restatement_widens_and_moves_no_measurement(receipt):
     """The estimate, the raw bounds, the standard error and the counts are the
     measurement, and a re-render does not re-measure."""
-    record = G.build_record(inputs_for(a_population(pairs=400)), looks=30)
+    record = G.build_record(inputs_for(a_population(pairs=900, days=45, games=60)), looks=30)
     moved = G.restated(record, looks=95, record_name="x")
     before = record["by_tier"][0]["advantages"][G.HEADLINE_KEYS[0]]
     after = moved["by_tier"][0]["advantages"][G.HEADLINE_KEYS[0]]
@@ -1435,3 +1435,86 @@ def test_a_version_one_record_is_refused_rather_than_re_rendered(tmp_path):
     with pytest.raises(G.PropGradingError) as caught:
         G.read_record(path)
     assert "version 1" in str(caught.value)
+
+
+# --------------------------------------------------------------------------
+# 12. What a prop null could have found
+#
+# Twenty-three cells here read `no demonstrated edge`. Measured, their
+# detectable effects run from 0.0056 to 0.0587 in log-loss units, and EIGHT of
+# them carry a measured gap at least half that size -- near-misses, not blanks.
+# The two tier headlines are the tightest in the record: mid-major is losing by
+# 0.0045 against a detectable 0.0056. Without this column that reads as "no
+# difference found" when it means "losing by nearly enough to prove it".
+# --------------------------------------------------------------------------
+
+
+def test_a_prop_null_says_what_advantage_it_could_have_demonstrated(receipt):
+    """The column is in the page, and it is the corrected bound restated."""
+    record = G.build_record(inputs_for(a_population(pairs=900, days=45, games=60)), looks=95)
+    page = G.render(record)
+    assert "| Could detect |" in page
+    cell = record["by_tier"][0]
+    row = (cell.get("advantages") or {}).get(cell.get("headline") or "")
+    assert row and row.get("standard_error"), "the fixture produced no interval"
+    printed = G._detectable_cell(row)
+    assert printed in page
+
+    # Two separate claims, because they are two different things and comparing
+    # a rendered string against an exact float at 1e-9 is how a test comes to
+    # pin a display format instead of a property.
+    #
+    # The ARITHMETIC: the detectable effect is the distance from the estimate
+    # to the corrected bound, exactly. Not a new statistic that could disagree
+    # with the interval printed beside it.
+    exact = S.bonferroni_z(int(row["looks"])) * float(row["standard_error"])
+    assert exact == pytest.approx(row["adjusted_high"] - row["value"], abs=1e-12)
+
+    # The FORMAT: the cell shows that number to four places, which is the
+    # precision the advantage column beside it uses.
+    assert printed == f"±{exact:.4f}"
+
+
+def test_the_prop_detectable_effect_moves_with_the_family(receipt):
+    """Derived from the row's own `looks`, so a restatement carries it."""
+    record = G.build_record(inputs_for(a_population(pairs=900, days=45, games=60)), looks=30)
+    cell = record["by_tier"][0]
+    row = dict((cell.get("advantages") or {}).get(cell.get("headline") or ""))
+    narrow = float(G._detectable_cell(row).strip("±"))
+    wide = float(G._detectable_cell(dict(row, looks=400)).strip("±"))
+    assert wide > narrow, (
+        "a wider search left the detectable effect alone, so it is being read "
+        "from something other than the row's own family size"
+    )
+
+
+def test_a_prop_row_with_no_number_gets_no_detectable_effect(receipt):
+    """Below the floors there is no figure, and that includes this one."""
+    assert G._detectable_cell(None) == "—"
+    # A row BELOW THE FLOOR that carries a real standard error. Written this
+    # way because `{"enough_evidence": False}` alone has no standard error
+    # either, so it returns an em dash through the second check whether or not
+    # the floor is tested at all -- and a mutant deleting the floor check left
+    # this test green until it was written like this.
+    below = {"enough_evidence": False, "standard_error": 0.05, "looks": 95}
+    assert G._detectable_cell(below) == "—", (
+        "a cell below the declared floor has no number, and that includes the "
+        "one saying what it could have detected"
+    )
+    assert G._detectable_cell(
+        {"enough_evidence": True, "standard_error": 0.0, "looks": 95}
+    ) == "—", (
+        "a comparison with no standard error can demonstrate NOTHING, and "
+        "±0.0000 would read as the sharpest row in the table"
+    )
+
+
+def test_the_detectable_effect_is_in_log_loss_units_not_percent(receipt):
+    """This table's estimate is a log-loss difference. A percentage here would
+    invite a reader to compare it against a different report's ROI column."""
+    record = G.build_record(inputs_for(a_population(pairs=900, days=45, games=60)), looks=95)
+    cell = record["by_tier"][0]
+    row = (cell.get("advantages") or {}).get(cell.get("headline") or "")
+    printed = G._detectable_cell(row)
+    assert "%" not in printed, "the detectable effect is not a percentage here"
+    assert printed.startswith("±")
