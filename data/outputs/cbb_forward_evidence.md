@@ -16,29 +16,29 @@ Intervals are clustered by game **and** by day, and the wider of the two is repo
 
 No figure pooled across the whole of Division I appears here. High-major, mid-major and low-major are different distributions and are measured as such; `unplaced` is a team with too little prior non-conference evidence to place and is reported apart rather than folded into a tier.
 
-| Market | Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Verdict |
-|:---|:---|---:|---:|---:|:---|:---|:---|
-| — | — | 0 | 0 | — | — | — | **not enough evidence** — 0 bets, below 200 |
+| Market | Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Could detect | Verdict |
+|:---|:---|---:|---:|---:|:---|:---|---:|:---|
+| — | — | 0 | 0 | — | — | — | — | **not enough evidence** — 0 bets, below 200 |
 
 ### Opinions by tier
 
-| Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Verdict |
-|:---|---:|---:|---:|:---|:---|:---|
-| — | 0 | 0 | — | — | — | **not enough evidence** — 0 bets, below 200 |
+| Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Could detect | Verdict |
+|:---|---:|---:|---:|:---|:---|---:|:---|
+| — | 0 | 0 | — | — | — | — | **not enough evidence** — 0 bets, below 200 |
 
 ## Bets, per market and per tier
 
 No figure pooled across the whole of Division I appears here. High-major, mid-major and low-major are different distributions and are measured as such; `unplaced` is a team with too little prior non-conference evidence to place and is reported apart rather than folded into a tier.
 
-| Market | Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Verdict |
-|:---|:---|---:|---:|---:|:---|:---|:---|
-| — | — | 0 | 0 | — | — | — | **not enough evidence** — 0 bets, below 200 |
+| Market | Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Could detect | Verdict |
+|:---|:---|---:|---:|---:|:---|:---|---:|:---|
+| — | — | 0 | 0 | — | — | — | — | **not enough evidence** — 0 bets, below 200 |
 
 ### Bets by tier
 
-| Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Verdict |
-|:---|---:|---:|---:|:---|:---|:---|
-| — | 0 | 0 | — | — | — | **not enough evidence** — 0 bets, below 200 |
+| Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Could detect | Verdict |
+|:---|---:|---:|---:|:---|:---|---:|:---|
+| — | 0 | 0 | — | — | — | — | **not enough evidence** — 0 bets, below 200 |
 
 ## Reachability
 
