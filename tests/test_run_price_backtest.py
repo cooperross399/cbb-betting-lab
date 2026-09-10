@@ -2803,3 +2803,109 @@ def test_the_optional_stamp_is_forgiven_when_absent_and_never_when_written():
             pd.DataFrame({"slate_date": [day], "priced_through": ["2024-01-06"]}),
             day_column="slate_date",
         )
+
+
+# --------------------------------------------------------------------------
+# What a null could have found
+#
+# `no demonstrated edge` is a statement about the EVIDENCE, not about the
+# effect. Measured on this lab's own headline table, 20 cells carry those
+# three words and their minimum detectable effects run from ±3.7% to ±52.7%:
+# 8 of the 20 could not have demonstrated an edge smaller than ±25%, and the
+# table said exactly the same thing about them as about the ±3.7% cell.
+# --------------------------------------------------------------------------
+
+
+def test_the_detectable_effect_is_the_corrected_bound_read_from_the_other_side():
+    """Not a second statistic. It is the bound already being applied."""
+    from cbb_betting_lab import stats as S
+
+    interval = S.RoiInterval(
+        roi=-0.0429, low=-0.0648, high=-0.0210, bets=88_344, clusters=740,
+        standard_error=0.011163, looks=95,
+    )
+    mde = interval.minimum_detectable_effect
+    assert interval.roi + mde == pytest.approx(interval.adjusted_high, abs=1e-12), (
+        "the detectable effect has to be the distance from the estimate to the "
+        "corrected bound, or it is a number nobody can check against the row"
+    )
+    assert interval.roi - mde == pytest.approx(interval.adjusted_low, abs=1e-12)
+
+
+def test_a_wider_search_can_only_ever_make_a_cell_blinder():
+    """The correction may only widen, so the detectable effect may only grow."""
+    from cbb_betting_lab import stats as S
+
+    def at(looks):
+        return S.RoiInterval(
+            roi=0.0, low=-0.02, high=0.02, bets=5_000, clusters=400,
+            standard_error=0.01, looks=looks,
+        ).minimum_detectable_effect
+
+    seen = [at(n) for n in (1, 30, 95, 400)]
+    assert seen == sorted(seen), (
+        "registering more hypotheses made a cell able to see a SMALLER effect, "
+        "which would make the correction a way to buy power rather than pay for it"
+    )
+    assert at(95) > at(30)
+
+
+def test_the_detectable_effect_is_derived_and_never_stored():
+    """Stored, it would go stale the day a hypothesis is registered.
+
+    Decision 46's rule, applied to a new column: a report restates its verdicts
+    at the ledger's CURRENT count, so anything printed beside them has to move
+    with them. `mde_cell` reads `looks` off the row it is handed, so a
+    re-render at a wider family prints a wider detectable effect from the same
+    record, with nothing re-measured.
+    """
+    row = {
+        "roi": 0.0, "low": -0.02, "high": 0.02, "bets": 5_000, "clusters": 400,
+        "cluster_unit": "day", "standard_error": 0.01, "looks": 30,
+        "enough_evidence": True, "verdict": "no demonstrated edge",
+    }
+    narrow = PB.mde_cell(row)
+    wide = PB.mde_cell(dict(row, looks=400))
+    assert narrow != wide, (
+        "the printed detectable effect did not move with the family size, so it "
+        "is being read from somewhere other than the row's own `looks`"
+    )
+    assert float(wide.strip("±%")) > float(narrow.strip("±%"))
+    # And it is genuinely absent from the record rather than quietly stored.
+    assert "minimum_detectable_effect" not in PB._interval_row(
+        PB.interval_from_row(row), name="x"
+    )
+
+
+def test_a_row_with_no_number_gets_no_detectable_effect_either():
+    """Below the floor there is no figure, and that includes this one."""
+    assert PB.mde_cell({}) == "—"
+    assert PB.mde_cell({"enough_evidence": False, "bets": 40}) == "—"
+    no_se = {
+        "roi": 0.0, "low": 0.0, "high": 0.0, "bets": 5_000, "clusters": 400,
+        "standard_error": 0.0, "looks": 95, "enough_evidence": True,
+    }
+    assert PB.mde_cell(no_se) == "—", (
+        "a cell with no standard error can detect NOTHING, and printing ±0.0% "
+        "would read as the sharpest measurement in the table"
+    )
+
+
+def test_the_headline_table_prints_what_each_cell_could_have_found():
+    """The column has to be in the rendered page, not merely computable."""
+    record = json.loads(
+        (Path(__file__).resolve().parents[1] / "data" / "outputs"
+         / "cbb_price_backtest.json").read_text(encoding="utf-8")
+    )
+    page = PB.render(record)
+    assert "| Could detect |" in page
+    nulls = [
+        r for r in record["by_market_and_tier"]
+        if r.get("verdict") == "no demonstrated edge" and r.get("enough_evidence")
+    ]
+    assert nulls, "the fixture record holds no null to qualify"
+    for row in nulls:
+        assert PB.mde_cell(row) in page, (
+            f"{row['tier']}/{row['market']} reads 'no demonstrated edge' and the "
+            "page does not say what it could have detected"
+        )

@@ -2092,6 +2092,29 @@ def roi_cells(row: dict) -> tuple[str, str, str]:
     )
 
 
+def mde_cell(row: Mapping) -> str:
+    """The smallest effect this row could have demonstrated, as `+/-x.x%`.
+
+    Printed beside every measured verdict, because *no demonstrated edge* on a
+    cell that could only ever have seen 10% and the same three words on a cell
+    that could have seen 0.5% are not the same finding -- and this table said
+    the same thing about both. A null is a statement about the evidence, and
+    without this column a reader cannot tell *we looked and there is nothing*
+    from *we could not have seen it*.
+
+    Derived from the row rather than stored in the record: it is
+    `bonferroni_z(looks) * standard_error`, both of which are already there, so
+    it costs no record field, no version bump, and it restates correctly when
+    the correction moves -- which a stored copy would not.
+    """
+    if not row or not row.get("enough_evidence"):
+        return "—"
+    mde = interval_from_row(dict(row)).minimum_detectable_effect
+    if mde != mde:  # NaN: no standard error was recorded
+        return "—"
+    return f"±{mde:.1%}"
+
+
 #: The header every ROI table in this report uses. It says **Clusters**, not
 #: "Games", because `stats.interval_two_way` clusters by game *and* by day and
 #: keeps the wider of the two — so two rows of one table are routinely
@@ -2236,15 +2259,15 @@ def render(record: dict) -> str:
     else:
         add(
             "| Tier | Market | Blind side | Bets | Clusters | ROI "
-            "| 95% interval | Family-corrected | Verdict |"
+            "| 95% interval | Family-corrected | Could detect | Verdict |"
         )
-        add("|:---|:---|:---|---:|---:|---:|:---|:---|:---|")
+        add("|:---|:---|:---|---:|---:|---:|:---|:---|---:|:---|")
         for row in baseline:
             roi, interval, corrected = roi_cells(row)
             add(
                 f"| {row['tier']} | {row['market']} | {row['name']} | "
                 f"{row['bets']:,} | {cluster_cell(row)} | {roi} | {interval} | "
-                f"{corrected} | {row['verdict']} |"
+                f"{corrected} | {mde_cell(row)} | {row['verdict']} |"
             )
         add("")
 
@@ -2263,15 +2286,15 @@ def render(record: dict) -> str:
     else:
         add(
             "| Tier | Market | Bets | Clusters | ROI | 95% interval "
-            "| Family-corrected | Verdict |"
+            "| Family-corrected | Could detect | Verdict |"
         )
-        add("|:---|:---|---:|---:|---:|:---|:---|:---|")
+        add("|:---|:---|---:|---:|---:|:---|:---|---:|:---|")
         for row in cells:
             roi, interval, corrected = roi_cells(row)
             add(
                 f"| {row['tier']} | {row['market']} | {row['bets']:,} | "
                 f"{cluster_cell(row)} | {roi} | {interval} | {corrected} | "
-                f"{row['verdict']} |"
+                f"{mde_cell(row)} | {row['verdict']} |"
             )
         add("")
         biased = [r for r in cells if r.get("side_biased")]
