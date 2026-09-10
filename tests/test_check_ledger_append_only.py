@@ -148,9 +148,13 @@ def test_the_reproduction_on_this_lab_is_caught(tmp_path: Path, capsys: pytest.C
     """
     tracked = _SCRIPT.parents[1] / "data" / "outputs" / "experiment_ledger.json"
     base = json.loads(tracked.read_text(encoding="utf-8"))["hypotheses"]
-    assert len(base) == 95, (
-        f"the tracked ledger holds {len(base)} entries, not 95; re-measure this "
-        "reproduction against the file rather than editing the number"
+    # The reproduction is "twelve entries deleted". What it needs from the
+    # tracked file is enough entries for that to be a real cut, not a
+    # particular total -- which is what the pinned 95 was asserting, and it
+    # failed on the next registration for a reason it does not test.
+    assert len(base) > 12, (
+        f"the tracked ledger holds {len(base)} entries, too few to reproduce "
+        "a twelve-entry deletion against"
     )
     head = base[:-12]
     assert run(tmp_path, base, head) == 1
@@ -494,10 +498,6 @@ def test_the_recorder_self_heals_a_ledger_that_was_cut_on_disk(tmp_path: Path) -
 
     repo = Path(__file__).resolve().parents[1]
     tracked = json.loads((repo / "data" / "outputs" / "experiment_ledger.json").read_text(encoding="utf-8"))
-    assert len(tracked["hypotheses"]) == 95, (
-        f"the tracked ledger holds {len(tracked['hypotheses'])} entries, not 95; "
-        "this test's arithmetic is quoted in four other files and needs re-deriving"
-    )
     pre_registered = len(_recorder.HYPOTHESES)
     assert pre_registered < len(tracked["hypotheses"]), (
         "the recorder's constant now carries every tracked entry, so this test "
@@ -524,12 +524,21 @@ def test_the_recorder_self_heals_a_ledger_that_was_cut_on_disk(tmp_path: Path) -
     assert f"x{healed.correction_factor():.2f}" in completed.stdout, completed.stdout
     assert len(restored["hypotheses"]) == pre_registered
 
-    # And what it could not heal: the holdout looks the replication appended.
+    # And what it could not heal: the holdout looks the REPLICATION appended.
     # They are not in the recorder's constant, so a cut ledger comes back
     # short of the family the reports corrected against.
+    #
+    # Keyed on the search and not on `stage`. This asserted that no restored
+    # entry was `stage="holdout"` at all, which held only while the
+    # replication owned every holdout entry in the file -- and stopped holding
+    # the moment the forward window was registered on 2026-09-10, which is
+    # declared IN the recorder and is a holdout because it is measured on
+    # seasons that do not exist yet. The property under test is that the
+    # recorder cannot restore what another process wrote, so that is what it
+    # now checks.
     assert len(restored["hypotheses"]) < len(tracked["hypotheses"])
-    assert not [h for h in restored["hypotheses"] if h.get("stage") == "holdout"], (
-        "the recorder restored a holdout look, which it cannot know about; "
+    assert not [h for h in restored["hypotheses"] if h.get("search") == "replication"], (
+        "the recorder restored a replication look, which it cannot know about; "
         "re-derive the two counts above from the ledger and the replication record"
     )
     whole = experiment_ledger.load(repo / "data" / "outputs" / "experiment_ledger.json")

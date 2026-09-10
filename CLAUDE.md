@@ -296,10 +296,11 @@ did"* — would have been a false cause today.
   mean.
 - **The skill measure shows nothing.** The disagreement coefficient over every
   opinion (293,661 wagers) is **no demonstrated edge** in all three tiers:
-  high +0.088 corrected -0.045 to +0.220; mid +0.122 corrected -0.029 to
-  +0.273; low +0.046 corrected -0.148 to +0.241. On the **selected** bets only
-  (110,316) high-major reads +0.239 corrected +0.009 to +0.470 — that is the
-  winner's-curse comparison, never the skill measure. **Two registrations moved
+  high +0.088 corrected -0.04527 to +0.22045; mid +0.122 corrected -0.02978
+  to +0.27357; low +0.046 corrected -0.14853 to +0.24113 — all at the ledger's
+  98 cumulative hypotheses. On the **selected** bets only (110,316) high-major
+  reads +0.239 corrected +0.00811 to +0.47075 — that is the winner's-curse
+  comparison, never the skill measure. **Two registrations moved
   that lower bound, not one.** The fit was scored while the ledger held 30 and
   its stored bound is +0.030; the replication's 32 held-out cell tests took it
   to +0.016 at 62, and the 33 player-prop hypotheses took it from +0.016 to

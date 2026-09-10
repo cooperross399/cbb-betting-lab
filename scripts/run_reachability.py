@@ -55,6 +55,8 @@ import pandas as pd
 from cbb_betting_lab import reachability as RE
 from cbb_betting_lab.competitions import DEFAULT_COMPETITION_KEY, competition_for
 from cbb_betting_lab.config import OUTPUTS_DIR, PROCESSED_DIR, REPO_ROOT
+from cbb_betting_lab import restatement as RESTATEMENT
+from cbb_betting_lab import stats as S
 from cbb_betting_lab.reports import price_backtest as PB
 
 #: The forward ledger's spelling of the columns this report needs, and what it
@@ -210,9 +212,40 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
+def _restated(record: dict, *, ledger: Path) -> dict:
+    """The record's stated family size, brought up to the ledger's count.
+
+    This report carries **no intervals** -- no ROI, no bounds, no verdict --
+    so restating it is stating a different number and never recomputing one.
+    That is why it is done here rather than through `restatement.restated`,
+    which exists to move bounds this record does not have.
+
+    It is done at all because `--rerender` used to hand `record["looks"]`
+    straight to `render`, so the report replayed the count its run was scored
+    at forever. Registering the forward window took the ledger from 95 to 98
+    and this document went on saying 95 under a sentence reading *"that is the
+    ledger's cumulative count and never the day's"* -- which was then false in
+    the one clause asserting it was true. Decision 46 in a report that carries
+    no verdict to be wrong about.
+
+    `restatement.widened` is one-directional, so a ledger this cannot find
+    leaves the record's own count in force rather than collapsing it.
+    """
+    correction = RESTATEMENT.current(ledger)
+    stated = RESTATEMENT.widened(int(record.get("looks", 1) or 1), correction)
+    if stated == int(record.get("looks", 1) or 1):
+        return record
+    moved = dict(record)
+    moved["looks"] = stated
+    moved["correction_factor"] = S.bonferroni_factor(stated)
+    return moved
+
+
 def _rerender(record_target: Path, report_target: Path, *, check: bool) -> int:
     try:
-        record = RE.read_record(record_target)
+        record = _restated(
+            RE.read_record(record_target), ledger=PB.ledger_path(record_target.parent)
+        )
         rendered = RE.render(record)
     except FileNotFoundError:
         print(

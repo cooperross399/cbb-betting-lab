@@ -1337,6 +1337,48 @@
       "predicted_direction": "lower",
       "stage": "discovery",
       "realised_direction": ""
+    },
+    {
+      "search": "forward_2027",
+      "name": "high_major: the model's frozen forward opinions return above 0% ROI, measured on evidence frozen before tip and settled after",
+      "tested_on": "2026-09-10",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "forward_2027",
+      "name": "mid_major: the model's frozen forward opinions return above 0% ROI, measured on evidence frozen before tip and settled after",
+      "tested_on": "2026-09-10",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "forward_2027",
+      "name": "low_major: the model's frozen forward opinions return above 0% ROI, measured on evidence frozen before tip and settled after",
+      "tested_on": "2026-09-10",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "holdout",
+      "realised_direction": ""
     }
   ]
 }

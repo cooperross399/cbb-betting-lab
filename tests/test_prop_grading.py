@@ -1200,7 +1200,15 @@ def test_the_rebuild_flag_reads_the_ledger_rather_than_replaying_the_record(
     )
     assert module.main(["--rebuild-report-only", "--output-dir", str(outputs)]) == 0
     wide = (outputs / "cbb_prop_grading.md").read_text(encoding="utf-8")
-    assert "Family correction: 95 cumulative" in wide
+    # Read from the ledger the test just copied in, not typed. The literal 95
+    # here made this test fail on the next registration for a reason it does
+    # not test: what it checks is that the re-render reads the LEDGER, and the
+    # ledger's count is whatever the ledger says.
+    held = len(
+        json.loads((outputs / "experiment_ledger.json").read_text("utf-8"))["hypotheses"]
+    )
+    assert held > 1, "the copied ledger has to be wider than the record's own count"
+    assert f"Family correction: {held:,} cumulative" in wide
     assert "scored at 1" in wide, (
         "a restated report has to name BOTH counts: what the run was scored at "
         "and what its verdicts are stated at"
