@@ -109,6 +109,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from statistics import NormalDist
 
+from cbb_betting_lab import stats
+
 #: The file, under `data/outputs/` like every other record the lab keeps.
 LEDGER_FILENAME = "experiment_ledger.json"
 
@@ -320,7 +322,16 @@ class ExperimentLedger:
         families = max(self.count + extra, 1)
         if families == 1:
             return 1.0
-        return NormalDist().inv_cdf(1 - (ALPHA / families) / 2) / 1.96
+        # `stats.bonferroni_factor` and not a second implementation of it. This
+        # divided by a literal 1.96 where `stats` divides by the exact
+        # `Z95` = 1.959963984540054, so the two disagreed by about 1.8e-5
+        # relative -- invisible at three decimals and enough to flip the
+        # fourth. EVERY record in this lab stores the `stats` value, so the
+        # only thing the local copy produced was a recorder console line
+        # stating a factor no published document contained: registering the
+        # forward window printed "x1.7731" while every report rendered
+        # "x1.7732" for the same 98 hypotheses.
+        return stats.bonferroni_factor(families)
 
     def record(self, *hypotheses: Hypothesis) -> int:
         """Add hypotheses. Returns how many were new.

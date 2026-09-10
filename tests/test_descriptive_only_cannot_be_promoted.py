@@ -40,6 +40,7 @@ from pathlib import Path
 import pytest
 
 from cbb_betting_lab import experiment_ledger as E
+from cbb_betting_lab import stats as S
 
 _REPO = Path(__file__).resolve().parents[1]
 _SCRIPT = _REPO / "scripts" / "check_ledger_append_only.py"
@@ -257,9 +258,15 @@ def test_the_tracked_ledger_carries_the_seven_declarations() -> None:
 
 def test_the_correction_is_computed_over_the_hypotheses_alone() -> None:
     ledger = E.load(TRACKED)
-    assert ledger.count == len(ledger.hypotheses) == 95
+    # The CLAIM is that `count` excludes the descriptive-only declarations,
+    # not that the ledger is any particular size. Pinning the size made this
+    # test fail on every registration for a reason it does not test.
+    assert ledger.count == len(ledger.hypotheses)
     assert len(ledger.descriptive_only) == 7
-    assert round(ledger.correction_factor(), 4) == 1.7689
+    assert ledger.count != len(ledger.hypotheses) + len(ledger.descriptive_only)
+    assert round(ledger.correction_factor(), 4) == round(
+        S.bonferroni_factor(len(ledger.hypotheses)), 4
+    )
 
 
 def test_the_render_escapes_a_pipe_so_the_table_does_not_split() -> None:

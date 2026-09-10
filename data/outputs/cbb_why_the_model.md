@@ -14,7 +14,7 @@ Read `docs/what_we_can_and_cannot_claim.md` first. This says what the evidence *
 
 Measured on 191,053 graded bets over 26,591 games and 791 days of the 2021-2026 seasons, across 32 market-and-tier cells.
 
-Every interval is corrected for 95 cumulative distinct hypotheses — the experiment ledger's count at render time, not the count when the backtest ran — which widens each one by x1.77. The correction can only ever get stricter as the search continues, which is the only direction it is allowed to move.
+Every interval is corrected for 98 cumulative distinct hypotheses — the experiment ledger's count at render time, not the count when the backtest ran — which widens each one by x1.77. The correction can only ever get stricter as the search continues, which is the only direction it is allowed to move.
 
 | Tier | Result |
 |:---|:---|
@@ -45,7 +45,7 @@ Before this block was generated, this document said of **low-major** that it was
 
 **It no longer holds.** On today's record low-major reads 59,475 bets, **-4.0%**, corrected -8.1% to +0.0% — no demonstrated edge.
 
-**The measurement did not move; the search did.** The uncorrected 95% interval is -6.3% to -1.7% and still excludes zero. What widens it across is the family-wise correction over 95 cumulative hypotheses — x1.7689 — every one of which this lab wrote down before it was tested. An interval is paid for by the whole search that produced it, including the parts of that search that have not run yet, and this is one interval paying. A claim that dissolves once the search is counted in full was never worth the width it was first printed at.
+**The measurement did not move; the search did.** The uncorrected 95% interval is -6.3% to -1.7% and still excludes zero. What widens it across is the family-wise correction over 98 cumulative hypotheses — x1.7732 — every one of which this lab wrote down before it was tested. An interval is paid for by the whole search that produced it, including the parts of that search that have not run yet, and this is one interval paying. A claim that dissolves once the search is counted in full was never worth the width it was first printed at.
 
 ## The model is not worthless — it is beaten by the vig
 
@@ -65,9 +65,9 @@ Each is a rule that needs no model at all. All 3 measured tiers return more than
 
 | Tier | Rows | Model minus raw market | Reading |
 |:---|---:|:---|:---|
-| high-major | 62,163 | -0.01663, corrected -0.02197 to -0.01129 | demonstrated deficit |
-| mid-major | 137,296 | -0.00962, corrected -0.01319 to -0.00604 | demonstrated deficit |
-| low-major | 94,182 | -0.00776, corrected -0.01103 to -0.00449 | demonstrated deficit |
+| high-major | 62,163 | -0.01663, corrected -0.02198 to -0.01128 | demonstrated deficit |
+| mid-major | 137,296 | -0.00962, corrected -0.01320 to -0.00603 | demonstrated deficit |
+| low-major | 94,182 | -0.00776, corrected -0.01104 to -0.00448 | demonstrated deficit |
 
 A **negative** advantage is the model scoring worse than the price it is betting into. The verdict column reads the sign the same way every other interval in this repository does; it is a Brier difference and not a return, and it is never added to one.
 

@@ -98,16 +98,27 @@ DESCRIPTIVE_FIELDS = ("search", "name", "declared_on", "rationale")
 Key = tuple[str, str, tuple[int, ...], str]
 
 
+from cbb_betting_lab import stats  # noqa: E402
+
+
 class LedgerError(Exception):
     """A ledger that cannot be read or trusted. Always a failure, never a skip."""
 
 
 def correction_factor(count: int) -> float:
-    """Bonferroni on the cumulative count, as `ExperimentLedger` computes it."""
+    """Bonferroni on the cumulative count, through the package's own function.
+
+    **A third copy of this arithmetic lived here.** It divided by a literal
+    1.96 where `stats.bonferroni_factor` divides by the exact
+    `Z95` = 1.959963984540054, and so did `ExperimentLedger.correction_factor`
+    -- so `test_the_scripts_arithmetic_matches_the_package` compared two
+    copies that agreed with each other and disagreed with the one every
+    record in this lab actually stores. Two wrongs matching is not a check.
+    """
     families = max(count, 1)
     if families == 1:
         return 1.0
-    return NormalDist().inv_cdf(1 - (ALPHA / families) / 2) / 1.96
+    return stats.bonferroni_factor(families)
 
 
 def read_descriptive(payload: dict, path: Path, side: str) -> list[dict]:

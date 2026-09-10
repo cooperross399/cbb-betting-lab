@@ -107,6 +107,16 @@ PLAYER_MARKETS = (
 #: file a high-major starter under whichever tier his opponent decided.
 PLAYER_TIERS = ("high_major", "mid_major", "low_major")
 
+#: The forward window, declared as THREE seasons and not one. Scaling the
+#: historical standard errors to a single season's bet count, one season can
+#: demonstrate a return of 9.5% (mid-major) to 11.9% (high-major) once the
+#: correction is applied, against a realistic edge of one to three percent. A
+#: one-season registration would spend the last clean holdout this lab has on a
+#: question the sample cannot answer, and a null from it would say nothing
+#: about the model. Registering the window wide is the only way the entry is
+#: worth its own correction.
+FORWARD = (2027, 2028, 2029)
+
 
 #: Everything this build has put, or is about to put, to the priced data.
 #:
@@ -312,6 +322,43 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
             outcome="pending",
             predicted_direction="lower",
             stage="discovery",
+        )
+        for tier in PLAYER_TIERS
+    ),
+    # --- The forward window. Registered 2026-09-10, EIGHT WEEKS before the
+    # 2026-11-02 opener and before a single row of forward evidence exists:
+    # `data/outputs/cbb_forward_evidence.json` records 0 frozen opinions on
+    # this date, and `test_the_forward_window_was_registered_before_it_opened`
+    # asserts it against the tree rather than trusting this comment.
+    #
+    # Every historical season is spent. 2021-2023 was discovery, 2024 the
+    # declared holdout, and the replication run reached 2025-26 and said so in
+    # its own record. Forward collection is the only clean evidence left, and
+    # it cannot be back-dated: a night not frozen is gone permanently.
+    #
+    # THREE entries, one per tier, which is the floor the no-pooled-Division-I
+    # rule allows. The historical build registered 33 market-by-tier cells and
+    # paid for it; a forward window with a tenth of the sample cannot support
+    # that resolution, and every entry widens every interval this lab has
+    # already published.
+    #
+    # `stage="holdout"` because nothing is being searched: the model exists,
+    # and its direction is fixed before a game is played. "higher" is the
+    # honest prediction to write down even though six seasons of evidence say
+    # it will fail -- a direction declared after the fact is not a prediction,
+    # and the failure is only worth something because the claim was made first.
+    *(
+        E.Hypothesis(
+            search="forward_2027",
+            name=(
+                f"{tier}: the model's frozen forward opinions return above 0% "
+                "ROI, measured on evidence frozen before tip and settled after"
+            ),
+            tested_on="2026-09-10",
+            seasons=FORWARD,
+            outcome="pending",
+            predicted_direction="higher",
+            stage="holdout",
         )
         for tier in PLAYER_TIERS
     ),

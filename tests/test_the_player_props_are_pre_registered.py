@@ -443,7 +443,9 @@ def test_pending_is_this_ledgers_convention_and_not_evidence_of_anything() -> No
         assert entry["realised_direction"] == "", entry["name"]
 
     every = payload["hypotheses"]
-    assert len(every) == 95
+    assert len(every) == len(E.load(TRACKED).hypotheses), (
+        "the tracked ledger and this test disagree on how many entries exist"
+    )
     assert {entry["outcome"] for entry in every} == {"pending"}, (
         "some entries now carry an outcome and some do not, so `pending` has "
         "become a claim about which ones were measured. Say what the new "
@@ -532,15 +534,31 @@ def test_the_family_went_from_62_to_95_and_the_factor_from_1_7095_to_1_7689() ->
     """The price of the registration, computed rather than quoted.
 
     62 is what the ledger held after the replication of 2026-09-05 appended its
-    32 holdout looks; 95 is what it holds now. Every interval this lab has
-    already published is corrected over the cumulative count, so the 33 entries
-    above are paid for by all of them.
+    32 holdout looks; 95 is what it held once these 33 landed. Every interval
+    this lab had already published is corrected over the cumulative count, so
+    those 33 entries are paid for by all of them.
+
+    **This is a claim about a moment, so it reconstructs that moment.** The
+    ledger has grown since -- the forward window was registered on 2026-09-10 --
+    and asserting against `ledger.count` made this test a hostage to every
+    later registration. Filtering to what had been recorded ON OR BEFORE the
+    prop registration keeps the arithmetic it exists to check, whatever the
+    ledger holds today.
     """
     ledger = E.load(TRACKED)
-    assert ledger.count == 95
+    as_of = E.ExperimentLedger(
+        hypotheses=[h for h in ledger.hypotheses if h.tested_on <= "2026-09-05"]
+    )
+    assert as_of.count == 95, (
+        f"the ledger held {as_of.count} entries on 2026-09-05, not 95. This "
+        "test's arithmetic is quoted in four other files and needs re-deriving."
+    )
     before = E.ExperimentLedger(
-        hypotheses=[h for h in ledger.hypotheses if h.search not in (DEVIG, CONTROL)]
+        hypotheses=[h for h in as_of.hypotheses if h.search not in (DEVIG, CONTROL)]
     )
     assert before.count == 62
     assert round(before.correction_factor(), 4) == 1.7095
-    assert round(ledger.correction_factor(), 4) == 1.7689
+    assert round(as_of.correction_factor(), 4) == 1.7689
+    # And the cost has only ever grown since, which is the one direction a
+    # correction is allowed to move.
+    assert ledger.count >= as_of.count
