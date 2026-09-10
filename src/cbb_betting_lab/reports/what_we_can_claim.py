@@ -1621,9 +1621,16 @@ def build_record(
             "floor_opinions": SAMPLE_FLOOR_OPINIONS,
             "floor_games": SAMPLE_FLOOR_GAMES,
         },
+        # Threaded the ledger's count through rather than letting the table
+        # default. The same edge needs more data to settle once more
+        # hypotheses have been tested, and that is the cost this lab charges
+        # itself in every other number on the page.
         "detection": [
-            {"edge": edge, "bets": bets} for edge, bets in S.detection_table()
+            {"edge": edge, "bets": bets}
+            for edge, bets in S.detection_table(looks=looks)
         ],
+        "detection_power": S.DETECTION_POWER,
+        "detection_looks": looks,
     }
     record["headline"] = headline(record)
     return record
@@ -2135,7 +2142,18 @@ def render(record: Mapping) -> str:
     # --- how much data ------------------------------------------------------
     add("## How much data would settle it")
     add("")
-    add("| If the true edge were | Bets needed to separate it from zero |")
+    looks_here = _as_int(record.get("detection_looks")) or 1
+    power = float(record.get("detection_power") or 0.0)
+    add(
+        f"Sized to **demonstrate** the edge, not merely to observe it: at "
+        f"{power:.0%} power and at the ledger's {looks_here:,} cumulative "
+        "hypotheses. An earlier version of this table gave the uncorrected "
+        "50%-power figure — the sample at which an interval just excludes "
+        "zero when the observed effect happens to equal the true one — which "
+        "understated a +5% edge by 4.8x."
+    )
+    add("")
+    add("| If the true edge were | Bets needed to demonstrate it |")
     add("|---:|---:|")
     for row in record.get("detection", []) or []:
         if isinstance(row, Mapping):

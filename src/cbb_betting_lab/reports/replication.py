@@ -870,9 +870,24 @@ def _line(row: Mapping, label: str, *, minimum_bets: int) -> str:
     roi, interval, corrected = roi_cells(row, criteria_minimum_bets=minimum_bets)
     return (
         f"| {label} | {int(row.get('bets', 0)):,} | "
-        f"{int(row.get('clusters', 0)):,} | {roi} | {interval} | {corrected} | "
+        f"{_cluster_cell(row)} | {roi} | {interval} | {corrected} | "
         f"{verdict_text(row, minimum_bets=minimum_bets)} |"
     )
+
+
+def _cluster_cell(row: Mapping) -> str:
+    """`278 days` or `8,694 games` -- the count and its unit, always both.
+
+    This printed the bare count under a column headed *Games*, and the pooled
+    table mixes the two: `interval_two_way` keeps whichever clustering gave the
+    wider interval, so moneyline and team_total came out day-clustered (277 and
+    278) while spread and total_points came out game-clustered (8,694 and
+    8,000). All five printed as "Games". The unit is written into the record at
+    `_interval_row` and this module already prints it in prose two sections
+    later; the table simply dropped it.
+    """
+    unit = str(row.get("cluster_unit") or "").strip()
+    return f"{int(row.get('clusters', 0) or 0):,} {unit or 'unknown-cluster'}s"
 
 
 def _nothing(what: str) -> list[str]:

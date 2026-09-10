@@ -542,9 +542,19 @@ class Attribution:
 
     `checked` is every clause the gate ATTEMPTED and `compared_checks` is how
     many of them compared a value against an expectation the artifact carried.
-    The two are equal on every attribution `reconcile` can now return, because
-    an absent expectation raises -- and they are reported separately anyway, so
-    that "52 clauses ran" is a number a reader can check rather than infer from
+
+    **They are NOT equal, and the gap is the number this record exists to
+    show.** Measured on a clean run: 53 attempted against 46 compared on the
+    tracked store, 31 against 24 on the test fixture. This docstring claimed
+    they were equal "because an absent expectation raises", which is not what
+    the counts do -- so a reader following it would take a seven-clause gap as
+    evidence that expectations had been deleted from the frozen artifact and
+    that the gate had certified the store on uncompared clauses. Nothing is
+    wrong; the two simply count different things, and a clause can run without
+    having a stored value to compare against.
+    
+    They are reported separately for that reason, so that "53 clauses ran" is
+    a number a reader can check rather than infer from
     `declared_checks + pinned_checks`, which are a partition of `checked` by
     where the expectation came from and were reproduced in full by a record
     with every value deleted.
@@ -1251,13 +1261,26 @@ _RECONCILED: dict[str, Attribution] = {}
 #: it first, that each refuses a player frame with no receipt, and -- as a
 #: floor rather than a proof, in the test's own name -- that no module outside
 #: the pinned list builds an interval or scores a probability.
-#: **`price_backtest.build_record` was added on 2026-09-07 and it is the one
-#: the shipped script always runs.** `settled_opinions` was the module's only
-#: named door, and `scripts/run_price_backtest.py` calls it inside
-#: `if args.write_graded:` while calling `build_record` on every invocation --
-#: so every test that iterates this tuple walked past the function that
-#: actually grades. Adding the guard without adding the name here left it
-#: unexercised by all three of them.
+#: **`price_backtest.build_record` is NOT in this list, and that is a written
+#: -down gap rather than an oversight.** This comment used to say it "was
+#: added on 2026-09-07"; it was attempted three times that day and backed out
+#: each time, and the comment describing the attempt outlived the decision to
+#: reverse it -- so a maintainer auditing which functions can grade a player
+#: wager without a census read that the shipped backtest's ROI half was a
+#: declared, guarded door. It is neither.
+#:
+#: The reason is the gate's own shape. `guard_graded_frame` demands TWO
+#: receipts and the second is set only by
+#: `assert_every_offered_prop_is_accounted`, which clause 5 of
+#: `tests/test_player_census_reconciles.py` forbids any script from calling.
+#: It is a NOT-YET gate. `build_record` is not a not-yet path: the shipped
+#: script runs it on every invocation and the committed record carries 127
+#: null-baseline rows over twelve player markets that it produced. Gating it
+#: cannot be satisfied and simply stops the run -- measured three times.
+#: `reports/price_backtest.py` carries the full account beside the function.
+#:
+#: `settled_opinions` IS named here and is guarded; it is the module's other
+#: door, called only under `if args.write_graded:`.
 #: **`reports.prop_grading.build_record` was added on 2026-09-07 and it is the
 #: one design section 10 was written for.** It de-vigs two ways, scores the log
 #: loss, the Brier and the calibration, builds the three-way clustered

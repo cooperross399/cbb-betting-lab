@@ -183,11 +183,11 @@ Every state below carries its sample size, and every cell whose held-out interva
 
 The held-out season's own return per tier. It carries no replication state: a state is a claim about a specific (market, tier) cell that the discovery window made, and a tier roll-up is not one of those.
 
-| Tier | Bets | Games | ROI | 95% interval | Family-corrected | Verdict |
+| Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Verdict |
 |:---|---:|---:|---:|:---|:---|:---|
-| high_major | 18,329 | 256 | -3.4% | -6.3% to -0.5% | -8.5% to +1.8% | no demonstrated edge |
-| mid_major | 29,034 | 254 | -4.7% | -7.0% to -2.4% | -8.8% to -0.6% | demonstrated deficit |
-| low_major | 24,415 | 227 | -3.6% | -6.3% to -1.0% | -8.4% to +1.1% | no demonstrated edge |
+| high_major | 18,329 | 256 days | -3.4% | -6.3% to -0.5% | -8.5% to +1.8% | no demonstrated edge |
+| mid_major | 29,034 | 254 days | -4.7% | -7.0% to -2.4% | -8.8% to -0.6% | demonstrated deficit |
+| low_major | 24,415 | 227 days | -3.6% | -6.3% to -1.0% | -8.4% to +1.1% | no demonstrated edge |
 
 ## Pooled
 
@@ -195,13 +195,13 @@ The held-out season's own return per tier. It carries no replication state: a st
 
 **No pooled row carries a replication state**, and none is written into the `markets` list the claims document reads. A row with no tier is treated there as applying to every tier of that market, so a pooled state would become a per-tier claim about a distribution it was never measured on.
 
-| Market | Bets | Games | ROI | 95% interval | Family-corrected | Verdict |
+| Market | Bets | Clusters | ROI | 95% interval | Family-corrected | Verdict |
 |:---|---:|---:|---:|:---|:---|:---|
-| moneyline | 8,443 | 277 | -6.7% | -11.1% to -2.3% | -14.5% to +1.2% | no demonstrated edge |
-| spread | 20,256 | 8,694 | -1.2% | -3.3% to +1.0% | -4.9% to +2.6% | no demonstrated edge |
-| team_total | 22,671 | 278 | -4.3% | -6.1% to -2.6% | -7.4% to -1.2% | demonstrated deficit |
-| total_points | 20,408 | 8,000 | -5.3% | -7.6% to -3.1% | -9.3% to -1.4% | demonstrated deficit |
-| every market | 71,778 | 278 | -4.0% | -5.5% to -2.5% | -6.6% to -1.4% | demonstrated deficit |
+| moneyline | 8,443 | 277 days | -6.7% | -11.1% to -2.3% | -14.5% to +1.2% | no demonstrated edge |
+| spread | 20,256 | 8,694 games | -1.2% | -3.3% to +1.0% | -4.9% to +2.6% | no demonstrated edge |
+| team_total | 22,671 | 278 days | -4.3% | -6.1% to -2.6% | -7.4% to -1.2% | demonstrated deficit |
+| total_points | 20,408 | 8,000 games | -5.3% | -7.6% to -3.1% | -9.3% to -1.4% | demonstrated deficit |
+| every market | 71,778 | 278 days | -4.0% | -5.5% to -2.5% | -6.6% to -1.4% | demonstrated deficit |
 
 ## What this report cannot say
 

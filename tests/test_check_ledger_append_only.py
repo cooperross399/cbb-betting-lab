@@ -109,11 +109,24 @@ def test_the_first_line_carries_the_count_beside_the_factor(tmp_path: Path, caps
 
 
 def test_the_scripts_arithmetic_matches_the_package() -> None:
+    """Against `stats.bonferroni_factor`, which is the authority.
+
+    This compared the script to `ExperimentLedger.correction_factor` — and for
+    a long time BOTH divided by a literal 1.96 while `stats` divided by the
+    exact `Z95`, so the two copies agreed with each other and disagreed with
+    the function whose value every record in this lab actually stores. Two
+    wrongs matching is not a check. Comparing against the authority is.
+    """
+    from cbb_betting_lab import stats
+
     assert check.ALPHA == experiment_ledger.ALPHA
+    assert check.Z95 == stats.Z95, "the restated z drifted from the package's"
     empty = experiment_ledger.ExperimentLedger()
     assert empty.count == 0
     for count in range(0, 201):
-        assert check.correction_factor(count) == empty.correction_factor(extra=count), count
+        assert check.correction_factor(count) == stats.bonferroni_factor(count), count
+        # And the ledger agrees with both, so all three stay collapsed.
+        assert empty.correction_factor(extra=count) == stats.bonferroni_factor(count)
 
 
 def test_the_scripts_key_matches_the_packages() -> None:

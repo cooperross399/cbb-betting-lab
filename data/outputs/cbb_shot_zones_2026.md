@@ -19,8 +19,8 @@ The mid-range is one zone rather than two because the measurement makes it one: 
 
 | | |
 |:---|---:|
-| Games in the season | 6,275 |
-| Games carrying shot coordinates | 6,275 (100.0%) |
+| Games in the season | 6,318 |
+| Games carrying shot coordinates | 6,275 (99.3%) |
 | Field goal attempts | 738,247 |
 | Dropped — coordinate off the floor | 0 |
 | Dropped — tagged to neither team | 14 in 2 game(s) (0.0019%) |
