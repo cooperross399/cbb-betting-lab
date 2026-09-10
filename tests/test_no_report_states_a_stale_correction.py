@@ -856,12 +856,21 @@ def _spellings(cell: dict, looks: int) -> tuple[str, ...]:
     Percentages to a tenth for a return, five decimals for a Brier advantage,
     three for a fitted coefficient. A document that grows a fourth spelling has
     to add it here before it can quote a stale number in it.
+
+    **It grew one and this was not updated.** Re-deriving CLAUDE.md's
+    disagreement coefficients at 98 hypotheses wrote them SIGNED to five
+    decimals -- `-0.04527 to +0.22045` -- while this produced only the unsigned
+    `-0.04527 to 0.22045`. Four of the eleven headline cells were therefore
+    quoted in a spelling no pattern here could match, so the guard that exists
+    to catch a stale figure could not have seen those four go stale. The
+    docstring above said exactly what to do; it simply was not done.
     """
     rebuilt = RESTATEMENT.rebuild_cell(cell, looks=looks)
     low, high = rebuilt["adjusted_low"], rebuilt["adjusted_high"]
     return (
         f"{low * 100:+.1f}% to {high * 100:+.1f}%",
         f"{low:.5f} to {high:.5f}",
+        f"{low:+.5f} to {high:+.5f}",
         f"{low:+.3f} to {high:+.3f}",
     )
 

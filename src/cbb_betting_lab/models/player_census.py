@@ -1354,9 +1354,21 @@ def player_markets_in(frame: pd.DataFrame) -> tuple[str, ...]:
     closed twice already, reintroduced by a fix to a different problem.
 
     The problem that subtraction solved — the gate blocking a frame with
-    nothing gradeable in it — is solved where it belongs instead: each entry
-    point filters refused markets BEFORE it gates, so the gate never sees one
-    and never has to reason about it.
+    nothing gradeable in it — is NOT solved by ordering, and this said it was.
+
+    Measured across the five gated entry points, every one calls
+    `guard_graded_frame` BEFORE `without_markets_refused_by_name`
+    (price_backtest 446/447, forecast_skill 1935/1936, reachability 988/989,
+    prop_grading 1371/1379). So the gate does see refused markets, and a frame
+    whose only player rows are `player_first_basket` and
+    `player_double_double` is refused for want of a census even though nothing
+    in it would ever be graded.
+
+    That is the CORRECT direction to be wrong in — fail closed, demand the
+    receipt, and let a caller with nothing gradeable pay the price of proving
+    it — and it is why `player_markets_in` deliberately does not subtract the
+    refusal list. What was wrong was this paragraph claiming an ordering the
+    code does not have.
     """
     if frame is None or len(frame) == 0 or "market" not in getattr(frame, "columns", ()):
         return ()

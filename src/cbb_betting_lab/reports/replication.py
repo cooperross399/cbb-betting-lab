@@ -1015,9 +1015,10 @@ def render(record: Mapping) -> str:
             f"{len(markets):,} cell(s) from the discovery record, re-scored on "
             f"{holdout.get('bets_graded', 0):,} graded held-out bets across "
             f"{holdout.get('games', 0):,} games and {holdout.get('days', 0):,} "
-            "slate days. **6 high-major conferences / 79 teams, 10 mid-major / "
-            "122, 17 low-major / 164** are three different distributions and "
-            "are never pooled into one headline."
+            "slate days. **The three tiers are measured from non-conference "
+            "margin, never assigned by a conference name list** — so the count "
+            "in each moves with the data — and they are three different "
+            "distributions, never pooled into one headline."
         )
         add("")
         add(

@@ -270,7 +270,15 @@ MINIMUM_ZONE_ATTEMPTS = 25
 #: only `ranked_of`, and the renderer printed the share rank against it: a
 #: rank over every team, divided by a count of the teams above the attempt
 #: floor. They agree only while no team is under it.
-RECORD_VERSION = 2
+#:
+#: 3 -- the `coverage` block changed MEANING. `games` and `share` were derived
+#: from the play-by-play's own game ids and are now derived from the schedule,
+#: and `unscheduled` is new. A version-2 record still renders, and reprints
+#: `6,275 of 6,275 games (100.0%)` -- the figure that change exists to
+#: disprove, against a schedule holding 6,318. The bump was missed in the very
+#: commit that made the change, an hour after the same omission was fixed in
+#: `what_we_can_claim`; two records changed shape that day and only one said so.
+RECORD_VERSION = 3
 
 
 class ShotZoneError(RuntimeError):

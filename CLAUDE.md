@@ -105,8 +105,13 @@ runway.
   Houston in Houston for a Sweet 16. `quasi_neutral` is its own state and the
   model fits an effect for it.
 - **Conference tiers are derived from measured non-conference margin**, never a
-  name list: 6 high-major conferences / 79 teams, 10 mid-major / 122, 17
-  low-major / 164. Cut points `HIGH_MAJOR_MARGIN = 8.0` and `MID_MAJOR_MARGIN =
+  name list — so the count in each tier MOVES with the data and the lookback
+  window, and is not a constant to be typed. `conferences.tier_table` computes
+  it and `data/outputs/cbb_ratings_fit.json` records the shape each fit placed.
+  (This sentence used to give "6 high-major conferences / 79 teams, 10
+  mid-major / 122, 17 low-major / 164" — a name-list census, in the sentence
+  saying tiers are never a name list, and contradicted by the table's own
+  61 / 131 / 172.) Cut points `HIGH_MAJOR_MARGIN = 8.0` and `MID_MAJOR_MARGIN =
   −3.0` were declared **before any market was measured per tier**.
 - **The slate spans twelve hours** — 11:00 ET to 23:00 ET, 45% of games still to
   tip at 19:00 ET. That is why there are two card slots and why the tip guard
@@ -189,9 +194,10 @@ appended, the **33 player-prop hypotheses pre-registered on 2026-09-05 before
 that model existed**, and the **3 forward-window hypotheses registered
 2026-09-10 before the 2026-11-02 opener** — so every interval is widened by
 **x1.7732**. The
-records on disk keep the correction each was scored under — the price backtest,
-the forecast-skill fit and the ratings fit at 30 hypotheses (x1.6041),
-`holdout/cbb_replication.json` at 62 (x1.7095) — and they are **not** rewritten:
+records on disk keep the correction each was scored under — the forecast-skill
+fit and the ratings fit at 30 hypotheses (x1.6041), the price backtest at **95**
+(x1.7689) since its 2026-09-09 re-run, `holdout/cbb_replication.json` at 62
+(x1.7095) — and they are **not** rewritten:
 a record is the evidence of what was measured. Every generated report re-reads
 the ledger when it renders and re-derives its verdicts at the cumulative count
 it finds there, naming both counts on the page when they differ (decision 46).
@@ -280,12 +286,19 @@ did"* — would have been a false cause today.
   The claim that it beat every blind rule was checked and is FALSE: of the
   188 blind sides clearing the 200-bet floor, **61 return more than
   their own tier's model**, and 10 of those carry a demonstrated deficit at
-  x1.7732 (13 at the x1.60 the record stores) — mid-major
-  `always the underdog` on moneyline returns -2.0% over 14,091 bets against the
-  model's -4.3%. The spread is wide in both directions: the worst blind side is
-  `low_major / player_threes / always over` at **-40.0%** over 227 bets, the best
-  is +20.7% over 345. **No blind side demonstrates an edge either (0 of
-  190)** — every positive one has an interval spanning zero after the
+  x1.7732 (13 at the x1.6041 the record was FIRST scored at, before its
+  2026-09-09 re-run; the record now stores x1.7689, at which the count is 10,
+  the same as today's) — mid-major
+  `always the favourite` on moneyline returns -2.0% over 14,091 bets against
+  the model's -4.3%. (This named `always the underdog`, which carries the same
+  bet count's neighbour and the OPPOSITE conclusion: it returns -4.8% over
+  14,037 and so loses to the model rather than beating it. The figures quoted
+  were always the favourite's; only the label was wrong, which is the worst
+  way for an example to be wrong.) The spread is wide in both directions: the
+  worst blind side is `low_major / player_threes / always over` at **-42.1%**
+  over 241 bets, the best is +20.7% over 317. **No blind side demonstrates an
+  edge either (0 of 188)** — every positive one has an interval spanning zero
+  after the
   correction. The evidence that the model carries information is the Brier score
   against the base rate, not the return against blind rules.
 - **The model loses to the market on Brier in every tier, with the vig left
