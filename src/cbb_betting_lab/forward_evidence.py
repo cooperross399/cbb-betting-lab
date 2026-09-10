@@ -1594,6 +1594,28 @@ def _without_markets_refused_by_name(frame: pd.DataFrame) -> pd.DataFrame:
     return without_markets_refused_by_name(frame)
 
 
+def _detectable(interval: stats.RoiInterval, *, minimum_bets: int) -> str:
+    """The smallest return this row could have demonstrated, as `+/-x.x%`.
+
+    **This organ needs the column more than any other in the lab.** Scaling
+    the historical standard errors to one season's bet count, a single forward
+    season can demonstrate a return of roughly 9.5% (mid-major) to 11.9%
+    (high-major) once the family correction is applied. A real edge in this
+    market is one to three percent. So a first season that reports *no
+    demonstrated edge* will be reporting that it could not have seen one --
+    and printing those three words without this number beside them would let a
+    season of collection read as a season of evidence against the model.
+
+    Below the declared floor there is no figure, and that includes this one:
+    a row with four bets can demonstrate nothing, and a number here would
+    invite exactly the reading the floor exists to prevent.
+    """
+    if interval.bets < minimum_bets:
+        return "—"
+    mde = interval.minimum_detectable_effect
+    return "—" if mde != mde else f"±{mde:.1%}"
+
+
 def _table(
     frame: pd.DataFrame,
     *,
@@ -1604,12 +1626,13 @@ def _table(
 ) -> list[str]:
     lines = [
         "| " + " | ".join(g.replace("_", " ").title() for g in group)
-        + " | Bets | Clusters | ROI | 95% interval | Family-corrected | Verdict |",
-        "|:---" * len(group) + "|---:|---:|---:|:---|:---|:---|",
+        + " | Bets | Clusters | ROI | 95% interval | Family-corrected "
+        "| Could detect | Verdict |",
+        "|:---" * len(group) + "|---:|---:|---:|:---|:---|---:|:---|",
     ]
     if frame.empty:
         lines.append(
-            "| " + " | ".join("—" for _ in group) + " | 0 | 0 | — | — | — | "
+            "| " + " | ".join("—" for _ in group) + " | 0 | 0 | — | — | — | — | "
             "**not enough evidence** — 0 bets, below "
             f"{minimum_bets:,} |"
         )
@@ -1629,6 +1652,7 @@ def _table(
             + f" | {interval.bets:,} | {interval.clusters:,} {interval.cluster_unit}s "
             f"| {interval.roi:+.1%} | {interval.low:+.1%} to {interval.high:+.1%} "
             f"| {interval.adjusted_low:+.1%} to {interval.adjusted_high:+.1%} "
+            f"| {_detectable(interval, minimum_bets=minimum_bets)} "
             f"| {row_verdict(interval, suspect=suspect, minimum_bets=minimum_bets)} |"
         )
     return lines

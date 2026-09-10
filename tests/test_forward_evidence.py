@@ -1492,3 +1492,82 @@ def _assert_gate_precedes_filter(function) -> None:
         f"gates at line {max(gates)}. The gate must be the first statement: a "
         "gate that runs after the de-vig is a gate on the report, not the run."
     )
+
+
+# --------------------------------------------------------------------------
+# What a forward null could have found
+#
+# This organ needs the column more than any other in the lab. Scaling the
+# historical standard errors to one season's bet count, a single forward
+# season can demonstrate a return of roughly 9.5% to 11.9% once the family
+# correction is applied, against a real edge of one to three percent. A first
+# season reporting `no demonstrated edge` is reporting that it could not have
+# seen one, and the three words alone do not say so.
+# --------------------------------------------------------------------------
+
+
+def test_a_forward_null_says_what_return_it_could_have_demonstrated():
+    """The column is in the page and carries a figure for a measured row."""
+    report = fe.render_ledger(_ledger(400, profit=lambda i: 1.0 if i % 2 else -1.0))
+    assert "| Could detect |" in report
+    assert "±" in report, (
+        "every row cleared the floor and none of them said what it could have "
+        "demonstrated"
+    )
+
+
+def test_a_forward_row_below_the_floor_states_no_detectable_return():
+    """Below the declared floor there is no figure, and that includes this one."""
+    # The profit VARIES. With `profit=lambda i: 1.0` every bet wins, the
+    # standard error is zero, and the em dash arrives through the NaN check
+    # whether or not the floor is tested at all -- so the test could not fail
+    # and a mutant deleting the floor sailed past it. A row needs real
+    # variance for the floor to be the only thing standing between it and a
+    # printed figure.
+    report = fe.render_ledger(_ledger(30, profit=lambda i: 1.0 if i % 2 else -1.0))
+    assert "| Could detect |" in report
+    assert "30 | " in report, "the fixture did not reach the table"
+    assert "±" not in report, (
+        "a row under the 200-bet floor printed a detectable return, which is "
+        "the reading the floor exists to prevent"
+    )
+
+
+def test_the_forward_detectable_return_is_the_corrected_bound():
+    """Not a second statistic: the bound already applied, from the other side."""
+    interval = stats.RoiInterval(
+        roi=0.0, low=-0.09, high=0.09, bets=14_724, clusters=140,
+        standard_error=0.0459, looks=98,
+    )
+    assert interval.roi + interval.minimum_detectable_effect == pytest.approx(
+        interval.adjusted_high, abs=1e-12
+    )
+    assert fe._detectable(interval, minimum_bets=200) == (
+        f"±{interval.minimum_detectable_effect:.1%}"
+    )
+    assert fe._detectable(interval, minimum_bets=20_000) == "—", (
+        "the floor is checked against the row's bets, not against nothing"
+    )
+
+
+def test_one_forward_season_cannot_demonstrate_a_realistic_edge():
+    """The measured reason this column exists here.
+
+    A mid-major season is about 14,700 bets. Scaled from the historical
+    standard error, that sample can demonstrate a return of roughly 9%-10%
+    once 98 hypotheses are corrected for. A real edge is 1%-3%, so a single
+    season's null is a statement about the sample and not about the model —
+    and this test fails if that ever stops being true, which would mean the
+    forward window had become powerful enough to read literally.
+    """
+    season = stats.RoiInterval(
+        roi=0.0, low=-0.09, high=0.09, bets=14_724, clusters=140,
+        standard_error=0.02734, looks=98,
+    )
+    mde = season.minimum_detectable_effect
+    assert 0.05 < mde < 0.15, (
+        f"one mid-major season's detectable return is {mde:.1%}; the plan to "
+        "register 2027 over multiple seasons rests on it being far above a "
+        "realistic 1-3% edge"
+    )
+    assert mde > 0.03, "a 3% edge is the optimistic end of realistic"
