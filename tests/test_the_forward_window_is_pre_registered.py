@@ -27,11 +27,15 @@ from pathlib import Path
 
 import pytest
 
+from cbb_betting_lab import season
+
 _REPO = Path(__file__).resolve().parents[1]
 _LEDGER = _REPO / "data" / "outputs" / "experiment_ledger.json"
 
-#: The 2026-27 Division I season's first game, from the tracked schedule.
-_SCHEDULE = _REPO / "data" / "raw" / "cbb" / "schedules" / "mbb_schedule_2027.parquet"
+#: When this lab looks for a game at all, from the tracked workflow. The
+#: gameday cron runs November through April and nothing else, so a month
+#: outside it is a month with no slate to freeze.
+_GAMEDAY = _REPO / ".github" / "workflows" / "cbb-gameday-refresh.yml"
 
 SEARCH = "forward_2027"
 TIERS = {"high_major", "mid_major", "low_major"}
@@ -78,13 +82,34 @@ def test_the_window_was_registered_before_it_opened() -> None:
     assert len(registered) == 1, "the three were registered on one date or none"
     stamped = registered.pop()
 
-    pd = pytest.importorskip("pandas")
-    schedule = pd.read_parquet(_SCHEDULE, columns=["date"])
-    opener = min(date.fromisoformat(str(d)[:10]) for d in schedule["date"])
-    assert stamped < opener, (
-        f"the window was registered {stamped}, on or after the {opener} opener. "
-        "A direction fixed after the first game is not a prediction."
+    # Both sources are TRACKED. An earlier version of this test read the
+    # season's first game out of `data/raw/cbb/schedules/mbb_schedule_2027.
+    # parquet`, which is not in the repository -- so it passed on a laptop
+    # with the raw store linked and failed in CI, where the file does not
+    # exist. A pre-registration whose ordering can only be checked on the
+    # machine that made it proves nothing to anybody else.
+    import yaml
+
+    workflow = yaml.safe_load(_GAMEDAY.read_text(encoding="utf-8"))
+    crons = [
+        entry["cron"]
+        for entry in (workflow[True] if True in workflow else workflow["on"])["schedule"]
+    ]
+    months = {
+        int(part)
+        for cron in crons
+        for part in cron.split()[3].split(",")
+        if part.isdigit()
+    }
+    assert months, f"no month field parsed out of {crons}"
+    assert stamped.month not in months, (
+        f"the window was registered in month {stamped.month}, which is a month "
+        f"the gameday pipeline runs in ({sorted(months)}). A direction fixed "
+        "once games are being played is not a prediction."
     )
+    # The lab's own July cut puts this registration inside the season it
+    # registers -- before any of it has been played.
+    assert season.season_for_slate_date(stamped.isoformat()) == 2027
 
     forward = json.loads(
         (_REPO / "data" / "outputs" / "cbb_forward_evidence.json").read_text("utf-8")
