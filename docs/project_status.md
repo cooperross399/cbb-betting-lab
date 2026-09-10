@@ -50,8 +50,8 @@ comparison, printed as a diagnostic and never a headline — the model is worse 
 point estimate in every tier.
 
 **Which correction the figures below carry.** Every interval in this file is the
-family-corrected one at the experiment ledger's **cumulative count of 95
-distinct hypotheses, ×1.7689** — the same correction every generated report in
+family-corrected one at the experiment ledger's **cumulative count of 98
+distinct hypotheses, ×1.7732** — the same correction every generated report in
 `data/outputs/` now states its verdicts at, because since decision 46 a report
 re-reads the ledger when it renders instead of replaying the count its run was
 scored at. This file is hand-written, so it is re-derived by hand and pinned by
@@ -69,7 +69,9 @@ retract a claim and can never manufacture one.
 
 **And on 2026-09-05 it got stricter, which changed a verdict this file carries.**
 Registering the player-prop model's 33 hypotheses before that model existed took
-the family from 62 to 95 and the factor from ×1.7095 to ×1.7689. At the wider
+the family from 62 to 95 and the factor from ×1.7095 to ×1.7689. (The ledger has
+since reached **98**, ×1.7732, when the forward window was registered on
+2026-09-10; 62 and 95 here are what it held on that date, not today.) At the wider
 factor **low-major tier ROI is no longer a demonstrated deficit**: -4.0% over
 59,475 bets, corrected -8.1% to +0.0%, crossing zero at the 85th hypothesis. So
 is the replication's held-out `total_points` / mid-major cell, -6.4% over 8,214
@@ -130,7 +132,7 @@ M and the commit of 2026-09-03.
 
 | # | Item | State | Evidence |
 |--:|:---|:---|:---|
-| 17 | Experiment ledger append-only, populated, its correction used by the reports | **done** | **95 distinct hypotheses**: 30 pre-registered discovery entries, each with a falsifiable direction; **32 holdout looks** the replication of 2026-09-05 appended, because putting a discovery finding to the holdout **is** a second look and is counted as one; and **33 player-prop hypotheses** registered the same day *before that model existed* — ten priceable markets × three tiers against the de-vigged two-sided fair price, plus one per tier against an identity-blind role-prior control. Correction **×1.7689**, up from ×1.7095 at 62 and ×1.60 at 30, and decision 43 records which two published verdicts that move cost. `save(floor=…)` raises rather than shrinking, and `Ledger Guard` diffs the tracked file against the PR base — the recorder cannot heal a cut ledger past its own pre-registered constant, which `test_check_ledger_append_only.py` measures rather than assumes. Seven quantities are declared **descriptive-only**: they are excluded from the count on the grounds that none can be a finding, and `record()`, `save()` and `Ledger Guard` all refuse to promote one afterwards, which is what makes the exclusion honest. The claims report reads the ledger and re-applies the factor at render time. |
+| 17 | Experiment ledger append-only, populated, its correction used by the reports | **done** | **98 distinct hypotheses**: 30 pre-registered discovery entries, each with a falsifiable direction; **32 holdout looks** the replication of 2026-09-05 appended, because putting a discovery finding to the holdout **is** a second look and is counted as one; **33 player-prop hypotheses** registered the same day *before that model existed* — ten priceable markets × three tiers against the de-vigged two-sided fair price, plus one per tier against an identity-blind role-prior control; and **3 forward-window hypotheses** registered 2026-09-10, eight weeks before the 2026-11-02 opener and with zero rows of forward evidence in existence, one per tier over 2027-2029. Correction **×1.7732**, up from ×1.7095 at 62 and ×1.60 at 30, and decision 43 records which two published verdicts that move cost. `save(floor=…)` raises rather than shrinking, and `Ledger Guard` diffs the tracked file against the PR base — the recorder cannot heal a cut ledger past its own pre-registered constant, which `test_check_ledger_append_only.py` measures rather than assumes. Seven quantities are declared **descriptive-only**: they are excluded from the count on the grounds that none can be a finding, and `record()`, `save()` and `Ledger Guard` all refuse to promote one afterwards, which is what makes the exclusion honest. The claims report reads the ledger and re-applies the factor at render time. |
 | 18 | Promotion criteria pre-registered on disk; demotion one direction only | **done** | `data/manual/promotion_criteria.json`, declared 2026-09-01 before any challenger was measured. There is no `grant()` in `promotion.py` or `staging_provider_policy.py`, and a test sweeps for one. |
 | 19 | The weekly loop runs unattended and re-renders the claims doc itself | **done** | `Weekly Refit and Measure`, Mondays 11:00 UTC, `contents: read` and no credential — it measures what is already bought and cannot spend. 43 tests. It re-renders the fenced block inside `docs/what_we_can_and_cannot_claim.md`; a missing fence is an error and never an append. |
 | 20 | `CLAUDE.md` has a "Current operating state" a future session can read, contract strings pinned | **done** | `test_contract_strings.py` pins all 14. |

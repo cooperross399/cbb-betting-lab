@@ -419,6 +419,16 @@ CORRECTION_SENTENCES = re.compile(
     r"|\*\*([\d,]+) distinct hypotheses have ever been tested here\*\*"
     r"|corrected for ([\d,]+) cumulative distinct hypotheses"
     r"|\*\*([\d,]+) distinct hypotheses tested\.\*\*"
+    # Added 2026-09-10 with the detection table's power preamble. It grew a
+    # sixth phrasing and was not added here, so the page could print "at the
+    # ledger's 1 cumulative hypotheses" while this regex collected only the
+    # OTHER count on the same page and compared that to the ledger. The
+    # constant's comment above already demanded this; it was simply not done.
+    r"|at the ledger's ([\d,]+) cumulative hypotheses"
+    # CLAUDE.md's own phrasing. It was unmatched by every pattern above, so the
+    # file could — and did — state the family size as 95 for a whole day after
+    # the ledger reached 98 with nothing checking it.
+    r"|[Tt]he ledger holds \*\*([\d,]+) distinct\s+hypotheses"
 )
 
 
@@ -455,6 +465,13 @@ DOCUMENTS_THAT_STATE_A_CORRECTION: tuple[str, ...] = (
     "data/outputs/holdout/cbb_replication.md",
     "docs/what_we_can_and_cannot_claim.md",
     "docs/why_the_model_does_or_does_not_have_an_edge.md",
+    # Hand-written, and on the roster for exactly that reason. Registering the
+    # forward window moved the ledger 95 -> 98 and left NINE sentences across
+    # this file and CLAUDE.md stating the old count — the roster did not name
+    # it, and `HAND_WRITTEN` only checks whether a QUOTED INTERVAL is stale,
+    # never whether the document states the wrong family size outright. So the
+    # whole registration shipped green with the count wrong in both.
+    "docs/project_status.md",
 )
 
 
@@ -717,6 +734,42 @@ def test_a_restated_report_names_both_counts():
 # narrower correction the number carries.
 
 HAND_WRITTEN = ("CLAUDE.md", "docs/project_status.md")
+
+
+def test_every_hand_written_document_states_the_ledgers_current_count():
+    """The hole that let nine sentences go stale in one commit.
+
+    `HAND_WRITTEN` was already checked — but only for whether a QUOTED
+    INTERVAL was stale, never for whether the document states the wrong FAMILY
+    SIZE outright. Registering the forward window moved the ledger 95 -> 98 and
+    left nine sentences across these two files saying 95 and x1.7689, and the
+    whole registration shipped green.
+
+    A hand-written file may still describe history — "took the family from 62
+    to 95" is a true sentence about 2026-09-05 — so this checks only the counts
+    stated in the present tense, which is what `CORRECTION_SENTENCES` matches.
+    """
+    looks = ledger_looks()
+    for name in HAND_WRITTEN:
+        text = (REPO / name).read_text(encoding="utf-8")
+        stated = {
+            int(group.replace(",", ""))
+            for found in CORRECTION_SENTENCES.finditer(text)
+            for group in found.groups()
+            if group
+        }
+        assert stated, (
+            f"{name} states no family size in any phrasing this guard knows. "
+            "Either it stopped naming the correction its figures carry, or it "
+            "grew a phrasing that must be added to CORRECTION_SENTENCES — "
+            "which is exactly how the last one went unnoticed."
+        )
+        assert stated == {looks}, (
+            f"{name} states the family correction at {sorted(stated)} and the "
+            f"experiment ledger holds {looks}. Re-derive its figures at the "
+            "current count, or mark the stale number as history in the same "
+            "sentence."
+        )
 
 
 def _at(payload, *path):
