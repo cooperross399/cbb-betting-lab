@@ -98,27 +98,42 @@ DESCRIPTIVE_FIELDS = ("search", "name", "declared_on", "rationale")
 Key = tuple[str, str, tuple[int, ...], str]
 
 
-from cbb_betting_lab import stats  # noqa: E402
-
-
 class LedgerError(Exception):
     """A ledger that cannot be read or trusted. Always a failure, never a skip."""
 
 
-def correction_factor(count: int) -> float:
-    """Bonferroni on the cumulative count, through the package's own function.
+#: `stats.Z95`, restated. The exact two-sided 95% z, NOT 1.96.
+#:
+#: This file divided by a literal `1.96` and so did
+#: `ExperimentLedger.correction_factor`, while `stats.bonferroni_factor` --
+#: the one every record in this lab actually stores -- divided by this. The
+#: two copies agreed with each other and disagreed with the authority by
+#: ~1.8e-5 relative, enough to flip the fourth decimal: the recorder printed
+#: x1.7731 for the same 98 hypotheses every report rendered as x1.7732.
+#:
+#: `test_the_scripts_arithmetic_matches_the_package` existed to catch exactly
+#: that and did not, because it compared the two copies TO EACH OTHER. It now
+#: compares this file against `stats.bonferroni_factor`.
+Z95 = 1.959963984540054
 
-    **A third copy of this arithmetic lived here.** It divided by a literal
-    1.96 where `stats.bonferroni_factor` divides by the exact
-    `Z95` = 1.959963984540054, and so did `ExperimentLedger.correction_factor`
-    -- so `test_the_scripts_arithmetic_matches_the_package` compared two
-    copies that agreed with each other and disagreed with the one every
-    record in this lab actually stores. Two wrongs matching is not a check.
+
+def correction_factor(count: int) -> float:
+    """Bonferroni on the cumulative count. `stats.bonferroni_factor` restated.
+
+    **Restated and not imported, on purpose.** The workflow step runs this
+    script without `PYTHONPATH=src`, so an import makes the append-only gate
+    die at line 1 with `ModuleNotFoundError` before argparse runs -- which is
+    what briefly happened here: the fix for the 1.96 divergence reached for
+    `from cbb_betting_lab import stats` and broke the bare-environment
+    contract this module's own docstring states. A gate that cannot run is
+    worse than a gate that is slightly wrong.
+
+    The copy is deliberate. What holds it honest is the test, not the import.
     """
     families = max(count, 1)
     if families == 1:
         return 1.0
-    return stats.bonferroni_factor(families)
+    return NormalDist().inv_cdf(1 - (ALPHA / families) / 2) / Z95
 
 
 def read_descriptive(payload: dict, path: Path, side: str) -> list[dict]:

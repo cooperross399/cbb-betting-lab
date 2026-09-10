@@ -385,18 +385,79 @@ def interval_three_way(
     return by_subject if by_subject.standard_error > widest.standard_error else widest
 
 
+#: One-sided z for 80% power. A sample sized so the CONFIDENCE INTERVAL just
+#: excludes zero when the OBSERVED effect equals the true one detects a true
+#: effect of that size about half the time -- the observed effect lands below
+#: it as often as above. Powering the answer is what makes it an answer to
+#: "how much data would settle it" rather than to "how much data would settle
+#: it on a lucky sample".
+Z80 = 0.8416212335729143
+
+#: The power `bets_needed_to_detect` sizes for, stated so the reports can name
+#: it beside the number.
+DETECTION_POWER = 0.80
+
+
 def bets_needed_to_detect(edge: float, *, spread: float = 1.0) -> int:
-    """How many bets separate a true edge of this size from zero at 95%."""
+    """The UNCORRECTED, 50%-power sample size. A building block, not an answer.
+
+    `ceil((Z95 * spread / edge) ** 2)` -- the n at which an OBSERVED effect of
+    this size just excludes zero at an uncorrected 95%. A TRUE effect that
+    size clears it about half the time, so this is not "how much data would
+    settle it"; :func:`bets_needed_to_demonstrate` is.
+
+    Kept as a primitive because `run_weekly_loop` wants exactly this and then
+    applies `factor ** 2` itself, which is algebraically the corrected figure
+    -- and its own docstring already says the result is a lower bound because
+    the arithmetic assumes independent bets this sport does not supply.
+    """
     if edge <= 0:
         return 0
     return int(math.ceil((Z95 * spread / edge) ** 2))
 
 
+def bets_needed_to_demonstrate(
+    edge: float, *, looks: int, spread: float = 1.0, power: float = 0.80
+) -> int:
+    """How many bets would SETTLE a true edge of this size, in this lab.
+
+    Corrected and powered, which is what a reader asking "how much data would
+    settle it" is asking. `docs/what_we_can_and_cannot_claim.md` published
+    :func:`bets_needed_to_detect` under that heading, and it was missing both
+    halves, which compound: a true effect clears an uncorrected 95% bar about
+    half the time, and every verdict in this lab is stated at the experiment
+    ledger's cumulative count on top of that.
+
+    Measured at the ledger's 98: a +5% edge was published as needing **~1,537
+    bets** and needs **7,455** -- understating the data required by 4.8x, in
+    the one document whose job is saying what this lab can and cannot claim.
+
+    `looks` is required and never defaulted: a default would be a family size
+    nobody chose, and the number's whole point is that it depends on the search
+    already run.
+    """
+    if edge <= 0:
+        return 0
+    if power != 0.80:
+        raise ValueError(
+            f"power={power}; only 0.80 has a z declared here (`Z80`). Add the "
+            "z for another power rather than interpolating one."
+        )
+    z = bonferroni_z(looks) + Z80
+    return int(math.ceil((z * spread / edge) ** 2))
+
+
 def detection_table(
-    edges: tuple[float, ...] = (0.05, 0.08, 0.10, 0.15)
+    edges: tuple[float, ...] = (0.05, 0.08, 0.10, 0.15), *, looks: int
 ) -> list[tuple[float, int]]:
-    """The sample-size table. This arithmetic does not depend on the sport."""
-    return [(e, bets_needed_to_detect(e)) for e in edges]
+    """The sample-size table. This arithmetic does not depend on the sport.
+
+    It does depend on the SEARCH, which is why `looks` is threaded through and
+    not defaulted: the same edge needs more data to settle once more
+    hypotheses have been tested, and that is the cost this lab charges itself
+    everywhere else.
+    """
+    return [(e, bets_needed_to_demonstrate(e, looks=looks)) for e in edges]
 
 
 def wilson_interval(successes: int, trials: int) -> tuple[float, float]:
@@ -432,16 +493,45 @@ def looks_significant_but_is_a_multiple_comparison(
     return significant <= max(1, int(round(0.05 * looks)))
 
 
+#: **Clusters, not Games.** This column used to be headed "Games" and filled
+#: with `interval.clusters` -- but `interval_two_way` and `interval_three_way`
+#: return whichever of the game, day or athlete clustering gave the WIDEST
+#: standard error, and record which one won in `cluster_unit`. So the count is
+#: a game count on some rows and a day count on others, and a fixed heading is
+#: wrong on whichever rows it does not describe.
+#:
+#: Measured on the shipped `data/outputs/holdout/cbb_replication.md`: the
+#: pooled table printed 277, 8,694, 278, 8,000 and 278 in one column headed
+#: **Games**, where 277 and 278 are slate days and 8,694 and 8,000 are games.
+#: A reader taking "8,443 moneyline bets over 277 games" off that page is
+#: reading it exactly as written and is wrong -- the window holds 9,776 games
+#: and 278 slate days, as the same report says four lines earlier.
+#:
+#: `price_backtest.CLUSTER_TABLE_HEADER` fixed this for itself and its
+#: docstring names the defect; it left the shared constant carrying it, and
+#: two live call sites still render from here.
 ROI_TABLE_HEADER = (
-    "| Market | Bets | Games | ROI | 95% interval | Family-corrected | Verdict |\n"
+    "| Market | Bets | Clusters | ROI | 95% interval | Family-corrected "
+    "| Verdict |\n"
     "|:---|---:|---:|---:|:---|:---|:---|"
 )
 
 
 def roi_table_row(name: str, interval: RoiInterval) -> str:
     return (
-        f"| {name} | {interval.bets:,} | {interval.clusters:,} | "
+        f"| {name} | {interval.bets:,} | {cluster_cell(interval)} | "
         f"{interval.roi:+.1%} | {interval.low:+.1%} to {interval.high:+.1%} | "
         f"{interval.adjusted_low:+.1%} to {interval.adjusted_high:+.1%} | "
         f"{interval.verdict()} |"
     )
+
+
+def cluster_cell(interval: RoiInterval) -> str:
+    """`278 days` or `8,694 games` -- the count and its unit, always both.
+
+    There is no default that could silently be wrong: an interval carrying no
+    `cluster_unit` prints `unknown-clusters` rather than being assumed to be
+    games, which is the assumption that put day counts under a Games heading.
+    """
+    unit = str(getattr(interval, "cluster_unit", "") or "").strip()
+    return f"{interval.clusters:,} {unit or 'unknown-cluster'}s"

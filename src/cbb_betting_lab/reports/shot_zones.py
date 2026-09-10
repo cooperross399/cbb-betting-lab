@@ -169,11 +169,18 @@ HALF_WIDTH = 25.0
 #: true circle. That is why one radius classifies every three.
 ARC = 22.146
 
-#: Beyond this lateral offset a three is a **corner** three. Measured: at
-#: `|y| >= 21` the median attempt sits 6 feet from the baseline against 13 feet
-#: just inside it, and points per attempt step from about 0.99 to about 1.06.
-#: The boundary is where the geometry changes, not where the efficiency is
-#: most flattering.
+#: Beyond this lateral offset a three is a **corner** three. Measured on the
+#: 2025-26 season: at `|y| >= 21` the median attempt sits **9.2 ft from the
+#: baseline** against **26.2 ft** just inside it, and points per attempt step
+#: from **0.990 to 1.062**. The boundary is where the geometry changes, not
+#: where the efficiency is most flattering.
+#:
+#: This said 6 ft against 13, which reproduces on no measure -- from the
+#: hoop's own x-line the same pair is 4.0 and 21.0. The module docstring above
+#: was corrected in #52 and this one was not, so the file gave two
+#: incompatible answers for one measurement, with the retracted figure sitting
+#: next to the constant where a reader checking why the boundary is 21.0 would
+#: find it first.
 CORNER_Y = 21.0
 
 #: A coordinate outside the floor is a sentinel rather than a shot. The feed
@@ -328,25 +335,76 @@ def field_goal_attempts(pbp: pd.DataFrame) -> pd.DataFrame:
     return pbp.loc[shooting & ~free_throw].copy()
 
 
-def charted_share(attempts: pd.DataFrame) -> dict:
+def charted_share(attempts: pd.DataFrame, *, schedule: pd.DataFrame) -> dict:
     """How much of this season carries usable coordinates, by GAME.
 
     The share is taken over games and not over shots, because the feed charts
     whole games: a shot-weighted share would read 6% as "most games are a bit
     thin" when what it means is "94% of games are absent entirely".
+
+    **The denominator is the SCHEDULE and never the play-by-play.** It used to
+    be `attempts["game_id"].nunique()`, which draws the denominator from the
+    same frame as the numerator and so cannot count a game the feed omits
+    entirely. Two consequences, both measured on 2025-26:
+
+    * the shipped record reported `6,275 of 6,275 games (100.0%)` while the
+      tracked schedule holds **6,318** -- 43 games are absent from the feed
+      altogether, and the true coverage is **99.32%**. It clears the 98% floor
+      either way, so no published zone number moves, but the report stated a
+      season 43 games short of the season;
+    * the refusal became unenforceable. Hand this a play-by-play already
+      filtered to rows carrying coordinates -- `pbp[pbp.coordinate_x.notna()]`,
+      or any loader that stores only charted games -- and games == charted, so
+      it measures 100% and returns. `assert_fully_charted`'s docstring says
+      *"There is no override"*; a denominator taken from the numerator's own
+      frame IS the override.
+
+    A game in the feed but not on the schedule is counted in `unscheduled` and
+    excluded from both sides: it cannot be a game this season failed to chart.
     """
     on_floor = _on_floor(attempts)
     per_game = on_floor.groupby(attempts["game_id"]).any()
-    games = int(len(per_game))
-    charted = int(per_game.sum())
+    charted_ids = {_game_key(g) for g, seen in per_game.items() if bool(seen)}
+    scheduled = _scheduled_game_ids(schedule)
+    if not scheduled:
+        raise ShotZoneError(
+            "The schedule supplied no game ids, so there is no denominator for "
+            "the coverage refusal. A share taken over the play-by-play's own "
+            "games is a share of the games the feed chose to include, which is "
+            "the selection this refusal exists to catch."
+        )
+    charted = len(charted_ids & scheduled)
     return {
-        "games": games,
+        "games": len(scheduled),
         "charted_games": charted,
-        "share": (charted / games) if games else 0.0,
+        "share": charted / len(scheduled),
+        "unscheduled": len(charted_ids - scheduled),
         "attempts": int(len(attempts)),
         "attempts_on_floor": int(on_floor.sum()),
         "sentinel_coordinates": int((~on_floor).sum()),
     }
+
+
+def _game_key(value: object) -> str:
+    """One spelling for a game id, whatever type it arrived as.
+
+    The feed's ids are int64 and the schedule's may be int, float or string;
+    the test fixtures use `"G1"`. Comparing them raw put a numeric id and its
+    own string on opposite sides of a set intersection, and coercing with
+    `int()` raised on any non-numeric id. A float that is integral loses its
+    `.0` so `401911532.0` and `401911532` agree, and anything else is compared
+    as its own text.
+    """
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value).strip()
+
+
+def _scheduled_game_ids(schedule: pd.DataFrame) -> set:
+    """Every game id the tracked schedule holds for this season."""
+    if schedule is None or "game_id" not in getattr(schedule, "columns", ()):
+        return set()
+    return {_game_key(g) for g in schedule["game_id"].dropna()}
 
 
 def _on_floor(attempts: pd.DataFrame) -> pd.Series:
@@ -355,9 +413,11 @@ def _on_floor(attempts: pd.DataFrame) -> pd.Series:
     return (x.abs() <= ON_FLOOR) & (y.abs() <= ON_FLOOR)
 
 
-def assert_fully_charted(attempts: pd.DataFrame, *, season) -> dict:
+def assert_fully_charted(
+    attempts: pd.DataFrame, *, season, schedule: pd.DataFrame
+) -> dict:
     """Refuse a season the feed only partly charted. There is no override."""
-    census = charted_share(attempts)
+    census = charted_share(attempts, schedule=schedule)
     if census["share"] < REQUIRED_CHARTED_SHARE:
         raise NotFullyCharted(
             f"Season {season} carries shot coordinates for "
@@ -685,7 +745,9 @@ def division_one_only(frame: pd.DataFrame, schedule: pd.DataFrame) -> tuple:
 def build_record(inputs: ShotZoneInputs, *, generated_at: str = "") -> dict:
     """The record. Every refusal fires before a single zone is counted."""
     attempts = field_goal_attempts(inputs.pbp)
-    coverage = assert_fully_charted(attempts, season=inputs.season)
+    coverage = assert_fully_charted(
+        attempts, season=inputs.season, schedule=inputs.schedule
+    )
     frame = attacking_frame(attempts)
     attribution = assert_every_shot_is_attributed(frame)
     # Counted above, dropped here, and the count rides in the record. Every

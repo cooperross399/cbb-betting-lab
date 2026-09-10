@@ -81,8 +81,17 @@ def a_season(rows, *, games=None):
     return pd.DataFrame(rows)
 
 
-def a_schedule(*, di=(10, 20), non_di=()):
-    """A schedule whose conference ids mark exactly `di` as Division I."""
+def a_schedule(*, di=(10, 20), non_di=(), games=()):
+    """A schedule whose conference ids mark exactly `di` as Division I.
+
+    `games` is the game ids this schedule is a schedule FOR, and it is the
+    denominator of the coverage refusal. It used to be absent entirely -- the
+    fixture carried only conference ids -- so no test could exercise the
+    refusal's denominator at all, which is how that denominator came to be
+    taken from the play-by-play's own frame and stopped being able to refuse
+    anything. `a_record` fills it from the rows it was handed, so the two
+    sides agree by construction rather than by being typed twice.
+    """
     rows = []
     for team in di:
         rows.append(
@@ -102,16 +111,31 @@ def a_schedule(*, di=(10, 20), non_di=()):
                 "away_conference_id": None,
             }
         )
-    return pd.DataFrame(rows)
+    frame = pd.DataFrame(rows)
+    ids = list(games) or ["G1"]
+    # One id per row, cycling, so every scheduled game is named exactly once.
+    frame["game_id"] = [ids[i % len(ids)] for i in range(len(frame))]
+    extra = ids[len(frame):]
+    if extra:
+        pad = frame.iloc[[0]].copy()
+        frame = pd.concat(
+            [frame] + [pad.assign(game_id=g) for g in extra], ignore_index=True
+        )
+    return frame
 
 
 def a_record(rows, *, schedule=None, season=2026):
     # `schedule or a_schedule()` calls bool() on a DataFrame, which raises.
+    if schedule is None:
+        # The schedule covers exactly the games the rows describe, so the
+        # coverage denominator is the season and not the feed's own subset.
+        seen = list(dict.fromkeys(r["game_id"] for r in rows))
+        schedule = a_schedule(games=seen)
     return SZ.build_record(
         SZ.ShotZoneInputs(
             pbp=a_season(rows),
             season=season,
-            schedule=a_schedule() if schedule is None else schedule,
+            schedule=schedule,
         )
     )
 
@@ -182,7 +206,13 @@ def test_charted_share_counts_games_and_not_shots():
     dark = [shot(game="dark") for _ in range(5_000)]
     for row in dark:
         row["coordinate_x"] = None
-    census = SZ.charted_share(SZ.field_goal_attempts(a_season(rows + dark)))
+    # The schedule names BOTH games, which is the point: the dark one exists
+    # and was simply never charted. Taking the denominator from the feed
+    # instead would count only the games the feed chose to include.
+    census = SZ.charted_share(
+        SZ.field_goal_attempts(a_season(rows + dark)),
+        schedule=a_schedule(games=["G1", "dark"]),
+    )
     assert census["games"] == 2 and census["charted_games"] == 1
     assert census["share"] == pytest.approx(0.5), (
         "5,000 uncharted shots in one game must not outvote 150 charted ones "
@@ -359,7 +389,7 @@ def test_a_non_division_one_opponent_is_dropped_from_both_profiles():
 def test_a_schedule_naming_no_conference_is_refused():
     """An empty membership set would rank every programme the feed has seen."""
     blank = pd.DataFrame(
-        {"home_id": [10], "away_id": [20],
+        {"home_id": [10], "away_id": [20], "game_id": ["G1"],
          "home_conference_id": [None], "away_conference_id": [None]}
     )
     with pytest.raises(SZ.NoDivisionOne):
@@ -622,3 +652,61 @@ def test_a_version_one_shot_zone_record_is_refused(tmp_path):
     with pytest.raises(SZ.ShotZoneError) as caught:
         SZ.read_record(path)
     assert "version 1" in str(caught.value)
+
+
+def test_a_feed_holding_only_charted_games_cannot_measure_full_coverage():
+    """The refusal's denominator is the SCHEDULE, so pre-filtering cannot beat it.
+
+    `charted_share` took its denominator from `attempts["game_id"]` — the same
+    frame as its numerator — so a play-by-play already restricted to rows
+    carrying coordinates measured 100% by construction and returned. The
+    module docstring says of the refusal: *"There is no flag to override it."*
+    A denominator drawn from the numerator's own frame IS the override.
+
+    Measured on the shipped 2025-26 record before this changed: it reported
+    `6,275 of 6,275 games (100.0%)` while the tracked schedule holds 6,318 —
+    43 games absent from the feed entirely, and a true coverage of 99.32%.
+    """
+    charted = a_full_profile(10, 20)
+    dark = [shot(game=f"dark{i}") for i in range(3) for _ in range(40)]
+    for row in dark:
+        row["coordinate_x"] = None
+    every_game = ["G1"] + [f"dark{i}" for i in range(3)]
+
+    honest = SZ.charted_share(
+        SZ.field_goal_attempts(a_season(charted + dark)),
+        schedule=a_schedule(games=every_game),
+    )
+    assert honest["games"] == 4 and honest["charted_games"] == 1
+    assert honest["share"] == pytest.approx(0.25)
+
+    # Now hand it a feed with the uncharted games REMOVED, exactly as a loader
+    # that stores only charted games would. The schedule still knows they
+    # existed, so the share is unchanged and the refusal still bites.
+    pruned = SZ.charted_share(
+        SZ.field_goal_attempts(a_season(charted)),
+        schedule=a_schedule(games=every_game),
+    )
+    assert pruned["share"] == pytest.approx(0.25), (
+        "a play-by-play restricted to charted games measured full coverage, so "
+        "the refusal can be walked past by filtering its input"
+    )
+    with pytest.raises(SZ.NotFullyCharted):
+        SZ.assert_fully_charted(
+            SZ.field_goal_attempts(a_season(charted)),
+            season=2026,
+            schedule=a_schedule(games=every_game),
+        )
+
+
+def test_a_schedule_with_no_game_ids_refuses_rather_than_counting_the_feed():
+    """Falling back to the feed's own games is the defect, not the fallback."""
+    no_ids = pd.DataFrame(
+        {"home_id": [10], "away_id": [20],
+         "home_conference_id": [1.0], "away_conference_id": [1.0]}
+    )
+    with pytest.raises(SZ.ShotZoneError, match="no game ids"):
+        SZ.charted_share(
+            SZ.field_goal_attempts(a_season(a_full_profile(10, 20))),
+            schedule=no_ids,
+        )

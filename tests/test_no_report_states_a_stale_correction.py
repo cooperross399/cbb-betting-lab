@@ -1064,6 +1064,19 @@ def _every_committed_record():
             continue
 
 
+#: The verdicts that are a claim about what a market is WORTH.
+RESERVED_VERDICTS = frozenset(
+    {S.DEMONSTRATED_EDGE, S.DEMONSTRATED_DEFICIT, S.NO_DEMONSTRATED_EDGE}
+)
+
+#: The sample-floor refusal. It belongs with the three above and not with
+#: `RETAINED_BUT_THIN`: for a market refused BY NAME it says the market was
+#: taken to the measurement and came back short of a floor, when the truth is
+#: it was never priced -- the wrong reason, and the more flattering one, since
+#: it implies a bigger store would produce a number.
+NOT_ENOUGH_EVIDENCE = "not enough evidence"
+
+
 def _betting_claims_about(payload, refused: set) -> list:
     """Rows that give a refused market a claim about its BETTING value.
 
@@ -1078,17 +1091,37 @@ def _betting_claims_about(payload, refused: set) -> list:
     ARCHIVE -- the store really does hold those quotes -- not a call on the
     bet. Suppressing it would hide something true about the data.
 
-    The line is a claim about what the market is WORTH: an ROI, or one of the
-    reserved verdict phrases. That is the thing this lab may not say about a
-    market it refuses to price.
+    The line is a claim about what the market is WORTH: an ROI, or a VERDICT
+    of any kind. That is the thing this lab may not say about a market it
+    refuses to price.
+
+    **Including "not enough evidence (...)".** The predicate first listed only
+    the three reserved phrases, which let a refused market carry
+    `"not enough evidence (0 wagers, below the 200 declared in advance)"` into
+    a committed record with the gate green. That sentence is not harmless
+    here: it says the market WAS taken to the measurement and came back short
+    of a sample floor, when the truth is that it was refused by name and never
+    priced at all. Wrong reason, and the more flattering of the two -- it
+    implies a bigger store would produce a number.
+
+    But NOT any verdict at all. `cbb_retention_probe.json` calls
+    `player_double_double` **RETAINED_BUT_THIN**, and that is a fact about the
+    ARCHIVE -- the store really does hold those quotes -- not a call on the
+    bet. Widening this to every non-empty verdict flagged it, which would
+    force a census to hide something true and be worse than the defect. The
+    line is a verdict about what the market is WORTH: the three reserved
+    phrases, or the sample-floor refusal that implies it was measured.
     """
-    reserved = {S.DEMONSTRATED_EDGE, S.DEMONSTRATED_DEFICIT, S.NO_DEMONSTRATED_EDGE}
+    def _is_a_betting_verdict(text: str) -> bool:
+        word = str(text or "").strip()
+        return word in RESERVED_VERDICTS or word.startswith(NOT_ENOUGH_EVIDENCE)
+
     found, stack = [], [payload]
     while stack:
         node = stack.pop()
         if isinstance(node, dict):
             if node.get("market") in refused and (
-                "roi" in node or str(node.get("verdict", "")) in reserved
+                "roi" in node or _is_a_betting_verdict(node.get("verdict"))
             ):
                 found.append(node)
             stack.extend(node.values())
@@ -1124,6 +1157,45 @@ def test_no_committed_record_prices_a_market_refused_by_name():
         f"{offenders}. Today's code cannot produce these rows — the records "
         "predate the filter and have to be RE-RUN, never hand-edited."
     )
+
+
+def test_the_refusal_gate_catches_a_sample_floor_verdict_too():
+    """The narrowest thing the gate must still catch, and the widest it must not.
+
+    Both sides pinned here, because the predicate is wrong in two directions
+    and only a pair of cases holds it in the middle:
+
+    * a refused market carrying `"not enough evidence (0 wagers, below the 200
+      declared in advance)"` MUST be caught. The gate first listed only the
+      three reserved phrases and let this through — and for a market refused
+      BY NAME that sentence is not a harmless refusal, it says the market was
+      measured and came up short of a floor when it was never priced at all;
+    * a refused market carrying `RETAINED_BUT_THIN` must NOT be caught. That is
+      a fact about the archive, and a gate that forced a census to hide it
+      would be worse than the defect.
+    """
+    refused = frozenset({"player_first_basket", "player_double_double"})
+
+    floor = {
+        "market": "player_first_basket",
+        "tier": "high_major",
+        "rows": 0,
+        "verdict": "not enough evidence (0 wagers, below the 200 declared in advance)",
+    }
+    assert _betting_claims_about({"cells": [floor]}, refused), (
+        "a market refused by name carried a sample-floor verdict into a record "
+        "and the gate did not notice"
+    )
+
+    archive = {"market": "player_double_double", "verdict": "RETAINED_BUT_THIN"}
+    assert not _betting_claims_about({"probe": [archive]}, refused), (
+        "the gate flagged an archive-retention verdict, which is a true "
+        "statement about the store and not a price"
+    )
+
+    # And a bare count stays legal, which is the census's whole job.
+    census = {"market": "player_first_basket", "wagers": 721, "bucket": "refused_by_name"}
+    assert not _betting_claims_about({"accounting": [census]}, refused)
 
 
 def test_the_refusal_gate_still_lets_a_census_name_what_it_refuses():

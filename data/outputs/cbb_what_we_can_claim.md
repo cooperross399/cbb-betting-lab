@@ -2,7 +2,7 @@
 
 Generated from the measurement records on disk, so it cannot drift from them. The hand-written rules — written before the first measurement, which is the whole point of them — live in `docs/what_we_can_and_cannot_claim.md`. **This file is re-rendered from its own run record and is never edited by hand.**
 
-- Generated: 2026-09-10T17:22:57+00:00
+- Generated: 2026-09-10T18:42:55+00:00
 - Sample floor: **200 bets**, declared in advance. Below it this document prints a phrase and not a number.
 
 **The only result that survives is a loss.** 32 market-and-tier cell(s) across 10 market(s) are measured against real prices. None excludes zero on the winning side; 3 exclude(s) it on the **losing** side after correcting for everything this lab has ever tested, which is a **demonstrated deficit**: `team_total` / mid_major (historical price backtest, bets) at -5.8% over 13,478 bets across 384 days; `moneyline` / low_major (historical price backtest, bets) at -7.9% over 7,561 bets across 632 days; `total_points` / low_major (historical price backtest, bets) at -5.2% over 17,903 bets across 7,131 games. A demonstrated deficit is a finding, not a null result, and it is the finding this lab has.
@@ -153,12 +153,14 @@ The survival split is computed in `data/outputs/cbb_forward_evidence.md`. Nothin
 
 ## How much data would settle it
 
-| If the true edge were | Bets needed to separate it from zero |
+Sized to **demonstrate** the edge, not merely to observe it: at 80% power and at the ledger's 98 cumulative hypotheses. An earlier version of this table gave the uncorrected 50%-power figure — the sample at which an interval just excludes zero when the observed effect happens to equal the true one — which understated a +5% edge by 4.8x.
+
+| If the true edge were | Bets needed to demonstrate it |
 |---:|---:|
-| +5% | ~1,537 |
-| +8% | ~601 |
-| +10% | ~385 |
-| +15% | ~171 |
+| +5% | ~7,455 |
+| +8% | ~2,912 |
+| +10% | ~1,864 |
+| +15% | ~829 |
 
 `docs/when_this_ends.md` set the decision date at **2027-04-19** and the sample floor at **10,000 settled opinions across at least 2,000 distinct games**, both declared on 2026-09-01 before any data existed. The forward ledger currently holds **0 settled opinions**. Below the floor the correct action is to diagnose the pipeline and **not to read the number**.
 

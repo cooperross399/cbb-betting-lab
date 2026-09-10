@@ -1310,7 +1310,10 @@ def _opening_section(record: Mapping) -> list[str]:
         roi, interval, corrected = PB.roi_cells(row)
         add(
             f"| {row.get('name', key)} | {row.get('bets', 0):,} | "
-            f"{row.get('clusters', 0):,} | {roi} | {interval} | {corrected} | "
+            # The unit, not a bare count: `interval_two_way` keeps whichever
+            # of the game or day clustering was wider, so a fixed "Games"
+            # heading is wrong on whichever rows it does not describe.
+            f"{PB.cluster_cell(row)} | {roi} | {interval} | {corrected} | "
             f"{row.get('verdict', '')} |"
         )
     add("")

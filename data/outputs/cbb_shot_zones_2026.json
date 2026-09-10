@@ -17,9 +17,10 @@
     "attempts": 738247,
     "attempts_on_floor": 738247,
     "charted_games": 6275,
-    "games": 6275,
+    "games": 6318,
     "sentinel_coordinates": 0,
-    "share": 1.0
+    "share": 0.9931940487496043,
+    "unscheduled": 0
   },
   "defense": [
     {
@@ -28494,7 +28495,7 @@
     }
   ],
   "descriptive_only": true,
-  "generated_at": "2026-09-09T15:12:08+00:00",
+  "generated_at": "2026-09-10T18:40:48+00:00",
   "geometry": {
     "agree": 661324,
     "attempts": 669442,
@@ -57027,7 +57028,7 @@
   ],
   "record_version": 2,
   "season": 2026,
-  "source": "/private/tmp/wt-rank/data/raw/cbb/pbp/play_by_play_2026.parquet",
+  "source": "/private/tmp/wt-lenses/data/raw/cbb/pbp/play_by_play_2026.parquet",
   "team_names": {
     "1": "Alaska Anchorage Seawolves",
     "101": "Eureka Red Devils",

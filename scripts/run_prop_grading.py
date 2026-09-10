@@ -888,12 +888,25 @@ def main(argv: list[str] | None = None) -> int:
         # nothing, so a missing ledger makes every interval below look more
         # significant than the search that produced it justifies. It is said
         # loudly rather than carried silently in the record.
+        # The tracked ledger's OWN count, read rather than typed. This said
+        # "holds 95 ... x1.7689" as literals, and the ledger moved to 98 the
+        # day the forward window was registered -- so the one warning whose
+        # entire purpose is telling an operator which correction they are
+        # missing told them the wrong one.
+        tracked = PB.ledger_path(OUTPUTS_DIR)
+        held, factor = PB.looks_from_ledger(tracked), None
+        if held > 1:
+            factor = f"x{S.bonferroni_factor(held):.4f}"
+        holds = (
+            f"holds {held:,} and every published interval is widened by {factor}"
+            if factor
+            else "could not be read from the tracked tree either"
+        )
         print(
             f"::warning::No experiment ledger at {experiment_ledger}, so every "
-            "interval below is corrected for ONE hypothesis. This lab's ledger "
-            "holds 95 and every published interval is widened by x1.7689; a "
-            "record written here states a correction nobody has justified. "
-            "Point --output-dir at the tree that carries the ledger.",
+            f"interval below is corrected for ONE hypothesis. This lab's ledger "
+            f"{holds}; a record written here states a correction nobody has "
+            "justified. Point --output-dir at the tree that carries the ledger.",
             file=sys.stderr,
         )
     inputs = PG.PropGradingInputs(
