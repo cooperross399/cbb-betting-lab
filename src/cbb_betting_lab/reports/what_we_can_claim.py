@@ -155,7 +155,24 @@ from cbb_betting_lab.reports import replication as replication_report
 #: record is older than the evidence it claims to have read. A version-1 record
 #: renders the same markdown it always did and is exactly as unable to notice
 #: that it is stale, so it is refused rather than re-rendered.
-RECORD_VERSION = 2
+#:
+#: **3** adds `detection_looks` and `detection_power`, AND changes what the
+#: `detection` rows mean: they were the uncorrected 50%-power sample size and
+#: are now corrected at the ledger's count and powered at 80%. The version was
+#: not bumped when that landed, so `--rerender` against a version-2 record fell
+#: back to `or 1` and `or 0.0` and printed, in the document whose job is
+#: stating what this lab may claim:
+#:
+#:     Sized to **demonstrate** the edge ... at 0% power and at the ledger's 1
+#:     cumulative hypotheses. An earlier version of this table gave the
+#:     uncorrected 50%-power figure ... which understated a +5% edge by 4.8x.
+#:
+#: directly above `| +5% | ~1,537 |` -- the very figures that sentence calls
+#: understated -- on a page that says "95 distinct hypotheses" 150 lines
+#: earlier. One document, two answers, and the retracted one relabelled as the
+#: corrected one. Refusing a version-2 record is the whole point of this
+#: constant, and it was the thing not done.
+RECORD_VERSION = 3
 
 #: The stem both outputs share. `competition.output_name` prefixes it, so the
 #: markdown lands at `data/outputs/cbb_what_we_can_claim.md` — a contract string

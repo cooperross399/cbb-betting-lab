@@ -63,18 +63,23 @@ nothing about basketball weakens them.
 - **"Documented is not quoted."** The provider's catalogue is what it will serve
   if a book hangs it. What books actually hang is an in-season question.
 
-## How much data would settle it
+## Where to find how much data would settle it
 
-This arithmetic does not depend on the sport, so it can be written down now.
-To separate a true edge from zero at 95% confidence, against roughly 5%
-per-bet variance:
+**The table is generated, further down this file, and there is only one of
+them.** This section used to carry a hand-written copy — ~1,540 bets for a +5%
+edge — and the generated one now says **~7,455**. Both sat under this identical
+heading, 290 lines apart, and the hand-written one came first.
 
-| If the true edge were | Bets needed to separate it from zero |
-|----------------------:|-------------------------------------:|
-| +5%  | ~1,540 |
-| +8%  | ~600 |
-| +10% | ~385 |
-| +15% | ~171 |
+The difference is not a correction to the arithmetic; it is two different
+questions. The hand-written figure was the sample at which an interval *just*
+excludes zero when the observed effect happens to equal the true one — which a
+real effect of that size manages about half the time, before this lab's family
+correction is applied at all. The generated table answers the question the
+heading actually asks: how much data would **demonstrate** it, at 80% power and
+at the experiment ledger's cumulative count.
+
+It is not restated here, because a number written twice is a number that
+drifts, and this one already had.
 
 ## The sample size is the reason this lab exists, and it is not good news
 
@@ -206,7 +211,7 @@ anything, and why the build order puts it third rather than last.
 
 Generated from the measurement records on disk, so it cannot drift from them. The hand-written rules — written before the first measurement, which is the whole point of them — live in `docs/what_we_can_and_cannot_claim.md`. **This file is re-rendered from its own run record and is never edited by hand.**
 
-- Generated: 2026-09-10T18:42:55+00:00
+- Generated: 2026-09-10T20:31:54+00:00
 - Sample floor: **200 bets**, declared in advance. Below it this document prints a phrase and not a number.
 
 **The only result that survives is a loss.** 32 market-and-tier cell(s) across 10 market(s) are measured against real prices. None excludes zero on the winning side; 3 exclude(s) it on the **losing** side after correcting for everything this lab has ever tested, which is a **demonstrated deficit**: `team_total` / mid_major (historical price backtest, bets) at -5.8% over 13,478 bets across 384 days; `moneyline` / low_major (historical price backtest, bets) at -7.9% over 7,561 bets across 632 days; `total_points` / low_major (historical price backtest, bets) at -5.2% over 17,903 bets across 7,131 games. A demonstrated deficit is a finding, not a null result, and it is the finding this lab has.

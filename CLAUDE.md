@@ -183,10 +183,12 @@ The store is core team 2021–2026 complete, ladders and halves on 609 events,
 props on 3,223 events; a second ladders wave of 1,199,926 credits was lost
 before persistence (defects S–W) and is not re-bought.
 
-**Which correction these figures carry.** The ledger holds **95 distinct
+**Which correction these figures carry.** The ledger holds **98 distinct
 hypotheses** — 30 discovery entries, the 32 holdout looks the replication
-appended, and the **33 player-prop hypotheses pre-registered on 2026-09-05
-before that model existed** — so every interval is widened by **x1.7689**. The
+appended, the **33 player-prop hypotheses pre-registered on 2026-09-05 before
+that model existed**, and the **3 forward-window hypotheses registered
+2026-09-10 before the 2026-11-02 opener** — so every interval is widened by
+**x1.7732**. The
 records on disk keep the correction each was scored under — the price backtest,
 the forecast-skill fit and the ratings fit at 30 hypotheses (x1.6041),
 `holdout/cbb_replication.json` at 62 (x1.7095) — and they are **not** rewritten:
@@ -214,7 +216,7 @@ generator and are re-derived by hand.
 `tests/test_no_report_states_a_stale_correction.py` fails until both halves are
 done, and names the file and the number it is waiting for.
 
-| Cut | Bets | ROI | Corrected (x1.7689, 95 hypotheses) | Verdict |
+| Cut | Bets | ROI | Corrected (x1.7732, 98 hypotheses) | Verdict |
 |:---|---:|---:|:---|:---|
 | high-major | 43,228 | -3.2% | -8.1% to +1.6% | no demonstrated edge |
 | mid-major | 88,344 | -4.3% | -8.2% to -0.4% | demonstrated deficit |
@@ -224,7 +226,7 @@ done, and names the file and the number it is waiting for.
 both moved the same way.** At the 62 hypotheses in force before the
 registration (x1.7095) **low-major** read a demonstrated deficit at -8.0% to
 -0.1%; it crosses zero at the 85th hypothesis and reads **no demonstrated
-edge** at -8.1% to +0.0% at today's 95 (x1.7689). The replication's held-out
+edge** at -8.1% to +0.0% at today's 98 (x1.7732). The replication's held-out
 **`total_points` / mid-major** cell, -6.4% over 8,214 bets, read a demonstrated
 deficit at -12.5% to -0.2% at those same 62 hypotheses and reads **no
 demonstrated edge** at -12.7% to +0.0% at 95; it crosses at the **95th**, which
@@ -276,9 +278,9 @@ did"* — would have been a false cause today.
   (-4.3% over 88,344 bets).
 - **The model does not beat blind betting on return, and it loses to the vig.**
   The claim that it beat every blind rule was checked and is FALSE: of the
-  190 blind sides clearing the 200-bet floor, **61 return more than
+  188 blind sides clearing the 200-bet floor, **61 return more than
   their own tier's model**, and 10 of those carry a demonstrated deficit at
-  x1.7689 (13 at the x1.60 the record stores) — mid-major
+  x1.7732 (13 at the x1.60 the record stores) — mid-major
   `always the underdog` on moneyline returns -2.0% over 14,091 bets against the
   model's -4.3%. The spread is wide in both directions: the worst blind side is
   `low_major / player_threes / always over` at **-40.0%** over 227 bets, the best
@@ -287,10 +289,10 @@ did"* — would have been a false cause today.
   correction. The evidence that the model carries information is the Brier score
   against the base rate, not the return against blind rules.
 - **The model loses to the market on Brier in every tier, with the vig left
-  in**, per tier and never pooled: high-major **-0.01663**, corrected -0.02197
-  to -0.01129 over 62,163 rows; mid-major **-0.00962**, corrected -0.01319 to
-  -0.00604 over 137,296 rows; low-major **-0.00776**, corrected -0.01103 to
-  -0.00449 over 94,182 rows. All three are demonstrated deficits at x1.7689 and
+  in**, per tier and never pooled: high-major **-0.01663**, corrected -0.02198
+  to -0.01128 over 62,163 rows; mid-major **-0.00962**, corrected -0.01320 to
+  -0.00603 over 137,296 rows; low-major **-0.00776**, corrected -0.01104 to
+  -0.00448 over 94,182 rows. All three are demonstrated deficits at x1.7732 and
   none of them moved when the family grew. In high-major its Brier is worse than
   the **base rate** (0.25118 against 0.25000) — beaten by predicting the league
   mean.
@@ -350,7 +352,7 @@ did"* — would have been a false cause today.
   **-0.0057** (corrected -0.0139 to +0.0024) over 46,370 wagers, **-0.0045**
   (-0.0102 to +0.0011) over 74,174, and **-0.0065** (-0.0386 to +0.0256) over
   2,060. **Uncorrected, high-major and mid-major exclude zero on the losing
-  side**; the family correction at 95 hypotheses is what makes them *no
+  side**; the family correction at 98 hypotheses is what makes them *no
   demonstrated edge* rather than a deficit, which is the correction working and
   not the measurement moving.
 - **One cell is a demonstrated deficit**: `player_pra` / high-major, -0.0167,
