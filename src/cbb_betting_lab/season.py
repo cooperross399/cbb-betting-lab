@@ -124,3 +124,44 @@ def season_for_slate_date(day: str) -> int:
     except ValueError:
         return 0
     return moment.year + 1 if moment.month >= 7 else moment.year
+
+
+# --------------------------------------------------------------------------
+# Rule regimes inside this lab's window
+# --------------------------------------------------------------------------
+
+#: The season the three-point arc moved to 22'1.75" in Division I men's
+#: basketball. Seasons are labelled by the year they END, so the 2019-20
+#: season is 2020 and everything from here shares one arc.
+#:
+#: **Measured on this repository's own countable team-games**, not taken from a
+#: source. Three-point percentage steps down exactly at the boundary and does
+#: not come back:
+#:
+#:     season   3PA rate   3P%
+#:       2019      0.387   0.344      <- old arc, 20'9"
+#:       2020      0.375   0.333      <- arc moved
+#:       2021      0.374   0.338
+#:       2024      0.373   0.338
+#:       2026      0.395   0.339
+#:
+#: An 11-point drop in 3P% is not noise on 6,000-game seasons. Pooling 2019
+#: with what follows models two different games as one, and every shooting
+#: rate, efficiency figure and prior fitted across the boundary inherits it.
+THREE_POINT_ARC_MOVED_IN = 2020
+
+#: The seasons this lab may pool without crossing a rule change. 2019 is
+#: excluded -- it is a real season and its data is not wrong, it simply
+#: belongs to a different game.
+ARC_CONSISTENT_SEASONS: tuple[int, ...] = (2020, 2021, 2022, 2023, 2024, 2025, 2026)
+
+
+def crosses_the_arc_change(seasons) -> bool:
+    """Whether a set of seasons spans the 2019-20 three-point arc move.
+
+    Written as a question rather than a filter because the answer is not always
+    "drop it": a study of shooting REGIME is exactly the study that wants both
+    sides. What it must never be is silent.
+    """
+    got = {int(s) for s in seasons if str(s).strip().isdigit() or isinstance(s, int)}
+    return bool(got) and min(got) < THREE_POINT_ARC_MOVED_IN <= max(got)
