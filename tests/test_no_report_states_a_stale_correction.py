@@ -875,6 +875,41 @@ def _spellings(cell: dict, looks: int) -> tuple[str, ...]:
     )
 
 
+def _and_list(counts) -> str:
+    """`92`, `92 or 95`, `85, 92 or 95` — the counts a reading could be stated at."""
+    spelled = [f"{count:,}" for count in counts]
+    if len(spelled) == 1:
+        return spelled[0]
+    return f"{', '.join(spelled[:-1])} or {spelled[-1]}"
+
+
+def _stale_spellings(cell, earlier, live) -> dict[str, list[int]]:
+    """Every superseded spelling of a cell, mapped to the counts that produce it.
+
+    **One spelling is usually the reading at several counts.** A tier ROI shown
+    to a tenth of a percent moves by less than 0.05pp across a whole
+    registration, so `-8.1% to +0.0%` is what this lab owed at 85, at 92, at 95
+    and at 98 alike. Asking a sentence to name *all four* is asking for
+    something no sentence can say, and the earlier form of this guard did
+    exactly that: it demanded the sentence name 92 while the sentence named 95,
+    for a figure identical at both, and the only way to satisfy it was to stop
+    narrating the history. Naming **one** count at which the quoted figure is
+    the reading is complete provenance, which is what decision 46 asks for.
+
+    Nothing is given up by this. A sentence that names no count at all still
+    fails, and so does one that names a count whose reading is a different
+    figure — the spelling at 62 is `-8.0% to -0.1%`, and a sentence quoting it
+    while saying "at 101" names a count that is not in this map's list for it.
+    """
+    by_spelling: dict[str, list[int]] = {}
+    for looks in earlier:
+        for spelling in _spellings(cell, looks):
+            if spelling in live:
+                continue
+            by_spelling.setdefault(spelling, []).append(looks)
+    return by_spelling
+
+
 def _registration_counts() -> list[int]:
     """The cumulative count at every registration boundary this ledger records.
 
@@ -909,8 +944,24 @@ def _registration_counts() -> list[int]:
 SENTENCE = re.compile(r"(?<=[.;:!?])\s+|\n|\|")
 
 
+def _unwrapped(text: str) -> str:
+    """The file's prose with every run of whitespace flattened to one space.
+
+    **A figure straddling a line break was invisible to this guard.** These two
+    documents are hard-wrapped, so `-0.02199 to -0.01127` is written across two
+    lines as often as not, and a literal substring search does not find it.
+    Both tests below then skipped the cell in silence: one because it looks for
+    superseded spellings and found none, the other because it only fires on a
+    cell the file is seen to quote. Five of CLAUDE.md's eleven headline cells
+    were in that state — unguarded, and indistinguishable from a file that
+    simply does not mention them. Re-wrapping a paragraph is not supposed to
+    decide whether a number is checked.
+    """
+    return re.sub(r"\s+", " ", text)
+
+
 def _sentences(text: str) -> list[str]:
-    return [part for part in SENTENCE.split(text) if part.strip()]
+    return [part for part in SENTENCE.split(_unwrapped(text)) if part.strip()]
 
 
 def _names_the_correction(sentence: str, looks: int) -> bool:
@@ -951,24 +1002,26 @@ def test_no_hand_written_document_states_a_headline_verdict_at_a_stale_correctio
         text = (REPO / name).read_text(encoding="utf-8")
         for label, cell in cells.items():
             live = set(_spellings(cell, current))
-            for looks in earlier:
-                for stale in _spellings(cell, looks):
-                    if stale in live:
+            for stale, counts in _stale_spellings(cell, earlier, live).items():
+                for sentence in _sentences(text):
+                    if stale not in sentence:
                         continue
-                    for sentence in _sentences(text):
-                        if stale not in sentence:
-                            continue
-                        checked += 1
-                        assert _names_the_correction(sentence, looks), (
-                            f"{name} quotes {label} as `{stale}` — the reading "
-                            f"at {looks:,} cumulative hypotheses — in a "
-                            f"sentence that never says so, while the ledger "
-                            f"holds {current:,}. Re-derive it to "
-                            f"`{sorted(live)[0]}`, or name the narrower "
-                            "correction in the same sentence as the number it "
-                            "belongs to. A correction named a paragraph away "
-                            "is not attached to anything."
-                        )
+                    checked += 1
+                    named = [
+                        looks
+                        for looks in counts
+                        if _names_the_correction(sentence, looks)
+                    ]
+                    assert named, (
+                        f"{name} quotes {label} as `{stale}` — the reading at "
+                        f"{_and_list(counts)} cumulative hypotheses — in a "
+                        f"sentence that names none of them, while the ledger "
+                        f"holds {current:,}. Re-derive it to "
+                        f"`{sorted(live)[0]}`, or name the narrower "
+                        "correction in the same sentence as the number it "
+                        "belongs to. A correction named a paragraph away "
+                        "is not attached to anything."
+                    )
     assert checked, (
         "no superseded reading was found in either hand-written document, so "
         "this guard checked nothing. That is possible — but check that the "
@@ -985,7 +1038,9 @@ def test_the_hand_written_documents_quote_the_headline_cells_at_todays_count():
     cells = _headline_cells()
     quoted = 0
     for name in HAND_WRITTEN:
-        text = (REPO / name).read_text(encoding="utf-8")
+        # Flattened, because a figure hard-wrapped across two lines is still a
+        # figure the file quotes -- see `_unwrapped`.
+        text = _unwrapped((REPO / name).read_text(encoding="utf-8"))
         for label, cell in cells.items():
             live = _spellings(cell, current)
             mentioned = [
