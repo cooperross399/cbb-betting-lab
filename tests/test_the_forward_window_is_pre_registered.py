@@ -22,6 +22,7 @@ correction is a fact about the tree rather than a promise in a docstring:
 from __future__ import annotations
 
 import json
+import re
 from datetime import date
 from pathlib import Path
 
@@ -160,12 +161,22 @@ def test_the_registration_cost_is_paid_by_everything_already_published() -> None
 
     **The count is read, not pinned.** This began as `== 98`, the size of the
     family on the day the forward window was registered, and the next
-    registration -- the rebound differential, three more entries -- broke it
-    while retracting nothing. A literal here tests the calendar rather than the
-    cost, and fails loudest exactly when a new registration is being made, which
-    is the moment the cost check most needs to run. The ledger is the authority
-    on its own size, and decision 46 already says so for every report; a test
-    that replays yesterday's count is the same defect one layer down.
+    registration -- the rebound differential, three more entries -- broke it. A
+    literal here tests the calendar rather than the cost, and fails loudest
+    exactly when a new registration is being made, which is the moment the cost
+    check most needs to run. The ledger is the authority on its own size, and
+    decision 46 already says so for every report; a test that replays
+    yesterday's count is the same defect one layer down.
+
+    **That rewrite first said the registration broke this "while retracting
+    nothing", and that was false.** Going 98 -> 101 withdrew a published
+    `demonstrated deficit` from `mid_major / player_threes` on the blind
+    null-baseline side, in both the full-store and the held-out backtest -- its
+    corrected high bound moved from -0.000007 to +0.000163. A wider family can
+    only ever retract, this lab's rule is that the retraction is narrated in the
+    commit that causes it, and the message on the `assert` below says exactly
+    that. It was narrated nowhere. Which is also the point of the roster this
+    check reads: it saw one cell of the record, and not that one.
     """
     from cbb_betting_lab import stats as S
 
@@ -177,18 +188,132 @@ def test_the_registration_cost_is_paid_by_everything_already_published() -> None
         "cut, or this test is reading the wrong one."
     )
 
-    record = json.loads(
-        (_REPO / "data" / "outputs" / "cbb_price_backtest.json").read_text("utf-8")
+    examined, retracted = _readings_across_every_record(S, looks)
+    assert examined > 200, (
+        f"only {examined} published readings were examined; this repository's "
+        "records carry well over two hundred. The roster stopped resolving -- "
+        "a block was renamed, or a record moved -- and a cost check that reads "
+        "nothing passes everything."
     )
-    deficits = [
-        c for c in record["by_tier"] if c.get("verdict") == "demonstrated deficit"
-    ]
-    assert deficits, "the record holds no demonstrated deficit to check"
-    for cell in deficits:
-        half = (cell["high"] - cell["low"]) / 2.0
-        widened = cell["roi"] + S.bonferroni_factor(looks) * half
-        assert widened < 0.0, (
-            f"{cell['name']} stops being a demonstrated deficit at {looks} "
-            "hypotheses. This registration retracted a published finding, "
-            "which has to be stated in the commit that does it."
+
+    narration = " ".join(
+        re.sub(r"\s+", " ", (_REPO / name).read_text(encoding="utf-8"))
+        for name in ("CLAUDE.md", "docs/project_status.md")
+    )
+    unnarrated = [cell for cell in retracted if not _is_narrated(cell, narration)]
+    assert not unnarrated, (
+        "a wider family retracted "
+        f"{len(unnarrated)} published reading(s) that no hand-written document "
+        "names: "
+        + "; ".join(
+            f"{c['record']} {c['block']} {c['tier']}/{c['market']}"
+            f"{'/' + c['name'] if c['name'] else ''} "
+            f"(demonstrated at {c['scored']}, not at {looks})"
+            for c in unnarrated[:6]
         )
+        + ". A wider correction can only ever retract, and this lab's rule is "
+        "that the retraction is narrated in the commit that causes it. Name the "
+        "cell in CLAUDE.md or docs/project_status.md, or do not make the "
+        "registration."
+    )
+
+
+def _cells(payload):
+    """Every scored cell in a record, whatever block it lives in.
+
+    Blocks are discovered rather than listed, because the defect this function
+    exists for was a roster that named ONE of them. `by_tier` holds three rows;
+    the record also carries `by_market_and_tier` and `null_baseline`, and the
+    reading this lab actually retracted on 2026-09-10 was in the last of those.
+    """
+    scored = payload.get("looks")
+    for block, rows in payload.items():
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            value = row.get("roi", row.get("value"))
+            error = row.get("standard_error")
+            if value is None or error is None:
+                continue
+            if not row.get("enough_evidence"):
+                continue
+            yield {
+                "block": block,
+                "tier": row.get("tier"),
+                "market": row.get("market"),
+                "name": row.get("name"),
+                "value": value,
+                "standard_error": error,
+                "scored": row.get("looks", scored),
+            }
+
+
+#: Every record that publishes a verdict a person could act on.
+SCORED_RECORDS = (
+    "cbb_price_backtest.json",
+    "holdout/cbb_price_backtest.json",
+    "core_team_only/cbb_price_backtest.json",
+    "holdout/cbb_replication.json",
+)
+
+
+def _readings_across_every_record(S, looks):
+    """(readings examined, readings that today's correction retracts)."""
+    examined = 0
+    retracted = []
+    for relative in SCORED_RECORDS:
+        path = _REPO / "data" / "outputs" / relative
+        if not path.is_file():
+            raise AssertionError(
+                f"{relative} is on this check's roster and is not on disk. "
+                "Re-render it or take it off the roster in this commit."
+            )
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        for cell in _cells(payload):
+            scored = cell["scored"]
+            if scored is None:
+                continue
+            examined += 1
+            was = _demonstrated(S, cell, scored)
+            now = _demonstrated(S, cell, looks)
+            if was and not now:
+                retracted.append({**cell, "record": relative})
+    return examined, retracted
+
+
+def _demonstrated(S, cell, looks):
+    """Whether the cell's interval at `looks` excludes zero, either side."""
+    half = S.bonferroni_z(looks) * cell["standard_error"]
+    return (cell["value"] + half) < 0.0 or (cell["value"] - half) > 0.0
+
+
+def _is_narrated(cell, narration: str) -> bool:
+    """Whether a hand-written document names the cell that lost its reading.
+
+    Spelled the several ways this repository writes a cell, because the rule is
+    that a reader meets the retraction -- not that it is recorded in one canonical
+    format.
+    """
+    tier, market = cell.get("tier"), cell.get("market")
+    if not tier or not market:
+        return False
+    hyphen = tier.replace("_", "-")
+    cell_named = any(
+        spelling in narration
+        for spelling in (
+            f"{tier} / {market}",
+            f"{market} / {tier}",
+            f"{hyphen} / {market}",
+            f"{market} / {hyphen}",
+        )
+    )
+    # **And the RULE, when the cell is a blind side that has one.** Naming the
+    # cell alone let one narrated rule vouch for its siblings: `low_major /
+    # spread` appeared in a sentence about `always the favourite`, and that
+    # silently covered `always home` and `always away`, which had also lost
+    # their readings and which no document mentioned. Three retractions, one
+    # sentence, two of them invisible.
+    rule = cell.get("name")
+    return cell_named and (rule in narration if rule else True)

@@ -181,7 +181,7 @@ what a market costs, not a reason not to know what a school is called.*
 
 ### The measurement, and it is decisive
 
-**2026-09-05, on the rebuilt full store: 925,831 wagers offered, 191,053 graded
+**2026-09-05, on the rebuilt full store: 920,712 wagers offered, 191,053 graded
 bets over 26,591 games and 791 days of seasons 2021-2026, 32 market-and-tier
 cells. 0 shows a demonstrated edge; 3 show a demonstrated deficit.**
 The store is core team 2021–2026 complete, ladders and halves on 609 events,
@@ -193,9 +193,11 @@ hypotheses** — 30 discovery entries, the 32 holdout looks the replication
 appended, the **33 player-prop hypotheses pre-registered on 2026-09-05 before
 that model existed**, the **3 forward-window hypotheses registered
 2026-09-10 before the 2026-11-02 opener**, and the **3 rebound-differential
-hypotheses registered the same day over 2027-2030**, a window sized to the
-effect rather than to the calendar — so every interval is widened by
-**x1.7773**. The
+hypotheses registered the same day over 2027-2030**, a window whose four
+seasons were chosen by a POOLED power calculation while the three tests
+registered are per-tier — so all three are underpowered, and
+`scripts/record_experiments.py` states the arithmetic rather than the claim it
+was registered under — so every interval is widened by **x1.7773**. The
 records on disk keep the correction each was scored under — the forecast-skill
 fit and the ratings fit at 30 hypotheses (x1.6041), the price backtest at **95**
 (x1.7689) since its 2026-09-09 re-run, `holdout/cbb_replication.json` at 62
@@ -215,7 +217,8 @@ ever published, so every report goes stale the moment it lands. Each generated
 report is brought current by running its own script with
 `--rebuild-report-only` — `run_price_backtest.py` (once per output directory:
 the default, `core_team_only/`, `holdout/`), `run_replication.py`,
-`run_forecast_skill.py`, `fit_ratings.py` — plus `run_what_we_can_claim.py`,
+`run_forecast_skill.py`, `run_prop_grading.py`, `fit_ratings.py` — plus
+`run_what_we_can_claim.py`,
 `run_why_the_model.py --splice-into`, `run_forward_evidence.py` and
 `run_reachability.py`. None of those reads a price table, touches the network
 or spends a credit; they re-read the ledger and re-derive the verdicts from the
@@ -234,15 +237,37 @@ done, and names the file and the number it is waiting for.
 both moved the same way.** At the 62 hypotheses in force before the
 registration (x1.7095) **low-major** read a demonstrated deficit at -8.0% to
 -0.1%; it crosses zero at the 85th hypothesis and reads **no demonstrated
-edge** at -8.1% to +0.1% at today's 101 (x1.7773). The replication's held-out
+edge** at -8.1% to +0.1% at today's 101 (x1.7773). **A third verdict moved at
+98 -> 101 and went unnarrated for a week**: `mid_major / player_threes` on the
+blind null-baseline side lost its demonstrated-deficit reading in both the
+full-store and the held-out backtest, its corrected high bound crossing from
+-0.000007 to +0.000163. The commit that caused it said it retracted nothing.
+The replication's held-out
 **`total_points` / mid-major** cell, -6.4% over 8,214 bets, read a demonstrated
 deficit at -12.5% to -0.2% at those same 62 hypotheses and reads **no
 demonstrated edge** at -12.8% to +0.0% at today's 101; it crossed at the
-**95th**, four registrations ago. Seven blind null-baseline sides lose a
-demonstrated-deficit reading too, taking the blind deficits from 79 of 190 to
-72 on the full store, from 70 of 189 to 63 on the held-out backtest and from 28
-of 48 to 27 on the core-team cut. **Seven on each of the first two, and not the
-same seven.** The held-out cut has no `spread / low-major / always the
+**95th**, two registrations ago. Five blind null-baseline sides lose a
+demonstrated-deficit reading too, taking the blind deficits from 76 of 188 to
+71 on the full store, from 67 of 187 to 62 on the held-out backtest and from 28
+of 48 to 27 on the core-team cut. **Five on each of the first two, and not the
+same five.** (At today's 101 they are 70, 61 and 27. The counts in this
+paragraph were read from records PR #53 replaced -- 79 of 190 and 70 of 189
+were the pre-#53 population, which still held the two markets this lab refuses
+by name -- and they were wrong here for a week.)
+
+**Two blind sides lost a demonstrated reading without any document saying so,
+and a widened cost check found them.** `mid_major / player_threes` on the full
+store and the held-out backtest went at 98 -> 101, in the registration whose own
+commit message said it retracted nothing. Four blind sides on the
+**core-team cut** went much earlier, all of them demonstrated deficits at the 30
+hypotheses that record was scored at and none of them demonstrated at 101:
+`low_major / spread / always home` (-3.4% over 23,392 bets),
+`low_major / spread / always away` (-3.3% over the same 23,392),
+`low_major / spread / always the favourite` (-7.5% over 1,320) and
+`low_major / team_total / always over` (-3.8% over 15,715). None of the six was
+narrated where it happened. The check that now refuses this reads every scored block of every
+published record rather than one block of one, because the version that missed
+both read only `by_tier`. The held-out cut has no `spread / low-major / always the
 favourite` deficit to lose — that side reads no demonstrated edge there at 62
 and at 95, on 673 held-out bets against 1,320 — and it loses `total_points /
 high-major / always the underdog` instead, which the full store keeps at both
@@ -365,18 +390,18 @@ did"* — would have been a false cause today.
   0.68793 against 0.68339, low-major 0.67955 against 0.67379. The headline
   advantage — the least favourable of two de-vigs and two push conventions — is
   **-0.0057** (corrected -0.0139 to +0.0024) over 46,370 wagers, **-0.0045**
-  (-0.0102 to +0.0011) over 74,174, and **-0.0065** (-0.0386 to +0.0256) over
+  (-0.0102 to +0.0011) over 74,174, and **-0.0065** (-0.0387 to +0.0257) over
   2,060. **Uncorrected, high-major and mid-major exclude zero on the losing
   side**; the family correction at 101 hypotheses is what makes them *no
   demonstrated edge* rather than a deficit, which is the correction working and
   not the measurement moving.
 - **One cell is a demonstrated deficit**: `player_pra` / high-major, -0.0167,
-  corrected **-0.0311 to -0.0023** over 4,308 wagers on 350 game clusters. Of
+  corrected **-0.0312 to -0.0023** over 4,308 wagers on 350 game clusters. Of
   the 30 registered market-and-tier cells, 20 are *no demonstrated edge*, that
   one is a deficit, and 9 sit below a declared floor and carry a phrase.
 - **It beats its own control, and that is not the same claim.** The
-  identity-blind role-prior control loses by **+0.1130** (corrected +0.0659 to
-  +0.1601) in high-major and **+0.1154** (+0.0913 to +0.1394) in mid-major, and
+  identity-blind role-prior control loses by **+0.1130** (corrected +0.0656 to
+  +0.1603) in high-major and **+0.1154** (+0.0912 to +0.1395) in mid-major, and
   by nothing demonstrable in low-major. That says the per-athlete evidence is
   worth something over a role table; it says nothing whatever about the market,
   and the report prints that sentence beside every one of them.
@@ -395,7 +420,7 @@ did"* — would have been a false cause today.
   filtered immediately after the census gate, and appear in no cell, no verdict
   and no hypothesis.
 
-**The ledger's 33 entries stay `pending`, and so do all 95.** This lab's
+**The ledger's 33 entries stay `pending`, and so do all 101.** This lab's
 convention is that the ledger records the registration and the record on disk
 carries the result; decision 54 says why, and
 `tests/test_the_player_props_are_pre_registered.py` no longer reads the field as
