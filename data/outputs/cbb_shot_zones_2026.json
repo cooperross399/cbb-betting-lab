@@ -28495,7 +28495,7 @@
     }
   ],
   "descriptive_only": true,
-  "generated_at": "2026-09-10T18:40:48+00:00",
+  "generated_at": "2026-09-10T21:02:46+00:00",
   "geometry": {
     "agree": 661324,
     "attempts": 669442,
@@ -57026,9 +57026,9 @@
       "zone": "short_paint"
     }
   ],
-  "record_version": 2,
+  "record_version": 3,
   "season": 2026,
-  "source": "/private/tmp/wt-lenses/data/raw/cbb/pbp/play_by_play_2026.parquet",
+  "source": "/private/tmp/wt-p3/data/raw/cbb/pbp/play_by_play_2026.parquet",
   "team_names": {
     "1": "Alaska Anchorage Seawolves",
     "101": "Eureka Red Devils",

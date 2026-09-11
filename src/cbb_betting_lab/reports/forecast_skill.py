@@ -2885,8 +2885,9 @@ def render(record: Mapping) -> str:
     )
     add("")
     add(
-        "**6 high-major conferences / 79 teams, 10 mid-major / 122, 17 "
-        "low-major / 164** are three different distributions, and this lab "
+        "**The three tiers are measured from non-conference margin, never "
+        "assigned by a conference name list** — so the count in each moves "
+        "with the data. They are three different distributions, and this lab "
         "exists because the third is plausibly priced with less attention. No "
         "pooled Division I headline is ever reported; the pooled section below "
         "exists only because it is printed beside these."

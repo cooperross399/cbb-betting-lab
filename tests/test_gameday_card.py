@@ -2110,3 +2110,44 @@ def test_a_market_refused_by_name_is_refused_by_name_on_the_card():
             "declined as a missing engine."
         )
         assert "no probability exists for this line yet" not in said
+
+
+def test_a_staged_board_does_not_claim_its_per_event_stage_finished(tmp_path):
+    """A truncated staged file and a complete one are the same file, shorter.
+
+    `Board.per_event_complete` defaults True and `read_staged_board` never set
+    it, so replaying a board written by a run the credit cap stopped partway
+    froze the ladder/half/prop PREFIX that flag exists to withhold — the early
+    tips kept and the late ones dropped, which in this sport is the West Coast,
+    low-major end of the board. `STAGED_COLUMNS` carries no completeness
+    marker, so the file cannot say; ambiguity falls on the not-frozen side.
+    """
+    from cbb_betting_lab.providers.staging import STAGED_COLUMNS
+
+    rows = []
+    for market, selection, line in (
+        ("moneyline", "home", ""),
+        ("alternate_spread", "home", -7.5),
+    ):
+        rows.append(
+            {
+                "event_id": "E1", "commence_time": "2027-01-05T23:00Z",
+                "slate_date": "2027-01-05", "home_team": "Duke Blue Devils",
+                "away_team": "Kansas Jayhawks", "market": market,
+                "segment": "game", "player": "", "selection": selection,
+                "line": line, "american_odds": -110, "book": "draftkings",
+                "provider_key": "the_odds_api:cbb",
+            }
+        )
+    frame = pd.DataFrame(rows)[list(STAGED_COLUMNS)]
+    target = tmp_path / "2027-01-05_morning.csv"
+    frame.to_csv(target, index=False, lineterminator="\n")
+
+    board = GC.read_staged_board(target, competition=CBB)
+    assert board.per_event_complete is False, (
+        "a staged board claimed its per-event stage finished. It cannot know "
+        "that, and the permissive default freezes a biased prefix as a night."
+    )
+    # And the bulk markets are unaffected: they arrive in one call and are
+    # complete or absent, so a featured-market rehearsal still works.
+    assert "moneyline" in set(board.rows["market"])

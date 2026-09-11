@@ -148,9 +148,11 @@ NFL's, and a hardcoded {3, 7} would be a fact about a different sport.
 
 ## Per market and per conference tier, never a pooled headline
 
-6 high-major conferences / 79 teams, 10 mid-major / 122, 17 low-major / 164 —
-three different distributions, and the whole thesis of this lab is that the
-third one is priced with less attention. The lead table is market x tier. A
+Three tiers, **measured from non-conference margin and never assigned by a
+conference name list**, so the count in each moves with the data and the
+lookback window — `data/outputs/cbb_ratings_fit.json` records the shape each
+fit placed. They are three different distributions, and the whole thesis of
+this lab is that the third one is priced with less attention. The lead table is market x tier. A
 pooled figure exists, because `docs/when_this_ends.md` applies the stopping rule
 to it, and it is printed under a heading that says in words that it is never the
 headline.
@@ -2274,10 +2276,25 @@ def render(record: dict) -> str:
     add("## The model, per market and per conference tier")
     add("")
     add(
-        "The lead table, and the only one that is a headline. **6 high-major "
-        "conferences / 79 teams, 10 mid-major / 122, 17 low-major / 164** are "
-        "three different distributions, and this lab exists because the third "
-        "is plausibly priced with less attention."
+        "The lead table, and the only one that is a headline. The three tiers "
+        "are three different distributions, and this lab exists because the "
+        "third is plausibly priced with less attention."
+    )
+    add("")
+    # The shape used to be typed here as "6 high-major conferences / 79 teams,
+    # 10 mid-major / 122, 17 low-major / 164" — a CONFERENCE name-list census
+    # of a scheme this lab does not use. `conferences.tier_table` places a team
+    # by its MEASURED non-conference margin over `TIER_LOOKBACK_SEASONS`, so
+    # the shape moves with the data and with the lookback window; on the fit
+    # behind this record it is 61 / 131 / 172, not 79 / 122 / 164. Rather than
+    # retype a second wrong triple, the sentence now points at the record that
+    # computes it.
+    add(
+        "The tier of a team is **measured, not assigned by conference**: "
+        "`conferences.tier_table` places it by non-conference margin over the "
+        "declared lookback, so the count in each tier moves with the data. "
+        "`data/outputs/cbb_ratings_fit.json` carries the shape the fit behind "
+        "this record placed."
     )
     add("")
     cells = record.get("by_market_and_tier") or []

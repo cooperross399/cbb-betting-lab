@@ -481,6 +481,20 @@ def read_staged_board(
         rows=frame,
         counts=counts,
         spend=Spend(),
+        # A staged file cannot say whether its per-event stage FINISHED, so
+        # this assumes it did not. `STAGED_COLUMNS` carries no completeness
+        # marker, and a live run stopped by the credit cap writes every row it
+        # already paid for — so a truncated board and a complete one are the
+        # same file with different lengths. Replaying one with the permissive
+        # default froze the ladder/half/prop PREFIX the flag exists to
+        # withhold: the early tips kept and the late ones dropped, which in
+        # this sport is the West Coast, low-major end of the board.
+        #
+        # Ambiguity falls on the not-frozen side, as it does everywhere else
+        # here. The bulk markets still freeze — they arrive in one call and
+        # are complete or absent — so a rehearsal of featured markets is
+        # unaffected; only the per-event strata are withheld.
+        per_event_complete=False,
         source=f"a staged fixture at `{Path(path).name}`",
         events_in_the_read=counts.events,
         notes=[

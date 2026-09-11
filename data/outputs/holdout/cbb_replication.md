@@ -20,7 +20,7 @@ Generated 2026-09-05T16:56:49Z.
 
 ## The verdict, per market and per conference tier
 
-32 cell(s) from the discovery record, re-scored on 71,778 graded held-out bets across 9,776 games and 278 slate days. **6 high-major conferences / 79 teams, 10 mid-major / 122, 17 low-major / 164** are three different distributions and are never pooled into one headline.
+32 cell(s) from the discovery record, re-scored on 71,778 graded held-out bets across 9,776 games and 278 slate days. **The three tiers are measured from non-conference margin, never assigned by a conference name list** — so the count in each moves with the data — and they are three different distributions, never pooled into one headline.
 
 The **Discovery** column quotes the backtest's own figure at the backtest's own floor of 200 bets; every held-out column is withheld below the 2,000-bet floor `promotion.py` pre-registered per season. Two floors, both declared in advance, each applied to the report that owns it — re-judging the backtest's numbers here would be inventing a third.
 

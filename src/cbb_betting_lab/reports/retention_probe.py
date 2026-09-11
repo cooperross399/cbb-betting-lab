@@ -340,12 +340,31 @@ def tip_window(commence_time: object, competition: Competition) -> str:
 
 
 def game_tier(home_team_id: object, away_team_id: object, tiers: TierTable) -> str:
-    """The higher of the two sides' tiers.
+    """The higher of the two sides' tiers, with `unplaced` ranked LOWEST.
 
     The board's attention follows the stronger programme: a low-major visiting a
     high-major is a televised high-major game and is priced like one. Taking the
     higher tier is therefore what makes the low-major stratum mean *both sides
     are low-major*, which is the end of the board this lab was built to look at.
+
+    **And that last sentence is not quite true, because of `unplaced`.**
+    `_TIER_RANK` puts it at 0, below `low_major`, so a low-major hosting a team
+    the tier table could not place returns `low_major` and the game enters that
+    stratum. But `unplaced` is not a weaker tier -- it is the absence of one --
+    so the low-major stratum can hold a game whose other side is of unknown
+    character, which is exactly what the sentence above says it does not.
+
+    The blast radius is small and measured: `game_state` already excludes
+    non-D-I opponents upstream (1,094 of 12,598 team-games in 2026), so this
+    reaches only D-I teams with too few countable games to place, and the
+    shipped backtest carries 6 bets in `unplaced` against 191,047 in the three
+    real tiers.
+
+    It is written down rather than changed because changing the rank would
+    move which stratum real games belong to, and every per-tier verdict this
+    lab publishes with them. That is a decision for the decision log, not a
+    tidy-up: `price_backtest` and `prop_grading` both keep `unplaced` as its
+    own reported state, which is the opposite convention to this one.
     """
     home = tiers.tier_for(home_team_id).value
     away = tiers.tier_for(away_team_id).value

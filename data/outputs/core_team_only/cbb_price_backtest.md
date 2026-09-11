@@ -81,7 +81,9 @@ Generated 2026-09-05T14:13:25Z.
 
 ## The model, per market and per conference tier
 
-The lead table, and the only one that is a headline. **6 high-major conferences / 79 teams, 10 mid-major / 122, 17 low-major / 164** are three different distributions, and this lab exists because the third is plausibly priced with less attention.
+The lead table, and the only one that is a headline. The three tiers are three different distributions, and this lab exists because the third is plausibly priced with less attention.
+
+The tier of a team is **measured, not assigned by conference**: `conferences.tier_table` places it by non-conference margin over the declared lookback, so the count in each tier moves with the data. `data/outputs/cbb_ratings_fit.json` carries the shape the fit behind this record placed.
 
 | Tier | Market | Bets | Clusters | ROI | 95% interval | Family-corrected | Could detect | Verdict |
 |:---|:---|---:|---:|---:|:---|:---|---:|:---|
