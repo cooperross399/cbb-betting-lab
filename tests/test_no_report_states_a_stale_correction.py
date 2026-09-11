@@ -816,6 +816,9 @@ def _headline_cells() -> dict[str, dict]:
     replication = json.loads(
         (OUTPUTS / "holdout" / "cbb_replication.json").read_text(encoding="utf-8")
     )
+    props = json.loads(
+        (OUTPUTS / "cbb_prop_grading.json").read_text(encoding="utf-8")
+    )
     cells: dict[str, dict] = {}
     for tier in ("high_major", "mid_major", "low_major"):
         index = _tier(backtest, "by_tier", tier)
@@ -846,7 +849,40 @@ def _headline_cells() -> dict[str, dict]:
     cells["replication / total_points mid-major held out"] = _at(
         replication, "markets", market, "holdout"
     )
-    assert len(cells) == 11, sorted(cells)
+
+    # The player-prop cells. **These were missing, and four published intervals
+    # went stale behind the gap.** The roster was built from three records and
+    # pinned at eleven, so every prop figure the two hand-written documents
+    # quote -- the headline de-vig advantage, the one demonstrated prop deficit
+    # and both role-prior controls -- was outside the guard's reach. Three of
+    # them had been stale since 95 hypotheses and the fourth went stale in the
+    # registration that added this comment, and all three document guards
+    # stayed green throughout. A roster is only a roster of what it names.
+    prop_tier = _tier(props, "by_tier", "low_major")
+    cells["prop grading / low-major de-vig headline"] = _at(
+        props, "by_tier", prop_tier, "advantages", "devig_power__conditional"
+    )
+    for tier in ("high_major", "mid_major"):
+        index = _tier(props, "by_tier", tier)
+        key = (
+            "control__unconditional"
+            if "control__unconditional"
+            in props["by_tier"][index]["advantages"]
+            else "control__conditional"
+        )
+        cells[f"prop grading / {tier} role-prior control"] = _at(
+            props, "by_tier", index, "advantages", key
+        )
+    pra = next(
+        i
+        for i, row in enumerate(props["by_market_and_tier"])
+        if (row.get("market"), row.get("tier")) == ("player_pra", "high_major")
+    )
+    cells["prop grading / player_pra high-major"] = _at(
+        props, "by_market_and_tier", pra, "advantages", "devig_power__conditional"
+    )
+
+    assert len(cells) == 15, sorted(cells)
     return cells
 
 
@@ -864,6 +900,12 @@ def _spellings(cell: dict, looks: int) -> tuple[str, ...]:
     quoted in a spelling no pattern here could match, so the guard that exists
     to catch a stale figure could not have seen those four go stale. The
     docstring above said exactly what to do; it simply was not done.
+
+    **And it grew a fifth.** The player-prop figures are written to FOUR
+    decimals (`-0.0387 to +0.0257`), which no pattern here matched either --
+    so even once those cells reached the roster the guard would have kept
+    quiet about them. Two spellings added late, for the same reason both
+    times: a document was written first and the guard was updated never.
     """
     rebuilt = RESTATEMENT.rebuild_cell(cell, looks=looks)
     low, high = rebuilt["adjusted_low"], rebuilt["adjusted_high"]
@@ -872,6 +914,7 @@ def _spellings(cell: dict, looks: int) -> tuple[str, ...]:
         f"{low:.5f} to {high:.5f}",
         f"{low:+.5f} to {high:+.5f}",
         f"{low:+.3f} to {high:+.3f}",
+        f"{low:+.4f} to {high:+.4f}",
     )
 
 
@@ -906,7 +949,13 @@ def _stale_spellings(cell, earlier, live) -> dict[str, list[int]]:
         for spelling in _spellings(cell, looks):
             if spelling in live:
                 continue
-            by_spelling.setdefault(spelling, []).append(looks)
+            counts = by_spelling.setdefault(spelling, [])
+            # De-duplicated, because several spellings of one cell collide: a
+            # cell whose bounds are both negative renders identically under the
+            # unsigned and the signed five-decimal forms, so one count was
+            # appended twice and `_and_list` read back "85 or 85".
+            if looks not in counts:
+                counts.append(looks)
     return by_spelling
 
 
@@ -944,8 +993,12 @@ def _registration_counts() -> list[int]:
 SENTENCE = re.compile(r"(?<=[.;:!?])\s+|\n|\|")
 
 
+#: A line that OPENS a block rather than continuing the previous one.
+BLOCK_OPENER = re.compile(r"^(?:\||[-*+]\s|\d+[.)]\s|#{1,6}\s|>|```|$)")
+
+
 def _unwrapped(text: str) -> str:
-    """The file's prose with every run of whitespace flattened to one space.
+    """The file's prose with SOFT WRAPS joined -- and nothing else.
 
     **A figure straddling a line break was invisible to this guard.** These two
     documents are hard-wrapped, so `-0.02199 to -0.01127` is written across two
@@ -953,11 +1006,42 @@ def _unwrapped(text: str) -> str:
     Both tests below then skipped the cell in silence: one because it looks for
     superseded spellings and found none, the other because it only fires on a
     cell the file is seen to quote. Five of CLAUDE.md's eleven headline cells
-    were in that state — unguarded, and indistinguishable from a file that
+    were in that state -- unguarded, and indistinguishable from a file that
     simply does not mention them. Re-wrapping a paragraph is not supposed to
     decide whether a number is checked.
+
+    **The first fix for that flattened every run of whitespace, and that was
+    too much.** `SENTENCE` splits on `\n` as well as on `.;:!?` and `|`, so
+    erasing every newline erased a boundary the splitter depends on: measured on
+    these two files it halved the chunk count (905 -> 457) and nearly doubled
+    the longest chunk (273 -> 525 characters). The guard's whole premise is
+    sentence-level scope -- "a correction named at the far end of it is attached
+    to nothing" -- so doubling what counts as one sentence lets a correction
+    named in one block vouch for a figure in the next. No committed document
+    exploited it, which is exactly why it needed catching by construction rather
+    than by inspection.
+
+    So join only a newline that is a SOFT WRAP: the previous line does not end a
+    sentence or a table row, and the next line continues prose rather than
+    opening a block. Every other newline survives as the boundary it was.
     """
-    return re.sub(r"\s+", " ", text)
+    out: list[str] = []
+    lines = text.split("\n")
+    joined = False
+    for index, line in enumerate(lines):
+        # A continuation carries the paragraph's indent; joining has to drop it
+        # or the figure reads `-0.02199   to -0.01127` and still does not match.
+        out.append(line.lstrip() if joined else line)
+        if index + 1 >= len(lines):
+            break
+        soft = bool(
+            line.strip()
+            and not line.rstrip().endswith(("|", ".", ";", ":", "!", "?"))
+            and not BLOCK_OPENER.match(lines[index + 1].lstrip())
+        )
+        out.append(" " if soft else "\n")
+        joined = soft
+    return "".join(out)
 
 
 def _sentences(text: str) -> list[str]:
@@ -967,17 +1051,109 @@ def _sentences(text: str) -> list[str]:
 def _names_the_correction(sentence: str, looks: int) -> bool:
     """Whether a sentence says, in its own words, which correction it carries.
 
-    Either the cumulative count or the factor computed from it — the two ways
+    Either the cumulative count or the factor computed from it -- the two ways
     this repository writes it. `x1.60` is accepted alongside `x1.6041` because
     the two-decimal form is what the records' own prose uses.
+
+    **Both factor patterns end in `(?!\\d)`, and without it this guard blessed
+    the thing it exists to catch.** A bare substring search for the two-decimal
+    form has no right-hand boundary, and `bonferroni_factor(95)` and `(98)` both
+    render `1.77` -- which is a PREFIX of `x1.7773`, the factor owed at 101. So
+    the one sentence in each document whose job is to declare today's correction
+    was also the sentence that vouched for 95 and 98, laundering any figure
+    stale at either count into the current family. It did not vouch for its own
+    count, since 101 renders `1.78`. The same collision sits at `1.60` for 29
+    and 30. The lookahead makes each pattern match only a factor written to
+    exactly that many decimals.
     """
     factor = S.bonferroni_factor(looks)
     tokens = (
         rf"\b{looks}\b",
-        rf"[x×]{factor:.4f}".replace(".", r"\."),
-        rf"[x×]{factor:.2f}".replace(".", r"\."),
+        rf"[x×]{factor:.4f}".replace(".", r"\.") + r"(?!\d)",
+        rf"[x×]{factor:.2f}".replace(".", r"\.") + r"(?!\d)",
     )
     return any(re.search(token, sentence) for token in tokens)
+
+
+def test_a_factor_vouches_only_for_the_count_that_produced_it():
+    """The prefix collision, pinned directly.
+
+    `bonferroni_factor(95)` and `(98)` both render `1.77` to two decimals, and
+    `1.77` is a PREFIX of `1.7773`, the factor owed at 101. Without a right-hand
+    boundary the one sentence in each document whose job is to declare today's
+    correction vouched for two superseded counts and not for its own. No
+    committed document exploited it, so no document could have caught it.
+    """
+    today = "the ledger's cumulative count of 101 distinct hypotheses, ×1.7773"
+    for stale in (29, 30, 62, 85, 92, 95, 98):
+        assert not _names_the_correction(today, stale), (
+            f"a sentence stating only today's correction vouches for {stale}. "
+            "The factor patterns lost their (?!\\d) boundary, so a shorter "
+            "factor matches as a prefix of a longer one."
+        )
+    assert _names_the_correction(today, 101)
+    # The two-decimal form the generated reports use still has to work.
+    assert _names_the_correction("widened by x1.78", 101)
+    assert not _names_the_correction("widened by x1.78", 95)
+
+
+def test_the_roster_and_the_spellings_reach_the_player_prop_figures():
+    """A roster omission is invisible while the documents happen to be right.
+
+    Four published prop intervals went stale behind this gap and all three
+    document guards stayed green, because `_headline_cells` was built from three
+    records and `_spellings` had no four-decimal form. Neither absence can be
+    caught by mutating a document -- with the documents correct there is nothing
+    to detect -- so both are pinned here by name.
+    """
+    cells = _headline_cells()
+    prop = sorted(name for name in cells if name.startswith("prop grading /"))
+    assert len(prop) == 4, (
+        f"the roster names {len(prop)} prop-grading cell(s): {prop}. The "
+        "hand-written documents quote four -- the de-vig headline, the one "
+        "demonstrated prop deficit and both role-prior controls."
+    )
+    spellings = _spellings(cells[prop[0]], ledger_looks())
+    assert any(
+        re.fullmatch(r"[-+]0\.\d{4} to [-+]0\.\d{4}", spelling)
+        for spelling in spellings
+    ), (
+        "no four-decimal spelling is emitted, which is the form every prop "
+        f"figure in those documents is written in. Got: {spellings}"
+    )
+
+
+def test_unwrapping_joins_a_soft_wrap_and_keeps_every_block_boundary():
+    """`_unwrapped` pinned directly, because no committed document can pin it.
+
+    The first version flattened every run of whitespace. That found the
+    hard-wrapped figures it was written for, and it also erased the `\n` branch
+    of SENTENCE -- so a correction named in one table row or bullet could vouch
+    for a figure in the next. No document in the repository exploited it, which
+    means the documents could not have caught it either: the guard would have
+    stayed green all the way to the day one did. Hence a unit test.
+    """
+    joined = _unwrapped("corrected -0.02199\n  to -0.01127 over 62,163 rows.")
+    assert "-0.02199 to -0.01127" in joined, (
+        "a soft wrap inside a sentence is no longer joined, so a hard-wrapped "
+        f"figure is invisible to the guard again. Got: {joined!r}"
+    )
+
+    for label, text in {
+        "table rows": "| low-major | -8.1% to +0.0% |\n| note | 101 |",
+        "bullets": "- low-major reads -8.1% to +0.0%\n- the family is 101",
+        "blank line": "low-major reads -8.1% to +0.0%\n\nThe family is 101",
+        "heading": "low-major reads -8.1% to +0.0%\n# The family is 101",
+        "numbered": "low-major reads -8.1% to +0.0%\n1. The family is 101",
+    }.items():
+        chunks = [c for c in SENTENCE.split(_unwrapped(text)) if c.strip()]
+        holding = [c for c in chunks if "-8.1% to +0.0%" in c]
+        assert holding, f"{label}: the figure vanished from every chunk"
+        assert not any("101" in c for c in holding), (
+            f"{label}: the figure and a correction count that does not belong to "
+            f"it share one chunk, so the count vouches for the figure. "
+            f"Chunks: {chunks!r}"
+        )
 
 
 def test_no_hand_written_document_states_a_headline_verdict_at_a_stale_correction():

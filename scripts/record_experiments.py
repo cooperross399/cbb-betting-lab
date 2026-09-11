@@ -117,17 +117,55 @@ PLAYER_TIERS = ("high_major", "mid_major", "low_major")
 #: worth its own correction.
 FORWARD = (2027, 2028, 2029)
 
-#: The rebound-differential window: FOUR seasons, not three, and the extra one
-#: is not caution. Measured on 25,826 games across 2021-2026 the slope is
-#: +7.14 points per unit of `d_orb` with a standard error of 1.31. Scaled to a
-#: season's ~4,304 games and corrected at 101 hypotheses, the minimum
-#: detectable slope is 11.21 at one season, 7.93 at two and 6.47 at three --
-#: and at 80% POWER three seasons needs 8.04 against an observed 7.14, which is
-#: underpowered. Four needs 6.96 and clears it.
+#: The rebound-differential window: four seasons.
 #:
-#: Registering this over 2027-2029 would have repeated the error the forward
-#: ROI window was designed to avoid: a hypothesis the sample cannot settle.
+#: **The arithmetic that chose four was done on the wrong sample, and the three
+#: hypotheses below are underpowered.** It was computed POOLED -- 25,826 games
+#: across 2021-2026, slope +7.14, standard error 1.31, scaled to a season's
+#: ~4,304 games and corrected at 101 hypotheses. Those pooled figures do
+#: reproduce: minimum detectable slope 11.21 at one season, 7.93 at two, 6.47 at
+#: three, and at 80% POWER 8.04 at three against an observed 7.14, 6.96 at four.
+#: But what is registered below is three PER-TIER tests, and a tier's slope is
+#: estimated from that tier's games alone. Splitting the same sample into exact
+#: thirds -- the most charitable division available -- the 80%-power minimum
+#: detectable slope over these four seasons is 12.02, against the per-tier
+#: observed slopes of +8.5 (high-major), +8.6 (mid-major) and +4.5 (low-major).
+#: All three are underpowered, and 6.96 describes a pooled test that was never
+#: registered and which this lab's no-pooled-headline rule would not accept.
+#:
+#: So this window repeats, rather than avoids, the error it was written to
+#: avoid: a hypothesis the sample cannot settle. It is left standing because the
+#: ledger is APPEND-ONLY -- a registered hypothesis is not withdrawn to make the
+#: arithmetic look better, which is the whole point of registering it -- and
+#: because a wider window bought now would be a second power calculation made by
+#: the same method that produced this one. What these three entries can settle
+#: in 2030 is therefore weaker than the sentence they were registered under:
+#: they can refute a slope near 12, and they cannot settle one near 7.
+#:
+#: `tests/test_the_rebound_differential_is_pre_registered.py` pins this, so the
+#: claim and the arithmetic cannot drift apart again.
 REBOUND_WINDOW = (2027, 2028, 2029, 2030)
+
+#: The measurement the window was chosen from, as constants rather than prose.
+#:
+#: They lived only in the comment above, where nothing could check them and the
+#: commit message stated them as fact. The feature table they came from is not
+#: committed -- `data/raw/cbb/pbp/` is gitignored and the walk-forward features
+#: are rebuilt, not stored -- so these numbers are **not re-derivable from this
+#: repository**, and that is worth saying plainly rather than leaving a reader
+#: to assume they are. What IS checkable is that the window, the per-tier slopes
+#: and the powered/underpowered claim agree with each other, and
+#: `tests/test_the_rebound_differential_is_pre_registered.py` checks exactly
+#: that, so the claim and the arithmetic cannot drift apart again.
+REBOUND_SLOPE = 7.14
+REBOUND_SLOPE_STANDARD_ERROR = 1.31
+REBOUND_GAMES_MEASURED = 25_826
+REBOUND_GAMES_PER_SEASON = 4_304
+REBOUND_SLOPE_BY_TIER = {
+    "high_major": 8.5,
+    "mid_major": 8.6,
+    "low_major": 4.5,
+}
 
 
 #: Everything this build has put, or is about to put, to the priced data.
@@ -390,8 +428,12 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
     # run on data already seen. A direction fixed after the numbers is not a
     # prediction, and no amount of clustering repairs that. This registration
     # is what converts a search result into a claim: the direction is written
-    # down now, before a single 2027 possession, and the four seasons are the
-    # ones the effect size actually needs.
+    # down now, before a single 2027 possession.
+    #
+    # The four seasons are NOT "the ones the effect size actually needs" -- that
+    # sentence stood here for a week and was wrong. See REBOUND_WINDOW: the
+    # power calculation was pooled, these three tests are per-tier, and all
+    # three are underpowered at four seasons.
     #
     # Three entries, one per tier, because the no-pooled-Division-I rule makes
     # that the floor -- and because the effect is not equal across them:

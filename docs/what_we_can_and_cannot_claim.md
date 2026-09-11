@@ -67,8 +67,16 @@ nothing about basketball weakens them.
 
 **The table is generated, further down this file, and there is only one of
 them.** This section used to carry a hand-written copy — ~1,540 bets for a +5%
-edge — and the generated one now says **~7,455**. Both sat under this identical
-heading, 290 lines apart, and the hand-written one came first.
+edge — and the generated one says several times that. **The figure itself is
+written once, in the generated table below, and deliberately not here.** Both
+sat under this identical heading, 290 lines apart, and the hand-written one
+came first.
+
+This paragraph then did the thing it warns about. It replaced the hand-written
+~1,540 with a hand-written copy of the generated figure, which was correct on
+the day it was typed and stale at the next registration: it read ~7,455 while
+the table 290 lines below read ~7,483. A number written twice is a number that
+drifts, including when the second copy is a sentence explaining that.
 
 The difference is not a correction to the arithmetic; it is two different
 questions. The hand-written figure was the sample at which an interval *just*
