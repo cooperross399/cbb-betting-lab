@@ -12,7 +12,7 @@ Generated 2026-09-05T22:37:50+00:00.
 
 **Limits are not observable from this instrument.** The provider serves a price and a book; it does not serve the maximum stake that book would accept on a Thursday low-major total. A quote that survived to the next capture is evidence that the *number* was still there, and it is not evidence that a stake of any size would have been taken. The brief names trivial limits and vanishing prices together; this report measures only the second, and a surviving price at a trivial limit is still not a bet.
 
-**Family correction: 98 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.77. That is the ledger's cumulative count and never the day's.
+**Family correction: 101 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.78. That is the ledger's cumulative count and never the day's.
 
 **Below 200 bets there is no number**, only the words *not enough evidence*. That floor was declared before any price was captured.
 

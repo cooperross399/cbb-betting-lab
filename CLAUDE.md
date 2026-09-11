@@ -188,12 +188,14 @@ The store is core team 2021–2026 complete, ladders and halves on 609 events,
 props on 3,223 events; a second ladders wave of 1,199,926 credits was lost
 before persistence (defects S–W) and is not re-bought.
 
-**Which correction these figures carry.** The ledger holds **98 distinct
+**Which correction these figures carry.** The ledger holds **101 distinct
 hypotheses** — 30 discovery entries, the 32 holdout looks the replication
 appended, the **33 player-prop hypotheses pre-registered on 2026-09-05 before
-that model existed**, and the **3 forward-window hypotheses registered
-2026-09-10 before the 2026-11-02 opener** — so every interval is widened by
-**x1.7732**. The
+that model existed**, the **3 forward-window hypotheses registered
+2026-09-10 before the 2026-11-02 opener**, and the **3 rebound-differential
+hypotheses registered the same day over 2027-2030**, a window sized to the
+effect rather than to the calendar — so every interval is widened by
+**x1.7773**. The
 records on disk keep the correction each was scored under — the forecast-skill
 fit and the ratings fit at 30 hypotheses (x1.6041), the price backtest at **95**
 (x1.7689) since its 2026-09-09 re-run, `holdout/cbb_replication.json` at 62
@@ -222,21 +224,21 @@ generator and are re-derived by hand.
 `tests/test_no_report_states_a_stale_correction.py` fails until both halves are
 done, and names the file and the number it is waiting for.
 
-| Cut | Bets | ROI | Corrected (x1.7732, 98 hypotheses) | Verdict |
+| Cut | Bets | ROI | Corrected (x1.7773, 101 hypotheses) | Verdict |
 |:---|---:|---:|:---|:---|
 | high-major | 43,228 | -3.2% | -8.1% to +1.6% | no demonstrated edge |
 | mid-major | 88,344 | -4.3% | -8.2% to -0.4% | demonstrated deficit |
-| low-major | 59,475 | -4.0% | -8.1% to +0.0% | no demonstrated edge |
+| low-major | 59,475 | -4.0% | -8.1% to +0.1% | no demonstrated edge |
 
 **Two published verdicts moved when those 33 hypotheses were registered, and
 both moved the same way.** At the 62 hypotheses in force before the
 registration (x1.7095) **low-major** read a demonstrated deficit at -8.0% to
 -0.1%; it crosses zero at the 85th hypothesis and reads **no demonstrated
-edge** at -8.1% to +0.0% at today's 98 (x1.7732). The replication's held-out
+edge** at -8.1% to +0.1% at today's 101 (x1.7773). The replication's held-out
 **`total_points` / mid-major** cell, -6.4% over 8,214 bets, read a demonstrated
 deficit at -12.5% to -0.2% at those same 62 hypotheses and reads **no
-demonstrated edge** at -12.7% to +0.0% at 95; it crosses at the **95th**, which
-is this registration's last entry. Seven blind null-baseline sides lose a
+demonstrated edge** at -12.8% to +0.0% at today's 101; it crossed at the
+**95th**, four registrations ago. Seven blind null-baseline sides lose a
 demonstrated-deficit reading too, taking the blind deficits from 79 of 190 to
 72 on the full store, from 70 of 189 to 63 on the held-out backtest and from 28
 of 48 to 27 on the core-team cut. **Seven on each of the first two, and not the
@@ -264,7 +266,7 @@ called low-major *the only tier whose interval excludes zero, and it excludes
 zero on the losing side*. On 2026-09-04's partial store the same tier read **no
 demonstrated edge** and the claim was withdrawn. On the full store it was a
 **demonstrated deficit** again. It is now **no demonstrated edge** — 59,475
-bets, -4.0%, corrected -8.1% to +0.0% — on a record whose population, model and
+bets, -4.0%, corrected -8.1% to +0.1% — on a record whose population, model and
 store did not change at all. What changed is the family: 62 hypotheses became
 95. The uncorrected interval still excludes zero at -6.3% to -1.7%, so this is
 the search being counted in full and not the measurement moving. The
@@ -286,7 +288,7 @@ did"* — would have been a false cause today.
   The claim that it beat every blind rule was checked and is FALSE: of the
   188 blind sides clearing the 200-bet floor, **61 return more than
   their own tier's model**, and 10 of those carry a demonstrated deficit at
-  x1.7732 (13 at the x1.6041 the record was FIRST scored at, before its
+  x1.7773 (13 at the x1.6041 the record was FIRST scored at, before its
   2026-09-09 re-run; the record now stores x1.7689, at which the count is 10,
   the same as today's) — mid-major
   `always the favourite` on moneyline returns -2.0% over 14,091 bets against
@@ -302,19 +304,19 @@ did"* — would have been a false cause today.
   correction. The evidence that the model carries information is the Brier score
   against the base rate, not the return against blind rules.
 - **The model loses to the market on Brier in every tier, with the vig left
-  in**, per tier and never pooled: high-major **-0.01663**, corrected -0.02198
-  to -0.01128 over 62,163 rows; mid-major **-0.00962**, corrected -0.01320 to
+  in**, per tier and never pooled: high-major **-0.01663**, corrected -0.02199
+  to -0.01127 over 62,163 rows; mid-major **-0.00962**, corrected -0.01321 to
   -0.00603 over 137,296 rows; low-major **-0.00776**, corrected -0.01104 to
-  -0.00448 over 94,182 rows. All three are demonstrated deficits at x1.7732 and
+  -0.00447 over 94,182 rows. All three are demonstrated deficits at x1.7773 and
   none of them moved when the family grew. In high-major its Brier is worse than
   the **base rate** (0.25118 against 0.25000) — beaten by predicting the league
   mean.
 - **The skill measure shows nothing.** The disagreement coefficient over every
   opinion (293,661 wagers) is **no demonstrated edge** in all three tiers:
-  high +0.088 corrected -0.04527 to +0.22045; mid +0.122 corrected -0.02978
-  to +0.27357; low +0.046 corrected -0.14853 to +0.24113 — all at the ledger's
-  98 cumulative hypotheses. On the **selected** bets only (110,316) high-major
-  reads +0.239 corrected +0.00811 to +0.47075 — that is the winner's-curse
+  high +0.088 corrected -0.04558 to +0.22076; mid +0.122 corrected -0.03013
+  to +0.27392; low +0.046 corrected -0.14898 to +0.24158 — all at the ledger's
+  101 cumulative hypotheses. On the **selected** bets only (110,316) high-major
+  reads +0.239 corrected +0.00757 to +0.47129 — that is the winner's-curse
   comparison, never the skill measure. **Two registrations moved
   that lower bound, not one.** The fit was scored while the ledger held 30 and
   its stored bound is +0.030; the replication's 32 held-out cell tests took it
@@ -365,7 +367,7 @@ did"* — would have been a false cause today.
   **-0.0057** (corrected -0.0139 to +0.0024) over 46,370 wagers, **-0.0045**
   (-0.0102 to +0.0011) over 74,174, and **-0.0065** (-0.0386 to +0.0256) over
   2,060. **Uncorrected, high-major and mid-major exclude zero on the losing
-  side**; the family correction at 98 hypotheses is what makes them *no
+  side**; the family correction at 101 hypotheses is what makes them *no
   demonstrated edge* rather than a deficit, which is the correction working and
   not the measurement moving.
 - **One cell is a demonstrated deficit**: `player_pra` / high-major, -0.0167,

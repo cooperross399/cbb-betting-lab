@@ -1379,6 +1379,51 @@
       "predicted_direction": "higher",
       "stage": "holdout",
       "realised_direction": ""
+    },
+    {
+      "search": "rebound_differential_vs_spread",
+      "name": "high_major: a team's prior offensive-rebound-rate advantage predicts margin against the card-time spread, positively",
+      "tested_on": "2026-09-10",
+      "seasons": [
+        2027,
+        2028,
+        2029,
+        2030
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "rebound_differential_vs_spread",
+      "name": "mid_major: a team's prior offensive-rebound-rate advantage predicts margin against the card-time spread, positively",
+      "tested_on": "2026-09-10",
+      "seasons": [
+        2027,
+        2028,
+        2029,
+        2030
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "holdout",
+      "realised_direction": ""
+    },
+    {
+      "search": "rebound_differential_vs_spread",
+      "name": "low_major: a team's prior offensive-rebound-rate advantage predicts margin against the card-time spread, positively",
+      "tested_on": "2026-09-10",
+      "seasons": [
+        2027,
+        2028,
+        2029,
+        2030
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "holdout",
+      "realised_direction": ""
     }
   ]
 }

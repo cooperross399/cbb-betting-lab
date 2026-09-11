@@ -117,6 +117,18 @@ PLAYER_TIERS = ("high_major", "mid_major", "low_major")
 #: worth its own correction.
 FORWARD = (2027, 2028, 2029)
 
+#: The rebound-differential window: FOUR seasons, not three, and the extra one
+#: is not caution. Measured on 25,826 games across 2021-2026 the slope is
+#: +7.14 points per unit of `d_orb` with a standard error of 1.31. Scaled to a
+#: season's ~4,304 games and corrected at 101 hypotheses, the minimum
+#: detectable slope is 11.21 at one season, 7.93 at two and 6.47 at three --
+#: and at 80% POWER three seasons needs 8.04 against an observed 7.14, which is
+#: underpowered. Four needs 6.96 and clears it.
+#:
+#: Registering this over 2027-2029 would have repeated the error the forward
+#: ROI window was designed to avoid: a hypothesis the sample cannot settle.
+REBOUND_WINDOW = (2027, 2028, 2029, 2030)
+
 
 #: Everything this build has put, or is about to put, to the priced data.
 #:
@@ -356,6 +368,43 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
             ),
             tested_on="2026-09-10",
             seasons=FORWARD,
+            outcome="pending",
+            predicted_direction="higher",
+            stage="holdout",
+        )
+        for tier in PLAYER_TIERS
+    ),
+    # --- The rebound differential. Registered 2026-09-10 from a SEARCH, and
+    # that is the whole reason it is here rather than in a report.
+    #
+    # Ten walk-forward features were regressed on (margin - card-time spread)
+    # over 2021-2026. One moved: the home-minus-away difference in prior
+    # offensive-rebound rate, slope +7.14, t = 5.4 clustered by team-season and
+    # 5.5 by slate date, positive in all six seasons, consistent inside every
+    # tier, and -- the reason it is worth a hypothesis at all --
+    # `corr(d_orb, home_spread) = -0.011`. The market's own number carries
+    # essentially no information about it.
+    #
+    # **The holdout was spent finding it.** The feature was chosen after a scan
+    # across every season, so the 2025-26 "out-of-sample" test that followed was
+    # run on data already seen. A direction fixed after the numbers is not a
+    # prediction, and no amount of clustering repairs that. This registration
+    # is what converts a search result into a claim: the direction is written
+    # down now, before a single 2027 possession, and the four seasons are the
+    # ones the effect size actually needs.
+    #
+    # Three entries, one per tier, because the no-pooled-Division-I rule makes
+    # that the floor -- and because the effect is not equal across them:
+    # measured at +8.5 high-major, +8.6 mid-major and +4.5 low-major.
+    *(
+        E.Hypothesis(
+            search="rebound_differential_vs_spread",
+            name=(
+                f"{tier}: a team's prior offensive-rebound-rate advantage "
+                "predicts margin against the card-time spread, positively"
+            ),
+            tested_on="2026-09-10",
+            seasons=REBOUND_WINDOW,
             outcome="pending",
             predicted_direction="higher",
             stage="holdout",

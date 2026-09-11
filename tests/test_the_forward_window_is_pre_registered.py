@@ -152,16 +152,30 @@ def test_the_direction_is_declared_and_is_the_one_expected_to_fail() -> None:
 
 
 def test_the_registration_cost_is_paid_by_everything_already_published() -> None:
-    """98 hypotheses, and both live deficits survive the wider correction.
+    """Every live deficit survives the correction the ledger holds TODAY.
 
     The cost is the point rather than an objection to it, but it has to be
-    stated: these three widen every interval this lab holds, and a claim that
-    dissolved under them was never worth its width.
+    stated: a registration widens every interval this lab holds, and a claim
+    that dissolved under one was never worth its width.
+
+    **The count is read, not pinned.** This began as `== 98`, the size of the
+    family on the day the forward window was registered, and the next
+    registration -- the rebound differential, three more entries -- broke it
+    while retracting nothing. A literal here tests the calendar rather than the
+    cost, and fails loudest exactly when a new registration is being made, which
+    is the moment the cost check most needs to run. The ledger is the authority
+    on its own size, and decision 46 already says so for every report; a test
+    that replays yesterday's count is the same defect one layer down.
     """
     from cbb_betting_lab import stats as S
 
     payload = json.loads(_LEDGER.read_text(encoding="utf-8"))
-    assert len(payload["hypotheses"]) == 98
+    looks = len(payload["hypotheses"])
+    assert looks >= 98, (
+        f"the ledger holds {looks} hypotheses and this lab had registered 98 by "
+        "2026-09-10. It is append-only, so it cannot have shrunk: the file was "
+        "cut, or this test is reading the wrong one."
+    )
 
     record = json.loads(
         (_REPO / "data" / "outputs" / "cbb_price_backtest.json").read_text("utf-8")
@@ -172,9 +186,9 @@ def test_the_registration_cost_is_paid_by_everything_already_published() -> None
     assert deficits, "the record holds no demonstrated deficit to check"
     for cell in deficits:
         half = (cell["high"] - cell["low"]) / 2.0
-        widened = cell["roi"] + S.bonferroni_factor(98) * half
+        widened = cell["roi"] + S.bonferroni_factor(looks) * half
         assert widened < 0.0, (
-            f"{cell['name']} stops being a demonstrated deficit at 98 "
-            "hypotheses. Registering the forward window retracted a published "
-            "finding, which has to be stated in the commit that does it."
+            f"{cell['name']} stops being a demonstrated deficit at {looks} "
+            "hypotheses. This registration retracted a published finding, "
+            "which has to be stated in the commit that does it."
         )
