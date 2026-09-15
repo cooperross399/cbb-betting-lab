@@ -1128,6 +1128,14 @@ READS_A_BUILT_RECORD_OR_CALLS_ONE_THAT_GRADES = {
         "the wiring for the module above: it prices, files its dispositions "
         "and settles, and every number it prints comes back from "
         "prop_grading.build_record",
+    "scripts/splice_headline_table.py":
+        "reads cbb_price_backtest.json, which run_price_backtest.py graded, and "
+        "rebuilds a RoiInterval from a stored row so the table it splices asks "
+        "stats for the verdict rather than re-deriving it -- it grades nothing "
+        "and prices nothing. It rebuilds rather than reads `verdict` because the "
+        "record stores the verdict it was SCORED at and the table states today's, "
+        "which is decision 46; the first version re-implemented the sign test "
+        "instead and silently dropped the 200-bet floor",
     "scripts/run_weekly_loop.py":
         "calls forward_evidence's own helpers for the demotion check, over "
         "`measurable_bets` -- which is `fe._bet_rows`, and that excludes every "
