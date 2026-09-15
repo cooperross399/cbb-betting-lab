@@ -42,6 +42,64 @@ def test_a_naive_numeric_coercion_would_have_lost_the_minutes():
     assert PF.parse_minutes(pd.Series(["34:12"], dtype="string")).notna().all()
 
 
+def _synthetic_box() -> pd.DataFrame:
+    """A team-game whose identities are forced by construction.
+
+    **The real-data identity checks SKIP on a clean checkout**, because the
+    player box is gitignored -- so without this they protect nothing in CI,
+    which is the only place they would catch a regression before it merged. Ten
+    players, minutes summing to 200 (five on the floor for forty), and counting
+    stats that add to the team totals the rates divide by.
+    """
+    minutes = [32, 30, 28, 26, 24, 20, 16, 12, 8, 4]
+    rows = []
+    for index, played in enumerate(minutes):
+        rows.append({
+            "game_id": 1, "team_id": 7, "season": 2025, "athlete_id": 100 + index,
+            "minutes": str(played), "points": played,
+            "field_goals_made": index, "field_goals_attempted": index + 4,
+            "three_point_field_goals_made": 0, "three_point_field_goals_attempted": 1,
+            "free_throws_made": 1, "free_throws_attempted": 2,
+            "offensive_rebounds": index % 3, "defensive_rebounds": index % 4,
+            "rebounds": (index % 3) + (index % 4),
+            "assists": index % 5, "steals": index % 2, "blocks": index % 2,
+            "turnovers": 1 + index % 3, "fouls": index % 4,
+            "starter": index < 5,
+        })
+    return pd.DataFrame(rows)
+
+
+@pytest.mark.parametrize(
+    "identity,column,expected",
+    [
+        ("five on the floor", "minutes_share", 5.0),
+        ("every possession is ended by somebody", "usage_rate", 1.0),
+        ("every offensive rebound is grabbed by somebody", "off_reb_rate", 1.0),
+        ("every defensive rebound is grabbed by somebody", "def_reb_rate", 1.0),
+    ],
+)
+def test_the_identities_hold_on_synthetic_data(identity, column, expected):
+    """The same checks as below, on data every checkout has.
+
+    Minutes shares sum to five directly; the rates are shares OF the team, so
+    each is weighted by the minutes share before summing.
+    """
+    frame = PF.player_game_features(_synthetic_box())
+    values = frame[column] if column == "minutes_share" else frame[column] * frame["minutes_share"]
+    assert values.sum() == pytest.approx(expected, abs=1e-6), (
+        f"{identity}: {column} sums to {values.sum():.4f}, not {expected}. The "
+        "denominator is wrong, and the mean would not have shown it."
+    )
+
+
+def test_bench_share_uses_the_starter_flag_and_refuses_to_guess():
+    frame = PF.player_game_features(_synthetic_box())
+    roster = PF.team_roster_features(frame)
+    assert roster["bench_minutes_share"].iloc[0] == pytest.approx(60 / 200, abs=1e-9)
+    with pytest.raises(ValueError, match="starter"):
+        PF.team_roster_features(frame.assign(starter=pd.NA))
+
+
 @pytest.fixture(scope="module")
 def features():
     if not _BOX.is_file():

@@ -14,11 +14,39 @@ a good feature look identical in every summary statistic anyone would print.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from cbb_betting_lab.models import team_features as TF
+
+
+_ROOT = Path(TF.__file__).resolve().parents[3]
+_GAMES = _ROOT / "data" / "processed" / "cbb_team_games.csv"
+
+
+def _season_2025() -> pd.DataFrame:
+    """The real 2025 team-games, or a skip — with the existence check FIRST.
+
+    **This guard was written after the read and therefore never fired.** The
+    table is gitignored, so CI raised `FileNotFoundError` on the `read_csv` and
+    never reached the `pytest.skip` two lines below it. Passed locally, failed on
+    a clean checkout: this repository's oldest recurring defect, committed again
+    by someone who had written the note about it.
+
+    The toy-fixture tests above carry the walk-forward and arithmetic checks and
+    run everywhere. What skips here is only the "does this match real college
+    basketball" range check, which needs data a clone does not have.
+    """
+    if not _GAMES.is_file():
+        pytest.skip(f"{_GAMES.name} is not built in this checkout (it is gitignored)")
+    games = pd.read_csv(_GAMES)
+    season = games[games["season"] == 2025]
+    if season.empty:
+        pytest.skip("no 2025 rows in the team-game table")
+    return season
 
 
 def _toy() -> pd.DataFrame:
@@ -108,13 +136,7 @@ def test_removing_the_shift_changes_the_answer():
 
 def test_the_four_factors_land_where_college_basketball_does():
     """A rate that computes but is nonsense is a bug someone will trust later."""
-    games = pd.read_csv(
-        TF.__file__.rsplit("/src/", 1)[0] + "/data/processed/cbb_team_games.csv"
-    )
-    season = games[games["season"] == 2025]
-    if season.empty:
-        pytest.skip("the 2025 team-game table is not built in this checkout")
-    features = TF.per_game_features(season)
+    features = TF.per_game_features(_season_2025())
 
     for column, low, high in [
         ("efg_pct", 0.46, 0.56), ("turnover_rate", 0.13, 0.22),
@@ -145,12 +167,7 @@ def test_the_box_and_the_play_by_play_agree_on_efg():
     play-by-play path classifies every shooting event and counts makes. They
     share no arithmetic, so agreement is a check on both.
     """
-    root = TF.__file__.rsplit("/src/", 1)[0]
-    games = pd.read_csv(root + "/data/processed/cbb_team_games.csv")
-    season = games[games["season"] == 2025]
-    if season.empty:
-        pytest.skip("the 2025 team-game table is not built in this checkout")
-    box_efg = TF.per_game_features(season)["efg_pct"].mean()
+    box_efg = TF.per_game_features(_season_2025())["efg_pct"].mean()
     assert 0.46 < box_efg < 0.56
     # The play-by-play figure, measured 2026-09-15 on 713,965 attempts, is 0.510.
     assert box_efg == pytest.approx(0.510, abs=0.01), (
