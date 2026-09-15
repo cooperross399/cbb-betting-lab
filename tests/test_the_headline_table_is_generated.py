@@ -139,6 +139,87 @@ def test_the_check_mode_fails_on_a_stale_block(tmp_path):
     )
 
 
+#: History a document may still state: a count the ledger has LEFT BEHIND.
+#:
+#: `98 -> 101` describes a transition that happened and stays true forever. What
+#: may not appear outside the fence is the ledger's count or factor asserted as
+#: CURRENT, because that is what a registration falsifies.
+def _outside_the_fence(path) -> str:
+    text = path.read_text(encoding="utf-8")
+    start = text.find(GENERATOR.BEGIN_MARKER)
+    stop = text.find(GENERATOR.END_MARKER) + len(GENERATOR.END_MARKER)
+    return text[:start] + text[stop:]
+
+
+@pytest.mark.parametrize("document", [path.name for path in GENERATOR.DOCUMENTS])
+def test_no_ledger_dependent_figure_is_typed_outside_the_fence(document):
+    """The whole class, and this one is total.
+
+    Every guard before it tried to FIND a stale figure in prose by recognising
+    its shape, and seven rounds of adversarial review each found a spelling the
+    last had missed -- `(-8.0%, -0.1%)`, `between -8.0% and -0.1%`, `± 4.1pp`.
+    "Two numbers that together are an interval" has no closed form in English.
+
+    This asks the opposite question, and it is decidable: the values are
+    GENERATED here, so they can be enumerated exactly, and none of them may
+    appear in the prose. A figure written in some other spelling is not this
+    check's problem -- it is not the current reading, so it is a stale or
+    invented one, and `test_every_interval_in_the_document_is_accounted_for`
+    refuses whatever it can account for while the limit written beside it says
+    what it cannot. The two together are a net plus a fence; the fence is the
+    part that holds.
+
+    Sixty-eight of these were typed into these two documents when this was
+    written: twenty-eight corrected intervals, twenty-five correction factors,
+    fifteen hypothesis counts. Every one of them went stale the moment a
+    hypothesis was registered, and the whole apparatus that failed seven times
+    existed to catch them afterwards.
+    """
+    import json as _json
+
+    from cbb_betting_lab import stats as _stats
+
+    path = next(p for p in GENERATOR.DOCUMENTS if p.name == document)
+    outside = _outside_the_fence(path)
+    looks = len(
+        _json.loads(GENERATOR.LEDGER.read_text(encoding="utf-8"))["hypotheses"]
+    )
+    factor = _stats.bonferroni_factor(looks)
+
+    forbidden = {f"x{factor:.4f}", f"×{factor:.4f}", f"x{factor:.2f}", f"×{factor:.2f}"}
+    for cell in GENERATOR.roster().values():
+        interval = GENERATOR._interval(cell, looks)
+        low, high = interval.adjusted_low, interval.adjusted_high
+        forbidden |= {
+            f"{low * 100:+.1f}% to {high * 100:+.1f}%",
+            f"{low:+.5f} to {high:+.5f}",
+            f"{low:+.4f} to {high:+.4f}",
+            f"{low:+.3f} to {high:+.3f}",
+        }
+
+    found = sorted(figure for figure in forbidden if figure in outside)
+    assert not found, (
+        f"{document} states {found} outside the generated block. Those are "
+        "rendered from the record inside it, so a copy out here is a second "
+        "source that goes stale at the next registration and must be retyped by "
+        "hand -- which is the failure this fence replaces. State the verdict and "
+        "point at the block."
+    )
+
+    # The COUNT, as a current assertion. A transition like `98 -> 101` is
+    # history and stays true; `at today's 101` does not.
+    import re as _re
+
+    for match in _re.finditer(rf"(?<![\w,.]){looks}(?![\d,.])", outside):
+        window = outside[max(0, match.start() - 60) : match.end() + 20]
+        assert _re.search(rf"\d+\s*(?:->|→|to)\s*{looks}", window), (
+            f"{document} states the ledger's current count ({looks}) outside the "
+            f"generated block: …{window}… Only a transition that already happened "
+            "may name it out here; what the ledger holds TODAY is the block's to "
+            "say, because that is the number a registration changes."
+        )
+
+
 def test_every_fenced_figure_is_absent_from_the_prose_that_frames_it():
     """A figure inside the fence must not also be typed outside it.
 

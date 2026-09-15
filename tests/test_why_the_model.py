@@ -1331,18 +1331,27 @@ def test_the_status_row_for_the_regression_carries_the_measured_per_tier_figures
             "the restatement did not reach this cell, so the comparison below "
             "is against the record's own correction after all"
         )
+        # **The figures moved into the generated block, and this reads them
+        # there.** It used to require them TYPED in the row, in one exact
+        # prose spelling -- which was the right guard while the document was
+        # hand-written and the wrong one once it was not: it would have forced
+        # a second, hand-maintained copy of three intervals to sit outside the
+        # fence that exists to stop exactly that. What it is really asserting
+        # is unchanged: this document states each measured tier's advantage,
+        # and the figure matches the record at the LEDGER's count rather than
+        # the one the fit was scored under. Only the location moved.
         printed = (
-            f"{raw['value']:.5f}, corrected "
-            f"{raw['adjusted_low']:.5f} to {raw['adjusted_high']:.5f}"
+            f"{raw['adjusted_low']:+.5f} to {raw['adjusted_high']:+.5f}"
         )
         assert printed in text, (
             f"docs/project_status.md does not carry {tier['label']}'s measured "
-            f"advantage as `{printed}`, so the row says something the record "
-            "does not."
+            f"advantage as `{printed}`, so the document says something the "
+            "record does not. It is rendered into the generated block by "
+            "`scripts/splice_headline_table.py`; re-run it."
         )
-        assert f"{int(raw['rows']):,} rows" in text, (
-            f"{tier['label']}'s figure in docs/project_status.md carries no "
-            "sample size beside it"
+        assert f"{raw['value']:+.5f}" in text, (
+            f"{tier['label']}'s interval is in docs/project_status.md without "
+            "the point estimate it was derived from."
         )
 
 

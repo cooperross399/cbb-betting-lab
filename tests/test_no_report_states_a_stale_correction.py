@@ -801,93 +801,24 @@ def _tier(payload, key, tier):
 
 
 def _headline_cells() -> dict[str, dict]:
-    """Every cell whose verdict the two hand-written documents state.
+    """Every cell these two documents publish.
 
-    Named individually rather than swept up, because the sweep is what the
-    generated documents get: these two are quoted by hand, so the roster is the
-    list of numbers a human has to retype when the ledger moves.
+    **Delegated to `scripts/splice_headline_table.roster()`, which is now the one
+    definition.** This file used to carry its own copy, so the roster that got
+    GENERATED and the roster that got POLICED were two hand-maintained lists
+    that could disagree -- and did, at eleven cells against eighteen, which is
+    how four published prop intervals went stale while every test here was
+    green. A guard and the thing it guards must not each have their own idea of
+    what the subject is.
     """
-    backtest = json.loads(
-        (OUTPUTS / "cbb_price_backtest.json").read_text(encoding="utf-8")
-    )
-    skill = json.loads(
-        (OUTPUTS / "cbb_forecast_skill.json").read_text(encoding="utf-8")
-    )
-    replication = json.loads(
-        (OUTPUTS / "holdout" / "cbb_replication.json").read_text(encoding="utf-8")
-    )
-    props = json.loads(
-        (OUTPUTS / "cbb_prop_grading.json").read_text(encoding="utf-8")
-    )
-    cells: dict[str, dict] = {}
-    for tier in ("high_major", "mid_major", "low_major"):
-        index = _tier(backtest, "by_tier", tier)
-        cells[f"price backtest / {tier} ROI"] = _at(backtest, "by_tier", index)
-        skill_index = _tier(skill, "by_tier", tier)
-        cells[f"forecast skill / {tier} Brier vs raw"] = _at(
-            skill, "by_tier", skill_index, "brier", "advantage_over_raw"
-        )
-        coefficients = skill["by_tier"][skill_index]["fit"]["coefficients"]
-        position = next(
-            i for i, c in enumerate(coefficients) if c["name"] == "disagreement"
-        )
-        cells[f"forecast skill / {tier} disagreement"] = _at(
-            skill, "by_tier", skill_index, "fit", "coefficients", position
-        )
-    selected = skill["selected"]["by_tier"][0]["fit"]["coefficients"]
-    position = next(
-        i for i, c in enumerate(selected) if c["name"] == "disagreement"
-    )
-    cells["forecast skill / selected-bets disagreement"] = _at(
-        skill, "selected", "by_tier", 0, "fit", "coefficients", position
-    )
-    market = next(
-        i
-        for i, row in enumerate(replication["markets"])
-        if (row.get("market"), row.get("tier")) == ("total_points", "mid_major")
-    )
-    cells["replication / total_points mid-major held out"] = _at(
-        replication, "markets", market, "holdout"
-    )
+    import importlib.util
 
-    # The player-prop cells. **These were missing, and published intervals went
-    # stale behind the gap.** The roster was built from three records and pinned
-    # at eleven, so every prop figure the two hand-written documents quote was
-    # outside the guard's reach.
-    #
-    # **The first repair added four of six and pinned the count at four**, which
-    # made the roster assert as fact that the documents quote four -- so an
-    # author completing it was met by a red test telling them they were wrong.
-    # The no-pooled rule guarantees a headline advantage PER TIER, so there are
-    # three of those, not one. The two that were still uncovered were also both
-    # wrong: the documents carried a point estimate and bounds that match no
-    # correction of this cell at any count.
-    #
-    # `devig_power__conditional` and `control__conditional` are named outright
-    # rather than reached through an "unconditional if present" fallback. The
-    # record carries both variants of each; for high-major they differ in the
-    # seventh decimal, which is invisible at the four the documents print and
-    # would stop being invisible without warning. The report labels the
-    # conditional one HEADLINE, so that is the one a reader meets.
-    for tier in ("high_major", "mid_major", "low_major"):
-        index = _tier(props, "by_tier", tier)
-        cells[f"prop grading / {tier} de-vig headline"] = _at(
-            props, "by_tier", index, "advantages", "devig_power__conditional"
-        )
-        cells[f"prop grading / {tier} role-prior control"] = _at(
-            props, "by_tier", index, "advantages", "control__conditional"
-        )
-    pra = next(
-        i
-        for i, row in enumerate(props["by_market_and_tier"])
-        if (row.get("market"), row.get("tier")) == ("player_pra", "high_major")
+    spec = importlib.util.spec_from_file_location(
+        "_splice", REPO / "scripts" / "splice_headline_table.py"
     )
-    cells["prop grading / player_pra high-major"] = _at(
-        props, "by_market_and_tier", pra, "advantages", "devig_power__conditional"
-    )
-
-    assert len(cells) == 18, sorted(cells)
-    return cells
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.roster()
 
 
 def _spellings(cell: dict, looks: int) -> tuple[str, ...]:
