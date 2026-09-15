@@ -32,6 +32,24 @@ _LEDGER = _REPO / "data" / "outputs" / "experiment_ledger.json"
 _RECORDER = _REPO / "scripts" / "record_experiments.py"
 
 SEARCH = "rebound_differential_vs_spread"
+
+#: The claim the recorder has to keep making, as a sentence.
+UNDERPOWERED_CLAIM = "All three are underpowered"
+
+#: And the ways of un-making it that a substring search would have missed.
+NEGATIONS = (
+    "not underpowered",
+    "no way underpowered",
+    "never underpowered",
+    "hardly underpowered",
+    "far from underpowered",
+    "are powered",
+    "is powered",
+    "adequately powered",
+    "sufficiently powered",
+    "well powered",
+    "not one of the three is underpowered",
+)
 TIERS = {"high_major", "mid_major", "low_major"}
 
 
@@ -43,6 +61,35 @@ def _recorder():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _prose(text: str) -> str:
+    """Comment text as a reader reads it: markers stripped, then unwrapped.
+
+    `re.sub(r"\\s+", " ", source)` on a comment block joins each line to the
+    next with that line's `#` marker still in it, so a banned sentence split
+    across two comment lines reads as `...the four seasons are the ones # the
+    effect size actually needs...` and a literal search does not find it. The
+    forbidden sentence was put back verbatim that way and the guard stayed green.
+    """
+    stripped = "\n".join(
+        re.sub(r"^\s*#:?\s?", "", line) for line in text.splitlines()
+    )
+    return re.sub(r"\s+", " ", stripped).strip()
+
+
+def _window_comment() -> str:
+    """The REBOUND_WINDOW comment, and nothing either side of it.
+
+    One helper, used by both the underpowered check and the test that pins its
+    boundary. They computed the slice separately, so widening one back to
+    `REBOUND_SLOPE =` -- the edit that lets the constants' comment vouch for the
+    window's -- left the other asserting about a slice nobody used.
+    """
+    source = _RECORDER.read_text(encoding="utf-8")
+    return source[
+        source.index("#: The rebound-differential") : source.index("REBOUND_WINDOW =")
+    ]
 
 
 def _entries(payload: dict | None = None) -> list[dict]:
@@ -171,12 +218,116 @@ def test_the_registered_tests_are_underpowered_and_the_recorder_says_so() -> Non
         "commit that earns it."
     )
 
+    # Scoped to the REBOUND_WINDOW comment ALONE. Reading up to `REBOUND_SLOPE =`
+    # swept in the constants' own comment, which says "the powered/underpowered
+    # claim agree with each other" -- a sentence about what this test checks, not
+    # about the three hypotheses. A bare substring search was satisfied by that
+    # one line, so the guard passed on a window comment that had been rewritten
+    # to say anything at all. The commit that added the guard added the decoy.
+    prose = _prose(_window_comment())
+    assert UNDERPOWERED_CLAIM in prose, (
+        f"scripts/record_experiments.py no longer states {UNDERPOWERED_CLAIM!r}, "
+        "and the arithmetic above says it is true. The comment is the only place "
+        "a reader meets this, so the claim is pinned as a sentence rather than as "
+        "a word: `\"underpowered\" in block` was satisfied by \"not "
+        "underpowered\", so the comment could assert the exact opposite while "
+        "this same function computed the shortfall and accepted it."
+    )
+    for negation in NEGATIONS:
+        assert negation not in prose, (
+            f"the window comment contains {negation!r}. Every tier is "
+            "underpowered by this function's own arithmetic; the prose beside it "
+            "does not get to say otherwise."
+        )
+
+
+def test_every_power_figure_in_the_comment_reproduces_from_the_constants() -> None:
+    """The comment says the figures reproduce. This is what checking that means.
+
+    They did not. Five pooled figures were printed beside the sentence "Those
+    pooled figures do reproduce" and every one was ~0.3% high -- computed from a
+    standard error of about 1.3143 while the constants beside them record 1.31 --
+    at the same time as the per-tier 12.02 in the same comment WAS computed from
+    1.31. Two halves of one comment, two standard errors, and a claim of
+    agreement between them.
+
+    It was not caught because nothing compared the prose to the arithmetic; the
+    word "reproduce" was doing the work a test should. Every number the comment
+    quotes is now parsed out of it and recomputed.
+    """
+    from cbb_betting_lab import stats as S
+
+    recorder = _recorder()
+    block = _window_comment()
+
+    def detectable(games, power):
+        error = recorder.REBOUND_SLOPE_STANDARD_ERROR * math.sqrt(
+            recorder.REBOUND_GAMES_MEASURED / games
+        )
+        return (S.bonferroni_z(101) + (S.Z80 if power else 0.0)) * error
+
+    season = recorder.REBOUND_GAMES_PER_SEASON
+    expected = {
+        "one season": detectable(season, False),
+        "two seasons": detectable(season * 2, False),
+        "three seasons": detectable(season * 3, False),
+        "three at 80% power": detectable(season * 3, True),
+        "four at 80% power": detectable(season * 4, True),
+        "per tier, four seasons, 80% power": detectable(
+            season * len(recorder.REBOUND_WINDOW) / len(TIERS), True
+        ),
+    }
+    quoted = {f"{value:.2f}" for value in expected.values()}
+    printed = set(re.findall(r"\b\d{1,2}\.\d{2}\b", block)) - {
+        f"{recorder.REBOUND_SLOPE:.2f}",
+        f"{recorder.REBOUND_SLOPE_STANDARD_ERROR:.2f}",
+    }
+    stray = printed - quoted
+    assert not stray, (
+        f"the REBOUND_WINDOW comment prints {sorted(stray)}, and no power figure "
+        f"derived from the recorded constants rounds to any of them. The "
+        f"derivable figures are {sorted(quoted)}. Either the prose is stale or "
+        "the constants are; they cannot both be right, and the comment is the "
+        "only place a reader meets either."
+    )
+    for label, value in expected.items():
+        assert f"{value:.2f}" in block, (
+            f"the comment no longer quotes the {label} figure ({value:.2f}). "
+            "Every figure the window rests on is stated there on purpose."
+        )
+
+
+def test_the_underpowered_search_region_excludes_the_constants_comment() -> None:
+    """The region boundary pinned, because widening it back changes nothing today.
+
+    `test_the_registered_tests_are_underpowered_and_the_recorder_says_so` greps a
+    slice of the recorder for the word "underpowered". That slice originally ran
+    to `REBOUND_SLOPE =`, which swept in the constants' own comment -- and that
+    comment contains "the powered/underpowered claim agree with each other", a
+    sentence about what the TEST checks. One decoy line satisfied the grep on its
+    own, so the guard passed on a window comment rewritten to say anything at
+    all. The commit that added the guard added the decoy.
+
+    Reverting the boundary passes while the real comment still says the word, so
+    the boundary is asserted directly.
+    """
     source = _RECORDER.read_text(encoding="utf-8")
-    block = source[: source.index("REBOUND_SLOPE =")]
-    assert "underpowered" in block.rsplit("#: The rebound-differential", 1)[-1], (
-        "scripts/record_experiments.py no longer says these entries are "
-        "underpowered, and the arithmetic above says they are. The comment is "
-        "the only place a reader meets this; it does not get to stop saying it."
+    region = _window_comment()
+    assert "REBOUND_SLOPE" not in region, (
+        "the searched region now reaches the constants and their comment. "
+        "Anything written there can satisfy the underpowered check on the window "
+        "comment's behalf."
+    )
+    decoy = "powered/underpowered claim agree"
+    assert decoy in source, (
+        f"the decoy string {decoy!r} is gone from the recorder. That is fine in "
+        "itself -- but this test exists to prove the region EXCLUDES it, so "
+        "without it there is nothing being excluded and the assertion above is "
+        "vacuous. Point this at whatever text now sits between the window "
+        "comment and the constants."
+    )
+    assert decoy not in region, (
+        "the decoy sits inside the searched region again."
     )
 
 
@@ -184,10 +335,9 @@ def test_the_recorder_does_not_claim_the_window_is_sized_to_the_effect() -> None
     """The sentence that was wrong, kept out by name.
 
     "the four seasons are the ones the effect size actually needs" stood in the
-    recorder for a week beside an arithmetic that says otherwise.
+    recorder    beside an arithmetic that says otherwise.
     """
-    source = _RECORDER.read_text(encoding="utf-8")
-    flat = re.sub(r"\s+", " ", source)
+    flat = _prose(_RECORDER.read_text(encoding="utf-8"))
     for claim in (
         "the four seasons are the ones the effect size actually needs",
         "Four needs 6.96 and clears it.",

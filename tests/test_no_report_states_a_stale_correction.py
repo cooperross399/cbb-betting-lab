@@ -850,28 +850,32 @@ def _headline_cells() -> dict[str, dict]:
         replication, "markets", market, "holdout"
     )
 
-    # The player-prop cells. **These were missing, and four published intervals
-    # went stale behind the gap.** The roster was built from three records and
-    # pinned at eleven, so every prop figure the two hand-written documents
-    # quote -- the headline de-vig advantage, the one demonstrated prop deficit
-    # and both role-prior controls -- was outside the guard's reach. Three of
-    # them had been stale since 95 hypotheses and the fourth went stale in the
-    # registration that added this comment, and all three document guards
-    # stayed green throughout. A roster is only a roster of what it names.
-    prop_tier = _tier(props, "by_tier", "low_major")
-    cells["prop grading / low-major de-vig headline"] = _at(
-        props, "by_tier", prop_tier, "advantages", "devig_power__conditional"
-    )
-    for tier in ("high_major", "mid_major"):
+    # The player-prop cells. **These were missing, and published intervals went
+    # stale behind the gap.** The roster was built from three records and pinned
+    # at eleven, so every prop figure the two hand-written documents quote was
+    # outside the guard's reach.
+    #
+    # **The first repair added four of six and pinned the count at four**, which
+    # made the roster assert as fact that the documents quote four -- so an
+    # author completing it was met by a red test telling them they were wrong.
+    # The no-pooled rule guarantees a headline advantage PER TIER, so there are
+    # three of those, not one. The two that were still uncovered were also both
+    # wrong: the documents carried a point estimate and bounds that match no
+    # correction of this cell at any count.
+    #
+    # `devig_power__conditional` and `control__conditional` are named outright
+    # rather than reached through an "unconditional if present" fallback. The
+    # record carries both variants of each; for high-major they differ in the
+    # seventh decimal, which is invisible at the four the documents print and
+    # would stop being invisible without warning. The report labels the
+    # conditional one HEADLINE, so that is the one a reader meets.
+    for tier in ("high_major", "mid_major", "low_major"):
         index = _tier(props, "by_tier", tier)
-        key = (
-            "control__unconditional"
-            if "control__unconditional"
-            in props["by_tier"][index]["advantages"]
-            else "control__conditional"
+        cells[f"prop grading / {tier} de-vig headline"] = _at(
+            props, "by_tier", index, "advantages", "devig_power__conditional"
         )
         cells[f"prop grading / {tier} role-prior control"] = _at(
-            props, "by_tier", index, "advantages", key
+            props, "by_tier", index, "advantages", "control__conditional"
         )
     pra = next(
         i
@@ -882,7 +886,7 @@ def _headline_cells() -> dict[str, dict]:
         props, "by_market_and_tier", pra, "advantages", "devig_power__conditional"
     )
 
-    assert len(cells) == 15, sorted(cells)
+    assert len(cells) == 18, sorted(cells)
     return cells
 
 
@@ -994,7 +998,30 @@ SENTENCE = re.compile(r"(?<=[.;:!?])\s+|\n|\|")
 
 
 #: A line that OPENS a block rather than continuing the previous one.
-BLOCK_OPENER = re.compile(r"^(?:\||[-*+]\s|\d+[.)]\s|#{1,6}\s|>|```|$)")
+#:
+#: **There is no numbered-list branch, and the omission is deliberate.** A
+#: `\d+[.)]\s` alternative was here and did one thing to these documents: it cut
+#: `...the family: 62 hypotheses became` / `95. The uncorrected interval...` in
+#: half, because the continuation of a hard-wrapped sentence happened to begin
+#: with a number and a full stop. Zero right splits, one wrong one -- and the
+#: wrong one is exactly the shape this guard reads, a count separated from the
+#: figure it belongs to. A real numbered list item is preceded either by a blank
+#: line or by a line ending in a sentence terminator, and both of those already
+#: refuse the join, so the branch bought nothing it was not already getting.
+BLOCK_OPENER = re.compile(
+    r"^(?:\||[-*+]\s|#{1,6}\s|>|```|-{3,}$|\*{3,}$|_{3,}$|$)"
+)
+
+#: Closing delimiters that can sit AFTER a sentence's full stop.
+#:
+#: `line.rstrip().endswith(...)` tests the last character, and this repository's
+#: house style ends a lede sentence `**like this.**` -- so the terminator was
+#: masked by the bold marker and `_unwrapped` joined straight through it, on ten
+#: committed lines. `SENTENCE` could not recover either: it needs the terminator
+#: immediately before the whitespace, and after the join the character there is
+#: `*`. Two blocks became one chunk and a count in the first vouched for every
+#: figure in the second.
+CLOSING_DELIMITERS = "*_`\"')]}"
 
 
 def _unwrapped(text: str) -> str:
@@ -1036,7 +1063,9 @@ def _unwrapped(text: str) -> str:
             break
         soft = bool(
             line.strip()
-            and not line.rstrip().endswith(("|", ".", ";", ":", "!", "?"))
+            and not line.rstrip().rstrip(CLOSING_DELIMITERS).endswith(
+                ("|", ".", ";", ":", "!", "?")
+            )
             and not BLOCK_OPENER.match(lines[index + 1].lstrip())
         )
         out.append(" " if soft else "\n")
@@ -1067,12 +1096,66 @@ def _names_the_correction(sentence: str, looks: int) -> bool:
     exactly that many decimals.
     """
     factor = S.bonferroni_factor(looks)
-    tokens = (
-        rf"\b{looks}\b",
-        rf"[x×]{factor:.4f}".replace(".", r"\.") + r"(?!\d)",
-        rf"[x×]{factor:.2f}".replace(".", r"\.") + r"(?!\d)",
+    if any(
+        re.search(token, sentence)
+        for token in (
+            rf"[x×]{factor:.4f}".replace(".", r"\.") + r"(?!\d)",
+            rf"[x×]{factor:.2f}".replace(".", r"\.") + r"(?!\d)",
+        )
+    ):
+        return True
+    # The BARE COUNT. This is the token the guard actually runs on, and it has
+    # been the source of every hole found in this function.
+    #
+    # It began as `\b{looks}\b`, which matched inside `62,163 rows`, `(98%)`,
+    # `09:30 ET` and `2018-19`. Anchoring it against embedded numbers left
+    # `85th` vouching for 8 and `decision 46` vouching for 4, because the
+    # lookahead needed two characters to refuse. Gating on a sentence mentioning
+    # "corrected" did nothing at all: every sentence quoting an interval says
+    # "corrected", by construction -- it is how this repository introduces one.
+    #
+    # **So the rule is now narrow on purpose, and it fails safe.** An attribution
+    # has to be written in one of a few unambiguous forms -- `N hypotheses`, a
+    # factor immediately after the count, or a family word immediately before it.
+    # Anything vaguer is not accepted, and the cost of that is a FALSE RED on a
+    # correct document: the author is told to write the attribution plainly.
+    # The cost of the alternative was a false green on a stale published figure.
+    # Given a parser over English prose will never be right, it should be wrong
+    # in the direction that makes someone look.
+    for match in re.finditer(_count_token(looks), sentence):
+        after = sentence[match.end() : match.end() + 28]
+        before = sentence[max(0, match.start() - 42) : match.start()]
+        if COUNT_FOLLOWED_BY.search(after) or COUNT_PRECEDED_BY.search(before):
+            return True
+    return False
+
+
+def _count_token(looks: int) -> str:
+    """`looks` as a standalone integer: not inside a bigger number, not an
+    ordinal, not a clock time, not a compound adjective, not a percentage."""
+    return (
+        rf"(?<![\w,.:$+/\-]){looks}"
+        r"(?!\d)(?![,.]\d)(?!%)(?!(?:st|nd|rd|th)\b)(?!:)(?!-\w)"
     )
-    return any(re.search(token, sentence) for token in tokens)
+
+
+#: A count is a family size if `hypotheses` or a factor follows it closely...
+COUNT_FOLLOWED_BY = re.compile(
+    r"^[\s*_`\-—,;.)(]*"
+    r"(?:(?:distinct|cumulative|more|additional|further)\s+)*"
+    r"(?:hypothes\w*|\(?[x×]1\.\d)",
+    re.IGNORECASE,
+)
+
+#: ...or a family word introduces it closely.
+COUNT_PRECEDED_BY = re.compile(
+    r"(?:hypothes\w*|ledger(?:'s)?(?:\s+(?:held|holds|reached|cumulative|count))?"
+    r"|famil\w+|correction|corrected\s+at|scored\s+at|registration|today's)"
+    r"[\s*_`\-—,:]*"
+    r"(?:(?:count|cumulative|today's|those|these|the|its|it|same|at|to|from|of|a|an|"
+    r"only|just|held|holds|reached|now)\s+)*$",
+    re.IGNORECASE,
+)
 
 
 def test_a_factor_vouches_only_for_the_count_that_produced_it():
@@ -1097,63 +1180,379 @@ def test_a_factor_vouches_only_for_the_count_that_produced_it():
     assert not _names_the_correction("widened by x1.78", 95)
 
 
-def test_the_roster_and_the_spellings_reach_the_player_prop_figures():
-    """A roster omission is invisible while the documents happen to be right.
+def test_every_roster_cell_resolves_to_the_record_path_it_is_named_for():
+    """The roster pinned by PATH, not by count.
 
-    Four published prop intervals went stale behind this gap and all three
-    document guards stayed green, because `_headline_cells` was built from three
-    records and `_spellings` had no four-decimal form. Neither absence can be
-    caught by mutating a document -- with the documents correct there is nothing
-    to detect -- so both are pinned here by name.
+    `assert len(cells) == N` constrains how many cells there are and never which.
+    The display names are hand-typed and independent of the paths they label, so
+    a future edit could repoint any of them at a different tier, market or de-vig
+    variant and nothing would go red -- the guard would keep checking, carefully,
+    the wrong number. Each expectation below navigates the record independently
+    and compares the object the roster actually holds.
+    """
+    props = json.loads(
+        (OUTPUTS / "cbb_prop_grading.json").read_text(encoding="utf-8")
+    )
+    cells = _headline_cells()
+
+    expected = {}
+    for tier in ("high_major", "mid_major", "low_major"):
+        row = next(r for r in props["by_tier"] if r.get("tier") == tier)
+        expected[f"prop grading / {tier} de-vig headline"] = row["advantages"][
+            "devig_power__conditional"
+        ]
+        expected[f"prop grading / {tier} role-prior control"] = row["advantages"][
+            "control__conditional"
+        ]
+    pra = next(
+        r
+        for r in props["by_market_and_tier"]
+        if (r.get("market"), r.get("tier")) == ("player_pra", "high_major")
+    )
+    expected["prop grading / player_pra high-major"] = pra["advantages"][
+        "devig_power__conditional"
+    ]
+
+    on_roster = {name for name in cells if name.startswith("prop grading /")}
+    assert on_roster == set(expected), (
+        "the roster's prop cells are not the ones this test expects.\n"
+        f"  on the roster and not expected: {sorted(on_roster - set(expected))}\n"
+        f"  expected and not on the roster: {sorted(set(expected) - on_roster)}"
+    )
+    for name, node in expected.items():
+        assert cells[name]["value"] == node["value"], (
+            f"{name!r} is on the roster but points at a different cell: it holds "
+            f"{cells[name]['value']!r}, the path it is named for holds "
+            f"{node['value']!r}. A name that does not match its path means the "
+            "guard checks one number and the document quotes another."
+        )
+        assert cells[name]["standard_error"] == node["standard_error"], name
+
+
+def test_the_spellings_cover_the_four_decimal_form_the_prop_figures_use():
+    """A spelling absent here is a figure that can go stale unseen.
+
+    Checked against a cell whose bounds are BOTH negative, because that is where
+    the unsigned and signed five-decimal forms collide and where a missing form
+    is least visible.
     """
     cells = _headline_cells()
-    prop = sorted(name for name in cells if name.startswith("prop grading /"))
-    assert len(prop) == 4, (
-        f"the roster names {len(prop)} prop-grading cell(s): {prop}. The "
-        "hand-written documents quote four -- the de-vig headline, the one "
-        "demonstrated prop deficit and both role-prior controls."
+    low, high = (
+        RESTATEMENT.rebuild_cell(
+            cells["prop grading / player_pra high-major"], looks=ledger_looks()
+        )[key]
+        for key in ("adjusted_low", "adjusted_high")
     )
-    spellings = _spellings(cells[prop[0]], ledger_looks())
-    assert any(
-        re.fullmatch(r"[-+]0\.\d{4} to [-+]0\.\d{4}", spelling)
-        for spelling in spellings
-    ), (
-        "no four-decimal spelling is emitted, which is the form every prop "
-        f"figure in those documents is written in. Got: {spellings}"
+    spellings = _spellings(cells["prop grading / player_pra high-major"], ledger_looks())
+    assert f"{low:+.4f} to {high:+.4f}" in spellings, (
+        "the four-decimal spelling is not emitted, and it is the form every prop "
+        f"figure in the two documents is written in. Got: {spellings}"
+    )
+    assert len(set(spellings)) >= 3, (
+        f"the spellings collapsed to {sorted(set(spellings))}; a cell should be "
+        "recognisable in each distinct form the documents use."
     )
 
 
-def test_unwrapping_joins_a_soft_wrap_and_keeps_every_block_boundary():
-    """`_unwrapped` pinned directly, because no committed document can pin it.
+#: Every boundary `_unwrapped` must not join across, one fixture per condition.
+#:
+#: **The first version of this test had five fixtures and killed two of the
+#: thirteen conditions in the predicate.** Each fixture tripped several at once,
+#: so most branches could be deleted with the test still green: the table-row
+#: fixture passed with `\|` removed because the trailing-pipe `endswith` refused
+#: the join anyway AND `SENTENCE` splits on `|` regardless; the blank-line
+#: fixture passed with `$` removed because a whitespace-only line is falsy on its
+#: own iteration. That is this repository's named failure mode, in the test
+#: written to avoid it. Every case below is built so that exactly one condition
+#: stands between the figure and the foreign count.
+BOUNDARY_CASES = {
+    # The previous line ends in `|`, so the `endswith` clause refuses this join
+    # too -- which is why this case alone could not tell whether the `\|` branch
+    # existed. "table row after prose" is the one only that branch saves.
+    "table row": "| tier | -8.1% to +0.0% |\n| the family holds 101 hypotheses |",
+    "table row after prose": "low-major reads -8.1% to +0.0%\n| the family holds 101 hypotheses |",
+    "bullet": "- low-major reads -8.1% to +0.0%\n- the family holds 101 hypotheses",
+    "star bullet": "* low-major reads -8.1% to +0.0%\n* the family holds 101 hypotheses",
+    "plus bullet": "+ low-major reads -8.1% to +0.0%\n+ the family holds 101 hypotheses",
+    "heading": "low-major reads -8.1% to +0.0%\n### the family holds 101 hypotheses",
+    "blockquote": "low-major reads -8.1% to +0.0%\n> the family holds 101 hypotheses",
+    "fence": "low-major reads -8.1% to +0.0%\n```\nthe family holds 101 hypotheses",
+    "blank line": "low-major reads -8.1% to +0.0%\n\nthe family holds 101 hypotheses",
+}
 
-    The first version flattened every run of whitespace. That found the
-    hard-wrapped figures it was written for, and it also erased the `\n` branch
-    of SENTENCE -- so a correction named in one table row or bullet could vouch
-    for a figure in the next. No document in the repository exploited it, which
-    means the documents could not have caught it either: the guard would have
-    stayed green all the way to the day one did. Hence a unit test.
+#: A line ending in one of these ends a sentence, so the next line is new.
+#:
+#: **Written out, not generated from the implementation's own tuple.** They were
+#: a comprehension over the same six characters the predicate checks, so the
+#: fixtures could only ever confirm the clause that existed -- and the whole
+#: class of terminator-plus-closing-delimiter (`.**`, `.)`, `."`), which this
+#: repository writes constantly, was invisible to them.
+TERMINATOR_CASES = {
+    ending: f"low-major reads -8.1% to +0.0%{ending}\nthe family holds 101 hypotheses"
+    for ending in (
+        ".", ";", ":", "!", "?", "|",
+        ".**", ".)", '."', ".'", ".`", ".]", ".}", ".*", ".__",
+        "!**", "?)", ";**", ":**",
+    )
+}
+
+
+def test_unwrapping_itself_refuses_to_join_into_a_table_row():
+    """Also asserted on the output, and for the same reason as the terminators.
+
+    `SENTENCE` splits on `|` independently, so a mutant that dropped the table-row
+    branch left every chunk unchanged and survived. `_unwrapped` is not allowed to
+    be correct only by the grace of the regex applied after it.
     """
+    joined = _unwrapped("low-major reads -8.1% to +0.0%\n| the family holds 101 |")
+    assert "\n|" in joined, (
+        f"a prose line was joined into the table row beneath it: {joined!r}"
+    )
+
+
+@pytest.mark.parametrize("terminator", sorted(TERMINATOR_CASES))
+def test_unwrapping_itself_refuses_to_join_across_a_terminator(terminator):
+    """Asserted on `_unwrapped`'s OUTPUT, not through `SENTENCE`.
+
+    Going through the splitter proved nothing about this clause: `SENTENCE`
+    independently splits on `.;:!?` and on `|`, so a mutant that dropped any one
+    of the six from the `endswith` tuple left every chunk unchanged and all six
+    mutants survived. The tuple is what makes `_unwrapped` correct on its own
+    terms rather than by the grace of the regex applied after it, so it is tested
+    on its own terms.
+    """
+    joined = _unwrapped(TERMINATOR_CASES[terminator])
+    assert "\n" in joined, (
+        f"a line ending in {terminator!r} was joined to the next one. "
+        f"`_unwrapped` must not close up a line that already ended: {joined!r}"
+    )
+
+
+def test_a_bare_integer_vouches_only_where_it_is_a_family_size():
+    """The count token, which is what this guard actually runs on.
+
+    It was `\b{looks}\b`, and `_registration_counts()` is mostly small integers
+    in documents made of integers. Every string below is taken from the two
+    hand-written documents and every one of them satisfied the old token. A
+    figure stale at 62 could be vouched for by its own row count.
+
+    This is pinned here rather than by a document mutant because, with the
+    documents correct, reverting the anchor changes no test outcome at all --
+    the hole is invisible exactly while nothing is exploiting it.
+    """
+    for sentence, looks in (
+        ("high-major **-0.01663**, corrected -0.02179 to -0.01147 over 62,163 rows;", 62),
+        ("541 of those 551 (98%) fall in November and December", 98),
+        ("measured **98.7% at the money**, 50.7% one rung out", 98),
+        ("at the Palazzetto dello Sport in Rome, 09:30 ET", 30),
+        ("-6.4% over 8,214 bets", 8),
+        ("**-3.4%** over 23,392 bets", 23),
+        # Anchored correctly and STILL not a family size. These are what the
+        # context gate is for; every case above it is caught by the anchoring
+        # alone, so without these the gate is untested.
+        ("the card carried 101 wagers that night", 101),
+        ("over 30 games in November and December", 30),
+        ("8 books quoted the side", 8),
+    ):
+        assert not _names_the_correction(sentence, looks), (
+            f"{sentence!r} vouches for a family of {looks}. The integer in it is "
+            "a row count, a percentage, a clock time or a bet count -- not a "
+            "family size. The count token lost its anchoring or its context gate."
+        )
+
+    # And the phrasings this repository actually uses still have to work.
+    for sentence, looks in (
+        ("corrected -8.1% to +0.0% at those 95 hypotheses", 95),
+        ("the ledger's cumulative count of 101 distinct hypotheses", 101),
+        ("Correction **×1.7773**, up from ×1.7732 at 98", 98),
+        ("while the ledger held 62, and it crosses zero", 62),
+        ("the 30 hypotheses the run was scored at", 30),
+    ):
+        assert _names_the_correction(sentence, looks), (
+            f"{sentence!r} no longer names {looks}. The anchoring is too strict "
+            "and a correctly-attributed figure now reads as unattributed."
+        )
+
+
+#: Roster cells the two hand-written documents quote. Their LIVE reading has to
+#: be findable in one of them.
+#:
+#: **The stale-figure guards cannot see a figure that is simply WRONG.** They
+#: work by finding a superseded spelling; a number matching no correction of the
+#: cell at any count matches nothing, so the cell is skipped in silence. Two
+#: published de-vig headlines sat in both documents in exactly that state --
+#: `-0.0139 to +0.0024` and `-0.0102 to +0.0011`, which no count produces -- with
+#: point estimates that were wrong too, and every guard green. Requiring the
+#: live spelling to be PRESENT is the complement: stale figures are caught by
+#: what they say, wrong ones by what they fail to say.
+QUOTED_CELLS = frozenset(
+    {
+        f"forecast skill / {tier} {measure}"
+        for tier in ("high_major", "mid_major", "low_major")
+        for measure in ("Brier vs raw", "disagreement")
+    }
+    | {f"price backtest / {tier} ROI" for tier in ("high_major", "mid_major", "low_major")}
+    | {f"prop grading / {tier} de-vig headline" for tier in ("high_major", "mid_major", "low_major")}
+    | {f"prop grading / {tier} role-prior control" for tier in ("high_major", "mid_major")}
+    | {
+        "forecast skill / selected-bets disagreement",
+        "prop grading / player_pra high-major",
+        "replication / total_points mid-major held out",
+    }
+)
+
+
+def _uncorrected_spellings(cell: dict) -> tuple[str, ...]:
+    """A cell's UNCORRECTED interval, in the forms these documents write.
+
+    `_spellings` renders only `adjusted_low`/`adjusted_high`, so the record's own
+    `low`/`high` were unreachable by every test in this file -- while both
+    documents publish `-6.3% to -1.7%` in the sentence carrying the argument
+    "what moved is the search and not the measurement". An interval nothing can
+    check is an interval anyone can retype.
+    """
+    low, high = cell["low"], cell["high"]
+    return (
+        f"{low * 100:+.1f}% to {high * 100:+.1f}%",
+        f"{low:+.4f} to {high:+.4f}",
+        f"{low:+.5f} to {high:+.5f}",
+    )
+
+
+#: How many times each document quotes each cell, corrected and uncorrected.
+#:
+#: **Pinned as counts, because presence is not enough.** The check was
+#: `any(spelling in document)` -- satisfied by ONE surviving correct occurrence.
+#: `price backtest / low_major ROI` is written three times in CLAUDE.md, so two
+#: of the three could be replaced with fabricated numbers and every guard stayed
+#: green: a stale figure is caught by what it says, a fabricated one only by
+#: something noticing it is no longer there.
+#:
+#: Editing prose that adds or removes a mention fails here until this is updated.
+#: That is the intended cost; the number of times a lab states a finding is not
+#: something that should drift silently either.
+QUOTED_OCCURRENCES = {
+    ("CLAUDE.md", "price backtest / low_major ROI"): (3, 1),
+    ("docs/project_status.md", "price backtest / low_major ROI"): (2, 1),
+    ("docs/project_status.md", "price backtest / mid_major ROI"): (2, 0),
+}
+
+
+@pytest.mark.parametrize("document", HAND_WRITTEN)
+def test_each_cell_is_quoted_exactly_as_often_as_it_should_be(document):
+    """Every occurrence carries the live reading, not just one of them."""
+    text = _unwrapped((REPO / document).read_text(encoding="utf-8"))
+    cells = _headline_cells()
+    for name in sorted(QUOTED_CELLS):
+        corrected, uncorrected = QUOTED_OCCURRENCES.get((document, name), (1, 0))
+        seen = sum(
+            text.count(spelling)
+            for spelling in set(_spellings(cells[name], ledger_looks()))
+        )
+        assert seen == corrected, (
+            f"{document} states the current reading of {name!r} {seen} time(s); "
+            f"{corrected} expected. If an occurrence was replaced by a figure no "
+            "correction of this cell produces, the stale-figure guards cannot see "
+            "it -- a wrong number matches no spelling. If the prose legitimately "
+            "gained or lost a mention, move the count in QUOTED_OCCURRENCES."
+        )
+        seen_raw = sum(
+            text.count(spelling) for spelling in set(_uncorrected_spellings(cells[name]))
+        )
+        assert seen_raw == uncorrected, (
+            f"{document} states the UNCORRECTED interval of {name!r} {seen_raw} "
+            f"time(s); {uncorrected} expected. These are published beside the "
+            "corrected ones and nothing else in this file reaches them."
+        )
+
+
+@pytest.mark.parametrize("document", HAND_WRITTEN)
+def test_every_cell_the_documents_quote_carries_its_live_reading(document):
+    """Per document, not over the two concatenated.
+
+    Both files quote all seventeen of these cells, so a wrong figure in one of
+    them is not excused by the other being right -- and over the concatenation it
+    was: changing a de-vig headline in CLAUDE.md to a value no correction
+    produces left the test green on the copy in docs/project_status.md.
+    """
+    quoted = _unwrapped((REPO / document).read_text(encoding="utf-8"))
+    cells = _headline_cells()
+    missing = set(QUOTED_CELLS) - set(cells)
+    assert not missing, f"QUOTED_CELLS names cells the roster does not: {sorted(missing)}"
+    for name in sorted(QUOTED_CELLS):
+        spellings = _spellings(cells[name], ledger_looks())
+        assert any(spelling in quoted for spelling in spellings), (
+            f"{document} does not carry the current reading of "
+            f"{name!r}. Expected one of {list(spellings)}. Either the figure was "
+            "changed to something no correction of this cell produces -- which "
+            "the stale-figure guards cannot see, because a wrong number matches "
+            "no spelling -- or this document stopped quoting the cell, in which "
+            "case take it out of QUOTED_CELLS in this commit."
+        )
+
+
+@pytest.mark.parametrize("label", sorted(BOUNDARY_CASES))
+def test_unwrapping_keeps_each_block_boundary(label):
+    """One boundary per case, and nothing else keeping the two apart."""
+    chunks = [c for c in SENTENCE.split(_unwrapped(BOUNDARY_CASES[label])) if c.strip()]
+    holding = [c for c in chunks if "-8.1% to +0.0%" in c]
+    assert holding, f"{label}: the figure vanished from every chunk: {chunks!r}"
+    assert not any("101" in c for c in holding), (
+        f"{label}: the figure shares a chunk with a correction count that does "
+        f"not belong to it, so that count vouches for it. Chunks: {chunks!r}"
+    )
+
+
+@pytest.mark.parametrize("terminator", sorted(TERMINATOR_CASES))
+def test_unwrapping_does_not_join_across_a_sentence_terminator(terminator):
+    chunks = [c for c in SENTENCE.split(_unwrapped(TERMINATOR_CASES[terminator])) if c.strip()]
+    holding = [c for c in chunks if "-8.1% to +0.0%" in c]
+    assert holding and not any("101" in c for c in holding), (
+        f"a line ending in {terminator!r} was joined to the next, so a count in "
+        f"the following sentence vouches for this one. Chunks: {chunks!r}"
+    )
+
+
+def test_unwrapping_joins_a_soft_wrap_and_preserves_every_character():
+    """The other half: a wrap INSIDE a sentence must close up, losing nothing."""
     joined = _unwrapped("corrected -0.02199\n  to -0.01127 over 62,163 rows.")
     assert "-0.02199 to -0.01127" in joined, (
-        "a soft wrap inside a sentence is no longer joined, so a hard-wrapped "
-        f"figure is invisible to the guard again. Got: {joined!r}"
+        f"a soft wrap inside a sentence is no longer joined: {joined!r}"
     )
-
-    for label, text in {
-        "table rows": "| low-major | -8.1% to +0.0% |\n| note | 101 |",
-        "bullets": "- low-major reads -8.1% to +0.0%\n- the family is 101",
-        "blank line": "low-major reads -8.1% to +0.0%\n\nThe family is 101",
-        "heading": "low-major reads -8.1% to +0.0%\n# The family is 101",
-        "numbered": "low-major reads -8.1% to +0.0%\n1. The family is 101",
-    }.items():
-        chunks = [c for c in SENTENCE.split(_unwrapped(text)) if c.strip()]
-        holding = [c for c in chunks if "-8.1% to +0.0%" in c]
-        assert holding, f"{label}: the figure vanished from every chunk"
-        assert not any("101" in c for c in holding), (
-            f"{label}: the figure and a correction count that does not belong to "
-            f"it share one chunk, so the count vouches for the figure. "
-            f"Chunks: {chunks!r}"
+    # A continuation that merely looks like a list item is still a continuation.
+    numbered = _unwrapped("the family: 62 hypotheses became\n95. The interval held.")
+    assert "became 95." in numbered, (
+        f"a wrapped sentence whose continuation starts with a number was split: "
+        f"{numbered!r}"
+    )
+    for name in HAND_WRITTEN:
+        text = (REPO / name).read_text(encoding="utf-8")
+        assert re.sub(r"\s+", "", _unwrapped(text)) == re.sub(r"\s+", "", text), (
+            f"{name}: _unwrapped changed the document's non-whitespace content. "
+            "It may only ever move whitespace."
         )
+
+
+def test_a_factor_vouches_only_for_the_count_that_produced_it():
+    """The prefix collision, pinned directly.
+
+    `bonferroni_factor(95)` and `(98)` both render `1.77` to two decimals, and
+    `1.77` is a PREFIX of `1.7773`, the factor owed at 101. Without a right-hand
+    boundary the one sentence in each document whose job is to declare today's
+    correction vouched for two superseded counts and not for its own. No
+    committed document exploited it, so no document could have caught it.
+    """
+    today = "the ledger's cumulative count of 101 distinct hypotheses, ×1.7773"
+    for stale in (29, 30, 62, 85, 92, 95, 98):
+        assert not _names_the_correction(today, stale), (
+            f"a sentence stating only today's correction vouches for {stale}. "
+            "The factor patterns lost their (?!\\d) boundary, so a shorter "
+            "factor matches as a prefix of a longer one."
+        )
+    assert _names_the_correction(today, 101)
+    # The two-decimal form the generated reports use still has to work.
+    assert _names_the_correction("widened by x1.78", 101)
+    assert not _names_the_correction("widened by x1.78", 95)
 
 
 def test_no_hand_written_document_states_a_headline_verdict_at_a_stale_correction():
