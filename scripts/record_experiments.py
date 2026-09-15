@@ -155,6 +155,11 @@ FORWARD = (2027, 2028, 2029)
 #: claim and the arithmetic cannot drift apart again.
 REBOUND_WINDOW = (2027, 2028, 2029, 2030)
 
+#: The seasons the residual regression of 2026-09-15 was run over. These are
+#: seasons this lab already holds prices for, which is why every entry from it
+#: is `stage="discovery"`: it is a search over data already seen.
+RESIDUAL_WINDOW = (2021, 2022, 2023, 2024, 2025, 2026)
+
 #: The measurement the window was chosen from, as constants rather than prose.
 #:
 #: They lived only in the comment above, where nothing could check them and the
@@ -462,6 +467,383 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         )
         for tier in PLAYER_TIERS
     ),
+
+    # --- The residual regression of 2026-09-15. TWENTY-SEVEN entries, not one.
+    #
+    # A walk-forward feature library was built from an audit of 84 published
+    # college-basketball statistics, and every team-level feature in it was
+    # regressed on (margin - card-time spread) over 2021-2026: 30,382 games,
+    # 842 slate-date clusters, cluster-robust standard errors.
+    #
+    # **One survived and twenty-six did not, and all twenty-seven are here.**
+    # Registering only the winner is what the family correction exists to stop:
+    # the denominator of a search is the number of things tried, not the number
+    # that worked. Reporting `def_reb_pct` at t = +4.14 while the ledger recorded
+    # one look would have made every interval this lab publishes narrower than
+    # the search that produced it -- the defect decision 46 closed, arriving
+    # from the registration side instead of the render side.
+    #
+    # The joint fit is the one that counts. Univariate, `off_reb_pct` reads
+    # t = +5.62; jointly it falls to +2.01, because offensive and defensive
+    # rebound rate are the same phenomenon seen from the two ends of the floor.
+    # A univariate screen would have reported two findings where there is one.
+    #
+    # **R-squared 0.00472.** All twenty-seven together explain under half a
+    # percent of what the closing-market's card-time spread misses. That is the
+    # headline, not the survivor.
+    #
+    # The survivor is a REPLICATION, not a discovery. Defensive rebound
+    # percentage is the mirror of the offensive-rebound advantage already
+    # registered as `rebound_differential_vs_spread` on 2026-09-10. It is
+    # `stage="discovery"` and not `"holdout"` because it ran on 2021-2026 --
+    # the same seasons the original was found on. A second construction of one
+    # effect on data already seen is a second look, not independent evidence,
+    # and calling it a holdout would be the more flattering of two available
+    # descriptions rather than the true one.
+    #
+    # **Every entry carries a direction, and the ledger is why.** They were
+    # written `predicted_direction="either"` first and `record()` refused them:
+    # an undirected look is admitted at the holdout stage only, because a cut
+    # written without a direction "could therefore only ever be exploratory".
+    # That rule is right and it forced the useful question -- what would I have
+    # predicted? -- rather than letting the search stay agnostic after the fact.
+    #
+    # So each direction below is the one basketball implies for a BETTER team:
+    # more offensive boards, fewer turnovers, less allowed at the rim. They were
+    # assigned from reasoning about the sport, NOT from the fitted signs, and
+    # several of the fitted signs disagree with them -- `net_efficiency`,
+    # `true_shooting_pct` and `elo` all came out negative against a predicted
+    # positive, which is what collinearity with the spread does to a coefficient
+    # and is itself worth having on the record. A registration that agreed with
+    # every result would mean the directions had been read off the answer.
+    #
+    # This append costs nine published readings. `docs/retracted_readings.md`
+    # names every one.
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior defensive-rebound-rate advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior offensive-rebound-rate advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior points-per-shot advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior forced-turnover-rate advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior assist-rate advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior free-throw-rate advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior effective-field-goal-percentage-allowed advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="lower",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior block-rate advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior net-efficiency advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior free-throw-percentage advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior tempo advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior true-shooting-percentage advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior Elo rating advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior defensive-efficiency advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="lower",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior free-throw-rate-allowed advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="lower",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior three-point-attempt-rate-allowed advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="lower",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior turnover-rate advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="lower",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior three-point-percentage advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior non-steal-turnover-rate advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="lower",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior three-point-attempt-rate advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior share-of-points-from-three advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior share-of-points-from-free-throws advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior steal-rate advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior effective-field-goal-percentage advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior two-point-percentage advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior offensive-efficiency advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="residual_regression_2026_09_15",
+        name=(
+            "a team's prior share-of-points-from-twos advantage over its opponent "
+            "predicts margin against the card-time spread"
+        ),
+        tested_on="2026-09-15",
+        seasons=RESIDUAL_WINDOW,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+
 )
 
 

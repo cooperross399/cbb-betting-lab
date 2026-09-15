@@ -207,10 +207,14 @@ def test_no_ledger_dependent_figure_is_typed_outside_the_fence(document):
     )
 
     # The COUNT, as a current assertion. A transition like `98 -> 101` is
-    # history and stays true; `at today's 101` does not.
+    # history and stays true; `at today's 101` does not. The trailing lookahead
+    # excludes a decimal (`1.7773` must not read as the count) but NOT a
+    # sentence-ending period: `the ledger today holds 101.` is the plainest way
+    # to type the forbidden thing, and for a while it was the one spelling that
+    # walked straight through here.
     import re as _re
 
-    for match in _re.finditer(rf"(?<![\w,.]){looks}(?![\d,.])", outside):
+    for match in _re.finditer(rf"(?<![\w,.]){looks}(?![\d,]|\.\d)", outside):
         window = outside[max(0, match.start() - 60) : match.end() + 20]
         assert _re.search(rf"\d+\s*(?:->|→|to)\s*{looks}", window), (
             f"{document} states the ledger's current count ({looks}) outside the "

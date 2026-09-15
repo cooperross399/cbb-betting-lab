@@ -4,16 +4,17 @@
 
 College basketball's large sample makes this **more** urgent, not less. A bigger n narrows every interval, including the intervals of the hypotheses that are wrong. Sample size buys power, never innocence.
 
-**101 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.78** before it means what it says.
+**128 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.81** before it means what it says.
 
 **Alpha budget: 6 new hypotheses a week**, declared 2026-09-01. Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state — re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise.
 
-**63 discovery, 38 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
+**90 discovery, 38 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
 
 | Search | Hypotheses |
 |:---|---:|
 | replication | 32 |
 | player_props_vs_devig | 30 |
+| residual_regression_2026_09_15 | 27 |
 | ladders_and_halves | 11 |
 | core_team_markets | 4 |
 | conference_tier | 4 |
@@ -128,6 +129,33 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | 99 | rebound_differential_vs_spread | high_major: a team's prior offensive-rebound-rate advantage predicts margin against the card-time spread, positively | holdout | higher | — | 2027, 2028, 2029, 2030 | 2026-09-10 | pending |
 | 100 | rebound_differential_vs_spread | mid_major: a team's prior offensive-rebound-rate advantage predicts margin against the card-time spread, positively | holdout | higher | — | 2027, 2028, 2029, 2030 | 2026-09-10 | pending |
 | 101 | rebound_differential_vs_spread | low_major: a team's prior offensive-rebound-rate advantage predicts margin against the card-time spread, positively | holdout | higher | — | 2027, 2028, 2029, 2030 | 2026-09-10 | pending |
+| 102 | residual_regression_2026_09_15 | a team's prior defensive-rebound-rate advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 103 | residual_regression_2026_09_15 | a team's prior offensive-rebound-rate advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 104 | residual_regression_2026_09_15 | a team's prior points-per-shot advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 105 | residual_regression_2026_09_15 | a team's prior forced-turnover-rate advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 106 | residual_regression_2026_09_15 | a team's prior assist-rate advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 107 | residual_regression_2026_09_15 | a team's prior free-throw-rate advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 108 | residual_regression_2026_09_15 | a team's prior effective-field-goal-percentage-allowed advantage over its opponent predicts margin against the card-time spread | discovery | lower | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 109 | residual_regression_2026_09_15 | a team's prior block-rate advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 110 | residual_regression_2026_09_15 | a team's prior net-efficiency advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 111 | residual_regression_2026_09_15 | a team's prior free-throw-percentage advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 112 | residual_regression_2026_09_15 | a team's prior tempo advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 113 | residual_regression_2026_09_15 | a team's prior true-shooting-percentage advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 114 | residual_regression_2026_09_15 | a team's prior Elo rating advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 115 | residual_regression_2026_09_15 | a team's prior defensive-efficiency advantage over its opponent predicts margin against the card-time spread | discovery | lower | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 116 | residual_regression_2026_09_15 | a team's prior free-throw-rate-allowed advantage over its opponent predicts margin against the card-time spread | discovery | lower | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 117 | residual_regression_2026_09_15 | a team's prior three-point-attempt-rate-allowed advantage over its opponent predicts margin against the card-time spread | discovery | lower | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 118 | residual_regression_2026_09_15 | a team's prior turnover-rate advantage over its opponent predicts margin against the card-time spread | discovery | lower | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 119 | residual_regression_2026_09_15 | a team's prior three-point-percentage advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 120 | residual_regression_2026_09_15 | a team's prior non-steal-turnover-rate advantage over its opponent predicts margin against the card-time spread | discovery | lower | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 121 | residual_regression_2026_09_15 | a team's prior three-point-attempt-rate advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 122 | residual_regression_2026_09_15 | a team's prior share-of-points-from-three advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 123 | residual_regression_2026_09_15 | a team's prior share-of-points-from-free-throws advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 124 | residual_regression_2026_09_15 | a team's prior steal-rate advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 125 | residual_regression_2026_09_15 | a team's prior effective-field-goal-percentage advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 126 | residual_regression_2026_09_15 | a team's prior two-point-percentage advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 127 | residual_regression_2026_09_15 | a team's prior offensive-efficiency advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 128 | residual_regression_2026_09_15 | a team's prior share-of-points-from-twos advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
 
 ## 7 quantities declared descriptive-only
 
