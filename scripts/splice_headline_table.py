@@ -45,51 +45,154 @@ BACKTEST = REPO / "data" / "outputs" / "cbb_price_backtest.json"
 
 TIERS = ("high_major", "mid_major", "low_major")
 
+PROPS = REPO / "data" / "outputs" / "cbb_prop_grading.json"
+SKILL = REPO / "data" / "outputs" / "cbb_forecast_skill.json"
+REPLICATION = REPO / "data" / "outputs" / "holdout" / "cbb_replication.json"
+
+
+def _at(payload, *path):
+    node = payload
+    for step in path:
+        node = node[step]
+    return node
+
+
+def _tier_row(payload, key, tier):
+    for row in payload[key]:
+        if tier in (row.get("tier"), row.get("label")):
+            return row
+    raise SystemExit(f"no {tier!r} row in {key}")
+
+
+def roster() -> dict[str, dict]:
+    """Every cell these two documents publish, from the records.
+
+    **Defined here rather than in the test that checks it.** The guard used to
+    carry its own copy of this list, so the thing being generated and the thing
+    being policed were two hand-maintained rosters that could disagree -- and
+    for a while they did, at eleven cells against eighteen, which is how four
+    published prop intervals went stale with every test green. One definition;
+    the test imports it.
+    """
+    backtest = json.loads(BACKTEST.read_text(encoding="utf-8"))
+    props = json.loads(PROPS.read_text(encoding="utf-8"))
+    skill = json.loads(SKILL.read_text(encoding="utf-8"))
+    replication = json.loads(REPLICATION.read_text(encoding="utf-8"))
+
+    cells: dict[str, dict] = {}
+    for tier in TIERS:
+        cells[f"price backtest / {tier} ROI"] = _tier_row(backtest, "by_tier", tier)
+
+        skill_row = _tier_row(skill, "by_tier", tier)
+        cells[f"forecast skill / {tier} Brier vs raw"] = _at(
+            skill_row, "brier", "advantage_over_raw"
+        )
+        coefficients = skill_row["fit"]["coefficients"]
+        cells[f"forecast skill / {tier} disagreement"] = next(
+            c for c in coefficients if c["name"] == "disagreement"
+        )
+
+        prop_row = _tier_row(props, "by_tier", tier)
+        cells[f"prop grading / {tier} de-vig headline"] = _at(
+            prop_row, "advantages", "devig_power__conditional"
+        )
+        cells[f"prop grading / {tier} role-prior control"] = _at(
+            prop_row, "advantages", "control__conditional"
+        )
+
+    cells["forecast skill / selected-bets disagreement"] = next(
+        c
+        for c in skill["selected"]["by_tier"][0]["fit"]["coefficients"]
+        if c["name"] == "disagreement"
+    )
+    pra = next(
+        row
+        for row in props["by_market_and_tier"]
+        if (row.get("market"), row.get("tier")) == ("player_pra", "high_major")
+    )
+    cells["prop grading / player_pra high-major"] = _at(
+        pra, "advantages", "devig_power__conditional"
+    )
+    market = next(
+        row
+        for row in replication["markets"]
+        if (row.get("market"), row.get("tier")) == ("total_points", "mid_major")
+    )
+    cells["replication / total_points mid-major held out"] = market["holdout"]
+
+    if len(cells) != 18:
+        raise SystemExit(f"the roster resolved {len(cells)} cells, expected 18")
+    return cells
+
+
+def _interval(cell, looks):
+    value = cell.get("roi", cell.get("value", cell.get("estimate")))
+    return S.RoiInterval(
+        roi=value,
+        low=cell["low"],
+        high=cell["high"],
+        bets=cell.get("bets", cell.get("rows", 0)),
+        clusters=cell.get("clusters", 0),
+        standard_error=cell["standard_error"],
+        looks=looks,
+        cluster_unit=cell.get("cluster_unit", "game"),
+    )
+
 
 def render() -> str:
-    """The table, from the record and the ledger, never from prose."""
+    """Every ledger-dependent figure these documents state, from the records.
+
+    **The prose around this block states verdicts and states no numbers.** Sixty
+    eight ledger-dependent figures were typed into it by hand -- twenty eight
+    corrected intervals, twenty five correction factors, fifteen hypothesis
+    counts -- and every one went stale the moment a hypothesis was registered.
+    Seven rounds of adversarial review were spent building a guard that could
+    find a stale one in English prose; each round found a spelling the last had
+    missed, because "two numbers that together are an interval" has no closed
+    form in a natural language. A generated figure does not need to be found.
+    """
     looks = len(json.loads(LEDGER.read_text(encoding="utf-8"))["hypotheses"])
-    record = json.loads(BACKTEST.read_text(encoding="utf-8"))
-    by_tier = {row["tier"]: row for row in record["by_tier"] if row.get("tier")}
+    factor = S.bonferroni_factor(looks)
+    cells = roster()
 
     lines = [
-        f"| Cut | Bets | ROI | Corrected (x{S.bonferroni_factor(looks):.4f}, "
-        f"{looks} hypotheses) | Verdict |",
+        f"**Family correction: {looks} cumulative hypotheses, x{factor:.4f}.** "
+        "Every interval below is widened by it. The count is the experiment "
+        "ledger's cumulative total, not the day's.",
+        "",
+        "| Cut | Bets | ROI | Corrected | Verdict |",
         "|:---|---:|---:|:---|:---|",
     ]
     for tier in TIERS:
-        row = by_tier[tier]
-        # **The verdict comes from `RoiInterval`, not from this file.** It was
-        # re-implemented here as `high < 0 / low > 0 / else`, which omits the
-        # declared 200-bet evidence floor -- so the generated table, which the
-        # fence makes the trusted copy, could print "demonstrated deficit" on a
-        # cell the record itself refuses as "not enough evidence", and
-        # `test_the_committed_block_is_what_the_record_renders_to` would certify
-        # it, because that test compares the fence to this render and never to
-        # the record's own verdict. A generator that re-derives a rule is a
-        # second implementation of it, and the second one is always the one
-        # nobody re-reads.
-        interval = S.RoiInterval(
-            roi=row["roi"],
-            low=row["low"],
-            high=row["high"],
-            bets=row["bets"],
-            clusters=row["clusters"],
-            standard_error=row["standard_error"],
-            looks=looks,
-            cluster_unit=row.get("cluster_unit", "game"),
-        )
+        interval = _interval(cells[f"price backtest / {tier} ROI"], looks)
         lines.append(
-            f"| {tier.replace('_', '-')} | {row['bets']:,} | {row['roi']:+.1%} | "
-            f"{interval.adjusted_low * 100:+.1f}% to "
+            f"| {tier.replace('_', '-')} | {interval.bets:,} | "
+            f"{interval.roi:+.1%} | {interval.adjusted_low * 100:+.1f}% to "
             f"{interval.adjusted_high * 100:+.1f}% | {interval.verdict()} |"
         )
-    lines.append("")
-    lines.append(
-        f"*Generated by `scripts/splice_headline_table.py` from "
-        f"`data/outputs/cbb_price_backtest.json` at the ledger's {looks} "
-        "hypotheses. Do not edit between the markers; re-run the script.*"
-    )
+
+    lines += [
+        "",
+        "| Measure | Cut | Estimate | Corrected | Verdict |",
+        "|:---|:---|---:|:---|:---|",
+    ]
+    for label in sorted(cells):
+        if label.startswith("price backtest /"):
+            continue
+        measure, _, cut = label.partition(" / ")
+        interval = _interval(cells[label], looks)
+        lines.append(
+            f"| {measure} | {cut} | {interval.roi:+.5f} | "
+            f"{interval.adjusted_low:+.5f} to {interval.adjusted_high:+.5f} | "
+            f"{interval.verdict()} |"
+        )
+
+    lines += [
+        "",
+        f"*Generated by `scripts/splice_headline_table.py` from the records in "
+        f"`data/outputs/` at the ledger's {looks} hypotheses. Do not edit "
+        "between the markers; re-run the script.*",
+    ]
     return "\n".join(lines)
 
 
