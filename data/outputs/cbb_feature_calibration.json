@@ -1,0 +1,31 @@
+{
+  "record_version": 1,
+  "season": 2025,
+  "team_games": 11518,
+  "player_games": 126602,
+  "team_means": {
+    "efg_pct": 0.5102962865876272,
+    "turnover_rate": 0.17191197688982857,
+    "off_reb_pct": 0.2955511155096185,
+    "def_reb_pct": 0.7044488844903815,
+    "free_throw_rate": 0.33727250969652045,
+    "off_efficiency": 106.27750071493037,
+    "def_efficiency": 106.27750071493037,
+    "tempo": 68.55217051571452,
+    "true_shooting_pct": 0.549366043374444,
+    "three_point_rate": 0.39107830058448767,
+    "block_rate": 0.09452256157432697,
+    "steal_rate": 0.09697328227362781
+  },
+  "player_means": {
+    "usage_rate": 0.18942562854411177,
+    "true_shooting_pct": 0.5187136979526923,
+    "turnover_rate": 0.16152619068186203,
+    "game_score": 5.365708282649563
+  },
+  "identities": {
+    "minutes_share_per_team_game": 5.0,
+    "usage_weighted_per_team_game": 1.0,
+    "off_reb_weighted_per_team_game": 0.9988871224165342
+  }
+}
