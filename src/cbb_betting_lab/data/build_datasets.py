@@ -326,6 +326,44 @@ def build_player_games(
     return box[list(PLAYER_GAME_COLUMNS)]
 
 
+def possession_ends(pbp: pd.DataFrame) -> pd.Series:
+    """Rows on which a team's possession ends. Expects play-order sorting.
+
+    A possession ends on a made field goal, a defensive rebound, a turnover, or
+    the last made free throw of a trip; an offensive rebound continues it.
+
+    **Extracted so there is one definition of it.** `possession_validation`
+    owned this rule inline, and anything else needing possessions -- shot-zone
+    features, possession length, transition rate -- would have had to write its
+    own. Two implementations of a segmentation rule drift, and the one that
+    drifts is the one nobody re-reads. The feature module calls this.
+
+    Two traps in this feed, both already paid for elsewhere in this file:
+    `score_value` is positive on MISSES too, so `is_made_field_goal` needs
+    `scoring_play`; and a takeaway is recorded twice, as a turnover and again as
+    a steal, so only the turnover text counts here.
+    """
+    text = pbp["type_text"].fillna("")
+    free_throw = is_free_throw(text)
+    made_free_throw = free_throw & pbp["scoring_play"].fillna(False).astype(bool)
+
+    # A free-throw TRIP ends a possession; an individual free throw does not.
+    # The last free throw of a consecutive run by one team is the one that
+    # ends it — and only if it was made, because a miss leaves a live ball
+    # that the rebound rule below already accounts for.
+    same_trip = free_throw & free_throw.shift(-1, fill_value=False) & (
+        pbp["team_id"] == pbp["team_id"].shift(-1)
+    ) & (pbp["game_id"] == pbp["game_id"].shift(-1))
+    trip_ends = made_free_throw & ~same_trip
+
+    return (
+        is_made_field_goal(pbp)
+        | text.str.contains("Defensive Rebound", case=False, na=False)
+        | text.str.contains("Turnover", case=False, na=False)
+        | trip_ends
+    )
+
+
 def possession_validation(season: int, *, raw_dir: Path | None = None) -> dict:
     """Check the standard possession estimator against play-by-play.
 
@@ -347,26 +385,7 @@ def possession_validation(season: int, *, raw_dir: Path | None = None) -> dict:
     pbp = pbp.sort_values(["game_id", "game_play_number"], kind="mergesort").reset_index(
         drop=True
     )
-    text = pbp["type_text"].fillna("")
-    free_throw = is_free_throw(text)
-    made_free_throw = free_throw & pbp["scoring_play"].fillna(False).astype(bool)
-
-    # A free-throw TRIP ends a possession; an individual free throw does not.
-    # The last free throw of a consecutive run by one team is the one that
-    # ends it — and only if it was made, because a miss leaves a live ball
-    # that the rebound rule below already accounts for.
-    same_trip = free_throw & free_throw.shift(-1, fill_value=False) & (
-        pbp["team_id"] == pbp["team_id"].shift(-1)
-    ) & (pbp["game_id"] == pbp["game_id"].shift(-1))
-    trip_ends = made_free_throw & ~same_trip
-
-    ends = (
-        is_made_field_goal(pbp)
-        | text.str.contains("Defensive Rebound", case=False, na=False)
-        | text.str.contains("Turnover", case=False, na=False)
-        | trip_ends
-    )
-    counted = pbp[ends].groupby("game_id").size()
+    counted = pbp[possession_ends(pbp)].groupby("game_id").size()
 
     team = build_team_games(season, raw_dir=raw_dir)
     estimated = team.groupby("game_id")["possessions_estimated"].sum()
