@@ -1424,6 +1424,465 @@
       "predicted_direction": "higher",
       "stage": "holdout",
       "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior defensive-rebound-rate advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior offensive-rebound-rate advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior points-per-shot advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior forced-turnover-rate advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior assist-rate advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior free-throw-rate advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior effective-field-goal-percentage-allowed advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior block-rate advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior net-efficiency advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior free-throw-percentage advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior tempo advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior true-shooting-percentage advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior Elo rating advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior defensive-efficiency advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior free-throw-rate-allowed advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior three-point-attempt-rate-allowed advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior turnover-rate advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior three-point-percentage advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior non-steal-turnover-rate advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "lower",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior three-point-attempt-rate advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior share-of-points-from-three advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior share-of-points-from-free-throws advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior steal-rate advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior effective-field-goal-percentage advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior two-point-percentage advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior offensive-efficiency advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "residual_regression_2026_09_15",
+      "name": "a team's prior share-of-points-from-twos advantage over its opponent predicts margin against the card-time spread",
+      "tested_on": "2026-09-15",
+      "seasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
     }
   ]
 }

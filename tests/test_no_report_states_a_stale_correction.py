@@ -1820,3 +1820,52 @@ def test_the_refusal_gate_still_lets_a_census_name_what_it_refuses():
     assert _betting_claims_about(census, refused) == []
     assert _betting_claims_about(archive, refused) == []
     assert _betting_claims_about(priced, refused) == [priced]
+
+
+# ---------------------------------------------------------------------------
+# 9. A hand-written composition adds up to the ledger
+# ---------------------------------------------------------------------------
+
+#: `docs/project_status.md` enumerates what the ledger is made of -- 30
+#: discovery entries, 32 holdout looks, 33 player props, and so on. That
+#: enumeration is hand-written, so it goes stale the moment a registration
+#: lands, and nothing else in this suite reads it: the correction checks above
+#: look for a *correction sentence*, and "30 + 32 + ..." is not one.
+#:
+#: The document deliberately does NOT write the total down. The fence guard in
+#: `test_the_headline_table_is_generated.py` reserves today's count for the
+#: generated block, and a composition's total is exactly a statement of what the
+#: ledger holds today. So the addends are the claim, and their sum is checked
+#: against the authority here.
+COMPOSITION = re.compile(r"(?<![\d.+])((?:\d+\s*\+\s*){2,}\d+)(?![\s*+\d])")
+
+
+def test_a_hand_written_composition_sums_to_the_ledgers_count():
+    """Every "a + b + ..." in the hand-written documents must sum to the count
+    the ledger holds. This is arithmetic against the authority, not a spelling --
+    so unlike a pinned literal it cannot go stale, and unlike a prose matcher
+    there is nothing here for a next reader to phrase differently. The total
+    itself is never written out: that is the generated block's to state.
+    """
+    looks = ledger_looks()
+    found = 0
+    for relative in ("CLAUDE.md", "docs/project_status.md"):
+        path = REPO / relative
+        assert path.is_file(), f"{relative} is on this check's roster and is not on disk."
+        for addends in COMPOSITION.findall(path.read_text(encoding="utf-8")):
+            parts = [int(part) for part in re.findall(r"\d+", addends)]
+            assert sum(parts) == looks, (
+                f"{relative} composes the ledger as {addends}, which sums to "
+                f"{sum(parts)}; the ledger holds {looks}. A registration landed "
+                "without the composition being extended -- add the new family as "
+                "its own addend rather than editing an existing one, because the "
+                "enumeration is what says where the count came from."
+            )
+            found += 1
+    assert found, (
+        "no hand-written composition was found in CLAUDE.md or "
+        "docs/project_status.md. One of them stated the ledger's make-up as a "
+        "sum of families and this check read it; if the wording moved, this "
+        "check now passes by finding nothing, which is the failure mode it "
+        "exists to prevent."
+    )
