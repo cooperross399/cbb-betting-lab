@@ -188,132 +188,293 @@ def test_the_registration_cost_is_paid_by_everything_already_published() -> None
         "cut, or this test is reading the wrong one."
     )
 
-    examined, retracted = _readings_across_every_record(S, looks)
-    assert examined > 200, (
-        f"only {examined} published readings were examined; this repository's "
-        "records carry well over two hundred. The roster stopped resolving -- "
-        "a block was renamed, or a record moved -- and a cost check that reads "
-        "nothing passes everything."
-    )
+    examined, retracted_cells = _readings_across_every_record(S, looks)
+    retracted = [key for key, _ in retracted_cells]
+    recorded = _recorded_retractions()
 
-    narration = " ".join(
-        re.sub(r"\s+", " ", (_REPO / name).read_text(encoding="utf-8"))
-        for name in ("CLAUDE.md", "docs/project_status.md")
-    )
-    unnarrated = [cell for cell in retracted if not _is_narrated(cell, narration)]
-    assert not unnarrated, (
-        "a wider family retracted "
-        f"{len(unnarrated)} published reading(s) that no hand-written document "
-        "names: "
-        + "; ".join(
-            f"{c['record']} {c['block']} {c['tier']}/{c['market']}"
-            f"{'/' + c['name'] if c['name'] else ''} "
-            f"(demonstrated at {c['scored']}, not at {looks})"
-            for c in unnarrated[:6]
-        )
-        + ". A wider correction can only ever retract, and this lab's rule is "
-        "that the retraction is narrated in the commit that causes it. Name the "
-        "cell in CLAUDE.md or docs/project_status.md, or do not make the "
+    missing = sorted(set(retracted) - set(recorded))
+    assert not missing, (
+        f"{len(missing)} published reading(s) that today's correction retracts "
+        f"are absent from {RETRACTIONS.name}:\n  "
+        + "\n  ".join(" | ".join(key) for key in missing)
+        + "\n\nA wider correction can only ever retract, so every registration "
+        "has a cost and the cost is computable. State it there, with the count "
+        "it was demonstrated at and the count it crossed, or do not make the "
         "registration."
     )
 
-
-def _cells(payload):
-    """Every scored cell in a record, whatever block it lives in.
-
-    Blocks are discovered rather than listed, because the defect this function
-    exists for was a roster that named ONE of them. `by_tier` holds three rows;
-    the record also carries `by_market_and_tier` and `null_baseline`, and the
-    reading this lab actually retracted on 2026-09-10 was in the last of those.
-    """
-    scored = payload.get("looks")
-    for block, rows in payload.items():
-        if not isinstance(rows, list):
+    # The numbers in the table, against the records they claim to describe.
+    by_key = {key: cell for key, cell in retracted_cells}
+    for key, stated in recorded.items():
+        cell = by_key.get(key)
+        if cell is None:
             continue
-        for row in rows:
-            if not isinstance(row, dict):
-                continue
-            value = row.get("roi", row.get("value"))
-            error = row.get("standard_error")
-            if value is None or error is None:
-                continue
-            if not row.get("enough_evidence"):
-                continue
-            yield {
-                "block": block,
-                "tier": row.get("tier"),
-                "market": row.get("market"),
-                "name": row.get("name"),
-                "value": value,
-                "standard_error": error,
-                "scored": row.get("looks", scored),
-            }
+        assert abs(cell["value"] - stated["roi"]) < 5e-5, (
+            f"{RETRACTIONS.name} states an ROI of {stated['roi']:+.2%} for "
+            f"{' | '.join(key)}; the record holds {cell['value']:+.2%}."
+        )
+        assert cell["scored"] == stated["demonstrated_at"], (
+            f"{RETRACTIONS.name} says that reading was demonstrated at "
+            f"{stated['demonstrated_at']} hypotheses; its record was scored at "
+            f"{cell['scored']}."
+        )
+        crossed = _crossing_point(S, cell)
+        assert crossed == stated["crossed_at"], (
+            f"{RETRACTIONS.name} says it crossed at {stated['crossed_at']}; "
+            f"re-derived from the record it crosses at {crossed}."
+        )
 
+    surplus = sorted(set(recorded) - set(retracted))
+    assert not surplus, (
+        f"{len(surplus)} row(s) in {RETRACTIONS.name} name a reading that is "
+        "NOT retracted at the ledger's current count:\n  "
+        + "\n  ".join(" | ".join(key) for key in surplus)
+        + "\n\nThis direction is the half that makes the other half mean "
+        "something: without it the table could be pre-filled with every cell in "
+        "the repository and would then accept any retraction in silence. A row "
+        "here is a claim that a specific reading was withdrawn; if the reading "
+        "still stands, the row is false."
+    )
+
+
+#: The hand-written ledger of readings the growing family has withdrawn.
+RETRACTIONS = _REPO / "docs" / "retracted_readings.md"
 
 #: Every record that publishes a verdict a person could act on.
-SCORED_RECORDS = (
-    "cbb_price_backtest.json",
-    "holdout/cbb_price_backtest.json",
-    "core_team_only/cbb_price_backtest.json",
-    "holdout/cbb_replication.json",
-)
+#:
+#: **`cbb_prop_grading.json` was missing and `cbb_forecast_skill.json` was
+#: missing**, which is how four stale prop intervals reached the documents while
+#: every guard ran green. A record that publishes a verdict belongs here; the
+#: floors below make dropping one fail rather than quietly shrink the search.
+#: **These are EXACT counts, not floors.** They were floors, set 14% under what
+#: the records actually yield -- 795 readings against 682 -- so 113 published
+#: readings could vanish with both tests green: twenty per cent of the
+#: prop-grading record, four live demonstrated findings among them, or a walker
+#: that quietly stopped descending into `pooled`. A coverage number that permits
+#: a collapse is not a coverage number. When a record legitimately gains or loses
+#: a reading this fails, and the commit that caused it says so.
+SCORED_RECORDS = {
+    "cbb_price_backtest.json": 225,
+    "holdout/cbb_price_backtest.json": 224,
+    "core_team_only/cbb_price_backtest.json": 69,
+    "holdout/cbb_replication.json": 67,
+    "cbb_prop_grading.json": 194,
+    "cbb_forecast_skill.json": 43,
+    "cbb_what_we_can_claim.json": 23,
+}
+
+
+def _key(record: str, cell: dict) -> tuple:
+    """A reading's identity, structural rather than prose.
+
+    Deliberately not a name to grep for. The rule before this one -- "the cell is
+    named somewhere in one of two documents" -- was satisfiable by text written
+    for a different record on a different occasion, and unsatisfiable altogether
+    for a row with no market or no tier.
+
+    **The key carries the leaf and the season, and without them it was not
+    injective.** `block` was frozen at the top-level dict key and `tier` /
+    `market` / `name` were inherited from ancestors, so every reading nested
+    under one `markets` row -- its `discovery` cell, its `holdout` cell, each
+    per-season cell -- collapsed to one key: 795 readings over 580 keys, 215 of
+    them sharing. Both halves of the check compare SETS, so one row in the table
+    discharged the obligation for every reading that shared its key, and the
+    surplus half rejected a row only when none of the readings under its key was
+    retracted. A retraction ledger whose keys collide is a ledger with blanks in
+    it.
+
+    Built from names, never from list indices. An index would be injective and
+    would also break the table whenever a record re-rendered in a different
+    order, which trains a reader to retype the key rather than read it. Block,
+    leaf and season are all carried in the data.
+    """
+    return (
+        record,
+        cell.get("block") or "",
+        cell.get("leaf") or "",
+        str(cell.get("season") or ""),
+        cell.get("tier") or "",
+        cell.get("label") or "",
+        cell.get("market") or "",
+        cell.get("name") or "",
+    )
+
+
+def _cells(
+    node,
+    record_looks,
+    block=None,
+    leaf=None,
+    season=None,
+    tier=None,
+    label=None,
+    market=None,
+    name=None,
+):
+    """Every scored reading in a record, AT ANY DEPTH.
+
+    **The first version walked top-level lists only**, and the claim written
+    beside it -- "reads every scored block of every published record" -- was
+    therefore false in the commit that made it. `holdout/cbb_replication.json`
+    keys its measurements one level down, inside `discovery` and `holdout`
+    sub-dicts of each `markets` row, so its 32 markets contributed nothing and
+    the record yielded 8 readings out of 67. One of the cells it could not see is
+    a published `demonstrated deficit` that today's correction retracts -- the
+    same cell the other guard's roster reaches by name. The check written to
+    catch a blind spot had one, in the direction it had just been widened.
+    """
+    if isinstance(node, dict):
+        tier = node.get("tier", tier)
+        # `label` is carried SEPARATELY, never merged into `tier`. The
+        # forecast-skill record keys a tier `label` while the prop-grading record
+        # uses `label` for an advantage's name, so folding one into the other
+        # disambiguated four readings and collided eighty-eight others.
+        label = node.get("label", label)
+        market = node.get("market", market)
+        name = node.get("name", name)
+        season = node.get("season", season)
+        # `estimate` as well: a regression coefficient stores its point estimate
+        # under that name, and 33 of them in cbb_forecast_skill.json were walked
+        # past in silence -- neither counted nor keyed nor retractable -- while
+        # that record's own prose calls one of them "the whole answer". Five are
+        # published today as a demonstrated edge or deficit.
+        value = node.get("roi", node.get("value", node.get("estimate")))
+        if value is not None and node.get("standard_error") is not None:
+            if node.get("enough_evidence", True):
+                scored = node.get("looks", record_looks)
+                if scored is not None:
+                    yield {
+                        "block": block,
+                        "leaf": leaf,
+                        "season": season,
+                        "tier": tier,
+                        "label": label,
+                        "market": market,
+                        "name": name,
+                        "value": value,
+                        "standard_error": node["standard_error"],
+                        "scored": scored,
+                    }
+        for key, child in node.items():
+            yield from _cells(
+                child,
+                record_looks,
+                block if block else key,
+                key if block else None,
+                season,
+                tier,
+                label,
+                market,
+                name,
+            )
+    elif isinstance(node, list):
+        for child in node:
+            yield from _cells(
+                child, record_looks, block, leaf, season, tier, label, market, name
+            )
+
+
+def test_the_roster_names_every_record_that_publishes_a_verdict():
+    """Membership pinned, not just the counts.
+
+    Both loops here are `for relative, floor in SCORED_RECORDS.items()`, so a
+    record that is not a key is not looked at, not counted, and not missed.
+    Setting a count to zero fails loudly; DELETING the line passes green -- a
+    strictly stronger disarm than the one the counts were hardened against. And
+    it is the same failure as the original: two records were missing from this
+    roster, which is how four stale prop intervals reached the documents with
+    every guard green. The counts were made unfakeable and the names were left a
+    hand-maintained literal.
+    """
+    outputs = _REPO / "data" / "outputs"
+    publishing = set()
+    for path in sorted(outputs.rglob("*.json")):
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        looks = payload.get("looks") if isinstance(payload, dict) else None
+        if any(True for _ in _cells(payload, looks)):
+            publishing.add(str(path.relative_to(outputs)))
+    named = set(SCORED_RECORDS)
+    assert named == publishing, (
+        "the roster and the records on disk that publish a scored reading "
+        "disagree.\n"
+        f"  publishes a verdict and is NOT on the roster: {sorted(publishing - named)}\n"
+        f"  on the roster and publishes nothing: {sorted(named - publishing)}\n"
+        "A record missing from this dict is not checked and does not complain."
+    )
 
 
 def _readings_across_every_record(S, looks):
-    """(readings examined, readings that today's correction retracts)."""
+    """(readings examined, the keys of those today's correction retracts)."""
     examined = 0
     retracted = []
-    for relative in SCORED_RECORDS:
+    for relative, floor in SCORED_RECORDS.items():
         path = _REPO / "data" / "outputs" / relative
-        if not path.is_file():
-            raise AssertionError(
-                f"{relative} is on this check's roster and is not on disk. "
-                "Re-render it or take it off the roster in this commit."
-            )
+        assert path.is_file(), (
+            f"{relative} is on this check's roster and is not on disk. "
+            "Re-render it or take it off the roster in this commit."
+        )
         payload = json.loads(path.read_text(encoding="utf-8"))
-        for cell in _cells(payload):
-            scored = cell["scored"]
-            if scored is None:
-                continue
-            examined += 1
-            was = _demonstrated(S, cell, scored)
-            now = _demonstrated(S, cell, looks)
-            if was and not now:
-                retracted.append({**cell, "record": relative})
+        cells = list(_cells(payload, payload.get("looks")))
+        assert len(cells) == floor, (
+            f"{relative} yields {len(cells)} scored readings; this check is "
+            f"pinned to {floor}. If the record gained or lost a reading, say so "
+            "in this commit and move the number. If it did not, coverage changed "
+            "underneath the walker -- a renamed block, a moved record, a stop in "
+            "the descent -- and a cost check that reads less passes more."
+        )
+        examined += len(cells)
+        for cell in cells:
+            half_then = S.bonferroni_z(cell["scored"]) * cell["standard_error"]
+            half_now = S.bonferroni_z(looks) * cell["standard_error"]
+            if abs(cell["value"]) > half_then and abs(cell["value"]) <= half_now:
+                retracted.append((_key(relative, cell), cell))
     return examined, retracted
 
 
-def _demonstrated(S, cell, looks):
-    """Whether the cell's interval at `looks` excludes zero, either side."""
-    half = S.bonferroni_z(looks) * cell["standard_error"]
-    return (cell["value"] + half) < 0.0 or (cell["value"] - half) > 0.0
+def _recorded_retractions() -> dict[tuple, dict]:
+    """The hand-written retraction table, keyed and with its numbers kept.
 
-
-def _is_narrated(cell, narration: str) -> bool:
-    """Whether a hand-written document names the cell that lost its reading.
-
-    Spelled the several ways this repository writes a cell, because the rule is
-    that a reader meets the retraction -- not that it is recorded in one canonical
-    format.
+    **Every column is parsed, because the ones that were not were unverified.**
+    The first version sliced `fields[:5]` and threw the rest away -- so the ROI,
+    the count a reading was demonstrated at and the count it crossed at were
+    never compared to anything, while the guard's own failure message instructed
+    an author to "state it there, with the count it was demonstrated at and the
+    count it crossed". A column nothing reads is a column anyone can make up.
     """
-    tier, market = cell.get("tier"), cell.get("market")
-    if not tier or not market:
-        return False
-    hyphen = tier.replace("_", "-")
-    cell_named = any(
-        spelling in narration
-        for spelling in (
-            f"{tier} / {market}",
-            f"{market} / {tier}",
-            f"{hyphen} / {market}",
-            f"{market} / {hyphen}",
-        )
+    assert RETRACTIONS.is_file(), (
+        f"{RETRACTIONS.name} is gone. It is the only place this lab states what "
+        "a registration cost; without it nothing records a withdrawn reading."
     )
-    # **And the RULE, when the cell is a blind side that has one.** Naming the
-    # cell alone let one narrated rule vouch for its siblings: `low_major /
-    # spread` appeared in a sentence about `always the favourite`, and that
-    # silently covered `always home` and `always away`, which had also lost
-    # their readings and which no document mentioned. Three retractions, one
-    # sentence, two of them invisible.
-    rule = cell.get("name")
-    return cell_named and (rule in narration if rule else True)
+    dash = "\u2014"
+    rows: dict[tuple, dict] = {}
+    for line in RETRACTIONS.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("| `"):
+            continue
+        fields = [f.strip().strip("`") for f in line.strip().strip("|").split("|")]
+        assert len(fields) == 11, (
+            f"a row of {RETRACTIONS.name} has {len(fields)} columns, expected 11: "
+            f"{line!r}. If the table's shape changed, change this parser with it "
+            "rather than letting it read a prefix and ignore the rest."
+        )
+        blank = lambda value: "" if value == dash else value
+        key = tuple(blank(field) for field in fields[:8])
+        assert key not in rows, f"{RETRACTIONS.name} names {key} twice."
+        rows[key] = {
+            "roi": float(fields[8].rstrip("%")) / 100.0,
+            "demonstrated_at": int(fields[9]),
+            "crossed_at": int(fields[10]),
+        }
+    assert rows, (
+        f"{RETRACTIONS.name} has no rows this parser recognises. Rows start "
+        "`| ` followed by a back-ticked record path; if the table's shape "
+        "changed, change this with it rather than letting it read nothing."
+    )
+    return rows
+
+
+def _crossing_point(S, cell) -> int:
+    """The first cumulative count at which this reading stops excluding zero."""
+    for looks in range(cell["scored"], 1000):
+        if abs(cell["value"]) <= S.bonferroni_z(looks) * cell["standard_error"]:
+            return looks
+    raise AssertionError(f"{cell!r} does not cross within 1000 hypotheses")

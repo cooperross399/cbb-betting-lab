@@ -123,15 +123,24 @@ FORWARD = (2027, 2028, 2029)
 #: hypotheses below are underpowered.** It was computed POOLED -- 25,826 games
 #: across 2021-2026, slope +7.14, standard error 1.31, scaled to a season's
 #: ~4,304 games and corrected at 101 hypotheses. Those pooled figures do
-#: reproduce: minimum detectable slope 11.21 at one season, 7.93 at two, 6.47 at
-#: three, and at 80% POWER 8.04 at three against an observed 7.14, 6.96 at four.
+#: reproduce: minimum detectable slope 11.18 at one season, 7.90 at two, 6.45 at
+#: three, and at 80% POWER 8.01 at three against an observed 7.14, 6.94 at four.
+#: (Each of those five stood here    at a value ~0.3% higher -- what a
+#: standard error of about 1.3143 gives, rather than the 1.31 recorded below --
+#: while the per-tier figure in the same comment was computed from 1.31. Two
+#: halves of one comment, from two different standard errors, with a sentence
+#: between them claiming they reproduced. The superseded five are not reprinted:
+#: a number written twice drifts, and a stale one written down beside its
+#: replacement is the most likely of all to be quoted. They are recomputed from
+#: the constants now, and a test asserts it instead of the prose claiming it.)
 #: But what is registered below is three PER-TIER tests, and a tier's slope is
 #: estimated from that tier's games alone. Splitting the same sample into exact
 #: thirds -- the most charitable division available -- the 80%-power minimum
 #: detectable slope over these four seasons is 12.02, against the per-tier
 #: observed slopes of +8.5 (high-major), +8.6 (mid-major) and +4.5 (low-major).
-#: All three are underpowered, and 6.96 describes a pooled test that was never
-#: registered and which this lab's no-pooled-headline rule would not accept.
+#: All three are underpowered, and the four-season pooled figure describes a
+#: test that was never registered and which this lab's no-pooled-headline rule
+#: would not accept.
 #:
 #: So this window repeats, rather than avoids, the error it was written to
 #: avoid: a hypothesis the sample cannot settle. It is left standing because the
@@ -431,7 +440,7 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
     # down now, before a single 2027 possession.
     #
     # The four seasons are NOT "the ones the effect size actually needs" -- that
-    # sentence stood here for a week and was wrong. See REBOUND_WINDOW: the
+    # sentence stood here nd a   was wrong. See REBOUND_WINDOW: the
     # power calculation was pooled, these three tests are per-tier, and all
     # three are underpowered at four seasons.
     #

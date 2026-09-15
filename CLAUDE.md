@@ -181,7 +181,9 @@ what a market costs, not a reason not to know what a school is called.*
 
 ### The measurement, and it is decisive
 
-**2026-09-05, on the rebuilt full store: 920,712 wagers offered, 191,053 graded
+**The rebuilt full store, measured 2026-09-05 and re-run on 2026-09-09 against
+the refused-by-name filter (PR #53) — which is the population these figures
+carry: 920,712 wagers offered, 191,053 graded
 bets over 26,591 games and 791 days of seasons 2021-2026, 32 market-and-tier
 cells. 0 shows a demonstrated edge; 3 show a demonstrated deficit.**
 The store is core team 2021–2026 complete, ladders and halves on 609 events,
@@ -238,7 +240,7 @@ both moved the same way.** At the 62 hypotheses in force before the
 registration (x1.7095) **low-major** read a demonstrated deficit at -8.0% to
 -0.1%; it crosses zero at the 85th hypothesis and reads **no demonstrated
 edge** at -8.1% to +0.1% at today's 101 (x1.7773). **A third verdict moved at
-98 -> 101 and went unnarrated for a week**: `mid_major / player_threes` on the
+98 -> 101 and went unnrrated**  a : `mid_major / player_threes` on the
 blind null-baseline side lost its demonstrated-deficit reading in both the
 full-store and the held-out backtest, its corrected high bound crossing from
 -0.000007 to +0.000163. The commit that caused it said it retracted nothing.
@@ -253,7 +255,7 @@ of 48 to 27 on the core-team cut. **Five on each of the first two, and not the
 same five.** (At today's 101 they are 70, 61 and 27. The counts in this
 paragraph were read from records PR #53 replaced -- 79 of 190 and 70 of 189
 were the pre-#53 population, which still held the two markets this lab refuses
-by name -- and they were wrong here for a week.)
+by name -- and they were wrong here until this review.)
 
 **Two blind sides lost a demonstrated reading without any document saying so,
 and a widened cost check found them.** `mid_major / player_threes` on the full
@@ -273,7 +275,9 @@ and at 95, on 673 held-out bets against 1,320 — and it loses `total_points /
 high-major / always the underdog` instead, which the full store keeps at both
 counts. A swap, not an eighth: the registration commit's message said the
 held-out backtest *"loses seven and gains"* that side, which reads as eight,
-and counted from the committed records at both factors it is seven, 70 - 63.
+and counted from the committed records at both factors it is five, 67 - 62 —
+the figures above. This sentence carried the pre-#53 `70 - 63` while the
+paragraph above it already said otherwise.
 Nothing anywhere becomes an edge. Mid-major survives with room: it would
 take 411 hypotheses to widen it across. **This is the pre-registration working,
 not a reason to have skipped it** — an interval is paid for by the whole search
@@ -389,8 +393,8 @@ did"* — would have been a false cause today.
   the price's in all three.** high-major 0.68839 against 0.68265, mid-major
   0.68793 against 0.68339, low-major 0.67955 against 0.67379. The headline
   advantage — the least favourable of two de-vigs and two push conventions — is
-  **-0.0057** (corrected -0.0139 to +0.0024) over 46,370 wagers, **-0.0045**
-  (-0.0102 to +0.0011) over 74,174, and **-0.0065** (-0.0387 to +0.0257) over
+  **-0.0055** (corrected -0.0139 to +0.0029) over 46,370 wagers, **-0.0044**
+  (-0.0101 to +0.0013) over 74,174, and **-0.0065** (-0.0387 to +0.0257) over
   2,060. **Uncorrected, high-major and mid-major exclude zero on the losing
   side**; the family correction at 101 hypotheses is what makes them *no
   demonstrated edge* rather than a deficit, which is the correction working and
