@@ -68,28 +68,12 @@ on:
     # published this slot cleanly, so on a healthy day it costs one
     # authenticated fetch of a status file and no credits at all.
     - cron: "0 10 * 11,12,1,2,3,4 *"
-    # THE `evening` SLOT HAS NO CRON SINCE 2026-09-16, AND THAT IS A BUDGET
-    # DECISION RATHER THAN A SCHEDULING ONE.
-    #
-    # The balance does not carry two snapshots a day through a season:
-    # 1,287,023 needed against 1,110,311 remaining once the sibling labs' 36,175
-    # a month is counted against the same balance, and the balance does not
-    # reset. Measured 2026-09-16.
-    #
-    # Dropping it costs nothing in REACH. Over the 6,300 played games of
-    # 2025-26 the morning slot alone can freeze 99.97% of the slate under EST
-    # and 99.41% under EDT; the evening slot adds 0.00%. The stopping rule's
-    # floor — 10,000 opinions across 2,000 games — is about reach, so one slot
-    # still produces the test the season exists to run.
-    #
-    # It costs price quality on late tips: a 23:00 ET game is now frozen off a
-    # board fetched twelve and a half hours earlier. Unmeasured, because the
-    # bought store holds one lead; `line-movement.yml` will measure it from
-    # November.
-    #
-    # `schedule_contract.SCHEDULED_SLOTS` is the authority and this schedule is
-    # pinned against it. The slot itself still exists and is still dispatchable
-    # by hand, so buying credit restores it by adding two crons back.
+    # `evening` primary. 55% of the slate had not been priced by anybody at the
+    # morning slot; this is the run that covers it, and it exists for no other
+    # reason.
+    - cron: "0 16 * 11,12,1,2,3,4 *"
+    # `evening` backup.
+    - cron: "0 17 * 11,12,1,2,3,4 *"
   workflow_dispatch:
     inputs:
       card_slot:
@@ -504,7 +488,7 @@ jobs:
           if ! python scripts/run_gameday_card.py \
             --live \
             --card-slot "${{ steps.identity.outputs.slot }}" \
-            --credit-cap "${{ inputs.credit_cap || '20000' }}" \
+            --credit-cap "${{ inputs.credit_cap || '40000' }}" \
             $REHEARSAL \
             | tee card_run.txt; then
             STATUSES=("${PIPESTATUS[@]}")

@@ -236,36 +236,3 @@ stricter in both directions and goes red the day the schedule constants move.
 
 **It is a coverage gap, not a fault** — but it is 0.59%, and a gap recorded at
 a twentieth of its size is not really recorded.
-
-## The cadence, as of 2026-09-16: one slot
-
-**The evening slot has no cron.** The balance does not carry two snapshots a
-day through a season — 1,287,023 needed against 1,110,311 remaining once the
-sibling labs' 36,175 a month is counted against the same balance, and the
-balance does not reset. The measurement above is why that was an acceptable
-trade rather than a cut: one slot still reaches the slate, so the stopping
-rule's floor of 10,000 opinions across 2,000 games is still in range.
-
-`schedule_contract.SCHEDULED_SLOTS` is the authority. `cron_expressions()`
-derives from it, and
-`test_the_gameday_workflow_crons_are_exactly_the_ones_the_contract_declares`
-compares it against the workflow in both directions, so a cron that reappears
-and a cron that silently disappears both fail. The morning **backup** stays:
-dropping it is the quiet failure, because a workflow missing its backup looks
-exactly like a healthy one until the primary is skipped.
-
-The daily credit cap came down with the cadence, 40,000 to **20,000**. The day
-it bounds is now one snapshot, and a cap left at twice the cadence would not
-have bounded the day at all — it would have permitted the spend the schedule
-was changed to avoid. 20,000 keeps the property the old number was chosen for:
-above the worst night this sport has produced (19,206), by the same margin
-40,000 left over 38,412.
-
-**What this costs is price quality on late tips, and it is not yet measurable.**
-A 23:00 ET game is now frozen off a board fetched twelve and a half hours
-earlier. `line-movement.yml` captures the board four times a day and will
-measure it from November; until then the cost is stated rather than known.
-
-**The evening slot is still defined and still dispatchable by hand.** It is
-what buying credit restores — two crons back — and deleting it would delete the
-record of what was given up.
