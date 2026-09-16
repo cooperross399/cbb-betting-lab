@@ -336,14 +336,18 @@ def _normalise_identity(frame: pd.DataFrame) -> pd.DataFrame:
     That failure is silent **and directional** — it can only ever invent
     vanished prices, never surviving ones — which makes it the one join defect
     that could produce a not-reachable finding out of nothing.
+
+    DELEGATED, BECAUSE GUARDING ONE CALLER OF FOUR IS NOT GUARDING. This
+    function existed here and was used by `label_survival` alone; `capture_pairs`,
+    `survival_by_book` and `survival_by_tier` — the three that feed the
+    PUBLISHED report — called the comparison on the raw store. So the report
+    printed 0.0% survival per tier and per book beside a bets split, computed
+    from the same rows, that said those prices survived. The normalisation now
+    lives in `line_movement`, where `QUOTE_IDENTITY` lives and where
+    `survival_between` applies it to both sides itself, so a caller cannot
+    bypass it by handing over a store.
     """
-    out = frame.copy()
-    for column in LM.QUOTE_IDENTITY:
-        if column in out.columns:
-            out[column] = out[column].map(stores._dedupe_value)
-        else:
-            out[column] = ""
-    return out
+    return LM.normalise_identity(frame)
 
 
 def _identity_tuples(frame: pd.DataFrame) -> list[tuple]:

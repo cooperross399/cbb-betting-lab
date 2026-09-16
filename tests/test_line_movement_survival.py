@@ -8,6 +8,8 @@ implementation drops.
 
 from __future__ import annotations
 
+import io
+
 import pandas as pd
 import pytest
 
@@ -150,3 +152,53 @@ def test_staging_goes_through_the_one_staging_path():
             "line_movement re-implements the staging loop. It must call "
             "providers.staging.stage_payloads instead."
         )
+
+
+# ---------------------------------------------------------------------------
+# A board does not vanish against itself
+# ---------------------------------------------------------------------------
+
+
+def test_an_identical_board_survives_itself_across_the_csv_round_trip():
+    """The defect that would have published 0.0% survival four times a day.
+
+    `QUOTE_IDENTITY` carries `player`, and this lab captures only the bulk
+    markets — h2h, spreads, totals — so `staging.stage_event` sets `player=""`
+    on every captured row. An all-empty column comes back from CSV as float64
+    NaN, and `nan != nan`, so a tuple carrying one never matches itself.
+
+    The round trip is not incidental to this test, it IS the test: in memory
+    the comparison was always right, and the store is the only place the
+    comparison ever actually happens.
+
+    The failure is directional — it can only ever invent vanished prices, never
+    surviving ones — which is what makes it able to produce a not-reachable
+    finding out of nothing, against a market whose prices were all there.
+    """
+    rows = [
+        {
+            "event_id": f"e{index}", "market": "spreads", "segment": "game",
+            "player": "", "selection": "home", "line": -3.5, "book": book,
+            "american_odds": -110, "captured_at": "2027-01-12T14:13:00Z",
+        }
+        for index in range(3)
+        for book in ("draftkings", "fanduel")
+    ]
+    buffer = io.StringIO()
+    pd.DataFrame(rows).to_csv(buffer, index=False)
+    buffer.seek(0)
+    stored = pd.read_csv(buffer)
+
+    assert stored["player"].isna().all(), (
+        "the fixture no longer round-trips an empty player column to NaN, so "
+        "it cannot reproduce the defect it exists for"
+    )
+
+    survival = LM.survival_between(stored, stored.copy())
+
+    assert survival.gone == 0, (
+        f"a board compared against ITSELF reported {survival.gone} of "
+        f"{len(rows)} quotes as vanished"
+    )
+    assert survival.survived == len(rows)
+    assert survival.unknown == 0
