@@ -439,14 +439,46 @@ def _side_and_direction(selection: str) -> tuple[str | None, str | None]:
             direction if direction in {OVER, UNDER} else None)
 
 
-def _row_is_the_named_side(game: object, side: str) -> bool | None:
+def _row_is_the_named_side(
+    game: object, side: str, expected_team_id: object = None
+) -> bool | None:
     """Whether the team-games row belongs to the side the selection names.
 
-    None when `home_away` cannot be read, which is treated as a failure like
-    any other ambiguity. See the module docstring, section 6: the row is not
+    **BY TEAM IDENTITY WHEN THE CALLER CAN SUPPLY ONE, AND BY THE LABEL ONLY
+    WHEN IT CANNOT.** The label check compares this table's `home_away` to the
+    word in the selection, and those are two different vocabularies: the
+    selection's `home` is whichever team the PRICE PROVIDER designated home,
+    and `home_away` is whichever team ESPN designated home. On a neutral-site
+    game the designation is a convention rather than a fact and the two sources
+    disagree — measured on the bought store by regressing the actual margin on
+    the negated staged home line, which gives a slope of 1 when nobody flips:
+
+        non-neutral      slope 1.0069   flip rate  -0.3%   n=27,609
+        neutral, March   slope 0.9885   flip rate   0.6%   n= 1,991
+        neutral, Nov-Dec slope 0.2776   flip rate  36.1%   n= 1,986
+
+    March is the control that proves the method rather than the sport: a
+    tournament bracket fixes the designation, so the two sources agree and the
+    flip rate goes to zero. In November, where the designation is arbitrary,
+    they disagree about a third of the time.
+
+    Worse, the label check could never CATCH that. The caller selected the row
+    out of a bundle keyed on `home_away` using the same word it then passed
+    here, so `text == side` was true by construction — a guard structurally
+    incapable of returning False for the rows its only callers produce. The
+    margin came back negated, the team total was the opponent's, every number
+    was plausible and nothing raised.
+
+    None when neither check can be made, which is treated as a failure like any
+    other ambiguity. See the module docstring, section 6: the row is not
     flipped to match, because flipping hides the caller that joined the wrong
     game.
     """
+    if expected_team_id is not None:
+        actual = _field(game, "team_id")
+        if actual is None or clean_text(actual) == "":
+            return None
+        return clean_text(actual) == clean_text(expected_team_id)
     text = clean_text(_field(game, "home_away")).casefold()
     if text not in {HOME, AWAY}:
         return None
@@ -531,6 +563,11 @@ class _Ask:
     line: object
     game: object
     player: object
+    #: The team id the selection names, per the PROVIDER, when the caller can
+    #: establish it. `None` falls back to the label check below, which every
+    #: direct-call test relies on and which is sound when the caller picked the
+    #: row by that same label.
+    expected_team_id: object = None
 
 
 Handler = Callable[[_Ask], Settled]
@@ -582,7 +619,7 @@ def _settle_game_margin(ask: _Ask) -> Settled:
             "neither side. There is no draw in this sport, so a selection that "
             "is not home or away came from somewhere it should not have."
         )
-    if _row_is_the_named_side(ask.game, side) is not True:
+    if _row_is_the_named_side(ask.game, side, ask.expected_team_id) is not True:
         return _cannot(_WRONG_SIDE)
     handicap = _handicap(ask)
     if handicap is None:
@@ -614,7 +651,7 @@ def _settle_half_margin(ask: _Ask) -> Settled:
             f"{ask.market.key} is a side market and {ask.selection!r} names "
             "neither side."
         )
-    if _row_is_the_named_side(ask.game, side) is not True:
+    if _row_is_the_named_side(ask.game, side, ask.expected_team_id) is not True:
         return _cannot(_WRONG_SIDE)
     handicap = _handicap(ask)
     if handicap is None:
@@ -686,7 +723,7 @@ def _settle_team_score(ask: _Ask) -> Settled:
             "side and a direction. Expected one of home_over, home_under, "
             "away_over, away_under."
         )
-    if _row_is_the_named_side(ask.game, side) is not True:
+    if _row_is_the_named_side(ask.game, side, ask.expected_team_id) is not True:
         return _cannot(_WRONG_SIDE)
     line = _finite_line(ask.line)
     if line is None:
@@ -708,7 +745,7 @@ def _settle_half_team_score(ask: _Ask) -> Settled:
             f"{ask.market.key} is a team total and {ask.selection!r} is not a "
             "side and a direction."
         )
-    if _row_is_the_named_side(ask.game, side) is not True:
+    if _row_is_the_named_side(ask.game, side, ask.expected_team_id) is not True:
         return _cannot(_WRONG_SIDE)
     line = _finite_line(ask.line)
     if line is None:
@@ -1172,6 +1209,7 @@ def settle(
     line: float | None,
     game: Mapping | None,
     player: Mapping | None = None,
+    expected_team_id: object = None,
 ) -> Settled:
     """Grade one staged wager against the box score.
 
@@ -1253,5 +1291,6 @@ def settle(
         line=line,
         game=game,
         player=player,
+        expected_team_id=expected_team_id,
     )
     return _HANDLERS[wired.settles_on](ask)
