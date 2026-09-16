@@ -90,16 +90,39 @@ with the instruction to scale it down if the real quota will not carry it
 alongside the siblings' committed spend. The siblings commit **36,175 a month**
 (NHL 26,091, football 10,084) — under 1% of the balance, and not a constraint.
 
-The binding constraint is the **balance**, not the ceiling: 4,992,714 total
-against a 1,500,000 monthly permission means the account holds about three and
-a third months of fully-authorised spending, once, with no reset that refills
-it. Every credit spent here is spent permanently.
+**CORRECTED 2026-09-16. THE PLAN RESETS MONTHLY.** This section said the
+opposite — "the account holds about three and a third months of fully-authorised
+spending, once, with no reset that refills it. Every credit spent here is spent
+permanently" — and that was wrong. Cooper confirmed the plan refills on its
+monthly boundary. The allowance is **5,000,000 a month**: the reading taken that
+morning was 3,889,689 used and 1,110,311 remaining, which sums to exactly
+5,000,000.
 
-That reframes the purchase from "which markets fit in a month" to **"which
-markets are worth a third of everything we will ever have"**, and it is why the
-retention probe runs first. Buying a market the archive does not retain, or
-retains too thinly to measure against, spends real credits on rows no join will
-ever find.
+What the wrong version cost, on the day it was found: the balance was read at
+1,110,311 against a season bound of 1,106,148 for two snapshots a day, and on
+the "no reset" premise that is a 0.37% margin with the siblings' spend not
+fitting beside it. The card was dropped to one snapshot a day and the daily cap
+halved. Both were reverted the same day. **Nothing in the lab detected the
+error; the premise came from this paragraph and was believed.**
+
+THE INSTRUMENT THAT SHOULD HAVE CAUGHT IT EXISTED AND HAD NEVER WORKED.
+`check_provider_quota.py` compares each reading against the previous one and
+prints "the quota reset between X and Y" exactly so a reset is observed rather
+than assumed. It could never fire: `quota_history.json` was uploaded as an
+artifact and never carried forward, so every run appended to an empty list and
+the comparison had nothing to compare against. That is fixed, so the next
+monthly boundary will be recorded rather than argued about.
+
+The binding constraint is therefore the **monthly allowance**, and against it
+the live season is small: a full season at two snapshots a day bounds at
+1,106,148 across about five months, roughly 221,000 a month, or **4.4% of the
+monthly allowance**. The siblings commit 36,175 a month on top of that.
+
+What is still true is the PURCHASE side of the arithmetic. A full-catalogue
+historical buy bounds at 17.6M against a 5M month, so it does not fit in one
+month whatever the reset does, and the retention probe still runs first:
+buying a market the archive does not retain, or retains too thinly to measure
+against, spends real credits on rows no join will ever find.
 
 ## The wall the runner puts up, and why it is not a budget
 

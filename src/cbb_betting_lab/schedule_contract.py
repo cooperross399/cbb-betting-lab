@@ -213,35 +213,6 @@ EVENING = CardSlot(
 SLOTS: tuple[CardSlot, ...] = (MORNING, EVENING)
 SLOT_NAMES: tuple[str, ...] = tuple(s.name for s in SLOTS)
 
-#: THE SLOTS THAT ACTUALLY FIRE, WHICH SINCE 2026-09-16 IS ONE OF THEM.
-#:
-#: The provider balance does not carry two snapshots a day through a season.
-#: Measured that morning: 1,110,311 credits remaining, against 1,106,148 for a
-#: season at two snapshots and 36,175 a month that the NHL and football labs
-#: draw from the same balance — 1,287,023 against 1,110,311, short by 176,712.
-#: The balance does not reset (`docs/credit_cost.md`: "Every credit spent here
-#: is spent permanently"), so this is not a month to wait out.
-#:
-#: WHAT DROPPING THE EVENING SLOT COSTS, MEASURED RATHER THAN ASSUMED. Nothing
-#: in reach: over the 6,300 played games of 2025-26 the morning slot alone can
-#: freeze 99.97% of the slate under EST and 99.41% under EDT, and the evening
-#: slot adds 0.00% — it lands too late to reach a game the morning could not.
-#: The stopping rule's floor is 10,000 settled opinions across 2,000 games, and
-#: that floor is about reach, so one slot still produces the test.
-#:
-#: What it costs is PRICE QUALITY on late tips: a 23:00 ET game is now frozen
-#: off a board fetched twelve and a half hours earlier. That cost is real and
-#: currently unmeasurable — the bought store holds one lead (60 minutes) and
-#: says nothing about the morning board. `line-movement.yml` captures four
-#: times a day and will measure it from November.
-#:
-#: EVENING STAYS DEFINED. It is still dispatchable by hand, and it is what
-#: buying credit would restore; deleting it would delete the record of what was
-#: given up. It simply has no cron. `tests/test_workflows.py` pins the card
-#: workflow's schedule against THIS tuple, so the two cannot drift.
-SCHEDULED_SLOTS: tuple[CardSlot, ...] = (MORNING,)
-SCHEDULED_SLOT_NAMES: tuple[str, ...] = tuple(s.name for s in SCHEDULED_SLOTS)
-
 #: The cron MONTH field every card trigger carries. November to April is the
 #: Division I season: the 2026-27 opener is 2026-11-01 and the championship is
 #: in early April. A card run outside it would fetch an empty board, and an
@@ -265,11 +236,8 @@ CRON_MINUTE = 0
 def cron_expressions() -> tuple[str, ...]:
     """Every cron string the gameday workflow must declare, in slot order.
 
-    Derived from :data:`SCHEDULED_SLOTS` and not from :data:`SLOTS`: a slot can
-    be DEFINED without being scheduled, which is what the evening slot has been
-    since 2026-09-16 and why that tuple exists. Moving a trigger — or taking one
-    off the schedule — is a one-line change there that turns the build red until
-    the workflow follows.
+    Derived from :data:`SLOTS`, so moving a trigger is a one-line change here
+    that turns the build red until the workflow follows.
     `tests/test_the_card_schedule_survives_cron_lateness.py` compares this
     against the `on.schedule` of `.github/workflows/cbb-gameday-refresh.yml`
     and fails on any difference in either direction — a cron the contract does
@@ -279,7 +247,7 @@ def cron_expressions() -> tuple[str, ...]:
     """
     return tuple(
         f"{CRON_MINUTE} {hour} * {SEASON_CRON_MONTHS} *"
-        for slot in SCHEDULED_SLOTS
+        for slot in SLOTS
         for hour in sorted(slot.cron_hours_utc)
     )
 
