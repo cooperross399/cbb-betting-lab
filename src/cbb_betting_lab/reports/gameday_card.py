@@ -1961,8 +1961,20 @@ class CardRun:
 
         THE NIGHT THIS EXISTS FOR. The price provider answers 200 with an empty
         list — its `basketball_ncaab` key goes inactive, or is renamed for a new
-        season, or the endpoint degrades to `[]`. Nothing raises, so nothing
-        reaches `board.degraded`: every one of its four append sites is inside
+        season, or the endpoint degrades to `[]`.
+
+        THAT IS NOT HYPOTHETICAL. Measured 2026-09-16 from the provider's own
+        free `/v4/sports` listing: `basketball_ncaab` is served and carries
+        **`active: false`**, alongside `basketball_nba_preseason`,
+        `baseball_ncaa` and every tennis major out of season.
+        `basketball_ncaab_championship_winner` is active — the futures are up,
+        the games are not. So the empty board this guard is about is the
+        provider's ordinary off-season state, and the key flips back on its own
+        before the opener. A run in that state MUST read as "no games" only when
+        the schedule agrees there are none, which is precisely what is checked
+        below.
+
+        Nothing raises, so nothing reaches `board.degraded`: every one of its four append sites is inside
         an `except ProviderError` or an `except CreditCapReached`. The run is
         green, the card reads a clean `no-slate`, the snapshot is header-only,
         and `latest_status.json` publishes `degraded=false`. An hour later the
