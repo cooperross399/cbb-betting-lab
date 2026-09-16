@@ -422,6 +422,7 @@ def main(argv: list[str] | None = None) -> int:
             # the player half off it and a bare dict would make every prop read
             # "the model was never asked" for the wrong reason.
             matchups=opinions.slate,
+            matchup_census=opinions.summary_line(),
             placement=placement,
             rehearsal=bool(args.rehearsal),
             previous_fingerprint=_read_previous_fingerprint(

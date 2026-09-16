@@ -2427,3 +2427,51 @@ def test_a_staged_board_does_not_claim_its_per_event_stage_finished(tmp_path):
     # And the bulk markets are unaffected: they arrive in one call and are
     # complete or absent, so a featured-market rehearsal still works.
     assert "moneyline" in set(board.rows["market"])
+
+
+def test_the_card_says_what_the_model_was_asked_and_what_joined(day, tmp_path, board):
+    """The one number that explains a quiet card, on the card.
+
+    `card_matchups.summary_line()` carries the join census — events asked,
+    events that resolved to a scheduled game, events that named no game that
+    day, spellings that did not resolve — and it went to stdout only. On a
+    scheduled run that is a CI log nobody opens, so a card reporting "0
+    priceable" looked the same whether the model was asked about games it could
+    not place or was never asked at all. Those are different faults with
+    different repairs.
+
+    It renders BEFORE the opinion census because it explains it.
+    """
+    census = (
+        "Model `ratings` asked about 50 event(s) on 2027-01-12: 12 resolved to "
+        "a scheduled game, 38 named no game on the schedule that day, 4 "
+        "name(s) did not resolve."
+    )
+    run = GC.run_card(
+        board, competition=CBB, day=day, card_slot="morning",
+        archive_dir=tmp_path / "archive", matchup_census=census,
+    )
+    card = GC.render_card(run)
+
+    assert census in card, "the join census reached stdout and not the card"
+    assert card.index(census) < card.index(run.opinions.summary_line()), (
+        "the join census renders after the opinion census it exists to explain"
+    )
+
+
+def test_a_card_given_no_join_census_says_nothing_rather_than_an_empty_line(
+    day, tmp_path, board
+):
+    """Absence is silence, not a blank. A caller that cannot supply the census
+    — every direct `run_card` in this suite — must not make the card grow an
+    empty paragraph where a measurement belongs."""
+    run = GC.run_card(
+        board, competition=CBB, day=day, card_slot="morning",
+        archive_dir=tmp_path / "archive",
+    )
+    card = GC.render_card(run)
+
+    assert "## What the model said\n\n\n" not in card
+    assert "resolved to a scheduled game" not in card, (
+        "a card with no join census still grew the census's own phrasing"
+    )
