@@ -2867,12 +2867,25 @@ PUBLISH_OUTCOMES = {
 }
 
 
-def run_publish(tmp_path: Path, restore: str, card: str, degraded: str, failing: set[str]) -> BlockRun:
+def run_publish(
+    tmp_path: Path,
+    restore: str,
+    card: str,
+    degraded: str,
+    failing: set[str],
+    comment: str = "success",
+) -> BlockRun:
+    # `comment` is an INPUT to the harness rather than an expectation: the
+    # publish block reads the comment step's outcome because the comment is
+    # assembled after health runs, so health cannot see it. `rendered` raises
+    # on an expression it was given no value for, which is what makes this
+    # parameter necessary rather than decorative.
     block = rendered(
         gameday_step("publish"),
         {
             "steps.restore.outcome": restore,
             "steps.card.outcome": card,
+            "steps.comment.outcome": comment,
             "steps.health.outputs.degraded || 'unknown'": degraded,
         },
     )
@@ -2935,6 +2948,7 @@ TONIGHTS_SNAPSHOT = "game_id,book,american_odds\n404,fanduel,-108\n"
 CLEAN_PUBLISH = {
     "steps.restore.outcome": "success",
     "steps.card.outcome": "success",
+    "steps.comment.outcome": "success",
     "steps.health.outputs.degraded || 'unknown'": "false",
 }
 
@@ -6559,4 +6573,48 @@ def test_the_quota_run_carries_its_history_and_stays_read_only() -> None:
         "provider-quota.yml no longer holds contents: read. If this became "
         "write, GitHub cannot scope it to a ref, so it is write access to main "
         "and a third holder of it — carry the history by artifact instead"
+    )
+
+
+def test_a_card_comment_that_could_not_be_assembled_publishes_as_degraded():
+    """The comment is assembled AFTER health runs, so health cannot see it.
+
+    The step is `continue-on-error`, so its failure never reaches the job's
+    result and `conclusion` is success whatever happens — only `outcome` can
+    observe it, and until the step had an `id` nothing could read even that. A
+    run whose comment fell back to the placeholder, or was never written,
+    published `degraded: false` beside it: the relay's copy of "the lab has
+    nothing to say", produced by the lab failing to say it.
+
+    The flag is widened rather than the job reordered. Nothing between health
+    and the comment reads health's outputs, so moving it would work — but this
+    job's order is load-bearing elsewhere, and a status flag is cheaper to
+    widen than a job is to reorder.
+    """
+    document = load(WORKFLOWS_DIR / GAMEDAY_WORKFLOW)
+    steps = [s for job in document["jobs"].values() for s in steps_of(job)]
+
+    comment = next(s for s in steps if s.get("name") == "Assemble the card comment")
+    assert comment.get("id") == "comment", (
+        "the comment step has no id, so nothing downstream can read whether it "
+        "failed — and `continue-on-error` means the job's result cannot either"
+    )
+    assert comment.get("continue-on-error") is True
+
+    publish = next(s for s in steps if "commit-tree" in str(s.get("run", "")))
+    script = str(publish.get("run", ""))
+    assert "steps.comment.outcome" in script, (
+        "the publish step does not read the comment step's outcome, so a card "
+        "whose comment could not be assembled still publishes as clean"
+    )
+    assert "DEGRADED=true" in script
+
+    # Order, structurally: health must precede the comment, or this whole
+    # workaround is unnecessary and the flag should be set there instead.
+    names = [s.get("name") or "" for s in steps]
+    assert names.index("Record what went wrong") < names.index(
+        "Assemble the card comment"
+    ), (
+        "health now runs after the comment, so it can read the outcome "
+        "directly and this indirection should be removed rather than kept"
     )
