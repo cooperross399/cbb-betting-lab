@@ -264,6 +264,66 @@ SCORED_RECORDS = {
 }
 
 
+#: The population each published record rests on, as a floor and never an
+#: equality. A bought store only grows, so a published record's population can
+#: only grow with it — and the day one of these goes DOWN, something has
+#: replaced a standing measurement with a narrower one.
+#:
+#: THIS IS THE CHECK THAT WAS MISSING ON 2026-09-16. One run of the weekly loop
+#: wrote its bounded single-season backtest over
+#: `data/outputs/cbb_price_backtest.json`: `season_label` 2021-2026 -> 2026,
+#: bets 191,053 -> 37,255, games 26,591 -> 4,927. It reported `Clean run` and
+#: exited 0. The reading-count pin above caught it — 225 readings became 67 —
+#: but only because the readings happened to be counted; nothing was watching
+#: the POPULATION, and the forecast-skill record was narrowed in the same run
+#: from the whole history to one season with no count to notice.
+#:
+#: Cross-checking the two records against each other would NOT have caught it:
+#: they were narrowed together and therefore agreed. A floor is the shape that
+#: works, because it compares the record to what the lab has already published
+#: rather than to another record that can move at the same time.
+#:
+#: Raising a floor is a commit that says what was bought. Lowering one is the
+#: thing this refuses.
+POPULATION_FLOORS = {
+    "cbb_price_backtest.json": {"bets_graded": 191_053, "games": 26_591, "days": 791},
+    "holdout/cbb_price_backtest.json": {"bets_graded": 119_275, "games": 16_815},
+    "core_team_only/cbb_price_backtest.json": {"bets_graded": 159_354, "games": 26_582},
+}
+
+
+def test_no_published_record_rests_on_a_smaller_population_than_it_did():
+    """A published population never shrinks, and a bounded run must never
+    overwrite a standing one.
+
+    Mutation: point the weekly loop's backtest back at `data/outputs` and run
+    it — RED here on `bets_graded`, within one run and before any document is
+    re-rendered from the narrower record.
+    """
+    for relative, floors in POPULATION_FLOORS.items():
+        path = _REPO / "data" / "outputs" / relative
+        assert path.is_file(), (
+            f"{relative} carries a population floor and is not on disk. A record "
+            "that vanishes is not a record that got smaller, and it is not "
+            "allowed to pass by being absent."
+        )
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        for field, floor in floors.items():
+            actual = payload.get(field)
+            assert isinstance(actual, int), (
+                f"{relative} carries no integer `{field}`, so its population "
+                "cannot be checked at all."
+            )
+            assert actual >= floor, (
+                f"{relative} now rests on {actual:,} {field} and this lab has "
+                f"published {floor:,}. A bought store only grows, so a published "
+                "population can only grow with it: something has replaced a "
+                "standing measurement with a narrower one. The weekly loop's "
+                "bounded window is the way this happened before — it belongs in "
+                "`data/drift/`, not here."
+            )
+
+
 def _key(record: str, cell: dict) -> tuple:
     """A reading's identity, structural rather than prose.
 
