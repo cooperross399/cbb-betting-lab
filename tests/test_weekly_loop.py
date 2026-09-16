@@ -184,13 +184,28 @@ def with_siblings(lab: dict) -> dict:
         lab,
         LOOP.BACKTEST_SCRIPT,
         body=(
-            "import json, pathlib, datetime\n"
+            "import json, pathlib, datetime, sys\n"
             "from cbb_betting_lab.reports import price_backtest as PB\n"
             "from cbb_betting_lab import experiment_ledger as E\n"
-            "out = pathlib.Path(%r)\n"
+            # HONOURS --output-dir, because the real script does.
+            #
+            # This stub wrote to the outputs root whatever it was told, which
+            # made it agree with the loop only while the loop wrote there too.
+            # The day the weekly drift run was moved to its own directory the
+            # stub kept writing to the standing one, and every test that reads
+            # "did the backtest produce a record this run?" would have gone on
+            # passing against a file the real loop no longer writes.
+            "argv = sys.argv\n"
+            "out = pathlib.Path(\n"
+            "    argv[argv.index('--output-dir') + 1]\n"
+            "    if '--output-dir' in argv\n"
+            "    else %r\n"
+            ")\n"
+            "out.mkdir(parents=True, exist_ok=True)\n"
+            "ledger_dir = pathlib.Path(%r)\n"
             # The same call the real backtest makes, so the stub cannot drift
             # from the rule the loop checks: max(count, 1), never the day's.
-            "looks = PB.looks_from_ledger(out / E.LEDGER_FILENAME)\n"
+            "looks = PB.looks_from_ledger(ledger_dir / E.LEDGER_FILENAME)\n"
             "(out / %r).write_text(json.dumps({\n"
             "    'record_version': %d, 'competition': %r,\n"
             "    'generated_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),\n"
@@ -198,6 +213,7 @@ def with_siblings(lab: dict) -> dict:
             "}), encoding='utf-8')\n"
         )
         % (
+            str(lab["outputs"]),
             str(lab["outputs"]),
             CBB.output_name("price_backtest", ".json"),
             PB.RECORD_VERSION,
@@ -825,10 +841,21 @@ def test_a_claims_doc_with_no_fence_fails_rather_than_appending(lab, tmp_path):
 
 
 def write_backtest_record(lab: dict, *, looks: int, generated_at: str) -> Path:
+    """Plant a record where the loop VERIFIES, which is the drift directory.
+
+    The loop's weekly backtest scores a bounded window and writes its own
+    record; the standing full-population record belongs to the deliberate
+    occasional run and this loop does not touch it. Planting a stale or
+    wrong-count record in the standing directory would test a file the
+    verification step no longer reads, and every check below would pass by
+    never finding anything to object to.
+    """
     record = PB.build_record(
         PB.BacktestInputs(), looks=looks, generated_at=generated_at
     )
-    return PB.write_record(record, PB.record_path(CBB, lab["outputs"]))
+    drift = Path(lab["outputs"]).parent / LOOP.WEEKLY_DRIFT_SEGMENT
+    drift.mkdir(parents=True, exist_ok=True)
+    return PB.write_record(record, PB.record_path(CBB, drift))
 
 
 def test_a_backtest_corrected_across_the_wrong_count_degrades_the_run(lab: dict):
@@ -1268,3 +1295,66 @@ def test_a_missing_forecast_program_degrades_the_week_and_never_looks_like_a_nul
     (lab["scripts"] / LOOP.FORECAST_SCRIPT).unlink()
     assert run(lab) == LOOP.EXIT_DEGRADED
     assert steps_from(lab)["regress outcome on market-implied vs model-implied, weekly"] == LOOP.MISSING
+
+
+# --------------------------------------------------------------------------
+# The drift run never writes the standing measurement
+# --------------------------------------------------------------------------
+
+
+def test_the_weekly_backtest_writes_its_own_record_and_not_the_standing_one(
+    lab: dict, capsys
+):
+    """What one run of this loop cost before the paths were separated.
+
+    The weekly backtest scores a BOUNDED WINDOW — one season — and that bound is
+    deliberate: the full bought population is a measured eight hours against a
+    240-minute workflow timeout. But it wrote that one season over
+    `data/outputs/cbb_price_backtest.json`, the record the occasional
+    full-population run produces, and every document downstream then re-rendered
+    from the narrower one.
+
+    Measured on 2026-09-16, running this loop once against the real store:
+    `season_label` 2021-2026 -> 2026, graded bets 191,053 -> 37,255, games
+    26,591 -> 4,927, the null-baseline block 280 readings -> 48, and the claims
+    report 32 measured cells and three demonstrated deficits -> 12 and one. The
+    loop printed `Clean run` and exited 0.
+
+    Drift detection and the standing measurement are different questions. This
+    asserts they no longer share a path — in both directions, because an
+    `--output-dir` that merely *mentions* the drift segment would still pass a
+    substring check while writing wherever it liked.
+    """
+    with_siblings(lab)
+    run(lab, "--dry-run")
+    planned = capsys.readouterr().out
+
+    backtest = next(
+        line for line in planned.splitlines() if "run_price_backtest.py" in line
+    )
+    outputs = str(lab["outputs"])
+    assert "--output-dir" in backtest, (
+        f"the weekly backtest names no output directory, so it writes the "
+        f"standing record by default: {backtest}"
+    )
+    written = backtest.split("--output-dir", 1)[1].strip().rstrip("`.").split()[0]
+
+    assert written != outputs, (
+        "the weekly drift backtest is writing the standing full-population "
+        "record; one season lands on top of six and every document downstream "
+        "re-renders from it"
+    )
+    assert written.endswith(LOOP.WEEKLY_DRIFT_SEGMENT)
+    assert Path(outputs) not in Path(written).parents, (
+        "the drift record sits inside the published outputs tree, where every "
+        "record publishing a verdict must be on the cost roster — and a "
+        "one-season cut beside the full population is two sets of verdicts "
+        "for one question"
+    )
+    assert LOOP.DRIFT_GRADED_BETS_FILENAME in backtest, (
+        "the drift run is writing the full-population graded-bet CSV, which is "
+        "how the forecast-skill record went from the whole history to one season"
+    )
+    assert LOOP.GRADED_BETS_FILENAME not in backtest.replace(
+        LOOP.DRIFT_GRADED_BETS_FILENAME, ""
+    )

@@ -19,6 +19,12 @@ data/raw/cbb/team_box/
 data/raw/cbb/player_box/
 data/raw/cbb/schedules/
 data/processed/*.csv
+# The weekly loop's drift measurements. A bounded one-season cut, read by
+# whoever runs the loop and never published: committing it would put a second
+# set of verdicts beside the full population's for the same markets.
+data/drift/
+# and the frames it builds on the way there, for the same reason.
+data/processed/*__weekly_drift*
 
 # Single-season backtest bet files. The pooled file that the reports read comes
 # only from the replication run; a partial set of season files sitting beside

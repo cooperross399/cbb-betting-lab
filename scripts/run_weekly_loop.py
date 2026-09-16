@@ -207,8 +207,48 @@ WHY_SCRIPT = "run_why_the_model.py"
 #: wager's complement at its own book, which the graded export does not carry.
 #: The export is EVERY settled opinion with the bets flagged `selected` — not
 #: the bets alone, which would hand the regression the winner's-curse slice.
+#: WHERE THE WEEKLY LOOP'S OWN MEASUREMENTS GO, AND WHY IT IS NOT `outputs/`.
+#:
+#: The weekly backtest scores a BOUNDED WINDOW — one season — because the full
+#: bought population is a measured eight hours against a 240-minute workflow
+#: timeout. That bound is correct and is explained where the season is chosen.
+#: What was wrong is that its result was written over
+#: `data/outputs/cbb_price_backtest.json`, the record the deliberate
+#: full-population run produces, and every document downstream then re-rendered
+#: from the narrower one.
+#:
+#: Measured on 2026-09-16, running this loop once: `season_label` went from
+#: `2021-2026` to `2026`, graded bets from 191,053 to 37,255, games from 26,591
+#: to 4,927 and the null-baseline block from 280 readings to 48. The claims
+#: report went from 32 measured cells and three demonstrated deficits to 12 and
+#: one. The loop reported `Clean run` and exited 0; the suite caught it, because
+#: `test_the_registration_cost_is_paid_by_everything_already_published` pins how
+#: many readings that record is supposed to carry.
+#:
+#: So the loop writes its drift measurements here and never touches the
+#: full-population record. Drift detection and the standing measurement are
+#: different questions, and they were sharing one path.
+#:
+#: OUTSIDE `data/outputs/`, AND THAT IS THE POINT RATHER THAN TIDINESS. Every
+#: record under the outputs tree that publishes a scored reading has to be on
+#: the cost check's roster, because a roster only guards what it names. Putting
+#: a one-season cut there would make the lab publish TWO sets of verdicts for
+#: the same markets — the full population's and this week's — and a reader could
+#: take whichever suited. That is the same "two bites at the same apple" this
+#: repository refuses everywhere else, and no roster entry fixes it. Drift is a
+#: signal for whoever reads the run, not a claim the lab makes, so it lives out
+#: of the published tree and is not committed.
+WEEKLY_DRIFT_SEGMENT = "drift"
 GRADED_BETS_FILENAME = "cbb_graded_bets.csv"
+#: The drift run's own graded bets. A separate name for the same reason as the
+#: directory: the full-population CSV is what a deliberate run leaves behind,
+#: and one season written over it silently narrows every frame built from it —
+#: which is how the forecast-skill record went from the whole history to one
+#: season on that same run.
+DRIFT_GRADED_BETS_FILENAME = "cbb_graded_bets__weekly_drift.csv"
 SKILL_FRAME_FILENAME = "cbb_skill_frame.csv"
+#: The drift run's own de-vig frame, for the same reason as its graded bets.
+DRIFT_SKILL_FRAME_FILENAME = "cbb_skill_frame__weekly_drift.csv"
 SKILL_FRAME_SCRIPT = "build_skill_frame.py"
 FORECAST_SCRIPT = "run_forecast_skill.py"
 
@@ -1521,6 +1561,9 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     competition = competition_for(args.competition)
     output_dir = Path(args.output_dir)
+    # The loop measures into its own directory and re-renders out of the
+    # standing one. See WEEKLY_DRIFT_SEGMENT for what sharing a path cost.
+    drift_dir = output_dir.parent / WEEKLY_DRIFT_SEGMENT
     # The hand-written claims document, whose fenced block this loop
     # re-renders. `--claims-doc ''` turns the splice off for a test
     # tree that has no docs/ directory.
@@ -1656,7 +1699,13 @@ def main(argv: list[str] | None = None) -> int:
             # `--write-graded` is what the regression reads. Without it the
             # backtest writes a return and no rows, and forecast_skill has
             # nothing to score — which reads as a null result and is not one.
-            passthrough + ["--write-graded", str(processed_dir / GRADED_BETS_FILENAME)],
+            passthrough
+            + [
+                "--write-graded",
+                str(processed_dir / DRIFT_GRADED_BETS_FILENAME),
+                "--output-dir",
+                str(drift_dir),
+            ],
             scripts_dir=scripts_dir,
             name="re-run the price backtest and replication",
             dry_run=args.dry_run,
@@ -1685,11 +1734,20 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
     else:
+        # VERIFIES THE RECORD THIS RUN WROTE, WHICH IS THE DRIFT ONE.
+        #
+        # The check asks "did the backtest actually re-run, and is its
+        # correction the ledger's current count?" Pointed at the standing
+        # full-population record it now answers no every week by construction —
+        # that record is the deliberate occasional run's and this loop no longer
+        # touches it, which is the whole point of the separation. Pointing it
+        # there would make a correct state report degraded for ever, and a
+        # status nobody can ever clear is a status nobody reads.
         verify_step, backtest_summary = verify_backtest_record(
-            PB.record_path(competition, output_dir),
+            PB.record_path(competition, drift_dir),
             looks_expected=looks,
             started_at=started_at,
-            replication_record=WC.replication_path(competition, output_dir),
+            replication_record=WC.replication_path(competition, drift_dir),
         )
         steps.append(verify_step)
         walk_step, walk_summary = verify_walk_forward(
@@ -1709,7 +1767,18 @@ def main(argv: list[str] | None = None) -> int:
     steps.append(
         run_script(
             SKILL_FRAME_SCRIPT,
-            ["--processed-dir", str(processed_dir)],
+            # Built from THIS run's graded bets and written beside them. The
+            # step used to take the processed directory alone, which meant it
+            # read whatever `cbb_graded_bets.csv` happened to be there — the
+            # full-population file when a deliberate run had left one, and the
+            # drift run's own output once that started overwriting it. Naming
+            # both ends keeps the drift pipeline closed: drift bets in, drift
+            # frame out, and the standing frame untouched either way.
+            [
+                "--processed-dir", str(processed_dir),
+                "--graded", str(processed_dir / DRIFT_GRADED_BETS_FILENAME),
+                "--out", str(processed_dir / DRIFT_SKILL_FRAME_FILENAME),
+            ],
             scripts_dir=scripts_dir,
             name="build the de-vig frame with each bet's complement",
             dry_run=args.dry_run,
@@ -1722,8 +1791,8 @@ def main(argv: list[str] | None = None) -> int:
             FORECAST_SCRIPT,
             [
                 "--competition", competition.key,
-                "--graded", str(processed_dir / SKILL_FRAME_FILENAME),
-                "--output-dir", str(output_dir),
+                "--graded", str(processed_dir / DRIFT_SKILL_FRAME_FILENAME),
+                "--output-dir", str(drift_dir),
             ],
             scripts_dir=scripts_dir,
             name="regress outcome on market-implied vs model-implied, weekly",
