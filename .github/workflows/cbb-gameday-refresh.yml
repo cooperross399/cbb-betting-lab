@@ -626,7 +626,13 @@ jobs:
           fi
 
       - name: Assemble the card comment
+        id: comment
         if: always()
+        # `continue-on-error` so a comment that cannot be assembled does not
+        # stop the publish — the card and the ledger matter more than the note
+        # that carries them. That makes `conclusion` success whatever happens,
+        # so the only thing that can observe this step failing is `outcome`,
+        # and until this step had an `id` nothing could read even that.
         continue-on-error: true
         run: |
           set -eu
@@ -711,6 +717,21 @@ jobs:
           SLOT="${{ steps.identity.outputs.slot }}"
           DECISION="${{ steps.card.outputs.decision || 'degraded' }}"
           DEGRADED="${{ steps.health.outputs.degraded || 'unknown' }}"
+          # THE COMMENT IS ASSEMBLED AFTER HEALTH RUNS, so health cannot see it
+          # and this is where it has to be seen. The step is
+          # `continue-on-error`, so a failure there is invisible in the job's
+          # result and would have published `degraded: false` beside a feed
+          # entry whose comment is the fallback text or missing entirely —
+          # the relay's copy of "the lab has nothing to say" produced by the
+          # lab failing to say it.
+          #
+          # Health is not moved below the comment to fix this: nothing between
+          # them reads its outputs, but the order of this job is load-bearing
+          # elsewhere and a status flag is cheaper to widen than a job is to
+          # reorder.
+          if [ "${{ steps.comment.outcome }}" = "failure" ]; then
+            DEGRADED=true
+          fi
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           SLATE="${{ inputs.rehearsal_slate_date || '' }}"
           [ -n "$SLATE" ] || SLATE="$DAY"
