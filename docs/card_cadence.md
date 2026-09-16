@@ -18,6 +18,41 @@ arithmetic behind that sentence and the schedule it produces.
 First tip 11:00 ET, last tip 23:00 ET, and one Hawai'i game at 01:00 ET. **The
 slate spans twelve hours.**
 
+## What the second slot actually buys, measured
+
+**Not coverage.** Measured 2026-09-16 over the 6,300 played games of the
+2025-26 schedule, against `schedule_contract`'s own landings and the
+60-minute card lead the tip guard enforces:
+
+| | morning slot alone can freeze | evening slot adds |
+|:---|---:|---:|
+| EST (freeze bar 10:30 ET) | **99.97%** | 0.00% |
+| EDT (freeze bar 11:30 ET) | **99.41%** | 0.00% |
+
+The morning run lands early enough to precede essentially every tip in the
+season, so by TIP TIME a single slot reaches the whole slate. The evening slot
+adds no games the morning could not have frozen.
+
+What it buys is **price quality on late tips**. A game tipping at 23:00 ET
+frozen from a board fetched at 10:30 ET is frozen twelve and a half hours out,
+and "one freeze cannot price a noon tip and an eleven o'clock tip" is a claim
+about the PRICE, not about reach.
+
+**And that cost is currently unmeasured.** The bought card store cannot answer
+it: every row carries `lead_minutes = 60`, so it holds one lead and says
+nothing about what the board looked like that morning. `book_last_update` is no
+help either — it sits ~1.08h before tip for every quote in all three tip
+windows, which is the snapshot's own time showing through rather than price
+stability. The instrument that WILL answer it is `line-movement.yml`, which
+captures the board four times a day and holds nothing yet because it is the
+off-season.
+
+**Why this matters now.** It is the difference between "one snapshot a day is a
+cheaper cadence" and "one snapshot a day is a smaller sample". It is the
+former: the stopping rule's floor of 10,000 opinions across 2,000 games is
+about reach, and reach is ~100% either way. The cost of halving the cadence is
+worse prices on late games, of unknown size, measurable from November.
+
 A single freeze at 09:00 ET would price the 23:00 ET games fourteen hours out —
 before the board is meaningfully formed for most of them, and long before any
 number a human could act on. A single freeze at 17:00 ET would arrive after a
