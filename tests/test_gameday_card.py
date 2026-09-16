@@ -1204,19 +1204,172 @@ def test_a_matchup_the_ratings_module_refuses_to_price_is_not_priced(board, day)
     assert any("refuses to price" in reason for reason in census.declined)
 
 
-def test_with_no_ratings_module_every_wager_is_no_opinion_and_says_so(
+def test_with_no_ratings_handed_every_wager_is_no_opinion_and_says_WHICH_absence(
     board, day, tmp_path
 ):
-    """The state of this lab today. `no opinion` is not a probability of zero
-    and it is not the model declining to find value."""
+    """`no opinion` is not a probability of zero and it is not the model
+    declining to find value — and the card must say which absence it is.
+
+    This test used to assert the card said *"`models/ratings.py` is not
+    written"*, and that assertion is the reason the falsehood outlived the fact
+    it rested on. The pin was written on 2026-09-01, when the module really was
+    absent; the module arrived on 2026-09-03 and nothing re-read the sentence
+    against the tree. **A test that pins a sentence pins its truth as well**,
+    and a green build over a published falsehood is worse than no test, because
+    it is evidence to the next reader that somebody checked. This one now
+    asserts the card names the absence it can actually SEE — no rating was
+    handed to it — and that the claim about the module is gone. See
+    `gameday_card.NO_RATING_ON_THIS_SLATE`.
+    """
     run = GC.run_card(
         board, competition=CBB, day=day, card_slot="morning",
         archive_dir=tmp_path / "archive", policy=a_policy("moneyline"),
     )
+    card = GC.render_card(run)
 
     assert run.opinions.priced == 0
     assert run.identity.no_opinion > 0
-    assert "`models/ratings.py` is not" in GC.render_card(run)
+    assert GC.NO_RATING_ON_THIS_SLATE in card
+    assert "is not written" not in card, (
+        "the card may not explain its own silence with a claim about a file it "
+        "cannot see. `models/ratings.py` is written and this function is "
+        f"handed its answer, never the module itself.\n{card}"
+    )
+
+
+def test_an_event_that_did_not_join_is_not_blamed_on_an_unwritten_module(board, day):
+    """A board event that joins to no game, explained by a sentence that was
+    false — and false on a card that was pricing the rest of the same board.
+
+    `card_matchups.attach_game_ids` leaves `game_id` null when the provider's
+    two school names resolve to no hoopR team, or resolve and name no game on
+    the schedule that day; `model_prices` then drops the row before the model
+    is called, so the slate comes back holding every OTHER event and not this
+    one. The card said *"no rating exists for this game — `models/ratings.py`
+    is not written, so the model was never asked"*, and in the row below it, on
+    the same run, *"the ratings module refuses to price this matchup"*. One
+    card, two rows, flatly contradicting each other, and the reader sent to the
+    one place the fault was not.
+
+    That matters most on the first board of a season, which is the board this
+    lab has been built for and has never seen: a join that fails uniformly is a
+    smaller sample and one that fails on the low-major half is a biased one —
+    20.5% of provider names unresolved, 46.7% of the misses low-major, before
+    `providers/team_names.variants()` closed it. A reader who is told the model
+    does not exist does not go and look at the join.
+    """
+    wagers, _, _ = _wagers_for(board, day)
+    unjoined = [w for w in wagers if w.event_id == "evt-started"]
+    assert unjoined, "the fixture must carry a second event on this slate day"
+
+    probabilities, census = GC.opinions_for(
+        wagers, {"evt-cardable": a_matchup()}, day=day
+    )
+
+    assert census.priced > 0, (
+        "the point of this test is a card that PRICED part of its board while "
+        "explaining the rest of it away"
+    )
+    assert not any(w.key in probabilities for w in unjoined)
+    said = [reason for reason in census.declined if "no rating exists" in reason]
+    assert len(said) == 1, said
+    assert "did not join to a game the model was asked about" in said[0]
+    assert "is not written" not in said[0], said[0]
+    assert "`models/ratings.py`" not in said[0], said[0]
+    # The count is read off the slate the model returned, not typed here, and it
+    # is on the page because it is the proof the reader needs: a model that
+    # answered about a game cannot be a model that was never written.
+    assert "answered about 1 other game(s) on this slate" in said[0], said[0]
+
+
+def test_the_unjoined_events_are_ONE_row_on_the_card_however_many_wagers(
+    board, day, tmp_path, now
+):
+    """Grouped, never one line per wager, and it must reach the rendered card.
+
+    `OpinionCensus` groups by sentence for the reason its docstring gives — 35
+    markets over a 200-game slate is seventeen thousand copies of one sentence,
+    and noise on a card is how the line that matters gets skipped. The join
+    sentence is therefore identical for every wager on every unjoined event of
+    a run: the count it carries is a property of the RUN (how many games the
+    model answered about), never of the wager, so a fifty-game board that joins
+    none of its events still renders as one row.
+
+    This asserts the rendered markdown and not only the census, because stdout
+    is not the card: `CardMatchups.summary_line()` has carried the true
+    diagnosis all along and `scripts/run_gameday_card.py` prints it to the
+    terminal, while the file that reaches the card feed and Cooper's Drive
+    carried no join census at all.
+    """
+    run = GC.run_card(
+        board, competition=CBB, day=day, card_slot="morning",
+        archive_dir=tmp_path / "archive",
+        matchups={"evt-cardable": a_matchup()}, now=lambda: now,
+    )
+    card = GC.render_card(run)
+    needle = "did not join to a game the model was asked about"
+
+    declined = sum(
+        count for reason, count in run.opinions.declined.items() if needle in reason
+    )
+    assert declined > 1, "the fixture must decline more than one wager for this"
+    assert card.count(needle) == 1, (
+        f"{declined} wagers, and the card must carry one line about them:\n{card}"
+    )
+    assert "is not written" not in card, card
+
+
+def test_a_ratings_refusal_does_not_put_a_raw_hoopR_team_id_on_the_card(board, day):
+    """One refusal, one row — not one row per team, keyed by an integer.
+
+    `ratings.Connectivity.connects` spells its first refusal with hoopR's own
+    integer key in it: *"team 12 has played no countable game this season"*. In
+    November that is the refusal nearly every game gets, so the grouped census
+    degenerates into one row per TEAM — a measured 50-game board put 50
+    near-identical rows into a 153-line card, differing only in a number no
+    reader of a card can look up. `scripts/fit_ratings.refusal_families` groups
+    the same sentences for the FIT report and nothing did it for the card.
+
+    The refusal here is the real one, produced by the real `connects` rather
+    than retyped: a sentence this test invented would pin this test's spelling
+    and not the model's, and the day the model's wording moved the card would
+    go back to one row per team with every assertion still green.
+    """
+    import numpy as np
+
+    from cbb_betting_lab.models import ratings as R
+
+    nothing_played = R.Connectivity(
+        index={}, component_of={}, component_sizes={},
+        resistance=np.zeros((0, 0)), games=0,
+    )
+    joined, duke = nothing_played.connects(2509, 2305)
+    _, gonzaga = nothing_played.connects(2250, 239)
+    assert not joined and "2509" in duke and "2250" in gonzaga, (duke, gonzaga)
+
+    wagers, _, _ = _wagers_for(board, day)
+    probabilities, census = GC.opinions_for(
+        wagers,
+        {
+            "evt-cardable": a_matchup(
+                priceable=False, unpriceable_reason=duke,
+                home_team_id=2509, away_team_id=2305,
+            ),
+            "evt-started": a_matchup(
+                priceable=False, unpriceable_reason=gonzaga,
+                home_team_id=2250, away_team_id=239,
+            ),
+        },
+        day=day,
+    )
+
+    assert probabilities == {}
+    refusals = [r for r in census.declined if "refuses to price" in r]
+    assert len(refusals) == 1, refusals
+    assert census.declined[refusals[0]] == len(wagers)
+    assert "has played no countable game this season" in refusals[0]
+    for raw in ("2509", "2250", "2305", "239"):
+        assert raw not in refusals[0], refusals[0]
 
 
 def test_a_player_prop_is_priced_frozen_and_settled_but_never_selected(day):

@@ -60,6 +60,25 @@ Three more rules this module enforces mechanically:
    heading is derived from how many tiers show a demonstrated edge, so a
    document titled *"does not have an edge"* cannot survive a measurement that
    found one.
+4. **A market whose settlement rule this lab cannot read is not evidence, at
+   any sample size.** Second-half markets settle including overtime at most US
+   books and not at all of them, which is a book's rulebook rather than a fact
+   about basketball, so those returns measure the rule as much as the model —
+   the football lab's single largest false finding. :func:`settlement_suspect`
+   reads :data:`forward_evidence.SETTLEMENT_AMBIGUOUS_MARKETS`, the same
+   frozenset `what_we_can_claim` excludes on, and
+   :func:`demonstrated_edges`/:func:`demonstrated_deficits` return neither. The
+   cell is **named** by :func:`not_evidence` with its return and its sample
+   beside it, because dropping it silently is a record this document does not
+   admit to, and calling it either way is the mistake.
+
+   This was a hole that ran the other way for as long as this module existed.
+   `what_we_can_claim` carried the exclusion and this file did not, so the two
+   published documents would have given **opposite verdicts on one row** the
+   first time a second-half price was scored: this one titled *"Where the model
+   does have a demonstrated edge"* off a `total_points_h2` cell that the other
+   was simultaneously printing as *not evidence*. The h2 prices are already
+   bought and unscored, so it needed one routine backtest and no new data.
 
 ## Corrected with today's family size, not the backtest's
 
@@ -92,6 +111,7 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 
+from cbb_betting_lab import forward_evidence as FE
 from cbb_betting_lab import stats as S
 from cbb_betting_lab import restatement as RESTATEMENT
 from cbb_betting_lab.competitions import Competition
@@ -843,14 +863,55 @@ def _rows(payload: Mapping, key: str, *, label: str, path: Path) -> list[dict]:
     return [dict(row) for row in value if isinstance(row, Mapping)]
 
 
+def settlement_suspect(row: Mapping) -> bool:
+    """Whether this row's market settles under a rule this lab cannot read.
+
+    A second-half market settles **including overtime** at most US books and
+    not at all of them. That is a book's rulebook and not a fact about
+    basketball, and this lab cannot read a rulebook, so a second-half return
+    measures the settlement convention as much as it measures the model. The
+    football lab's single largest false finding was exactly that shape, which
+    is why the answer is *not evidence* at any sample size rather than a weaker
+    verdict at a small one.
+
+    **Derived from the market key, never stored on the row**, for the same
+    reason :func:`verdict_of` derives the verdict: this module's records are
+    artefacts on disk that somebody edits, and a stored flag is one keystroke
+    from false. The set comes from
+    :data:`forward_evidence.SETTLEMENT_AMBIGUOUS_MARKETS` — one frozenset,
+    derived from the market registry's own ``segment == "h2"``, shared with
+    `what_we_can_claim` and `forward_evidence` — because a second list of
+    market keys here would drift, and the direction it drifts in is never the
+    conservative one.
+
+    **What this does not reach.** The blind baselines. A blind rule on a
+    second-half market carries the same unreadable settlement, and
+    :func:`_blind_lines` prints its return and lets it set `worst_blind`. That
+    section makes no claim about the model and calls nothing an edge, so the
+    consequence there is a comparison bar computed on an artefact rather than a
+    finding published from one — a smaller defect, and a separate one.
+    """
+    return _text(row.get("market")) in FE.SETTLEMENT_AMBIGUOUS_MARKETS
+
+
 def demonstrated_edges(cells: Sequence[Mapping]) -> list[dict]:
     """Cells whose corrected interval excludes zero **above** it.
 
     The predicate is :func:`verdict_of`, which reads the interval, and never
     the stored ``verdict`` string: a record edited to say `"a demonstrated
     edge"` must not be able to put a cell in this list.
+
+    **And never a settlement-suspect cell**, whichever side of zero it sits on.
+    :func:`title` and :func:`_cell_lines` are both derived from this list, so a
+    second-half cell reaching it retitles the whole document *"Where the model
+    does have a demonstrated edge"* — off a number the lab's other published
+    document is printing as not evidence on the same day.
     """
-    return [c for c in cells if verdict_of(c) == S.DEMONSTRATED_EDGE]
+    return [
+        c
+        for c in cells
+        if verdict_of(c) == S.DEMONSTRATED_EDGE and not settlement_suspect(c)
+    ]
 
 
 def demonstrated_deficits(cells: Sequence[Mapping]) -> list[dict]:
@@ -858,8 +919,32 @@ def demonstrated_deficits(cells: Sequence[Mapping]) -> list[dict]:
 
     A separate function returning a disjoint list, never a flag on the first
     one: the two are different findings and the sibling lab merged them.
+
+    Settlement-suspect cells are excluded here too, and excluding them from
+    both lists is the point rather than an asymmetry: an unverifiable
+    settlement rule is not evidence *either way*, and deciding which of the two
+    it "would have been" is the mistake.
     """
-    return [c for c in cells if verdict_of(c) == S.DEMONSTRATED_DEFICIT]
+    return [
+        c
+        for c in cells
+        if verdict_of(c) == S.DEMONSTRATED_DEFICIT and not settlement_suspect(c)
+    ]
+
+
+def not_evidence(cells: Sequence[Mapping]) -> list[dict]:
+    """Cells excluded from both lists above because of how they settle.
+
+    Above the floor only, because below it there is no number to be an artefact
+    of — such a cell is already named in :func:`_open_questions` as carrying a
+    phrase rather than a figure.
+
+    They are **named** in the document rather than dropped. A cell the record
+    holds and the document does not mention is a record the document does not
+    admit to; and the answer *"this lab cannot verify how this settles"* is
+    itself a finding about the evidence, which is what this document is for.
+    """
+    return [c for c in cells if settlement_suspect(c) and enough_evidence_of(c)]
 
 
 # ---------------------------------------------------------------------------
@@ -1353,7 +1438,7 @@ def _why_it_no_longer_holds(current: Mapping) -> str:
     )
 
 
-def _figure(claim: Mapping) -> str:
+def _figure(claim: Mapping, *, with_verdict: bool = True) -> str:
     """One cell as a sentence, **always with its sample size**.
 
     Below the floor there is no number at all, only the phrase the verdict
@@ -1367,6 +1452,16 @@ def _figure(claim: Mapping) -> str:
     made the published document announce a demonstrated edge over an interval
     that spanned zero — the number and the sentence beside it disagreeing, with
     nothing in the pipeline to notice.
+
+    `with_verdict=False` prints the same figure and **withholds the verdict
+    word**. It has exactly one caller: a settlement-suspect cell in
+    :func:`_cell_lines`. The return, the sample and the corrected bounds all
+    still reach the page — nothing about the row is hidden — but the phrase
+    that would turn an artefact of a book's rulebook into a finding is not
+    printed beside them, and it is withheld rather than qualified: *"it would
+    read a demonstrated edge"* is the mistake :func:`not_evidence` names,
+    because a reader skimming for a verdict reads the last emphasised phrase on
+    the line.
     """
     interval = printed_interval(claim)
     bets = interval.bets
@@ -1374,11 +1469,14 @@ def _figure(claim: Mapping) -> str:
         # No number at all. `RoiInterval.verdict()` already names the sample and
         # the floor it is below, so printing a count beside it would say the
         # same thing twice and printing the return would say it once too often.
+        # Printed even when the verdict is withheld: below the floor that phrase
+        # IS the figure, and it names a sample size rather than a finding.
         return interval.verdict()
     return (
         f"{bets:,} {_bets(bets)}, **{_pct(claim.get('roi', claim.get('value')))}**, "
         f"corrected {_pct(claim.get('adjusted_low'))} to "
-        f"{_pct(claim.get('adjusted_high'))} — {interval.verdict()}"
+        f"{_pct(claim.get('adjusted_high'))}"
+        + (f" — {interval.verdict()}" if with_verdict else "")
     )
 
 
@@ -1453,6 +1551,13 @@ def _cell_lines(record: Mapping) -> list[str]:
     survive being averaged with the rest. Both counts are printed even when
     they are zero, because *"0 of 32 cells shows a demonstrated edge"* is the
     answer and an omitted line reads as an oversight.
+
+    **A settlement-suspect cell is in neither count and is named anyway.** It
+    clears the floor, so it stays in the *"over the N that clear the floor"*
+    denominator — it was measured, and pretending it was not would be a second
+    misstatement — but it is neither an edge nor a deficit, and the block below
+    says which cells those are, what they returned, and why a number computed on
+    an unreadable settlement rule is not evidence either way.
     """
     backtest = record.get("backtest")
     backtest = backtest if isinstance(backtest, Mapping) else {}
@@ -1460,6 +1565,7 @@ def _cell_lines(record: Mapping) -> list[str]:
     measured = _measured(record, "cells")
     edges = demonstrated_edges(measured)
     deficits = demonstrated_deficits(measured)
+    unverifiable = not_evidence(measured)
     lines = [
         f"Cut finer, by market **and** tier: **{len(edges)} of {total:,} cells "
         f"shows a demonstrated edge** and **{len(deficits)} shows a "
@@ -1473,6 +1579,22 @@ def _cell_lines(record: Mapping) -> list[str]:
             f"{_figure(row)}"
         )
     if edges or deficits:
+        lines.append("")
+    if unverifiable:
+        lines += [
+            f"{len(unverifiable)} of those cells carry a settlement rule this "
+            "lab cannot verify — a second-half market settles including "
+            "overtime at most US books and not at all of them, which is a "
+            "book's rulebook rather than a fact about basketball — so the "
+            "number measures the rule as much as the model and is **not "
+            "evidence**, neither an edge nor a deficit, at any sample size:",
+            "",
+        ]
+        for row in unverifiable:
+            lines.append(
+                f"- `{_text(row.get('market'))} / {_text(row.get('tier'))}`: "
+                f"{_figure(row, with_verdict=False)}"
+            )
         lines.append("")
     return lines
 

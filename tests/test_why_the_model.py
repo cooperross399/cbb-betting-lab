@@ -32,6 +32,7 @@ from pathlib import Path
 
 import pytest
 
+from cbb_betting_lab import forward_evidence as FE
 from cbb_betting_lab import restatement as RESTATEMENT
 from cbb_betting_lab import stats as S
 from cbb_betting_lab.competitions import CBB
@@ -988,9 +989,90 @@ def test_a_demonstrated_deficit_is_named_and_never_folded_into_the_edges(outputs
     assert "shows a demonstrated edge" not in line
 
 
-# --------------------------------------------------------------------------
-# 4. Purity, freshness, and the committed document
-# --------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    ("roi", "would_read"),
+    [(0.05, S.DEMONSTRATED_EDGE), (-0.05, S.DEMONSTRATED_DEFICIT)],
+)
+def test_a_second_half_cell_is_not_evidence_and_never_becomes_the_title(
+    outputs, roi, would_read
+):
+    """**The two published documents disagreed about one row, and this one won.**
+
+    A second-half market settles including overtime at most US books and not at
+    all of them, so its return measures a book's rulebook as much as the model.
+    `what_we_can_claim` has excluded those cells from both verdict lists since
+    it was written; this module never mentioned settlement at all, and its
+    `cells` come straight off `by_market_and_tier` with no filter. The h2 prices
+    are already bought and unscored, so the first routine backtest that scores
+    them puts such a cell in that table — and a positive one retitles this whole
+    document *"Where the model does have a demonstrated edge"* while the sibling
+    document prints the same row as **not evidence** on the same day.
+
+    Planted in the price backtest and rebuilt, rather than constructed as a
+    record row, because the reachability is half the claim: the defect needs no
+    edit to a record and no new data, only a measurement that has not run yet.
+    """
+    backtest_path = WHY.evidence_paths(CBB, outputs)["price backtest"]
+    payload = json.loads(backtest_path.read_text(encoding="utf-8"))
+    before = build(outputs)
+
+    market = sorted(FE.SETTLEMENT_AMBIGUOUS_MARKETS)[0]
+    assert market not in {c["market"] for c in before["cells"]}, (
+        "this fixture plants the first second-half cell; the record already "
+        "holds one, so the counts below no longer isolate it"
+    )
+    template = max(payload["by_market_and_tier"], key=lambda r: r.get("bets") or 0)
+    planted_row = dict(template)
+    planted_row.update(
+        {
+            "market": market,
+            "name": market,
+            "tier": "high_major",
+            "roi": roi,
+            "low": roi - 0.01,
+            "high": roi + 0.01,
+            "bets": 4_000,
+            "clusters": 900,
+            "standard_error": 0.005,
+        }
+    )
+    payload["by_market_and_tier"] = list(payload["by_market_and_tier"]) + [planted_row]
+    backtest_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    record = build(outputs)
+    planted = next(c for c in record["cells"] if c["market"] == market)
+    # It clears the floor and its corrected interval excludes zero: on the
+    # merits of the arithmetic alone this row IS a finding, which is what makes
+    # excluding it a rule about settlement rather than about sample size.
+    assert planted["enough_evidence"] is True
+    assert planted["verdict"] == would_read
+    assert WHY.settlement_suspect(planted) is True
+
+    measured = WHY._measured(record, "cells")
+    assert planted not in WHY.demonstrated_edges(measured)
+    assert planted not in WHY.demonstrated_deficits(measured)
+    assert planted in WHY.not_evidence(measured)
+
+    # Neither count moves, and the title cannot follow a verdict nothing holds.
+    was = WHY._measured(before, "cells")
+    assert len(WHY.demonstrated_edges(measured)) == len(WHY.demonstrated_edges(was))
+    assert len(WHY.demonstrated_deficits(measured)) == len(
+        WHY.demonstrated_deficits(was)
+    )
+    assert WHY.title(record) == WHY.title(before)
+    assert "does not have a demonstrated edge" in WHY.title(record)
+
+    # Named on the page, carrying its figure and no verdict word. Dropping it
+    # silently would be a record this document does not admit to; printing the
+    # verdict it "would have had" is the thing `not_evidence` says is the
+    # mistake.
+    text = WHY.render(record)
+    named = [line for line in text.splitlines() if market in line]
+    assert named, f"the {market} cell reached the record and not the document"
+    for line in named:
+        assert "demonstrated" not in line, line
+    assert "not evidence" in text
+    assert f"{roi:+.1%}" in "\n".join(named)
 
 
 def test_the_report_is_a_pure_function_of_its_record(outputs):

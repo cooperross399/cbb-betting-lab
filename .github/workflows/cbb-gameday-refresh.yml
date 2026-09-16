@@ -534,6 +534,13 @@ jobs:
         # writes `data/outputs/cbb_what_we_can_claim.md`. Soft, because a
         # measurement failure must never cost a card, and the card's own gates
         # do not depend on this report.
+        #
+        # THE ID IS NOT DECORATION: it is the only way the health step below
+        # can learn that this step failed, and without it a failed rebuild
+        # published the checkout's committed copy as this run's claims
+        # document under `degraded: "false"`. A step with no id has no
+        # addressable outcome.
+        id: claims
         if: always()
         continue-on-error: true
         env:
@@ -588,6 +595,27 @@ jobs:
           fi
           if [ "${{ steps.restore.outcome }}" != "success" ]; then
             echo "The card-feed branch was not restored (restore step outcome: ${{ steps.restore.outcome }}), so this run held no history and published nothing." >> run_degraded.txt
+          fi
+          # A SOFT STEP THAT FAILED IS STILL SOMETHING THAT WENT WRONG, and
+          # this one publishes a document. `data/outputs/cbb_what_we_can_claim.md`
+          # is TRACKED, so a fresh checkout always holds the committed copy:
+          # when the renderer dies, the publish step's
+          # `add latest_what_we_can_claim.md` hashes THAT copy and pushes it to
+          # card-feed as this run's claims document. Stamped clean, no reader
+          # can tell a report this run measured from one it inherited — and the
+          # run that inherits one is exactly the run whose report would have
+          # said something new. The step stays `continue-on-error` on purpose,
+          # because a measurement failure must never cost a card; what changed
+          # is that it is no longer invisible.
+          #
+          # ONLY THE STEPS ABOVE THIS ONE CAN BE READ THIS WAY. A step's
+          # `outcome` is empty while the steps before it are still running, so
+          # the comment assembler and the summary writer further down cannot be
+          # consulted here whatever id they carry — closing those would take a
+          # reordering, not an id. `tests/test_workflows.py` holds the
+          # completeness rule to exactly that scope and says so.
+          if [ "${{ steps.claims.outcome }}" != "success" ]; then
+            echo "The claims report was not rebuilt (outcome: ${{ steps.claims.outcome }}), so the claims document on the feed is whatever the checkout carried rather than what this run measured." >> run_degraded.txt
           fi
           if [ -s run_degraded.txt ]; then
             echo "degraded=true" >> "$GITHUB_OUTPUT"
@@ -768,22 +796,74 @@ jobs:
             echo "::warning::This run held no local ledger; carried the branch copy forward rather than publishing a tree without it."
           fi
 
+          # ONE SNAPSHOT THAT DID NOT COME BACK IS A DAY DELETED FROM THE
+          # ONLY DURABLE COPY, and the all-or-nothing carry-forward could not
+          # see it. The restore step reads the tip's snapshots blob by blob
+          # and, when one of them cannot be read, prints `::warning::Could not
+          # restore` and carries on. That warning went nowhere: the step still
+          # exits 0, so `steps.restore.outcome` is `success`; the health step
+          # reads step OUTCOMES and never warnings, so `degraded` is "false";
+          # the clobber guard compares day, slot and degraded and has no
+          # opinion about trees; and the already-published job then stands the
+          # backup trigger down. This step rebuilt `snapshots/` from the LOCAL
+          # DIRECTORY ALONE, so the day that did not come back was simply
+          # absent from the tree it pushed — an ordinary fast-forward, on a
+          # green run. `data/archive/` is untracked on main, so the branch is
+          # where frozen opinions live; the artifact keeps a copy for 90 days
+          # and nothing in this lab ever reads one back.
+          #
+          # THE CASE THE OLD CARRY-FORWARD LOOKED MOST LIKE IT COVERED IS THE
+          # ONE IT MISSED WORST. It fired only on `[ ! -s "$SNAP_INPUT" ]` —
+          # the local set being COMPLETELY empty — and on any night that
+          # reaches the card, `forward_evidence.write_snapshot` has just
+          # frozen today into that same directory. So even a run where EVERY
+          # restore failed published one day over the whole season with the
+          # carry-forward silent and the run stamped clean.
+          #
+          # SO THE FLOOR COMES FROM THE TIP, PER NAME, AND NEVER FROM A NUMBER
+          # WRITTEN HERE. That is the shape `line-movement.yml` uses for its
+          # capture store, and the reason stated there applies verbatim: a
+          # shrink guard inside the writer reads `before` off the local file,
+          # and the failure being guarded against is the local file not being
+          # there at all, which reads as zero. Frozen snapshots are
+          # append-only by design — nothing under `src/` or `scripts/` ever
+          # unlinks one — so a name the tip holds and this run does not is
+          # always a loss and never a prune. Each such name is carried forward
+          # by its own blob sha, so the tree this step publishes can no longer
+          # be a subset of the tip it replaces.
+          #
+          # `[ -s ]` AND NOT `[ -f ]` ON BOTH SIDES, for the reason the
+          # restore step gives for refusing an empty blob: a snapshot always
+          # carries a header row, so a zero-byte one is a run killed
+          # mid-`to_csv`, not a day with no opinions. `add` tests `-f`, so
+          # such a file used to be hashed straight over the tip's good blob
+          # for that day — and the NEXT run's restore would then warn about a
+          # day this one had destroyed.
           for snapshot in data/archive/priced_snapshots/*.csv; do
-            [ -f "$snapshot" ] || continue
+            [ -s "$snapshot" ] || continue
             add "$(basename "$snapshot")" "$snapshot" "$SNAP_INPUT"
           done
-          SNAP_CARRIED=""
-          if [ ! -s "$SNAP_INPUT" ] && git cat-file -e refs/card-feed-tip:snapshots 2>/dev/null; then
-            CARRIED=$(git rev-parse refs/card-feed-tip:snapshots)
-            printf '040000 tree %s\tsnapshots\n' "$CARRIED" >> "$ROOT_INPUT"
-            echo "::warning::This run held no local snapshots; carried the branch tree forward."
-            SNAP_CARRIED=yes
+          if git cat-file -e refs/card-feed-tip:snapshots 2>/dev/null; then
+            for path in $(git ls-tree -r --name-only refs/card-feed-tip snapshots/); do
+              CARRIED_NAME=$(basename "$path")
+              if [ -s "data/archive/priced_snapshots/$CARRIED_NAME" ]; then
+                continue
+              fi
+              CARRIED_SHA=$(git rev-parse "refs/card-feed-tip:$path")
+              printf '100644 blob %s\t%s\n' "$CARRIED_SHA" "$CARRIED_NAME" >> "$SNAP_INPUT"
+              echo "::warning::This run does not hold snapshots/$CARRIED_NAME, so the branch copy was carried forward rather than dropped from the tree. The restore step's warnings say why it is not here."
+            done
           fi
-          if [ -s "$SNAP_INPUT" ] && [ -z "$SNAP_CARRIED" ]; then
+          if [ -s "$SNAP_INPUT" ]; then
             # `git mktree` builds ONE FLAT LEVEL and refuses a path containing
             # a slash, so `snapshots/` is its own tree object referenced from
             # the root. Flattening the names instead would have worked and
-            # would have made the feed a heap of files.
+            # would have made the feed a heap of files. It SORTS the entries
+            # it is given, so a carried name may simply be appended, and it
+            # VERIFIES every object it is handed — a carried sha this runner
+            # cannot read fails the step under `set -eu` rather than
+            # publishing a tree without that day, which is the right end for a
+            # run that cannot reproduce the tip.
             SNAP_TREE=$(git mktree < "$SNAP_INPUT")
             printf '040000 tree %s\tsnapshots\n' "$SNAP_TREE" >> "$ROOT_INPUT"
           fi

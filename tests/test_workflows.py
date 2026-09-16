@@ -2465,9 +2465,11 @@ def test_the_card_step_never_reports_tees_status(tmp_path: Path) -> None:
     assert still_a_fault.returncode != 0, "a crashed card read green because tee was blamed instead"
 
 
-def run_health(tmp_path: Path, *, card_degraded: str, card: str = "success") -> BlockRun:
+def run_health(
+    tmp_path: Path, *, card_degraded: str, card: str = "success", claims: str = "success"
+) -> BlockRun:
     """The health block, executed with the card rendered and every other step
-    successful, so the only variable is what the card said about itself."""
+    successful, so the only variable is the one the case is about."""
     outputs = tmp_path / "data/outputs"
     outputs.mkdir(parents=True, exist_ok=True)
     (outputs / "cbb_gameday_card.md").write_text("# CBB card\n", encoding="utf-8")
@@ -2479,6 +2481,7 @@ def run_health(tmp_path: Path, *, card_degraded: str, card: str = "success") -> 
             "steps.card.outcome": card,
             "steps.restore.outcome": "success",
             "steps.card.outputs.card_degraded": card_degraded,
+            "steps.claims.outcome": claims,
         },
     )
     return run_block_under_stubs(block, set(), tmp_path)
@@ -2501,6 +2504,72 @@ def test_a_card_that_reported_itself_degraded_makes_the_run_degraded(tmp_path: P
         assert "degraded=true\n" in runner_file(tmp_path, "GITHUB_OUTPUT"), (
             f"the card reported its health as {reported!r} and the run was stamped clean"
         )
+
+
+def test_a_claims_report_that_did_not_rebuild_makes_the_run_degraded(tmp_path: Path) -> None:
+    """The step is `continue-on-error` on purpose and the health step read
+    nothing about it, so a failed rebuild was invisible.
+
+    `data/outputs/cbb_what_we_can_claim.md` is TRACKED, so a fresh checkout
+    always holds the committed copy. When `run_what_we_can_claim.py` exited
+    non-zero the file was still there, the publish step's
+    `add latest_what_we_can_claim.md` hashed it, and card-feed received the
+    committed document as this run's — stamped `degraded: "false"`, so the
+    clobber guard treated the run as clean and the already-published job stood
+    the backup trigger down. No reader could tell a report this run measured
+    from one it inherited.
+
+    Both directions: a rebuilt report leaves the run clean, and every way the
+    step can fail to succeed makes it degraded. The list is not just
+    `failure`, because "not success" is the question — a cancelled or skipped
+    step did not write the document either."""
+    clean = run_health(tmp_path, card_degraded="false", claims="success")
+    assert clean.exit_code == 0 and clean.unmodelled == [], clean
+    assert "degraded=false\n" in runner_file(tmp_path, "GITHUB_OUTPUT"), runner_file(tmp_path, "GITHUB_OUTPUT")
+
+    for reported in ("failure", "skipped", "cancelled", ""):
+        stale = run_health(tmp_path, card_degraded="false", claims=reported)
+        assert stale.exit_code == 0 and stale.unmodelled == [], stale
+        assert "degraded=true\n" in runner_file(tmp_path, "GITHUB_OUTPUT"), (
+            f"the claims rebuild reported {reported!r} and the run was stamped clean, "
+            "so the checkout's committed claims document went to the feed as this run's"
+        )
+
+
+def test_every_soft_step_before_the_health_step_is_read_by_it() -> None:
+    """A `continue-on-error` step that nothing consults is a failure the run
+    never records, and the health step is the one place that decides.
+
+    `Rebuild the claims report` was such a step. It carried no `id` at all, so
+    its outcome was not even addressable, and the chain above is what that
+    cost. The rule is read off the file rather than written down here, so a
+    soft step added tomorrow is covered without anyone editing a list.
+
+    SCOPED TO THE STEPS THE HEALTH STEP CAN ACTUALLY READ, and the scope is
+    the honest half of this rule. A step's `outcome` is empty while the steps
+    before it are still running, so `Assemble the card comment` and `Write the
+    card to the run summary`, which sit BELOW the health step, cannot be
+    consulted from it whatever id they carry — closing those would take a
+    reordering, not an id, and a rule demanding an id for them would be
+    demanding something that does not work. What stands for them instead is
+    that neither can take a document off the feed: the assembler's `else`
+    branch always writes `card_comment.md`, and the summary writer touches no
+    file the publish step reads."""
+    steps = steps_of(jobs_of(load(WORKFLOWS_DIR / GAMEDAY_WORKFLOW))["card"])
+    health = next(index for index, step in enumerate(steps) if step.get("id") == "health")
+    block = steps[health]["run"]
+    soft = [step for step in steps[:health] if step.get("continue-on-error") is True]
+    assert soft, "no soft step runs before the health step any more, so this rule grades nothing"
+    unread = [
+        step.get("name")
+        for step in soft
+        if not step.get("id") or f"steps.{step['id']}.outcome" not in block
+    ]
+    assert not unread, (
+        f"{GAMEDAY_WORKFLOW}: {unread} may fail without failing the step and the health "
+        "step never reads them, so the run is stamped clean — and whatever they should "
+        "have written is published as this run's out of whatever the checkout carried"
+    )
 
 
 def test_a_failed_feed_fetch_fails_the_restore_step(tmp_path: Path) -> None:
@@ -2846,6 +2915,204 @@ def test_a_failed_card_never_publishes_as_clean(tmp_path: Path) -> None:
     the same fact again. If the two ever disagree, nothing is pushed."""
     disagreement = run_publish(tmp_path, "success", "failure", "false", {"git"})
     assert disagreement.exit_code != 0 and disagreement.any_failures == [], disagreement
+
+
+#: What the card-feed tip holds before the run under test: three frozen days
+#: and a ledger. Bodies rather than names alone, because the question these
+#: tests ask is whether the BLOB survived, not whether the path did.
+TIP_SNAPSHOTS = {
+    "2026-11-01.csv": "game_id,book,american_odds\n401,fanduel,-110\n",
+    "2026-11-02.csv": "game_id,book,american_odds\n402,fanduel,105\n",
+    "2026-11-03.csv": "game_id,book,american_odds\n403,fanduel,-125\n",
+}
+TIP_LEDGER = "snapshot_date,game_id,edge\n2026-11-01,401,0.014\n"
+#: What the card freezes on the night under test, into the same directory the
+#: restore step fills. Its presence is why the all-or-nothing carry-forward
+#: could never fire on a night that reached the card.
+TONIGHTS_SNAPSHOT = "game_id,book,american_odds\n404,fanduel,-108\n"
+#: A clean run that restored its feed — the publish step's own happy path,
+#: supplied to every real-push case below so the variable is the tree alone.
+CLEAN_PUBLISH = {
+    "steps.restore.outcome": "success",
+    "steps.card.outcome": "success",
+    "steps.health.outputs.degraded || 'unknown'": "false",
+}
+
+
+def run_gameday_publish_for_real(
+    root: Path,
+    remote_url: str,
+    *,
+    values: dict[str, str],
+    ledger: str | None = None,
+    snapshots: dict[str, str] | None = None,
+    root_files: dict[str, str] | None = None,
+) -> tuple[subprocess.CompletedProcess[str], Path]:
+    """The gameday publish block, with its remote line and nothing else
+    replaced, executed with real git against a real ref and a real push.
+
+    Every other executed test of this block stubs git and asserts an exit
+    code, and an exit code cannot say what is IN the tree that was pushed —
+    which is how a publish that silently dropped a day out of `snapshots/`
+    stayed green. This harness exists so the tree can be enumerated off the
+    remote afterwards.
+
+    `snapshots` is what the run holds LOCALLY in
+    `data/archive/priced_snapshots/` when the publish step starts: the restore
+    step's output plus whatever the card froze. That directory is where a day
+    goes missing, so it is the one the cases vary.
+    """
+    block = gameday_step("publish")
+    assert block.count(RESTORE_REMOTE_LINE) == 1, (
+        "the publish block no longer names its remote on the one line these tests replace"
+    )
+    block = rendered(block.replace(RESTORE_REMOTE_LINE, f'REMOTE="{remote_url}"'), values)
+    workspace = root / "publish-workspace"
+    if workspace.exists():
+        shutil.rmtree(workspace)
+    workspace.mkdir()
+    subprocess.run(["git", "init", "-q", str(workspace)], check=True)
+    # The clobber guard is invoked by the relative path the workflow spells,
+    # so the REAL script travels into the workspace rather than a restatement
+    # of its logic: a copy that drifted would let these tests pass over a
+    # guard that no longer stands anything down.
+    library = workspace / ".github/workflows/lib"
+    library.mkdir(parents=True)
+    shutil.copy(PROJECT_ROOT / ".github/workflows/lib/clobber_guard.sh", library / "clobber_guard.sh")
+    if ledger is not None:
+        (workspace / "data/processed").mkdir(parents=True, exist_ok=True)
+        (workspace / "data/processed/cbb_forward_evidence.csv").write_text(ledger, encoding="utf-8")
+    archive = workspace / "data/archive/priced_snapshots"
+    archive.mkdir(parents=True, exist_ok=True)
+    for name, body in (snapshots or {}).items():
+        (archive / name).write_text(body, encoding="utf-8")
+    for name, body in (root_files or {}).items():
+        target = workspace / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(body, encoding="utf-8")
+    script = workspace / "run_block.sh"
+    script.write_text(block, encoding="utf-8")
+    environment = {
+        "PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(workspace),
+        "LC_ALL": "C", "GH_TOKEN": "unused", **GIT_IDENTITY,
+    }
+    for name in RUNNER_FILE_VARIABLES:
+        target = workspace / name.lower()
+        target.write_text("", encoding="utf-8")
+        environment[name] = str(target)
+    assert HARNESS_SHELL
+    completed = subprocess.run(
+        [HARNESS_SHELL, "-e", str(script)], cwd=workspace, env=environment,
+        capture_output=True, text=True, timeout=120,
+    )
+    return completed, workspace
+
+
+def published_tree(root: Path, path: str = "") -> list[str]:
+    """The names one level of the pushed card-feed tree holds."""
+    listed = subprocess.run(
+        ["git", "-C", str(root / "remote.git"), "ls-tree", "--name-only", f"refs/heads/card-feed:{path}"],
+        capture_output=True, text=True, check=True,
+    )
+    return listed.stdout.split()
+
+
+def published_snapshots(root: Path) -> dict[str, str]:
+    """Every snapshot BODY on the pushed card-feed tip, by name.
+
+    Bodies and not names: a guard that kept the path and lost the contents
+    would be worse than one that dropped the path, because the day would still
+    look present to everything that globs the directory.
+    """
+    remote = root / "remote.git"
+    bodies = {}
+    for name in published_tree(root, "snapshots"):
+        shown = subprocess.run(
+            ["git", "-C", str(remote), "show", f"refs/heads/card-feed:snapshots/{name}"],
+            capture_output=True, text=True, check=True,
+        )
+        bodies[name] = shown.stdout
+    return bodies
+
+
+def test_the_publish_carries_forward_a_snapshot_this_run_did_not_restore(tmp_path: Path) -> None:
+    """The defect, against a real ref and a real push.
+
+    The restore step reads the tip's snapshots blob by blob and, when one
+    cannot be read, warns and carries on — exit 0, `steps.restore.outcome`
+    `success`, health stamps `degraded: "false"`, and the clobber guard has no
+    opinion about trees. The publish step then rebuilt `snapshots/` from the
+    local directory ALONE and pushed a tree with that day simply absent, as an
+    ordinary fast-forward. `data/archive/` is untracked on main, so the branch
+    is the durable copy and the prices those rows were frozen at no longer
+    exist.
+
+    The all-or-nothing carry-forward beside it could not catch this: it fired
+    only when the local set was COMPLETELY empty, and the card has just frozen
+    tonight's day into that same directory — which is exactly what this case
+    holds, so the old guard stays silent throughout.
+
+    BOTH DIRECTIONS, because a floor that froze the tree would be no use: the
+    unrestored day comes back byte for byte AND tonight's new day reaches the
+    branch.
+    """
+    remote = scratch_remote(tmp_path)
+    push_card_feed(tmp_path, TIP_LEDGER, TIP_SNAPSHOTS)
+    before = tip_of(tmp_path, "refs/heads/card-feed")
+
+    held = {name: body for name, body in TIP_SNAPSHOTS.items() if name != "2026-11-02.csv"}
+    held["2026-11-04.csv"] = TONIGHTS_SNAPSHOT
+
+    published, workspace = run_gameday_publish_for_real(
+        tmp_path, remote, values=CLEAN_PUBLISH, ledger=TIP_LEDGER, snapshots=held,
+        root_files={"card_comment.md": "# CBB card\n"},
+    )
+    assert published.returncode == 0, published.stderr
+    assert tip_of(tmp_path, "refs/heads/card-feed") != before, "a clean run published nothing"
+
+    assert published_snapshots(tmp_path) == {**TIP_SNAPSHOTS, "2026-11-04.csv": TONIGHTS_SNAPSHOT}, (
+        "the day this run could not restore is not on the branch the run pushed; "
+        "the branch is the only copy and the prices it was frozen at are gone"
+    )
+    # WHAT THE `git add` RULE CANNOT SAY. That rule is textual — it proves the
+    # words are absent. This is the tree that actually reached the ref, and the
+    # workspace it was built in holds a run script, the runner files and a
+    # checked-out guard script, none of which may ever appear on the delivery
+    # branch.
+    assert published_tree(tmp_path) == [
+        "forward_evidence.csv", "latest_card_comment.md", "latest_status.json", "snapshots",
+    ], published_tree(tmp_path)
+    assert (workspace / "run_block.sh").exists(), "the harness did not build the block it claims to have run"
+
+
+def test_the_publish_never_hashes_a_zero_byte_snapshot_over_the_tips_copy(tmp_path: Path) -> None:
+    """The same hole reached by the likelier door, and the one the restore
+    step's `[ -s ]` arm is really about.
+
+    `write_snapshot` ends in a plain non-atomic `to_csv`, so a run killed or
+    OOM-ed mid-rewrite leaves a ZERO-BYTE file for that day. `add` tested
+    `-f`, so the publish step hashed that empty file straight over the tip's
+    good blob — a clean fast-forward, and the day's opinions gone. The next
+    run's restore would then warn that it could not restore a day this one had
+    destroyed, and drop it.
+
+    A snapshot always carries a header row, so a zero-byte one is never a day
+    without opinions. The tip's copy is what belongs on the branch.
+    """
+    remote = scratch_remote(tmp_path)
+    push_card_feed(tmp_path, TIP_LEDGER, TIP_SNAPSHOTS)
+
+    held = dict(TIP_SNAPSHOTS)
+    held["2026-11-02.csv"] = ""
+
+    published, _ = run_gameday_publish_for_real(
+        tmp_path, remote, values=CLEAN_PUBLISH, ledger=TIP_LEDGER, snapshots=held,
+        root_files={"card_comment.md": "# CBB card\n"},
+    )
+    assert published.returncode == 0, published.stderr
+    assert published_snapshots(tmp_path) == TIP_SNAPSHOTS, (
+        "a zero-byte local snapshot was published over the tip's copy of that day"
+    )
 
 
 # --------------------------------------------------------------------------
