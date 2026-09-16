@@ -43,9 +43,20 @@ failure. A run that exits non-zero here would mark the whole game-day run
 degraded, and *"the lab has measured nothing yet"* is not a fault — it is the
 correct state for a lab whose season opens in November.
 
-It exits non-zero for exactly two things: `--check` finding drift — a stale
-record or a hand-edited report — and a record it was asked to render that cannot
-be read. Both are faults in the instrument.
+It exits non-zero for exactly three things: `--check` finding drift — a stale
+record or a hand-edited report; a record it was asked to render that cannot be
+read, or that does not agree with itself; and a `--splice-into` whose record has
+fallen behind the evidence on disk. All three are faults in the instrument.
+
+The third was added on 2026-09-16 and it is the second half of the 2026-09-04
+defect above. The freshness question went into `--check` and not into
+`--rerender`, which reads the same stored record and then **writes** — the
+report, and then the fenced block inside the hand-written
+`docs/what_we_can_and_cannot_claim.md`. So the same stale record that `--check`
+exits 1 on could be republished, word for word, into the document a human reads
+before deciding what this lab may claim. The re-render itself still exits zero,
+because a re-render is a pure function of its record by design and the next
+plain run repairs it; the **splice** is refused, before anything is written.
 """
 
 from __future__ import annotations
@@ -141,7 +152,9 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "Render the existing record without rebuilding it from the "
             "evidence. Use this to improve a sentence without re-reading a "
-            "measurement — the report is a pure function of the record."
+            "measurement — the report is a pure function of the record. A "
+            "record that has fallen behind the evidence is reported and still "
+            "re-rendered; with --splice-into it is refused instead."
         ),
     )
     parser.add_argument(
@@ -159,7 +172,9 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "A hand-written document carrying BEGIN/END GENERATED markers. The "
             "rendered report replaces what sits between them and the prose "
-            "around them is left alone."
+            "around them is left alone. Refused when the record has fallen "
+            "behind the evidence on disk: this writes into a document a human "
+            "reads before deciding what the lab may claim."
         ),
     )
     args = parser.parse_args(argv)
@@ -205,19 +220,74 @@ def main(argv: list[str] | None = None) -> int:
     # `evidence_inputs` reports *why* it is out of date rather than the version
     # mismatch it would also fail on. Both are faults; only one names the file
     # whose evidence went unread.
-    if args.check:
-        stale = WC.stale_inputs(record)
-        if stale:
-            print(
-                f"::error::{record_target} is older than the evidence it says "
-                "it read, so the document rendered from it is stating things "
-                "about files it never opened. Re-run this script without "
-                "--check to rebuild the record from the evidence on disk.",
-                file=sys.stderr,
-            )
-            for reason in stale:
-                print(f"::error::  {reason}", file=sys.stderr)
-            return 1
+    #
+    # IT IS ASKED ON EVERY PATH THAT READS THE RECORD, and it used to be asked
+    # only under `--check`. `--rerender` reads the same stored record, renders
+    # it, writes the report and then splices it into the hand-written document,
+    # and it asked nothing: drop a price backtest holding 118,050 graded bets
+    # beside a record written the day before it ran, re-render, and the
+    # republished block says **"nothing has been measured against real prices
+    # yet"** and names the backtest as not found. Exit 0. That is the 2026-09-04
+    # defect this docstring says was closed, arriving through the path that
+    # writes rather than the path that checks.
+    #
+    # `stale_inputs` reads each evidence file's own `generated_at` string and
+    # whether it is there — never a measurement — so asking it here does not
+    # make a re-render cost a re-run, which is the rule
+    # `test_rerender_does_not_consult_the_evidence` holds open.
+    stale = WC.stale_inputs(record) if (args.rerender or args.check) else []
+    if args.check and stale:
+        print(
+            f"::error::{record_target} is older than the evidence it says "
+            "it read, so the document rendered from it is stating things "
+            "about files it never opened. Re-run this script without "
+            "--check to rebuild the record from the evidence on disk.",
+            file=sys.stderr,
+        )
+        for reason in stale:
+            print(f"::error::  {reason}", file=sys.stderr)
+        return 1
+
+    # THE GATE IS AT THE SPLICE, and the two halves of that are deliberate.
+    #
+    # Re-rendering `data/outputs/cbb_what_we_can_claim.md` from a record is
+    # defined to be a pure function of that record — improving a sentence must
+    # never cost a re-run of a measurement, and a report that can only be
+    # produced by re-running the measurement is a report nobody improves. A
+    # stale re-render there is repaired by the next plain run, which is the
+    # invocation the workflow and the weekly loop both use, so it is reported
+    # loudly below and does not fail the run.
+    #
+    # Splicing into `docs/what_we_can_and_cannot_claim.md` is not a re-render.
+    # It is a publication into a hand-written document a human reads before
+    # deciding what this lab may claim, it is not regenerated by anything on a
+    # schedule, and the operator who typed `--rerender --splice-into` is the one
+    # person the freshness answer was for. So a stale record is refused here,
+    # **before anything is written** — a refusal that has already overwritten
+    # the good document is not a refusal.
+    if stale and args.splice_into:
+        print(
+            f"::error::Refusing to splice {record_target} into "
+            f"{args.splice_into}: the record is no longer about the evidence "
+            "on disk, so the block it would publish states things about files "
+            "it never opened. Nothing was written. Re-run this script without "
+            "--rerender to rebuild the record from the evidence first.",
+            file=sys.stderr,
+        )
+        for reason in stale:
+            print(f"::error::  {reason}", file=sys.stderr)
+        return 1
+    if stale:
+        print(
+            f"::warning::{record_target} is no longer about the evidence on "
+            "disk. This re-render republishes what that record says, which is "
+            "what --rerender is for; the next run without --rerender rebuilds "
+            "it. Nothing is spliced into a hand-written document from a record "
+            "in this state.",
+            file=sys.stderr,
+        )
+        for reason in stale:
+            print(f"::warning::  {reason}", file=sys.stderr)
 
     try:
         rendered = WC.render(record)

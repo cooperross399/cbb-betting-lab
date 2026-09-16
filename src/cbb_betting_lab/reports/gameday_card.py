@@ -207,6 +207,68 @@ REHEARSAL_LABEL = "REHEARSAL — not a card"
 #: the run is invoked.
 REHEARSAL_ARCHIVE_SEGMENT = "rehearsals"
 
+#: What the card says about a wager whose game carries no rating, when this card
+#: was handed no rating for ANY game on the slate.
+#:
+#: This sentence and :data:`NO_RATING_FOR_THIS_EVENT` below replace one that was
+#: FALSE on every card that ever printed it: *"no rating exists for this game —
+#: `models/ratings.py` is not written, so the model was never asked"*.
+#: `models/ratings.py` is written, it is the model `reports/card_matchups.py`
+#: resolves and calls, and a six-event 2026-11-02 board measured offline priced
+#: four of its events through that module while telling the reader, in the row
+#: above, that the module does not exist. The rendered card contradicted itself
+#: on its face: one row said the file is unwritten and the row below it said
+#: *"the ratings module refuses to price this matchup"*. `card_matchups.py`'s
+#: own module docstring quotes this sentence as "a sentence that had been false
+#: since the module was written", fixes the wiring it describes, and leaves the
+#: sentence standing; this is the other half of that repair, and the player half
+#: got its equivalent on 2026-09-06 (see :data:`slate.NO_DISTRIBUTION_ENGINE`,
+#: which records being re-pointed for exactly this reason).
+#:
+#: **A card that states a false reason for its own silence is worse than one
+#: that states none, because the reader stops looking.** And the reason it hid
+#: is the one that matters most on the first board of a season: the event did
+#: not JOIN. The retention probe measured 20.5% of provider team names
+#: unresolved with 46.7% of the misses at the low-major end — the population
+#: this lab exists to ask about — before `providers/team_names.variants()`
+#: closed it, and a join that fails on half the low-major board is a biased
+#: sample rather than a smaller one. A run reporting that as "the ratings
+#: module does not exist", on a card stamped `degraded=false`, sends the reader
+#: to the one place the fault is not.
+#:
+#: Neither sentence says anything about whether `models/ratings.py` exists, and
+#: that is deliberate: this module is handed the model's ANSWER and never the
+#: model, so it cannot see the import and must not guess at it. It says only
+#: what it can see. `reports/price_backtest.resolve_model` is where an absent
+#: module IS visible, and it is where that sentence belongs.
+NO_RATING_ON_THIS_SLATE: str = (
+    "no rating exists for this game: this card was handed no rating for any "
+    "game on this slate, so the model declined nothing and was asked about "
+    "nothing. That is a wiring absence rather than a night on which the model "
+    "had no view — `reports/card_matchups.py` is the wire that carries the "
+    "model's answer into this card — and it is not a pass, an avoid or a "
+    "no-value call"
+)
+
+#: What the card says about a wager whose game carries no rating, when the card
+#: DOES hold ratings for other games on the same slate. The count of those
+#: others is appended by the caller, because the contradiction this sentence
+#: exists to end is a card that prices some of a board while saying the model
+#: was never written: the number is the proof, on the page, that it was asked.
+#:
+#: The census is grouped by sentence, and this one is identical for every wager
+#: on every unjoined event of a run — the appended count is a property of the
+#: run and not of the wager — so a fifty-game board that joins none of its
+#: events still renders as ONE row. See :class:`OpinionCensus`.
+NO_RATING_FOR_THIS_EVENT: str = (
+    "no rating exists for this game: the board event did not join to a game "
+    "the model was asked about, so the model was never asked about THIS one — "
+    "the two school names resolved to no hoopR team, or resolved and named no "
+    "game on this day's schedule, and `reports/card_matchups.py`'s join census "
+    "says which. A join failure is not the model declining, and it is not a "
+    "pass, an avoid or a no-value call. The model answered about"
+)
+
 #: The months in which a rating is still substantially the preseason prior. The
 #: brief calls the whole regime "November"; the graph does not reconnect on 1
 #: December, and the buy-games that make ratings hardest to read are 98%
@@ -369,6 +431,13 @@ class Matchup(Protocol):
     #: anything but the prior. An unpriced game is an honest output.
     priceable: bool
     unpriceable_reason: str
+    #: hoopR's integer keys for the two schools. **Nothing is priced off
+    #: these** — they are read only by :func:`_refusal_without_raw_team_ids`,
+    #: which uses them to take the raw id back out of a refusal sentence that
+    #: embedded it, and they are read through `_matchup_field` with a default
+    #: so a double that omits them declines the collapse rather than raising.
+    home_team_id: object
+    away_team_id: object
 
 
 def _matchup_field(matchup: object, name: str, default=None):
@@ -1435,6 +1504,78 @@ def _read_player_market(
     return float(win), float(push), ""
 
 
+def _no_rating_reason(model: "slate.SlateModel") -> str:
+    """Why this card holds no rating for one game, said in what it can SEE.
+
+    Two states, and they are two different facts — the distinction
+    `models/slate.py` draws between a wiring absence and a board state, drawn
+    here for the team half. The slate holds no rating for any game, so nothing
+    was priced and the wire is the first place to look; or the slate holds
+    ratings and this event is not among them, so the event did not join and the
+    JOIN is the first place to look. One sentence for both would hide the
+    second inside the first, which is exactly what the sentence these two
+    replace did — it sent every reader to `models/ratings.py`, a file that has
+    been on this tree since 2026-09-03, and none to the join that failed.
+
+    Neither branch asserts anything about the module, because this function
+    cannot see it: it is handed the model's answer through
+    `reports/card_matchups.py` and never the model. What it CAN see is how many
+    games that answer covered, and the second branch prints that count — a
+    reader who is told "the model answered about 4 other game(s) on this slate"
+    cannot mistake the silence for an absent model, and the card can no longer
+    contradict itself by pricing a board it says was never asked about.
+    """
+    if not model.matchups:
+        return NO_RATING_ON_THIS_SLATE
+    return (
+        f"{NO_RATING_FOR_THIS_EVENT} {len(model.matchups):,} other game(s) on "
+        "this slate"
+    )
+
+
+def _refusal_without_raw_team_ids(reason: str, matchup: object) -> str:
+    """One ratings refusal with its raw hoopR ids named by side instead.
+
+    `ratings.Connectivity.connects` spells its first refusal ``f"team {team}
+    has played no countable game this season"``, and the id in it is hoopR's
+    integer key for that school. On the first board of a season that is the
+    commonest refusal there is — every team has played no countable game on
+    2 November — so the census, which exists to GROUP ("seventeen thousand
+    copies of one sentence" is what :class:`OpinionCensus` was built against),
+    degenerates into one row per TEAM. A measured 50-game November board
+    produced 50 near-identical rows in a 153-line card, differing only in a
+    number no reader of a card can look up. Fifty rows that say one thing is
+    how the one row that says something else gets skipped, and the row that
+    says something else here is the join census above.
+
+    The substitution is an **exact-string** one, against the two ids the
+    `Matchup` itself carries, and only where the id follows the literal
+    ``team ``. It is deliberately not a pattern over the prose: a regex hunting
+    numbers in these sentences would also collapse the component count, the
+    effective resistance and the bar it is measured against, which are facts
+    about the fit that belong on the card. This repository has paid for that
+    lesson — a prose detector is a list of shapes, and the next spelling is
+    always the one it missed.
+
+    Nothing a reader could have used is lost. The id is printed nowhere else on
+    the card; the schools are named by the provider's own spelling beside every
+    wager. What is still one row per GAME is the effective-resistance refusal,
+    whose number is per-PAIR and is a measurement rather than an identifier —
+    collapsing that one belongs where the sentence is written, in
+    `models/ratings.py`, and not in the reader of it.
+    """
+    if not reason:
+        return reason
+    for field_name, side in (
+        ("home_team_id", "the home team"),
+        ("away_team_id", "the away team"),
+    ):
+        raw = clean_text(_matchup_field(matchup, field_name, ""))
+        if raw and f"team {raw} " in reason:
+            reason = reason.replace(f"team {raw} ", f"{side} ")
+    return reason
+
+
 def opinions_for(
     wagers: Iterable[Wager],
     matchups: "Mapping[str, object] | slate.SlateModel | None",
@@ -1457,7 +1598,15 @@ def opinions_for(
 
     1. **No matchup.** No rating exists for this game, so the model was never
        asked about it. That reads `no opinion`, which is not a probability of
-       zero and is not the model declining to find value.
+       zero and is not the model declining to find value. **Which of the two
+       reasons that is, is said on the card**: the slate holds no rating at all
+       (:data:`NO_RATING_ON_THIS_SLATE`, a wiring absence) or it holds ratings
+       for other games and this event did not join to one of them
+       (:data:`NO_RATING_FOR_THIS_EVENT`, a join failure, printed with the
+       number of games the model did answer about). Until this was split, both
+       read as *"`models/ratings.py` is not written"* — false since the day
+       that module was written, and false on the same card that priced four
+       events through it. See the two constants for what it cost.
     2. **The ratings module refuses.** The schedule graph has not connected
        these two teams by anything but the prior, so any adjusted rating is
        identified by the prior alone. An unpriced game is an honest output; a
@@ -1671,13 +1820,13 @@ def opinions_for(
 
         matchup = model.matchup_for(wager.event_id)
         if matchup is None:
-            census.decline(
-                "no rating exists for this game — `models/ratings.py` is not "
-                "written, so the model was never asked"
-            )
+            census.decline(_no_rating_reason(model))
             continue
         if not bool(_matchup_field(matchup, "priceable", True)):
-            reason = clean_text(_matchup_field(matchup, "unpriceable_reason", ""))
+            reason = _refusal_without_raw_team_ids(
+                clean_text(_matchup_field(matchup, "unpriceable_reason", "")),
+                matchup,
+            )
             census.decline(
                 "the ratings module refuses to price this matchup"
                 + (f": {reason}" if reason else "")

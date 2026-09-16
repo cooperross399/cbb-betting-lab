@@ -18,6 +18,7 @@ has to get right for the headline to be worth reading:
 from __future__ import annotations
 
 import copy
+import importlib.util
 import json
 import subprocess
 import sys
@@ -219,6 +220,84 @@ def test_the_check_mode_catches_a_hand_edited_report(tmp_path: Path):
     )
 
     assert _run_script("--check", cwd=tmp_path).returncode == 1
+
+
+def test_a_verdict_typed_into_the_record_is_refused_rather_than_published(
+    tmp_path: Path,
+):
+    """**Defect 3 again, arriving through the stored field this time.**
+
+    The sign is read once, by `stats.RoiInterval.verdict()` — and then it is
+    written into a JSON file on disk, and the headline, the tables and the
+    counts all read the file. Nothing compared that stored string to the two
+    bounds printed on the same line, so editing one word of one claim published
+
+        at least one **profitable** result survived the correction for
+        everything this lab has ever tested and then replicated on a window it
+        was not found on: `spread` / low_major at -5.8% over 9,000 bets
+
+    with the corrected interval lying entirely below zero three columns to its
+    left. The sibling document refuses exactly this row — it is refusal 4 of
+    `why_the_model.verdict_disagreements` — and this one printed it.
+
+    And `--check` could not see it: it asks whether the document matches the
+    record, and whether the record is older than the evidence's timestamps.
+    Neither question is *does the record agree with itself*.
+    """
+    outputs = tmp_path / "outputs"
+    _write_backtest(outputs, [_cell(roi=-0.058, half_width=0.02)])
+    record = _build(tmp_path)
+    record_target = WC.write_record(record, WC.record_path(CBB, outputs))
+    WC.write_report(record, WC.report_path(CBB, outputs))
+    assert _run_script("--check", cwd=tmp_path).returncode == 0
+
+    losing = next(c for c in record["claims"] if c["market"] == "spread")
+    assert losing["verdict"] == S.DEMONSTRATED_DEFICIT
+    assert (losing["adjusted_high"] or 0.0) < 0.0
+    # The whole edit: one word, and every number beside it left alone.
+    losing["verdict"] = S.DEMONSTRATED_EDGE
+    losing["replicated"] = True
+
+    assert WC.demonstrated_edges(record) == []
+    assert WC.verdict_of(losing) == S.DEMONSTRATED_DEFICIT
+    headline = WC.headline(record)
+    assert "profitable" not in headline.casefold(), headline
+    assert "survived the correction" not in headline
+
+    with pytest.raises(WC.ClaimsError) as caught:
+        WC.render(record)
+    assert S.DEMONSTRATED_EDGE in str(caught.value)
+    assert S.DEMONSTRATED_DEFICIT in str(caught.value)
+
+    # And it reaches the process boundary, where `--check` used to say the
+    # document matched its run record and exit 0.
+    record_target.write_text(json.dumps(record, indent=2), encoding="utf-8")
+    result = _run_script("--check", cwd=tmp_path)
+    assert result.returncode != 0, result.stdout
+    assert "does not agree with itself" in result.stderr
+
+
+def test_a_sample_size_typed_over_the_floor_never_promotes_a_claim(tmp_path: Path):
+    """The other half of the same refusal.
+
+    `enough_evidence` decides whether a number is printed at all, and it is
+    stored beside the count it was derived from. Hand-flagging a 40-bet row as
+    having cleared the 200-bet floor prints `+30.0%` over 40 bets in a document
+    whose rule is that below the floor there is a phrase and no number.
+    """
+    outputs = tmp_path / "outputs"
+    _write_backtest(outputs, [_cell(roi=0.30, half_width=0.05, bets=40, clusters=12)])
+    record = _build(tmp_path)
+    thin = record["claims"][0]
+    assert thin["bets"] < S.MINIMUM_BETS
+    assert thin["enough_evidence"] is False
+
+    thin["enough_evidence"] = True
+
+    assert WC.enough_evidence_of(thin) is False
+    with pytest.raises(WC.ClaimsError) as caught:
+        WC.render(record)
+    assert "enough_evidence" in str(caught.value)
 
 
 def test_the_vocabulary_of_a_tipster_is_refused(tmp_path: Path):
@@ -575,6 +654,106 @@ def test_rerender_does_not_consult_the_evidence(tmp_path: Path):
     assert result.returncode == 0, result.stderr
     assert WC.report_path(CBB, outputs).read_text(encoding="utf-8") == before
     assert "The only result that survives is a loss." in before
+
+
+def _script_module():
+    """The script itself, imported, so its fence markers are read and not typed.
+
+    A second copy of `<!-- BEGIN GENERATED: what_we_can_claim -->` in a test is
+    a copy that keeps passing after the script's own marker changes, which is
+    the failure mode this file exists to catch in documents.
+    """
+    spec = importlib.util.spec_from_file_location(
+        "_run_what_we_can_claim",
+        Path(REPO_ROOT) / "scripts" / "run_what_we_can_claim.py",
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _hand_written_doc(tmp_path: Path) -> Path:
+    """A document with framing around a fenced block, as the real one has."""
+    script = _script_module()
+    doc = tmp_path / "what_we_can_and_cannot_claim.md"
+    doc.write_text(
+        "# What this lab may claim\n\n"
+        "Written before the first measurement, and that timing is the point.\n\n"
+        f"{script.BEGIN}\n\nplaceholder\n\n{script.END}\n\n"
+        "Closing prose that must also survive.\n",
+        encoding="utf-8",
+    )
+    return doc
+
+
+def test_a_rerender_never_splices_a_record_that_has_fallen_behind_the_evidence(
+    tmp_path: Path,
+):
+    """**The 2026-09-04 defect, on the path that writes.**
+
+    The freshness question went into `--check` and stopped there. `--rerender`
+    reads the same stored record, renders it, writes the report and then
+    replaces the fenced block inside the hand-written document — asking nothing.
+    So a record written the day before the price backtest ran could be
+    republished, word for word, into the document a human reads before deciding
+    what this lab may claim: *"nothing has been measured against real prices
+    yet"*, with 9,000 graded bets sitting in a file on disk beside it. Exit 0.
+
+    The splice is refused **before anything is written**, and that is the half
+    of the gap that matters: a refusal that has already overwritten the good
+    document is not a refusal.
+    """
+    outputs = tmp_path / "outputs"
+    assert _run_script(cwd=tmp_path).returncode == 0
+    report = WC.report_path(CBB, outputs)
+    doc = _hand_written_doc(tmp_path)
+    document_before = doc.read_text(encoding="utf-8")
+    report_before = report.read_text(encoding="utf-8")
+    assert "nothing has been measured against real prices yet" in report_before
+    assert _run_script("--check", cwd=tmp_path).returncode == 0
+
+    # The measurement the record was written before.
+    backtest_file = _write_backtest(
+        outputs, [_cell(roi=-0.066, half_width=0.02)], generated_at=LATER
+    )
+
+    result = _run_script(
+        "--rerender", "--splice-into", str(doc), cwd=tmp_path
+    )
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert doc.read_text(encoding="utf-8") == document_before, (
+        "the refusal spliced the stale block into the hand-written document"
+    )
+    assert report.read_text(encoding="utf-8") == report_before
+    assert str(backtest_file) in result.stderr
+
+
+def test_a_rerender_that_writes_only_the_report_still_says_the_record_is_behind(
+    tmp_path: Path,
+):
+    """The gap this leaves open, on purpose, and out loud.
+
+    `test_rerender_does_not_consult_the_evidence` is the rule: re-rendering the
+    generated report must never re-read a measurement, or improving a sentence
+    costs a re-run. So a stale `--rerender` that writes only
+    `data/outputs/cbb_what_we_can_claim.md` still exits zero — the next plain
+    run rebuilds the record, and that is the invocation the workflow and the
+    weekly loop both use. What it must not do is stay silent about it: the
+    operator who asked for a re-render is the one person the freshness answer
+    was for.
+    """
+    outputs = tmp_path / "outputs"
+    assert _run_script(cwd=tmp_path).returncode == 0
+    backtest_file = _write_backtest(
+        outputs, [_cell(roi=-0.066, half_width=0.02)], generated_at=LATER
+    )
+
+    result = _run_script("--rerender", cwd=tmp_path)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "no longer about the evidence" in result.stderr
+    assert str(backtest_file) in result.stderr
 
 
 # ---------------------------------------------------------------------------

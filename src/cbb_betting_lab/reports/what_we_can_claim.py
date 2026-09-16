@@ -35,6 +35,17 @@ re-deriving the test. :func:`demonstrated_edges` and
 
 That is defect 3 in `docs/ported_defects.md`.
 
+**And the string is stored in a file somebody can edit, which is how defect 3
+came back.** The sign is read once *per build*; the partitions then read a JSON
+record on disk, and until :func:`claim_disagreements` existed nothing compared
+that stored `verdict` to the bounds printed on the same line. One edited word
+published a −5.8% market as *"at least one **profitable** result survived the
+correction … and then replicated"*, and `--check` stayed green, because it asks
+whether the document matches the record and whether the record is older than its
+evidence — never whether the record agrees with itself. :func:`render` now
+refuses such a record outright, and the partitions require the stored string and
+the printed interval to say the same thing.
+
 ## Four more rules this module enforces mechanically
 
 1. **Every measured number is printed with its sample size**, and below
@@ -926,18 +937,238 @@ def _headline_claims(record: Mapping) -> list[dict]:
     ]
 
 
+#: The two bounds this document prints beside every verdict — the
+#: **Family-corrected** column of the claims table — and therefore the pair any
+#: verdict on this page is a statement about. :func:`verdict_of` reads the sign
+#: off exactly these, never off a wider or narrower pair recomputed from a
+#: standard error the reader is never shown.
+PRINTED_BOUNDS: tuple[str, str] = ("adjusted_low", "adjusted_high")
+
+
+def printed_interval(claim: Mapping) -> S.RoiInterval:
+    """The interval this document PRINTS beside a claim, as a `RoiInterval`.
+
+    The corrected bounds are handed in as the interval's own bounds and the
+    correction is then switched off (``looks=1``), so
+    :meth:`stats.RoiInterval.verdict` reads the two numbers the reader sees and
+    nothing else. A bound the claim does not carry reads 0.0, which is why
+    :func:`claim_disagreements` refuses a row carrying half a pair outright
+    rather than reasoning about the interval that fabricates.
+
+    **This is a second spelling of the plumbing and not a second reading of the
+    sign.** `why_the_model.printed_interval` does the same thing for the rows
+    that document prints, and both end in `stats.RoiInterval.verdict` — the one
+    place in this repository that decides which side of zero a number is on.
+    They are not shared because `why_the_model` imports this module and the
+    import cannot run the other way; what must never be copied is the
+    comparison, and it is not.
+    """
+    return S.RoiInterval(
+        roi=_as_float(claim.get("roi")) or 0.0,
+        low=_as_float(claim.get(PRINTED_BOUNDS[0])) or 0.0,
+        high=_as_float(claim.get(PRINTED_BOUNDS[1])) or 0.0,
+        bets=_as_int(claim.get("bets")),
+        clusters=_as_int(claim.get("clusters")),
+        standard_error=0.0,
+        looks=1,
+        cluster_unit=_text(claim.get("cluster_unit")) or "game",
+    )
+
+
+def verdict_of(claim: Mapping) -> str:
+    """The verdict of the interval printed beside `claim`, **derived**."""
+    return printed_interval(claim).verdict()
+
+
+def enough_evidence_of(claim: Mapping) -> bool:
+    """Whether `claim`'s own sample clears the floor declared in advance."""
+    return printed_interval(claim).enough_evidence
+
+
+def settlement_suspect(claim: Mapping) -> bool:
+    """Whether this claim's market settles under a rule this lab cannot read.
+
+    Stored by :func:`_claim` and re-derived here from the market key, and a
+    claim is suspect when **either** says so. The stored flag can only be lost
+    by an edit, and losing it promotes a second-half artefact into the headline;
+    re-deriving it means the exclusion survives the record being rewritten.
+    """
+    return bool(claim.get("settlement_suspect")) or _text(
+        claim.get("market")
+    ) in forward_evidence.SETTLEMENT_AMBIGUOUS_MARKETS
+
+
+def claim_disagreements(record: Mapping) -> list[str]:
+    """Every row of the record that does not agree with **itself**.
+
+    This module's contract was *"the sign is read once, by
+    `stats.RoiInterval.verdict`, and every partition reads the resulting
+    string"* — and it was one step short. The string is read once **per build**,
+    and then it is stored in a JSON file on disk, and the partitions, the table
+    and the headline all read the file. Nothing compared that string to the
+    bounds printed on the same line, so a record whose `verdict` had been edited
+    between the measurement and the document published
+
+        at least one **profitable** result survived the correction for
+        everything this lab has ever tested and then replicated on a window it
+        was not found on: `team_total` / mid_major at -5.8% over 13,478 bets
+
+    — the sentence and the figure in it contradicting each other — and
+    `--check` stayed green, because `--check` compares the document to the
+    record and the freshness check compares the record to the evidence files'
+    stamps. Neither of them compares the record to itself. That is defect 3
+    again, arriving through the stored field rather than through a second
+    predicate, in the module whose docstring says it exists to prevent it.
+
+    The four refusals, over `claims` and `pooled` — every section of this
+    record that carries a figure:
+
+    1. **Half a printed pair.** `adjusted_low` without `adjusted_high` or the
+       reverse. The missing bound reads 0.0, which is a bound no measurement
+       produced and the one that most easily excludes zero.
+    2. **A claim carrying neither printed bound.** A return or a verdict with
+       both keys gone fabricates the whole of `[0.0, 0.0]` under a figure the
+       table still prints — deleting both keys must not be the way past
+       refusal 1.
+    3. **The stored verdict, or `enough_evidence`, is not the reading of its own
+       interval.** A hand-set `enough_evidence: true` promotes a 40-bet row into
+       the headline's population; a hand-set `verdict` renames a loss.
+    4. **The return does not lie between its own printed bounds** — checked only
+       above the floor and only on a pair of finite bounds, for the two reasons
+       under **What still gets through**.
+
+    ## What still gets through
+
+    Written down rather than hoped shut, because both are real rows this
+    module's own builder produces:
+
+    1. **Below the floor, refusal 4 does not run.** There this document prints a
+       phrase and no number, so there is no pair on the page for a return to
+       disagree with.
+    2. **A pair of `null` bounds is not compared to its return.**
+       `stats.interval_by_cluster` returns infinite bounds where between-cluster
+       variation identifies nothing, JSON cannot carry an infinity, and
+       `_as_float` stores `None` rather than a zero on purpose — *a zero-width
+       interval around a positive return reads as a finding*. The page prints
+       `unbounded` for such a row. Refusals 1 and 3 still run on it, and an
+       unbounded pair reads `no demonstrated edge` whatever return sits beside
+       it, so a verdict typed onto one is still refused.
+
+    Empty means the record agrees with itself. :func:`render` refuses a
+    non-empty list rather than printing either reading: printing the stored one
+    publishes the edit, and printing the derived one silently overwrites a
+    disagreement a human has to see.
+
+    **What it does not reach.** Whether the record agrees with the *evidence* —
+    that is :func:`stale_inputs`, which re-asks the disk what each file was
+    stamped with. A record internally coherent and built from a backtest that
+    has since been re-run fails there and not here.
+    """
+    reasons: list[str] = []
+    for section in ("claims", "pooled"):
+        for index, row in enumerate(record.get(section, []) or []):
+            if not isinstance(row, Mapping):
+                continue
+            label = (
+                f"{section}[{index}] "
+                f"{_text(row.get('market')) or _text(row.get('name'))}"
+                f"{'/' + _text(row.get('tier')) if row.get('tier') else ''}"
+            ).strip()
+            present = [key for key in PRINTED_BOUNDS if key in row]
+            if len(present) == 1:
+                missing = next(k for k in PRINTED_BOUNDS if k not in row)
+                reasons.append(
+                    f"{label}: carries `{present[0]}` and no `{missing}`. Half "
+                    "an interval is not an interval — the missing bound is read "
+                    "as 0.0, which is a bound no measurement produced and the "
+                    "one that most easily excludes zero."
+                )
+                continue
+            if not present and any(key in row for key in ("roi", "verdict")):
+                reasons.append(
+                    f"{label}: carries a return or a verdict and neither of "
+                    f"`{PRINTED_BOUNDS[0]}`/`{PRINTED_BOUNDS[1]}`, which is the "
+                    "pair printed beside it and the pair its verdict is read "
+                    "off. Both are fabricated as 0.0, and `[0.0, 0.0]` is not "
+                    "an interval."
+                )
+                continue
+            interval = printed_interval(row)
+            # **A bound that is JSON `null` is not a bound that was edited
+            # away.** `stats.interval_by_cluster` returns infinite bounds where
+            # between-cluster variation identifies nothing — a single-cluster
+            # forward cell — JSON cannot carry an infinity, and `_as_float`
+            # deliberately stores `None` rather than a zero, because "a
+            # zero-width interval around a positive return reads as a finding".
+            # The document prints `unbounded` for such a row. So there is no
+            # pair on the page for the return to sit inside, and comparing it to
+            # the fabricated `[0.0, 0.0]` would refuse every unidentified cell
+            # the builder legitimately writes. The verdict and `enough_evidence`
+            # comparisons above still run on it: an unbounded pair reads
+            # `no demonstrated edge` whatever return it carries, so a verdict
+            # typed onto such a row is still refused.
+            bounded = all(
+                _as_float(row.get(key)) is not None for key in PRINTED_BOUNDS
+            )
+            if "verdict" in row:
+                stored = _text(row.get("verdict"))
+                derived = interval.verdict()
+                if stored != derived:
+                    reasons.append(
+                        f"{label}: the record stores the verdict {stored!r}, "
+                        "and the corrected interval printed beside it "
+                        f"[{_as_float(row.get(PRINTED_BOUNDS[0]))}, "
+                        f"{_as_float(row.get(PRINTED_BOUNDS[1]))}] over "
+                        f"{interval.bets:,} bets reads {derived!r}."
+                    )
+            if "enough_evidence" in row:
+                stored_enough = bool(row.get("enough_evidence"))
+                if stored_enough != interval.enough_evidence:
+                    reasons.append(
+                        f"{label}: the record stores enough_evidence="
+                        f"{stored_enough} and its sample of {interval.bets:,} "
+                        f"bets against the {S.MINIMUM_BETS:,} declared in "
+                        f"advance says {interval.enough_evidence}."
+                    )
+            if (
+                bounded
+                and interval.enough_evidence
+                and not interval.return_sits_inside_its_own_interval
+            ):
+                reasons.append(
+                    f"{label}: the return {_pct(interval.roi)} does not lie "
+                    f"between the corrected bounds "
+                    f"[{_as_float(row.get(PRINTED_BOUNDS[0]))}, "
+                    f"{_as_float(row.get(PRINTED_BOUNDS[1]))}] printed beside "
+                    "it, so the two numbers on that line did not come from one "
+                    f"measurement — and those bounds read "
+                    f"{interval.verdict()!r}."
+                )
+    return reasons
+
+
 def demonstrated_edges(record: Mapping) -> list[dict]:
     """Cells whose corrected interval excludes zero **on the winning side**.
 
     Reads `verdict`, which came from `stats.RoiInterval.verdict()`, which reads
-    the sign. This function and :func:`demonstrated_deficits` return disjoint
-    lists by construction, and that disjointness is the whole fix for defect 3.
+    the sign — **and the interval printed beside it, which has to say the same
+    thing**. The second condition is not a second predicate: it is the same
+    `stats.RoiInterval.verdict`, asked of the two bounds on the page rather than
+    of the string the record carries, and requiring both can only ever shrink
+    this list. A record whose stored verdict has been edited to outrank its own
+    interval is refused by :func:`render` before anything gets here; this makes
+    the partition safe on its own as well, because :func:`headline` is a public
+    function and a caller can reach it without rendering.
+
+    This function and :func:`demonstrated_deficits` return disjoint lists by
+    construction, and that disjointness is the whole fix for defect 3.
     """
     return [
         claim
         for claim in _headline_claims(record)
         if claim.get("verdict") == S.DEMONSTRATED_EDGE
-        and not claim.get("settlement_suspect")
+        and verdict_of(claim) == S.DEMONSTRATED_EDGE
+        and not settlement_suspect(claim)
     ]
 
 
@@ -945,13 +1176,16 @@ def demonstrated_deficits(record: Mapping) -> list[dict]:
     """Cells whose corrected interval excludes zero **on the losing side**.
 
     A demonstrated deficit is a finding, not a null result, and it is never
-    reported as an edge, as a near-miss, or as encouragement.
+    reported as an edge, as a near-miss, or as encouragement. The stored verdict
+    and the printed interval must agree here too, for the reason
+    :func:`demonstrated_edges` gives.
     """
     return [
         claim
         for claim in _headline_claims(record)
         if claim.get("verdict") == S.DEMONSTRATED_DEFICIT
-        and not claim.get("settlement_suspect")
+        and verdict_of(claim) == S.DEMONSTRATED_DEFICIT
+        and not settlement_suspect(claim)
     ]
 
 
@@ -963,11 +1197,16 @@ def not_evidence(record: Mapping) -> list[dict]:
     sample size, and the football lab's single largest false finding was exactly
     that — so it is neither an edge nor a deficit, and saying which it "would
     have been" is the mistake.
+
+    Both halves of the test are derived — :func:`settlement_suspect` re-reads
+    the market key and :func:`enough_evidence_of` re-reads the sample — so a
+    record that has lost its `settlement_suspect` flag still names the cell here
+    rather than quietly moving it into one of the two lists above.
     """
     return [
         claim
         for claim in _headline_claims(record)
-        if claim.get("settlement_suspect") and claim.get("enough_evidence")
+        if settlement_suspect(claim) and enough_evidence_of(claim)
     ]
 
 
@@ -1704,8 +1943,16 @@ def _claims_table(claims: Sequence[Mapping]) -> list[str]:
             )
         else:
             replication = "no held-out test has been run"
-        verdict = _text(claim.get("verdict"))
-        if claim.get("settlement_suspect"):
+        # DERIVED from the two bounds in the Family-corrected column of this
+        # very row, by `stats.RoiInterval.verdict`, rather than read from the
+        # record. `render` has already refused a record where the two disagree,
+        # so on every document this repository publishes the two are the same
+        # string; deriving it means the column cannot become the place a record
+        # edit surfaces if that refusal is ever loosened, and a verdict printed
+        # beside an interval it is not a statement about is the defect this
+        # whole module is arranged against.
+        verdict = verdict_of(claim)
+        if settlement_suspect(claim):
             # THE VERDICT WORD IS WITHHELD, not qualified. This cell used to
             # print "…it would read *demonstrated edge*", which is the exact
             # thing `not_evidence` says is the mistake: *"it is neither an edge
@@ -1746,6 +1993,27 @@ def render(record: Mapping) -> str:
             f"version {RECORD_VERSION}. Rebuild it rather than rendering a "
             "record whose shape has changed — a stale record renders a report "
             "with holes in it and nothing looks wrong."
+        )
+
+    # THE RECORD HAS TO AGREE WITH ITSELF BEFORE IT IS PUBLISHED. Purity is what
+    # makes a re-render free, and it was also what made this file trustworthy on
+    # the wrong grounds: the document matched the record, the record matched the
+    # evidence's timestamps, and nothing anywhere compared a stored verdict to
+    # the bounds printed on the same line. Editing one word of one claim
+    # published a -5.8% market as a profitable result that had survived the
+    # correction and replicated, with `--check` green. Refusing here rather than
+    # printing either reading: printing the stored one publishes the edit, and
+    # quietly printing the derived one hides a disagreement between a
+    # measurement and the file that claims to hold it.
+    disagreements = claim_disagreements(record)
+    if disagreements:
+        raise ClaimsError(
+            "This claims record does not agree with itself — a stored verdict "
+            "or `enough_evidence` that is not what its own interval reads, a "
+            "return outside the bounds printed beside it, or half of the "
+            "corrected pair. Every one of those is something edited between "
+            "the measurement and the document. Refusing to render either "
+            "reading:\n  " + "\n  ".join(disagreements)
         )
 
     correction = record.get("correction", {}) or {}
