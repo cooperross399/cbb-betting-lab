@@ -6230,3 +6230,66 @@ def test_no_workflow_comment_still_claims_a_single_contents_write_holder():
                 "`main` is a claim that goes stale silently — the parsed "
                 "`CONTENTS-WRITE HOLDERS:` line is the one to change."
             )
+
+
+# ---------------------------------------------------------------------------
+# The quota history has to survive the runner
+# ---------------------------------------------------------------------------
+
+
+def test_the_quota_run_carries_its_history_and_stays_read_only() -> None:
+    """A history that starts empty every run is not a history.
+
+    `check_provider_quota.py` appends to `quota_history.json`, keeps the last
+    200 readings, and compares each against the previous one so a quota RESET
+    becomes observable. None of that could happen: the file is untracked and
+    the runner checks out clean, so every run appended to an empty list,
+    uploaded a one-entry "history", and was destroyed. Measured 2026-09-16 on
+    the sixth consecutive daily success — the artifact held exactly one entry,
+    and the reset branch had never been reachable.
+
+    What that cost is not the notice. The balance does not reset
+    (`docs/credit_cost.md`: "Every credit spent here is spent permanently"), so
+    the BURN RATE is the only thing that answers whether a season's carding
+    fits in what is left — and a one-entry history has no rate in it.
+
+    The carry is by artifact, never by commit: `contents: write` cannot be
+    scoped to a ref, so granting it here would put a third holder of write
+    access on `main`. That half is asserted too, because the cheap way to make
+    a history persist is exactly the change this must not make.
+    """
+    path = WORKFLOWS_DIR / "provider-quota.yml"
+    document = load(path)
+
+    # Ordered over the parsed STEPS, not over indexes into the file's text. A
+    # first draft of this asserted `text.index("gh run download") <
+    # text.index("check_provider_quota.py")` and failed on a correct workflow,
+    # because the second string also appears in a comment near the top — the
+    # carry really did come first. Prose is not structure.
+    steps = [
+        " ".join(str(step.get(key, "")) for key in ("name", "run", "uses"))
+        for job in document["jobs"].values()
+        for step in steps_of(job)
+    ]
+    carry = [i for i, s in enumerate(steps) if "gh run download" in s]
+    check = [i for i, s in enumerate(steps) if "check_provider_quota.py" in s]
+
+    assert carry, (
+        "the quota run does not carry the previous history forward, so every "
+        "reading it takes is the only reading it has"
+    )
+    assert check, "no step runs check_provider_quota.py"
+    assert min(carry) < min(check), (
+        "the history is fetched after the check that appends to it, so the "
+        "append still lands on an empty list"
+    )
+
+    permissions = document.get("permissions") or {}
+    assert permissions.get("actions") == "read", (
+        "carrying the artifact forward needs `actions: read`"
+    )
+    assert permissions.get("contents") == "read", (
+        "provider-quota.yml no longer holds contents: read. If this became "
+        "write, GitHub cannot scope it to a ref, so it is write access to main "
+        "and a third holder of it — carry the history by artifact instead"
+    )
