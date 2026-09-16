@@ -2275,7 +2275,7 @@ GAMEDAY_CONTEXT: dict[str, str] = {
     "github.run_id": "1",
     "inputs.rehearsal_slate_date": "",
     "inputs.rehearsal_slate_date || ''": "",
-    "inputs.credit_cap || '40000'": "40000",
+    "inputs.credit_cap || '20000'": "20000",
     "steps.identity.outputs.day": "2026-11-02",
     "steps.identity.outputs.slot": "morning",
     "steps.identity.outputs.trigger": "schedule",

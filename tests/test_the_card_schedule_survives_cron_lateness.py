@@ -42,6 +42,7 @@ from cbb_betting_lab.schedule_contract import (
     EVENING,
     MORNING,
     OBSERVED_LATENESS_H,
+    SCHEDULED_SLOTS,
     SEASON_CRON_MONTHS,
     SLOTS,
     CardSlot,
@@ -483,8 +484,14 @@ def test_every_declared_cron_is_a_trigger_of_a_slot_that_survives_the_lateness()
     """Each cron string is decomposed back to its hour and put through the same
     lateness arithmetic the rest of this file uses, so the pin above cannot be
     satisfied by a contract that declares a time no slot could survive."""
+    # SCHEDULED_SLOTS, not SLOTS. A slot can be defined without being
+    # scheduled — the evening slot has been since 2026-09-16, because the
+    # balance does not carry two snapshots a day through a season. It keeps its
+    # definition because it is still dispatchable by hand and is what buying
+    # credit restores; what it does not keep is a cron, and this check is about
+    # the crons that fire.
     hours_by_slot = {
-        slot.name: sorted(slot.cron_hours_utc) for slot in SLOTS
+        slot.name: sorted(slot.cron_hours_utc) for slot in SCHEDULED_SLOTS
     }
     declared = []
     for expression in cron_expressions():
@@ -508,7 +515,7 @@ def test_every_declared_cron_is_a_trigger_of_a_slot_that_survives_the_lateness()
     # card lead is applied, and those cells are named in
     # `CELLS_THAT_CANNOT_FREEZE_THEIR_BLOCK` rather than swept into a `holds()`
     # that was sixty minutes optimistic.
-    for slot in SLOTS:
+    for slot in SCHEDULED_SLOTS:
         assert slot.primary_holds(EST_OFFSET_H), (
             f"Slot {slot.name!r} declares crons at {slot.cron_hours_utc} UTC. "
             f"At the {OBSERVED_LATENESS_H}h worst lateness observed its primary "
