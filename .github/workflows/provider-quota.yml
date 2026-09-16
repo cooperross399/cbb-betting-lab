@@ -22,6 +22,12 @@ on:
 
 permissions:
   contents: read
+  # `actions: read` so this run can DOWNLOAD THE PREVIOUS RUN'S HISTORY, and
+  # for no other reason. Deliberately not `contents: write`: GitHub cannot
+  # scope write to one ref, so granting it here would add a third holder of
+  # write access to `main` — see the write-holder note in
+  # `cbb-gameday-refresh.yml`, which `tests/test_workflows.py` pins.
+  actions: read
 
 jobs:
   quota:
@@ -35,6 +41,47 @@ jobs:
       - run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt && python -m pip install -e .
+      # THE HISTORY HAD TO BE CARRIED, OR IT WAS NEVER A HISTORY.
+      #
+      # `check_provider_quota.py` appends to `quota_history.json`, keeps the
+      # last 200 entries, and compares each reading against the previous one so
+      # that a quota RESET becomes observable — "the reset day becomes
+      # observable rather than inferred", in its own words. None of that could
+      # ever happen: the file is not tracked, and the runner starts from a clean
+      # checkout, so every run appended to an empty list, uploaded a
+      # one-entry "history", and was destroyed. Measured 2026-09-16: the
+      # artifact of the sixth consecutive daily success held exactly one entry,
+      # and the reset branch had never once been reachable.
+      #
+      # What that cost is not the notice. It is that the lab could not see its
+      # own BURN RATE — and the balance does not reset (`docs/credit_cost.md`:
+      # "Every credit spent here is spent permanently"), so burn rate is the
+      # only thing that answers whether a season's carding fits in what is
+      # left. On the day this was found the answer was 4,163 credits of margin.
+      #
+      # Carried by artifact rather than by commit, so this workflow stays
+      # read-only. Absence is fine and expected on the first run.
+      - name: Carry the previous history forward
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          mkdir -p data/outputs
+          PREVIOUS=$(gh run list --workflow=provider-quota.yml --status=success \
+            --limit 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || true)
+          if [ -z "$PREVIOUS" ]; then
+            echo "No previous successful run; this history starts here."
+            exit 0
+          fi
+          if gh run download "$PREVIOUS" --name quota --dir data/outputs 2>/dev/null; then
+            echo "Carried $(python -c "import json,sys; print(len(json.load(open('data/outputs/quota_history.json'))))" 2>/dev/null || echo '?') entry(ies) forward from run $PREVIOUS."
+          else
+            # An expired or absent artifact is a gap in the history and not a
+            # reason to fail: the reading this run is about to take is still
+            # worth recording. It says so rather than starting silently.
+            echo "::warning::Run $PREVIOUS has no readable quota artifact (expired?). This history restarts, so the burn rate is unmeasurable until it rebuilds."
+          fi
+
       - name: Check
         env:
           PYTHONPATH: src
