@@ -136,14 +136,25 @@ CBB = Competition(
     # The largest slate in five cached seasons is **200 games** (opening Monday
     # of 2022-23). At 48 per-event keys across two regions that is 96 credits an
     # event pessimistic, so one snapshot of the worst night is 19,206 and two
-    # snapshots are 38,412. The cap is 40,000 — above the worst night this sport
-    # has produced, because a cap below it is a cap that starves it, and **a
-    # starved fetch and an unquoted market look identical in the reports.**
+    # snapshots are 38,412.
+    #
+    # The cap was 40,000 while the card ran two slots a day. Since 2026-09-16 it
+    # runs one — `schedule_contract.SCHEDULED_SLOTS` — because the balance does
+    # not carry two through a season, so the DAY the cap bounds is now one
+    # snapshot and the cap comes down with it.
+    #
+    # 20,000 keeps the property the old number was chosen for: above the worst
+    # night this sport has produced (19,206) by the same 4% margin 40,000 left
+    # over 38,412, because **a cap below the worst slate is a cap that starves
+    # it, and a starved fetch and an unquoted market look identical in the
+    # reports.** A cap left at twice the cadence would not have bounded the day
+    # at all; it would have silently permitted the spend the schedule was
+    # changed to avoid.
     #
     # It is pessimistic by design: it assumes every asked-for market returns at
     # every book, which on a low-major Tuesday is nothing like true. The real
     # spend is read from `x-requests-last` and will come in far under.
-    daily_credit_cap=40_000,
+    daily_credit_cap=20_000,
 )
 
 #: Women's basketball, D-II and D-III are deliberately absent, and their
