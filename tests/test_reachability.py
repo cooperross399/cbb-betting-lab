@@ -88,6 +88,37 @@ def bets_from_board(frame: pd.DataFrame, **overrides) -> pd.DataFrame:
     return out
 
 
+#: A THREE-LONG PHASE OVER A TWO-BET EVENT, and the length is the whole point.
+#:
+#: This generator used to index `profits` by the flat bet counter. Every caller
+#: passes two profits and two bets per event, so each event received one of
+#: each and EVERY EVENT TOTAL WAS IDENTICAL — measured here as 60 games all
+#: returning exactly 1.0 and all three slate days returning exactly 20.0. A
+#: population with no between-cluster variation cannot be measured at all: the
+#: estimator has nothing to build a standard error from, and until `stats` was
+#: fixed that degeneracy came back as a ZERO-WIDTH interval, which excludes
+#: zero by arithmetic. Every reachability verdict this file asserted was
+#: produced that way rather than measured.
+#:
+#: The phase is an OFFSET into the profits cycle, not an index into it — a
+#: phase used as an index can only ever reach `profits[0]` and `profits[1]`,
+#: which silently ignores every caller that passes more than two.
+#:
+#: Its length has to divide neither the four bets an event carries nor the six
+#: events a slate day carries, or it re-aligns and hands every cluster the same
+#: mix again. A three-long phase fixes the games and leaves the DAYS flat — six
+#: divides evenly by three — and a flat day arm is infinitely wide, so it wins
+#: the take-the-wider comparison and the cell comes back unmeasurable anyway.
+#: Five divides neither.
+#:
+#: Four zeros to a one, so the cycle stays close to balanced: `[1.0, -1.0]`
+#: returns +0.0% over an interval that includes zero, which is the "surviving
+#: set returns nothing" these tests are written around, while `[0.4, 0.6]`
+#: returns the +50% its docstring names. Measured here, against one distinct
+#: game total and one distinct day total before.
+_PHASE = (0, 0, 0, 0, 1)
+
+
 def staked(
     n_events: int,
     *,
@@ -110,7 +141,9 @@ def staked(
         event = f"{event_prefix}{index}"
         day = f"2027-01-{first_day + index % days:02d}"
         for slot in range(per_event):
-            profit = profits[(index * per_event + slot) % len(profits)]
+            counter = index * per_event + slot
+            phase = _PHASE[counter % len(_PHASE)]
+            profit = profits[(counter + phase) % len(profits)]
             rows.append(
                 {
                     "event_id": event,

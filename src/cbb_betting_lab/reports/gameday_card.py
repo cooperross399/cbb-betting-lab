@@ -742,6 +742,16 @@ class Placement:
     unresolved_names: dict[str, int] = field(default_factory=dict)
     seasons_used: tuple[int, ...] = ()
     note: str = ""
+    #: How many games the **cached schedule** says are played on this slate day,
+    #: or `None` when no schedule for this season is on disk. This is the one
+    #: number on the card that does not come from the price provider, which is
+    #: the whole point of it: a provider that answers 200 with an empty board
+    #: says "no games tonight" in exactly the words a quiet Monday uses, and
+    #: until this was recorded nothing in the lab could tell those two apart.
+    #: `None` is a stated absence and never a zero — an uncached schedule
+    #: cannot contradict anything, and must not be allowed to look as though it
+    #: confirmed the board either.
+    games_scheduled: int | None = None
 
     def counts(self) -> dict[str, int]:
         out: dict[str, int] = {}
@@ -763,6 +773,31 @@ class Placement:
             "sides' tiers, because the board's attention follows the stronger "
             "programme."
         )
+
+
+def games_the_schedule_lists(
+    schedules: dict[int, pd.DataFrame], *, season: int, day: str
+) -> int | None:
+    """How many games the cached schedule says are played on `day`.
+
+    `None` when the season being played is not cached, which is a different
+    statement from zero and is kept different all the way to the card: an
+    absent schedule cannot contradict an empty board, and must not be allowed
+    to vouch for one either.
+
+    The schedule's `game_date` is already the Eastern calendar date, and
+    :data:`competitions.DAY_BOUNDARY_HOUR` is 0, so it **is** the slate date —
+    no conversion, and no second opinion about which night a late tip belongs
+    to. Reading `date` (UTC, a string) instead would put every 20:00 ET tip on
+    tomorrow, which is the bug `season.slate_date` exists to prevent.
+    """
+    frame = schedules.get(season)
+    if frame is None or frame.empty or "game_date" not in frame.columns:
+        return None
+    on_the_day = frame["game_date"].astype("string").str.slice(0, 10) == day
+    if "status_type_name" in frame.columns:
+        on_the_day &= ~frame["status_type_name"].isin(hoopr.NOT_PLAYED_STATUSES)
+    return int(on_the_day.sum())
 
 
 def place_games(
@@ -811,15 +846,23 @@ def place_games(
             )
         )
 
+    # Counted before the walk-forward check below, and carried through it. The
+    # tier table needs a season STRICTLY EARLIER than the one being priced; the
+    # game count needs the season being played and nothing else. Tying the
+    # second to the first would blind the contradiction guard for the whole of
+    # a lab's first season, which is exactly when it is most needed.
+    scheduled = games_the_schedule_lists(schedules, season=season, day=day)
+
     earlier = tuple(s for s in sorted(schedules) if s < season)
     if not earlier:
         return Placement(
+            games_scheduled=scheduled,
             note=(
                 f"No season before {season} is cached, so no walk-forward tier "
                 "table could be built. Tiering off the season being priced "
                 "would leak its own results into the stratum every game lands "
                 "in, so every game is `unplaced` instead."
-            )
+            ),
         )
     used = earlier[-TIER_LOOKBACK_SEASONS:]
     table = tier_table(schedules, used)
@@ -840,6 +883,7 @@ def place_games(
         table=table,
         unresolved_names=dict(index.unresolved),
         seasons_used=used,
+        games_scheduled=scheduled,
     )
 
 
@@ -1912,8 +1956,60 @@ class CardRun:
         return Decision.NO_SELECTIONS
 
     @property
+    def schedule_contradiction(self) -> str:
+        """Set when the cached schedule says there were games and none was priced.
+
+        THE NIGHT THIS EXISTS FOR. The price provider answers 200 with an empty
+        list — its `basketball_ncaab` key goes inactive, or is renamed for a new
+        season, or the endpoint degrades to `[]`. Nothing raises, so nothing
+        reaches `board.degraded`: every one of its four append sites is inside
+        an `except ProviderError` or an `except CreditCapReached`. The run is
+        green, the card reads a clean `no-slate`, the snapshot is header-only,
+        and `latest_status.json` publishes `degraded=false`. An hour later the
+        backup trigger reads that flag, sees the slot already published cleanly,
+        and stands down. A 200-game Tuesday is gone, and every artefact of the
+        night says the lab simply had nothing to say.
+
+        The lab already held the number that falsifies that. It loads the
+        cached season schedule to build the tier table and never asked it how
+        many games were on. `events_listed_for_the_slate` is no help here — it
+        is the provider's own count, so it is zero for exactly the same reason
+        the board is.
+
+        Silence when the schedule is uncached (`None`): unknown is not zero,
+        and a lab that cannot check must say so rather than pass.
+        """
+        scheduled = self.placement.games_scheduled
+        if scheduled is None or scheduled <= 0:
+            return ""
+        if self.events_on_this_slate:
+            return ""
+        return (
+            f"The cached schedule lists {scheduled:,} game(s) on {self.slate_date} "
+            f"and this run priced none. That is not a night without basketball: "
+            f"it is a board that came back empty while the schedule says it "
+            f"should not have. Nothing was frozen, so the night is unrecoverable "
+            f"if this is not investigated before the games tip."
+        )
+
+    @property
+    def degraded_reasons(self) -> list[str]:
+        """Every reason this run is degraded, in one list and in no other place.
+
+        The renderer used to read `self.degraded or self.board.degraded`, which
+        is an `or` over two lists that hold the same thing — and which would
+        have printed an EMPTY "what went wrong" section for a run degraded by
+        anything that was not a provider exception. A health flag whose reason
+        does not reach the card is a flag nobody can act on.
+        """
+        reasons = list(self.degraded) or list(self.board.degraded)
+        if self.schedule_contradiction:
+            reasons.append(self.schedule_contradiction)
+        return reasons
+
+    @property
     def is_degraded(self) -> bool:
-        return bool(self.degraded or self.board.degraded)
+        return bool(self.degraded_reasons)
 
     @property
     def selections_changed(self) -> bool | None:
@@ -2696,7 +2792,7 @@ def render_comment(run: CardRun) -> str:
     ]
     if run.is_degraded:
         lead += ["What went wrong:", ""]
-        lead += [f"* {note}" for note in (run.degraded or run.board.degraded)]
+        lead += [f"* {note}" for note in run.degraded_reasons]
         lead.append("")
     return guard_mentions_nobody("\n".join(lead) + render_card(run))
 

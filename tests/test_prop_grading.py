@@ -45,6 +45,7 @@ import json
 import sys
 from pathlib import Path
 
+import math
 import pandas as pd
 import pytest
 
@@ -137,6 +138,21 @@ def pair(
     ]
 
 
+#: Which side won, cycled instead of strictly alternated. Balanced — four of
+#: eight — so the population still carries no skill, which is what the callers
+#: that leave `over_won` unset are asking for.
+#:
+#: Strict alternation on `index % 2` balanced every SLATE DAY exactly: a day
+#: collects indices `d, d+days, d+2*days, ...`, and with an odd day count those
+#: alternate parity, so each day landed ten over-wins and ten under-wins and
+#: every day returned the identical total. A population whose clusters all
+#: return the same number has no between-cluster variance and cannot be
+#: measured at all — the arm comes back unbounded, wins the widest-of-three,
+#: and the cell reports no interval to restate. Eight shares no factor with the
+#: forty-five days these fixtures use, so the mix a day sees moves.
+_ALTERNATION = (True, True, False, False, True, False, True, False)
+
+
 def a_population(
     *,
     pairs=150,
@@ -169,9 +185,28 @@ def a_population(
         for name in markets
         for athlete in range(athletes)
     ]
+    # VISITED ON A COPRIME STRIDE, NOT IN ODOMETER ORDER.
+    #
+    # Read in order, the first `pairs` indices exhaust the innermost dimension
+    # before touching the next one: a 900-pair call over `games=60` spent forty
+    # athletes and ten markets inside event 0, 1 and 2 and produced THREE
+    # distinct games — under the thirty-cluster floor the report holds its game
+    # arm to, so the cell could not be scored at all. Reordering the loops only
+    # moves the starvation onto whichever dimension ends up innermost; the test
+    # that needs all ten markets and the tests that need sixty games cannot both
+    # be served by any nesting.
+    #
+    # A stride coprime to the number of combinations visits distinct triples —
+    # so wager keys stay unique, which is the property the odometer was chosen
+    # for — while advancing every dimension at once.
+    stride = next(
+        candidate
+        for candidate in (7919, 7907, 6421, 3571, 1)
+        if math.gcd(candidate, len(combinations)) == 1
+    )
     rows: list[dict] = []
     for index in range(pairs):
-        event, name, athlete = combinations[index % len(combinations)]
+        event, name, athlete = combinations[(index * stride) % len(combinations)]
         rows += pair(
             # The tier is part of the EVENT and not of the wager key -- a game
             # is high-major or mid-major, a wager is not -- so two tiers built
@@ -190,7 +225,9 @@ def a_population(
             # claiming to test the near one. That happened on the first draft.
             line=10.5 + (index // len(combinations)),
             tier=tier,
-            over_won=(index % 2 == 0) if over_won is None else over_won,
+            over_won=_ALTERNATION[index % len(_ALTERNATION)]
+            if over_won is None
+            else over_won,
             model_over=model_over,
             control_over=control_over,
         )
@@ -623,12 +660,22 @@ def test_the_interval_clusters_three_ways_and_the_athlete_arm_can_win():
         # sits on a different game and a different day — so the game and the day
         # arms see independent observations and only the athlete arm sees the
         # dependence.
+        #
+        # The day comes from the athlete AND the rung, over a span of 21. When
+        # it came from the rung alone every day received all forty athletes,
+        # twenty of each sign, so EVERY DAY TOTALLED EXACTLY ZERO — one distinct
+        # day total over the whole fixture. An arm with no variance between its
+        # clusters cannot be measured, and an unmeasurable arm is infinitely
+        # wide, so the day arm won the widest-of-three and this test's subject
+        # never got a look in. 21 rather than 20 because an even span puts the
+        # two athletes feeding a given day at the same parity, which balances
+        # the signs and flattens it all over again.
         sign = 1.0 if athlete % 2 == 0 else -1.0
         for rung in range(10):
             rows.append(
                 {
                     "event_id": f"E{athlete * 10 + rung}",
-                    "slate_date": f"2024-01-{(rung % 20) + 1:02d}",
+                    "slate_date": f"2024-01-{((athlete + rung) % 21) + 1:02d}",
                     "subject": f"player {athlete}",
                     "value": sign,
                 }
@@ -733,6 +780,13 @@ def test_the_far_ladder_is_unbenchmarked_whatever_its_interval_says(receipt):
         for rung, odds in enumerate((-105, -200, -300, -400, -500, -600, -700, -800)):
             rows += pair(
                 event=f"E{index % 40}",
+                # `pair` defaults every row to one date, so this fixture had a
+                # single day cluster and the day arm could not be measured at
+                # all — unmeasurable is infinitely wide, so it won the
+                # widest-of-three and the cell reported "not enough evidence"
+                # instead of the far-ladder verdict this test is about. 31 is
+                # over the thirty-cluster floor the report declares.
+                day=f"2024-01-{(index % 31) + 1:02d}",
                 player=f"Player {index}",
                 line=10.5 + rung,
                 over_odds=odds,

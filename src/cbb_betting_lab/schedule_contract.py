@@ -9,6 +9,13 @@ the test that proves the schedule works all read the same numbers. Raising
 :data:`OBSERVED_LATENESS_H` when GitHub gets worse is a one-line change that
 proves itself, because the test recomputes the whole table from it.
 
+**A landing is not a deadline.** Every deadline here is a landing plus
+:data:`CARD_LEAD_MINUTES`, because the tip guard the card actually runs
+quarantines any game tipping inside that lead and never writes it to the
+append-only store. This module declared that constant and then compared
+landings to tip hours as though it were zero, for its whole life — see
+:func:`freeze_bar_et_hour`, which is where the sixty minutes now live.
+
 The reasoning is in `docs/card_cadence.md`.
 """
 
@@ -35,11 +42,19 @@ EST_OFFSET_H = -5
 #: the same instant reads an hour LATER on an Eastern clock — 10:00 UTC is
 #: 05:00 EST on 2027-03-13 and 06:00 EDT on 2027-03-14. Later is the unsafe
 #: direction, toward the first tip, and at the worst observed lateness it moves
-#: the morning backup from 10:18 ET to 11:18 ET, past its 11:00 ET block. The
-#: morning primary (10:18 ET) and both evening triggers still hold. That gap is
-#: recorded rather than chased — the crons were not moved for it — and
+#: the morning backup from 10:18 ET to 11:18 ET, past its 11:00 ET block.
+#:
+#: This comment used to end "the morning primary (10:18 ET) and both evening
+#: triggers still hold", and that sentence was the same sixty-minute omission
+#: :func:`freeze_bar_et_hour` exists to close. A run landing at 10:18 cannot
+#: freeze an 11:00 tip: the tip guard quarantines it. Under EDT the morning
+#: primary therefore misses the 11:00 block too, and the evening backup lands
+#: 18:18 and cannot reach the 19:00 block it exists for. Those gaps are
+#: recorded rather than chased — the crons were not moved for them, and moving
+#: them is a workflow change — and
 #: `tests/test_the_card_schedule_survives_cron_lateness.py` pins the sign on
-#: those two instants and the gap as written.
+#: those two instants and the whole set of cells that cannot freeze their block
+#: as written.
 EDT_OFFSET_H = -4
 
 EASTERN = ZoneInfo("America/New_York")
@@ -76,6 +91,46 @@ def landing_et(cron_hour_utc: float, day: date, lateness_h: float = 0.0) -> floa
 #: which is what keeps that import acyclic.
 CARD_LEAD_MINUTES = 60
 
+#: The same lead in hours, because every landing in this module is an ET
+#: hour-of-day as a float. Derived from the minutes rather than typed again:
+#: two spellings of one number is how `gates` and this module came to hold 15
+#: and 60 in the first place.
+CARD_LEAD_H = CARD_LEAD_MINUTES / 60.0
+
+
+def freeze_bar_et_hour(landing_hour_et: float) -> float:
+    """The ET tip hour a run landing at `landing_hour_et` must beat to freeze.
+
+    **A landing is not a deadline, and this module treated it as one.** A game
+    is carded only if the tip guard calls it `UPCOMING`, and
+    `gates.IMMINENT_MINUTES` **is** :data:`CARD_LEAD_MINUTES`: `gates.tip_state`
+    returns `IMMINENT` for `delta <= IMMINENT_MINUTES`, `gates.can_be_played`
+    is true only for `UPCOMING`, and `reports/gameday_card.py._rows_to_freeze`
+    drops everything that is not playable *before* the rows reach
+    `forward_evidence.write_snapshot`. So a game inside the lead is not merely
+    unstaked — it is never written to the append-only store at all, and the
+    night it would have contributed cannot be rebuilt.
+
+    The earliest tip a run can freeze is therefore its landing plus the lead.
+    :meth:`CardSlot.holds` compared the bare landing to the block's tip hour
+    for this module's whole life, which made every slot sixty minutes more
+    comfortable than it is: the morning backup's recorded margin was "42 min",
+    which is *inside* the lab's own guard, and `holds()` went red at 6.0h
+    lateness when the real bar was already violated at 5.0h — below the 5.3h
+    being observed the day this was found.
+
+    Two deliberate choices:
+
+    * The caller compares with a strict `<`. A tip exactly on the bar is
+      `delta == IMMINENT_MINUTES`, which `tip_state` quarantines, so the bar is
+      a hour a tip must fall strictly after and not merely reach.
+    * The sum is **not** taken modulo 24, unlike the landings that feed it. A
+      landing at 23:30 should read 24.5 here and fail every `<` against a tip
+      hour; wrapping it to 00:30 would let a slot that lands tonight claim to
+      cover tomorrow morning. Fail closed on the one case nobody has a test for.
+    """
+    return landing_hour_et + CARD_LEAD_H
+
 
 @dataclass(frozen=True)
 class CardSlot:
@@ -85,8 +140,9 @@ class CardSlot:
     #: Nominal cron hours in UTC. Two of them: a primary and a backup an hour
     #: later, where the backup stands down if the primary published cleanly.
     cron_hours_utc: tuple[int, ...]
-    #: The ET hour this slot's games start at. The slot must land before it even
-    #: at worst-case lateness.
+    #: The ET hour this slot's games start at. The slot must land a full
+    #: :data:`CARD_LEAD_MINUTES` before it even at worst-case lateness — not
+    #: merely before it, see :func:`freeze_bar_et_hour`.
     must_precede_et_hour: int
     what: str
 
@@ -101,9 +157,37 @@ class CardSlot:
         backup = max(self.cron_hours_utc)
         return (backup + OBSERVED_LATENESS_H + offset_h) % 24
 
+    def worst_case_freeze_bar_et(self, offset_h: float = EST_OFFSET_H) -> float:
+        """The earliest tip the PRIMARY can still freeze, at worst lateness:
+        its landing plus the card lead. See :func:`freeze_bar_et_hour`."""
+        return freeze_bar_et_hour(self.worst_case_landing_et(offset_h))
+
+    def backup_worst_case_freeze_bar_et(self, offset_h: float = EST_OFFSET_H) -> float:
+        """The earliest tip the BACKUP can still freeze, at worst lateness."""
+        return freeze_bar_et_hour(self.backup_worst_case_landing_et(offset_h))
+
+    def primary_holds(self, offset_h: float = EST_OFFSET_H) -> bool:
+        """True when the primary trigger can still freeze the block's first tip.
+
+        The weaker of the two promises, and the only one the morning slot keeps
+        under EST. It is stated separately because the backup exists precisely
+        for the day the primary was dropped, so "the primary holds" is not a
+        substitute for "the slot holds" — it is the smaller thing that is true.
+        """
+        return self.worst_case_freeze_bar_et(offset_h) < self.must_precede_et_hour
+
     def holds(self, offset_h: float = EST_OFFSET_H) -> bool:
-        """True when even the backup trigger lands before its block starts."""
-        return self.backup_worst_case_landing_et(offset_h) < self.must_precede_et_hour
+        """True when even the backup trigger can still FREEZE the block's first
+        tip — landing plus :data:`CARD_LEAD_MINUTES`, not the bare landing.
+
+        This method asked `backup_worst_case_landing_et(offset_h) <
+        must_precede_et_hour` until 2026-09-15, with no lead term, twenty-seven
+        lines below the constant that defines the lead. Three of the four
+        slot/offset cells it passed cannot in fact freeze the block they name,
+        and the uncardable share the repository had recorded off the same
+        omission (0.05%) understated the real one (0.59%) by eighteen times.
+        """
+        return self.backup_worst_case_freeze_bar_et(offset_h) < self.must_precede_et_hour
 
 
 #: 11:00 ET is the earliest tip in a full season (3 games); 12:00 ET is the

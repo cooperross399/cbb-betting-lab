@@ -334,13 +334,44 @@ jobs:
             exit 1
           }
           echo "feed=restored" >> "$GITHUB_OUTPUT"
-          TMP=$(mktemp)
-          if git show refs/card-feed-tip:forward_evidence.csv > "$TMP" 2>/dev/null && [ -s "$TMP" ]; then
-            mv "$TMP" data/processed/cbb_forward_evidence.csv
-            echo "Ledger restored: $(( $(wc -l < data/processed/cbb_forward_evidence.csv) - 1 )) rows."
+          # "THE TIP HOLDS NO LEDGER" AND "I COULD NOT READ THE LEDGER" ARE
+          # DIFFERENT FACTS TOO, and this is the same conflation the block
+          # above refuses for `ls-remote` against `fetch`, one level down. The
+          # else below printed `No ledger on card-feed yet.` whether the tree
+          # genuinely held no ledger — the legitimate first run — or held one
+          # whose blob could not be read, and the step exited 0 either way
+          # with `feed=restored` already written. With no local ledger,
+          # `settle_snapshots` finds no settled day (the `.settled` markers
+          # are runner-local, so the ledger's `snapshot_date` set is the only
+          # surviving source of "this day is done"), re-grades every snapshot
+          # in the archive against today's tables, and `append_ledger` reads
+          # `before = 0` so its own shrink refusal cannot fire. The publish
+          # step then adds that rebuilt file, because its carry-forward `elif`
+          # fires only on ABSENCE and the file is there. The season comes back
+          # with today's `settled_at` on every row — which is exactly the
+          # quantity `_hold_days` differences — and any day whose snapshot did
+          # not restore loses its rows outright. So the tree is asked whether
+          # it HOLDS a ledger, with `git cat-file -e`, before anything tries
+          # to read one, and a read that then fails refuses rather than
+          # proceeding on an empty season. This is defect H
+          # (`docs/ported_defects.md`) in the branch layer: an unreadable
+          # thing must never be settled as an empty one.
+          if git cat-file -e refs/card-feed-tip:forward_evidence.csv 2>/dev/null; then
+            TMP=$(mktemp)
+            if git show refs/card-feed-tip:forward_evidence.csv > "$TMP" 2>"$GIT_ERROR" && [ -s "$TMP" ]; then
+              mv "$TMP" data/processed/cbb_forward_evidence.csv
+              echo "Ledger restored: $(( $(wc -l < data/processed/cbb_forward_evidence.csv) - 1 )) rows."
+            else
+              rm -f "$TMP"
+              echo "ledger=unreadable" >> "$GITHUB_OUTPUT"
+              sed -e 's|x-access-token:[^@]*@|x-access-token:***@|g' "$GIT_ERROR" >&2
+              echo "::error::card-feed HOLDS forward_evidence.csv and this run could not read it — and an empty read is a failed read, because a zero-byte ledger is what a run killed mid-write leaves. That is not an empty season. Settling against no ledger would re-grade the whole archive and republish it, so nothing is published."
+              printf '## Not published\n\nThe card-feed tip holds a forward ledger this run could not read. A rebuilt ledger would stamp rows settled months ago with the settlement time of this run, and the prices they were frozen at are gone. Nothing was pushed; the tip stands.\n' >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
           else
-            rm -f "$TMP"
-            echo "No ledger on card-feed yet."
+            echo "ledger=none" >> "$GITHUB_OUTPUT"
+            echo "No ledger on card-feed yet: the tip holds no forward_evidence.csv at all (git cat-file -e). That is a first run on this branch, not a ledger that could not be read."
           fi
           for path in $(git ls-tree -r --name-only refs/card-feed-tip snapshots/ 2>/dev/null); do
             TMP=$(mktemp)
@@ -768,7 +799,43 @@ jobs:
           git push "$REMOTE" "$COMMIT:refs/heads/card-feed"
           echo "card-feed updated for $DAY / $SLOT (decision: $DECISION, degraded: $DEGRADED)."
 
-      - name: Upload the reports and the frozen opinions
+      # THE FULL BOARD LEAVES THE RUNNER OR IT DOES NOT EXIST ANYWHERE.
+      # `run_gameday_card.py` writes every book's quote for every market it
+      # fetched to `data/staging/`, and the freeze keeps ONE row per wager at
+      # the best price — so every other book's quote for the night lived only
+      # there. It was in neither the publish step's file list nor this path
+      # list, nothing under `src/` or `scripts/` ever reads the directory back
+      # (`GC.read_staged_board` runs only behind an operator's
+      # `--staged-board`), and so its deletion at runner teardown had no
+      # reader to fail: the card printed the path it had been written to, the
+      # runner went away, and the file was gone from every machine, on a green
+      # run.
+      #
+      # THE NIGHT IT COSTS MOST IS THE ONE THE CODE MOST WANTS IT. When the
+      # per-event stage hits the credit cap, `_rows_to_freeze` withholds every
+      # non-bulk market from the ledger on purpose — a tip-ordered prefix is a
+      # biased subset wearing the name of a night — on the stated grounds that
+      # those rows "are staged". On such a night the purchased ladder, half
+      # and prop quotes were withheld from the ledger AND deleted from disk in
+      # the same run, and existed nowhere.
+      #
+      # AN ARTIFACT AND NOT THE FEED, deliberately, and this is the honest
+      # version of the claim rather than the maximal one. Staged rows are
+      # unreviewed provider data whose only protection is that they live where
+      # the card cannot read them (`providers/staging.write_staged` refuses
+      # every other destination), and `card-feed` is the DELIVERY ref — the
+      # one a relay copies into Cooper's Drive. Putting them there would carry
+      # unreviewed rows into the delivery path and would grow, by a whole
+      # slate's board twice a night, a branch every run shallow-fetches. The
+      # bought historical responses are persisted exactly this way and for the
+      # same reason (`historical-purchase.yml`). What this buys is a retention
+      # window rather than a permanent home; the registered evidence — the
+      # ledger and the frozen snapshots — is what lives on the branch forever.
+      # Nothing here stages a working tree: `git add -A` on this tree is how a
+      # credential reaches a ref, and the staged CSV reaches an ARTIFACT, over
+      # a fixed 13-column projection (`providers/staging.STAGED_COLUMNS`) that
+      # carries no provider payload and no header.
+      - name: Upload the reports, the frozen opinions and the full board
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -777,6 +844,7 @@ jobs:
             data/outputs/
             data/processed/cbb_forward_evidence.csv
             data/archive/priced_snapshots/
+            data/staging/
           if-no-files-found: warn
           retention-days: 90
 

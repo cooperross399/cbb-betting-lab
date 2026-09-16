@@ -1,4 +1,8 @@
 .venv/
+# Tool-generated agent worktrees. Untracked and inside the repo, so a
+# `git add -A` from any session would sweep a whole second checkout into a
+# commit — which is how a records-corrupting commit happened here before.
+.claude/
 __pycache__/
 *.pyc
 .pytest_cache/

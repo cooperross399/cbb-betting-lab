@@ -62,21 +62,95 @@ jobs:
       # money buys it back — the historical archive serves one snapshot per
       # event, not the minute-by-minute board. So it is restored from the ref
       # before every capture and published back after.
+      #
+      # "THE BRANCH DOES NOT EXIST" AND "I COULD NOT ASK" ARE DIFFERENT FACTS.
+      # This step used to read both as the first. `if git fetch ...; else echo
+      # "No line-movement ref yet"` swallowed a DNS blip, a 5xx and a token
+      # fault into the one branch that means "nothing has ever been captured",
+      # exited 0, and left the capture to build a store holding only its own
+      # rows. `stores.append`'s shrink guard cannot fire on that: it reads
+      # `before` off a file that is not there and gets zero. The publish step
+      # then fetched AGAIN seconds later, usually successfully, parented on
+      # the real tip, and pushed the one-capture tree over the season as an
+      # ordinary fast-forward. A green run, "3,412 new rows" in the log, and
+      # months of four-a-day captures gone. Only the case where the FIRST
+      # fetch fails and the second succeeds destroys anything, and that was
+      # the one case with no guard — when both failed, the parentless push was
+      # already rejected, loudly.
+      #
+      # So the ref is asked for BY NAME first: `git ls-remote --exit-code`
+      # exits 2 when the ref is absent (the legitimate first capture) and
+      # anything else when the remote could not be asked, and only the 2 may
+      # mean "no branch yet". Any other status fails this step, so the capture
+      # never spends a credit without its history, and the publish step reads
+      # this step's outcome and refuses. `cbb-gameday-refresh.yml` has run
+      # this discipline since the football lab's guard failed open on an
+      # unauthenticated fetch (defect 18 in `docs/ported_defects.md`); it
+      # belonged here too and was not ported.
+      #
+      # TEMP-THEN-MOVE, EVERY TIME, and `git cat-file -e` BEFORE the read.
+      # `git show X > file` creates the file even when the show fails (defect
+      # 16), and a tip that HOLDS a store this run could not read must not
+      # print what a tip with no store yet prints.
       - name: Restore the capture store
+        id: restore
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
           mkdir -p data/processed
-          REMOTE="https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}"
-          if git fetch --depth=1 "$REMOTE" +refs/heads/line-movement:refs/lm-tip 2>/dev/null; then
-            TMP=$(mktemp)
-            if git show refs/lm-tip:cbb_line_movement.csv > "$TMP" 2>/dev/null && [ -s "$TMP" ]; then
-              mv "$TMP" data/processed/cbb_line_movement.csv
-              echo "Restored $(wc -l < data/processed/cbb_line_movement.csv) lines."
-            else
-              echo "The ref exists but holds no store yet."
-            fi
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}"
+          # GIT'S OWN MESSAGE IS THE DIAGNOSIS, SO IT IS KEPT. It is captured
+          # here and replayed on every refusal below, with any credential in a
+          # URL blanked first: git strips the userinfo out of the URL it
+          # prints, and nothing here depends on it doing so. The one run that
+          # ever takes these paths is the run that needs the reason.
+          GIT_ERROR=$(mktemp)
+          LISTED=0
+          git ls-remote --exit-code "$REMOTE" refs/heads/line-movement >/dev/null 2>"$GIT_ERROR" || LISTED=$?
+          case "$LISTED" in
+            0) ;;
+            2)
+              echo "store=absent" >> "$GITHUB_OUTPUT"
+              echo "::warning::The remote has no line-movement branch (git ls-remote exit 2). This is the first capture. If it is not, the whole capture history is gone."
+              exit 0
+              ;;
+            *)
+              echo "store=unreachable" >> "$GITHUB_OUTPUT"
+              sed -e 's|x-access-token:[^@]*@|x-access-token:***@|g' "$GIT_ERROR" >&2
+              echo "::error::Could not ask the remote whether line-movement exists (git ls-remote exit $LISTED). That is a fetch failure, not an absent branch: this run holds no capture history and will publish nothing. git's own message is above."
+              {
+                echo "## Not published"
+                echo
+                echo "The line-movement branch could not be read (\`git ls-remote\` exit $LISTED). A capture that cannot read the store does not write it: a tree built without the season's captures would replace them, and the prices in them are gone. Nothing was pushed; the tip stands."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+              ;;
+          esac
+          git fetch --depth=1 "$REMOTE" +refs/heads/line-movement:refs/lm-tip 2>"$GIT_ERROR" || {
+            echo "store=unreachable" >> "$GITHUB_OUTPUT"
+            sed -e 's|x-access-token:[^@]*@|x-access-token:***@|g' "$GIT_ERROR" >&2
+            echo "::error::line-movement exists but could not be fetched (git's own message is above). This run holds no capture history and will publish nothing."
+            printf '## Not published\n\nThe line-movement branch exists but could not be fetched. Nothing was pushed; the tip stands.\n' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          }
+          if ! git cat-file -e refs/lm-tip:cbb_line_movement.csv 2>/dev/null; then
+            echo "store=empty" >> "$GITHUB_OUTPUT"
+            echo "The ref exists and holds no store yet; this is the first capture on it."
+            exit 0
+          fi
+          TMP=$(mktemp)
+          if git show refs/lm-tip:cbb_line_movement.csv > "$TMP" 2>"$GIT_ERROR" && [ -s "$TMP" ]; then
+            mv "$TMP" data/processed/cbb_line_movement.csv
+            echo "store=restored" >> "$GITHUB_OUTPUT"
+            echo "Restored $(wc -l < data/processed/cbb_line_movement.csv) lines."
           else
-            echo "No line-movement ref yet; this is the first capture."
+            rm -f "$TMP"
+            echo "store=unreadable" >> "$GITHUB_OUTPUT"
+            sed -e 's|x-access-token:[^@]*@|x-access-token:***@|g' "$GIT_ERROR" >&2
+            echo "::error::The line-movement tip HOLDS cbb_line_movement.csv and this run could not read it — and an empty read is a failed read, because a zero-byte store is what a run killed mid-write leaves. That is not a first capture. Nothing will be published."
+            printf '## Not published\n\nThe line-movement tip holds a store this run could not read. Publishing on top of nothing would replace every capture before this one. Nothing was pushed; the tip stands.\n' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
           fi
 
       - name: Capture
@@ -91,19 +165,63 @@ jobs:
           python scripts/capture_line_movement.py $FLAGS | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Publish to the line-movement branch
+        # EVERY RUN THAT READ THE STORE PUBLISHES, including one whose capture
+        # died, because a capture that wrote rows before it died wrote
+        # evidence. The one exception is the first check inside: a run whose
+        # restore step did not succeed did not read the store, holds nothing
+        # to publish on top of, and refuses.
+        #
+        # Every push parents on the tip that was just fetched, so it is always
+        # a fast-forward and never a force.
+        id: publish
         if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
+          # A RUN THAT COULD NOT READ THE STORE DOES NOT WRITE IT. The restore
+          # step fails when the remote could not be asked for line-movement
+          # (as opposed to answering that it does not exist yet), and a run
+          # that died before that step holds nothing either. The tree below is
+          # built from local files, so publishing here would publish the
+          # absence of every capture before this one. Refused before any git
+          # call, and the summary says why.
+          if [ "${{ steps.restore.outcome }}" != "success" ]; then
+            echo "::error::The capture store was not restored this run (restore step outcome: ${{ steps.restore.outcome }}). Nothing was published; the line-movement tip stands."
+            printf '## Not published\n\nThe restore step did not succeed (outcome: %s), so this run holds no capture history to publish on top of. Nothing was pushed to line-movement.\n' "${{ steps.restore.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
           [ -f data/processed/cbb_line_movement.csv ] || {
             echo "No store to publish. Nothing was captured."
             exit 0
           }
-          REMOTE="https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}"
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}"
           git fetch --depth=1 "$REMOTE" +refs/heads/line-movement:refs/lm-tip 2>/dev/null || true
           PARENT=""
           if git rev-parse --verify -q refs/lm-tip >/dev/null; then
             PARENT=$(git rev-parse refs/lm-tip)
           fi
+          # THE FLOOR COMES FROM THE TIP, NEVER FROM A NUMBER WRITTEN HERE.
+          # The store is append-only, so a tree carrying FEWER lines than the
+          # tip already holds is not a capture, it is a loss — whatever the
+          # steps above believed about their own health. `stores.append` has
+          # this refusal and cannot make it here: it reads `before` off the
+          # local file, and the failure being guarded against is the local
+          # file not being there at all, which reads as zero. So the count is
+          # read back off the ref that is about to be overwritten, seconds
+          # before the push, and a shorter tree is refused rather than
+          # fast-forwarded over the season.
+          TIP_STORE=$(mktemp)
+          if [ -n "$PARENT" ] && git show refs/lm-tip:cbb_line_movement.csv > "$TIP_STORE" 2>/dev/null; then
+            TIP_LINES=$(wc -l < "$TIP_STORE")
+            NEW_LINES=$(wc -l < data/processed/cbb_line_movement.csv)
+            if [ "$NEW_LINES" -lt "$TIP_LINES" ]; then
+              echo "::error::Refusing to publish a store of $NEW_LINES line(s) over a tip holding $TIP_LINES. This store is append-only and cannot be rebuilt, so a shorter one means this run lost captures rather than adding any. Nothing was pushed; the tip stands."
+              printf '## Not published\n\nThe local store holds %s line(s) and the line-movement tip holds %s. The capture store is append-only, so a shorter tree is a loss and not a capture. Nothing was pushed; the tip stands.\n' "$NEW_LINES" "$TIP_LINES" >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+          fi
+          rm -f "$TIP_STORE"
           # PLUMBING ONLY, and each file named. The working tree holds staged
           # prices and cached feeds; `git add -A` on it is how a credential
           # reaches a ref.

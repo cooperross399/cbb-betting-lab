@@ -106,6 +106,17 @@ class Feed:
 
 
 #: The feeds this lab reads. Each verified by fetching it on 2026-09-01.
+
+#: Schedule statuses that are not a game anybody could have carded or frozen.
+#: A postponed or cancelled fixture is ON the schedule and is not on that
+#: night's slate, so counting it manufactures a missing night that was never
+#: played. Lives here, beside the feed whose column it describes, because both
+#: the card (which asks "did the board match the schedule?") and the settle
+#: pass (which asks "is a night missing from the archive?") need it, and
+#: `reports.gameday_card` already imports `forward_evidence` — a constant in
+#: either of those two would have to be copied into the other.
+NOT_PLAYED_STATUSES = ("STATUS_POSTPONED", "STATUS_CANCELED", "STATUS_CANCELLED")
+
 FEEDS: dict[str, Feed] = {
     "schedules": Feed(
         name="schedules",

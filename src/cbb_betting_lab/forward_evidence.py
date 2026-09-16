@@ -184,6 +184,7 @@ from cbb_betting_lab.competitions import CBB, Competition
 from cbb_betting_lab.conferences import Tier
 from cbb_betting_lab.config import DATA_DIR
 from cbb_betting_lab.models import player_census
+from cbb_betting_lab.data import hoopr
 from cbb_betting_lab.providers import player_names
 from cbb_betting_lab.selection import (
     AWAY,
@@ -369,6 +370,49 @@ def snapshot_files(archive_dir: Path | str) -> list[Path]:
     return sorted(p for p in directory.glob("*.csv") if p.is_file())
 
 
+def nights_missing_from_the_archive(
+    archive_dir: Path | str, schedule: "pd.DataFrame | None"
+) -> tuple[str, ...]:
+    """Nights the schedule says were played and the archive holds no snapshot for.
+
+    **THE ONLY ALARM FOR AN UNFROZEN NIGHT WAS DEAD FROM THE SECOND NIGHT OF
+    THE SEASON.** `SettlementResult.summary_line` says "0 snapshots found.
+    Nothing was frozen ... Check that the freeze step ran" — and it fires on
+    `not snapshots_seen`, which counts every snapshot in the archive the
+    workflow just restored from `card-feed`, not last night's. Once one night
+    is in there the branch is unreachable, and a Tuesday with 200 games and no
+    snapshot prints the same "42 snapshots seen, 42 settled, 0 waiting" line a
+    healthy run prints.
+
+    Nothing else looked either. A scheduled run that never fires leaves no
+    workflow run, so no step fails, so the job that turns a bad night red never
+    executes — the lab going quiet and the lab having nothing to say are the
+    same artefact. This is the number that tells them apart, and like the
+    card's own contradiction guard it comes from the cached schedule rather
+    than from the price provider.
+
+    **Bounded to the archive's own span, deliberately.** Only days between the
+    first and last snapshot are checked. The season ahead is not missing, it has
+    not happened; and nights before the pipeline existed were never owed. A
+    guard that reports every unplayed night as a gap gets switched off in
+    November, and then it is not there in January.
+
+    `None` schedule returns `()`: unknown is not zero, the same rule the card
+    keeps for an uncached schedule.
+    """
+    frozen = {path.stem for path in snapshot_files(archive_dir)}
+    if not frozen or schedule is None or schedule.empty:
+        return ()
+    if "game_date" not in schedule.columns:
+        return ()
+    played = schedule
+    if "status_type_name" in played.columns:
+        played = played[~played["status_type_name"].isin(hoopr.NOT_PLAYED_STATUSES)]
+    days = set(played["game_date"].astype("string").str.slice(0, 10).dropna())
+    first, last = min(frozen), max(frozen)
+    return tuple(sorted(d for d in days if first < d < last and d not in frozen))
+
+
 def _valid_day(value: object) -> str:
     text = str(value or "").strip()
     try:
@@ -450,6 +494,26 @@ def _blank(value: object) -> object:
 # --------------------------------------------------------------------------
 # Stage one: freeze
 # --------------------------------------------------------------------------
+
+
+def _side_of(row: SimpleNamespace) -> tuple:
+    """The bet a row is about, with the NUMBER left out.
+
+    `key_for` is injected and its tuple shape belongs to `selection.py`, so this
+    is built from the normalised row instead of by indexing into a key whose
+    layout this module does not own. Everything that identifies *which side of
+    which market on which game* is here; the line and the price are not, because
+    they are precisely what moves between the morning and evening slots.
+
+    One snapshot file is one slate day, so the day does not need to be in it.
+    """
+    return (
+        row.event_id,
+        row.market,
+        row.segment,
+        row.player,
+        row.selection,
+    )
 
 
 def _frozen_row(record: Mapping) -> SimpleNamespace:
@@ -564,11 +628,21 @@ def write_snapshot(
     verdict_text = _verdict_text(verdicts_in_force)
 
     stood = target.is_file()
-    existing = stores.read_store(target, columns=SNAPSHOT_COLUMNS)
+    # `for_append=True`, and the reason is this function. A lenient read returns
+    # an EMPTY frame when the standing snapshot cannot be parsed — and 80 lines
+    # below, `combined = frame if existing.empty else concat(...)` then writes
+    # the evening's rows ALONE over the morning's. A damaged snapshot was not
+    # repaired by that, it was deleted, and the publish step pushed the short
+    # file over `snapshots/<day>.csv` on card-feed, which is the only copy.
+    # `read_store`'s own docstring describes this failure exactly; the tool was
+    # here and this caller was the one that did not use it.
+    existing = stores.read_store(target, columns=SNAPSHOT_COLUMNS, for_append=True)
     already: set = set()
+    already_sides: set = set()
     for record in existing.to_dict("records"):
+        frozen = _frozen_row(record)
         try:
-            already.add(key_for(_frozen_row(record)))
+            already.add(key_for(frozen))
         except Exception as exc:  # noqa: BLE001 - re-raised, never swallowed
             raise SnapshotKeyError(
                 f"A row already frozen in {target.name} cannot be re-keyed by "
@@ -576,13 +650,37 @@ def write_snapshot(
                 "run cannot tell an unfrozen game from a re-price, and the "
                 "first opinion of the day for a game is never replaced."
             ) from exc
+        already_sides.add(_side_of(frozen))
 
     rows: list[dict] = []
     seen_this_run: set = set()
     for record in _records(prices):
         row = _frozen_row(record)
         key = key_for(row)
-        if key in already or key in seen_this_run:
+        # TWO PREDICATES, AND THEY ARE NOT THE SAME PREDICATE.
+        #
+        # Within one run, one side legitimately appears at several numbers:
+        # `best_price_per_wager` collapses BOOKS, not lines, because a bet at
+        # -3.5 and a bet at -4.5 settle differently on a four-point win. Those
+        # are two simultaneously takeable bets and both are real. So the
+        # within-run test stays on the full key, line included.
+        #
+        # ACROSS slots it is the same bet seen seven hours apart, and the rule
+        # every document states is about the GAME: "the evening slot freezes
+        # games the morning slot did not, and may never re-price one it did."
+        # The full key carries the line (`selection_key`'s seventh element), so
+        # testing the standing snapshot with it meant a half-point move made the
+        # key differ and the side was frozen a second time — with an `edge`
+        # recomputed on an information set that now includes the market's own
+        # move. That is not a re-price, it is a second attempt at clearing the
+        # bet threshold, and both rows settle and both enter the ROI. Which
+        # games get two rows is decided by whether the number moved, so the
+        # population is movement-selected as well as double-weighted.
+        #
+        # Every test of this rule used a moneyline, whose line is None and whose
+        # key therefore cannot change when the price moves — the one market in
+        # the catalogue structurally immune to the bug the tests were guarding.
+        if _side_of(row) in already_sides or key in seen_this_run:
             continue
         seen_this_run.add(key)
 
@@ -721,6 +819,15 @@ class SettlementResult:
     #: them without listing them again. A field added to this dataclass and not
     #: to this tuple would silently stop being rolled back on a waiting day,
     #: which is the defect this exists to close returning by another door.
+    #:
+    #: `settlement_errors` was exactly that field. It is incremented on the same
+    #: speculative pass as the rest — inside `_call_settle` — and it was the one
+    #: the warning above describes and the list below omitted. A day that both
+    #: raised inside `settle` AND ended up waiting rolled the row counters back
+    #: and kept the error, so `Reconciliation.of` computed a NEGATIVE
+    #: `rows_unsettleable_other` and failed the run on a break that never
+    #: happened. The counter that catches the catastrophe is worthless if it
+    #: also cries on a healthy night.
     ROW_COUNTERS: ClassVar[tuple[str, ...]] = (
         "rows_settled",
         "rows_void",
@@ -728,7 +835,9 @@ class SettlementResult:
         "rows_without_a_price",
         "rows_without_a_fixture",
         "rows_ambiguous_player",
+        "rows_unresolved_player",
         "rows_futures_deferred",
+        "settlement_errors",
     )
 
     snapshots_seen: int = 0
@@ -745,6 +854,12 @@ class SettlementResult:
     rows_without_a_fixture: int = 0
     #: Player rows whose name matched more than one athlete on the two teams.
     rows_ambiguous_player: int = 0
+    #: Player rows whose name matched NO athlete on either roster. Kept apart
+    #: from `rows_ambiguous_player` and from `rows_void` because it is a third
+    #: state: the lab could not read the name, which is not the same as reading
+    #: it and finding he never entered. `build_index` keeps did-not-play rows
+    #: precisely so those two can stay different.
+    rows_unresolved_player: int = 0
     #: Futures, which settle on the tournament months later and are deferred
     #: here rather than guessed. Never described as a pass or an avoid.
     rows_futures_deferred: int = 0
@@ -808,6 +923,12 @@ class SettlementResult:
             reasons.append(
                 f"{self.rows_ambiguous_player:,} named more than one athlete on "
                 "the two teams (ambiguous, never a coin flip)"
+            )
+        if self.rows_unresolved_player:
+            reasons.append(
+                f"{self.rows_unresolved_player:,} named a player who resolves to "
+                "nobody on either team's box score; an unresolved name is "
+                "unknown, not a did-not-play, so it is never a void"
             )
         if self.rows_futures_deferred:
             reasons.append(
@@ -1217,14 +1338,34 @@ def _settle_row(
                 settled_at,
             )
         if not candidates:
-            decided = Settled(
-                Outcome.VOID,
-                None,
-                f"{row.player!r} does not appear in this game's box score, so "
-                "he never entered the game",
+            # AN UNRESOLVED NAME IS UNKNOWN, NOT A DID-NOT-PLAY.
+            #
+            # `build_index` keeps `did_not_play` rows on purpose, and says so:
+            # they are how a player who was on the roster and never entered
+            # reaches the guard and comes back VOID. So zero candidates cannot
+            # mean "he did not play" — it means this lab could not read the
+            # name. The two are a different verdict and a different counter,
+            # and the note written here asserted the first while observing the
+            # second: a claim about a player's status that the lab does not
+            # have, written permanently into an append-only ledger at profit
+            # 0.0. `normalise_person` measures how often that happens — 763 of
+            # 9,584 (game, player) pairs, 7.96%, because the provider hangs a
+            # team tag on a name, writes initialisms apart or together, and
+            # drops apostrophes ESPN keeps.
+            #
+            # The backtest was corrected for this (defect X) and the ledger path
+            # was not. The test that bans the sentence read only the backtest
+            # script's source, so the string stayed alive over here where it
+            # does permanent damage rather than re-runnable damage.
+            result.rows_unsettleable += 1
+            result.rows_unresolved_player += 1
+            return _unsettleable(
+                record,
+                f"{row.player!r} resolves to nobody on either team's box score. "
+                "An unresolved name is unknown, not a did-not-play, so it is "
+                "never a void",
+                settled_at,
             )
-            result.rows_void += 1
-            return _ledger_row(record, decided, settled_at)
         player_row = candidates[0]
 
     return _record_outcome(
@@ -1296,9 +1437,20 @@ def _record_outcome(
 # --------------------------------------------------------------------------
 
 
-def _row_counter_snapshot(result: "SettlementResult") -> dict[str, int]:
-    """The row counters as they stand, for restoring after a waiting day."""
-    return {name: getattr(result, name) for name in SettlementResult.ROW_COUNTERS}
+def _row_counter_snapshot(result: "SettlementResult") -> dict[str, object]:
+    """The row counters as they stand, for restoring after a waiting day.
+
+    Dict-valued counters are COPIED. `settlement_errors` is a mapping, and
+    saving the live object would save a reference to the very thing the
+    speculative pass is about to mutate — a rollback that restores the mutated
+    dict onto itself, which looks exactly like a rollback and is not one.
+    """
+    return {
+        name: dict(value) if isinstance(value, dict) else value
+        for name, value in (
+            (name, getattr(result, name)) for name in SettlementResult.ROW_COUNTERS
+        )
+    }
 
 
 def _restore_row_counters(result: "SettlementResult", saved: dict[str, int]) -> None:
@@ -1319,7 +1471,7 @@ def _restore_row_counters(result: "SettlementResult", saved: dict[str, int]) -> 
     rather than derived from the numbers it is checking.
     """
     for name, value in saved.items():
-        setattr(result, name, value)
+        setattr(result, name, dict(value) if isinstance(value, dict) else value)
 
 
 def read_ledger(path: Path | str) -> pd.DataFrame:
@@ -1666,6 +1818,7 @@ def render_ledger(
     settlement_suspects: frozenset = frozenset(),
     bet_threshold: float = BET_EDGE_THRESHOLD,
     competition: Competition = CBB,
+    excluded_note: str = "",
 ) -> str:
     """The forward-evidence report, per market **and** per tier.
 
@@ -1723,6 +1876,14 @@ def render_ledger(
     add = lines.append
     add("# Forward evidence")
     add("")
+    if excluded_note:
+        # AT THE TOP, IN THE DOCUMENT, not only on the run's stderr. This file
+        # is what the publish step pushes to `card-feed` and what a relay copies
+        # into Drive; a caveat that lives only in a log reaches nobody who reads
+        # the report. A market excluded from every interval below has to be
+        # named where the intervals are read.
+        add(f"> **Markets excluded from this report.** {excluded_note}")
+        add("")
     add(
         "**Forward evidence cannot be back-dated.** Historical prices can be "
         "bought at any time; a night the pipeline did not freeze and settle is "
@@ -2103,6 +2264,7 @@ def write_report(
     settlement_suspects: frozenset = frozenset(),
     bet_threshold: float = BET_EDGE_THRESHOLD,
     competition: Competition = CBB,
+    excluded_note: str = "",
 ) -> tuple[Path, Path]:
     """Write both renders of the report. Returns `(markdown, json)`."""
     directory = Path(output_dir)
@@ -2117,6 +2279,7 @@ def write_report(
             settlement_suspects=settlement_suspects,
             bet_threshold=bet_threshold,
             competition=competition,
+            excluded_note=excluded_note,
         ),
         encoding="utf-8",
     )
