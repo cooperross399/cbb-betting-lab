@@ -47,11 +47,20 @@ stability. The instrument that WILL answer it is `line-movement.yml`, which
 captures the board four times a day and holds nothing yet because it is the
 off-season.
 
-**Why this matters now.** It is the difference between "one snapshot a day is a
+**Why this matters.** It is the difference between "one snapshot a day is a
 cheaper cadence" and "one snapshot a day is a smaller sample". It is the
 former: the stopping rule's floor of 10,000 opinions across 2,000 games is
 about reach, and reach is ~100% either way. The cost of halving the cadence is
 worse prices on late games, of unknown size, measurable from November.
+
+**The lab runs TWO slots.** This measurement was taken while deciding whether
+to halve the cadence for credit reasons; the card was dropped to one slot on
+2026-09-16 and put back the same day, because the premise behind it — that the
+provider balance never refills — was wrong and `docs/credit_cost.md` now says
+so. The measurement stands on its own: it is what the second slot buys, and the
+answer is price quality on late tips rather than reach. It is kept because the
+question returns whenever the budget is tight, and the answer should not have
+to be re-derived under pressure.
 
 A single freeze at 09:00 ET would price the 23:00 ET games fourteen hours out —
 before the board is meaningfully formed for most of them, and long before any
