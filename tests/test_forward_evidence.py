@@ -34,6 +34,7 @@ import pytest
 import cbb_betting_lab.settlement  # noqa: E402,F401  (an ImportError here is a failure, never a skip)
 
 from cbb_betting_lab import forward_evidence as fe  # noqa: E402
+from cbb_betting_lab import markets as markets_registry  # noqa: E402
 from cbb_betting_lab import stats, stores  # noqa: E402
 from cbb_betting_lab.competitions import CBB  # noqa: E402
 from cbb_betting_lab.conferences import Tier  # noqa: E402
@@ -1910,3 +1911,90 @@ def test_an_absent_schedule_reports_no_gap_rather_than_every_night(tmp_path):
 
     assert fe.nights_missing_from_the_archive(tmp_path, None) == ()
     assert fe.nights_missing_from_the_archive(tmp_path, pd.DataFrame()) == ()
+
+
+# --------------------------------------------------------------------------
+# The provider and ESPN disagree about who is home
+# --------------------------------------------------------------------------
+
+
+def test_a_neutral_site_wager_settles_for_the_team_the_provider_named(tmp_path):
+    """The defect that graded a third of early-season neutral games as the
+    opponent's bet.
+
+    `home` in a selection means the team the PRICE PROVIDER designated home.
+    `home_away` in the results table means the team ESPN designated home. On a
+    neutral court that designation is a convention, not a fact, and the two
+    sources disagree — measured on the bought store by regressing actual margin
+    on the negated staged home line, which is 1.0 when nobody flips:
+
+        non-neutral      slope 1.0069   flips  -0.3%   n=27,609
+        neutral, March   slope 0.9885   flips   0.6%   n= 1,991
+        neutral, Nov-Dec slope 0.2776   flips  36.1%   n= 1,986
+
+    March is the control that proves the method rather than the sport: a
+    bracket fixes the designation and the disagreement vanishes.
+
+    Here ESPN calls Butler the home team and the provider calls Purdue home.
+    The wager is Purdue -3.5; Purdue won by 10 and covers. Settled from ESPN's
+    home row it reads Butler's -10, comes back LOST, and is written permanently
+    into an append-only ledger with every number plausible.
+    """
+    espn = team_games()
+    # ESPN's labels, inverted for game 1 only. The scores do not move: this is
+    # a disagreement about designation, not about what happened.
+    flipped = espn.copy()
+    mask = flipped["game_id"] == 1
+    flipped.loc[mask, "home_away"] = flipped.loc[mask, "home_away"].map(
+        {"home": "away", "away": "home"}
+    )
+
+    wager = price(market="spread", selection="home", line=-3.5, odds=-110)
+    freeze(tmp_path, [wager], {})
+    result = fe.settle_snapshots(
+        archive_dir=tmp_path,
+        ledger_path=tmp_path / fe.LEDGER_FILENAME,
+        team_games=flipped,
+        player_games=player_games(),
+        game_segments=game_segments(),
+        team_index=team_index(),
+        now=NOW,
+    )
+
+    assert result.rows_settled == 1, (
+        f"the wager did not settle at all: {result.summary_line()}"
+    )
+    ledger = fe.read_ledger(tmp_path / fe.LEDGER_FILENAME)
+    assert ledger["outcome"].iloc[0] == Outcome.WON.value, (
+        "Purdue -3.5 won by 10 and was graded from Butler's row, so the margin "
+        "came back negated and the bet settled as the opponent's"
+    )
+
+
+def test_a_side_wager_whose_team_cannot_be_placed_is_refused_not_guessed():
+    """No default side, tested where the decision is actually made.
+
+    Driven through the units rather than the pass, because an unresolvable name
+    fails the FIXTURE join first and the day waits — a different, older and
+    correct behaviour that would hide this one. What is checked here is the
+    branch that fires when the fixture resolved and the team still cannot be
+    placed in it: the row is refused, never settled from whichever side ESPN
+    happened to label home.
+    """
+    bundle = {
+        "home": {"team_id": 10, "home_away": "home", "margin": 10},
+        "away": {"team_id": 20, "home_away": "away", "margin": -10},
+        "home_team_id": 10,
+        "away_team_id": 20,
+    }
+    row = fe._frozen_row(price(market="spread", selection="home"))
+    index = team_index()
+
+    assert fe.team_the_selection_names(row, bundle, index) == 10
+    assert fe._game_row_for(row, markets_registry.MARKETS_BY_KEY["spread"], bundle, 10) is bundle["home"]
+
+    # A team the index knows and this fixture does not hold. The old code
+    # returned `bundle["home"]` here and settled somebody else's bet.
+    stranger = fe._frozen_row(price(market="spread", selection="home", home="Duke"))
+    assert fe.team_the_selection_names(stranger, bundle, index) is None
+    assert fe._game_row_for(stranger, markets_registry.MARKETS_BY_KEY["spread"], bundle, None) is None

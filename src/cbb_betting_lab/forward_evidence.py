@@ -1208,6 +1208,7 @@ def settle_snapshots(
                     result,
                     settled_at,
                     competition,
+                    team_index,
                 )
             )
         if waiting:
@@ -1270,6 +1271,7 @@ def _settle_row(
     result: SettlementResult,
     settled_at: str,
     competition: Competition,
+    team_index=None,
 ) -> dict:
     """One frozen opinion, graded. Every branch ends somewhere countable."""
     market = markets_registry.MARKETS_BY_KEY.get(row.market)
@@ -1312,7 +1314,8 @@ def _settle_row(
         )
 
     bundle = fixtures.game.get(game_id)
-    game = _game_row_for(row, market, bundle)
+    named_team = team_the_selection_names(row, bundle, team_index)
+    game = _game_row_for(row, market, bundle, named_team)
     if bundle is None or (game is None and market.family != markets_registry.PLAYER):
         result.rows_unsettleable += 1
         result.rows_without_a_fixture += 1
@@ -1370,13 +1373,54 @@ def _settle_row(
 
     return _record_outcome(
         record,
-        _call_settle(market, row, game, player_row, result),
+        _call_settle(market, row, game, player_row, result, named_team),
         result,
         settled_at,
     )
 
 
-def _game_row_for(row: SimpleNamespace, market, bundle) -> object:
+def team_the_selection_names(row: SimpleNamespace, bundle, index) -> object:
+    """The team id a side selection names, per the PROVIDER — or None.
+
+    The frozen row carries the provider's own `home_team` / `away_team`
+    spellings; the bundle carries ESPN's `home_team_id` / `away_team_id`. This
+    resolves the first into the second's vocabulary so the settle path can pick
+    a row by TEAM rather than by the word `home`, which the two sources
+    disagree about on roughly a third of early-season neutral-site games.
+
+    `None` on any ambiguity — an unresolvable spelling, or a name that resolves
+    to a team the bundle does not hold — and a caller that gets None refuses
+    the row rather than settling it from a default side. Those two ids were
+    computed and never read by anything until this function; the identity check
+    they exist for was described in a comment and never written.
+    """
+    if bundle is None or index is None:
+        return None
+    side = _ROW_FOR_SELECTION.get(row.selection)
+    if side is None:
+        return None
+    name = row.home_team if side == "home" else row.away_team
+    resolved = index.resolve(name)
+    if resolved is None:
+        return None
+    known = {bundle.get("home_team_id"), bundle.get("away_team_id")} - {None}
+    return resolved if resolved in known else None
+
+
+def _row_by_team(bundle, team_id) -> object:
+    """The bundle's row for a team id, whichever side ESPN labelled it."""
+    if bundle is None or team_id is None:
+        return None
+    for side in ("home", "away"):
+        record = bundle.get(side)
+        if record is not None and season.clean_text(
+            record.get("team_id")
+        ) == season.clean_text(team_id):
+            return record
+    return None
+
+
+def _game_row_for(row: SimpleNamespace, market, bundle, team_id=None) -> object:
     """The row `settle` needs as its `game`, or None when it needs none.
 
     Three cases, all of them from the settlement contract rather than guessed:
@@ -1391,10 +1435,19 @@ def _game_row_for(row: SimpleNamespace, market, bundle) -> object:
         return bundle.get("segment")
     if market.family == markets_registry.PLAYER:
         return None
-    return bundle.get(_ROW_FOR_SELECTION.get(row.selection, "home"))
+    # BY TEAM, NOT BY THE WORD. `_ROW_FOR_SELECTION` still says which side the
+    # selection names; what it cannot say is which of ESPN's two rows that side
+    # IS, because the provider and ESPN disagree about the home designation on
+    # a neutral court. When the caller could not establish the team, this
+    # returns None and the row is refused rather than settled from a default.
+    if _ROW_FOR_SELECTION.get(row.selection) is None:
+        return None
+    return _row_by_team(bundle, team_id)
 
 
-def _call_settle(market, row: SimpleNamespace, game, player_row, result) -> Settled:
+def _call_settle(
+    market, row: SimpleNamespace, game, player_row, result, expected_team_id=None
+) -> Settled:
     """`settle`, with one row's failure kept to one row.
 
     A contract mismatch must not look like a missing box score, so an exception
@@ -1410,6 +1463,7 @@ def _call_settle(market, row: SimpleNamespace, game, player_row, result) -> Sett
             line=row.line,
             game=game,
             player=player_row,
+            expected_team_id=expected_team_id,
         )
     except Exception as exc:  # noqa: BLE001 - counted and named, never swallowed
         message = f"{type(exc).__name__}: {exc}"[:200]
