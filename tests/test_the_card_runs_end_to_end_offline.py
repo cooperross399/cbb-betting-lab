@@ -313,3 +313,23 @@ def test_the_card_opens_no_socket(
     # loudly; this pins the stronger claim that it never tried.
     assert "apiKey" not in result.stdout
     assert "requests_used" not in result.stdout.lower() or "0" in result.stdout
+
+
+def test_the_rendered_card_carries_the_join_census(carded):
+    """The wiring, not just the renderer.
+
+    `run_card` renders the census when it is given one; this asserts the SCRIPT
+    actually gives it one. Removing `matchup_census=` from the call in
+    `run_gameday_card.py` left every card test green — the renderer was covered
+    and the wire was not, which is how a measurement reaches stdout for weeks
+    while the card that is supposed to carry it stays silent.
+    """
+    _result, tmp = carded
+    card = (tmp / "outputs" / "cbb_gameday_card.md").read_text(encoding="utf-8")
+
+    assert "resolved to a scheduled game" in card, (
+        "the card does not carry the join census, so a quiet card cannot say "
+        "whether the model was asked about games it could not place or was "
+        "never asked at all"
+    )
+    assert "named no game on the schedule that day" in card

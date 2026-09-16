@@ -2091,6 +2091,13 @@ class CardRun:
     #: full one.
     events_on_this_slate: int = 0
     rows_off_this_slate: int = 0
+    #: What the model was ASKED and what joined, from `card_matchups`. It went
+    #: to stdout only, which on a scheduled run means a CI log nobody opens,
+    #: so the one number that explains a quiet card — how many board events
+    #: never resolved to a scheduled game — reached nobody. A card that cannot
+    #: say why it is quiet is the failure this lab keeps finding in other
+    #: shapes: silence that looks identical whatever caused it.
+    matchup_census: str = ""
     degraded: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
@@ -2195,6 +2202,7 @@ def run_card(
     rehearsal: bool = False,
     previous_fingerprint: str = "",
     output_dir: Path | str | None = None,
+    matchup_census: str = "",
 ) -> CardRun:
     """Gate, price, freeze, and account for every row. In that order.
 
@@ -2321,6 +2329,7 @@ def run_card(
             competition, output_dir=Path(output_dir) if output_dir else None
         ),
         rows_off_this_slate=off_slate,
+        matchup_census=str(matchup_census or ""),
         degraded=list(board.degraded),
         notes=list(board.notes),
     )
@@ -2850,6 +2859,14 @@ def _model_section(run: CardRun) -> list[str]:
     lines = [
         "## What the model said",
         "",
+    ]
+    if run.matchup_census:
+        # BEFORE the opinion census, because it explains it. "0 priceable" with
+        # no join line reads as a broken model; with it, a reader sees whether
+        # the model was asked about games it could not place or was never asked
+        # at all, and those are different faults with different repairs.
+        lines += [run.matchup_census, ""]
+    lines += [
         run.opinions.summary_line(),
         "",
         run.opinions.structural_check_line(),
