@@ -2909,3 +2909,57 @@ def test_the_headline_table_prints_what_each_cell_could_have_found():
             f"{row['tier']}/{row['market']} reads 'no demonstrated edge' and the "
             "page does not say what it could have detected"
         )
+
+
+def test_a_side_wager_on_a_neutral_court_is_refused_and_named(script):
+    """This store cannot orient a side wager on a neutral court.
+
+    `home` in a selection is the team the PRICE PROVIDER designated home;
+    `home_away` in the results table is the team ESPN designated home. On a
+    neutral court that is a convention, not a fact, and the two disagree —
+    measured by regressing actual margin on the negated staged home line, which
+    is 1.0 when nobody flips:
+
+        non-neutral       slope 1.0069   flip  -0.3%   n=27,609
+        neutral, March    slope 0.9885   flip   0.6%   n= 1,991
+        neutral, Nov-Dec  slope 0.2776   flip  36.1%   n= 1,986
+
+    `forward_evidence` resolves this by team identity, because a frozen row
+    keeps the provider's own spelling. This store cannot: the purchase rewrote
+    `home_team`/`away_team` to ESPN's designation while leaving the provider's
+    LINES against the provider's selection words, so the designation is not in
+    the file. So the row is refused and counted, never graded — an unsettleable
+    row is this lab admitting it could not grade one, and a graded one would be
+    the opponent's bet with every number plausible.
+
+    A bare over/under is a TOTAL, symmetric, and does not consult a side at
+    all: it is graded on a neutral court like anywhere else.
+    """
+    census = script["GradingCensus"]()
+    bundle = {
+        "home": {"team_id": 10, "home_away": "home", "margin": 10, "total": 150},
+        "away": {"team_id": 20, "home_away": "away", "margin": -10, "total": 150},
+        "neutral_site": True,
+        "segment": None,
+    }
+
+    outcome, profit, reason = script["_grade_one"](
+        {"market": "spread", "segment": "game", "selection": "home",
+         "line": -3.5, "american_odds": -110, "game_id": 1},
+        fixtures={1: bundle}, players={}, census=census,
+    )
+    assert outcome is script["Outcome"].UNSETTLEABLE
+    assert profit is None
+    assert "neutral court" in reason
+    assert census.neutral_site_unorientable == 1
+    assert "never a pass, an avoid or a no-value call" in "\n".join(census.lines())
+
+    # The symmetric market is untouched: a total does not name a side.
+    total_census = script["GradingCensus"]()
+    outcome, _, _ = script["_grade_one"](
+        {"market": "total_points", "segment": "game", "selection": "over",
+         "line": 140.5, "american_odds": -110, "game_id": 1},
+        fixtures={1: bundle}, players={}, census=total_census,
+    )
+    assert outcome is not script["Outcome"].UNSETTLEABLE
+    assert total_census.neutral_site_unorientable == 0

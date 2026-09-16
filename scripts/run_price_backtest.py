@@ -474,6 +474,35 @@ class GradingCensus:
     #: treatment of a listed player who did not enter, and this lab only says
     #: it about a player it has actually found, marked `did_not_play`.
     unresolved_player: int = 0
+    #: A SIDE wager on a neutral court, which this store cannot orient.
+    #:
+    #: `home` in a selection means the team the PRICE PROVIDER designated home;
+    #: `home_away` in the results table means the team ESPN designated home. On
+    #: a neutral court that designation is a convention rather than a fact and
+    #: the two disagree. Measured by regressing the actual margin on the negated
+    #: staged home line, which is 1.0 when nobody flips:
+    #:
+    #:     non-neutral       slope 1.0069   flip  -0.3%   n=27,609
+    #:     neutral, March    slope 0.9885   flip   0.6%   n= 1,991
+    #:     neutral, Nov-Dec  slope 0.2776   flip  36.1%   n= 1,986
+    #:
+    #: March is the control that proves the method rather than the sport: a
+    #: bracket fixes the designation and the disagreement vanishes.
+    #:
+    #: `forward_evidence` resolves this by TEAM IDENTITY, because a frozen row
+    #: keeps the provider's own spelling. This store cannot: the purchase
+    #: rewrote `home_team`/`away_team` to ESPN's designation (verified, 100%
+    #: agreement on neutral and non-neutral alike) while leaving the provider's
+    #: LINES against the provider's selection words, so the original
+    #: designation is not in the file and cannot be recovered from it.
+    #:
+    #: So these rows are REFUSED and counted, never graded. An unsettleable row
+    #: is this lab admitting it could not grade the row; a graded one would be
+    #: about a third of a season's neutral-site bets settled for the opponent,
+    #: with every number plausible. Non-neutral games are unaffected: there the
+    #: home team is whoever owns the court, so the two sources cannot disagree,
+    #: which the -0.3% above is the measurement of.
+    neutral_site_unorientable: int = 0
     unreadable_price: int = 0
     errors: dict[str, int] = field(default_factory=dict)
     reasons: dict[str, int] = field(default_factory=dict)
@@ -495,6 +524,15 @@ class GradingCensus:
             out.append(
                 f"  of those, {self.no_fixture:,} name a game the processed "
                 "tables do not carry"
+            )
+        if self.neutral_site_unorientable:
+            out.append(
+                f"  {self.neutral_site_unorientable:,} are side wagers on a "
+                "neutral court, where the provider's home designation and the "
+                "results table's disagree about a third of the time and this "
+                "store does not carry the provider's. Excluded from every "
+                "number in this record — an exclusion, never a pass, an avoid "
+                "or a no-value call"
             )
         if self.ambiguous_player:
             out.append(
@@ -706,6 +744,10 @@ def fixture_index(
         side = clean_text(record.get("home_away"))
         if side in ("home", "away"):
             bundle[side] = record
+        # Carried so `_grade_one` can refuse a side wager it cannot orient.
+        # See `neutral_site_unorientable` on the census for why it must.
+        if record.get("neutral_site"):
+            bundle["neutral_site"] = True
     if game_segments is not None and not game_segments.empty:
         rows = game_segments[game_segments["game_id"].isin(game_ids)]
         for record in rows.to_dict("records"):
@@ -830,6 +872,28 @@ def _grade_one(
         if market.settles_on in SEGMENT_SETTLED:
             game = bundle.get("segment")
         elif market.family != PLAYER:
+            # A SIDE WAGER ON A NEUTRAL COURT CANNOT BE ORIENTED FROM THIS
+            # STORE, so it is refused rather than graded from whichever row
+            # ESPN happened to label home. See the census field for the
+            # measurement; the short version is that about a third of
+            # early-season neutral games would settle for the opponent, with
+            # every number plausible and nothing raising.
+            #
+            # `ROW_FOR_SELECTION` returning None means the selection is a bare
+            # over/under — a game or half TOTAL, symmetric, which does not
+            # consult a side at all and is unaffected by the designation.
+            if bundle.get("neutral_site") and ROW_FOR_SELECTION.get(selection):
+                census.unsettleable += 1
+                census.neutral_site_unorientable += 1
+                return (
+                    Outcome.UNSETTLEABLE,
+                    None,
+                    "this is a side wager on a neutral court, where the price "
+                    "provider's home designation and the results table's "
+                    "disagree about a third of the time and this store does "
+                    "not carry the provider's. Refused rather than settled "
+                    "from a default side",
+                )
             game = bundle.get(ROW_FOR_SELECTION.get(selection, "home"))
     if market is not None and market.family != PLAYER and game is None:
         census.no_fixture += 1
