@@ -197,14 +197,57 @@ def append_capture(frame: pd.DataFrame, path: Path | str) -> int:
     )
 
 
+def normalise_identity(frame: pd.DataFrame) -> pd.DataFrame:
+    """Every identity column in one spelling, on both sides of a comparison.
+
+    `stores._dedupe_value` is the repository's one normaliser for this: `""`,
+    `None` and `NaN` are the same absent player; `142.5` and `"142.50"` are the
+    same line. A CSV round-trip preserves neither, and an identity that does
+    not match itself across that round-trip looks exactly like a price a book
+    pulled.
+
+    That failure is silent **and directional** — it can only ever invent
+    vanished prices, never surviving ones — which makes it the one join defect
+    that could produce a not-reachable finding out of nothing.
+
+    IT WAS LIVE, AND IT LIVED HERE. This lab captures only the bulk markets —
+    h2h, spreads, totals — so `staging.stage_event` sets `player=""` on every
+    captured row. An all-empty column comes back from CSV as float64 NaN, and
+    `nan != nan`, so a tuple carrying one never matches itself. Measured on two
+    captures of an IDENTICAL board: in memory `survived=6, gone=0`; after the
+    round trip the store actually performs, `survived=0, gone=6`. The report
+    printed "0.0% of judged quotes survived" and would have published it to the
+    line-movement ref four times a day from opening night.
+
+    It lives in this module rather than beside one of its callers because
+    `QUOTE_IDENTITY` lives here. `reachability` had written exactly this
+    function and then called the comparison on the raw store at three of its
+    four call sites, which is how a normaliser ends up guarding one caller.
+    """
+    out = frame.copy()
+    for column in QUOTE_IDENTITY:
+        if column in out.columns:
+            out[column] = out[column].map(stores._dedupe_value)
+        else:
+            out[column] = ""
+    return out
+
+
 def survival_between(
     earlier: pd.DataFrame, later: pd.DataFrame
 ) -> Survival:
-    """What became of `earlier`'s quotes by the time of `later`."""
+    """What became of `earlier`'s quotes by the time of `later`.
+
+    Both sides are normalised HERE rather than by the caller, so a consumer
+    that hands over a raw store cannot silently get a board that vanished
+    against itself. See :func:`normalise_identity`.
+    """
     stamp_a = str(earlier["captured_at"].iloc[0]) if not earlier.empty else ""
     stamp_b = str(later["captured_at"].iloc[0]) if not later.empty else ""
     if earlier.empty:
         return Survival(earlier=stamp_a, later=stamp_b)
+    earlier = normalise_identity(earlier)
+    later = normalise_identity(later) if not later.empty else later
 
     # What the later capture COVERED, at (event, market) resolution. A quote
     # in an event/market the later capture never fetched is unjudgeable, and

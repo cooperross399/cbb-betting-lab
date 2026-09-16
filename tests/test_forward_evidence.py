@@ -1998,3 +1998,30 @@ def test_a_side_wager_whose_team_cannot_be_placed_is_refused_not_guessed():
     stranger = fe._frozen_row(price(market="spread", selection="home", home="Duke"))
     assert fe.team_the_selection_names(stranger, bundle, index) is None
     assert fe._game_row_for(stranger, markets_registry.MARKETS_BY_KEY["spread"], bundle, None) is None
+
+
+def test_a_bet_with_no_survival_reading_is_not_counted_as_a_vanished_price():
+    """`unknown` is a state this lab created on purpose, and it is not `gone`.
+
+    The split was `survived` / `not survived`, so the literal word `unknown` —
+    `line_movement.UNKNOWN` — and a blank both landed under "the price
+    vanished". `reachability._survival_word` states the rule in the other
+    direction: "A missing value is UNKNOWN and never GONE. Nothing recorded is
+    not a price that was pulled."
+
+    The all-null guard cannot stand in for this: it fires only when EVERY value
+    is null, so one stamped bet publishes every unstamped bet as vanished. And
+    the direction is the dangerous one — it manufactures unreachability, which
+    this lab states in those words and acts on.
+    """
+    ledger = _ledger(300, profit=won)
+    ledger["price_survived"] = (
+        ["true"] * 100 + ["false"] * 100 + ["unknown"] * 50 + [""] * 50
+    )
+    report = fe.render_ledger(ledger)
+
+    assert "100 opinions were frozen at a price that still existed" in report
+    assert "; 100 were not." in report, (
+        "the 100 rows carrying no reading were counted as vanished prices"
+    )
+    assert "100 carry no survival reading at all" in report

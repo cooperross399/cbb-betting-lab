@@ -2140,14 +2140,39 @@ def _reachability_section(
         lines.append("")
         return lines
 
+    # THREE STATES, BECAUSE NOTHING RECORDED IS NOT A PRICE THAT WAS PULLED.
+    #
+    # This split was `survived` / `not survived`, so the literal word `unknown`
+    # — `line_movement.UNKNOWN`, a state this lab created on purpose — and a
+    # blank both fell into "the price vanished". That is the exact rule
+    # `reachability._survival_word` enforces in the other direction: "A missing
+    # value is UNKNOWN and never GONE. Nothing recorded is not a price that was
+    # pulled, and reading it as one is the whole failure this module exists to
+    # avoid, arriving through a null instead of through a join."
+    #
+    # The guard above cannot stand in for this: it fires only when EVERY value
+    # is null, so the moment one bet carries a stamp, every unstamped bet in the
+    # ledger is published as a vanished price. And the direction is the
+    # dangerous one — it can only ever manufacture unreachability, which is a
+    # verdict this lab states in those words and acts on.
     survived = games[games["price_survived"].map(_truthy)]
-    vanished = games[~games["price_survived"].map(_truthy)]
+    gone = games[games["price_survived"].map(_gone)]
+    unknown = games.drop(survived.index).drop(gone.index, errors="ignore")
     lines.append(
         f"**{len(survived):,} opinions were frozen at a price that still "
-        f"existed at the next capture; {len(vanished):,} were not.** A backtest "
+        f"existed at the next capture; {len(gone):,} were not.** A backtest "
         "that beats a price nobody could still take is not a bet."
     )
+    if len(unknown):
+        lines.append("")
+        lines.append(
+            f"**{len(unknown):,} carry no survival reading at all** and are "
+            "counted apart rather than with the vanished. Nothing recorded is "
+            "not a price that was pulled; folding it in would manufacture "
+            "unreachability out of a gap in the capture."
+        )
     lines.append("")
+    vanished = gone
     lines.extend(
         _table(
             games.assign(
@@ -2181,6 +2206,17 @@ def _reachability_section(
 def _truthy(value: object) -> bool:
     text = season.clean_text(value).casefold()
     return text in {"1", "1.0", "true", "yes", "survived", "y"}
+
+
+def _gone(value: object) -> bool:
+    """A price this lab OBSERVED had been pulled — never merely unrecorded.
+
+    The complement of `_truthy` is not this: it also holds every blank, every
+    NaN and the literal word `unknown`, and reading those as vanished is the
+    one join defect that can produce a not-reachable finding out of nothing.
+    """
+    text = season.clean_text(value).casefold()
+    return text in {"0", "0.0", "false", "no", "gone", "n", "vanished"}
 
 
 def _futures_section(
