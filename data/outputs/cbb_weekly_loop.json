@@ -1,0 +1,197 @@
+{
+  "record_version": 1,
+  "competition": "cbb",
+  "title": "NCAA Division I men's basketball",
+  "week": "2026-W38",
+  "generated_at": "2026-09-16T01:58:59+00:00",
+  "dry_run": false,
+  "steps": [
+    {
+      "name": "pre-register the week's search",
+      "status": "ok",
+      "detail": "0 new hypothesis(es) recorded of 4 available this week; 0 waiting.",
+      "lines": []
+    },
+    {
+      "name": "refit the ratings walk-forward",
+      "status": "ok",
+      "detail": "`python fit_ratings.py --competition cbb --seasons 2026` exited 0.",
+      "lines": [
+        "NCAA Division I men's basketball \u2014 walk-forward ratings fit",
+        "Spends nothing, opens no socket, buys no price.",
+        "Seasons [2026], prior window 3, reading seasons [2023, 2024, 2025, 2026] of 94,194 team-game rows.",
+        "42,658 fittable team-games of 50,090 supplied (reconciles): not countable 4,194, venue unknown 0, overtime 2,670, period count missing 568, possessions below 40 0.",
+        "Player-games: 1,493,589 rows, of which 799,664 are in the prior window [2023, 2024, 2025, 2026].",
+        "Fitting season 2026...",
+        "  146 fits, 4,719 of 5,415 games priced. prior decay holds.",
+        "Wrote /Users/cooperross/Projects/cbb-betting-lab/data/outputs/cbb_ratings_fit.json",
+        "Wrote /Users/cooperross/Projects/cbb-betting-lab/data/outputs/cbb_ratings_fit.md"
+      ]
+    },
+    {
+      "name": "re-run the price backtest and replication",
+      "status": "ok",
+      "detail": "`python run_price_backtest.py --competition cbb --seasons 2026 --write-graded /Users/cooperross/Projects/cbb-betting-lab/data/processed/cbb_graded_bets__weekly_drift.csv --output-dir /Users/cooperross/Projects/cbb-betting-lab/data/drift` exited 0.",
+      "lines": [
+        "  mid_major: 14,696 bets / 1,942 games  -4.3%  [-7.5% to -1.1%]  corrected [-10.2% to +1.5%]  \u2014 no demonstrated edge",
+        "  low_major: 13,832 bets / 113 days  -2.9%  [-6.3% to +0.5%]  corrected [-9.0% to +3.3%]  \u2014 no demonstrated edge",
+        "POOLED \u2014 never the headline. High-major, mid-major and low-major are",
+        "three different distributions and the stopping rule is applied to each.",
+        "  every market (pooled): 37,255 bets / 4,927 games  -3.6%  [-5.6% to -1.6%]  corrected [-7.2% to +0.1%]  \u2014 no demonstrated edge",
+        "HALF A POINT AT A KEY NUMBER, OR A VIEW OF THE GAME",
+        "  Key numbers measured from 5,750 games this store covers: 4 (6.4%), 3 (6.1%), 5 (6.0%), 7 (5.4%), 6 (5.4%), 2 (5.2%), 8 (5.1%), 9 (4.9%), 10 (4.8%), 1 (4.7%).",
+        "  Not reported. The ticket-margin reconstruction agreed with the recorded outcome on 89.1% of 37,032 scorable bets, below the 99% this module requires. The half-point decomposition is refused rather than computed on a convention that has not been verified.",
+        "824 of 37,255 bet(s) sit outside `card_pricing.PRICE_BAND` (-400.0, 600.0), which the card declares in advance and this backtest does not apply. The largest apparent edges in any price store are the rows that are wrong, and they all live out there.",
+        "Wrote /Users/cooperross/Projects/cbb-betting-lab/data/drift/cbb_price_backtest.json",
+        "Wrote /Users/cooperross/Projects/cbb-betting-lab/data/drift/cbb_price_backtest.md",
+        "Re-render the report from that record for free with --rebuild-report-only; improving a sentence must never cost a re-run."
+      ]
+    },
+    {
+      "name": "verify the backtest record",
+      "status": "ok",
+      "detail": "cbb_price_backtest.json is this run's, and its correction is the ledger's cumulative 130 looks. No replication record was written this run, so nothing here confirms a held-out season was scored. Replication remains the bar and this run did not clear it.",
+      "lines": []
+    },
+    {
+      "name": "re-verify walk-forward",
+      "status": "skipped",
+      "detail": "No graded-bet frame was offered (--verify-bets), so walk-forward was not re-verified here. `price_backtest.build_record` asserts it when the record is built; this run adds no second opinion and does not claim one.",
+      "lines": []
+    },
+    {
+      "name": "build the de-vig frame with each bet's complement",
+      "status": "ok",
+      "detail": "`python build_skill_frame.py --processed-dir /Users/cooperross/Projects/cbb-betting-lab/data/processed --graded /Users/cooperross/Projects/cbb-betting-lab/data/processed/cbb_graded_bets__weekly_drift.csv --out /Users/cooperross/Projects/cbb-betting-lab/data/processed/cbb_skill_frame__weekly_drift.csv` exited 0.",
+      "lines": [
+        "graded 99,574 settled opinion(s), of which 37,032 are the threshold-selected bets | store 3,863,325",
+        "Unpairable census \u2014 supplied = paired + unpairable + no_pair_key:",
+        "  graded rows supplied  99,574",
+        "  paired                99,574",
+        "  unpairable            0",
+        "  no_pair_key           0",
+        "  reconciles            yes (99,574 accounted of 99,574 supplied; 99,574 complement row(s) for 99,574 paired wager(s))",
+        "  unpairable share      0.000000% of the graded rows, against a refusal threshold of 0.010000%",
+        "Wrote cbb_skill_frame__weekly_drift.csv: 199,148 rows = 99,574 scorable + 99,574 complement-only, with 0 graded row(s) excluded as unpairable. No request was made and no credit was spent.",
+        "Wrote cbb_skill_frame__weekly_drift__unpairable.json: the census, so a reader can state the population from a count rather than from the frame's length."
+      ]
+    },
+    {
+      "name": "regress outcome on market-implied vs model-implied, weekly",
+      "status": "ok",
+      "detail": "`python run_forecast_skill.py --competition cbb --graded /Users/cooperross/Projects/cbb-betting-lab/data/processed/cbb_skill_frame__weekly_drift.csv --output-dir /Users/cooperross/Projects/cbb-betting-lab/data/drift` exited 0.",
+      "lines": [
+        "    claimed +20% and above: model said 60.9%, price said 42.4%, actually won 44.0% [42.9%, 45.1%] over 7,951 wagers in 3,067 games (-16.9 pp against the model)",
+        "    ! overconfidence widens by 28.4 pp from the lowest claimed-edge bucket to the highest \u2014 the model over-estimates most where it claims most. That is the winner's curse, not yet anti-predictiveness.",
+        "THE THRESHOLD-SELECTED BETS, BESIDE IT \u2014 THE WINNER'S-CURSE COMPARISON, NOT THE SKILL MEASURE",
+        "  20,396 scorable wagers the model's own disagreement with the price selected. A coefficient here is fitted on the tail of",
+        "  the model's error distribution and says what the selection cost.",
+        "  high_major (the threshold-selected bets only): +0.204 [-0.021, +0.429], family-corrected [-0.021, +0.429] over 4,723 wagers across 123 days \u2014 no demonstrated edge",
+        "  mid_major (the threshold-selected bets only): +0.246 [+0.017, +0.476], family-corrected [+0.017, +0.476] over 8,017 wagers across 125 days \u2014 demonstrated edge",
+        "  low_major (the threshold-selected bets only): +0.291 [-0.023, +0.605], family-corrected [-0.023, +0.605] over 7,656 wagers across 113 days \u2014 no demonstrated edge",
+        "  every tier pooled (the threshold-selected bets only; a pooled subset is never the headline either): +0.225 [+0.078, +0.372], family-corrected [+0.078, +0.372] over 20,396 wagers across 137 days \u2014 demonstrated edge",
+        "Wrote /Users/cooperross/Projects/cbb-betting-lab/data/drift/cbb_forecast_skill.json",
+        "Wrote /Users/cooperross/Projects/cbb-betting-lab/data/drift/cbb_forecast_skill.md",
+        "Re-render the report from that record for free with --rebuild-report-only; improving a sentence must never cost a re-run."
+      ]
+    },
+    {
+      "name": "re-render the claims report from its run record",
+      "status": "ok",
+      "detail": "`python run_what_we_can_claim.py --competition cbb --output-dir /Users/cooperross/Projects/cbb-betting-lab/data/outputs --splice-into /Users/cooperross/Projects/cbb-betting-lab/docs/what_we_can_and_cannot_claim.md` exited 0.",
+      "lines": [
+        "Spliced the generated block into /Users/cooperross/Projects/cbb-betting-lab/docs/what_we_can_and_cannot_claim.md.",
+        "Wrote /Users/cooperross/Projects/cbb-betting-lab/data/outputs/cbb_what_we_can_claim.md from /Users/cooperross/Projects/cbb-betting-lab/data/outputs/cbb_what_we_can_claim.json.",
+        "**The only result that survives is a loss.** 32 market-and-tier cell(s) across 10 market(s) are measured against real prices. None excludes zero on the winning side; 3 exclude(s) it on the **losing** side after correcting for everything this lab has ever tested, which is a **demonstrated deficit**: `team_total` / mid_major (historical price backtest, bets) at -5.8% over 13,478 bets across 384 days; `moneyline` / low_major (historical price backtest, bets) at -7.9% over 7,561 bets across 632 days; `total_points` / low_major (historical price backtest, bets) at -5.2% over 17,903 bets across 7,131 games. A demonstrated deficit is a finding, not a null result, and it is the finding this lab has.",
+        "Correction: 130 cumulative hypotheses, intervals widened by x1.81.",
+        "Cells measured: 32. Demonstrated edges: 0. Demonstrated deficits: 3.",
+        "Policy: `the_odds_api:cbb` is **manual-only**. No market is allowlisted, the card produces no selection, and that is the correct state for a lab with no signed receipt.",
+        "This run read records, rendered markdown, and touched no network. It allowlisted no market, signed no receipt and spent no credit."
+      ]
+    },
+    {
+      "name": "re-render the edge document from the measurement records",
+      "status": "ok",
+      "detail": "`python run_why_the_model.py --competition cbb --output-dir /Users/cooperross/Projects/cbb-betting-lab/data/outputs --splice-into /Users/cooperross/Projects/cbb-betting-lab/docs/why_the_model_does_or_does_not_have_an_edge.md` exited 0.",
+      "lines": [
+        "Spliced the generated block into /Users/cooperross/Projects/cbb-betting-lab/docs/why_the_model_does_or_does_not_have_an_edge.md.",
+        "Wrote /Users/cooperross/Projects/cbb-betting-lab/data/outputs/cbb_why_the_model.md from /Users/cooperross/Projects/cbb-betting-lab/data/outputs/cbb_why_the_model.json.",
+        "**No demonstrated edge in any of the 3 measured tiers** (high-major 43,228 bets, mid-major 88,344 bets, low-major 59,475 bets). 1 shows a demonstrated deficit: mid-major 88,344 bets, **-4.3%**, corrected -8.3% to -0.3% \u2014 demonstrated deficit.",
+        "Correction: 130 cumulative hypotheses, intervals widened by x1.81.",
+        "Tiers measured: 3. Demonstrated edges: 0. Demonstrated deficits: 1.",
+        "This run read records, rendered markdown, and touched no network. It allowlisted no market, signed no receipt and spent no credit."
+      ]
+    },
+    {
+      "name": "check for auto-demotion",
+      "status": "skipped",
+      "detail": "no market is allowlisted, so there is nothing to withdraw. That is the correct state for a lab with no signed receipt.",
+      "lines": []
+    },
+    {
+      "name": "check the stopping rule",
+      "status": "ok",
+      "detail": "x1.81 over 130 looks; a +5% edge needs 5,044 bets, which is inside a season's supply until 1,466,970,562,662 looks and inside the 10,000-opinion floor until 86,909",
+      "lines": []
+    }
+  ],
+  "alpha_budget": {
+    "week": "2026-W38",
+    "declared_on": "2026-09-01",
+    "per_week": 6,
+    "ceiling": 6,
+    "already_spent_this_week": 2,
+    "remaining_before": 4,
+    "spent_now": [],
+    "waiting": [],
+    "already_recorded": 2,
+    "problems": [],
+    "refused": ""
+  },
+  "ledger": {
+    "hypotheses_before": 130,
+    "hypotheses_after": 130,
+    "correction_before": 1.8114726296806516,
+    "correction_after": 1.8114726296806516
+  },
+  "backtest": {
+    "record": "/Users/cooperross/Projects/cbb-betting-lab/data/drift/cbb_price_backtest.json",
+    "readable": true,
+    "fresh": true,
+    "looks_expected": 130,
+    "looks_recorded": 130,
+    "replication_confirmed": false,
+    "replication_record": "/Users/cooperross/Projects/cbb-betting-lab/data/drift/cbb_replication.json",
+    "generated_at": "2026-09-16T02:11:09Z"
+  },
+  "walk_forward": {
+    "frame": "",
+    "verified": false,
+    "rows": 0
+  },
+  "forward_evidence": {
+    "rows": 0,
+    "bets": 0,
+    "threshold": 0.02
+  },
+  "policy": {
+    "summary": "`the_odds_api:cbb` is **manual-only**. No market is allowlisted, the card produces no selection, and that is the correct state for a lab with no signed receipt."
+  },
+  "demotion": [],
+  "stopping_rule": {
+    "looks": 130,
+    "correction_factor": 1.8114726296806516,
+    "edge": 0.05,
+    "bets_needed_uncorrected": 1537,
+    "bets_needed_corrected": 5044,
+    "season_supply": 23000,
+    "sample_floor_opinions": 10000,
+    "sample_floor_games": 2000,
+    "exhausted": false,
+    "looks_at_which_it_bites": 1466970562662,
+    "looks_at_which_it_bites_at_the_floor": 86909,
+    "decision_date": "2027-04-19",
+    "days_to_decision": 215,
+    "assumption": "independent bets of unit variance, which this sport does not supply \u2014 so this is a lower bound on the bets needed and therefore an optimistic read of the remaining headroom"
+  }
+}

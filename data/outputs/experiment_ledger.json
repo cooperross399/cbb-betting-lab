@@ -1883,6 +1883,30 @@
       "predicted_direction": "higher",
       "stage": "discovery",
       "realised_direction": ""
+    },
+    {
+      "search": "champion_challenger",
+      "name": "the weekly refit's ROI exceeds the standing champion's by the pre-registered margin",
+      "tested_on": "2026-W38",
+      "seasons": [
+        2027
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "forward_evidence",
+      "name": "CLV: frozen opinions beat the closing price",
+      "tested_on": "2026-W38",
+      "seasons": [
+        2027
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
     }
   ]
 }

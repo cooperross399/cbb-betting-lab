@@ -4,11 +4,11 @@
 
 College basketball's large sample makes this **more** urgent, not less. A bigger n narrows every interval, including the intervals of the hypotheses that are wrong. Sample size buys power, never innocence.
 
-**128 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.81** before it means what it says.
+**130 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.81** before it means what it says.
 
 **Alpha budget: 6 new hypotheses a week**, declared 2026-09-01. Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state — re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise.
 
-**90 discovery, 38 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
+**92 discovery, 38 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
 
 | Search | Hypotheses |
 |:---|---:|
@@ -25,6 +25,8 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | rebound_differential_vs_spread | 3 |
 | november_prior | 2 |
 | reachability | 1 |
+| champion_challenger | 1 |
+| forward_evidence | 1 |
 
 | # | Search | Hypothesis | Stage | Predicted | Realised | Seasons | Tested | Outcome |
 |---:|:---|:---|:---|:---|:---|:---|:---|:---|
@@ -156,6 +158,8 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | 126 | residual_regression_2026_09_15 | a team's prior two-point-percentage advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
 | 127 | residual_regression_2026_09_15 | a team's prior offensive-efficiency advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
 | 128 | residual_regression_2026_09_15 | a team's prior share-of-points-from-twos advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
+| 129 | champion_challenger | the weekly refit's ROI exceeds the standing champion's by the pre-registered margin | discovery | higher | — | 2027 | 2026-W38 | pending |
+| 130 | forward_evidence | CLV: frozen opinions beat the closing price | discovery | higher | — | 2027 | 2026-W38 | pending |
 
 ## 7 quantities declared descriptive-only
 
