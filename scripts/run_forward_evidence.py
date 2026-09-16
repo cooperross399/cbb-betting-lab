@@ -94,6 +94,7 @@ from pathlib import Path
 import pandas as pd
 
 from cbb_betting_lab import experiment_ledger, forward_evidence as fe, season, stores
+from cbb_betting_lab.models import player_census as PC
 from cbb_betting_lab.competitions import DEFAULT_COMPETITION_KEY, Competition, competition_for
 from cbb_betting_lab.config import OUTPUTS_DIR, PROCESSED_DIR, RAW_DIR
 from cbb_betting_lab.providers import team_names
@@ -135,6 +136,10 @@ class Inputs:
     team_index: team_names.TeamIndex
     #: The seasons whose schedules the index was built from, for the log line.
     index_seasons: tuple[int, ...]
+    #: Those schedules themselves. The only thing this pass holds that knows
+    #: which NIGHTS were played, which is a different question from which teams
+    #: exist and is the one nothing was asking.
+    schedule: pd.DataFrame | None = None
 
     def summary_lines(self) -> list[str]:
         return [
@@ -200,8 +205,13 @@ def snapshot_seasons(archive_dir: Path) -> tuple[int, ...]:
 
 def load_team_index(
     raw_dir: Path, *, competition: Competition, seasons: tuple[int, ...]
-) -> tuple[team_names.TeamIndex, tuple[int, ...]]:
-    """The provider-name index, built from the schedules the archive needs.
+) -> tuple[team_names.TeamIndex, tuple[int, ...], pd.DataFrame | None]:
+    """The provider-name index and the schedules it was built from.
+
+    The schedule comes back rather than being dropped on the floor, because it
+    is also the only thing in this pass that knows which NIGHTS were played —
+    see `forward_evidence.nights_missing_from_the_archive`. Reading it twice
+    would be two answers to one question the first time the two loads drifted.
 
     Built from the results source, which is `team_names`' first rule: every
     alias comes from the feed that also supplies the settlement, so the two
@@ -239,16 +249,16 @@ def load_team_index(
         # snapshots seen and the index is never consulted; building an empty
         # one is honest about that rather than loading a schedule to satisfy a
         # type.
-        return team_names.TeamIndex(), ()
+        return team_names.TeamIndex(), (), None
     schedule = frames[0] if len(frames) == 1 else pd.concat(frames, ignore_index=True)
-    return team_names.build_index(schedule), tuple(loaded)
+    return team_names.build_index(schedule), tuple(loaded), schedule
 
 
 def load_inputs(
     *, processed_dir: Path, raw_dir: Path, archive_dir: Path, competition: Competition
 ) -> Inputs:
     tables = load_tables(processed_dir, competition=competition)
-    index, index_seasons = load_team_index(
+    index, index_seasons, schedule = load_team_index(
         raw_dir, competition=competition, seasons=snapshot_seasons(archive_dir)
     )
     return Inputs(
@@ -257,6 +267,7 @@ def load_inputs(
         game_segments=tables["game_segments"],
         team_index=index,
         index_seasons=index_seasons,
+        schedule=schedule,
     )
 
 
@@ -590,7 +601,13 @@ def family_count(output_dir: Path) -> int | None:
     return ledger.count or None
 
 
-def render(ledger: pd.DataFrame, *, output_dir: Path, competition: Competition) -> list[str]:
+def render(
+    ledger: pd.DataFrame,
+    *,
+    output_dir: Path,
+    competition: Competition,
+    excluded_note: str = "",
+) -> list[str]:
     """Write both renders of the report and describe what was written.
 
     The second-half markets are passed as **settlement suspects** rather than
@@ -608,6 +625,7 @@ def render(ledger: pd.DataFrame, *, output_dir: Path, competition: Competition) 
         families=families,
         settlement_suspects=fe.SETTLEMENT_AMBIGUOUS_MARKETS,
         competition=competition,
+        excluded_note=excluded_note,
     )
     correction = (
         f"corrected across {families:,} hypotheses from the experiment ledger's "
@@ -773,6 +791,29 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {count:,} x {message}")
         print("")
 
+    # A NIGHT THAT WAS NEVER FROZEN, WHICH NOTHING ELSE HERE CAN SEE.
+    #
+    # `summary_line`'s "0 snapshots found ... check that the freeze step ran" is
+    # the lab's only alarm for this and it is unreachable after the first night
+    # of the season, because it counts the whole restored archive rather than
+    # last night. A scheduled run that never fires leaves no failed step to go
+    # red, so the gap is silent by construction: the lab going quiet and the lab
+    # having nothing to say are the same artefact until something compares the
+    # archive against the schedule.
+    missing_nights = fe.nights_missing_from_the_archive(archive_dir, inputs.schedule)
+    if missing_nights:
+        named = ", ".join(missing_nights[:10])
+        more = "" if len(missing_nights) <= 10 else f" (and {len(missing_nights) - 10:,} more)"
+        print(
+            f"::error::{len(missing_nights):,} night(s) inside this archive's own "
+            f"span were played and never frozen: {named}{more}. Those are not "
+            "nights with no basketball — the cached schedule lists games on each "
+            "of them. Nothing can be settled for a night that was not frozen and "
+            "the prices are gone, so this is reported rather than repaired.",
+            file=sys.stderr,
+        )
+        print("")
+
     # `team_names`' fourth rule: an unresolved name is reported loudly and
     # counted, because a name this lab cannot resolve is a game it silently
     # cannot settle — and the NHL lab proved that a silent loss looks exactly
@@ -786,8 +827,52 @@ def main(argv: list[str] | None = None) -> int:
     except stores.CorruptStoreError as exc:
         print(f"::error::{exc}", file=sys.stderr)
         return 1
-    for line in render(settled_ledger, output_dir=output_dir, competition=competition):
+    try:
+        lines = render(settled_ledger, output_dir=output_dir, competition=competition)
+        census_refused = ""
+    except PC.WagerCountMismatch as exc:
+        # THE FIRST SETTLED PROP USED TO TAKE THE WHOLE REPORT DOWN, AND THE
+        # STALE ONE WENT OUT IN ITS PLACE.
+        #
+        # The card freezes player props by default (tier 3), so the night after
+        # the first slate the ledger carries them, `render_ledger`'s census
+        # guard fails closed — correctly, it is the gate that stops a prop being
+        # graded without a reconciled wager census — and this call was not
+        # inside a try. The script died, the report on disk stayed at whatever
+        # it last said, and the publish step pushed THAT to card-feed. On
+        # opening week it says "0 frozen opinions", which is a false statement
+        # about a ledger holding thousands, republished nightly.
+        #
+        # The census cannot reconcile here and that is not a bug either: it
+        # needs `cbb_historical_prices__card.csv` and `cbb_player_games.csv`,
+        # both of which are gitignored and are not on a runner. So the honest
+        # outcome is not to grade the props and not to die: it is to report the
+        # team markets, NAME the excluded ones, and exit non-zero.
+        #
+        # Named, never dropped. An excluded market is never reported as a pass,
+        # an avoid, or a no-value call — and a market that silently vanishes
+        # from a table is the softest version of exactly that.
+        refused = PC.player_markets_in(settled_ledger)
+        team_only = settled_ledger[~settled_ledger["market"].isin(refused)]
+        census_refused = (
+            f"{len(refused)} player market(s) are EXCLUDED from the report above "
+            f"and from every interval in it: {', '.join(sorted(refused))}. No "
+            "wager census has reconciled in this process, so this run is not "
+            "allowed to grade a prop. That is an exclusion, not a pass, an "
+            "avoid or a no-value call, and the rows stay in the ledger "
+            "ungraded. The team markets above are unaffected."
+        )
+        lines = render(
+            team_only,
+            output_dir=output_dir,
+            competition=competition,
+            excluded_note=census_refused,
+        )
+    for line in lines:
         print(line)
+    if census_refused:
+        print("")
+        print(f"::error::{census_refused}")
 
     print("")
     print(
@@ -801,6 +886,11 @@ def main(argv: list[str] | None = None) -> int:
             "without appearing in a count is a defect, not a decision.",
             file=sys.stderr,
         )
+        return 1
+    if census_refused:
+        # The report that was written is truthful and the run is still red: a
+        # night whose props went ungraded is a night somebody has to look at,
+        # and a green run is how it would go unlooked-at forever.
         return 1
     return 0
 

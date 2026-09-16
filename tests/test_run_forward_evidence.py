@@ -873,18 +873,38 @@ def test_the_report_stage_refuses_a_prop_when_no_census_has_run(tmp_path, capsys
     lab.freeze(a_night())
 
     assert player_census.reconciled() == (), "a receipt leaked in from another test"
-    with pytest.raises(player_census.WagerCountMismatch) as raised:
-        lab.run("--settle")
 
-    message = str(raised.value)
-    assert "forward_evidence.render_ledger" in message, message
-    assert "player_points" in message, message
-    assert "no wager census has reconciled" in message, message
-    assert not (lab.outputs / fe.REPORT_MARKDOWN_FILENAME).exists(), (
-        "the report was written before the gate refused, so the gate is on the "
-        "document and not on the run"
+    # THE GATE STILL REFUSES; WHAT CHANGED IS WHAT HAPPENS AFTER IT.
+    #
+    # This used to assert the exception escaped and that no report was written,
+    # and stopped there — it never asked what the nightly workflow publishes
+    # once the run has died. The answer was: the report file from the last run
+    # that succeeded, which on opening week says "0 frozen opinions" about a
+    # ledger holding thousands, pushed to card-feed every night.
+    #
+    # So the run still refuses to GRADE the prop and still exits non-zero, and
+    # it now also writes a truthful report of the markets it is allowed to
+    # grade, with the excluded ones named in the document itself.
+    assert lab.run("--settle") == 1, (
+        "a night whose props went ungraded must be red; a green run is how it "
+        "goes unlooked-at forever"
     )
-    capsys.readouterr()
+
+    out = capsys.readouterr().out
+    assert "player_points" in out
+    assert "EXCLUDED" in out
+
+    report = (lab.outputs / fe.REPORT_MARKDOWN_FILENAME).read_text(encoding="utf-8")
+    assert "Markets excluded from this report" in report, (
+        "the exclusion reached the run's output and not the document, and the "
+        "document is what card-feed publishes"
+    )
+    assert "player_points" in report
+    # The refusal is on GRADING, and that is the half that must not soften: no
+    # verdict, no interval, no ROI for the prop anywhere in the published file.
+    assert "| player_points |" not in report, (
+        "the prop was excluded from the census gate and graded anyway"
+    )
 
 
 def test_the_report_says_it_is_uncorrected_when_nothing_has_been_hypothesised(lab, capsys):

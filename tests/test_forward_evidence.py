@@ -282,6 +282,108 @@ def test_a_later_run_adds_an_unfrozen_game_and_never_reprices_a_frozen_one(tmp_p
     assert math.isclose(frozen["e2"], 0.55)
 
 
+def test_the_evening_slot_does_not_refreeze_a_side_whose_number_moved(tmp_path):
+    """The rule is about the GAME, and every test of it used a moneyline.
+
+    A moneyline's line is `None`, so its key cannot change when the price
+    moves — it is the one market in the catalogue structurally immune to this
+    defect, and it was the only one the rule was ever tested on. On a spread the
+    line is part of the key, so a half-point move made the evening row look like
+    a side nobody had frozen.
+
+    What that bought was not a duplicate row. It was a SECOND ATTEMPT at the bet
+    threshold: the evening `edge` is recomputed from a model probability formed
+    seven hours later, with the market's own move visible. Both rows then settle
+    against their own numbers and both enter the ROI, so a game whose line moved
+    carries twice the weight of a game whose number held — and which games those
+    are is decided by the movement, not by anything exchangeable.
+    """
+    morning = price(market="spread", selection="home", line=-3.5, odds=-110)
+    first = freeze(tmp_path, [morning], {key_for(fe._frozen_row(morning)): 0.58})
+    assert first is not None
+
+    moved = price(market="spread", selection="home", line=-4.5, odds=-110)
+    second = freeze(tmp_path, [moved], {key_for(fe._frozen_row(moved)): 0.71})
+
+    assert second is None, (
+        "the evening slot froze Purdue's spread a second time because the "
+        "number had moved half a point"
+    )
+    frame = fe.read_snapshot(first)
+    assert len(frame) == 1
+    assert float(frame["line"].iloc[0]) == -3.5
+    assert math.isclose(float(frame["model_probability"].iloc[0]), 0.58)
+
+
+def test_the_evening_slot_still_adds_the_other_side_of_a_game_it_half_froze(tmp_path):
+    """The narrowing must not become a blanket per-game lock.
+
+    A morning board that offered only the home spread must not stop the evening
+    from freezing the away side: that is a different bet, settled by a different
+    outcome, and refusing it would lose real evidence to a guard aimed at
+    something else.
+    """
+    morning = price(market="spread", selection="home", line=-3.5)
+    freeze(tmp_path, [morning], {key_for(fe._frozen_row(morning)): 0.58})
+
+    other = price(market="spread", selection="away", line=3.5)
+    second = freeze(tmp_path, [other], {key_for(fe._frozen_row(other)): 0.44})
+
+    assert second is not None
+    frame = fe.read_snapshot(second)
+    assert set(frame["selection"]) == {"home", "away"}
+
+
+def test_two_books_hanging_different_numbers_are_both_frozen_in_one_run(tmp_path):
+    """Within a single run, multiplicity is the design and stays the design.
+
+    `best_price_per_wager` collapses BOOKS, not lines, "because a bet at -3.5
+    and a bet at -4.5 settle differently on a four-point win. That is a
+    different bet, not a different price." Both were takeable at the same
+    moment, so both are real evidence. The across-slot rule above must not be
+    allowed to eat this case on its way past.
+    """
+    rows = [
+        price(market="spread", selection="home", line=-3.5, book="dk"),
+        price(market="spread", selection="home", line=-4.5, book="fd"),
+    ]
+    path = freeze(tmp_path, rows, {key_for(fe._frozen_row(r)): 0.58 for r in rows})
+
+    frame = fe.read_snapshot(path)
+    assert sorted(frame["line"].astype(float)) == [-4.5, -3.5], (
+        "two books hanging different numbers at the same moment are two "
+        "takeable bets, and collapsing them loses evidence that existed"
+    )
+
+
+def test_a_damaged_standing_snapshot_refuses_rather_than_being_overwritten(tmp_path):
+    """The store that cannot be rebuilt was the one reading its own file leniently.
+
+    A lenient read hands back an EMPTY frame when the file will not parse, and
+    the concat below is guarded on `existing.empty` — so a damaged morning
+    snapshot was not repaired, it was DELETED and replaced by the evening's rows
+    alone. The publish step then pushed that short file over the only copy that
+    survives the runner.
+
+    `stores.read_store(for_append=True)` has described this exact failure since
+    it was written. This caller simply never passed the flag.
+    """
+    morning = price(market="spread", selection="home", line=-3.5)
+    path = freeze(tmp_path, [morning], {key_for(fe._frozen_row(morning)): 0.58})
+    assert path is not None
+
+    # A ragged tail: what a `to_csv` killed partway through the write leaves,
+    # and what the job's `if: always()` publish step would then push.
+    path.write_text(
+        path.read_text(encoding="utf-8").rstrip("\n") + '\n"unterminated,,,\n',
+        encoding="utf-8",
+    )
+
+    evening = price(market="spread", selection="away", line=3.5)
+    with pytest.raises(stores.CorruptStoreError):
+        freeze(tmp_path, [evening], {key_for(fe._frozen_row(evening)): 0.44})
+
+
 def test_a_third_run_with_nothing_new_writes_nothing_at_all(tmp_path):
     """Idempotence at the freeze stage, byte for byte."""
     rows = [price(), price(event_id="e2", home="Duke", away="North Carolina")]
@@ -554,6 +656,54 @@ def test_a_game_with_no_result_waits_inside_the_patience_window(tmp_path):
     assert not fe.marker_path(fe.snapshot_path(tmp_path, "2027-01-18")).exists()
 
 
+def test_a_waiting_day_rolls_back_the_settlement_errors_it_speculatively_counted(
+    tmp_path, monkeypatch
+):
+    """The one combination nothing drove: a day that BOTH raises and waits.
+
+    The rollback test drives a waiting day with clean rows; the settlement-error
+    test drives a day that settles fully with a raising row. Neither puts the
+    two in one snapshot, which is the only arrangement that leaves
+    `settlement_errors` and the row counters disagreeing.
+
+    `SettlementResult`'s own docstring warned about exactly this — "a field
+    added to this dataclass and not to this tuple would silently stop being
+    rolled back on a waiting day" — and `settlement_errors` was the field the
+    warning described and the tuple omitted. The ledger stayed correct; what
+    broke was the accounting identity the workflow prints, which then failed the
+    run on a night where nothing had gone wrong. A counter that cries on a
+    healthy night is a counter somebody learns to ignore.
+    """
+    def raises_for_purdue(*, market, segment, selection, line, game, player):
+        raise ValueError("contract mismatch")
+
+    monkeypatch.setattr(fe, "settle", raises_for_purdue)
+
+    freeze(
+        tmp_path,
+        [
+            # Resolves against the fixture, so it is graded — and raises.
+            price(event_id="e1", home="Purdue", away="Butler"),
+            # Same slate day, a matchup the team index cannot resolve, inside
+            # the patience window. The day discovers it is waiting here, and
+            # everything graded above it is thrown away.
+            price(event_id="e7", home="Villanova", away="Xavier"),
+        ],
+        {},
+    )
+
+    result = settle(tmp_path, now=NOW)
+
+    assert result.snapshots_waiting == 1
+    assert result.snapshots_settled == 0
+    assert result.settlement_errors == {}, (
+        "the day waited and discarded its grading, but the settlement error "
+        "that grading raised was kept — so the run reports an error against a "
+        "night whose rows were never written"
+    )
+    assert result.rows_unsettleable == 0
+
+
 def test_a_game_with_no_result_past_the_patience_window_is_unsettleable_never_guessed(
     tmp_path,
 ):
@@ -627,7 +777,67 @@ def test_a_player_named_by_two_athletes_in_one_game_is_ambiguous_never_a_coin_fl
     assert ledger["outcome"].iloc[0] == Outcome.UNSETTLEABLE.value
 
 
-def test_a_player_absent_from_the_box_score_is_void_because_he_never_entered(tmp_path):
+def test_a_rostered_player_who_never_entered_is_void(tmp_path):
+    """The real did-not-play: a name that RESOLVES, to a row that says he sat.
+
+    `build_index` keeps `did_not_play` rows precisely so this state can be
+    observed rather than inferred, and a void here is a bet that never existed
+    rather than one that lost.
+    """
+    sat = pd.concat(
+        [
+            player_games(),
+            pd.DataFrame(
+                [
+                    {
+                        "game_id": 1,
+                        "athlete_id": 333,
+                        "athlete_display_name": "Trey Kaufman-Renn",
+                        "team_id": 10,
+                        "opponent_id": 20,
+                        "did_not_play": True,
+                        "points": None,
+                        "rebounds": None,
+                        "assists": None,
+                    }
+                ]
+            ),
+        ],
+        ignore_index=True,
+    )
+    freeze(
+        tmp_path,
+        [
+            price(
+                market="player_points",
+                selection="over",
+                line=18.5,
+                player="Trey Kaufman-Renn",
+            )
+        ],
+        {},
+    )
+    result = settle(tmp_path, players=sat)
+
+    assert result.rows_void == 1
+    assert result.rows_unresolved_player == 0
+    ledger = fe.read_ledger(tmp_path / fe.LEDGER_FILENAME)
+    assert ledger["outcome"].iloc[0] == Outcome.VOID.value
+
+
+def test_a_name_that_resolves_to_nobody_is_unknown_and_never_a_void(tmp_path):
+    """This test previously asserted the defect, under a name for the one above.
+
+    Its fixture used a player who appears in no row at all, and called the
+    result a did-not-play — so the ledger recorded `VOID`, profit 0.0, with a
+    note stating that a named human "never entered the game". This lab does not
+    know that. It knows it could not read the name, which `normalise_person`
+    measures at 763 of 9,584 (game, player) pairs, 7.96%.
+
+    The backtest was corrected for this and the ledger path was not, because the
+    test that bans the sentence reads only the backtest script's source. Here
+    the damage is permanent: the forward store is append-only.
+    """
     freeze(
         tmp_path,
         [
@@ -641,9 +851,14 @@ def test_a_player_absent_from_the_box_score_is_void_because_he_never_entered(tmp
         {},
     )
     result = settle(tmp_path)
-    assert result.rows_void == 1
+
+    assert result.rows_void == 0, (
+        "an unreadable name was recorded as a player who did not play"
+    )
+    assert result.rows_unresolved_player == 1
+    assert result.rows_unsettleable == 1
     ledger = fe.read_ledger(tmp_path / fe.LEDGER_FILENAME)
-    assert ledger["outcome"].iloc[0] == Outcome.VOID.value
+    assert ledger["outcome"].iloc[0] == Outcome.UNSETTLEABLE.value
 
 
 def test_a_player_is_resolved_by_athlete_identity_and_not_by_a_raw_string(tmp_path):
@@ -841,6 +1056,7 @@ def test_appending_the_same_settled_row_twice_keeps_the_row_recorded_first(tmp_p
 def _ledger_row(
     *,
     event_id="e1",
+    snapshot_date=DAY,
     profit=1.0,
     market="moneyline",
     tier=Tier.HIGH_MAJOR.value,
@@ -852,7 +1068,7 @@ def _ledger_row(
     selection="home",
 ):
     return {
-        "snapshot_date": DAY,
+        "snapshot_date": snapshot_date,
         "commence_time": commence_time,
         "event_id": event_id,
         "home_team": "Purdue",
@@ -883,6 +1099,28 @@ def _ledger_row(
 # --------------------------------------------------------------------------
 
 
+#: A WINNING population, and a LOSING one, with real variation in them.
+#:
+#: These fixtures used to return a constant — `lambda i: 1.0` — and a constant
+#: is the one population a cluster-robust interval cannot measure: every game
+#: returns identically, between-cluster variance is exactly zero, and the
+#: estimator has nothing to form a standard error out of. Until `stats` was
+#: fixed that degeneracy came back as a ZERO-WIDTH interval, which excludes zero
+#: by arithmetic and read as **demonstrated**. Eighteen tests across five files
+#: were green on verdicts nothing had measured.
+#:
+#: Three winners to a loser at even money is a real distribution with a real
+#: mean and a real spread, and 400 of them still demonstrate the edge these
+#: tests are about — so what they assert is now produced by evidence rather than
+#: by a division that never happened.
+def won(i: int) -> float:
+    return 1.0 if i % 4 else -1.0
+
+
+def lost(i: int) -> float:
+    return -1.0 if i % 4 else 1.0
+
+
 def _ledger(n, *, profit, market="spread", tier=Tier.LOW_MAJOR.value, edge=0.05):
     """`n` settled rows spread over `n // 3` games and three slate days."""
     rows = []
@@ -896,6 +1134,13 @@ def _ledger(n, *, profit, market="spread", tier=Tier.LOW_MAJOR.value, edge=0.05)
                 edge=edge,
                 outcome=Outcome.WON.value if profit(i) > 0 else Outcome.LOST.value,
                 commence_time=f"2027-01-{12 + (i % 3):02d}T23:00:00Z",
+                # The docstring says three slate days and the rows carried one:
+                # `snapshot_date` was a constant while only `commence_time`
+                # moved, so the day arm had a single cluster in every fixture in
+                # this file. That is invisible while a degenerate arm reports
+                # standard error 0.0 and loses the "take the wider" comparison;
+                # it is the whole answer once such an arm is correctly infinite.
+                snapshot_date=f"2027-01-{12 + (i % 3):02d}",
             )
         )
     return pd.DataFrame(rows, columns=list(fe.LEDGER_COLUMNS))
@@ -920,7 +1165,7 @@ def test_an_interval_including_zero_reads_no_demonstrated_edge_in_those_words():
 
 
 def test_a_thin_market_gets_a_phrase_and_never_a_number():
-    report = fe.render_ledger(_ledger(30, profit=lambda i: 1.0))
+    report = fe.render_ledger(_ledger(30, profit=won))
     assert "not enough evidence" in report
     assert "30 bets, below 200" in report
 
@@ -931,13 +1176,13 @@ def test_a_replicated_loss_is_reported_as_negative_and_never_as_an_edge():
     Its headline predicate tested measured + survives-correction + replicated
     and never read the sign. The direction is not decoration.
     """
-    report = fe.render_ledger(_ledger(400, profit=lambda i: -1.0))
+    report = fe.render_ledger(_ledger(400, profit=lost))
     assert "interval excludes zero, **negative**" in report
     assert "**positive**" not in report
 
 
 def test_a_replicated_win_is_reported_as_positive():
-    report = fe.render_ledger(_ledger(400, profit=lambda i: 1.0))
+    report = fe.render_ledger(_ledger(400, profit=won))
     assert "interval excludes zero, **positive**" in report
     assert "**negative**" not in report
 
@@ -948,7 +1193,7 @@ def test_a_settlement_suspect_is_not_evidence_at_any_sample_size():
     The football lab's single largest false finding was a settlement offset it
     could not see, and a constant settlement offset replicates by construction.
     """
-    ledger = _ledger(400, profit=lambda i: 1.0, market="spread_h2")
+    ledger = _ledger(400, profit=won, market="spread_h2")
     report = fe.render_ledger(ledger, settlement_suspects=frozenset({"spread_h2"}))
     assert "**not evidence**" in report
     assert "interval excludes zero, **positive**" not in report, (
@@ -961,7 +1206,7 @@ def test_a_settlement_suspect_is_not_evidence_at_any_sample_size():
 
 def test_a_second_half_market_is_footnoted_even_when_nobody_marked_it_suspect():
     """`SECOND_HALF_INCLUDES_OVERTIME` is a book rule, not a fact about the sport."""
-    report = fe.render_ledger(_ledger(300, profit=lambda i: 1.0, market="total_points_h2"))
+    report = fe.render_ledger(_ledger(300, profit=won, market="total_points_h2"))
     assert "Settlement ambiguity" in report
     assert "`total_points_h2`" in report
     assert "cannot read a book's rulebook" in report
@@ -983,8 +1228,8 @@ def test_no_pooled_division_one_headline_is_reported():
     distributions and are never collapsed into one lead number."""
     ledger = pd.concat(
         [
-            _ledger(300, profit=lambda i: 1.0, tier=Tier.HIGH_MAJOR.value),
-            _ledger(300, profit=lambda i: -1.0, tier=Tier.LOW_MAJOR.value),
+            _ledger(300, profit=won, tier=Tier.HIGH_MAJOR.value),
+            _ledger(300, profit=lost, tier=Tier.LOW_MAJOR.value),
         ],
         ignore_index=True,
     )
@@ -1003,8 +1248,8 @@ def test_opinions_and_bets_are_reported_separately():
     """Mixing them flatters whichever is worse."""
     ledger = pd.concat(
         [
-            _ledger(300, profit=lambda i: 1.0, edge=0.09),
-            _ledger(300, profit=lambda i: -1.0, edge=-0.04),
+            _ledger(300, profit=won, edge=0.09),
+            _ledger(300, profit=lost, edge=-0.04),
         ],
         ignore_index=True,
     )
@@ -1033,7 +1278,7 @@ def test_a_player_prop_is_an_opinion_and_never_a_bet_and_never_called_a_pass(
     refusal is asserted next door; this test is about what the report says once
     the gate has been satisfied, which is the run an operator actually makes.
     """
-    ledger = _ledger(300, profit=lambda i: 1.0, market="player_points", edge=0.20)
+    ledger = _ledger(300, profit=won, market="player_points", edge=0.20)
     report = fe.render_ledger(ledger)
     assert "cannot produce a\nselection" in report or "cannot produce a selection" in report
     assert "not a pass, an\navoid, or a no-value call" in report or (
@@ -1047,9 +1292,9 @@ def test_a_player_prop_is_an_opinion_and_never_a_bet_and_never_called_a_pass(
 
 
 def test_futures_are_reported_apart_with_hold_time_and_never_in_a_game_headline():
-    futures = _ledger(4, profit=lambda i: -1.0, market="championship_winner")
+    futures = _ledger(4, profit=lost, market="championship_winner")
     futures["settled_at"] = "2027-04-06T06:00:00+00:00"
-    games = _ledger(300, profit=lambda i: 1.0)
+    games = _ledger(300, profit=won)
     report = fe.render_ledger(pd.concat([futures, games], ignore_index=True))
     assert "## Futures" in report
     assert "median hold **84 days**" in report
@@ -1059,7 +1304,7 @@ def test_futures_are_reported_apart_with_hold_time_and_never_in_a_game_headline(
 
 
 def test_unsettleable_and_void_rows_never_enter_an_interval_as_zeros():
-    settled = _ledger(300, profit=lambda i: 1.0)
+    settled = _ledger(300, profit=won)
     junk = pd.DataFrame(
         [
             _ledger_row(event_id=f"x{i}", profit=None, outcome=Outcome.UNSETTLEABLE.value)
@@ -1082,13 +1327,13 @@ def test_unsettleable_and_void_rows_never_enter_an_interval_as_zeros():
 
 
 def test_reachability_is_reported_separately_when_the_ledger_carries_it():
-    ledger = _ledger(300, profit=lambda i: 1.0)
+    ledger = _ledger(300, profit=won)
     ledger["price_survived"] = [i % 2 == 0 for i in range(len(ledger))]
     report = fe.render_ledger(ledger)
     assert "## Reachability" in report
     assert "survived" in report and "vanished" in report
 
-    without = fe.render_ledger(_ledger(300, profit=lambda i: 1.0))
+    without = fe.render_ledger(_ledger(300, profit=won))
     assert "does not carry price survival" in without, (
         "Reachability unmeasured must say so, rather than being silently absent."
     )
@@ -1096,23 +1341,38 @@ def test_reachability_is_reported_separately_when_the_ledger_carries_it():
 
 def test_an_edge_that_lives_only_in_prices_that_vanished_is_not_reachable():
     """From the brief: a soft number you cannot bet is not an edge."""
-    ledger = _ledger(600, profit=lambda i: 1.0 if i % 2 else -1.0)
-    ledger["price_survived"] = [i % 2 == 0 for i in range(len(ledger))]
-    # Winners are exactly the rows whose price had already gone.
-    ledger.loc[ledger["price_survived"], "profit_units"] = -1.0
-    ledger.loc[~ledger["price_survived"], "profit_units"] = 1.0
+    ledger = _ledger(600, profit=lambda i: 1.0)
+    survived = [i % 2 == 0 for i in range(len(ledger))]
+    ledger["price_survived"] = survived
+    # The edge lives ONLY where the price had already gone: the surviving half
+    # breaks even and the vanished half wins three times in four.
+    #
+    # Both halves carry REAL variation, and the period is 8 against the
+    # fixture's three slate days on purpose. This test used to set each half to
+    # a single constant, which leaves no between-cluster variance at all — and a
+    # first attempt at repairing it used a period-4 pattern that divided evenly
+    # into the day cycle and put identical totals on all three days again. An
+    # arm with no variance cannot be measured, so BOTH halves came back
+    # unmeasurable and the report said "no demonstrated edge" about a question
+    # it had never managed to ask.
+    ledger.loc[survived, "profit_units"] = [
+        1.0 if i % 8 < 4 else -1.0 for i in range(sum(survived))
+    ]
+    ledger.loc[[not s for s in survived], "profit_units"] = [
+        1.0 if i % 8 < 6 else -1.0 for i in range(len(ledger) - sum(survived))
+    ]
     report = fe.render_ledger(ledger)
     assert fe.NOT_REACHABLE in report
 
 
 def test_every_reported_number_carries_its_sample_size():
-    report = fe.render_ledger(_ledger(300, profit=lambda i: 1.0))
+    report = fe.render_ledger(_ledger(300, profit=won))
     assert "| 300 |" in report
     assert "frozen opinions in the ledger" in report
 
 
 def test_the_report_writes_both_renders_from_one_computation(tmp_path):
-    ledger = _ledger(300, profit=lambda i: 1.0)
+    ledger = _ledger(300, profit=won)
     markdown, payload = fe.write_report(ledger, output_dir=tmp_path)
     assert markdown.name == fe.REPORT_MARKDOWN_FILENAME
     assert payload.name == fe.REPORT_JSON_FILENAME
@@ -1120,7 +1380,7 @@ def test_the_report_writes_both_renders_from_one_computation(tmp_path):
 
 
 def test_render_never_mutates_the_ledger_it_was_handed():
-    ledger = _ledger(30, profit=lambda i: 1.0)
+    ledger = _ledger(30, profit=won)
     before = list(ledger.columns)
     fe.render_ledger(ledger)
     assert list(ledger.columns) == before
@@ -1518,7 +1778,7 @@ def test_a_forward_null_says_what_return_it_could_have_demonstrated():
 
 def test_a_forward_row_below_the_floor_states_no_detectable_return():
     """Below the declared floor there is no figure, and that includes this one."""
-    # The profit VARIES. With `profit=lambda i: 1.0` every bet wins, the
+    # The profit VARIES. With `profit=won` every bet wins, the
     # standard error is zero, and the em dash arrives through the NaN check
     # whether or not the floor is tested at all -- so the test could not fail
     # and a mutant deleting the floor sailed past it. A row needs real
@@ -1571,3 +1831,82 @@ def test_one_forward_season_cannot_demonstrate_a_realistic_edge():
         "realistic 1-3% edge"
     )
     assert mde > 0.03, "a 3% edge is the optimistic end of realistic"
+
+
+# --------------------------------------------------------------------------
+# A night that was never frozen
+# --------------------------------------------------------------------------
+
+
+def _schedule(days_with_games, *, postponed=()):
+    """A hoopR-shaped schedule: one row per game, `game_date` already Eastern."""
+    rows = []
+    for day, count in days_with_games.items():
+        for _ in range(count):
+            rows.append({"game_date": day, "status_type_name": "STATUS_SCHEDULED"})
+    for day in postponed:
+        rows.append({"game_date": day, "status_type_name": "STATUS_POSTPONED"})
+    return pd.DataFrame(rows)
+
+
+def test_a_night_that_was_played_and_never_frozen_is_named(tmp_path):
+    """The gap the lab had no way to see.
+
+    `summary_line`'s "0 snapshots found" fires on an empty archive, which after
+    the first night of a season can never happen again — it counts everything
+    the workflow restored from card-feed, not last night. So a Tuesday with 200
+    games and no snapshot printed the line a healthy run prints.
+    """
+    for day in ("2027-01-12", "2027-01-15"):
+        freeze(tmp_path, [price(commence_time=f"{day}T23:00:00Z")], {}, day=day)
+
+    missing = fe.nights_missing_from_the_archive(
+        tmp_path,
+        _schedule({"2027-01-12": 40, "2027-01-13": 200, "2027-01-14": 0, "2027-01-15": 60}),
+    )
+
+    assert missing == ("2027-01-13",), (
+        "a 200-game night with no snapshot read exactly like a night with no "
+        "basketball"
+    )
+
+
+def test_the_gap_is_bounded_by_the_archives_own_span(tmp_path):
+    """The season ahead is not missing, it has not happened.
+
+    A guard that reports every unplayed night of the year as a gap is a guard
+    somebody switches off in November, and then it is not there in January.
+    """
+    freeze(tmp_path, [price()], {}, day="2027-01-12")
+    freeze(tmp_path, [price(event_id="e2")], {}, day="2027-01-14")
+
+    missing = fe.nights_missing_from_the_archive(
+        tmp_path,
+        _schedule({
+            "2026-11-02": 90,   # before the archive begins: never owed
+            "2027-01-13": 120,  # inside the span: a real gap
+            "2027-03-01": 80,   # after it ends: has not happened
+        }),
+    )
+
+    assert missing == ("2027-01-13",)
+
+
+def test_a_postponed_night_is_not_a_missing_night(tmp_path):
+    """A fixture that was called off is on the schedule and not on the slate."""
+    freeze(tmp_path, [price()], {}, day="2027-01-12")
+    freeze(tmp_path, [price(event_id="e2")], {}, day="2027-01-14")
+
+    missing = fe.nights_missing_from_the_archive(
+        tmp_path, _schedule({"2027-01-12": 5, "2027-01-14": 5}, postponed=["2027-01-13"])
+    )
+
+    assert missing == ()
+
+
+def test_an_absent_schedule_reports_no_gap_rather_than_every_night(tmp_path):
+    """Unknown is not zero, and it is not "everything is missing" either."""
+    freeze(tmp_path, [price()], {}, day="2027-01-12")
+
+    assert fe.nights_missing_from_the_archive(tmp_path, None) == ()
+    assert fe.nights_missing_from_the_archive(tmp_path, pd.DataFrame()) == ()

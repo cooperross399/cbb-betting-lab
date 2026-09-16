@@ -2246,14 +2246,27 @@ def test_the_weekly_loop_measures_the_newest_bought_store_and_not_a_pinned_cache
 # --------------------------------------------------------------------------
 
 GAMEDAY_WORKFLOW = "cbb-gameday-refresh.yml"
+#: The capture workflow, whose restore and publish blocks are executed here for
+#: the same reason the gameday ones are: both restore evidence that cannot be
+#: rebuilt from a ref and then write back to it, and a restore that fails open
+#: is how the whole history gets replaced by one run's.
+LINE_MOVEMENT_WORKFLOW = "line-movement.yml"
 #: `${{ expr }}`, which GitHub substitutes before bash ever sees the block. Bash
 #: reads an unrendered one as a bad substitution, so the harness renders them
 #: first, and refuses an expression it was not given a value for.
 EXPRESSION = re.compile(r"\$\{\{\s*(.*?)\s*\}\}")
-#: The one line of the restore step that names the real remote. The real-git
-#: test replaces exactly this line with a scratch path and nothing else, so a
-#: change to how the remote is spelled is a change this test sees.
+#: The one line every step that talks to the remote names it on — the gameday
+#: restore, the capture restore and the capture publish, all spelled
+#: identically. The real-git tests replace exactly this line with a scratch
+#: path and nothing else, so a change to how the remote is spelled is a change
+#: those tests see rather than one they run around.
 RESTORE_REMOTE_LINE = 'REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}"'
+#: A line that REPLAYS git's captured stderr, as opposed to the `2>"$GIT_ERROR"`
+#: redirections that WRITE it: an occurrence of the variable that no redirection
+#: operator immediately precedes. Written this way so a replay added through
+#: `cat` or `printf` instead of the redacting `sed` is still seen as a replay
+#: and still has to redact.
+REPLAYS_GIT_ERROR = re.compile(r'(?<![<>])"\$GIT_ERROR"')
 #: What the `${{ }}` context holds on a real scheduled morning run, as far as
 #: these three blocks read it. Outcomes are supplied per case.
 GAMEDAY_CONTEXT: dict[str, str] = {
@@ -2283,13 +2296,27 @@ def rendered(block: str, values: dict[str, str] | None = None) -> str:
     return text
 
 
-def gameday_step(step_id: str) -> str:
-    document = load(WORKFLOWS_DIR / GAMEDAY_WORKFLOW)
-    for step in steps_of(jobs_of(document)["card"]):
+def workflow_step(workflow_name: str, job_id: str, step_id: str) -> str:
+    """One `run:` block, by workflow, job and step id.
+
+    Addressed by ID rather than by position or name, because a step that loses
+    its id stops being findable and this raises instead of silently grading
+    nothing — which is the failure mode these executed tests exist to avoid.
+    """
+    document = load(WORKFLOWS_DIR / workflow_name)
+    for step in steps_of(jobs_of(document)[job_id]):
         if step.get("id") == step_id:
             assert isinstance(step.get("run"), str), f"step {step_id!r} has no run block"
             return step["run"]
-    raise AssertionError(f"{GAMEDAY_WORKFLOW} has no step with id {step_id!r} in the card job")
+    raise AssertionError(f"{workflow_name} has no step with id {step_id!r} in the {job_id} job")
+
+
+def gameday_step(step_id: str) -> str:
+    return workflow_step(GAMEDAY_WORKFLOW, "card", step_id)
+
+
+def line_movement_step(step_id: str) -> str:
+    return workflow_step(LINE_MOVEMENT_WORKFLOW, "capture", step_id)
 
 
 def runner_file(sandbox: Path, name: str) -> str:
@@ -2503,9 +2530,16 @@ def scratch_remote(root: Path) -> str:
     return remote.as_uri()
 
 
-def push_card_feed(root: Path, ledger: str, snapshots: dict[str, str]) -> None:
+def push_card_feed(root: Path, ledger: str | None, snapshots: dict[str, str]) -> None:
     """A real orphan commit on refs/heads/card-feed in the scratch remote,
-    built with the same plumbing the publish step uses."""
+    built with the same plumbing the publish step uses.
+
+    `ledger=None` builds a tip with NO `forward_evidence.csv` entry at all,
+    which is the legitimate first run; `ledger=""` builds one whose blob is
+    there and empty, which is what a run killed mid-`to_csv` leaves. The two
+    used to print the same sentence and exit the same way, and telling them
+    apart is the whole point of the test that asks for the second.
+    """
     remote = root / "remote.git"
 
     def blob(text: str) -> str:
@@ -2520,7 +2554,8 @@ def push_card_feed(root: Path, ledger: str, snapshots: dict[str, str]) -> None:
         ).stdout.strip()
 
     snapshot_tree = tree("".join(f"100644 blob {blob(body)}\t{name}\n" for name, body in snapshots.items()))
-    root_tree = tree(f"100644 blob {blob(ledger)}\tforward_evidence.csv\n040000 tree {snapshot_tree}\tsnapshots\n")
+    entries = "" if ledger is None else f"100644 blob {blob(ledger)}\tforward_evidence.csv\n"
+    root_tree = tree(f"{entries}040000 tree {snapshot_tree}\tsnapshots\n")
     # `commit-tree` refuses without a committer identity, and a CI runner has no
     # global git config — the identity travels in the environment so the test does
     # not depend on whose machine it runs on, and does not write anyone's config.
@@ -2605,6 +2640,57 @@ def test_the_restore_step_tells_an_absent_branch_from_a_failed_fetch(tmp_path: P
     assert "No card-feed branch" not in unreachable.stdout + unreachable.stderr
 
 
+def test_a_tip_that_holds_no_ledger_is_not_one_that_could_not_be_read(tmp_path: Path) -> None:
+    """The same conflation the step refuses one level up, refused per file.
+
+    `if git show refs/card-feed-tip:forward_evidence.csv > "$TMP" && [ -s
+    "$TMP" ]` printed `No ledger on card-feed yet.` for BOTH a tree that holds
+    no ledger — the legitimate first run — and a ledger whose blob could not be
+    read, and exited 0 either way with `feed=restored` already written. The
+    second is the expensive one: with no local ledger and no `.settled` markers
+    (they are runner-local and were never published), `settle_snapshots`
+    re-grades the whole archive, `append_ledger` reads `before = 0` so its
+    shrink refusal cannot fire, and the publish step's carry-forward `elif`
+    does not fire either because it tests for ABSENCE and the file is there.
+    The season comes back rebuilt with this run's `settled_at` on every row.
+
+    Both states are built for real on a scratch remote: a tip with no
+    `forward_evidence.csv` entry at all, and a tip whose entry is the empty
+    blob — which is what a run killed mid-`to_csv` leaves, `stores.py`'s write
+    not being atomic.
+    """
+    remote = scratch_remote(tmp_path)
+    snapshots = {"2026-11-01.csv": "game_id,price\n401,-110\n"}
+
+    push_card_feed(tmp_path, None, snapshots)
+    first_run, workspace = run_restore_for_real(tmp_path, remote)
+    assert first_run.returncode == 0, first_run.stderr
+    output = runner_file(workspace, "GITHUB_OUTPUT")
+    assert "feed=restored" in output and "ledger=none" in output, output
+    assert "ledger=unreadable" not in output, output
+    assert not (workspace / "data/processed/cbb_forward_evidence.csv").exists()
+    assert (workspace / "data/archive/priced_snapshots/2026-11-01.csv").exists(), (
+        "a tip with no ledger is still a tip whose snapshots restore"
+    )
+    assert runner_file(workspace, "GITHUB_STEP_SUMMARY") == "", (
+        "a first run on this branch refused, and it is not a fault"
+    )
+
+    push_card_feed(tmp_path, "", snapshots)
+    unreadable, workspace = run_restore_for_real(tmp_path, remote)
+    assert unreadable.returncode != 0, (
+        "the tip holds a ledger this run could not read and the restore step exited 0; "
+        "the settle pass would have rebuilt the season and the publish step would have pushed it"
+    )
+    output = runner_file(workspace, "GITHUB_OUTPUT")
+    assert "ledger=unreadable" in output and "ledger=none" not in output, output
+    assert "Not published" in runner_file(workspace, "GITHUB_STEP_SUMMARY")
+    assert not (workspace / "data/processed/cbb_forward_evidence.csv").exists()
+    assert "No ledger on card-feed yet" not in unreadable.stdout + unreadable.stderr, (
+        "an unreadable ledger printed what an empty season prints"
+    )
+
+
 def test_an_unreachable_remote_leaves_gits_own_message_in_the_log(tmp_path: Path) -> None:
     """`2>&1` into /dev/null made the `feed=unreachable` path undiagnosable:
     the run said it could not ask the remote and never said why, so a DNS
@@ -2620,14 +2706,45 @@ def test_an_unreachable_remote_leaves_gits_own_message_in_the_log(tmp_path: Path
     assert "does not appear to be a git repository" in logged or "Could not read from remote" in logged, logged
 
 
-def test_the_restore_step_blanks_a_credential_out_of_the_message_it_replays(tmp_path: Path) -> None:
+#: The restore blocks, by workflow. Both capture git's stderr and replay it on
+#: the paths that refuse, so both are held to the same two rules below.
+RESTORE_BLOCK_OF = {
+    GAMEDAY_WORKFLOW: lambda: gameday_step("restore"),
+    LINE_MOVEMENT_WORKFLOW: lambda: line_movement_step("restore"),
+}
+
+
+@pytest.mark.parametrize("workflow_name", sorted(RESTORE_BLOCK_OF), ids=sorted(RESTORE_BLOCK_OF))
+def test_a_restore_step_blanks_a_credential_out_of_the_message_it_replays(
+    tmp_path: Path, workflow_name: str
+) -> None:
     """The message git writes is replayed, and the remote it names carries the
     token. git strips the userinfo out of the URL it prints; this proves the
     step does not depend on it doing so. Executed: the block's own redaction
-    lines, over a message that does carry one."""
-    redactions = [line for line in commands(gameday_step("restore")) if line.startswith("sed ")]
-    assert len(redactions) == 2, (
-        f"the restore step replays git's error on {len(redactions)} path(s), not the two that fail: {redactions}"
+    lines, over a message that does carry one.
+
+    The count is DERIVED rather than typed. It used to read `== 2`, which was
+    the number of refusing paths on the day it was written — so closing a third
+    hole in the same step turned this red for the wrong reason, and a fourth
+    added without a replay would have turned it red for no reason at all. The
+    two invariants are what the number was standing in for: every line that
+    replays git's message redacts it, and every refusal in the step has a
+    replay to explain itself with. One run in this step's life ever takes these
+    paths, and it is the run that needs the reason.
+    """
+    lines = commands(RESTORE_BLOCK_OF[workflow_name]())
+    redactions = [line for line in lines if REPLAYS_GIT_ERROR.search(line)]
+    refusals = [line for line in lines if "::error::" in line]
+    assert redactions, f"{workflow_name}: the restore step no longer replays git's message anywhere"
+    for line in redactions:
+        assert line.startswith("sed -e "), (
+            f"{workflow_name}: the restore step replays git's message without redacting it: {line!r}"
+        )
+    assert len(redactions) == len(refusals), (
+        f"{workflow_name}: the restore step refuses on {len(refusals)} path(s) and replays git's "
+        f"message on {len(redactions)}. Every refusal here is a git failure, so a refusal with no "
+        f"replay is a run told it could not read the feed and never told why.\n"
+        f"refusals: {refusals}\nreplays: {redactions}"
     )
     carrier = tmp_path / "git_error.txt"
     carrier.write_text(
@@ -2729,6 +2846,343 @@ def test_a_failed_card_never_publishes_as_clean(tmp_path: Path) -> None:
     the same fact again. If the two ever disagree, nothing is pushed."""
     disagreement = run_publish(tmp_path, "success", "failure", "false", {"git"})
     assert disagreement.exit_code != 0 and disagreement.any_failures == [], disagreement
+
+
+# --------------------------------------------------------------------------
+# What the gameday run carries off the runner, and what it deliberately does
+# not put on the feed.
+# --------------------------------------------------------------------------
+
+
+def upload_paths(workflow_name: str, job_id: str) -> list[str]:
+    """Every path listed by every `actions/upload-artifact` step in one job."""
+    document = load(WORKFLOWS_DIR / workflow_name)
+    listed: list[str] = []
+    for step in steps_of(jobs_of(document)[job_id]):
+        if not str(step.get("uses", "")).startswith("actions/upload-artifact"):
+            continue
+        declared = (step.get("with") or {}).get("path", "")
+        listed.extend(piece.strip() for piece in str(declared).splitlines() if piece.strip())
+    return listed
+
+
+def test_the_full_board_the_card_stages_is_carried_off_the_runner() -> None:
+    """The staged board was written every live night and kept by nobody.
+
+    `run_gameday_card.py` writes every book\'s quote for every market it
+    fetched to `data/staging/`, and the freeze keeps ONE row per wager at the
+    best price — so every other book\'s quote for the night lived only there.
+    It was in neither the publish step\'s file list nor the artifact\'s path
+    list, and nothing under `src/` or `scripts/` reads the directory back, so
+    the deletion at runner teardown had no reader to fail. It is loudest on a
+    night the credit cap cuts the per-event stage short: `_rows_to_freeze`
+    withholds every non-bulk market from the ledger on the stated grounds that
+    those rows are staged, and they were then deleted in the same run.
+
+    The directory is READ FROM THE MODULE THAT WRITES IT rather than typed
+    here, the way `test_the_purchase_workflow_names_the_directory_the_module_
+    actually_writes` reads `cache_dir_for` — a hand-spelled path the code never
+    writes is the most expensive defect in this repository.
+    """
+    from cbb_betting_lab.config import STAGING_DIR
+
+    staged = STAGING_DIR.resolve().relative_to(PROJECT_ROOT.resolve()).as_posix()
+    listed = upload_paths(GAMEDAY_WORKFLOW, "card")
+    assert any(path.rstrip("/") == staged for path in listed), (
+        f"the gameday card job uploads {listed} and none of them is {staged!r}, where "
+        "`run_gameday_card.py` writes the whole fetched board. The runner is torn down "
+        "after the job, so a night of every-book quotes — including the ladder, half and "
+        "prop rows the freeze deliberately withholds from the ledger — exists nowhere."
+    )
+
+    # ...and the default is what the workflow actually gets, which is only true
+    # while the card step does not point the writer somewhere else.
+    card = rendered(gameday_step("card"))
+    assert "--staging-dir" not in card, (
+        "the card step overrides --staging-dir, so the directory this test reads off "
+        "`config.STAGING_DIR` is no longer the directory the run writes"
+    )
+
+    # THE OTHER HALF OF THE SAME DECISION, and it is a standing guard rather
+    # than a fix: staged rows are unreviewed provider data whose only
+    # protection is that they live where the card cannot read them, and
+    # `card-feed` is the delivery ref a relay copies into Drive. They are
+    # persisted as an artifact for exactly that reason, and a later session
+    # that decides to "finish the job" by publishing them to the branch turns
+    # this red.
+    publish = gameday_step("publish")
+    assert "data/staging" not in publish, (
+        "the publish step names data/staging. Staged rows are unreviewed provider data and "
+        "card-feed is the delivery ref; they are carried as an artifact and never on the feed."
+    )
+
+
+# --------------------------------------------------------------------------
+# The capture workflow\'s fault paths, executed rather than read.
+#
+# `line-movement.yml` restores a store that cannot be rebuilt from a ref and
+# then writes back to it, which is the gameday shape exactly — so its restore
+# and publish blocks are executed the same two ways: under stubs, where the
+# question is which exit code the block reaches its end with, and against a
+# real scratch remote, where the question is whether an absent branch, an
+# unreadable store and an unanswerable remote are told apart. The `${{ }}`
+# renderer above serves both files; the capture blocks read only
+# `github.repository` and the restore step\'s own outcome.
+# --------------------------------------------------------------------------
+
+
+def push_line_movement(root: Path, files: dict[str, str]) -> str:
+    """A real orphan commit on refs/heads/line-movement in the scratch remote,
+    built with the same plumbing the publish step uses. Returns its sha, so a
+    test can assert the tip DID NOT MOVE — which is the only thing a refusal
+    to publish actually promises.
+
+    `files` is the whole root tree, so a tip holding no `cbb_line_movement.csv`
+    and a tip holding an empty one are both expressible: the first is a branch
+    that exists before anything was ever captured, the second is what a run
+    killed mid-`to_csv` leaves (`stores.py` writes non-atomically), and the
+    step used to print the same sentence for both.
+    """
+    remote = root / "remote.git"
+
+    def blob(text: str) -> str:
+        return subprocess.run(
+            ["git", "-C", str(remote), "hash-object", "-w", "--stdin"],
+            input=text, capture_output=True, text=True, check=True,
+        ).stdout.strip()
+
+    entries = "".join(f"100644 blob {blob(body)}\t{name}\n" for name, body in files.items())
+    root_tree = subprocess.run(
+        ["git", "-C", str(remote), "mktree"], input=entries, capture_output=True, text=True, check=True
+    ).stdout.strip()
+    commit = subprocess.run(
+        ["git", "-C", str(remote), "commit-tree", root_tree, "-m", "capture"],
+        capture_output=True, text=True, check=True, env={**os.environ, **GIT_IDENTITY},
+    ).stdout.strip()
+    subprocess.run(["git", "-C", str(remote), "update-ref", "refs/heads/line-movement", commit], check=True)
+    return commit
+
+
+def tip_of(root: Path, ref: str) -> str:
+    """The sha the scratch remote\'s ref points at, or `""` if it has none."""
+    listed = subprocess.run(
+        ["git", "-C", str(root / "remote.git"), "rev-parse", "--verify", "-q", ref],
+        capture_output=True, text=True,
+    )
+    return listed.stdout.strip()
+
+
+def run_capture_block_for_real(
+    root: Path,
+    block: str,
+    remote_url: str,
+    *,
+    values: dict[str, str] | None = None,
+    store: str | None = None,
+) -> tuple[subprocess.CompletedProcess[str], Path]:
+    """One capture block, with its remote line and nothing else replaced,
+    executed with real git inside a fresh checkout-shaped directory.
+
+    `store` is the local `data/processed/cbb_line_movement.csv` the block finds
+    on disk — which is what the capture step would have left behind.
+    """
+    assert block.count(RESTORE_REMOTE_LINE) == 1, (
+        "the capture block no longer names its remote on the one line these tests replace"
+    )
+    block = rendered(block.replace(RESTORE_REMOTE_LINE, f'REMOTE="{remote_url}"'), values)
+    workspace = root / "capture-workspace"
+    if workspace.exists():
+        shutil.rmtree(workspace)
+    workspace.mkdir()
+    subprocess.run(["git", "init", "-q", str(workspace)], check=True)
+    if store is not None:
+        (workspace / "data/processed").mkdir(parents=True, exist_ok=True)
+        (workspace / "data/processed/cbb_line_movement.csv").write_text(store, encoding="utf-8")
+    script = workspace / "run_block.sh"
+    script.write_text(block, encoding="utf-8")
+    environment = {
+        "PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(workspace),
+        "LC_ALL": "C", "GH_TOKEN": "unused", **GIT_IDENTITY,
+    }
+    for name in RUNNER_FILE_VARIABLES:
+        target = workspace / name.lower()
+        target.write_text("", encoding="utf-8")
+        environment[name] = str(target)
+    assert HARNESS_SHELL
+    completed = subprocess.run(
+        [HARNESS_SHELL, "-e", str(script)], cwd=workspace, env=environment,
+        capture_output=True, text=True, timeout=120,
+    )
+    return completed, workspace
+
+
+#: Two captures on the store the scratch remote starts from. Line count, not
+#: row count: the publish step\'s floor compares `wc -l` on both sides, which
+#: is the only measure available to it without parsing the CSV.
+CAPTURE_STORE = (
+    "captured_at,event_id,market,book,selection,american_odds\n"
+    "2026-11-02T18:13:00Z,e1,spread,fanduel,home_minus_2_5,-110\n"
+    "2026-11-02T18:13:00Z,e2,spread,fanduel,home_minus_6_5,-105\n"
+    "2026-11-02T23:13:00Z,e1,spread,fanduel,home_minus_2_5,-112\n"
+    "2026-11-02T23:13:00Z,e2,spread,fanduel,home_minus_6_5,-108\n"
+)
+#: What the defect produces: the restore found nothing, so the capture wrote a
+#: store holding only its own rows. `stores.append`\'s shrink guard read
+#: `before = 0` off the absent file and could not fire.
+ONE_CAPTURE_STORE = (
+    "captured_at,event_id,market,book,selection,american_odds\n"
+    "2026-11-02T23:13:00Z,e1,spread,fanduel,home_minus_2_5,-112\n"
+)
+
+
+def test_a_failed_capture_fetch_fails_the_restore_step(tmp_path: Path) -> None:
+    """The defect, under stubs: `if git fetch ...; else echo "No line-movement
+    ref yet; this is the first capture."` read every failure as an absent
+    branch. Executed with git failing, the block must exit non-zero, record
+    `store=unreachable`, and write the refusal into the step summary — and
+    never claim the branch is absent."""
+    block = rendered(line_movement_step("restore"))
+
+    failed = run_block_under_stubs(block, {"git"}, tmp_path)
+    assert "git" in failed.any_failures, "git was never invoked, so nothing was tested"
+    assert failed.unmodelled == [], failed
+    assert failed.exit_code != 0, "the capture fetch failed and the restore step still exited 0"
+    output = runner_file(tmp_path, "GITHUB_OUTPUT")
+    assert "store=unreachable" in output, output
+    assert "store=absent" not in output and "store=restored" not in output, output
+    assert "Not published" in runner_file(tmp_path, "GITHUB_STEP_SUMMARY")
+
+    everything = run_block_under_stubs(block, None, tmp_path)
+    assert everything.exit_code != 0
+
+
+def test_the_capture_restore_tells_an_absent_branch_from_a_failed_fetch(tmp_path: Path) -> None:
+    """Against a real remote in all three states. Absent: the legitimate first
+    capture, exit 0 and `store=absent`. Present: the store comes back byte for
+    byte and `store=restored`. Unreachable: exit non-zero, `store=unreachable`,
+    the refusal in the summary, and nothing on disk that a capture could append
+    to and then publish over the season."""
+    remote = scratch_remote(tmp_path)
+
+    absent, workspace = run_capture_block_for_real(tmp_path, line_movement_step("restore"), remote)
+    assert absent.returncode == 0, absent.stderr
+    assert "store=absent" in runner_file(workspace, "GITHUB_OUTPUT")
+    assert not (workspace / "data/processed/cbb_line_movement.csv").exists()
+    assert runner_file(workspace, "GITHUB_STEP_SUMMARY") == ""
+
+    push_line_movement(tmp_path, {"cbb_line_movement.csv": CAPTURE_STORE})
+    present, workspace = run_capture_block_for_real(tmp_path, line_movement_step("restore"), remote)
+    assert present.returncode == 0, present.stderr
+    assert "store=restored" in runner_file(workspace, "GITHUB_OUTPUT")
+    assert (workspace / "data/processed/cbb_line_movement.csv").read_text(encoding="utf-8") == CAPTURE_STORE
+
+    unreachable, workspace = run_capture_block_for_real(
+        tmp_path, line_movement_step("restore"), (tmp_path / "no-such-remote.git").as_uri()
+    )
+    assert unreachable.returncode != 0, "an unreachable remote was read as an absent branch"
+    output = runner_file(workspace, "GITHUB_OUTPUT")
+    assert "store=unreachable" in output and "store=absent" not in output, output
+    assert "Not published" in runner_file(workspace, "GITHUB_STEP_SUMMARY")
+    assert not (workspace / "data/processed/cbb_line_movement.csv").exists()
+    assert "first capture" not in unreachable.stdout, (
+        "a remote that could not be asked printed what a first capture prints"
+    )
+
+
+def test_a_ref_that_holds_no_store_is_not_one_that_could_not_be_read(tmp_path: Path) -> None:
+    """Per file, the same distinction the step now makes per branch.
+
+    A branch that exists and holds no `cbb_line_movement.csv` is the first
+    capture on it. A branch whose store is there and unreadable — the empty
+    blob a run killed mid-`to_csv` leaves — is not, and appending to nothing
+    and publishing the result is how the season goes."""
+    remote = scratch_remote(tmp_path)
+
+    push_line_movement(tmp_path, {"latest_line_movement.md": "# no captures yet\n"})
+    empty, workspace = run_capture_block_for_real(tmp_path, line_movement_step("restore"), remote)
+    assert empty.returncode == 0, empty.stderr
+    output = runner_file(workspace, "GITHUB_OUTPUT")
+    assert "store=empty" in output and "store=unreadable" not in output, output
+    assert not (workspace / "data/processed/cbb_line_movement.csv").exists()
+    assert runner_file(workspace, "GITHUB_STEP_SUMMARY") == ""
+
+    push_line_movement(tmp_path, {"cbb_line_movement.csv": ""})
+    unreadable, workspace = run_capture_block_for_real(tmp_path, line_movement_step("restore"), remote)
+    assert unreadable.returncode != 0, (
+        "the ref holds a store this run could not read and the restore step exited 0; "
+        "the capture would have appended to nothing and the publish step would have pushed it"
+    )
+    output = runner_file(workspace, "GITHUB_OUTPUT")
+    assert "store=unreadable" in output and "store=empty" not in output, output
+    assert "Not published" in runner_file(workspace, "GITHUB_STEP_SUMMARY")
+    assert not (workspace / "data/processed/cbb_line_movement.csv").exists()
+
+
+CAPTURE_PUBLISH_OUTCOMES = {
+    "restore failed": "failure",
+    "run died before restore": "skipped",
+    "restore cancelled": "cancelled",
+}
+
+
+@pytest.mark.parametrize("case", sorted(CAPTURE_PUBLISH_OUTCOMES), ids=sorted(CAPTURE_PUBLISH_OUTCOMES))
+def test_a_capture_that_did_not_restore_the_store_never_reaches_publish(tmp_path: Path, case: str) -> None:
+    """The defect\'s second half. The restore step failing is only half a fix:
+    the publish step runs under `if: always()`, fetches the ref AGAIN, and that
+    second fetch usually succeeds — which is what made the truncated tree a
+    clean fast-forward onto the real tip. With git failing, `any_failures` is
+    empty only if no git command was invoked at all: the refusal came first."""
+    block = rendered(
+        line_movement_step("publish"), {"steps.restore.outcome": CAPTURE_PUBLISH_OUTCOMES[case]}
+    )
+    refused = run_block_under_stubs(block, {"git"}, tmp_path)
+    assert refused.unmodelled == [], refused
+    assert refused.exit_code != 0, f"{case}: the publish step ran to its end without a restored store"
+    assert refused.any_failures == [], f"{case}: git was invoked before the refusal: {refused.any_failures}"
+    assert "Not published" in runner_file(tmp_path, "GITHUB_STEP_SUMMARY"), f"{case}: the summary does not say why"
+
+
+def test_the_capture_publish_refuses_a_tree_shorter_than_the_tip_it_would_replace(tmp_path: Path) -> None:
+    """The last line of defence, executed against a real ref and a real push.
+
+    Whatever upstream believed about its own health, a store shorter than the
+    one already on the branch is a loss and not a capture: this store is
+    append-only, and `stores.append` cannot make this refusal because it reads
+    `before` off the local file and the failure being guarded against is the
+    local file not being there. The floor is read back off the tip seconds
+    before the push, so it cannot go stale.
+
+    Both directions, because a guard that refuses everything is not a guard:
+    the short tree is refused AND the remote\'s tip does not move, then a
+    longer tree publishes and the branch carries it.
+    """
+    remote = scratch_remote(tmp_path)
+    before = push_line_movement(tmp_path, {"cbb_line_movement.csv": CAPTURE_STORE})
+
+    short, workspace = run_capture_block_for_real(
+        tmp_path, line_movement_step("publish"), remote,
+        values={"steps.restore.outcome": "success"}, store=ONE_CAPTURE_STORE,
+    )
+    assert short.returncode != 0, (
+        "a one-capture store published over a tip holding four captures, as a fast-forward"
+    )
+    assert "Not published" in runner_file(workspace, "GITHUB_STEP_SUMMARY")
+    assert tip_of(tmp_path, "refs/heads/line-movement") == before, (
+        "the refusal still moved the branch; the season is what this guard is for"
+    )
+
+    grown = CAPTURE_STORE + "2026-11-03T03:13:00Z,e1,spread,fanduel,home_minus_2_5,-115\n"
+    longer, workspace = run_capture_block_for_real(
+        tmp_path, line_movement_step("publish"), remote,
+        values={"steps.restore.outcome": "success"}, store=grown,
+    )
+    assert longer.returncode == 0, longer.stderr
+    assert tip_of(tmp_path, "refs/heads/line-movement") != before, "a legitimate capture did not publish"
+    published = subprocess.run(
+        ["git", "-C", str(tmp_path / "remote.git"), "show", "refs/heads/line-movement:cbb_line_movement.csv"],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    assert published == grown, published
 
 
 # --------------------------------------------------------------------------

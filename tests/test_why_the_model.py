@@ -462,10 +462,30 @@ def test_half_an_interval_cannot_fabricate_an_edge_by_being_half_an_interval(out
     row["adjusted_low"] = +0.02
     del row["adjusted_high"]
     row["verdict"] = S.DEMONSTRATED_EDGE
-    assert WHY.verdict_of(row) == S.DEMONSTRATED_EDGE, (
-        "the fabricated interval must still read as an edge, or this test is "
-        "passing because the row stopped being dangerous rather than because "
-        "the record is refused"
+    # THE TRIPWIRE, AND WHY IT NO LONGER NAMES A VERDICT.
+    #
+    # This asserted `verdict_of(row) == DEMONSTRATED_EDGE`, so that a green test
+    # could not mean "the row stopped being dangerous" instead of "the record
+    # is refused". It fired on 2026-09-15, doing exactly its job: a second door
+    # closed underneath it. `RoiInterval.survives_correction` now refuses any
+    # pair that is not an interval, and a missing bound reads 0.0, so the
+    # fabricated pair `[+0.02, 0.0]` is INVERTED rather than merely zero-width
+    # and no longer reads as an edge anywhere. The old expectation had itself
+    # been produced by the defect that fix closed: `0.02 <= 0` is False, so the
+    # single `not (low <= 0 <= high)` clause called that pair an edge.
+    #
+    # So the tripwire now asserts the DANGER rather than the verdict that used
+    # to follow from it. What made the deleted key dangerous is that the pair
+    # the row publishes excludes zero by arithmetic while being compared to
+    # nothing — and that is still exactly true. A row that stopped satisfying
+    # this would still make the test below vacuous, which is the whole point of
+    # asserting anything here.
+    assert "adjusted_high" not in row
+    published = WHY.printed_interval(row)
+    assert published.low > 0.0 >= published.high, (
+        "the pair this row would PUBLISH no longer excludes zero from above "
+        f"({published.low} to {published.high}), so this is not the dangerous "
+        "row the test is named for and the refusal below proves nothing"
     )
 
     with pytest.raises(WHY.WhyError) as caught:

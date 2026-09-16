@@ -405,6 +405,14 @@ def allowlist(lab: dict, market: str, *, roi_floor: float = -0.02) -> None:
     staging.save(policy, lab["manual"])
 
 
+#: A swing that sums to zero over its cycle, so the mean the caller asks for is
+#: the mean it gets. Seven is coprime to the sixty slate days below.
+SWING = (1, -1, 1, -1, 1, -1, 0)
+#: How far each bet sits from the mean. Large enough that the between-cluster
+#: variance is real, small enough that it does not move a verdict across zero.
+SWING_UNITS = 0.5
+
+
 def settled_ledger(
     lab: dict, *, market: str, rows: int, profit: float, tier: str = "low_major"
 ) -> Path:
@@ -414,10 +422,24 @@ def settled_ledger(
     as tight as it can honestly be — this fixture is about the demotion decision
     rather than about clustering, which `stats.interval_two_way` owns and
     `tests/test_clustered_interval_is_not_too_narrow.py` pins.
+
+    `profit` is the MEAN return per bet, realised as a swing around it. It used
+    to be the return of every single row, and a population in which every
+    cluster returns the same number has no between-cluster variance at all — so
+    the interval was not tight, it was undefined, and the verdicts these tests
+    read off it were produced by a division that never happened.
+
+    The swing is seven long against sixty slate days because a period that
+    divides the day count puts the identical mix on every day and flattens the
+    day arm again; a flat arm is infinitely wide and wins the take-the-wider
+    comparison, so the cell comes back unmeasurable however varied the games
+    are. It sums to zero over its cycle, so `profit` still means what its
+    callers pass.
     """
     records = []
     for i in range(rows):
         day = date(2026, 11, 1) + timedelta(days=i % 60)
+        row_profit = round(profit + SWING[i % len(SWING)] * SWING_UNITS, 4)
         records.append(
             {
                 "snapshot_date": day.isoformat(),
@@ -440,9 +462,9 @@ def settled_ledger(
                 "tier": tier,
                 "verdicts_in_force": "",
                 "settled_at": f"{day.isoformat()}T23:59:00Z",
-                "outcome": "won" if profit > 0 else "lost",
+                "outcome": "won" if row_profit > 0 else "lost",
                 "actual": 3,
-                "profit_units": profit,
+                "profit_units": row_profit,
             }
         )
     frame = pd.DataFrame(records, columns=list(fe.LEDGER_COLUMNS))
@@ -498,7 +520,12 @@ def test_the_receipts_floor_wins_over_the_criteria_file(lab: dict):
     default in `promotion_criteria.json` would have kept.
     """
     allowlist(lab, "spread", roi_floor=0.0)
-    settled_ledger(lab, market="spread", rows=900, profit=-0.02)
+    # Enough evidence that the WHOLE interval sits under 0% while still
+    # reaching above -2%: that gap is the entire subject of this test, and it
+    # only exists on a record big enough to measure. The old fixture got it
+    # from 900 rows that all returned -2.00% exactly — an interval of no width,
+    # which sits below any floor above it by arithmetic rather than by evidence.
+    settled_ledger(lab, market="spread", rows=9000, profit=-0.015)
     criteria = promotion.load_criteria(CBB, manual_dir=lab["manual"])
     assert criteria.demotion_roi_floor == -0.02, "the fixture is not testing anything"
     run(lab)

@@ -48,6 +48,19 @@ advance which applies, so `interval_two_way` computes both and reports the
 **wider**. Choosing the narrower after seeing both is exactly the move this
 whole document set exists to prevent.
 
+**"Wider" is measured on the WIDTH, and that is not a pedantic distinction.**
+The rule compared the two arms' standard errors, and an arm with fewer than two
+clusters has no standard error to report — it carries ±inf bounds and the
+dataclass default 0.0 — so the arm with the INFINITE interval lost every
+comparison it was ever in. Days can never outnumber games, so the arm that goes
+degenerate is the day arm, and the forward ledger is one slate date from its
+first settled night until a cell reaches its second: every cell of the opening
+week would have printed a game-clustered interval, a family correction and a
+verdict off a standard error that assumed a hundred independent games on a
+night when every one of them shared whatever daily component there was. The
+football lab's interval, 10.3× too narrow, coming back through the selection
+rule after the estimator itself was fixed.
+
 **The third unit is the ATHLETE, and on a player-prop population it is not
 optional.** One subject supplies a whole ladder across ten markets on one
 night: `player_points` carries a mean 7.19 lines per subject on the 2024 card
@@ -63,6 +76,7 @@ more than twice too narrow on a population shaped like this one.
 from __future__ import annotations
 
 import math
+import sys
 from dataclasses import dataclass
 from statistics import NormalDist
 
@@ -167,8 +181,26 @@ class RoiInterval:
 
     @property
     def survives_correction(self) -> bool:
-        """Whether the result still excludes zero once the search is counted."""
+        """Whether the result still excludes zero once the search is counted.
+
+        **A zero-width interval is the absence of an interval, not certainty
+        about one**, and it excludes zero by arithmetic rather than by
+        evidence. `interval_by_cluster` no longer emits one — it returns ±inf
+        where between-cluster variation identifies nothing — but a row REBUILT
+        from a published record carries whatever bounds that record holds, and
+        `what_we_can_claim._interval_from_forward_row` recovers the standard
+        error as `(high − low) / (2·Z95)`, so a record whose two bounds are
+        equal rebuilds as `roi ± 0` and walks straight past the test below as a
+        demonstrated edge. That file's own `_as_float` already names the shape:
+        *"a zero-width interval around a positive return reads as a finding."*
+        Nothing is demonstrated by a pair of bounds that is not an interval,
+        whichever side of zero it sits on — and the same clause refuses a NaN
+        pair, where every comparison below is False and the `not` would turn
+        that into a claim.
+        """
         if not self.enough_evidence:
+            return False
+        if not (self.adjusted_high > self.adjusted_low):
             return False
         return not (self.adjusted_low <= 0.0 <= self.adjusted_high)
 
@@ -235,6 +267,81 @@ class RoiInterval:
         )
 
 
+#: How much floating-point cancellation a residual may carry before it counts
+#: as between-cluster variation. `residual = profit − roi · bets` subtracts two
+#: numbers of the same magnitude, so clusters that all returned IDENTICALLY
+#: leave a few ulps behind rather than exact zeros. Measured on 240 bets over
+#: 120 games all paying +0.9091: the largest residual is **6.7e-16** and the
+#: standard error **3.05e-17**, which is not 0.0 — so `if not standard_error`
+#: never fires, `minimum_detectable_effect` returns 9.1e-17 rather than NaN,
+#: and the cell printed *+90.9% to +90.9% — demonstrated edge* over an interval
+#: with no width at all. An exact `== 0` test does not hold in floating point
+#: and this is what stands in for one.
+#:
+#: Sixty-four eps is a cancellation bound, not a tolerance on the return: it is
+#: applied to the magnitude of the two quantities being differenced, which on
+#: that frame makes the bar 5.2e-14 against residuals that a cell with any real
+#: variation in it carries at the scale of its own profits — thirteen orders of
+#: magnitude clear of it. Nothing a graded column can produce lands in between.
+_CANCELLATION_NOISE = 64 * sys.float_info.epsilon
+
+
+def _not_identified(
+    roi: float,
+    bets: int,
+    clusters: int,
+    *,
+    looks: int,
+    cluster_unit: str,
+) -> RoiInterval:
+    """The shape an arm takes when between-cluster variation bounds nothing.
+
+    **±inf and no standard error, never `roi ± 0`.** This is the closest thing
+    this module has to `forecast_skill.NotIdentified`, which refuses outright —
+    *"One game is not a sample of games"* — and it refuses the same thing by
+    value rather than by exception, because every caller of this function
+    renders a table and a raised exception on the first settled night of the
+    season would take the whole forward report down with it rather than one
+    cell. The value says the same thing everywhere a number is read:
+    `minimum_detectable_effect` is NaN (*"a cell that could detect nothing at
+    all rather than a cell that could detect everything"*), `row_verdict` reads
+    −inf and +inf and prints `no demonstrated edge`, `_detectable` prints an em
+    dash, and `what_we_can_claim._as_float` renders it as **unbounded** — the
+    one word its docstring says exists because carrying the same case through
+    as 0.0 "would be far worse, because a zero-width interval around a positive
+    return reads as a finding".
+    """
+    return RoiInterval(
+        roi,
+        float("-inf"),
+        float("inf"),
+        bets,
+        clusters,
+        looks=looks,
+        cluster_unit=cluster_unit,
+    )
+
+
+def _half_width(interval: RoiInterval) -> float:
+    """How wide this arm actually is, with an unidentified arm INFINITELY wide.
+
+    The comparison the two- and three-way rules make, and it is on the width
+    rather than on the standard error because those two disagree on exactly the
+    arm that carries no information: :func:`_not_identified` reports ±inf bounds
+    alongside the dataclass default `standard_error=0.0`, so a comparison on the
+    standard error ranks an unbounded interval as the NARROWEST thing in the
+    room and hands back the other arm. On every arm an estimator did identify
+    the two comparisons are the same one, because the bounds are `roi ± Z95·se`.
+
+    A NaN bound — which is what a NaN profit propagates into — is also not
+    finite, so it reads as unidentified here rather than losing every
+    comparison it is in.
+    """
+    if not (math.isfinite(interval.low) and math.isfinite(interval.high)):
+        return float("inf")
+    return (interval.high - interval.low) / 2.0
+
+
 def interval_by_cluster(
     per_cluster: pd.DataFrame,
     *,
@@ -249,6 +356,15 @@ def interval_by_cluster(
     agrees with. `per_cluster` is one row per cluster with the cluster's total
     profit and its bet count — build it with
     `df.groupby(key).agg(profit=(...,"sum"), bets=(...,"size"))`.
+
+    **Two shapes identify nothing, and both return ±inf rather than a width.**
+    Fewer than two clusters is the obvious one: one game is not a sample of
+    games. The other is a set of clusters that all returned the SAME ROI, which
+    leaves the between-cluster variance at zero and the interval at `roi ± 0` —
+    a pair of bounds that excludes zero for any non-zero return and reads as a
+    demonstrated edge at any sample size. That is not a return measured without
+    error; it is a column with no variation in it, which is what a settlement
+    or grading fault looks like from here. See :func:`_not_identified`.
     """
     if per_cluster.empty:
         return RoiInterval(0.0, 0.0, 0.0, 0, 0, looks=looks, cluster_unit=cluster_unit)
@@ -260,17 +376,28 @@ def interval_by_cluster(
         )
     roi = float(per_cluster[profit_column].sum() / total)
     if clusters < 2:
-        return RoiInterval(
-            roi,
-            float("-inf"),
-            float("inf"),
-            total,
-            clusters,
-            looks=looks,
-            cluster_unit=cluster_unit,
+        return _not_identified(
+            roi, total, clusters, looks=looks, cluster_unit=cluster_unit
         )
     mean_bets = total / clusters
     residual = per_cluster[profit_column] - roi * per_cluster[bets_column]
+    # **No spread between the clusters is not a perfectly measured return.**
+    # Every cluster returning the same ROI drives the residuals — and so the
+    # standard error and the interval's whole width — to zero, and `roi ± 0`
+    # excludes zero by arithmetic. Compared against the magnitude of the two
+    # quantities being differenced, because that is the scale the cancellation
+    # error lives on; an absolute epsilon would mean one thing on a unit stake
+    # and another on a thousand.
+    scale = float(
+        (
+            per_cluster[profit_column].abs()
+            + abs(roi) * per_cluster[bets_column].abs()
+        ).max()
+    )
+    if float(residual.abs().max()) <= _CANCELLATION_NOISE * scale:
+        return _not_identified(
+            roi, total, clusters, looks=looks, cluster_unit=cluster_unit
+        )
     variance = float((residual**2).sum())
     standard_error = math.sqrt(variance / (clusters * (clusters - 1))) / mean_bets
     return RoiInterval(
@@ -301,6 +428,27 @@ def interval_two_way(
     applies, so it computes both and takes the wider — because choosing the
     narrower after seeing both is the move the rest of this repository exists
     to prevent.
+
+    **The comparison is on the WIDTH, and an arm that identifies nothing is
+    infinitely wide.** It used to be on the standard error, and
+    :func:`_not_identified` carries the dataclass default 0.0 alongside its
+    infinite bounds — so the arm with no interval at all lost every comparison,
+    and the docstring's promise was inverted exactly where one arm had nothing
+    to say. The number of distinct days can never exceed the number of distinct
+    games, so the arm that goes degenerate is the DAY arm, and **the forward
+    ledger is one slate date from its first settled night until a cell reaches
+    its second.** Reproduced on 240 bets over 120 games on a single 2026-11-02:
+    the day arm returned 1 cluster and −inf to +inf, the game arm ±8.5%, and
+    the rule handed back the game arm — a cross-game-independence claim about a
+    night on which every game shared whatever daily component there was, under
+    a front page (`forward_evidence` module docstring) that promises the reader
+    *"clustered by game **and** by day, wider of the two"*. That is the football
+    lab's 10.3×-too-narrow interval coming back through the selection rule
+    instead of through the estimator.
+
+    The tie still goes to the game arm, which is where it went before: the two
+    arms are equally wide only when both are degenerate — one game, therefore
+    one day — and then both are unbounded and the game is the canonical unit.
     """
     if bets.empty:
         return RoiInterval(0.0, 0.0, 0.0, 0, 0, looks=looks)
@@ -318,7 +466,7 @@ def interval_two_way(
         looks=looks,
         cluster_unit="day",
     )
-    return by_game if by_game.standard_error >= by_day.standard_error else by_day
+    return by_game if _half_width(by_game) >= _half_width(by_day) else by_day
 
 
 #: The third cluster unit, and it is not optional on a player-prop population.
@@ -359,12 +507,25 @@ def interval_three_way(
 
     **A frame whose subjects are all blank degrades to the two-way answer, and
     cannot narrow it.** A team market has no athlete, so every such row groups
-    under one nameless key; `interval_by_cluster` with a single cluster reports
-    a standard error of 0.0 and infinite bounds, and 0.0 never wins the
-    comparison below. So the arm is silent rather than wrong on a population it
-    does not describe. It can never make the answer NARROWER either, whatever
-    the subjects look like, because the widest of the three is taken. Callers on
-    this lab's prop population always carry a subject.
+    under one nameless key and `interval_by_cluster` reports the unidentified
+    shape; the guard below then steps the arm aside entirely. So the arm is
+    silent rather than wrong on a population it does not describe. It can never
+    make the answer NARROWER either, whatever the subjects look like, because
+    the widest of the three is taken. Callers on this lab's prop population
+    always carry a subject.
+
+    **A degenerate athlete arm is silent where a degenerate DAY arm is
+    unbounded, and the difference is the population.** Both come back from
+    :func:`_not_identified`, so the width rule alone cannot tell them apart —
+    and applied blindly it would make every team-market interval unbounded on
+    the strength of a column that is empty. The day arm is different in kind:
+    every wager in this lab has a slate date, so a one-day frame IS described by
+    day clustering and simply supplies no between-day variation, which is why
+    the honest interval there is the unbounded one. A blank `subject` is a
+    population the athlete arm does not describe at all. The consequence that
+    matters is that the two-way answer still cannot be narrowed: on a one-day
+    prop ledger the two-way arm is unbounded and a live athlete arm, however
+    tight, does not displace it.
     """
     if bets.empty:
         return RoiInterval(0.0, 0.0, 0.0, 0, 0, looks=looks)
@@ -382,7 +543,11 @@ def interval_three_way(
         looks=looks,
         cluster_unit=SUBJECT_CLUSTER_UNIT,
     )
-    return by_subject if by_subject.standard_error > widest.standard_error else widest
+    # The athlete arm steps aside when it identified nothing, rather than
+    # winning on an infinite width the way the day arm does — see the docstring.
+    if not math.isfinite(_half_width(by_subject)):
+        return widest
+    return by_subject if _half_width(by_subject) > _half_width(widest) else widest
 
 
 #: One-sided z for 80% power. A sample sized so the CONFIDENCE INTERVAL just

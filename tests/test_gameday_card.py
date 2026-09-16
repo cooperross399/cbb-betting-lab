@@ -929,6 +929,129 @@ def test_a_run_that_freezes_nothing_still_leaves_a_record_that_it_ran(day, tmp_p
 
 
 # ---------------------------------------------------------------------------
+# "No basketball tonight" has to be falsifiable
+# ---------------------------------------------------------------------------
+#
+# The test above states the invariant — "had no opinion" and "did not run" must
+# never look the same — and then checks the one half of it the code got right.
+# There is a third state it does not name: the pipeline ran, the provider
+# answered 200 with an empty list, and 59 games tipped anyway. Until the cached
+# schedule was consulted that state was indistinguishable from Christmas Eve,
+# the run was green, `degraded=false` was published, and the backup trigger
+# stood down on the strength of it.
+#
+# 2027-02-13 carries 59 games in the tracked schedule fixture and 2026-12-24
+# carries none, so both directions are measured against the same real corpus
+# rather than against a frame written to make a point.
+
+A_NIGHT_WITH_GAMES = "2027-02-13"
+A_NIGHT_WITH_NONE = "2026-12-24"
+
+
+def _empty_board_run(day, *, raw_dir, tmp_path):
+    empty = GC.board_from_payloads([], competition=CBB)
+    placement = GC.place_games(empty, competition=CBB, day=day, raw_dir=raw_dir)
+    return GC.run_card(
+        empty, competition=CBB, day=day, card_slot="morning",
+        archive_dir=tmp_path / "archive", placement=placement,
+    )
+
+
+def test_an_empty_board_on_a_night_the_schedule_has_games_is_degraded(
+    fixture_raw_dir, tmp_path
+):
+    """The night this guard exists for: a provider that answers 200 with `[]`.
+
+    Nothing raises, so none of `board.degraded`'s four append sites fires, and
+    every artefact of the night says the lab had nothing to say. The schedule
+    is the one number on the card that does not come from the price provider,
+    and it says otherwise.
+    """
+    run = _empty_board_run(A_NIGHT_WITH_GAMES, raw_dir=fixture_raw_dir, tmp_path=tmp_path)
+
+    assert run.placement.games_scheduled == 59
+    assert run.is_degraded, (
+        "an empty board on a 59-game night published degraded=false, which is "
+        "what the backup trigger reads before standing down"
+    )
+    assert "59 game(s)" in run.schedule_contradiction
+    # The flag is useless if the card cannot say why. `degraded_reasons` is the
+    # single list the renderer reads; before it existed this section rendered
+    # empty for any degradation that was not a provider exception.
+    assert run.schedule_contradiction in run.degraded_reasons
+    assert "59 game(s)" in GC.render_comment(run)
+
+
+def test_a_night_the_schedule_says_is_empty_is_not_degraded(fixture_raw_dir, tmp_path):
+    """The other direction, and the one that keeps the guard honest.
+
+    A guard that fires on every quiet night is a guard that gets switched off in
+    January. 2026-12-24 has no games in the tracked schedule, and an empty board
+    on it is the truth.
+    """
+    run = _empty_board_run(A_NIGHT_WITH_NONE, raw_dir=fixture_raw_dir, tmp_path=tmp_path)
+
+    assert run.placement.games_scheduled == 0
+    assert not run.schedule_contradiction
+    assert not run.is_degraded
+    assert run.decision is GC.Decision.NO_SLATE
+
+
+@pytest.mark.parametrize(
+    "day, raw_dir_name",
+    [
+        # No schedule cached at all: `place_games` returns before it could count.
+        (A_NIGHT_WITH_GAMES, "empty"),
+        # Schedules cached, but NOT for the season being played. This is the
+        # path through `games_the_schedule_lists` itself, and the one a first
+        # mutation run showed was never exercised: the case above returns early
+        # and so proves nothing about the function's own absent-season branch.
+        ("2028-01-15", "fixtures"),
+    ],
+)
+def test_an_uncached_schedule_neither_contradicts_an_empty_board_nor_vouches_for_it(
+    day, raw_dir_name, fixture_raw_dir, tmp_path
+):
+    """`None` is a stated absence and never a zero.
+
+    A lab that cannot check must say so rather than pass. Reporting zero games
+    when the schedule was simply not on disk would silently vouch for every
+    empty board — the failure this guard was written to end, re-entering
+    through the one door left open.
+    """
+    raw_dir = tmp_path if raw_dir_name == "empty" else fixture_raw_dir
+    run = _empty_board_run(day, raw_dir=raw_dir, tmp_path=tmp_path)
+
+    assert run.placement.games_scheduled is None, (
+        "an absent schedule reported a number, so a night with no cached "
+        "schedule now looks exactly like a night with no games"
+    )
+    assert not run.schedule_contradiction
+    assert not run.is_degraded
+
+
+def test_a_postponed_game_is_not_a_game_the_board_failed_to_price(
+    fixture_raw_dir, tmp_path
+):
+    """Counting a postponement would manufacture a contradiction on a fine night.
+
+    2026-01-26 carries 15 fixtures in the tracked schedule and five of them were
+    postponed or cancelled, so a board that priced the ten played games is
+    complete. A count that ignored status would call that night degraded every
+    time, and a guard that cries wolf in January is a guard somebody turns off.
+    """
+    board = GC.board_from_payloads([], competition=CBB)
+    placement = GC.place_games(
+        board, competition=CBB, day="2026-01-26", raw_dir=fixture_raw_dir
+    )
+
+    assert placement.games_scheduled == 10, (
+        "the five postponed and cancelled fixtures on this date were counted as "
+        "games the board should have priced"
+    )
+
+
+# ---------------------------------------------------------------------------
 # The model seam, and the November prior
 # ---------------------------------------------------------------------------
 

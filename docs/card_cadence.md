@@ -53,36 +53,77 @@ the backup stands down when the primary has already published that slot cleanly.
 crons **4.5 to 5.3 hours late since 2026-08-27**. Every deadline here is checked
 against `nominal + OBSERVED_LATENESS_H`, not against nominal.
 
+**A landing is not a deadline.** A run cannot freeze a game tipping inside
+`schedule_contract.CARD_LEAD_MINUTES` — sixty minutes — of the moment it fires:
+`gates.IMMINENT_MINUTES` **is** that constant, `gates.tip_state` calls such a
+game `imminent`, and `reports/gameday_card.py._rows_to_freeze` drops it before
+the rows reach the append-only store. So the figure that matters is the landing
+plus the lead, and this table used to print the landing alone.
+
 The season runs almost entirely in EST (UTC−5). Taking the worst observed
 lateness of 5.3 hours, in EST:
 
-| Slot | Nominal | Worst-case fire | In ET | Precedes |
-|:---|:---|:---|:---|:---|
-| `morning` primary | 09:00 UTC | 14:18 UTC | **09:18 ET** | the 11:00 ET first tip, by 1h42 |
-| `morning` backup | 10:00 UTC | 15:18 UTC | **10:18 ET** | the 11:00 ET first tip, by 42 min |
-| `evening` primary | 16:00 UTC | 21:18 UTC | **16:18 ET** | the 19:00 ET block (55% of the slate), by 2h42 |
-| `evening` backup | 17:00 UTC | 22:18 UTC | **17:18 ET** | the 19:00 ET block, by 1h42 |
+| Slot | Nominal | Worst-case fire | In ET | Can freeze tips after | Against its block |
+|:---|:---|:---|:---|:---|:---|
+| `morning` primary | 09:00 UTC | 14:18 UTC | **09:18 ET** | 10:18 ET | clears the 11:00 ET first tip by 42 min |
+| `morning` backup | 10:00 UTC | 15:18 UTC | **10:18 ET** | 11:18 ET | **misses the 11:00 ET first tip by 18 min** |
+| `evening` primary | 16:00 UTC | 21:18 UTC | **16:18 ET** | 17:18 ET | clears the 19:00 ET block (55% of the slate) by 1h42 |
+| `evening` backup | 17:00 UTC | 22:18 UTC | **17:18 ET** | 18:18 ET | clears the 19:00 ET block by 42 min |
 
-Even at maximum observed lateness, both slots land before the games they exist
-to cover. At the *nominal* time they land hours earlier, which is the ordinary
-case and costs nothing.
+**The morning backup does not cover its block, and this document said it did.**
+The old fifth column read *"the 11:00 ET first tip, by 42 min"*, computed
+against the 10:18 landing with no lead term — and 42 minutes is **inside** the
+lab's own 60-minute guard, so the games that column claimed were covered are
+exactly the ones the tip guard quarantines. `schedule_contract.holds()` had the
+same omission, twenty-seven lines below the constant it omitted: it went red
+only at 6.0 hours of lateness, while the honest bar was already violated at
+5.0, and GitHub has been at 5.3 since 2026-08-27. The morning backup has
+therefore never covered the 11:00 ET block at the lateness this repository is
+built for.
 
-**From 2027-03-14 every figure above is an hour later, and one of them stops
+At the *nominal* time every trigger lands five hours earlier and all four cover
+their blocks with room, which is the ordinary case and costs nothing. The
+column above is the degraded case, and for the morning backup the degraded case
+is also the case where the primary was dropped — both have to go wrong before a
+game is lost.
+
+**From 2027-03-14 every figure above is an hour later, and two more cells stop
 holding.** DST begins that day and the offset moves from UTC−5 to UTC−4. A cron
 is fixed in UTC, so the same instant reads an hour *later* on an Eastern clock:
 10:00 UTC is 05:00 EST on the 13th and 06:00 EDT on the 14th. An earlier
 version of `schedule_contract.py` said the opposite — "earlier, the safe
 direction" — and had the sign backwards. In EDT at 5.3 hours late the morning
-primary lands 10:18 ET and still precedes the 11:00 ET first tip; the morning
-**backup** lands **11:18 ET**, 18 minutes after it; the evening pair land 17:18
-and 18:18 ET and still precede the 19:00 ET block. That is a recorded gap, not
-a moved cron. It bites only when the primary was dropped **and** GitHub is at
-its worst observed lateness **and** a game tips at 11:00 ET, in the last three
-weeks of the season; moving the crons an hour earlier for it would card every
-day of the season earlier, with less information.
-`tests/test_the_card_schedule_survives_cron_lateness.py` pins the sign on those
-two instants and the gap as written, so the day the lateness constant changes,
-the record changes with it or the build goes red.
+primary lands 10:18 ET and so can freeze nothing tipping before 11:18, missing
+the 11:00 ET first tip the EST version of it clears; the morning **backup**
+lands **11:18 ET**, after the tip entirely; the evening primary lands 17:18 and
+still clears the 19:00 ET block; the evening **backup** lands 18:18 and reaches
+nothing before 19:18, so it too misses its block.
+
+**Four cells in total, then, not one**, and this document recorded one of them:
+
+| Cannot freeze its block | Lands | Can freeze tips after | Block |
+|:---|:---|:---|:---|
+| `morning` backup, EST | 10:18 ET | 11:18 ET | 11:00 ET |
+| `morning` primary, EDT | 10:18 ET | 11:18 ET | 11:00 ET |
+| `morning` backup, EDT | 11:18 ET | 12:18 ET | 11:00 ET |
+| `evening` backup, EDT | 18:18 ET | 19:18 ET | 19:00 ET |
+
+Those are recorded gaps, not moved crons. Each bites only when the primary was
+dropped **and** GitHub is at its worst observed lateness **and** a game tips in
+the first hour of the block — except the EST morning backup, which is the whole
+season rather than the last three weeks of it. Closing the morning slot's EST
+cell would mean moving its pair to 08:00/09:00 UTC and its EDT cells
+07:00/08:00; closing the evening backup's EDT cell would mean 15:00/16:00. All
+of that cards every day of the season an hour or two earlier, with that much
+less information, to buy a handful of first-hour tips on the days the primary
+also failed. `tests/test_the_card_schedule_survives_cron_lateness.py` pins the sign
+on those two instants and **the whole set of four cells**, in both directions,
+so the day the lateness constant or a cron changes, the record changes with it
+or the build goes red. It also puts a landing and a block's first tip on one
+real clock and asks `gates.tip_state` itself, which is the check that was
+missing: the schedule and the guard had never been multiplied together, so a
+contract claiming a slot covered its block and a guard quarantining every game
+in it were both green at once.
 
 **A slot that fires late has not failed.** The tip guard quarantines whatever
 has already started, per game, and the run reports the coverage it achieved.
@@ -90,9 +131,11 @@ That is an honest partial card. What the schedule buys is that the partial case
 is rare rather than routine.
 
 `tests/test_the_card_schedule_survives_cron_lateness.py` computes this table
-from `OBSERVED_LATENESS_H` and the real schedule and fails if a slot's worst
-case stops preceding its block — so raising the lateness constant when GitHub
-gets worse is a one-line change that proves itself.
+from `OBSERVED_LATENESS_H`, `CARD_LEAD_MINUTES` and the real schedule, and
+fails if a slot's worst case stops being able to **freeze** its block — so
+raising the lateness constant when GitHub gets worse is a one-line change that
+proves itself. It used to check "precedes" rather than "can freeze", which is
+the sixty minutes this page had to be rewritten for.
 
 **And the crons themselves are pinned, which they were not.** This document
 used to say the test went red *"the day the crons move"*. Nothing read the
@@ -115,24 +158,46 @@ It is not a second opinion, it is not a correction, and it is not a chance to
 improve on the morning. It exists because 55% of the slate had not been priced
 by anybody at 09:00 ET, and for no other reason.
 
-## Three games a season cannot be carded, and that is stated rather than chased
+## Thirty-seven games a season cannot be carded, and that is stated rather than chased
 
-The morning slot's backup lands at **10:18 ET** at worst-case lateness. Three
-games in the whole 2025-26 season tip before that — one at 01:00 ET in Honolulu,
-one at 08:00 and one at 10:00. **0.05% of the slate.**
+**This section said three games and 0.05%, and the real figure is 37 and
+0.59%.** Both halves of the old number were wrong, and they were wrong in
+opposite directions, which is why nothing looked odd:
+
+* The bar was taken as the morning backup's **landing**, 10:18 ET, rather than
+  the earliest tip it can freeze, 11:18 ET. That is the missing card lead, and
+  it is worth 35 games.
+* The measurement behind it read the tip's **hour** and compared it to 10.3, so
+  it was really asking "does this game tip before 11:00?". That over-counted by
+  one: the third of the three games is VCU against Virginia Tech at **10:30
+  ET** on 2025-11-28 — the Battle 4 Atlantis third-place game, on a neutral
+  floor in Nassau — recorded here as "one at 10:00", and it tips *after* a
+  10:18 landing. Two games tip before the landing, not three.
+
+Measured to the minute on the completed 2025-26 season, 6,318 games: the
+worst-late morning backup can freeze nothing tipping at or before **11:18 ET**,
+and **37 games — 0.59% of the slate — tip at or before it**, spread one to
+three at a time over 27 dates from 2025-11-03 to 2026-03-14. Thirty-four of the
+37 are the 11:00 ET block itself, which is the block the morning slot exists to
+precede.
 
 **The 2026-27 season opener is one of them**: Notre Dame against Villanova at
 the Palazzetto dello Sport in Rome, 09:30 ET on Sunday 2026-11-01. A single
 game, and the season's first, which is exactly the kind of thing that looks like
 a fault on the day and is not.
 
-Moving the cron earlier to catch it would card the entire day earlier, with less
-information, to buy three games. The football lab reached the same conclusion
-about its six 09:30 ET international kickoffs — *"the real fix is per-game
-carding rather than per-day, which is a design change and not a scheduling
-one"* — and recorded it rather than chasing it. The tip guard quarantines these
-games correctly, the run reports the coverage it achieved, and
-`tests/test_the_card_schedule_survives_cron_lateness.py` fails if the
-uncardable share ever stops being a handful.
+Moving the cron earlier to catch the rest would card the entire day earlier,
+with less information, to buy a set of games that is only lost when the morning
+primary was dropped as well. The football lab reached the same conclusion about
+its six 09:30 ET international kickoffs — *"the real fix is per-game carding
+rather than per-day, which is a design change and not a scheduling one"* — and
+recorded it rather than chasing it. The tip guard quarantines these games
+correctly, the run reports the coverage it achieved, and
+`tests/test_the_card_schedule_survives_cron_lateness.py` now pins the measured
+share against the schedule fixture rather than bounding it: the old assertion
+was `< 0.001`, which the true 0.59% fails by six times, and the bound was **not
+widened to accommodate it** — it was replaced by the number itself, which is
+stricter in both directions and goes red the day the schedule constants move.
 
-**It is a coverage gap, not a fault.**
+**It is a coverage gap, not a fault** — but it is 0.59%, and a gap recorded at
+a twentieth of its size is not really recorded.
