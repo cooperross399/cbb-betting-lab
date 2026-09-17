@@ -324,3 +324,101 @@ def test_clear_caches_really_empties_every_cache():
     assert caches, "no module-level caches found; this test has stopped measuring"
     for cache in caches:
         assert not cache, "clear_caches() left a cache populated"
+
+
+def test_the_carryover_fit_carries_the_mean_it_centred_on():
+    """A model fitted on a centred covariate must be applied to a centred one.
+
+    `design_for` fits `b_r * (returning - m)` with NO intercept, so `m` is part
+    of the model. It was computed, used to fit, and then dropped: `CarryoverFit`
+    had no field for it and `_prior_means` multiplied the coefficient by the RAW
+    share. With no intercept there is nothing to absorb the difference, so every
+    team carrying roster evidence took `+b_r * m` of prior the fit never
+    predicted — the same offset, on every team, all season.
+
+    The invariant is the one the centring defines: a team sitting exactly AT the
+    mean returning share gets NO roster adjustment, because that is what
+    `returning - m == 0` means. Asserting the stored number equals the fitted
+    frame's mean would only restate the assignment; this asserts what the
+    number is FOR.
+    """
+    rng = np.random.default_rng(11)
+    rows = []
+    for season in (2024, 2025, 2026):
+        for team in range(60):
+            returning = float(rng.uniform(0.35, 0.85))
+            previous = float(rng.normal(0.0, 6.0))
+            rows.append(
+                {
+                    "season": season, "team_id": team, "previous": previous,
+                    "current": 0.6 * previous + 9.0 * (returning - 0.6)
+                    + float(rng.normal(0.0, 1.0)),
+                    "returning": returning,
+                    "incoming": float(rng.uniform(0.0, 0.3)),
+                    "incoming_level": float(rng.normal(0.0, 1.0)),
+                }
+            )
+    frame = pd.DataFrame(rows)
+    frame["incoming_level_product"] = frame["incoming"] * frame["incoming_level"]
+
+    fit = R._carryover(
+        frame, component="offence", use_roster=True, observation_sd=1.0
+    )
+
+    assert fit.uses_roster
+    assert fit.returning_mean == pytest.approx(float(frame["returning"].mean()))
+    assert fit.returning_mean > 0.3, (
+        "the centring mean is near zero, so this fixture cannot tell a centred "
+        "application from an uncentred one and proves nothing"
+    )
+    assert abs(fit.returning) > 1.0, (
+        "the roster coefficient is near zero here, so the offset it would "
+        "produce is invisible and this fixture is vacuous"
+    )
+
+    # DRIVEN THROUGH `_prior_means`, WHICH IS WHERE THE DEFECT LIVED.
+    #
+    # The first version of this test asserted the stored mean and then did the
+    # centred arithmetic ITSELF. Both mutants should have killed it and only one
+    # did: restoring the raw-share application — the actual shipped defect — left
+    # it green, because the test never called the code that applies the term. It
+    # checked the sentence and not the artifact, which is the same mistake this
+    # repository has now made twice in two days. So it calls the real function.
+    class _Roster:
+        def __init__(self, shares):
+            self._shares = shares
+
+        def share_as_of(self, day):  # noqa: ARG002 - the day is fixed here
+            return self._shares
+
+    at_mean, above_mean = "at-the-mean", "above-the-mean"
+    shares = pd.DataFrame(
+        {
+            "returning": [fit.returning_mean, fit.returning_mean + 0.2],
+            "incoming": [0.0, 0.0],
+            "incoming_level": [0.0, 0.0],
+        },
+        index=pd.Index([at_mean, above_mean], name="team_id"),
+    )
+    prior = R.Prior(
+        season=2027,
+        league_efficiency=0.0,
+        league_tempo=0.0,
+        league_efficiency_strength=0.0,
+        league_tempo_strength=0.0,
+        team={},
+        fits={"offence": fit},
+        roster=_Roster(shares),
+    )
+    means = R._prior_means([at_mean, above_mean], prior, "2026-11-02")
+    offence = means["offence"]
+
+    assert offence[0] == pytest.approx(0.0, abs=1e-9), (
+        f"a team AT the centring mean received {offence[0]:+.4f} per 100 "
+        "possessions of roster prior. Centred, the term is exactly zero there; "
+        "this is the b_r * m the uncentred application added to every team"
+    )
+    assert offence[1] == pytest.approx(fit.returning * 0.2, rel=1e-9), (
+        "a team above the mean no longer receives the coefficient times its "
+        "DISTANCE from the mean, so the centring has been over-applied"
+    )

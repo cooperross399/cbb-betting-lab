@@ -897,6 +897,15 @@ class CarryoverFit:
     pairs: int = 0
     uses_roster: bool = False
     out_of_sample: bool = False
+    #: The mean returning share the design matrix was CENTRED on.
+    #:
+    #: `design_for` fits `b_r * (returning - m)` with no intercept, so `m` is
+    #: part of the model and not a detail of the fitting. It was computed,
+    #: used, and then dropped on the floor — so `_prior_means` applied the
+    #: coefficient to the RAW share and every team carrying roster evidence got
+    #: `+b_r * m` of prior the fit never predicted. With no intercept there is
+    #: nothing to absorb it: the offset lands whole, on every team, all season.
+    returning_mean: float = 0.0
 
     @property
     def strength(self) -> float:
@@ -1195,6 +1204,7 @@ def _carryover(
         pairs=int(len(usable)),
         uses_roster=has_roster,
         out_of_sample=out_of_sample,
+        returning_mean=returning_mean,
     )
 
 
@@ -1913,10 +1923,13 @@ def _prior_means(teams: Sequence, prior: Prior, day: str) -> dict[str, np.ndarra
         if prior.roster is not None
         else pd.DataFrame(columns=["returning", "incoming", "incoming_level"])
     )
-    returning_mean = (
-        float(prior.fits[OFFENCE].returning) if OFFENCE in prior.fits else 0.0
-    )
-    del returning_mean  # the centring is inside the carryover fit, not here
+    # The centring constant is carried on each component's own fit and applied
+    # below. This used to read `prior.fits[OFFENCE].returning` into a variable
+    # called `returning_mean` — that attribute is the COEFFICIENT, not the mean
+    # — and then `del` it under a comment saying the centring lived inside the
+    # carryover fit. It did live there, which is exactly why it has to be
+    # subtracted here too: a model fitted on a centred covariate and applied to
+    # an uncentred one is a different model.
 
     out = {c: np.zeros(len(teams)) for c in COMPONENTS}
     for position, team in enumerate(teams):
@@ -1942,7 +1955,8 @@ def _prior_means(teams: Sequence, prior: Prior, day: str) -> dict[str, np.ndarra
             ):
                 row = shares.loc[team]
                 base += (
-                    fit_for.returning * float(row["returning"])
+                    fit_for.returning
+                    * (float(row["returning"]) - fit_for.returning_mean)
                     + fit_for.incoming * float(row["incoming"])
                     + fit_for.incoming_level
                     * float(row["incoming"])
