@@ -557,6 +557,60 @@ def model_name(model: Callable) -> str:
     return qualname or repr(model)
 
 
+def dropped_for_a_defaulted_parameter(
+    model: Callable, provided: Iterable[str]
+) -> tuple[list[str], list[str]]:
+    """Arguments the caller offered that nothing took, beside the defaults that
+    went unfilled — the shape of a NAME MISMATCH between two vocabularies.
+
+    :func:`unsupplied_arguments` deliberately exempts a defaulted parameter: a
+    default is the author's statement that absence is acceptable. That is right,
+    and it is also exactly what hid this defect for the life of the backtest.
+
+    The pricer held the player table and passed it as `player_history` — the
+    walk-forward guard's name for the frame. `models.ratings.matchups_for`
+    declares `player_games`. :func:`call_model` passes only what the callee
+    declares, so the frame was dropped; `player_games` has a default of `None`,
+    so nothing was required and nothing refused. The backtest priced its entire
+    history with the model's roster terms off, while `cbb_ratings_fit.md`
+    published "with roster terms" about the same model.
+
+    Neither existing rule can see it. Rule 1 drops unknown arguments ON PURPOSE,
+    so a model need not accept a frame it will not read. Rule 2 refuses only
+    REQUIRED parameters. The defect lives precisely in the gap: something was
+    offered, something went unfilled, and the two never met.
+
+    So this reports the pair rather than either half. A caller offering an
+    argument nothing consumes, while the callee leaves a defaulted parameter
+    unfilled, is the signature of two names for one thing — and it is worth a
+    refusal even though each half alone is legitimate.
+    """
+    import inspect
+
+    try:
+        signature = inspect.signature(model)
+    except (TypeError, ValueError):  # pragma: no cover - builtins
+        return [], []
+    parameters = signature.parameters
+    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
+        return [], []
+    offered = set(provided)
+    taken = {
+        name
+        for name, p in parameters.items()
+        if p.kind is not inspect.Parameter.POSITIONAL_ONLY
+    }
+    dropped = sorted(offered - taken)
+    unfilled = sorted(
+        name
+        for name, p in parameters.items()
+        if p.default is not inspect.Parameter.empty
+        and name not in offered
+        and p.kind is not inspect.Parameter.POSITIONAL_ONLY
+    )
+    return dropped, unfilled
+
+
 def unsupplied_arguments(model: Callable, provided: Iterable[str]) -> list[str]:
     """The parameters `model` requires that a caller offering `provided` cannot fill.
 

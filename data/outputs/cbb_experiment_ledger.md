@@ -4,15 +4,15 @@
 
 College basketball's large sample makes this **more** urgent, not less. A bigger n narrows every interval, including the intervals of the hypotheses that are wrong. Sample size buys power, never innocence.
 
-**130 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.81** before it means what it says.
+**133 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.81** before it means what it says.
 
 **Alpha budget: 6 new hypotheses a week**, declared 2026-09-01. Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state — re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise.
 
-**92 discovery, 38 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
+**92 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
 
 | Search | Hypotheses |
 |:---|---:|
-| replication | 32 |
+| replication | 35 |
 | player_props_vs_devig | 30 |
 | residual_regression_2026_09_15 | 27 |
 | ladders_and_halves | 11 |
@@ -160,6 +160,9 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | 128 | residual_regression_2026_09_15 | a team's prior share-of-points-from-twos advantage over its opponent predicts margin against the card-time spread | discovery | higher | — | 2021, 2022, 2023, 2024, 2025, 2026 | 2026-09-15 | pending |
 | 129 | champion_challenger | the weekly refit's ROI exceeds the standing champion's by the pre-registered margin | discovery | higher | — | 2027 | 2026-W38 | pending |
 | 130 | forward_evidence | CLV: frozen opinions beat the closing price | discovery | higher | — | 2027 | 2026-W38 | pending |
+| 131 | replication | team_total / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-17 | pending |
+| 132 | replication | moneyline / low_major: the discovery result holds on a season it was not selected on | holdout | lower | — | 2025, 2026 | 2026-09-17 | pending |
+| 133 | replication | total_points / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-17 | pending |
 
 ## 7 quantities declared descriptive-only
 

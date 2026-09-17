@@ -2,7 +2,7 @@
   "record_version": 1,
   "competition": "cbb",
   "title": "NCAA Division I men's basketball",
-  "generated_at": "2026-09-16T02:00:07+00:00",
+  "generated_at": "2026-09-17T12:11:33+00:00",
   "processed_dir": "/Users/cooperross/Projects/cbb-betting-lab/data/processed",
   "raw_dir": "/Users/cooperross/Projects/cbb-betting-lab/data/raw",
   "seasons": [
@@ -263,7 +263,7 @@
           "teams": 365,
           "league_efficiency": 105.90038265973548,
           "league_tempo": 71.48945425766293,
-          "residual_sd": 14.094627605292313,
+          "residual_sd": 14.101965376289504,
           "prior_weight": {
             "offence": {
               "0.1": 0.9076546940566604,
@@ -323,7 +323,7 @@
           "teams": 365,
           "league_efficiency": 106.0308046378812,
           "league_tempo": 71.55373819437317,
-          "residual_sd": 13.986737986328238,
+          "residual_sd": 14.002345833540256,
           "prior_weight": {
             "offence": {
               "0.1": 0.8262149611786783,
@@ -383,7 +383,7 @@
           "teams": 365,
           "league_efficiency": 106.24050672420518,
           "league_tempo": 71.11616336093692,
-          "residual_sd": 13.32840135201383,
+          "residual_sd": 13.338984720766234,
           "prior_weight": {
             "offence": {
               "0.1": 0.6951823350403091,
@@ -443,7 +443,7 @@
           "teams": 365,
           "league_efficiency": 106.52687229774754,
           "league_tempo": 70.90690104763817,
-          "residual_sd": 13.19806830914189,
+          "residual_sd": 13.2060053505297,
           "prior_weight": {
             "offence": {
               "0.1": 0.6425670083992219,
@@ -503,7 +503,7 @@
           "teams": 365,
           "league_efficiency": 106.8185188469371,
           "league_tempo": 70.64175996043099,
-          "residual_sd": 13.187406524923688,
+          "residual_sd": 13.193535467833426,
           "prior_weight": {
             "offence": {
               "0.1": 0.5943859035981457,
@@ -563,7 +563,7 @@
           "teams": 365,
           "league_efficiency": 106.81317151565274,
           "league_tempo": 70.17735624191901,
-          "residual_sd": 13.336323145588977,
+          "residual_sd": 13.340306759576759,
           "prior_weight": {
             "offence": {
               "0.1": 0.5181763141490665,
@@ -623,7 +623,7 @@
           "teams": 365,
           "league_efficiency": 106.98157403911684,
           "league_tempo": 70.04393555115695,
-          "residual_sd": 13.270063248628718,
+          "residual_sd": 13.273818553892232,
           "prior_weight": {
             "offence": {
               "0.1": 0.4893802231661651,
@@ -683,7 +683,7 @@
           "teams": 365,
           "league_efficiency": 107.00505652143889,
           "league_tempo": 69.90929508649302,
-          "residual_sd": 13.193428287134054,
+          "residual_sd": 13.196170134534432,
           "prior_weight": {
             "offence": {
               "0.1": 0.45401963578161575,
@@ -743,7 +743,7 @@
           "teams": 365,
           "league_efficiency": 107.11955232898812,
           "league_tempo": 69.81697473619955,
-          "residual_sd": 13.20145800538655,
+          "residual_sd": 13.203586795317205,
           "prior_weight": {
             "offence": {
               "0.1": 0.42703897375719246,
@@ -803,7 +803,7 @@
           "teams": 365,
           "league_efficiency": 107.14781801299267,
           "league_tempo": 69.81080435897957,
-          "residual_sd": 13.147775711157372,
+          "residual_sd": 13.150126488351574,
           "prior_weight": {
             "offence": {
               "0.1": 0.42519059523898467,
@@ -863,7 +863,7 @@
           "teams": 365,
           "league_efficiency": 107.33750631600896,
           "league_tempo": 69.69161898376962,
-          "residual_sd": 13.216040711004698,
+          "residual_sd": 13.21852808405994,
           "prior_weight": {
             "offence": {
               "0.1": 0.375687186237524,
@@ -923,7 +923,7 @@
           "teams": 365,
           "league_efficiency": 107.42829130410148,
           "league_tempo": 69.52388938883936,
-          "residual_sd": 13.237391168563688,
+          "residual_sd": 13.23985460842152,
           "prior_weight": {
             "offence": {
               "0.1": 0.354597171922345,
@@ -983,7 +983,7 @@
           "teams": 365,
           "league_efficiency": 107.4506142589547,
           "league_tempo": 69.43921114775875,
-          "residual_sd": 13.189882682257942,
+          "residual_sd": 13.19237590664443,
           "prior_weight": {
             "offence": {
               "0.1": 0.33726540112109343,
@@ -1043,7 +1043,7 @@
           "teams": 365,
           "league_efficiency": 107.67126050950401,
           "league_tempo": 69.30278454398915,
-          "residual_sd": 13.197681122747767,
+          "residual_sd": 13.19978376088257,
           "prior_weight": {
             "offence": {
               "0.1": 0.3052740661028658,
@@ -1103,7 +1103,7 @@
           "teams": 365,
           "league_efficiency": 107.85857031157919,
           "league_tempo": 69.1634545376675,
-          "residual_sd": 13.277681365444696,
+          "residual_sd": 13.27946067942171,
           "prior_weight": {
             "offence": {
               "0.1": 0.2898961056314869,
@@ -1163,7 +1163,7 @@
           "teams": 365,
           "league_efficiency": 107.93915374001746,
           "league_tempo": 69.02158144278187,
-          "residual_sd": 13.200414296392239,
+          "residual_sd": 13.201956138405897,
           "prior_weight": {
             "offence": {
               "0.1": 0.26249950010760503,
@@ -1223,7 +1223,7 @@
           "teams": 365,
           "league_efficiency": 107.9901470146466,
           "league_tempo": 68.90216659108025,
-          "residual_sd": 13.222175067753989,
+          "residual_sd": 13.223318222057669,
           "prior_weight": {
             "offence": {
               "0.1": 0.24862798366187047,
@@ -1283,7 +1283,7 @@
           "teams": 365,
           "league_efficiency": 108.02363623185228,
           "league_tempo": 68.84309553458519,
-          "residual_sd": 13.222758362937151,
+          "residual_sd": 13.223836655036841,
           "prior_weight": {
             "offence": {
               "0.1": 0.23805606752860853,
@@ -1343,7 +1343,7 @@
           "teams": 365,
           "league_efficiency": 108.02060398065322,
           "league_tempo": 68.76539488932946,
-          "residual_sd": 13.199050153733577,
+          "residual_sd": 13.20010309430521,
           "prior_weight": {
             "offence": {
               "0.1": 0.2231801181733083,
@@ -1403,7 +1403,7 @@
           "teams": 365,
           "league_efficiency": 108.11928439421074,
           "league_tempo": 68.68875055030402,
-          "residual_sd": 13.192928058451196,
+          "residual_sd": 13.193889500766424,
           "prior_weight": {
             "offence": {
               "0.1": 0.2061554311173365,
@@ -1463,7 +1463,7 @@
           "teams": 365,
           "league_efficiency": 108.15398305512055,
           "league_tempo": 68.63813677044459,
-          "residual_sd": 13.219763401723206,
+          "residual_sd": 13.220756407698216,
           "prior_weight": {
             "offence": {
               "0.1": 0.19616824393430057,
@@ -1523,7 +1523,7 @@
           "teams": 365,
           "league_efficiency": 108.2297717771369,
           "league_tempo": 68.57205291371534,
-          "residual_sd": 13.203027191528895,
+          "residual_sd": 13.203942206643374,
           "prior_weight": {
             "offence": {
               "0.1": 0.18520920611783417,
@@ -1583,7 +1583,7 @@
           "teams": 365,
           "league_efficiency": 108.28636301097946,
           "league_tempo": 68.51143181915995,
-          "residual_sd": 13.182691371619459,
+          "residual_sd": 13.183522253587869,
           "prior_weight": {
             "offence": {
               "0.1": 0.171851719630885,
@@ -1643,7 +1643,7 @@
           "teams": 365,
           "league_efficiency": 108.29141030250145,
           "league_tempo": 68.47795666435132,
-          "residual_sd": 13.185006089239485,
+          "residual_sd": 13.18580735599184,
           "prior_weight": {
             "offence": {
               "0.1": 0.16501174586832457,
@@ -1703,7 +1703,7 @@
           "teams": 365,
           "league_efficiency": 108.36179283168022,
           "league_tempo": 68.44137515570281,
-          "residual_sd": 13.200567102735338,
+          "residual_sd": 13.201368659169097,
           "prior_weight": {
             "offence": {
               "0.1": 0.15652017149622124,
@@ -1763,7 +1763,7 @@
           "teams": 365,
           "league_efficiency": 108.35010427377779,
           "league_tempo": 68.40416833753854,
-          "residual_sd": 13.168556123478716,
+          "residual_sd": 13.169256992121706,
           "prior_weight": {
             "offence": {
               "0.1": 0.1506202608934119,
@@ -1823,7 +1823,7 @@
           "teams": 365,
           "league_efficiency": 108.35509877233898,
           "league_tempo": 68.4034804867202,
-          "residual_sd": 13.167563309154232,
+          "residual_sd": 13.168236220917407,
           "prior_weight": {
             "offence": {
               "0.1": 0.14805064049917366,
@@ -1883,7 +1883,7 @@
           "teams": 365,
           "league_efficiency": 108.37508165396653,
           "league_tempo": 68.3976821725412,
-          "residual_sd": 13.160484114010497,
+          "residual_sd": 13.161123965297543,
           "prior_weight": {
             "offence": {
               "0.1": 0.14508188364315328,
@@ -1943,7 +1943,7 @@
           "teams": 365,
           "league_efficiency": 108.3846344217188,
           "league_tempo": 68.38924828557873,
-          "residual_sd": 13.156447106536064,
+          "residual_sd": 13.157077699939347,
           "prior_weight": {
             "offence": {
               "0.1": 0.14360232619074345,
@@ -2003,7 +2003,7 @@
           "teams": 365,
           "league_efficiency": 108.38201344380633,
           "league_tempo": 68.38946875832984,
-          "residual_sd": 13.158740541465402,
+          "residual_sd": 13.15935746577399,
           "prior_weight": {
             "offence": {
               "0.1": 0.1436207219625619,
@@ -2447,40 +2447,40 @@
             "tempo": 0.07638176704771912
           },
           "rating_sd": {
-            "offence": 4.340905898238142,
-            "defence": 3.6674485469940077,
+            "offence": 4.348308171681877,
+            "defence": 3.6605623400807885,
             "tempo": 2.2935298040760803
           },
           "margin_bias": {
-            "mean": 3.840831087697798,
-            "low": 2.6984351048415585,
-            "high": 4.983227070554038,
+            "mean": 3.8410711207405757,
+            "low": 2.6986606462339946,
+            "high": 4.983481595247157,
             "n": 687,
             "clusters": 109,
             "cluster_unit": "day",
-            "standard_error": 0.5828658035899197,
+            "standard_error": 0.582873197424937,
             "looks": 130,
-            "adjusted_low": 1.7714120324965932,
-            "adjusted_high": 5.910250142899002,
+            "adjusted_low": 1.771625814311418,
+            "adjusted_high": 5.910516427169734,
             "enough_evidence": true,
             "survives_correction": true
           },
-          "margin_absolute_error": 10.893218351239991,
+          "margin_absolute_error": 10.893181482142063,
           "total_bias": {
-            "mean": 2.756022713149363,
-            "low": 1.4968658979481286,
-            "high": 4.015179528350597,
+            "mean": 2.164315888484674,
+            "low": 0.9028451708666594,
+            "high": 3.4257866061026885,
             "n": 687,
             "clusters": 109,
             "cluster_unit": "day",
-            "standard_error": 0.6424387514940594,
+            "standard_error": 0.6436193356451112,
             "looks": 130,
-            "adjusted_low": 0.4750946059364689,
-            "adjusted_high": 5.036950820362257,
+            "adjusted_low": -0.12080378962396976,
+            "adjusted_high": 4.449435566593317,
             "enough_evidence": true,
-            "survives_correction": true
+            "survives_correction": false
           },
-          "total_absolute_error": 11.99986701118401
+          "total_absolute_error": 11.917557205516369
         },
         {
           "tier": "mid_major",
@@ -2494,40 +2494,40 @@
             "tempo": 0.08301588075712457
           },
           "rating_sd": {
-            "offence": 4.491678485646691,
-            "defence": 3.465999142614318,
+            "offence": 4.498370926271379,
+            "defence": 3.4613907687685894,
             "tempo": 1.928799359890062
           },
           "margin_bias": {
-            "mean": 1.8290904042019125,
-            "low": 1.0715035412321692,
-            "high": 2.586677267171656,
+            "mean": 1.8292109843277282,
+            "low": 1.071650975231616,
+            "high": 2.5867709934238405,
             "n": 1387,
             "clusters": 116,
             "cluster_unit": "day",
-            "standard_error": 0.3865310122764968,
+            "standard_error": 0.38651731106879983,
             "looks": 130,
-            "adjusted_low": 0.4567425373265963,
-            "adjusted_high": 3.2014382710772287,
+            "adjusted_low": 0.45691176250949495,
+            "adjusted_high": 3.2015102061459615,
             "enough_evidence": true,
             "survives_correction": true
           },
-          "margin_absolute_error": 9.401666791231655,
+          "margin_absolute_error": 9.401834572127973,
           "total_bias": {
-            "mean": 1.868141720901188,
-            "low": 0.9620888907210154,
-            "high": 2.7741945510813606,
+            "mean": 1.2488215652461332,
+            "low": 0.3502702310824689,
+            "high": 2.1473728994097976,
             "n": 1387,
             "clusters": 116,
             "cluster_unit": "day",
-            "standard_error": 0.4622803466425922,
+            "standard_error": 0.45845298242790306,
             "looks": 130,
-            "adjusted_low": 0.226851817985114,
-            "adjusted_high": 3.509431623817262,
+            "adjusted_low": -0.3788795829543776,
+            "adjusted_high": 2.876522713446644,
             "enough_evidence": true,
-            "survives_correction": true
+            "survives_correction": false
           },
-          "total_absolute_error": 13.022932116195681
+          "total_absolute_error": 12.958922822173884
         },
         {
           "tier": "low_major",
@@ -2541,40 +2541,40 @@
             "tempo": 0.08568122267364014
           },
           "rating_sd": {
-            "offence": 4.0359419071587075,
-            "defence": 3.1875834839064807,
+            "offence": 4.037201584569143,
+            "defence": 3.1852075765299177,
             "tempo": 2.0397038607027222
           },
           "margin_bias": {
-            "mean": -0.17486742437444916,
-            "low": -0.7548781837527496,
-            "high": 0.40514333500385136,
+            "mean": -0.17519924508573184,
+            "low": -0.7551714999850676,
+            "high": 0.404773009813604,
             "n": 1841,
             "clusters": 112,
             "cluster_unit": "day",
-            "standard_error": 0.29592929459589634,
+            "standard_error": 0.29590964909257667,
             "looks": 130,
-            "adjusted_low": -1.225541039908531,
-            "adjusted_high": 0.8758061911596325,
+            "adjusted_low": -1.2258031108100487,
+            "adjusted_high": 0.875404620638585,
             "enough_evidence": true,
             "survives_correction": false
           },
-          "margin_absolute_error": 9.240139723613519,
+          "margin_absolute_error": 9.240301746617869,
           "total_bias": {
-            "mean": 2.8591749264963697,
-            "low": 2.1110697602727426,
-            "high": 3.607280092719997,
+            "mean": 2.2117278913504124,
+            "low": 1.4636097057866375,
+            "high": 2.959846076914187,
             "n": 1841,
             "clusters": 1841,
             "cluster_unit": "game",
-            "standard_error": 0.3816933230021496,
+            "standard_error": 0.3816999656446934,
             "looks": 130,
-            "adjusted_low": 1.504002893759575,
-            "adjusted_high": 4.214346959233165,
+            "adjusted_low": 0.8565322744352832,
+            "adjusted_high": 3.5669235082655417,
             "enough_evidence": true,
             "survives_correction": true
           },
-          "total_absolute_error": 13.470875471742056
+          "total_absolute_error": 13.372702703584256
         },
         {
           "tier": "mixed",
@@ -2593,35 +2593,35 @@
             "tempo": null
           },
           "margin_bias": {
-            "mean": -3.3856748003219077,
-            "low": -4.568587209358232,
-            "high": -2.2027623912855834,
+            "mean": -3.3926961777500684,
+            "low": -4.577154015524104,
+            "high": -2.208238339976033,
             "n": 804,
             "clusters": 88,
             "cluster_unit": "day",
-            "standard_error": 0.6035378294534934,
+            "standard_error": 0.6043263279921917,
             "looks": 130,
-            "adjusted_low": -5.5284882526008134,
-            "adjusted_high": -1.242861348043002,
+            "adjusted_low": -5.538309131888459,
+            "adjusted_high": -1.2470832236116776,
             "enough_evidence": true,
             "survives_correction": true
           },
-          "margin_absolute_error": 11.31001272777129,
+          "margin_absolute_error": 11.31013957268559,
           "total_bias": {
-            "mean": 1.6470709410370432,
-            "low": 0.4552873896574454,
-            "high": 2.8388544924166412,
+            "mean": 0.7627813769043098,
+            "low": -0.4287636170130361,
+            "high": 1.9543263708216556,
             "n": 804,
             "clusters": 804,
             "cluster_unit": "game",
-            "standard_error": 0.6080640056553255,
+            "standard_error": 0.6079422904278349,
             "looks": 130,
-            "adjusted_low": -0.5118123427907029,
-            "adjusted_high": 3.8059542248647893,
+            "adjusted_low": -1.3956697666099611,
+            "adjusted_high": 2.921232520418581,
             "enough_evidence": true,
             "survives_correction": false
           },
-          "total_absolute_error": 13.907776884305553
+          "total_absolute_error": 13.839114747009999
         },
         {
           "tier": "POOLED",
@@ -2635,40 +2635,40 @@
             "tempo": 0.08302960865194203
           },
           "rating_sd": {
-            "offence": 5.030868531828359,
-            "defence": 3.7499178955779167,
+            "offence": 5.033810752128477,
+            "defence": 3.7439547739133014,
             "tempo": 2.0481553602100013
           },
           "margin_bias": {
-            "mean": 0.4517028777589038,
-            "low": -0.12569902453450915,
-            "high": 1.0291047800523168,
+            "mean": 0.45044754356801164,
+            "low": -0.12753451210179445,
+            "high": 1.0284295992378176,
             "n": 4719,
             "clusters": 136,
             "cluster_unit": "day",
-            "standard_error": 0.2945982206039935,
+            "standard_error": 0.29489422266370957,
             "looks": 130,
-            "adjusted_low": -0.5942448645711556,
-            "adjusted_high": 1.4976506200889632,
+            "adjusted_low": -0.5965511307244008,
+            "adjusted_high": 1.497446217860424,
             "enough_evidence": true,
             "survives_correction": false
           },
-          "margin_absolute_error": 9.88092822865878,
+          "margin_absolute_error": 9.881056995493921,
           "total_bias": {
-            "mean": 2.346362841088612,
-            "low": 1.8569668010088818,
-            "high": 2.8357588811683425,
+            "mean": 1.6749454972224056,
+            "low": 1.1889125057001155,
+            "high": 2.1609784887446954,
             "n": 4719,
             "clusters": 136,
             "cluster_unit": "day",
-            "standard_error": 0.24969644541431568,
+            "standard_error": 0.2479805727840186,
             "looks": 130,
-            "adjusted_low": 1.4598353094100855,
-            "adjusted_high": 3.2328903727671388,
+            "adjusted_low": 0.794510035957969,
+            "adjusted_high": 2.5553809584868423,
             "enough_evidence": true,
             "survives_correction": true
           },
-          "total_absolute_error": 13.199501979297652
+          "total_absolute_error": 13.118707711048863
         }
       ],
       "venue_audit": [

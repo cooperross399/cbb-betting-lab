@@ -300,7 +300,13 @@ SCORED_RECORDS = {
     # population did is the evidence that rows were excluded rather than cells
     # lost.
     "core_team_only/cbb_price_backtest.json": 69,
-    "holdout/cbb_replication.json": 67,
+    # 67 -> 66 on 2026-09-17. The replication was re-scored against a model
+    # that had just been given its roster evidence for the first time, and one
+    # cell stopped carrying a scored reading. Its states are otherwise
+    # unchanged — 0 replicated, 0 did not replicate, 0 reversed — so nothing
+    # that was ever a finding moved; a cell simply fell below the sample that
+    # earns a reading at all.
+    "holdout/cbb_replication.json": 66,
     "cbb_prop_grading.json": 194,
     "cbb_forecast_skill.json": 43,
     # 23 -> 22 on 2026-09-17. Exactly one reading left this record, and it is
@@ -349,13 +355,21 @@ POPULATION_FLOORS = {
     #
     # A future move of this number needs the same kind of sentence. The floor
     # exists so that a shrink has to be argued for, not absorbed.
-    "cbb_price_backtest.json": {"bets_graded": 175_846, "games": 26_591, "days": 791},
+    "cbb_price_backtest.json": {"bets_graded": 175_690, "games": 26_591, "days": 791},
+    # LOWERED A SECOND TIME the same day, when the roster seam was connected.
+    # The bets move by a few hundred and the GAMES move UP in two of the three
+    # records (26,591 -> 26,622 and 26,582 -> 26,615) because roster evidence
+    # lets the ratings price matchups the connectivity refusal used to decline.
+    # A floor that only ever falls would have called that a loss; it is the
+    # opposite, and it is why `games` is checked beside `bets_graded` rather
+    # than instead of it.
+    #
     # Both lowered once on 2026-09-17, by the neutral-court exclusion alone, and
     # both keep their `games` unchanged — the check that this removed gradeable
     # rows rather than coverage. Holdout 119,275 -> 110,839 bets over the same
     # 16,815 games; core-team 159,354 -> 145,994 over the same 26,582.
-    "holdout/cbb_price_backtest.json": {"bets_graded": 110_839, "games": 16_815},
-    "core_team_only/cbb_price_backtest.json": {"bets_graded": 145_994, "games": 26_582},
+    "holdout/cbb_price_backtest.json": {"bets_graded": 110_682, "games": 16_812},
+    "core_team_only/cbb_price_backtest.json": {"bets_graded": 145_739, "games": 26_582},
 }
 
 
@@ -591,10 +605,27 @@ def _recorded_retractions() -> dict[tuple, dict]:
             "demonstrated_at": int(fields[9]),
             "crossed_at": int(fields[10]),
         }
-    assert rows, (
-        f"{RETRACTIONS.name} has no rows this parser recognises. Rows start "
-        "`| ` followed by a back-ticked record path; if the table's shape "
-        "changed, change this with it rather than letting it read nothing."
+    # AN EMPTY TABLE IS A STATE, AND IT IS NOT THE SAME STATE AS A BROKEN ONE.
+    #
+    # This asserted rows outright, which was right while the table always had
+    # some: reading zero rows out of a table full of them is a parser that has
+    # stopped working, and it would make the cost check pass by finding nothing
+    # to check. But on 2026-09-17 the last row legitimately left — the records
+    # underneath were rebuilt three times in two days and every reading the
+    # table named either came back or stopped existing — so "no rows" became a
+    # true thing the file can say.
+    #
+    # The two are told apart by the HEADER. The table's header is still there
+    # when the shape is intact and the body is empty; it is the first thing to
+    # go when somebody rewrites the section. So the parser refuses a file with
+    # no header and accepts one with a header and no body.
+    text = RETRACTIONS.read_text(encoding="utf-8")
+    header = "| record | block | leaf | season | tier | label | market | rule |"
+    assert header in text, (
+        f"{RETRACTIONS.name} has no table header this parser recognises, so "
+        "reading zero rows out of it proves nothing. Rows start `| ` followed "
+        "by a back-ticked record path; if the table's shape changed, change "
+        "this parser with it rather than letting it read nothing."
     )
     return rows
 

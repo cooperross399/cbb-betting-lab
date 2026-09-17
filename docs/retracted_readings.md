@@ -26,7 +26,6 @@ lives in `CLAUDE.md`. This file is the ledger of the fact.
 
 | record | block | leaf | season | tier | label | market | rule | ROI | demonstrated at | crossed at |
 |:---|:---|:---|:---|:---|:---|:---|:---|---:|---:|---:|
-| `holdout/cbb_replication.json` | `markets` | `holdout` | `—` | mid_major | `—` | total_points | — | -6.36% | 62 | 95 |
 
 **None of these
  is a claim that was wrong.** Each was a correctly measured
@@ -144,3 +143,26 @@ demonstrated deficit.
 Across all three records the direction is the same one this file keeps having to
 record in the unusual direction: the correction withdrew nothing and returned
 six readings, and cleaner measurement found MORE losing rather than less.
+
+## And the last row went when the model was given its roster
+
+`holdout/cbb_replication.json | markets | holdout | mid_major | total_points`
+was the one row here that was never a blind null-baseline side — the
+replication's held-out cell, the one `CLAUDE.md` discusses by name. It is not
+retracted any more, and the reason is not a correction either.
+
+On 2026-09-17 the price backtest was found never to have handed the ratings
+model its roster evidence: the pricer passed the player table under the
+walk-forward guard's name, `player_history`, while `models.ratings.matchups_for`
+declares `player_games`, so the frame was dropped and the parameter's default
+absorbed it. Every measurement this lab has published was made by a model with
+its roster terms switched off. Re-scored with them connected, that cell no
+longer carries a scored reading at all — its sample fell below the bar — so a
+row claiming it was withdrawn by the family growing is no longer true.
+
+**Every row this file ever held has now left it.** That is not a clean bill of
+health and should not be read as one: the table is empty because the records
+underneath it were rebuilt three times in two days — the neutral-court
+exclusion, the scope declaration, and the roster seam — and a retraction is a
+statement about a specific reading in a specific record. What survives is the
+narration above, which is why it is kept.

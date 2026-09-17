@@ -1,6 +1,6 @@
 # NCAA Division I men's basketball — ratings fit
 
-Generated 2026-09-16T02:00:07+00:00.
+Generated 2026-09-17T12:11:33+00:00.
 
 **Nothing in this report is a return.** A fit is not a price, forecast error is not profit, and calibration can rule a model out and never in. Where an interval includes zero this report says **no demonstrated edge** in the lab's own words, which for a fitted quantity reads as *no demonstrated effect*. The price backtest is what decides whether any of this is worth money.
 
@@ -8,7 +8,9 @@ Generated 2026-09-16T02:00:07+00:00.
 
 **Sample floor: 200 observations.** Below it a cell prints an em dash and the words *not enough evidence*, never a figure.
 
-**Family correction: 130 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.81. That is the ledger's cumulative count and never the day's.
+**Family correction: 133 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.81. That is the ledger's cumulative count and never the day's.
+
+**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 130 cumulative hypotheses (x1.8115), and `cbb_ratings_fit.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 133 hypotheses (x1.8145), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
 
 ## The fit population, reconciled
 
@@ -39,14 +41,14 @@ The share of a rating that is still the preseason prior, as the median across te
 | Day | Games fitted on | Teams | Offence | Defence | Tempo | Residual sd |
 |:---|---:|---:|---:|---:|---:|---:|
 | 2025-11-03 | 0 | 364 | 100.0% | 100.0% | 100.0% | 0.00 |
-| 2025-11-05 | 121 | 365 | 90.8% | 93.1% | 72.8% | 14.09 |
-| 2025-11-10 | 295 | 365 | 82.9% | 87.2% | 57.6% | 13.99 |
-| 2025-11-15 | 485 | 365 | 76.4% | 82.4% | 48.7% | 13.33 |
-| 2025-11-20 | 696 | 365 | 70.4% | 77.9% | 40.7% | 13.20 |
+| 2025-11-05 | 121 | 365 | 90.8% | 93.1% | 72.8% | 14.10 |
+| 2025-11-10 | 295 | 365 | 82.9% | 87.2% | 57.6% | 14.00 |
+| 2025-11-15 | 485 | 365 | 76.4% | 82.4% | 48.7% | 13.34 |
+| 2025-11-20 | 696 | 365 | 70.4% | 77.9% | 40.7% | 13.21 |
 | 2025-11-25 | 919 | 365 | 65.2% | 74.0% | 34.9% | 13.19 |
 | 2025-12-01 | 1,186 | 365 | 56.7% | 67.6% | 28.5% | 13.34 |
 | 2025-12-05 | 1,316 | 365 | 56.3% | 67.3% | 27.1% | 13.27 |
-| 2025-12-10 | 1,499 | 365 | 52.6% | 64.5% | 24.4% | 13.19 |
+| 2025-12-10 | 1,499 | 365 | 52.6% | 64.5% | 24.4% | 13.20 |
 | 2025-12-15 | 1,648 | 365 | 49.5% | 62.1% | 22.7% | 13.20 |
 | 2025-12-20 | 1,785 | 365 | 46.6% | 60.0% | 21.1% | 13.15 |
 | 2026-01-01 | 2,099 | 365 | 41.5% | 56.2% | 18.6% | 13.22 |
@@ -182,11 +184,11 @@ The fitted columns describe the model at the end of the season; the measured col
 
 | Tier | Teams | Games priced | Priced share | Prior weight (off/def/tempo) | Margin bias | 95% interval | Family-corrected | Reading | Margin MAE | Total bias | 95% interval | Family-corrected |
 |:---|---:|---:|---:|:---|---:|:---|:---|:---|---:|---:|:---|:---|
-| high_major | 61 | 687 | 96.5% | 16% / 37% / 8% | +3.84 | +2.70 to +4.98 | +1.77 to +5.91 | excludes zero after the family correction | 10.89 | +2.76 | +1.50 to +4.02 | +0.48 to +5.04 |
-| mid_major | 131 | 1,387 | 94.7% | 17% / 38% / 8% | +1.83 | +1.07 to +2.59 | +0.46 to +3.20 | excludes zero after the family correction | 9.40 | +1.87 | +0.96 to +2.77 | +0.23 to +3.51 |
-| low_major | 172 | 1,841 | 94.6% | 18% / 39% / 9% | -0.17 | -0.75 to +0.41 | -1.23 to +0.88 | **no demonstrated edge** | 9.24 | +2.86 | +2.11 to +3.61 | +1.50 to +4.21 |
-| mixed | — | 804 | 62.2% | — / — / — | -3.39 | -4.57 to -2.20 | -5.53 to -1.24 | excludes zero after the family correction | 11.31 | +1.65 | +0.46 to +2.84 | -0.51 to +3.81 |
-| POOLED | 365 | 4,719 | 87.1% | 18% / 38% / 8% | +0.45 | -0.13 to +1.03 | -0.59 to +1.50 | **no demonstrated edge** | 9.88 | +2.35 | +1.86 to +2.84 | +1.46 to +3.23 |
+| high_major | 61 | 687 | 96.5% | 16% / 37% / 8% | +3.84 | +2.70 to +4.98 | +1.77 to +5.91 | excludes zero after the family correction | 10.89 | +2.16 | +0.90 to +3.43 | -0.12 to +4.45 |
+| mid_major | 131 | 1,387 | 94.7% | 17% / 38% / 8% | +1.83 | +1.07 to +2.59 | +0.45 to +3.20 | excludes zero after the family correction | 9.40 | +1.25 | +0.35 to +2.15 | -0.38 to +2.88 |
+| low_major | 172 | 1,841 | 94.6% | 18% / 39% / 9% | -0.18 | -0.76 to +0.40 | -1.23 to +0.88 | **no demonstrated edge** | 9.24 | +2.21 | +1.46 to +2.96 | +0.85 to +3.57 |
+| mixed | — | 804 | 62.2% | — / — / — | -3.39 | -4.58 to -2.21 | -5.54 to -1.24 | excludes zero after the family correction | 11.31 | +0.76 | -0.43 to +1.95 | -1.40 to +2.92 |
+| POOLED | 365 | 4,719 | 87.1% | 18% / 38% / 8% | +0.45 | -0.13 to +1.03 | -0.60 to +1.50 | **no demonstrated edge** | 9.88 | +1.67 | +1.19 to +2.16 | +0.79 to +2.56 |
 
 > Pooled across every tier. **This is never the headline.** High-major, mid-major and low-major are three different distributions and this lab exists because the third is plausibly priced with less attention; a pooled row is printed only alongside its tier rows, and only so the tier rows can be read against something.
 
@@ -198,9 +200,9 @@ The tier home-court effect the model applies, beside an estimate of the same qua
 
 | Tier | Fitted (per 100) | Measured (per 100) | 95% interval | Family-corrected | Pairs | Fitted inside 95% | Fitted inside corrected | Gap |
 |:---|---:|---:|:---|:---|---:|:---|:---|---:|
-| high_major | +12.36 | +5.58 | +4.52 to +6.63 | +3.67 to +7.49 | 475 | **no** | **no** | +6.78 |
-| mid_major | +7.34 | +4.70 | +4.03 to +5.36 | +3.49 to +5.90 | 1,134 | **no** | **no** | +2.64 |
-| low_major | +3.90 | +3.69 | +3.15 to +4.23 | +2.71 to +4.67 | 1,728 | yes | yes | +0.22 |
+| high_major | +12.36 | +5.58 | +4.52 to +6.63 | +3.66 to +7.49 | 475 | **no** | **no** | +6.78 |
+| mid_major | +7.34 | +4.70 | +4.03 to +5.36 | +3.49 to +5.91 | 1,134 | **no** | **no** | +2.64 |
+| low_major | +3.90 | +3.69 | +3.15 to +4.23 | +2.70 to +4.67 | 1,728 | yes | yes | +0.22 |
 | unplaced | +7.87 | — | — | — | 0 | — | — | — |
 
 Two `inside` columns, because the corrected interval is the wider one and a fitted number can fall outside the raw interval and inside the corrected one. **The corrected column is the one that decides**, and the list below is drawn from it: reading a disagreement off the narrower interval is exactly what a family-wise correction exists to stop.
