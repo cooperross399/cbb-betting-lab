@@ -1155,3 +1155,61 @@ def test_rebuild_report_only_without_a_record_says_so_and_exits_non_zero(tmp_pat
     code, output = run_script("--output-dir", str(outputs), "--rebuild-report-only")
     assert code == 2
     assert "there is no record to re-render" in output
+
+
+def test_a_replication_that_no_longer_describes_its_discovery_run_is_refused(tmp_path):
+    """The record stamps the discovery run; nothing ever read the stamp back.
+
+    `build_record` has always written `discovery.generated_at`, `bets_graded`,
+    `wagers_graded`, `games` and `days` — the exact key that proves the two
+    records still belong together. `record["discovery"]["generated_at"]`
+    appeared once in the whole repository: at the line that writes it. So a
+    discovery re-score left the replication quoting a run that no longer
+    existed, and `--rebuild-report-only` re-rendered the quotation without
+    re-reading anything. Measured 2026-09-17, the committed pair were nine days
+    and 8,593 bets apart and nothing said so.
+
+    Both directions are asserted. A pair that agrees must return no reasons —
+    otherwise the check is a permanent red that gets switched off — and each
+    kind of disagreement must be named with BOTH figures, because "the
+    discovery run is newer" is an assertion and two timestamps is a fact.
+    """
+    discovery = tmp_path / "cbb_price_backtest.json"
+    stamped = {
+        "generated_at": "2026-09-17T15:56:40Z",
+        "bets_graded": 110_682,
+        "wagers_graded": 411_034,
+        "games": 16_812,
+        "days": 513,
+    }
+    discovery.write_text(json.dumps(stamped), encoding="utf-8")
+    record = {"discovery": dict(stamped)}
+
+    assert R.stale_discovery(record, discovery) == [], (
+        "a replication and the discovery record it names, in agreement, are "
+        "reported stale — so the check would be red from the day it landed"
+    )
+
+    discovery.write_text(
+        json.dumps({**stamped, "generated_at": "2026-09-18T09:00:00Z"}), encoding="utf-8"
+    )
+    reasons = R.stale_discovery(record, discovery)
+    assert len(reasons) == 1 and "2026-09-18T09:00:00Z" in reasons[0]
+    assert "2026-09-17T15:56:40Z" in reasons[0], (
+        "the reason names only the new stamp, so a reader cannot check it "
+        "against what the record claims"
+    )
+
+    discovery.write_text(
+        json.dumps({**stamped, "bets_graded": 119_275}), encoding="utf-8"
+    )
+    reasons = R.stale_discovery(record, discovery)
+    assert len(reasons) == 1 and "119,275" in reasons[0] and "110,682" in reasons[0]
+
+    # An ABSENT discovery record is "cannot check", not "disagrees". Refusing
+    # there would make this a permanent red in any record-only tree — a rebuild
+    # from a distributed record, a test world that writes no discovery file —
+    # and a check that is always red is a check somebody deletes. The script
+    # warns instead; only a pair that is present and disagrees is refused.
+    discovery.unlink()
+    assert R.stale_discovery(record, discovery) == []

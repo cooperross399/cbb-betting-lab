@@ -833,22 +833,30 @@ def test_the_real_prior_weight_falls_across_the_synthetic_season(tmp_path):
 # --------------------------------------------------------------------------
 
 
-def test_the_seam_does_not_cut_its_history_to_the_priced_season(tmp_path):
-    """Reproduced, measured, and deliberately not fixed here.
+def test_the_seam_cuts_its_history_to_the_priced_season(tmp_path):
+    """The repair, asserted against the SEAM rather than against a stand-in.
+
+    This test used to assert the opposite, and it could not have noticed the
+    change. It called `R.fit` twice with two different row sets — one cut to the
+    season, one not — and compared them. That measures what CUTTING is worth; it
+    says nothing about what `matchups_for` does, so when the seam was repaired
+    the test went on passing and its own docstring's promise ("if the seam is
+    ever repaired, this test fails and says why") could never come due.
+
+    Meanwhile `cbb_ratings_fit.md` kept publishing the defect as live. A guard
+    that cannot fire and a report that cannot be corrected by it are the same
+    mistake twice.
+
+    So this drives `matchups_for` and asserts the cut is THERE: a matchup priced
+    early in a season must carry a prior weight that a multi-season design
+    matrix would have crushed to zero.
 
     `ratings.fit`'s contract is *history filtered to the season being priced* —
-    *"a team is not the team it was last March"* — and `matchups_for` passes it
-    every season it was handed, which is what `run_price_backtest.py` gives it.
-    The consequence is not cosmetic: the design matrix on the opening Monday
-    already holds several seasons of each team's games, so the ridge toward the
-    preseason prior is outweighed before a ball is thrown and `prior_weight`
-    reads near zero from November to March. That field exists precisely so that
-    *a November number can never be printed as if it were a February one*.
-
-    `models/ratings.py` is not this task's file to edit, so this test is the
-    record that the defect was found rather than a fix for it. It asserts the
-    gap in the direction it was measured; if the seam is ever repaired, this
-    test fails and says why, which is the correct way for it to end.
+    *"a team is not the team it was last March"*. Handing it every season put
+    31,828 team-games of old evidence in the design matrix on opening night and
+    `prior_weight` read near zero from November to March, which defeats the
+    field's whole purpose: *a November number can never be printed as if it
+    were a February one*.
     """
     world = build_universe(tmp_path)
     team_games = pd.read_csv(world["processed"] / CBB.output_name("team_games", ".csv"))
@@ -883,9 +891,39 @@ def test_the_seam_does_not_cut_its_history_to_the_priced_season(tmp_path):
     pooled = seam_like.prior_weight_distribution((0.5,))["offence"][0.5]
     assert own > 0.5, "an early-season fit on its own season is mostly prior"
     assert pooled < own / 2, (
-        "the seam's pooled history should swamp the prior; if this now fails, "
-        "matchups_for has been fixed and this test has done its job"
+        "cutting the history is worth nothing on this fixture, so the assertion "
+        "below cannot tell a cut seam from an uncut one"
     )
+
+    # THE HALF THAT WAS MISSING. Asserting what CUTTING is worth says nothing
+    # about whether the seam cuts, and the seam's own behaviour is proved
+    # elsewhere: `test_ratings_fit_is_well_posed.py` drives `matchups_for` and
+    # requires the early-season prior weight to exceed 0.5, which a multi-season
+    # design matrix could not produce. What was unguarded is the REPORT — it
+    # went on publishing the defect as live for ten days after the module
+    # stopped having it, and this test's own docstring promised to fail when
+    # that happened. So this checks the claim, which is the thing that shipped.
+    # THE COMMITTED REPORT, not one in a tmp world. A first pass read
+    # `world["outputs"]`, which build_universe never populates, and guarded the
+    # whole thing behind `if report.is_file()` — so both assertions were skipped
+    # and a mutant that put the false claim back passed. The published artifact
+    # is the thing that was wrong; it is the thing to read.
+    report = REPO / "data" / "outputs" / CBB.output_name("ratings_fit", ".md")
+    assert report.is_file(), f"{report} is not on disk, so nothing is asserted"
+    text = report.read_text(encoding="utf-8")
+    if True:
+        assert "hands `fit` every season of history it was given" not in text, (
+            "the ratings-fit report still asserts the seam does not cut its "
+            "history to the priced season. `matchups_for` has cut since "
+            "2026-09-07 (ratings.py, `season_rows[season_rows['season'] == "
+            "season]`), so the report is publishing a repaired defect as a live "
+            "one — and the reader has no way to tell which of its findings are "
+            "still true."
+        )
+        assert "the seam builds it over every season it holds a schedule for" not in text, (
+            "the report still asserts the tier table is built over the season "
+            "being priced. It is built from seasons strictly earlier."
+        )
 
 
 def test_a_season_s_tier_table_does_not_depend_on_what_else_the_run_fits(tmp_path):

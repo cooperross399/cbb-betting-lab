@@ -426,7 +426,11 @@ def print_verdicts(record: Mapping) -> None:
 
 
 def rebuild_report_only(
-    *, record_path: Path, report_path: Path, ledger: Path | None = None
+    *,
+    record_path: Path,
+    report_path: Path,
+    ledger: Path | None = None,
+    discovery_path: Path | None = None,
 ) -> int:
     """Re-render the markdown from the record. Scores nothing, spends nothing.
 
@@ -452,6 +456,39 @@ def rebuild_report_only(
     except R.ReplicationError as exc:
         print(f"::error::{exc}", file=sys.stderr)
         return EXIT_NOTHING_TO_MEASURE
+    # REFUSE A RE-RENDER OF A REPLICATION THAT NO LONGER DESCRIBES ITS
+    # DISCOVERY RUN. The record stamps the discovery run it replicated; nothing
+    # ever read that stamp back, so a discovery re-score left this quoting a run
+    # that no longer existed and this path would re-render the quotation without
+    # re-reading anything. Measured 2026-09-17: the committed pair were nine
+    # days and 8,593 bets apart.
+    #
+    # A refusal rather than a warning, because the report's whole subject is
+    # whether a discovery finding held on held-out seasons — and that sentence
+    # means nothing if the discovery half has moved underneath it.
+    if discovery_path is not None and not Path(discovery_path).is_file():
+        print(
+            f"::warning::{Path(discovery_path).name} is not beside this record, "
+            "so whether this replication still describes its discovery run is "
+            "unchecked rather than checked and found fine.",
+            file=sys.stderr,
+        )
+    stale = R.stale_discovery(record, discovery_path) if discovery_path else []
+    if stale:
+        print(
+            "::error::this replication no longer describes the discovery run "
+            "it names, so re-rendering it would republish a comparison that is "
+            "no longer between those two things:",
+            file=sys.stderr,
+        )
+        for reason in stale:
+            print(f"::error::  {reason}", file=sys.stderr)
+        print(
+            "::error::Re-run the replication rather than re-rendering it.",
+            file=sys.stderr,
+        )
+        return EXIT_NOTHING_TO_MEASURE
+
     correction = RESTATEMENT.current(ledger)
     was = int(record.get("looks", 1) or 1)
     # One-directional: a re-render may only ever widen. See `restatement.widened`.
@@ -567,6 +604,9 @@ def main(argv: list[str] | None = None) -> int:
             record_path=record_path,
             report_path=report_path,
             ledger=Path(args.ledger) if args.ledger else PB.ledger_path(OUTPUTS_DIR),
+            # The discovery record lives beside this one, in the same
+            # --output-dir, and is the half a re-render must re-read.
+            discovery_path=PB.record_path(competition, output_dir),
         )
 
     print(f"{competition.title} — replication on a held-out season")

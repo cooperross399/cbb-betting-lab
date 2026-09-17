@@ -82,9 +82,11 @@ Monotone decay over November through February **holds**: 23 printed days out of 
 
 The last two columns are reported and decide nothing, and they are **team-days rather than teams** — one team on one day is one step. `prior_weight` is the row sum of `A⁻¹Λ` and `A⁻¹` has negative off-diagonal entries, so a team's own prior share depends on games played by the teams it is connected to and is **not** a monotone function of its own game count. Roughly half of all team-days move the wrong way by a fraction of a point, which is what a coupled ridge does and not a defect; it is counted here so that it is a number in the record rather than a paragraph. 1 team(s) joined the fit during the window, each entering at a weight near 1.0, which is the other thing that moves an order statistic.
 
-### The seam prices a different fit — season 2026
+### What cutting the history to the priced season is worth — season 2026
 
-`ratings.matchups_for` hands `fit` every season of history it was given, and `run_price_backtest.py` gives it all of them, so the design matrix on the opening Monday already holds several seasons of each team's games. `ratings.fit`'s own contract is the other one — *history filtered to the season being priced*, because *a team is not the team it was last March* — and this report fits that way. Both are refitted on the days below **from the same prior and the same tier table**, so the only thing that differs between the two columns is where the history was cut. The seam's other departure — a tier table built over the season it is pricing — is a separate finding and is counted separately below.
+**This section described a live defect until 2026-09-17 and now measures a repair.** It said `ratings.matchups_for` HANDED `fit` every season of history it was given, so the design matrix on the opening Monday already held several seasons of each team's games and the prior's weight read 0.0% from November to April. That was true when it was written and is not true now: `matchups_for` cuts to the priced season, and builds its tier table from seasons strictly earlier. The report went on asserting both after the module had stopped doing either.
+
+What the two columns compare is therefore no longer a seam against a contract; it is the SAME contract fitted two ways, and the right-hand column is what a card WOULD print if the cut were ever removed. `ratings.fit`'s contract is *history filtered to the season being priced*, because *a team is not the team it was last March*. Both are refitted below **from the same prior and the same tier table**, so the only thing that differs is where the history was cut.
 
 | Day | Team-games (season) | Prior weight (season) | Team-games (seam) | Prior weight (seam) |
 |:---|---:|---:|---:|---:|
@@ -120,9 +122,9 @@ The last two columns are reported and decide nothing, and they are **team-days r
 | 2026-04-01 | 10,812 | 17.6% | 42,640 | 0.0% |
 | 2026-04-06 | 10,828 | 17.6% | 42,656 | 0.0% |
 
-Offence's median is printed for compactness and every component is in the record; offence and defence differ, and both are there. **The right-hand column is the number a card produced through the seam would print**, and it does not move all season.
+Offence's median is printed for compactness and every component is in the record; offence and defence differ, and both are there. **The right-hand column is what a card would print if the cut were removed**, and it does not move all season. It is the cost of the repair stated as a number rather than a claim, and it is not what the shipped seam does.
 
-**Tier table:** 34 of 367 teams (9.3%) change tier when the priced season is allowed into `conferences.tier_table`. This report builds it from seasons strictly earlier, which is that module's own rule; the seam builds it over every season it holds a schedule for. A tier is not a label — it chooses which home-court effect is applied — so a team on the wrong side of a cut point is a multi-point error on every market on its home games.
+**Tier table:** 34 of 367 teams (9.3%) change tier when the priced season is allowed into `conferences.tier_table`. This report builds it from seasons strictly earlier, which is that module's own rule, and **so does the seam** — `matchups_for` takes `earlier = tuple(s for s in sorted(schedules) if s < season)`. This paragraph asserted the opposite until 2026-09-17, ten days after the module stopped doing it. The figure above is therefore what the leak WOULD cost if the rule were relaxed, not a live defect. A tier is not a label — it chooses which home-court effect is applied — so a team on the wrong side of a cut point is a multi-point error on every market on its home games, which is why the cost is still measured and printed.
 
 - strictly before: Tiers from seasons [2023, 2024, 2025]: high_major=61, low_major=174, mid_major=131 (33 conferences).
 - including the priced season: Tiers from seasons [2023, 2024, 2025, 2026]: high_major=61, low_major=156, mid_major=150 (33 conferences).
