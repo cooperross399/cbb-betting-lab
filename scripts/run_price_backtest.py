@@ -612,7 +612,24 @@ def make_price_day(
             history=history,
             prices=frame,
             competition=competition,
+            # BOTH NAMES, AND THE REASON IS THAT THEY ARE TWO DIFFERENT
+            # VOCABULARIES FOR ONE FRAME.
+            #
+            # `player_history` is the walk-forward guard's name for it — the
+            # `frames=` key this pricer declares it cut. `player_games` is what
+            # `models.ratings.matchups_for` declares as its parameter.
+            # `call_model` passes only what the callee declares, so passing the
+            # guard's name alone meant the model was handed NOTHING and, because
+            # its parameter carries a default of None, nothing refused. The
+            # price backtest priced every game in its history with the roster
+            # terms — returning minutes, incoming transfers, their level — off,
+            # while `cbb_ratings_fit.md` published "with roster terms" about the
+            # same model.
+            #
+            # `call_model` filters, so a model declaring only one of these gets
+            # only that one, and a model declaring neither gets neither.
             player_history=player_history,
+            player_games=player_history,
         )
         row_reasons: list[str] = []
         wagers, unparseable, reasons = card_pricing.build_wagers(
@@ -1465,10 +1482,28 @@ def main(argv: list[str] | None = None) -> int:
 
     # ---- the results tables ------------------------------------------------
     markets_present = {clean_text(m) for m in wagers["market"].dropna().unique()}
-    needs_players = any(
+    grades_props = any(
         (MARKETS_BY_KEY.get(m) is not None and MARKETS_BY_KEY[m].family == PLAYER)
         for m in markets_present
     )
+    # TWO DIFFERENT NEEDS, AND CONFLATING THEM SILENTLY CHANGED THE MODEL.
+    #
+    # `player_games` is read for two unrelated reasons: to GRADE a prop, and to
+    # give the ratings prior its ROSTER EVIDENCE — returning minutes, incoming
+    # transfers and their level. This was one flag computed from whether the
+    # store held a player MARKET, so `drop_player_markets` (added 2026-09-17 to
+    # declare this script's scope) turned it False, the table was not read, and
+    # the model priced every game with the roster terms silently switched off.
+    # The run said so in one line nobody read: "The board carries no player
+    # market, so `cbb_player_games.csv` was not read."
+    #
+    # That commit described itself as a market-scope change. It was also a model
+    # change, and the measurement it produced was not comparable to the one it
+    # replaced. Roster evidence is read whenever the table is there.
+    roster_table = Path(args.processed_dir) / competition.output_name(
+        "player_games", ".csv"
+    )
+    needs_players = grades_props or roster_table.is_file()
     # TAKE THE CENSUS BEFORE SCORING ANYTHING, WHICH IS WHAT ITS DOCSTRING SAYS
     # A GRADING RUN DOES: "This is what a grading run calls before any scoring
     # code runs. It raises on anything unreconciled."
@@ -1484,7 +1519,8 @@ def main(argv: list[str] | None = None) -> int:
     # reconciles — 46 compared checks, 23 declared, 30 pinned. The gate was
     # sound, the call site was missing, and the failure only appears on the one
     # invocation nobody runs weekly: the deliberate full-population pass.
-    if needs_players:
+    # The census gates GRADING, so it is asked only when props are graded.
+    if grades_props:
         processed = Path(args.processed_dir)
         try:
             player_census.assert_reconciles(

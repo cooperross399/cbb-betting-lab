@@ -612,12 +612,24 @@ def test_the_default_model_resolves(tmp_path):
 
 
 class _RequiresAPlayerFrame:
-    """A model of the shape a player-prop model would have. Never callable here."""
+    """A model of the shape a player-prop model would have. Never callable here.
+
+    It used to require `player_games`, and the backtest refused it because the
+    pricer did not supply that name. That refusal was REAL but it was the
+    symptom of a defect rather than a guard working: the pricer holds the frame
+    and was passing it under the walk-forward guard's name, `player_history`,
+    which `models.ratings.matchups_for` does not declare. Fixing the seam made
+    this model satisfiable, so the test stopped proving anything.
+
+    It now requires a frame the pricer genuinely cannot build, which is what the
+    refusal is about: a model needing an input this caller does not hold must be
+    refused rather than called with a default that prices a plausible day.
+    """
 
     def __init__(self) -> None:
         self.calls = 0
 
-    def matchups_for(self, *, day, history, prices, competition, player_games):
+    def matchups_for(self, *, day, history, prices, competition, referee_assignments):
         self.calls += 1
         return {}
 
@@ -635,9 +647,15 @@ def test_a_model_requiring_an_argument_the_caller_cannot_build_is_refused():
     """The seam refuses, naming the parameter and the caller, and does not call.
 
     Before this, the model was called with the four arguments the caller had
-    and `player_games` fell to whatever the model's default was. A player model
+    and the missing one fell to whatever the model's default was. A player model
     would have priced every prop off an absent frame and returned probabilities
     indistinguishable from the ones it returns when the frame is there.
+
+    The parameter here is `referee_assignments` rather than `player_games`
+    because the pricer now genuinely supplies the latter. That matters: this
+    refusal only means something when the caller REALLY cannot build the
+    argument. Pointed at a frame the caller holds, it was testing a wiring
+    defect and reading as a guard.
     """
     model = _RequiresAPlayerFrame()
 
@@ -649,7 +667,7 @@ def test_a_model_requiring_an_argument_the_caller_cannot_build_is_refused():
         )
 
     message = str(raised.value)
-    assert "player_games" in message, message
+    assert "referee_assignments" in message, message
     assert "per-day pricer" in message, "a refusal must name whose call it was"
     assert "['competition', 'day', 'history', 'prices']" in message, (
         "and must say what the caller does build, so the reader knows which "
@@ -782,7 +800,7 @@ def test_the_backtest_exits_on_a_model_that_does_not_fit_rather_than_pricing(
     assert code != 0
     combined = "".join(capsys.readouterr())
     assert "::error::" in combined
-    assert "player_games" in combined
+    assert "referee_assignments" in combined
     assert "per-day pricer" in combined
     assert not lab.report_path.exists(), "a report was written for an unwired model"
     assert not lab.record_path.exists()
@@ -2996,4 +3014,70 @@ def test_the_grading_census_reconciles_when_a_neutral_court_wager_is_refused(scr
         "the refusal counted itself as unsettleable, and the caller counts it "
         "again for every UNSETTLEABLE outcome — so the census over-reports by "
         "one per refused row and rows == graded + unsettleable breaks"
+    )
+
+
+def test_the_pricer_hands_the_model_the_player_frame_it_declares(tmp_path):
+    """The backtest priced its whole history with the roster terms switched off.
+
+    The pricer holds the player table and passed it as `player_history` — the
+    walk-forward guard's name for the frame. `models.ratings.matchups_for`
+    declares `player_games`. `call_model` passes only what the callee declares,
+    so the frame was DROPPED; the parameter carries a default of `None`, so
+    `unsupplied_arguments` found nothing missing and nothing refused.
+
+    Neither existing rule could see it. Rule 1 drops unknown arguments on
+    purpose. Rule 2 refuses only REQUIRED parameters. The defect lived exactly
+    in the gap: something was offered, something went unfilled, and the two
+    never met — while `cbb_ratings_fit.md` published "with roster terms" about a
+    model the measurement was never giving a roster to.
+
+    Asserted behaviourally, on what the model RECEIVES, because that is the
+    thing that was wrong. A signature comparison would pass on a pricer that
+    supplies the name and hands it an empty frame.
+    """
+    lab = Lab(tmp_path).with_tables().with_store()
+    received: dict = {}
+
+    def model(*, day, history, prices, competition, player_games=None):
+        received.setdefault("frames", []).append(player_games)
+        return {}
+
+    # DRIVEN THROUGH THE REAL PRICER, via the `--model` door an operator uses.
+    #
+    # The first version of this called `call_model` directly, supplying both
+    # names itself — so reverting the seam left it GREEN. It tested the unit I
+    # had just written instead of the path that was broken, which is the third
+    # time in one day the same mistake produced a test that proves nothing.
+    # Only a run through `make_price_day` can say what the pricer passes.
+    module_name = "cbb_stub_model_records_the_player_frame"
+    module = types.ModuleType(module_name)
+    module.matchups_for = model
+    sys.modules[module_name] = module
+    try:
+        lab.run("--model", f"{module_name}:matchups_for")
+    finally:
+        sys.modules.pop(module_name, None)
+
+    frames = received.get("frames") or []
+    assert frames, "the pricer never called the model at all"
+    # NON-EMPTY, not merely non-None. A first pass asserted `is not None` and a
+    # mutant that stopped LOADING the roster table sailed through it: the table
+    # is not read, the pricer hands the seam an empty frame with the declared
+    # columns, and the model receives a DataFrame that is not None and carries
+    # no roster. Two different ways to price with the terms off, and only one
+    # of them is visible to an identity check.
+    assert any(f is not None and len(f) for f in frames), (
+        "the model declaring `player_games` was handed nothing on any day, so "
+        "every price falls back to its default and the roster terms are off"
+    )
+
+    # And the shape is named, so the next mismatch is reported rather than
+    # absorbed by a default the way this one was.
+    dropped, unfilled = PB.dropped_for_a_defaulted_parameter(
+        model, ["day", "history", "prices", "competition", "player_history"]
+    )
+    assert dropped == ["player_history"] and "player_games" in unfilled, (
+        "the mismatch detector no longer recognises the shape it was written "
+        f"for: dropped={dropped} unfilled={unfilled}"
     )

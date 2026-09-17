@@ -2,49 +2,50 @@
 
 Every figure below is read from a record on disk by `scripts/run_why_the_model.py`, never typed. The records, and the moment each stamped itself with:
 
-- **price backtest** — `data/outputs/cbb_price_backtest.json`, generated 2026-09-17T05:06:43Z
+- **price backtest** — `data/outputs/cbb_price_backtest.json`, generated 2026-09-17T16:24:15Z
 - **forecast skill** — `data/outputs/cbb_forecast_skill.json`, generated 2026-09-05T15:56:38Z
-- **held-out replication** — `data/outputs/holdout/cbb_replication.json`, generated 2026-09-05T16:56:49Z
+- **held-out replication** — `data/outputs/holdout/cbb_replication.json`, generated 2026-09-17T16:47:13Z
 
 Read `docs/what_we_can_and_cannot_claim.md` first. This says what the evidence *is*; that says how to read it.
 
 ## The answer
 
-**No demonstrated edge in any of the 3 measured tiers** (high-major 37,774 bets, mid-major 81,477 bets, low-major 56,589 bets). 2 shows a demonstrated deficit: mid-major 81,477 bets, **-5.5%**, corrected -9.5% to -1.5% — demonstrated deficit; low-major 56,589 bets, **-4.7%**, corrected -8.9% to -0.4% — demonstrated deficit.
+**No demonstrated edge in any of the 3 measured tiers** (high-major 37,939 bets, mid-major 81,404 bets, low-major 56,340 bets). 2 shows a demonstrated deficit: mid-major 81,404 bets, **-5.5%**, corrected -9.5% to -1.4% — demonstrated deficit; low-major 56,340 bets, **-4.6%**, corrected -8.8% to -0.3% — demonstrated deficit.
 
-Measured on 175,846 graded bets over 26,591 games and 791 days of the 2021-2026 seasons, across 32 market-and-tier cells.
+Measured on 175,690 graded bets over 26,622 games and 791 days of the 2021-2026 seasons, across 32 market-and-tier cells.
 
-Every interval is corrected for 130 cumulative distinct hypotheses — the experiment ledger's count at render time, not the count when the backtest ran — which widens each one by x1.81. The correction can only ever get stricter as the search continues, which is the only direction it is allowed to move.
+Every interval is corrected for 133 cumulative distinct hypotheses — the experiment ledger's count at render time, not the count when the backtest ran — which widens each one by x1.81. The correction can only ever get stricter as the search continues, which is the only direction it is allowed to move.
 
 | Tier | Result |
 |:---|:---|
-| high-major | 37,774 bets, **-4.1%**, corrected -9.6% to +1.4% — no demonstrated edge |
-| mid-major | 81,477 bets, **-5.5%**, corrected -9.5% to -1.5% — demonstrated deficit |
-| low-major | 56,589 bets, **-4.7%**, corrected -8.9% to -0.4% — demonstrated deficit |
-| unplaced | not enough evidence (6 bets, below the 200 declared in advance) |
+| high-major | 37,939 bets, **-4.2%**, corrected -9.7% to +1.4% — no demonstrated edge |
+| mid-major | 81,404 bets, **-5.5%**, corrected -9.5% to -1.4% — demonstrated deficit |
+| low-major | 56,340 bets, **-4.6%**, corrected -8.8% to -0.3% — demonstrated deficit |
+| unplaced | not enough evidence (7 bets, below the 200 declared in advance) |
 
-Cut finer, by market **and** tier: **0 of 32 cells shows a demonstrated edge** and **4 shows a demonstrated deficit**, over the 22 that clear the floor declared in advance.
+Cut finer, by market **and** tier: **0 of 32 cells shows a demonstrated edge** and **5 shows a demonstrated deficit**, over the 22 that clear the floor declared in advance.
 
-- `moneyline / mid_major`: 8,983 bets, **-8.0%**, corrected -14.5% to -1.6% — demonstrated deficit
-- `team_total / mid_major`: 11,690 bets, **-6.5%**, corrected -10.3% to -2.6% — demonstrated deficit
-- `moneyline / low_major`: 6,972 bets, **-9.9%**, corrected -17.0% to -2.9% — demonstrated deficit
-- `total_points / low_major`: 17,903 bets, **-5.2%**, corrected -9.5% to -0.8% — demonstrated deficit
+- `moneyline / high_major`: 4,393 bets, **-11.1%**, corrected -21.4% to -0.7% — demonstrated deficit
+- `moneyline / mid_major`: 8,873 bets, **-8.0%**, corrected -14.7% to -1.4% — demonstrated deficit
+- `team_total / mid_major`: 11,618 bets, **-6.3%**, corrected -10.1% to -2.5% — demonstrated deficit
+- `moneyline / low_major`: 6,967 bets, **-9.8%**, corrected -16.7% to -2.8% — demonstrated deficit
+- `total_points / low_major`: 17,978 bets, **-5.2%**, corrected -9.5% to -0.9% — demonstrated deficit
 
 ### The tier this lab was built expecting to be the best
 
-The reason for a fourth lab was market heterogeneity — 360 teams on a Tuesday night in January being priced with less attention than a 32-team league, so softness should appear at the low-major end. By point estimate the **worst** measured tier is **mid-major**: 81,477 bets, **-5.5%**, corrected -9.5% to -1.5% — demonstrated deficit. Whatever is different about that board, this model is not better there.
+The reason for a fourth lab was market heterogeneity — 360 teams on a Tuesday night in January being priced with less attention than a 32-team league, so softness should appear at the low-major end. By point estimate the **worst** measured tier is **mid-major**: 81,404 bets, **-5.5%**, corrected -9.5% to -1.4% — demonstrated deficit. Whatever is different about that board, this model is not better there.
 
 ### The pooled figure, which is not the answer
 
 **Pooled across Division I. This is never the headline.** High-major, mid-major and low-major are different distributions; a policy that wins in low-major games and loses in high-major ships in low-major only, if it ships at all. `docs/when_this_ends.md` applies the stopping rule to the pooled figure as well as to each tier, which is why it is computed — not so it can be quoted on its own.
 
-Pooled across every market and tier: 175,846 bets, **-4.9%**, corrected -7.5% to -2.4% — demonstrated deficit.
+Pooled across every market and tier: 175,690 bets, **-4.9%**, corrected -7.5% to -2.3% — demonstrated deficit.
 
 ### A claim this document has retracted, recorded 2026-09-04
 
 Before this block was generated, this document said of **low-major** that it was *“the only tier whose interval excludes zero, and it excludes zero on the losing side”* — a demonstrated deficit. That was measured on the core team markets alone, before the alternate ladders and the halves entered the population.
 
-**It still holds.** On today's record low-major reads 56,589 bets, **-4.7%**, corrected -8.9% to -0.4% — demonstrated deficit.
+**It still holds.** On today's record low-major reads 56,340 bets, **-4.6%**, corrected -8.8% to -0.3% — demonstrated deficit.
 
 ## The model is not worthless — it is beaten by the vig
 
@@ -64,9 +65,9 @@ Each is a rule that needs no model at all. All 3 measured tiers return more than
 
 | Tier | Rows | Model minus raw market | Reading |
 |:---|---:|:---|:---|
-| high-major | 62,163 | -0.01663, corrected -0.02210 to -0.01116 | demonstrated deficit |
-| mid-major | 137,296 | -0.00962, corrected -0.01328 to -0.00596 | demonstrated deficit |
-| low-major | 94,182 | -0.00776, corrected -0.01111 to -0.00441 | demonstrated deficit |
+| high-major | 62,163 | -0.01663, corrected -0.02211 to -0.01116 | demonstrated deficit |
+| mid-major | 137,296 | -0.00962, corrected -0.01328 to -0.00595 | demonstrated deficit |
+| low-major | 94,182 | -0.00776, corrected -0.01111 to -0.00440 | demonstrated deficit |
 
 A **negative** advantage is the model scoring worse than the price it is betting into. The verdict column reads the sign the same way every other interval in this repository does; it is a Brier difference and not a return, and it is never added to one.
 
@@ -75,13 +76,13 @@ In high-major (0.25118 against 0.25000, 62,163 rows) the model's Brier is worse 
 **Calibration, over the whole population and over the bets the model selected.** These are counts of rows across Division I rather than a return, and they are reported together because only the second one is evidence about the bets this lab would place:
 
 - overall: **0.4 pp underconfident** over 526,728 rows
-- on the bets it **selected**: **10.5 pp overconfident** over 174,291 rows
+- on the bets it **selected**: **10.4 pp overconfident** over 174,136 rows
 
 The overall figure is not evidence about a betting policy. Nothing stakes money on the overall population.
 
 ## The held-out test
 
-The held-out test is 2025, 2026 (held out), discovered on 2021-2024 and **not declared in advance** — the seasons held out were chosen after the discovery numbers had been seen, so this is a second look at the data rather than a pre-registered test. It graded 71,778 held-out bets over 9,776 games against 119,275 on the discovery seasons, across 32 cells:
+The held-out test is 2025, 2026 (held out), discovered on 2021-2024 and **not declared in advance** — the seasons held out were chosen after the discovery numbers had been seen, so this is a second look at the data rather than a pre-registered test. It graded 65,007 held-out bets over 9,776 games against 110,682 on the discovery seasons, across 32 cells:
 
 - did not replicate: **0** of 32
 - not enough evidence: **3** of 32
@@ -95,6 +96,6 @@ The held-out test is 2025, 2026 (held out), discovered on 2021-2024 and **not de
 ## What this does not settle
 
 - **One price window.** Every number above is measured at the `card` snapshot and says nothing about any other.
-- **The half-point decomposition was refused, not computed.** The ticket-margin reconstruction agreed with the recorded outcome on 153,197 of 174,291 settled bets (87.9%), below the bar this repository set for using it, so how much of any spread or total figure is half a point at a key number is still open.
-- **10 of 32 cells are below the 200-bet floor declared in advance** and carry a phrase rather than a number: `spread_h1 / high_major` (198 bets), `total_points_h1 / high_major` (184 bets), `moneyline_h1 / mid_major` (165 bets), `moneyline_h1 / low_major` (77 bets), `moneyline_h1 / high_major` (46 bets), `alternate_team_total / mid_major` (11 bets), `alternate_team_total / low_major` (11 bets), `spread / unplaced` (3 bets), `total_points / unplaced` (2 bets), `moneyline / unplaced` (1 bet). A market in that list is not a market judged to have no value; it is a market with no price-based evidence either way.
+- **The half-point decomposition was refused, not computed.** The ticket-margin reconstruction agreed with the recorded outcome on 153,347 of 174,136 settled bets (88.1%), below the bar this repository set for using it, so how much of any spread or total figure is half a point at a key number is still open.
+- **10 of 32 cells are below the 200-bet floor declared in advance** and carry a phrase rather than a number: `spread_h1 / high_major` (189 bets), `total_points_h1 / high_major` (181 bets), `moneyline_h1 / mid_major` (168 bets), `moneyline_h1 / low_major` (79 bets), `moneyline_h1 / high_major` (47 bets), `alternate_team_total / mid_major` (13 bets), `alternate_team_total / low_major` (10 bets), `spread / unplaced` (3 bets), `total_points / unplaced` (3 bets), `moneyline / unplaced` (1 bet). A market in that list is not a market judged to have no value; it is a market with no price-based evidence either way.
 - **Nothing here is a forward result.** Every number above is a historical backtest, bet into prices somebody has already seen resolve. The forward ledger is untouched by all of it and is the only evidence that can still grow.
