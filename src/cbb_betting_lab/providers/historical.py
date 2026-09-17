@@ -120,6 +120,38 @@ Asking anyway costs nothing and returns nothing, **which looks exactly like "no
 book quoted it"**. The plan therefore filters keys per event date, records every
 refusal with its cut-off, and :func:`guard_cutoffs` raises if a plan that
 survived the filter still contains a violation.
+
+## 8. An empty ACCOUNT is not a fact about the archive
+
+Rule 2 is about this run's own cap. This rule is about the balance behind it,
+and they fail in opposite directions.
+
+A run that hits its cap has bought less than it planned: the segments it did not
+reach are simply unbought, and re-running buys them. A run whose **account**
+empties mid-flight keeps making requests that the provider no longer answers.
+Those responses stage nothing, the events under them land in the census as
+having produced no quote, and the report then publishes "the archive does not
+retain this" out of a fact about our wallet. That is fabricating a fact about
+retention, and it is the one failure this module's whole census discipline
+exists to prevent arriving through the one door it did not watch.
+
+So `x-requests-remaining` is read as a measurement and acted on:
+
+* `scripts/buy_historical_prices.py` refuses to **start** a run whose declared
+  cap exceeds the balance the provider reports — the same pre-flight the card
+  and the probe have always had, which this script did not;
+* :func:`buy` re-reads the measured remaining balance after **every** response
+  and stops the run with :class:`~cbb_betting_lab.providers.odds_api.QuotaExhausted`
+  the moment it falls below a floor derived from the widest single request the
+  run can make;
+* a run stopped that way is recorded as `stopped_on_quota` and :func:`render`
+  prints **STOPPED ON QUOTA** in place of the ordinary partial-buy wording,
+  lists every segment the run never reached as unasked, and says in the census
+  section that nothing in it may be read as evidence about retention.
+
+**No quota number is ever assumed.** When the provider reports none, the breaker
+has nothing to watch and the report says exactly that rather than letting the
+absence of a stop read as a clean bill of health.
 """
 
 from __future__ import annotations
@@ -127,7 +159,7 @@ from __future__ import annotations
 import hashlib
 import json
 import random
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -146,6 +178,7 @@ from cbb_betting_lab.providers.odds_api import (
     CreditCapReached,
     OddsApiProvider,
     ProviderError,
+    QuotaExhausted,
     Spend,
     markets_fingerprint,
 )
@@ -249,8 +282,20 @@ DEFAULT_SEED = 20260901
 #: plan it was given; set the cap from that.
 DEFAULT_CREDIT_CAP = 200_000
 
-#: Bumped whenever the run record's shape changes, so a stale record fails
-#: loudly at re-render rather than rendering a report with holes in it.
+#: Bumped whenever an older record would render **wrongly** under today's
+#: renderer, so a stale record fails loudly rather than producing a report with
+#: holes in it.
+#:
+#: Stated that way rather than as "whenever the shape changes", because the two
+#: are not the same rule and only the first is the one worth enforcing. Keys
+#: added for the balance circuit-breaker (`stopped_on_quota`, `quota_floor`,
+#: `quota_ever_reported`, `unreached_segments`, `zero_billed_responses`,
+#: `fallback_charges`) are absent from every record written before it existed,
+#: and `render` reads each with a default that is *true of those records*: none
+#: of them could have stopped on quota, because nothing measured it. Bumping for
+#: those would buy nothing and would make the committed record unrenderable —
+#: which is a worse outcome than the one the version guard exists to prevent.
+#: A key whose absence would make the report SAY something false is a bump.
 RECORD_SCHEMA_VERSION = 1
 
 REPORT_STEM = "historical_purchase"
@@ -1052,6 +1097,37 @@ class BuyState:
     #: happening again, in the open.
     worst_overrun: int = 0
     per_segment: list[dict] = field(default_factory=list)
+    #: True only when the run stopped because the ACCOUNT ran out of credits,
+    #: as opposed to because this run hit its own cap. Kept apart from
+    #: `completed` because the two mean opposite things about what the run's
+    #: silence proves: a capped run left markets unbought, an exhausted-quota
+    #: run left markets UNANSWERED, and an unanswered market in a census is
+    #: indistinguishable from one the provider does not retain.
+    stopped_on_quota: bool = False
+    #: The floor the circuit-breaker watched, and the last remaining quota the
+    #: provider actually reported. `None` means the provider reported none at
+    #: any point in the run — which is a third answer, not a zero.
+    quota_floor: int = 0
+    quota_last_measured: int | None = None
+    #: Whether the provider reported a remaining quota at any point in the run.
+    #: False means the circuit-breaker had nothing to watch for the whole run —
+    #: not that the balance was healthy. The report has to say which of those
+    #: two it is, or the absence of a stop reads as a measured all-clear.
+    quota_ever_reported: bool = False
+    #: How many times the breaker looked and found no balance to compare.
+    #:
+    #: `quota_ever_reported` alone is two answers where there are three. A
+    #: provider (or a proxy) that reports a balance once and then stops leaves
+    #: it True while the breaker is blind for the rest of the run, which is the
+    #: worst of the three states and the one that reads as the best. Anything
+    #: above zero means the run was NOT watched throughout, and no sentence
+    #: anywhere may then treat an absence as a fact about the archive.
+    quota_unwatched_responses: int = 0
+    #: Segments the run never reached, in plan order. They are NOT absent from
+    #: the archive and they are NOT unquoted; they were never asked. Recorded
+    #: so the segment table shows them instead of simply ending early, which is
+    #: how "we stopped" becomes "the provider had nothing".
+    unreached_segments: list[dict] = field(default_factory=list)
 
     def note(self, reason: str, n: int = 1) -> None:
         self.census[reason] = self.census.get(reason, 0) + int(n)
@@ -1091,17 +1167,39 @@ def buy(
     use_cache: bool = True,
     generated_at: str = "",
     population_by_season: Mapping[int, Sequence[RP.ProbeEvent]] | None = None,
+    quota_floor: int | None = None,
 ) -> dict:
     """Walk the plan in priority order, buy what is not cached, and record it.
 
     The record is the artefact. `render` is a pure function of it, so the
     report's wording can be improved for ever without spending a credit twice —
     and at ten times the live rate that rule earns more here than anywhere else.
+
+    `quota_floor` is the ACCOUNT balance below which the run stops. It is
+    derived rather than invented: the default is the pessimistic bound of the
+    single largest request this run can make, `10 x chunk_size x regions`, so
+    the breaker trips while there is still enough balance for the request in
+    flight to have been answered in full. Passing a number overrides it;
+    nothing here ever assumes one when the provider reports none.
     """
     guard_cutoffs(plan)
     state = BuyState()
     listings: dict[str, list[dict]] = {}
     cache_root = Path(cache_dir)
+    # The widest single request this plan can make. Used as the default floor
+    # because it is the smallest balance at which the NEXT request could still
+    # be answered whole; a floor of zero would let the run make a request the
+    # account cannot pay for, and a partially-billed response is exactly the
+    # thing whose silence is unreadable.
+    regions_in_plan = max(
+        [int(s.regions) for s in plan.buyable_segments()] or [1]
+    )
+    floor = (
+        int(quota_floor)
+        if quota_floor is not None
+        else HISTORICAL_MULTIPLIER * int(chunk_size) * regions_in_plan
+    )
+    state.quota_floor = floor
 
     def measured_total_ok(where: str) -> bool:
         """The check the NHL lab did not have. See rule 2."""
@@ -1119,9 +1217,49 @@ def buy(
         )
         return False
 
+    def check_quota(where: str) -> None:
+        """The circuit-breaker. Raises `QuotaExhausted` rather than returning.
+
+        THIS IS NOT THE CREDIT CAP. The cap is this run's own budget and
+        stopping against it leaves markets UNBOUGHT. This watches the account's
+        balance, and running it out leaves markets UNANSWERED — the provider
+        simply stops returning quotes, those responses stage no rows, and the
+        census reason they land under reads as the provider not retaining that
+        market. Publishing that is a statement about the archive made out of a
+        fact about our wallet, which is a fabricated fact about retention.
+
+        The remaining quota is read from `x-requests-remaining` **on the
+        response just received**, never assumed and never carried forward from
+        an earlier one. When that response reports none, this returns without
+        stopping and without inventing a number, and counts the look as one the
+        breaker could not make: the record then distinguishes a run watched
+        throughout from one watched once and blind afterwards, which is the
+        state that otherwise reads as the healthiest of the three.
+        """
+        remaining = state.spend.remaining_credits()
+        if remaining is None:
+            state.quota_unwatched_responses += 1
+            return
+        state.quota_ever_reported = True
+        state.quota_last_measured = remaining
+        if remaining >= floor:
+            return
+        raise QuotaExhausted(
+            f"The provider reports {remaining:,} credit(s) remaining on the "
+            f"account, below this run's floor of {floor:,}, measured while "
+            f"fetching {where}. **STOPPED ON QUOTA.** The run stopped at once "
+            "rather than continuing: once the balance is gone the provider "
+            "stops returning quotes, and a response with no quotes in it is "
+            "indistinguishable in a census from a market the archive does not "
+            "retain. Everything this run did not reach is UNASKED, not absent."
+        )
+
+    def stop_on_quota(exc: QuotaExhausted) -> None:
+        state.completed = False
+        state.stopped_on_quota = True
+        state.stopped_because = redact(str(exc))
+
     for segment in plan.segments:
-        if not state.completed:
-            break
         segment_record = {
             **segment.to_json(),
             "events_bought": 0,
@@ -1129,8 +1267,23 @@ def buy(
             "credits_spent_here": 0,
             "rows_staged": 0,
         }
+        # A BLOCKED SEGMENT IS RECORDED WHETHER OR NOT THE RUN HAS STOPPED.
+        #
+        # This used to sit after the stop check, so a segment blocked by an
+        # archive cut-off that happened to fall after a quota stop never
+        # reached `per_segment` and was swept into `unreached_segments`
+        # instead. Its real, known reason — the provider's archive does not go
+        # back that far — was then replaced in the report by "we ran out of
+        # money before we got there", which is a different and false statement
+        # about why nothing was asked. The cut-off is true of that segment
+        # regardless of what the budget did, so it is recorded regardless.
         if not segment.buyable:
             state.per_segment.append(segment_record)
+            continue
+        if not state.completed:
+            # Buy nothing more, but keep walking the plan so the blocked
+            # segments after the stop keep their own reason. A `break` here
+            # is what handed them the budget's reason instead.
             continue
         chunks = RP.market_chunks(segment.keys, size=chunk_size)
         index = indexes.get(int(segment.season))
@@ -1184,9 +1337,20 @@ def buy(
                         listings[event.snapshot] = []
                         continue
                     state.responses_bought += 1
+                    # CACHE BEFORE STOPPING. This response is bought and paid
+                    # for whatever the guards decide next; discarding it makes
+                    # the resumed run buy it a second time. The odds path below
+                    # has always written first for exactly this reason and this
+                    # one did not, so a cap stop threw away a listing it had
+                    # already been billed for.
+                    _write_cache(path, listing)
                     if not measured_total_ok(f"the slate listing at {event.snapshot}"):
                         break
-                    _write_cache(path, listing)
+                    try:
+                        check_quota(f"the slate listing at {event.snapshot}")
+                    except QuotaExhausted as exc:
+                        stop_on_quota(exc)
+                        break
                 listings[event.snapshot] = listing
 
             provider_event_id, reason = RP.match_provider_event(listing, event, index)
@@ -1247,6 +1411,11 @@ def buy(
                     _write_cache(path, payload)
                     if not measured_total_ok(f"event {event.game_id}"):
                         break
+                    try:
+                        check_quota(f"event {event.game_id}")
+                    except QuotaExhausted as exc:
+                        stop_on_quota(exc)
+                        break
                 else:
                     state.responses_from_cache += 1
                 staged, census = stage_event(
@@ -1272,6 +1441,21 @@ def buy(
             state.spend.credits_spent - credits_at_segment_start
         )
         state.per_segment.append(segment_record)
+
+    # WHAT THE RUN NEVER REACHED, NAMED.
+    #
+    # A run that stops early simply ends its loop, and every segment after the
+    # stop then vanishes from `per_segment` — so the report's segment table
+    # ends where the credits did, with nothing on the page saying that the rows
+    # below it were ever planned. That is how "we stopped asking" turns into
+    # "the provider had nothing": the absence looks like the plan, not like the
+    # budget. These are recorded as unreached, are in no denominator, and carry
+    # no census reason of their own.
+    recorded = {(str(s["wave"]), int(s["season"])) for s in state.per_segment}
+    for segment in plan.segments:
+        if (segment.wave, int(segment.season)) in recorded:
+            continue
+        state.unreached_segments.append({**segment.to_json(), "not_reached": True})
 
     return build_record(
         competition=competition,
@@ -1320,6 +1504,26 @@ def build_record(
         "live": bool(live),
         "completed": bool(state.completed),
         "stopped_because": str(state.stopped_because),
+        # THE SCHEMA VERSION DELIBERATELY DID NOT MOVE FOR THESE KEYS.
+        #
+        # Every one of them is absent from a record written before the quota
+        # breaker existed, and `render` reads each with a `False`/`0`/`None`
+        # default. That default is not a guess: no record written before the
+        # breaker could have stopped on quota, because nothing measured it. So
+        # an old record renders exactly as truthfully as it did, and bumping
+        # the version would only make the committed record unrenderable.
+        "stopped_on_quota": bool(state.stopped_on_quota),
+        "quota_floor": int(state.quota_floor),
+        "quota_ever_reported": bool(state.quota_ever_reported),
+        "quota_unwatched_responses": int(state.quota_unwatched_responses),
+        "quota_last_measured": (
+            None if state.quota_last_measured is None else int(state.quota_last_measured)
+        ),
+        "unreached_segments": [dict(s) for s in state.unreached_segments],
+        "zero_billed_responses": int(state.spend.zero_billed_responses),
+        "fallback_charges": {
+            str(k): int(v) for k, v in sorted(state.spend.fallback_charges.items())
+        },
         "window": plan.window.name,
         "window_minutes_before_tip": int(plan.window.minutes_before_tip),
         "window_why": plan.window.why,
@@ -1333,7 +1537,15 @@ def build_record(
         "responses_bought": int(state.responses_bought),
         "responses_from_cache": int(state.responses_from_cache),
         "worst_single_response_overrun": int(state.worst_overrun),
+        # What the LAST response reported, which is empty when it reported
+        # nothing — not the last figure the run ever saw. See `Spend`.
         "quota_remaining": str(state.spend.quota_remaining),
+        "quota_remaining_last_reported": str(
+            state.spend.quota_remaining_last_reported
+        ),
+        "responses_since_quota_reported": int(
+            state.spend.responses_since_quota_reported
+        ),
         "spend_notes": list(state.spend.notes),
         "waves": [
             {
@@ -1468,9 +1680,103 @@ def render(record: Mapping) -> str:
         f"| Responses served from cache (free) | "
         f"{int(record.get('responses_from_cache', 0)):,} |"
     )
-    add(f"| Quota remaining afterwards | {record.get('quota_remaining') or 'unrecorded'} |")
+    # "The provider billed nothing for this response" is a measurement and it
+    # is printed as one. Folded into the total it is invisible, and a run whose
+    # responses mostly billed zero reads as a cheap run rather than as a run
+    # that mostly came back empty — two different things with the same total.
+    #
+    # A record written before that count existed says so rather than printing
+    # `0`, which would assert that none of its responses billed zero. Under the
+    # old code every such response was charged the pessimistic bound and left
+    # no trace, so `0` is exactly the thing nobody can know about those runs.
+    if not live:
+        zero_billed_text = "not applicable: nothing was requested"
+    elif "zero_billed_responses" in record:
+        zero_billed_text = f"{int(record['zero_billed_responses']):,}"
+    else:
+        zero_billed_text = "unrecorded: this record predates the count"
+    add(f"| Responses the provider billed at zero | {zero_billed_text} |")
+    # WHAT THE BALANCE BREAKER ACTUALLY SAW, DECIDED ONCE AND READ EVERYWHERE.
+    #
+    # Three states, not two. `quota_ever_reported` alone cannot tell a run the
+    # breaker watched from end to end apart from one where the provider sent a
+    # balance on its first response and then stopped while the account drained
+    # — and that second run is the dangerous one, because a True flag reads as
+    # the safe answer. `quota_unwatched_responses` counts the looks the breaker
+    # could not make. Only a run with a breaker, a reported balance, and zero
+    # unwatched looks was watched throughout, and only that run may have an
+    # absence below described as a fact about the archive.
+    #
+    # Every one of these keys is absent from a record written before the
+    # breaker existed, and each default here fails CLOSED: no breaker, not
+    # watched, nothing claimed.
+    breaker_ran = live and "quota_floor" in record
+    quota_ever_reported = bool(record.get("quota_ever_reported"))
+    quota_unwatched = int(record.get("quota_unwatched_responses", 0))
+    quota_watched_throughout = (
+        breaker_ran
+        and quota_ever_reported
+        and "quota_unwatched_responses" in record
+        and quota_unwatched == 0
+    )
+
+    # A balance is only stated as the balance AFTERWARDS when the last response
+    # of the run actually carried one. Otherwise the last figure the provider
+    # gave is printed as exactly that, with its age.
+    current_quota = str(record.get("quota_remaining", "")).strip()
+    last_quota = str(record.get("quota_remaining_last_reported", "")).strip()
+    if current_quota:
+        quota_text = current_quota
+    elif last_quota:
+        quota_text = (
+            f"not reported on the last response; **{last_quota}** as of "
+            f"{int(record.get('responses_since_quota_reported', 0)):,} "
+            "response(s) before the end, which is the last figure the provider "
+            "gave and not the balance the run finished on"
+        )
+    else:
+        quota_text = "unrecorded"
+    add(f"| Quota remaining afterwards | {quota_text} |")
+    # A record written before the balance breaker existed carries no floor. It
+    # says so rather than printing `0`, which would read as a floor of zero —
+    # a breaker that can never fire — rather than as no breaker at all.
+    if not live:
+        floor_text = "not applicable: nothing was requested"
+    elif "quota_floor" in record:
+        floor_text = f"{int(record['quota_floor']):,}"
+    else:
+        floor_text = "none: this record predates the balance circuit-breaker"
+    add(f"| Account balance floor this run watched | {floor_text} |")
     add(f"| Run completed | **{'yes' if completed else 'no'}** |")
+    # The same treatment the two rows above get, and for the same reason. A
+    # flat **no** on a record that predates the breaker reads as a measured
+    # all-clear over a run in which nothing was measured — which is the exact
+    # shape of the defect this row was added to prevent, printed by the row
+    # itself, two lines under a floor that says no breaker existed.
+    if not live:
+        stopped_text = "not applicable: nothing was requested"
+    elif "stopped_on_quota" in record:
+        stopped_text = "**yes**" if record.get("stopped_on_quota") else "**no**"
+    else:
+        stopped_text = "unrecorded: this record predates the balance circuit-breaker"
+    add(f"| **Stopped on quota** | {stopped_text} |")
     add("")
+    fallbacks = record.get("fallback_charges") or {}
+    if fallbacks:
+        add(
+            "**"
+            + ", ".join(
+                f"{int(count):,} response(s) with a(n) {name} `x-requests-last`"
+                for name, count in sorted(fallbacks.items())
+            )
+            + "** were charged the pessimistic bound rather than a measured "
+            "cost. The three are counted apart because they are three different "
+            "faults: an absent header is the provider or a proxy changing, an "
+            "unreadable one is an assumption of ours breaking, and a negative "
+            "one is the provider itself. A response that reported **0** is not "
+            "in this count — zero is an answer, and it is charged as zero."
+        )
+        add("")
     add(f"{record.get('window_why','')}")
     add("")
 
@@ -1493,6 +1799,29 @@ def render(record: Mapping) -> str:
             "is the correct answer for a run that asked nothing."
         )
         add("")
+    elif record.get("stopped_on_quota"):
+        # THE ONE CASE THAT MUST NOT READ AS "the ordinary case". Stopping at
+        # this run's own cap leaves markets unbought; running the ACCOUNT out
+        # leaves markets unanswered, and an unanswered market is what a census
+        # cannot tell apart from a market the archive does not hold.
+        add(
+            "> # STOPPED ON QUOTA"
+        )
+        add(
+            f"> {record.get('stopped_because') or 'The account ran out of credits.'}"
+        )
+        add(
+            "> **This is not the ordinary partial buy.** A run that stops at "
+            "its own credit cap has bought less than it planned to; a run that "
+            "stops because the ACCOUNT is empty has also stopped getting "
+            "answers. Once the balance is gone the provider returns no quotes, "
+            "those responses stage no rows, and the census reason they land "
+            "under is indistinguishable from the provider not retaining the "
+            "market. **Nothing below may be read as a statement about what the "
+            "archive holds.** Top the balance up and re-run to resume; nothing "
+            "already cached is bought twice."
+        )
+        add("")
     elif not completed:
         add(
             "> **This run did not complete.** "
@@ -1505,11 +1834,73 @@ def render(record: Mapping) -> str:
             "already cached is bought twice."
         )
         add("")
+    elif quota_watched_throughout:
+        # THE ONLY BRANCH ALLOWED TO SAY "ABSENT FROM THE ARCHIVE".
+        #
+        # It is a claim about the provider built on a claim about our balance,
+        # and it is only true when the balance was actually measured — on every
+        # response, not on one of them. This sentence used to be printed for
+        # every completed run, including a run in which the breaker never read
+        # a single balance, with the "nothing to watch" paragraph appended
+        # three lines below it and never retracting it. Two contradictory
+        # statements about the same absence, and the false one first and in the
+        # summary voice.
+        add(
+            "The run completed inside its cap, and the account's balance was "
+            "measured on every response and stayed above this run's floor "
+            "throughout. Anything absent below is absent from the archive "
+            "rather than absent from the budget — but only for the segments "
+            "the plan actually contained, which are listed in full."
+        )
+        add("")
     else:
         add(
-            "The run completed inside its cap. Anything absent below is absent "
-            "from the archive rather than absent from the budget — but only for "
-            "the segments the plan actually contained, which are listed in full."
+            "The run completed inside its cap and bought every segment the "
+            "plan contained. **What is absent below cannot be attributed to "
+            "the archive**, because the account's balance was not measured "
+            "throughout this run — see the note immediately below — and an "
+            "unanswered request and an unretained market look identical here."
+        )
+        add("")
+    if live and not breaker_ran:
+        # Not "the breaker had nothing to watch": there was no breaker. A
+        # report that describes a mechanism which did not exist at the time is
+        # inventing the run's own history.
+        add(
+            "> **This record predates the balance circuit-breaker.** Nothing "
+            "read `x-requests-remaining` during this run, so nothing would "
+            "have stopped it had the account emptied part-way through. That is "
+            "not a measurement that the balance was healthy; it is the absence "
+            "of one, and no quota figure has been assumed in its place."
+        )
+        add("")
+    elif breaker_ran and not quota_ever_reported:
+        # An unwatched breaker is not a clean bill of health, and a report that
+        # stays silent here lets the absence of a stop read as one.
+        add(
+            "> **The provider reported no remaining account quota on any "
+            "response in this run, so the balance circuit-breaker had nothing "
+            "to watch.** That is not a measurement that the balance was "
+            "healthy; it is the absence of one. No quota figure has been "
+            "assumed in its place."
+        )
+        add("")
+    elif breaker_ran and not quota_watched_throughout:
+        # The third state, and the one that reads as the safest while being the
+        # worst: a balance arrived, so the breaker looks armed, and then the
+        # provider (or a proxy) stopped sending the header while the account
+        # drained. The old code carried the first figure forward for ever and
+        # compared THAT against the floor on every later response.
+        add(
+            f"> **The provider stopped reporting a remaining account quota: "
+            f"the breaker looked {quota_unwatched:,} time(s) and found no "
+            "balance to compare.** It was therefore blind for that part of the "
+            "run. The figure in the table above is the last one the provider "
+            "gave, not the balance the run ended on, and it is not carried "
+            "forward as though it were: a stale balance compared against a "
+            "floor is a breaker that cannot fire while reporting that it is "
+            "armed. **Nothing below may be read as a statement about what the "
+            "archive holds.**"
         )
         add("")
     for note in record.get("spend_notes", []) or []:
@@ -1558,7 +1949,30 @@ def render(record: Mapping) -> str:
             f"{int(segment.get('credits_spent_here', 0)):,} | "
             f"{int(segment.get('rows_staged', 0)):,} |"
         )
+    unreached = record.get("unreached_segments", []) or []
+    for segment in unreached:
+        # Printed in the same table, marked, rather than left off it. A table
+        # that simply ends where the run did makes the unbought half of the
+        # plan invisible, and an invisible plan row is how "we never asked"
+        # reads as "there was nothing to ask for".
+        add(
+            f"| `{segment['wave']}` ⏹ | {int(segment['season'])} | "
+            f"{len(segment.get('keys', []))} | "
+            f"{int(segment.get('events_planned', 0)):,} | "
+            f"{int(segment.get('pessimistic_bound', 0)):,} | "
+            "— | — | — | — |"
+        )
     add("")
+    if unreached:
+        add(
+            f"⏹ **{len(unreached)} segment(s) were planned and never reached.** "
+            "The run stopped before them. Their markets were **never asked "
+            "for**, so they are in no denominator, contribute no census reason, "
+            "and establish nothing whatever about what the archive retains — "
+            "asking costs nothing and returns nothing, which looks exactly like "
+            "a market no book quoted."
+        )
+        add("")
     blocked = [s for s in record.get("segments", []) if s.get("blocked_reason")]
     if blocked:
         add("⛔ segments that were not asked for, and why:")
@@ -1638,6 +2052,39 @@ def render(record: Mapping) -> str:
             "vanishes without appearing here is a defect, not a decision:"
         )
         add("")
+        if record.get("stopped_on_quota"):
+            # The census counts what the RESPONSES WE RECEIVED contained. When
+            # the account emptied mid-run the later responses contained nothing,
+            # and the segments after the stop were never requested at all — so
+            # neither is evidence about the archive, and the table must not be
+            # read as though it were.
+            add(
+                "> **This run STOPPED ON QUOTA, so this table counts only the "
+                "responses the provider was still answering.** The segments "
+                "after the stop were never requested and appear in no row of "
+                "it. Nothing in this census attributes anything to the "
+                "provider's retention, and nothing in it may be quoted as "
+                "evidence that a market is not retained."
+            )
+            add("")
+        elif live and not quota_watched_throughout:
+            # The same disclaimer for the case that LOOKS fine. A run whose
+            # balance was never measured — or measured once and then not again
+            # — may have emptied the account part-way through and carried on
+            # asking, and every one of those responses is an empty payload in
+            # this table under a reason that reads as the provider not
+            # retaining the market.
+            add(
+                "> **The account's balance was not measured throughout this "
+                "run, so this census is not evidence about the archive.** An "
+                "empty response from an exhausted account and an empty "
+                "response from a market the provider does not retain are the "
+                "same bytes; only a measured balance tells them apart, and "
+                "this run does not have one for every response. Nothing in "
+                "this census may be quoted as evidence that a market is not "
+                "retained."
+            )
+            add("")
         add("| Reason | Outcomes |")
         add("|:---|---:|")
         for reason, count in sorted(census.items()):
@@ -1683,8 +2130,10 @@ def render(record: Mapping) -> str:
     add(
         "- **A market absent from a segment this run did not reach is not a "
         "market the archive lacks.** A starved fetch and an unquoted market "
-        "look identical, which is why the cap, the bound, the measured spend "
-        "and the completed flag are all above."
+        "look identical, which is why the cap, the bound, the measured spend, "
+        "the completed flag, the account balance floor and the STOPPED ON "
+        "QUOTA flag are all above, and why every segment the run never reached "
+        "is listed by name rather than left off the table."
     )
     add(
         "- **Nothing here allowlists anything.** No market reaches the card "
@@ -1807,6 +2256,194 @@ def rebuild_from_cache(
             if found:
                 reached.append(event)
     return rows, census, reached
+
+
+@dataclass(frozen=True)
+class RebuildResult:
+    """What a completed rebuild replaced, and with what."""
+
+    target: Path
+    #: Rows the previous store held, counted BEFORE anything touched it.
+    #: `None` only when the previous store could not be read at all and the
+    #: operator opted out in writing — in which case there is no floor and the
+    #: anti-shrink guard did not run.
+    previous_rows: int | None
+    rows_staged: int
+    rows_held: int
+    events_reached: int
+    segments_rebuilt: int
+    census: dict[str, int]
+    shrink_allowed_because: str = ""
+    #: Set only when the operator opted out of the unreadable-store refusal in
+    #: writing. When it is set, `previous_rows` is `None` and NO floor ran:
+    #: the shrink comparison needs a previous count and there was not one.
+    unreadable_store_allowed_because: str = ""
+
+
+def rebuild_store(
+    *,
+    plan: PurchasePlan,
+    cache_dir: Path,
+    indexes: Mapping[int, team_names.TeamIndex],
+    processed_dir: Path,
+    competition: Competition = CBB,
+    chunk_size: int = MARKET_CHUNK_SIZE,
+    allow_shrink_reason: str = "",
+    allow_unreadable_store_reason: str = "",
+    on_segment: Callable[[PlanSegment, int, int, int], None] | None = None,
+) -> RebuildResult:
+    """Re-derive the price store from the raw cache, and only then replace it.
+
+    BUILD BESIDE, VERIFY, THEN REPLACE — never unlink first.
+
+    The previous version of this deleted the target and *then* staged rows into
+    the empty path one segment at a time. Everything about that is defensible
+    except the order, and the order is what made two guards unable to fire:
+
+    * `stores.append` refuses to write fewer rows than it read. With the target
+      already deleted it always read **zero**, so the anti-shrink guard compared
+      every rebuild against nothing and could never refuse one. The comment over
+      that unlink explained that the store had once shrunk from 2.9M rows to
+      2.3M — which is precisely the event a shrink guard exists to catch, and
+      deleting first guaranteed it could not.
+    * a rebuild that staged nothing at all — an empty cache, or every cached
+      response failing to stage — printed a warning and **returned 0**. A green
+      exit over a destroyed store: the caller saw success, CI saw success, and
+      the store was gone.
+
+    So: the previous store's rows are counted first, the rebuild is assembled
+    into a scratch path beside the target, and the target is replaced only once
+    the result is verified non-empty and no smaller than what it replaces. Every
+    refusal leaves the original store exactly where it was.
+
+    TWO GUARDS, TWO OPT-OUTS. `allow_shrink_reason` permits a rebuild that
+    holds fewer rows than the store it replaces — a MEASURED shrink, where both
+    counts are known and the operator has decided the loss is intended.
+    `allow_unreadable_store_reason` permits a rebuild over a store that cannot
+    be counted at all, where no floor exists and therefore no shrink guard can
+    run. These used to share one flag, so the reason an operator wrote about
+    fifteen duplicate rows also disarmed the refusal over an unreadable store
+    and, through `previous_rows = None`, the shrink comparison itself. Each is
+    an explicit written reason rather than a bare flag, and an empty reason is
+    no opt-out.
+
+    The rebuild still derives FROM THE CACHE AND NOT FROM THE STORE, which is
+    the property the unlink was reaching for: the scratch path starts empty, so
+    nothing a stale restored store happens to hold is carried forward. And it
+    still streams one segment at a time, because holding a 4.8M-row wave in
+    memory as Python dicts OOM-killed a runner and took 1,199,926 credits of
+    unsaved responses with it.
+    """
+    target = store_path(competition, Path(processed_dir), plan.window)
+    previous_rows: int | None
+    try:
+        # `for_append=True` on purpose: a store that cannot be read is a store
+        # whose row count is unknown, and an unknown floor is no floor. Reading
+        # it leniently here would hand the shrink guard a zero and make it
+        # unable to fire for the second time in this function's history.
+        previous_rows = len(
+            stores.read_store(target, columns=PRICE_COLUMNS, for_append=True)
+        )
+    except stores.CorruptStoreError as exc:
+        # ITS OWN OPT-OUT, NOT THE SHRINK GUARD'S.
+        #
+        # This used to read `if not allow_shrink_reason`, so the flag whose
+        # help text is entirely about permitting a SHRINK also switched off the
+        # refusal to rebuild over a store nobody could count — and switching it
+        # off sets `previous_rows = None`, which makes the shrink comparison
+        # below (`previous_rows is not None and ...`) skip as well. One written
+        # reason about fifteen duplicate rows, and a 12,000-row rebuild could
+        # replace a 2.9M-row store with no floor having run at all. Two guards
+        # with two different failure modes get two different opt-outs.
+        if not allow_unreadable_store_reason:
+            raise PurchaseError(
+                f"{target} exists but could not be read, so this rebuild cannot "
+                "count what it would be replacing and the anti-shrink guard has "
+                "no floor to compare against. Refusing, and leaving the file "
+                "exactly where it is. Pass an explicit written reason to "
+                "`--allow-unreadable-store-reason` to override — a guard whose "
+                "floor is unknown must not silently default to zero, and "
+                "`--allow-shrink-reason` deliberately does NOT override this: "
+                "permitting a measured shrink and permitting an unmeasurable "
+                "one are different decisions."
+            ) from exc
+        previous_rows = None
+
+    scratch = target.with_name(target.name + ".rebuilding")
+    scratch.parent.mkdir(parents=True, exist_ok=True)
+    scratch.unlink(missing_ok=True)
+
+    rows_staged = 0
+    rows_held = 0
+    events_reached = 0
+    segments_rebuilt = 0
+    census: dict[str, int] = {}
+    try:
+        for segment in plan.segments:
+            if not segment.buyable:
+                continue
+            rows, part, reached = rebuild_from_cache(
+                plan=plan,
+                cache_dir=cache_dir,
+                indexes=indexes,
+                chunk_size=chunk_size,
+                segments=[segment],
+            )
+            rows_held = append_prices(rows, scratch, window=plan.window)
+            rows_staged += len(rows)
+            events_reached += len(reached)
+            segments_rebuilt += 1
+            for reason, count in part.items():
+                census[reason] = census.get(reason, 0) + count
+            if on_segment is not None:
+                on_segment(segment, len(rows), len(reached), rows_held)
+            del rows
+
+        if rows_staged == 0:
+            raise PurchaseError(
+                "The rebuild staged **zero** price rows, so there is nothing to "
+                f"replace {target.name} with. Either the cache under "
+                f"{Path(cache_dir)} is empty, or every response in it failed to "
+                "stage — two different faults, told apart by the census "
+                f"({len(census)} reason(s) counted: an empty census means an "
+                "empty cache). Refusing, and leaving the existing store "
+                "untouched: a rebuild that produces nothing must not be the "
+                "thing that destroys what it was rebuilding."
+            )
+        if (
+            previous_rows is not None
+            and rows_held < previous_rows
+            and not allow_shrink_reason
+        ):
+            raise PurchaseError(
+                f"The rebuild holds {rows_held:,} rows against the "
+                f"{previous_rows:,} the existing {target.name} already holds. "
+                "Refusing, and leaving the existing store untouched. This store "
+                "is append-only and cannot be re-bought — the prices it settled "
+                "against are gone — and this is exactly the event that took it "
+                "from 2.9M rows to 2.3M the last time. If the shrink is "
+                "intended, re-run with an explicit written reason."
+            )
+    except BaseException:
+        # Every failure path, not only the two refusals above: a KeyboardInterrupt
+        # or an OOM part-way through must not leave a half-built scratch file
+        # beside the store for the next run to mistake for anything.
+        scratch.unlink(missing_ok=True)
+        raise
+
+    # One atomic rename. Until this line the original store is the store.
+    scratch.replace(target)
+    return RebuildResult(
+        target=target,
+        previous_rows=previous_rows,
+        rows_staged=rows_staged,
+        rows_held=rows_held,
+        events_reached=events_reached,
+        segments_rebuilt=segments_rebuilt,
+        census=census,
+        shrink_allowed_because=str(allow_shrink_reason),
+        unreadable_store_allowed_because=str(allow_unreadable_store_reason),
+    )
 
 
 # ---------------------------------------------------------------------------

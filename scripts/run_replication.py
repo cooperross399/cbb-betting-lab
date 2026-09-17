@@ -481,6 +481,17 @@ def rebuild_report_only(
     # A refusal rather than a warning, because the report's whole subject is
     # whether a discovery finding held on held-out seasons — and that sentence
     # means nothing if the discovery half has moved underneath it.
+    #
+    # Three shapes reach the refusal, and only one of them is a disagreement:
+    # the stamped figures differ from the file's; the file is present and
+    # cannot be parsed; or the record's stamp does not carry the fields the
+    # comparison reads — `R.COMPARED_DISCOVERY_FIELDS` — and so cannot be
+    # asked, whether that stamp is absent, empty, or truncated down to the
+    # three keys nothing compares. The warning below is a fourth and is NOT a
+    # refusal — it is keyed
+    # on the discovery FILE being absent, which is the one case a record-only
+    # tree can legitimately be in, and it exists so that "could not check"
+    # never leaves this script silent and reads as "checked and found fine".
     if discovery_path is not None and not Path(discovery_path).is_file():
         print(
             f"::warning::{Path(discovery_path).name} is not beside this record, "
@@ -492,8 +503,9 @@ def rebuild_report_only(
     if stale:
         print(
             "::error::this replication no longer describes the discovery run "
-            "it names, so re-rendering it would republish a comparison that is "
-            "no longer between those two things:",
+            "it names, or can no longer show that it does, so re-rendering it "
+            "would republish a comparison that is not known to be between "
+            "those two things:",
             file=sys.stderr,
         )
         for reason in stale:

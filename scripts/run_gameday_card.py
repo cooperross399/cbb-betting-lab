@@ -95,6 +95,7 @@ from cbb_betting_lab.forward_evidence import ARCHIVE_DIR, SnapshotKeyError
 from cbb_betting_lab.providers import staging
 from cbb_betting_lab.providers.env_file import load_provider_env, redact
 from cbb_betting_lab.providers.odds_api import (
+    CARD_STARVATION,
     OddsApiProvider,
     ProviderError,
     sufficient_quota,
@@ -325,7 +326,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"decision={GC.Decision.REFUSED.value}")
                 return 2
             # Refusal two.
-            enough, note = sufficient_quota(headers, cap)
+            enough, note = sufficient_quota(headers, cap, why=CARD_STARVATION)
             print(note)
             if not enough:
                 print(

@@ -120,6 +120,20 @@ class CreditCapReached(ProviderError):
     """The next request could breach the cap, so it was not made."""
 
 
+class QuotaExhausted(ProviderError):
+    """The ACCOUNT's measured remaining quota fell below the run's floor.
+
+    A distinct exception from `CreditCapReached` because the two say opposite
+    things about the world. A cap is this run's self-imposed budget: hitting it
+    means the run bought as much as it was allowed to, and everything it did not
+    reach is simply unbought. An exhausted quota means the **provider stopped
+    answering**, and its responses from then on stage no rows — which in a
+    census reads identically to the provider not retaining that market. One of
+    those is a fact about the archive and the other is a fact about our balance,
+    and a report that cannot tell them apart publishes the second as the first.
+    """
+
+
 Requester = Callable[..., Any]
 
 
@@ -139,56 +153,204 @@ def markets_fingerprint(markets: tuple[str, ...]) -> str:
     return hashlib.sha256(joined.encode("utf-8")).hexdigest()[:12]
 
 
+#: The three ways a response can fail to tell us what it cost. Named, because
+#: the count of each reaches the run record and a report that blurs them cannot
+#: be read: "the header was absent" is a provider change or a proxy stripping
+#: headers, "the header was unreadable" is a parsing assumption of ours that has
+#: broken, and "the header was negative" is a provider bug. All three charge the
+#: pessimistic bound — guessing low lets a run drift past its cap while
+#: reporting that it has not — but they are three different events.
+FALLBACK_ABSENT = "absent"
+FALLBACK_UNREADABLE = "unreadable"
+FALLBACK_NEGATIVE = "negative"
+
+
 @dataclass
 class Spend:
     """What a run actually cost, measured rather than estimated."""
 
     credits_spent: int = 0
     requests_made: int = 0
+    #: The balance the **most recent** response reported, and nothing else.
+    #:
+    #: NOT STICKY, deliberately. This field used to be written only `if value`,
+    #: so a single `x-requests-remaining` early in a run stayed here for the
+    #: whole of it. Every reader — the circuit-breaker, `summary_line`, the run
+    #: records, both renderers — then treated the last value EVER seen as the
+    #: current balance, and a provider or proxy that stops sending the header
+    #: while the account drains to zero leaves a breaker comparing a healthy
+    #: five-thousand against its floor for ever and a report publishing that
+    #: five thousand as the balance the run ended on. A stale measurement
+    #: presented as a current one is a fabricated fact about the provider.
+    #:
+    #: So a response that does not carry the header clears this, which makes
+    #: `remaining_credits()` return `None` — the third answer, "we do not
+    #: currently know" — rather than a number nobody measured.
     quota_remaining: str = ""
+    #: The last balance the provider reported at ANY point in the run, kept so
+    #: a report can say what was last seen without claiming it is current, and
+    #: how many responses ago it was seen.
+    quota_remaining_last_reported: str = ""
+    responses_since_quota_reported: int = 0
     quota_used: str = ""
     #: What the pessimistic pre-flight bound would have predicted, kept so the
     #: two can be compared in the report. A large gap is information: it means
     #: most asked markets are not quoted.
     credits_estimated: int = 0
+    #: Responses the provider billed at **exactly zero**, which it really does
+    #: for some responses. Counted rather than absorbed into the total, because
+    #: "most of this run billed nothing" is a materially different run from
+    #: "this run was cheap", and a report printing only a total blurs the two.
+    zero_billed_responses: int = 0
+    #: Responses charged the pessimistic bound because the provider's own
+    #: measurement could not be used, keyed by which of the three answers it
+    #: was. See `FALLBACK_ABSENT` and its neighbours.
+    fallback_charges: dict[str, int] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
 
-    def record(self, headers: Mapping[str, str], *, fallback: int) -> int:
-        """Charge one response, preferring the measured cost over the guess.
+    def _charge_fallback(self, kind: str, fallback: int, *, saw: str) -> None:
+        """Count a fallback charge, and the first time each kind happens say so.
 
-        A missing `x-requests-last` charges the pessimistic fallback. Guessing
-        low would let a run drift past its cap while reporting that it had not.
+        One note per KIND rather than one per response, deliberately. A purchase
+        run makes tens of thousands of requests; a note appended per response
+        would put tens of thousands of identical strings into the run record and
+        into the rendered report, and the reader would learn nothing from the
+        ten-thousandth that the first did not tell them. The note names which
+        kind it was; `fallback_charges` carries how many, and that is what
+        reaches the record — so the report can state the count without this list
+        growing with the length of the run.
+        """
+        first = kind not in self.fallback_charges
+        self.fallback_charges[kind] = self.fallback_charges.get(kind, 0) + 1
+        if not first:
+            return
+        self.notes.append(
+            {
+                FALLBACK_ABSENT: (
+                    f"A response's `x-requests-last` was **{FALLBACK_ABSENT}** — "
+                    "the header was not on the response at all; charged the "
+                    f"pessimistic estimate of {fallback} against the cap instead."
+                ),
+                FALLBACK_UNREADABLE: (
+                    f"A response's `x-requests-last` was **{FALLBACK_UNREADABLE}** "
+                    f"({saw!r}) — it was there and this code could not read it; "
+                    f"charged the pessimistic estimate of {fallback} against the "
+                    "cap instead."
+                ),
+                FALLBACK_NEGATIVE: (
+                    f"A response's `x-requests-last` was **{FALLBACK_NEGATIVE}** "
+                    f"({saw!r}), which cannot be what it cost; charged the "
+                    f"pessimistic estimate of {fallback} against the cap instead."
+                ),
+            }[kind]
+        )
+
+    def record(self, headers: Mapping[str, str], *, fallback: int) -> int:
+        """Charge one response: the provider's measurement whenever it made one.
+
+        WHY THIS IS NOT `if actual <= 0: actual = fallback`.
+
+        That one test conflated three different answers from the provider — the
+        header was absent, the header was unreadable, and the header said
+        **0** — and charged all three the full pessimistic bound. The Odds API
+        really does bill 0 for some responses, so charging those the bound is a
+        guess overriding a measurement the provider actually reported. A run
+        whose responses mostly bill nothing then burns its credit cap against
+        spending that never happened, stops early, and both the run record and
+        the rendered report state that phantom spend as fact.
+
+        So: absent, unreadable and negative each charge the pessimistic
+        fallback and are counted under their own names; a present, parseable,
+        non-negative value charges **exactly that**, zero included. Zero-billed
+        responses are counted separately so the report can say how many, which
+        is the difference between a cheap run and a run that bought nothing.
         """
         self.requests_made += 1
-        try:
-            actual = int(str(headers.get("x-requests-last", "")).strip())
-        except (TypeError, ValueError):
-            actual = 0
-        if actual <= 0:
+        raw = headers.get("x-requests-last")
+        seen = "" if raw is None else str(raw).strip()
+        if not seen:
             actual = int(fallback)
-            self.notes.append(
-                "A response carried no `x-requests-last`; charged the "
-                f"pessimistic estimate of {fallback} against the cap instead."
-            )
+            self._charge_fallback(FALLBACK_ABSENT, fallback, saw=seen)
+        else:
+            try:
+                measured = int(seen)
+            except (TypeError, ValueError):
+                actual = int(fallback)
+                self._charge_fallback(FALLBACK_UNREADABLE, fallback, saw=seen)
+            else:
+                if measured < 0:
+                    actual = int(fallback)
+                    self._charge_fallback(FALLBACK_NEGATIVE, fallback, saw=seen)
+                else:
+                    # The authoritative answer, and it is authoritative at 0 too.
+                    actual = measured
+                    if measured == 0:
+                        self.zero_billed_responses += 1
         self.credits_spent += actual
-        for header, attribute in (
-            ("x-requests-remaining", "quota_remaining"),
-            ("x-requests-used", "quota_used"),
-        ):
-            value = str(headers.get(header, "")).strip()
-            if value:
-                setattr(self, attribute, value)
+        # THE BALANCE IS OVERWRITTEN EVERY RESPONSE, INCLUDING WITH NOTHING.
+        #
+        # See `quota_remaining`. Writing it only `if value` made one header at
+        # the start of a run arm every reader of it for the whole run: the
+        # breaker compared a stale figure against its floor and never fired,
+        # and the record published that figure as the balance afterwards.
+        remaining = str(headers.get("x-requests-remaining", "")).strip()
+        self.quota_remaining = remaining
+        if remaining:
+            self.quota_remaining_last_reported = remaining
+            self.responses_since_quota_reported = 0
+        else:
+            self.responses_since_quota_reported += 1
+        # `x-requests-used` is cumulative and monotone, so a retained value is
+        # a true statement about the run so far rather than a claim about now.
+        used = str(headers.get("x-requests-used", "")).strip()
+        if used:
+            self.quota_used = used
         return actual
+
+    def remaining_credits(self) -> int | None:
+        """The balance the MOST RECENT response reported, or `None` for none.
+
+        `None` means the provider did not tell us **on that response** — it
+        does not mean zero, it does not mean plenty, and it deliberately does
+        not mean "the last number we ever saw". Returning `None` rather than a
+        pessimistic, an optimistic or a stale integer forces every caller to
+        handle that third answer explicitly instead of reading a number nobody
+        measured, which is the difference between a measurement and a
+        fabrication.
+
+        A caller that wants to know a balance was reported at some point in the
+        run reads `quota_remaining_last_reported` and says how old it is.
+        """
+        text = str(self.quota_remaining).strip()
+        if not text.lstrip("-").isdigit():
+            return None
+        return int(text)
 
     def summary_line(self) -> str:
         line = (
             f"{self.credits_spent:,} credit(s) actually spent over "
             f"{self.requests_made} request(s)"
         )
+        if self.zero_billed_responses:
+            line += (
+                f", {self.zero_billed_responses:,} of which the provider "
+                "billed at zero"
+            )
         if self.credits_estimated:
             line += f"; the pessimistic pre-flight bound was {self.credits_estimated:,}"
+        # A balance is only stated as current when the most recent response
+        # actually carried one. Otherwise the last figure seen is printed AS
+        # the last figure seen, with its age, because "5,000 remaining" over a
+        # run whose last thousand responses reported nothing is a measurement
+        # the run does not have.
         if self.quota_remaining:
             line += f"; {self.quota_remaining} remaining"
+        elif self.quota_remaining_last_reported:
+            line += (
+                f"; {self.quota_remaining_last_reported} remaining as of "
+                f"{self.responses_since_quota_reported:,} response(s) ago, the "
+                "last the provider reported"
+            )
         return line + "."
 
 
@@ -515,18 +677,23 @@ class OddsApiProvider:
         return data if isinstance(data, Mapping) else {}
 
 
-def sufficient_quota(headers: Mapping[str, str], credit_cap: int) -> tuple[bool, str]:
+def sufficient_quota(
+    headers: Mapping[str, str], credit_cap: int, *, why: str
+) -> tuple[bool, str]:
     """Whether there are enough credits left to start a run at all.
 
-    Refusing is the safe direction. A run that starts with less than its cap
-    gets partway through the slate and stops, leaving a snapshot holding the
-    games it happened to reach — a biased subset frozen into the ledger as
-    though it were the day, and forward evidence cannot be re-made.
-
-    In this sport the bias has a shape: the fetch works through the slate in
-    tip order, so a starved run keeps the early games and drops the late ones —
-    which is exactly the West Coast, low-major end of the board this lab was
-    built to look at.
+    Refusing is the safe direction, but WHAT A STARVED RUN COSTS IS DIFFERENT
+    IN EVERY CALLER, so the caller supplies that sentence and this function
+    does the arithmetic. `why` has no default on purpose. It used to hold the
+    card's reason inline — "a run that stops halfway through the slate freezes
+    the early tips and drops the late ones, which is a biased subset written
+    into the ledger as though it were the night" — which is true of the
+    nightly card and false of every other caller. The historical purchase
+    writes no ledger and buys past seasons in an order whose every prefix is
+    already a sample; the retention probe writes no ledger either and its
+    starvation shows up as a verdict about the provider's archive. An operator
+    handed the wrong reason either dismisses a real refusal as a copy-paste or
+    acts on the wrong model of what was lost.
 
     An unreadable header does **not** block the run: the guard exists to catch
     a known shortfall, not to make an unreadable response fatal, and the
@@ -542,8 +709,39 @@ def sufficient_quota(headers: Mapping[str, str], credit_cap: int) -> tuple[bool,
     if left < credit_cap:
         return False, (
             f"Only {left:,} credits remain against a cap of {credit_cap:,}. "
-            "Refusing to start: a run that stops halfway through the slate "
-            "freezes the early tips and drops the late ones, which is a biased "
-            "subset written into the ledger as though it were the night."
+            f"Refusing to start: {why}"
         )
     return True, f"{left:,} credits remain against a cap of {credit_cap:,}."
+
+
+#: The four callers' reasons, kept beside the guard so a fifth caller has to
+#: write its own rather than borrow one that does not describe it. The set is
+#: pinned in `tests/test_spending_scripts_construct_their_provider.py`, because
+#: `docs/ported_defects.md` row AD states it and a sentence about which scripts
+#: spend is worthless if nothing checks it — that row named the wrong set once
+#: already and pointed an audit away from the probe.
+CARD_STARVATION = (
+    "a run that stops halfway through the slate freezes the early tips and "
+    "drops the late ones, which is a biased subset written into the ledger as "
+    "though it were the night."
+)
+PURCHASE_STARVATION = (
+    "once the account empties the provider stops returning quotes, and a "
+    "response with no quotes in it is indistinguishable in the purchase census "
+    "from a market the archive never retained — so a short run does not buy "
+    "less, it publishes a fact about our wallet as a fact about the provider's "
+    "archive. Nothing was requested and no ledger was touched."
+)
+PROBE_STARVATION = (
+    "a starved fetch and an unquoted market look identical, so a probe that "
+    "runs the account out reports its own empty wallet as a `NOT_RETAINED` "
+    "verdict about the provider's archive. Nothing was requested."
+)
+MOVEMENT_STARVATION = (
+    "the capture store is the lab's record of which quotes were REACHABLE, and "
+    "an emptied account returns a board with no bookmakers on it — which this "
+    "store cannot tell apart from a board no one hung. A short capture does not "
+    "record less: it records prices that were never withdrawn as prices that "
+    "vanished between captures, and every survival rate computed afterwards is "
+    "against that. Nothing was requested and no capture was written."
+)

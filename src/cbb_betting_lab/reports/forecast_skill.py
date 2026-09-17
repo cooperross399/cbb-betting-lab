@@ -313,8 +313,27 @@ from cbb_betting_lab.stores import _decimal_payout as decimal_payout
 #: version 2 record has none of those keys and every one of them is read by
 #: `render`, so re-rendering one would print a bucket section with the
 #: anti-predictive paragraph missing entirely and nothing would look wrong.
-#: That is exactly what :func:`read_record` refuses.
-RECORD_VERSION = 4
+#: That is exactly what :func:`read_record` refuses. Version 4 adds
+#: `populations.excluded_unpairable`, the graded wagers the frame-builder
+#: dropped because their book hung one side only.
+#:
+#: Version 5 makes two shapes larger, and a version 4 record carries neither.
+#: `populations.excluded_unpairable` gains `no_pair_key` and `accounted` — the
+#: third term of the frame-builder's census and the sum of all three, so the
+#: identity the report prints is closed by counts this module holds rather than
+#: by a `.get` default standing in for a term nobody copied. And
+#: `anti_predictive_return` gains `measured_buckets`, the three disjoint
+#: reasons a populated bucket is not usable, and the sign of what was measured
+#: — `negative_point_estimates`, `demonstrated_deficits`, `deficit_buckets` and
+#: `worst_bucket` — which is what a run with fewer than two usable buckets had
+#: no way of reporting at all. `deficit_buckets` is carried beside the count
+#: because `worst_bucket` is selected by the lowest point estimate and the
+#: count is taken off the corrected high bound: they are not the same bucket,
+#: and a renderer given only the count and the worst bucket will print one
+#: beside a claim justified by the other. Re-render a version 4 record and the census prints a
+#: manufactured zero while the anti-predictive paragraph gives a sample floor
+#: as the reason for a silence it did not cause.
+RECORD_VERSION = 5
 
 #: The output stem. Competition-prefixed by `Competition.output_name`, so this
 #: lab's record could never be overwritten by another's.
@@ -1614,6 +1633,57 @@ def _return_bucket(bucket: Mapping) -> dict:
     }
 
 
+def _negative_return_finding(measured: Sequence[Mapping]) -> dict:
+    """What the buckets that cleared the floor say about the SIGN of the return.
+
+    Separate from the across-bucket comparison on purpose. That comparison needs
+    two buckets and answers *"does the return fall as the claimed edge rises"*.
+    This one needs one bucket and answers a question the comparison never asks:
+    *"did the wagers in it lose money, and is that loss demonstrated"*. Until
+    2026-09-17 nothing asked the second question, so a run with a single
+    measurable bucket returning a demonstrated deficit reported nothing at all
+    and gave the sample floor as the reason.
+
+    Three counts and one bucket, all read off the **family-corrected** bounds
+    and never off `roi` alone:
+
+    * `negative_point_estimates` — buckets whose return point estimate is below
+      zero. On its own this is not a claim: an interval spanning zero around a
+      negative point estimate is `stats.NO_DEMONSTRATED_EDGE`, in those words,
+      and this count exists so the report can say *"the point estimate is
+      negative and the interval spans zero"* rather than picking one of the two.
+    * `demonstrated_deficits` — buckets whose corrected interval lies **entirely
+      below zero**. That is `stats.DEMONSTRATED_DEFICIT` and it is a different
+      statement from no demonstrated edge: worse than nothing, not merely
+      indistinguishable from it.
+    * `worst_bucket` — the measured bucket with the lowest return, so a reader
+      is given the figure and not only the count. Empty when nothing cleared
+      the floor, which is the one case where there is genuinely no number.
+
+    **`worst_bucket` is not the bucket `demonstrated_deficits` counts, and a
+    renderer may not treat it as one.** The two are selected by different
+    quantities — the lowest **point estimate** against the corrected **high
+    bound** — so with buckets A (`roi -20%`, corrected `[-45%, +5%]`) and B
+    (`roi -5%`, corrected `[-8%, -2%]`), `worst_bucket` is A and the one
+    demonstrated deficit is B. Printing A beside a sentence justified by B puts
+    a loss on the page with its evidence missing and a figure on the page
+    reading `no demonstrated edge`. `deficit_buckets` is therefore carried as
+    well: the buckets the count counts, as rows, so the claim and the figures
+    under it are the same buckets.
+    """
+    ordered = sorted(measured, key=lambda b: float(b["roi"]))
+    # The corrected high bound, not the raw one and not the point estimate: a
+    # deficit that is visible only before the size of the search is counted has
+    # not been demonstrated, and the report may not say it has.
+    deficits = [dict(b) for b in measured if float(b["roi_adjusted_high"]) < 0.0]
+    return {
+        "negative_point_estimates": sum(1 for b in measured if float(b["roi"]) < 0.0),
+        "demonstrated_deficits": len(deficits),
+        "deficit_buckets": deficits,
+        "worst_bucket": dict(ordered[0]) if ordered else {},
+    }
+
+
 def anti_predictive_return(buckets: Sequence[Mapping]) -> dict:
     """Does the realised **return** fall as the claimed edge rises?
 
@@ -1624,12 +1694,45 @@ def anti_predictive_return(buckets: Sequence[Mapping]) -> dict:
     measures per bucket — a two-way clustered interval over the settled wagers
     in that bucket, with its bet count and the clustering that produced it.
 
-    A bucket enters only if its return clears `stats.MINIMUM_BETS`, because
-    below that floor there is no number. `falls_at_the_top` is the direction;
-    `demonstrated` is whether the two intervals are **disjoint**, and it is the
-    only key any sentence about the shape may lean on. Two overlapping intervals
-    are two buckets that have not been shown to differ, and saying so is not the
-    same as saying they are equal.
+    A bucket enters the COMPARISON only if its return clears
+    `stats.MINIMUM_BETS`, because below that floor there is no number.
+    `falls_at_the_top` is the direction; `demonstrated` is whether the two
+    intervals are **disjoint**, and it is the only key any sentence about the
+    shape may lean on. Two overlapping intervals are two buckets that have not
+    been shown to differ, and saying so is not the same as saying they are
+    equal.
+
+    **`measurable: False` is a statement about the comparison, not about the
+    evidence.** Below two usable buckets this function returned four keys and
+    dropped everything it had measured, and the report then printed a
+    sample-size floor as the reason there was no result — a claim about WHY
+    with nothing enforcing that it was the real why. Two things are wrong with
+    that and both are now closed:
+
+    * The reason is counted rather than asserted.
+      `buckets_below_the_row_floor`, `buckets_with_no_return_figure` and
+      `buckets_below_the_bet_floor` are disjoint, and they are the reasons a
+      populated bucket is **not** usable — so the identity is
+
+      ``below_the_row_floor + no_return_figure + below_the_bet_floor +
+      usable_buckets == populated_buckets``
+
+      and **not** that the three alone exhaust `populated`. They sum to zero on
+      the single-usable-bucket fixture this whole change was written for, where
+      `populated` is 1. `test_the_three_unusable_reasons_and_the_usable_count_
+      close_against_populated` pins the identity in the form above; a
+      reconciliation written from the shorter claim is red on the patch's own
+      headline case. The renderer states the reason the buckets actually give:
+      on this lab's published run that reason was *no settled wager anywhere in
+      the frame*, and the report was telling readers the sample was too small.
+    * A measurement that WAS available is no longer pre-empted by a floor.
+      `measured_buckets` carries every bucket that cleared the floor even when
+      there is only one — a comparison needs two, a **sign** needs one — and
+      `negative_point_estimates`, `demonstrated_deficits` and `worst_bucket`
+      read that sign off the family-corrected bounds. A single bucket whose
+      corrected interval lies entirely below zero is a demonstrated deficit,
+      which is a stronger statement than *no demonstrated edge* and used to
+      have no way of reaching the page at all.
 
     **`demonstrated` reads the family-corrected intervals**, not the raw ones.
     This comparison is one more look at the same data as every other interval
@@ -1645,18 +1748,62 @@ def anti_predictive_return(buckets: Sequence[Mapping]) -> dict:
         if b.get("enough") and (b.get("roi") or {}).get("enough_evidence")
     ]
     populated = [b for b in buckets if int(b.get("rows", 0))]
+    # **Why each populated bucket is not usable, counted rather than asserted.**
+    # The report used to give one reason for the absence of this statistic —
+    # that fewer than `stats.MINIMUM_BETS` settled wagers were carried — and
+    # nothing checked that the reason was the real one. On this lab's own
+    # published run it was not: 293,661 wagers in eight populated buckets, and
+    # not one of them carried a settled wager at all, so the frame held no
+    # return column rather than a thin one. A reader was told the sample was
+    # small when the truth was that nothing had been settled. These three
+    # counts are disjoint and are the reasons a populated bucket is NOT usable,
+    # so `below_the_row_floor + no_return_figure + below_the_bet_floor +
+    # len(usable) == len(populated)` — they do not exhaust `populated` on their
+    # own, and on a run with one usable bucket and nothing else populated all
+    # three are zero. The sentence the report prints is read off the buckets
+    # instead of being written into the renderer as a standing claim.
+    below_the_row_floor = sum(1 for b in populated if not b.get("enough"))
+    no_return_figure = sum(
+        1 for b in populated if b.get("enough") and not b.get("roi")
+    )
+    below_the_bet_floor = sum(
+        1
+        for b in populated
+        if b.get("enough")
+        and b.get("roi")
+        and not (b["roi"] or {}).get("enough_evidence")
+    )
+    # Every bucket that cleared the floor, measured — whether or not there are
+    # two of them. A comparison needs two; a SIGN needs one, and the sign was
+    # what the early return threw away.
+    measured = [_return_bucket(b) for b in usable]
+    negative = _negative_return_finding(measured)
     if len(usable) < 2:
         return {
             "measures": ANTI_PREDICTIVE_LABEL,
             "usable_buckets": len(usable),
             "populated_buckets": len(populated),
+            # The ACROSS-BUCKET comparison is what is not measurable. That is
+            # not the same as "there is no number": `measured_buckets` may hold
+            # one, and a single bucket whose corrected interval lies entirely
+            # below zero is a demonstrated deficit that has to be said.
             "measurable": False,
+            "measured_buckets": measured,
+            "buckets_with_no_return_figure": no_return_figure,
+            "buckets_below_the_bet_floor": below_the_bet_floor,
+            "buckets_below_the_row_floor": below_the_row_floor,
+            **negative,
         }
     lowest, highest = _return_bucket(usable[0]), _return_bucket(usable[-1])
     return {
         "measures": ANTI_PREDICTIVE_LABEL,
         "usable_buckets": len(usable),
         "populated_buckets": len(populated),
+        "measured_buckets": measured,
+        "buckets_with_no_return_figure": no_return_figure,
+        "buckets_below_the_bet_floor": below_the_bet_floor,
+        "buckets_below_the_row_floor": below_the_row_floor,
+        **negative,
         # Whether the comparison reaches the top of the claimed-edge range. It
         # usually does not: the top buckets are the thinnest, and a bucket below
         # `stats.MINIMUM_BETS` settled wagers has no return figure at all. A
@@ -1862,6 +2009,19 @@ def _excluded_unpairable(census: Mapping | None) -> dict:
     so in words. It is never defaulted to zero: "no rows were excluded" and
     "nobody counted" are different claims, and printing the first when the
     second is true is the whole class of error this file argues against.
+
+    **All THREE terms are carried, and `accounted` is their sum.**
+    `build_skill_frame.UnpairableCensus` states one identity — `supplied =
+    paired + unpairable + no_pair_key` — and until 2026-09-17 this function
+    copied two of its terms and dropped `no_pair_key` on the floor. The
+    consequence was not a missing column: `_excluded_lines` already printed a
+    `no_pair_key` figure, read it off this dict with a `0` default, and so
+    printed a hard zero for a term nobody had copied. A reader was shown three
+    numbers that added up, one of which was invented by a default — which is
+    the same defect as deriving an accounting bucket by subtraction, wearing
+    the shape of a census that balances. `accounted` is carried beside them so
+    the sum a reader is asked to check is the one this module computed from the
+    terms it holds, not one the reader has to do in their head.
     """
     if not census:
         return {
@@ -1871,6 +2031,8 @@ def _excluded_unpairable(census: Mapping | None) -> dict:
             "rows": 0,
             "supplied": 0,
             "paired": 0,
+            "no_pair_key": 0,
+            "accounted": 0,
             "share": 0.0,
             "selected_rows": 0,
             "reason": "",
@@ -1880,13 +2042,22 @@ def _excluded_unpairable(census: Mapping | None) -> dict:
         }
     supplied = int(census.get("supplied", 0))
     rows = int(census.get("unpairable", 0))
+    paired = int(census.get("paired", 0))
+    no_pair_key = int(census.get("no_pair_key", 0))
     return {
         "label": UNPAIRABLE_LABEL,
         "role": UNPAIRABLE_ROLE,
         "available": True,
         "rows": rows,
         "supplied": supplied,
-        "paired": int(census.get("paired", 0)),
+        "paired": paired,
+        # The third term. A graded row whose selection this lab forms no pair
+        # key for did not pair and was not excluded — it is its own bucket,
+        # and it stays in the frame.
+        "no_pair_key": no_pair_key,
+        # The sum of the three, so the identity the reader is shown is closed
+        # by arithmetic this module did rather than by arithmetic it assumes.
+        "accounted": paired + rows + no_pair_key,
         "share": float(census.get("share", 0.0)),
         "selected_rows": int(census.get("unpairable_selected", 0)),
         "reason": str(census.get("reason", "")),
@@ -2339,6 +2510,227 @@ def _overconfidence_paragraph(measured: Mapping) -> list[str]:
     return lines
 
 
+def _return_cell(bucket: Mapping) -> str:
+    """One bucket's return: both intervals, labelled, and the verdict.
+
+    Raw and family-corrected are printed side by side and named apart, because
+    the corrected one is what any claim rests on and the raw one is what the
+    correction was applied to. The verdict is `stats.RoiInterval.verdict()`
+    read off the corrected interval, so a bucket whose corrected interval spans
+    zero reads `stats.NO_DEMONSTRATED_EDGE` in exactly those words — a printed
+    interval with no verdict beside it is the thing a reader supplies a verdict
+    for.
+
+    Module-level rather than nested inside the paragraph that used to own it,
+    because the same cell is now printed from two places: the across-bucket
+    comparison, and the single-bucket sign statement that the comparison's
+    early return used to suppress. Two copies of this formatting would be two
+    ways of printing one figure.
+    """
+    return (
+        f"{bucket['roi']:+.1%} over {bucket['bets']:,} settled wagers "
+        f"across {bucket['clusters']:,} {bucket['cluster_unit']}s, 95% "
+        f"interval [{bucket['roi_low']:+.1%}, {bucket['roi_high']:+.1%}], "
+        f"family-corrected [{bucket['roi_adjusted_low']:+.1%}, "
+        f"{bucket['roi_adjusted_high']:+.1%}] across "
+        f"{bucket['looks']:,} look{'' if bucket['looks'] == 1 else 's'} — "
+        f"{bucket['verdict']}"
+    )
+
+
+def _negative_return_lines(
+    shape: Mapping, *, printed: Sequence[Mapping] = ()
+) -> list[str]:
+    """The SIGN of what was measured, said in plain words, or nothing.
+
+    **A negative result is a result.** The across-bucket comparison answers
+    *"does the return fall as the claimed edge rises"* and needs two buckets;
+    it returned early below two and the report then printed a sample-size
+    floor, which reads as *we could not see anything*. It is a different
+    sentence from *we saw the model lose money*, and until 2026-09-17 the
+    second one had no way of being printed at all: `anti_predictive_return`
+    dropped every measured bucket on the floor-return path, so no renderer
+    could reach the figure even when the figure existed.
+
+    Three outcomes, and the vocabulary is not interchangeable between them:
+
+    * corrected interval entirely below zero -> `stats.DEMONSTRATED_DEFICIT`.
+      Worse than no edge, and it is never softened into no-demonstrated-edge.
+    * point estimate below zero, corrected interval spanning it ->
+      `stats.NO_DEMONSTRATED_EDGE` **in those words**, with the negative point
+      estimate stated beside it rather than instead of it. Both are true; the
+      report says both.
+    * neither -> nothing. There is no negative finding to report and inventing
+      one would be the same defect in the other direction.
+
+    **It reads every measured bucket, and it is called on BOTH paths.** It used
+    to read `worst_bucket` alone — the bucket with the lowest point estimate —
+    and `worst_bucket` is not the bucket a deficit is counted off: that is
+    selected by the corrected high bound. On buckets A (`-20%`, corrected
+    `[-45%, +5%]`) and B (`-5%`, corrected `[-8%, -2%]`) the old reading named
+    A, whose interval spans zero, and printed nothing about B. And it was not
+    called at all on the compared path, on the justification that *"the sign is
+    on the page there already, in the verdict beside each cell"* — true of two
+    cells, and that path prints exactly two however many buckets were measured.
+    Three usable buckets with a demonstrated deficit in the middle one reached
+    no sentence and no figure on this page at all.
+
+    `printed` is the buckets the caller has already put on the page. A bucket
+    this function needs and the caller has not printed gets its cell here, so
+    the sentence never refers to *"the interval printed above"* when there is
+    none — and a bucket already on the page is not printed twice, because an
+    interval printed twice is two chances for a reader to quote the one without
+    its qualifier.
+    """
+    measured = [b for b in (shape.get("measured_buckets") or []) if b]
+    if not measured:
+        return []
+    already = {(b["low"], b["high"]) for b in printed}
+
+    def cells(buckets: Sequence[Mapping]) -> list[str]:
+        return [
+            f"The {bucket_label(b['low'], b['high'])} bucket returned "
+            f"{_return_cell(b)}."
+            for b in buckets
+            if (b["low"], b["high"]) not in already
+        ]
+
+    deficits = [b for b in measured if float(b["roi_adjusted_high"]) < 0.0]
+    if deficits:
+        named = ", ".join(bucket_label(b["low"], b["high"]) for b in deficits)
+        plural = len(deficits) != 1
+        return cells(deficits) + [
+            f"**The wagers in the {named} claimed-edge "
+            + ("buckets" if plural else "bucket")
+            + " lost money, and the loss survives the correction.** The "
+            "family-corrected "
+            + ("intervals" if plural else "interval")
+            + " printed above "
+            + ("lie" if plural else "lies")
+            + " entirely below zero, so "
+            + ("each of those buckets is" if plural else "that bucket is")
+            + f" a **{S.DEMONSTRATED_DEFICIT}**: the model did worse than no "
+            "edge in "
+            + ("them" if plural else "it")
+            + ", which is a stronger statement than failing to demonstrate "
+            "one, and it is a statement about the money rather than about the "
+            "size of the sample."
+        ]
+    negative = [b for b in measured if float(b["roi"]) < 0.0]
+    if negative:
+        worst = min(negative, key=lambda b: float(b["roi"]))
+        label = bucket_label(worst["low"], worst["high"])
+        return cells([worst]) + [
+            f"**The {label} claimed-edge bucket's return is below zero at the "
+            "point estimate.** Both things are true and both are said: the "
+            "point estimate sits on the losing side, and the family-corrected "
+            "interval printed above includes zero, so the verdict beside it "
+            "is the one that stands. A negative number under an interval that "
+            "spans zero is not evidence of a loss; it is also not evidence of "
+            "anything else."
+        ]
+    return []
+
+
+def _unmeasured_anti_predictive_lines(shape: Mapping) -> list[str]:
+    """Why the across-bucket comparison was not made, counted off the buckets.
+
+    **This is the paragraph the finding was about.** It used to be one
+    sentence: *"Fewer than two claimed-edge buckets carry 200 settled wagers,
+    which is the floor declared in advance, and below it there is no return
+    figure to compare."* That is a claim about WHY there is no result, and
+    nothing enforced that it was the real why. On this lab's own published run
+    it was false in both halves: eight populated buckets held 293,661 wagers
+    and **none of them carried a settled wager at all**, so there was no return
+    column to fall below a floor — and a reader was told the sample was too
+    small to see an answer when the truth was that no answer had been settled.
+
+    The reasons are now read off `populated`: buckets below the row floor,
+    buckets with no settled wager, and buckets with a settled wager below
+    `stats.MINIMUM_BETS`. Those three are disjoint, and together with the
+    usable count they close against `populated` — they do **not** exhaust it on
+    their own, and this paragraph prints the usable ones itself, which is the
+    fourth term. So the sentence cannot say something the counts do not.
+
+    And when a bucket DID clear the floor — one is not two, so no comparison
+    is possible — its return is printed with its verdict, and
+    :func:`_negative_return_lines` says what its sign means. A floor may not
+    pre-empt a measurement that was available.
+    """
+    populated = int(shape.get("populated_buckets", 0))
+    measured = shape.get("measured_buckets") or []
+    # **Counted off the buckets this paragraph is about to print, not off
+    # `usable_buckets`.** The two agree in any record this module wrote, and
+    # they do not in a record written before version 5: that shape carries the
+    # count and not the buckets, and keying the sentence on the count would
+    # promise a figure below that nothing can print. A sentence whose subject
+    # is a number rather than the thing the number counts is the same defect
+    # as the floor sentence this paragraph exists to replace.
+    usable = len(measured)
+    lines: list[str] = []
+    add = lines.append
+
+    def carry(count: int) -> str:
+        """Verb agreement. These counts are routinely one, and *"1 carry"*
+        reads like a typo in a document whose whole argument is care."""
+        return "carries" if count == 1 else "carry"
+
+    if usable:
+        add(
+            "**Anti-predictiveness — the realised return falling as the "
+            "claimed edge rises — is not compared across buckets here.** A "
+            f"comparison needs two, and {usable:,} of {populated:,} populated "
+            f"claimed-edge buckets {carry(usable)} a readable return. "
+            "Whatever cleared the floor is measured below rather than left "
+            "under the floor sentence."
+        )
+    else:
+        add(
+            "**Anti-predictiveness — the realised return falling as the "
+            "claimed edge rises — is not measured here.** No claimed-edge "
+            f"bucket of the {populated:,} with any wager in them carries a "
+            "readable return, so there is nothing to compare and nothing to "
+            "read a sign off."
+        )
+    no_return_figure = int(shape.get("buckets_with_no_return_figure", 0))
+    below_the_bet_floor = int(shape.get("buckets_below_the_bet_floor", 0))
+    below_the_row_floor = int(shape.get("buckets_below_the_row_floor", 0))
+    if no_return_figure:
+        add(
+            f"Of those, {no_return_figure:,} {carry(no_return_figure)} no "
+            "settled wager at all — not a thin sample but an absent one: "
+            "nothing in them has been graded to a profit, so no return was "
+            "computed and no floor was reached or missed. That is a fact about "
+            "what the frame holds and it is **not** a statement that the model "
+            "was measured and found wanting, nor that it was measured and "
+            "found harmless."
+        )
+    if below_the_bet_floor:
+        add(
+            f"{below_the_bet_floor:,} {carry(below_the_bet_floor)} a settled "
+            f"wager but fewer than the {S.MINIMUM_BETS:,} settled wagers "
+            "declared in advance as the floor, which is below the point where "
+            "a return figure is printed at all."
+        )
+    if below_the_row_floor:
+        add(
+            f"{below_the_row_floor:,} hold fewer than {MINIMUM_BUCKET:,} "
+            "wagers in total, which is the row floor this table prints no "
+            "frequency below."
+        )
+    for bucket in measured:
+        add(
+            f"The {bucket_label(bucket['low'], bucket['high'])} bucket "
+            f"returned {_return_cell(bucket)}."
+        )
+    lines.extend(_negative_return_lines(shape, printed=measured))
+    add(
+        "The overconfidence column above is a different quantity and cannot "
+        "stand in for this one."
+    )
+    return lines
+
+
 def _anti_predictive_paragraph(measured: Mapping) -> list[str]:
     """The statistic the word *anti-predictive* actually names: realised return.
 
@@ -2351,45 +2743,24 @@ def _anti_predictive_paragraph(measured: Mapping) -> list[str]:
     intervals are disjoint, because that sentence is a claim about money, the
     point estimates alone do not carry it, and an interval read before the size
     of the search is counted is not the interval the claim rests on.
+
+    **When there are not two buckets to compare, this delegates rather than
+    stopping.** :func:`_unmeasured_anti_predictive_lines` states the reason the
+    buckets themselves give, prints whatever single bucket cleared the floor,
+    and says what its sign means. That path used to be one sentence naming a
+    sample floor, which is a claim about why there is no result with nothing
+    enforcing that it is the real reason.
     """
     lines: list[str] = []
     add = lines.append
     shape = measured.get("anti_predictive_return") or {}
     if not shape.get("measurable"):
-        add(
-            "**Anti-predictiveness — the realised return falling as the claimed "
-            "edge rises — is not measured here.** Fewer than two claimed-edge "
-            f"buckets carry {S.MINIMUM_BETS:,} settled wagers, which is the "
-            "floor declared in advance, and below it there is no return figure "
-            "to compare. The overconfidence column above is a different "
-            "quantity and cannot stand in for this one."
-        )
+        lines.extend(_unmeasured_anti_predictive_lines(shape))
         add("")
         return lines
     low = shape["lowest_bucket"]
     high = shape["highest_bucket"]
-
-    def cell(bucket: Mapping) -> str:
-        """One bucket's return: both intervals, labelled, and the verdict.
-
-        Raw and family-corrected are printed side by side and named apart,
-        because the corrected one is what any claim rests on and the raw one is
-        what the correction was applied to. The verdict is
-        `stats.RoiInterval.verdict()` read off the corrected interval, so a
-        bucket whose corrected interval spans zero reads
-        `stats.NO_DEMONSTRATED_EDGE` in exactly those words — a printed
-        interval with no verdict beside it is the thing a reader supplies a
-        verdict for.
-        """
-        return (
-            f"{bucket['roi']:+.1%} over {bucket['bets']:,} settled wagers "
-            f"across {bucket['clusters']:,} {bucket['cluster_unit']}s, 95% "
-            f"interval [{bucket['roi_low']:+.1%}, {bucket['roi_high']:+.1%}], "
-            f"family-corrected [{bucket['roi_adjusted_low']:+.1%}, "
-            f"{bucket['roi_adjusted_high']:+.1%}] across "
-            f"{bucket['looks']:,} look{'' if bucket['looks'] == 1 else 's'} — "
-            f"{bucket['verdict']}"
-        )
+    cell = _return_cell
 
     head = (
         "**Realised return by claimed edge — the anti-predictive statistic.** "
@@ -2446,6 +2817,13 @@ def _anti_predictive_paragraph(measured: Mapping) -> list[str]:
             "not contradict the overconfidence column above, which measures a "
             "different quantity."
         )
+    # **The sign, on this path too.** The paragraph above prints the lowest and
+    # the highest bucket and no others, so with three or more usable buckets a
+    # demonstrated deficit in a middle one reached neither a figure nor a
+    # sentence. `printed` is the two cells the head already carries, so nothing
+    # is printed twice and anything the claim needs and the head does not carry
+    # is printed here.
+    lines.extend(_negative_return_lines(shape, printed=(low, high)))
     add("")
     return lines
 
@@ -2571,15 +2949,41 @@ def _excluded_lines(excluded: Mapping) -> list[str]:
     the part that would not be.
 
     The census this reads has THREE terms — `supplied = paired + unpairable +
-    no_pair_key` — and this paragraph names all three. It named two until
-    2026-09-05, which made `supplied - paired` read as the exclusion when a
-    third term was sitting between them.
+    no_pair_key` — and this paragraph names all three and then prints the sum
+    beside the number it is supposed to equal. It named two until 2026-09-05,
+    which made `supplied - paired` read as the exclusion when a third term was
+    sitting between them; and from then until 2026-09-17 it *printed* three
+    while `_excluded_unpairable` copied two, so the third figure on the page
+    was the `0` of a `.get` default rather than a count. A zero that arrives by
+    default is indistinguishable on the page from a zero that was measured,
+    which is why the term is now read off a key that is always written and the
+    identity is closed in front of the reader rather than left for them to do.
     """
     if not excluded.get("available"):
         return [UNPAIRABLE_NOT_SUPPLIED, ""]
     rows = int(excluded.get("rows", 0))
     supplied = int(excluded.get("supplied", 0))
     paired = int(excluded.get("paired", 0))
+    missing = [key for key in ("no_pair_key", "accounted") if key not in excluded]
+    if missing:
+        # **Refused, not defaulted.** This is the defect itself, arriving from
+        # the other direction: a record written before version 5 carries two of
+        # the census's three terms, and a `.get(..., 0)` here would print a
+        # hard zero for the third and a total that balances because one of its
+        # addends was invented. There is no honest rendering of a census whose
+        # terms this record does not hold, so the report says so and stops
+        # rather than publishing arithmetic nobody did.
+        raise ForecastSkillError(
+            "The unpairable census in this record carries no "
+            + " and no ".join(f"`{key}`" for key in missing)
+            + f". `read_record` writes version {RECORD_VERSION}, in which the "
+            "census carries all three of its terms and their sum; an older "
+            "record carries two, and printing a zero for the third would say "
+            "that no graded wager lacked a pair key when nobody counted. "
+            "Re-run the regression rather than re-rendering."
+        )
+    no_pair_key = int(excluded["no_pair_key"])
+    accounted = int(excluded["accounted"])
     reason = str(excluded.get("reason") or UNPAIRABLE_ROLE)
     paragraphs: list[str] = []
     if not excluded.get("reconciles"):
@@ -2588,18 +2992,33 @@ def _excluded_lines(excluded: Mapping) -> list[str]:
             "terms do not add up to the wagers it was handed, so nothing in "
             "this subsection can be read as complete."
         )
-    if not rows:
+    if not rows and not no_pair_key:
         paragraphs.append(
             f"**Nothing was excluded before this frame was built.** All "
             f"{supplied:,} graded wagers found a complement at their own book, "
             "so the frame is the whole graded set."
+        )
+    elif not rows:
+        # Nothing excluded, but the third term is not zero. "All of them found
+        # a complement" would be false of exactly these rows: they never went
+        # looking for one, because this lab forms no pair key for what they
+        # selected. They are in the frame and they are not paired, and a
+        # sentence that folds them into `paired` is the same error the
+        # frame-builder's own census docstring was written to close.
+        paragraphs.append(
+            f"**Nothing was excluded before this frame was built.** Of the "
+            f"{supplied:,} graded wagers the frame was built from, {paired:,} "
+            f"paired with the other side of their own book's quote and "
+            f"{no_pair_key:,} carried a selection this lab forms no pair key "
+            "for and were kept unpaired. None was dropped, so the frame is the "
+            "whole graded set — but it is not wholly a paired one."
         )
     else:
         paragraphs.append(
             f"**{rows:,} graded wager(s) are in neither population above.** "
             f"The frame was built from {supplied:,} graded wagers: {paired:,} "
             f"paired with the other side of their own book's quote, "
-            f"{int(excluded.get('no_pair_key', 0)):,} carried a selection this "
+            f"{no_pair_key:,} carried a selection this "
             f"lab forms no pair key for and were kept unpaired, and {rows:,} "
             f"({float(excluded.get('share', 0.0)):.6%}) were excluded because "
             f"{reason}. Excluding them is the only honest arithmetic available "
@@ -2627,6 +3046,22 @@ def _excluded_lines(excluded: Mapping) -> list[str]:
                 f"as {SELECTED_LABEL}, so that comparison is short by the same "
                 "number."
             )
+    # The identity, closed on the page. Every bucket is named above; this is
+    # the one line that adds them up, and it is printed whether or not it
+    # balances — a census stated only when it works is a census whose failure
+    # is invisible.
+    identity = (
+        f"Census: {paired:,} paired + {rows:,} excluded + {no_pair_key:,} with "
+        f"no pair key = {accounted:,}, against {supplied:,} graded wagers "
+        "supplied."
+    )
+    if accounted != supplied:
+        identity += (
+            " **Those three terms do not add up to the wagers supplied**, so a "
+            "graded wager reached none of the three buckets and the counts "
+            "above are of unknown completeness."
+        )
+    paragraphs.append(identity)
     out: list[str] = []
     for paragraph in paragraphs:
         out.append(paragraph)

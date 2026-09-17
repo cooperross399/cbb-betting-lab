@@ -1379,17 +1379,73 @@ def test_the_limitations_this_gate_ships_with():
        a grading denominator.
     3. **Design section 10 is written as an equality that can never hold.**
        Implemented as an attribution, and the disagreement is reported.
-    4. **Nothing has been graded.** No de-vig, no log loss, no interval and no
-       verdict exists anywhere in this tree for a player prop.
+    4. **This gate states no result. Something else in this tree now does.**
+       This clause used to read *"nothing has been graded: no de-vig, no log
+       loss, no interval and no verdict exists anywhere in this tree for a
+       player prop"*, and that sentence stopped being true the day
+       `reports/prop_grading.py` and `scripts/run_prop_grading.py` arrived --
+       two de-vigs, log loss, Brier, calibration by decile, three-way clustered
+       intervals and a verdict per market and per tier. It is contradicted by
+       `GRADES_A_WAGER_FRAME_AND_IS_GUARDED` in this same file, which names
+       that module and lists exactly those numbers.
+
+       The assertion under this clause was never the wide claim. It is an AST
+       scan of `player_census.py` and nothing else, so the prose promised a
+       fact about the whole tree that nothing here checked, which is the shape
+       this file exists to argue against. Re-pointed rather than deleted, per
+       the rule at the end of this docstring, at the half that is still true
+       and still worth holding: **this module counts rows and refuses, and
+       states no result of its own.** A gate that computed a fair price or a
+       ROI would be grading the thing it exists to admit has not been graded
+       under it.
+
+       The half that has CLOSED is asserted positively, the way clause 2 does
+       it, so that the day the prop grading disappears this goes red and the
+       clause is re-pointed deliberately -- rather than the old sentence
+       quietly becoming true again with nobody having looked.
+
+       Every name in the sentence above is in that assertion, one for one:
+       `DEVIG_PROPORTIONAL` and `DEVIG_POWER` for the two de-vigs, `log_loss`,
+       `brier`, `calibration_by_decile`, `verdict_of`, and the call to
+       `stats.interval_three_way` for the clustered intervals -- the last of
+       these read off what the module ASKS FOR rather than what it defines,
+       because the grader does not own that arithmetic. The scan was four
+       names under a sentence naming six things, and the two it did not hold
+       were `calibration_by_decile` and the three-way interval: renaming the
+       one and re-pointing the other left this clause green while claiming the
+       grader did two things it no longer did.
+
+       What is held ELSEWHERE and deliberately not re-asserted here is the
+       behaviour rather than the names -- that the verdict is per market and
+       per tier, and that a refused market never gets one. That is
+       `tests/test_prop_grading.py`'s job, and a copy of it here would be a
+       second assertion drifting from the first. This clause holds that the
+       grader exists and names what it computes; it does not hold that the
+       computation is right.
     5. **A grading run files its own dispositions now, and the SHIPPED card
        and backtest still do not.** This clause has been re-pointed twice. It
        began as "no shipped script files a disposition, so no run can pass the
-       second half of this gate"; on 2026-09-07 `scripts/run_prop_accounting.
-       py` closed that and it was re-pointed at "the runs that turn wagers into
-       numbers file nothing"; and `scripts/run_prop_grading.py` closed THAT on
-       the same day — it walks the store forward, hands
-       `reports.gameday_card.opinions_for` a `RunDisposition`, calls
-       `assert_every_offered_prop_is_accounted`, and only then scores anything.
+       second half of this gate"; `scripts/run_prop_accounting.py` closed that
+       and it was re-pointed at "the runs that turn wagers into numbers file
+       nothing"; and `scripts/run_prop_grading.py` closed THAT. It walks the
+       store forward, hands `reports.gameday_card.opinions_for` a
+       `RunDisposition`, calls `assert_every_offered_prop_is_accounted`, and
+       only then scores anything.
+
+       **Two dates, one event, and this clause used to give only one of them.**
+       Both scripts and `reports/prop_grading.py` arrived in ONE commit, which
+       `git log --diff-filter=A` dates **2026-09-09** — so "closed that, and
+       closed THAT on the same day" is exactly true, and a bare *2026-09-07*
+       above it read as a claim about when the files landed that git
+       contradicts by two days. It was not a typo: **2026-09-07** is the date
+       that same commit wrote for this work everywhere else — decision-log rows
+       49 through 56, and nine docstrings across this file and
+       `test_player_model_leakage.py` — because decisions here are dated by the
+       day they were made and the branch is squashed on merge. Both are given
+       now rather than one, so that a reader re-pointing this clause does not
+       have to guess which convention a bare date is using, and so that
+       correcting one of the two spellings does not leave this the only place
+       in the repository disagreeing with the other nine.
 
        It is re-pointed again rather than deleted, at the half that is still
        open: **the two shipped runs that price props every night file
@@ -1441,10 +1497,21 @@ def test_the_limitations_this_gate_ships_with():
     )
 
     tree = ast.parse(MODULE_PATH.read_text(encoding="utf-8"))
+    # Names USED and names DEFINED. The used half alone was the whole scan, and
+    # it does not see the plainest spelling of what this clause forbids: a
+    # module-level `def brier(...)` that nothing in the module calls is never an
+    # `ast.Name` or an `ast.Attribute`, so appending one to `player_census.py`
+    # left this green while the gate computed a Brier score. `ast.walk` rather
+    # than `tree.body` on purpose here -- a `def brier` nested inside another
+    # function is still this module scoring something.
     named = {
         node.id if isinstance(node, ast.Name) else node.attr
         for node in ast.walk(tree)
         if isinstance(node, (ast.Name, ast.Attribute))
+    } | {
+        node.name
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
     }
     forbidden = {
         "log_loss",
@@ -1457,9 +1524,72 @@ def test_the_limitations_this_gate_ships_with():
         "edge",
     }
     assert not (named & forbidden), (
-        "CLAUSE 4 HAS CLOSED: player_census.py names "
+        "CLAUSE 4 HAS MOVED: player_census.py names "
         f"{sorted(named & forbidden)}. This module counts rows and refuses; it "
-        "states no result. Grading belongs in its own commit, gated on this one."
+        "states no result. Grading belongs in its own module, gated on this one."
+    )
+    # And the grading this gate was built for EXISTS, which is the half of the
+    # old clause 4 that closed. Read off the grader's own source rather than
+    # off the roster above: the roster is a list this file maintains, and the
+    # claim being made is about the tree.
+    grader = REPO / "src" / "cbb_betting_lab" / "reports" / "prop_grading.py"
+    assert grader.is_file(), (
+        "CLAUSE 4 HAS RE-OPENED: reports/prop_grading.py is gone. Establish "
+        "from the tree what grades a player prop now and re-point this clause; "
+        "do not restore the old sentence on faith, and do not delete it."
+    )
+    grader_tree = ast.parse(grader.read_text(encoding="utf-8"))
+    # MODULE LEVEL, and bindings as well as `def`s. `ast.walk` over the whole
+    # tree was both too loose and too tight at once: a `devig` defined INSIDE
+    # another function satisfied it, and a legitimate `brier = _brier_scores`
+    # alias or an `async def brier` did not -- a permanent red on a refactor
+    # that changed nothing about what the grader computes, and a permanent red
+    # is a check somebody switches off.
+    defines = {
+        node.name
+        for node in grader_tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    } | {
+        target.id
+        for node in grader_tree.body
+        if isinstance(node, ast.Assign)
+        for target in node.targets
+        if isinstance(target, ast.Name)
+    } | {
+        node.target.id
+        for node in grader_tree.body
+        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)
+    }
+    # And what it ASKS FOR, which is how the clustered interval gets in: the
+    # grader does not define `interval_three_way`, it hands a frame to
+    # `stats.interval_three_way`. A scan of definitions alone cannot see it,
+    # and re-pointing that call at a name that does not exist left this green.
+    asks_for = {
+        node.id if isinstance(node, ast.Name) else node.attr
+        for node in ast.walk(grader_tree)
+        if isinstance(node, (ast.Name, ast.Attribute))
+    }
+    owed = sorted(
+        (
+            {
+                "devig",
+                "DEVIG_PROPORTIONAL",
+                "DEVIG_POWER",
+                "log_loss",
+                "brier",
+                "calibration_by_decile",
+                "verdict_of",
+            }
+            - defines
+        )
+        | ({"interval_three_way"} - asks_for)
+    )
+    assert not owed, (
+        f"CLAUSE 4 HAS RE-OPENED: prop_grading.py no longer carries {owed}. "
+        "Every name this clause says the grader has is listed here, so the "
+        "prose above cannot outrun the check under it: the two de-vigs, the "
+        "log loss, the Brier score, the calibration by decile, the three-way "
+        "clustered interval and the verdict. Say what grades a player prop now."
     )
 
     scripts = sorted((REPO / "scripts").glob("*.py"))

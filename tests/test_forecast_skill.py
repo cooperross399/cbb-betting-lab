@@ -416,6 +416,406 @@ def test_a_bucket_below_the_declared_floor_gets_no_anti_predictive_comparison():
     assert "raising the edge threshold the wrong response" not in text
 
 
+def _usable_bucket(
+    low: float, high: float, roi: float, ci: tuple[float, float], *, looks: int
+) -> dict:
+    """One usable claimed-edge bucket, its ROI cell built by production code.
+
+    The ROI cell is a real `stats.RoiInterval` through `_interval_row`, for the
+    reason `_measured_with` gives: the verdict has to come from production code
+    or the test proves only that the fixture and the assertion agree.
+
+    **`looks` is never 1 in a fixture that is about the correction.**
+    `RoiInterval.adjusted_low`/`adjusted_high` return `self.low`/`self.high`
+    unchanged at `looks <= 1`, so at one look the corrected bounds ARE the raw
+    bounds and a test cannot tell which pair the code read. Every rule in this
+    module about reading the family-corrected bound and never the raw one is
+    invisible to such a fixture: swapping `roi_adjusted_high` for `roi_high`
+    passes it.
+    """
+    standard_error = (ci[1] - ci[0]) / (2.0 * S.Z95)
+    interval = S.RoiInterval(
+        roi=roi,
+        low=roi - S.Z95 * standard_error,
+        high=roi + S.Z95 * standard_error,
+        bets=400,
+        clusters=90,
+        standard_error=standard_error,
+        looks=looks,
+        cluster_unit="day",
+    )
+    assert interval.low == pytest.approx(ci[0]) and interval.high == pytest.approx(ci[1])
+    return {
+        "low": low,
+        "high": high,
+        "rows": 400,
+        "games": 90,
+        "enough": True,
+        "gap_to_model": 0.0,
+        "roi": FS._interval_row(interval, name="realised return"),
+    }
+
+
+def _usable_buckets(*specs, looks: int = 24) -> dict:
+    """A `measure()`-shaped dict carrying N usable claimed-edge buckets.
+
+    Each spec is `(low, high, roi, ci)`. Two is what the across-bucket
+    comparison needs; THREE is the shape that showed the comparison path prints
+    only its ends, so a demonstrated deficit in a middle bucket reached neither
+    a figure nor a sentence.
+    """
+    buckets = [_usable_bucket(*spec, looks=looks) for spec in specs]
+    return {
+        "buckets": buckets,
+        "anti_predictive_return": FS.anti_predictive_return(buckets),
+    }
+
+
+def _one_usable_bucket(roi: float, ci: tuple[float, float], *, looks: int = 24) -> dict:
+    """A `measure()`-shaped dict carrying exactly ONE usable claimed-edge bucket.
+
+    One is the number the across-bucket comparison cannot use and the sign can.
+    Everything else in the cell is empty on purpose: this fixture exists to put
+    the report in the state where `measurable` is False and a return figure
+    nonetheless exists, and a fixture carrying a second usable bucket would put
+    it in the state the comparison already handles.
+
+    `looks` defaults to 24 rather than 1 — see :func:`_usable_bucket`.
+    """
+    buckets = [_usable_bucket(0.20, float("inf"), roi, ci, looks=looks)]
+    return {
+        "buckets": buckets,
+        "anti_predictive_return": FS.anti_predictive_return(buckets),
+    }
+
+
+def test_a_single_measured_bucket_losing_money_is_reported_as_a_demonstrated_deficit():
+    """A sample floor may not pre-empt a measurement that was available.
+
+    `anti_predictive_return` needs two usable buckets to answer *"does the
+    return fall as the claimed edge rises"*, and below two it returned four
+    keys and threw away everything it had measured. The report then printed a
+    sample-size floor — which reads as *we could not see anything* — over a
+    bucket carrying 400 settled wagers whose family-corrected interval lies
+    entirely below zero. That is `stats.DEMONSTRATED_DEFICIT`: the model did
+    worse than no edge, and the one sentence on the page said the sample was
+    too small to tell.
+    """
+    losing = _one_usable_bucket(-0.09, (-0.14, -0.04))
+    shape = losing["anti_predictive_return"]
+    assert shape["measurable"] is False, (
+        "one bucket cannot be compared to another, so the COMPARISON is still "
+        f"not measurable; got {shape}"
+    )
+    assert shape["usable_buckets"] == 1
+    assert len(shape["measured_buckets"]) == 1, (
+        "the bucket that cleared the floor must survive the early return, or "
+        f"no renderer can reach the figure; got {shape}"
+    )
+    assert shape["demonstrated_deficits"] == 1, shape
+    assert shape["worst_bucket"]["verdict"] == S.DEMONSTRATED_DEFICIT, shape
+
+    text = "\n".join(FS._anti_predictive_paragraph(losing))
+    assert S.DEMONSTRATED_DEFICIT in text, text
+    assert "lost money" in text, text
+    # The figure itself, with its sample size and both intervals, not just the
+    # word: a verdict with no number under it is the same silence in a louder
+    # font.
+    assert "-9.0% over 400 settled wagers across 90 days" in text, text
+    # Two DIFFERENT pairs, named apart. At `looks=1` they would be the same
+    # numbers twice and this pair of assertions would prove nothing about which
+    # one the verdict was read off.
+    assert "95% interval [-14.0%, -4.0%]" in text, text
+    assert "family-corrected [-16.9%, -1.1%] across 24 looks" in text, text
+    # And the floor sentence must not be the report's account of why there is
+    # no comparison, because a return figure was available and is printed.
+    assert "is not measured here" not in text, text
+    assert S.NO_DEMONSTRATED_EDGE not in text, (
+        "a corrected interval lying entirely below zero is worse than no edge, "
+        f"and must never be softened into the phrase for spanning zero; {text}"
+    )
+
+
+def test_a_negative_point_estimate_under_a_wide_interval_says_both_things():
+    """Small sample AND a negative point estimate: the report says both.
+
+    The rule this repository states about a sign is that an interval including
+    zero is `stats.NO_DEMONSTRATED_EDGE` in those words. That rule is about
+    what may be *claimed*; it is not a licence to stop printing the point
+    estimate's sign. A bucket returning -9% under an interval from -30% to +12%
+    is two facts, and a report that prints only the first invents a loss while
+    a report that prints only the second buries one.
+    """
+    wide = _one_usable_bucket(-0.09, (-0.30, 0.12))
+    shape = wide["anti_predictive_return"]
+    assert shape["measurable"] is False
+    assert shape["negative_point_estimates"] == 1, shape
+    assert shape["demonstrated_deficits"] == 0, (
+        "the corrected interval spans zero, so nothing is demonstrated; "
+        f"got {shape}"
+    )
+    assert shape["worst_bucket"]["verdict"] == S.NO_DEMONSTRATED_EDGE, shape
+
+    text = "\n".join(FS._anti_predictive_paragraph(wide))
+    assert "below zero at the point estimate" in text, text
+    assert "-9.0% over 400 settled wagers" in text, text
+    assert S.NO_DEMONSTRATED_EDGE in text, text
+    assert S.DEMONSTRATED_DEFICIT not in text, (
+        "the reserved phrase for an interval excluding zero on the losing side "
+        f"must not appear beside one that spans it, even in a negation; {text}"
+    )
+
+
+def test_a_bucket_that_settled_nothing_is_not_reported_as_a_thin_sample():
+    """The reason for a silence is counted off the buckets, not asserted.
+
+    This is the shape this lab's own published run is in:
+    `data/outputs/cbb_forecast_skill.json` carries eight populated claimed-edge
+    buckets holding 293,661 wagers and **no `roi` on any of them** — nothing in
+    the frame had been graded to a profit, so no return was ever computed. The
+    report printed *"Fewer than two claimed-edge buckets carry 200 settled
+    wagers, which is the floor declared in advance"*, ten times, which tells a
+    reader the sample was too small to see an answer. The sample was not the
+    problem and the floor was never reached or missed.
+    """
+    buckets = [
+        {
+            "low": low,
+            "high": high,
+            "rows": 5_000,
+            "games": 900,
+            "enough": True,
+            "gap_to_model": 0.0,
+        }
+        for low, high in ((0.0, 0.02), (0.02, 0.05), (0.20, float("inf")))
+    ]
+    shape = FS.anti_predictive_return(buckets)
+    assert shape["measurable"] is False
+    assert shape["populated_buckets"] == 3
+    assert shape["buckets_with_no_return_figure"] == 3, shape
+    assert shape["buckets_below_the_bet_floor"] == 0, (
+        "not one of these buckets carries a settled wager, so not one of them "
+        f"is below the settled-wager floor; got {shape}"
+    )
+    assert shape["measured_buckets"] == [] and shape["worst_bucket"] == {}
+
+    text = "\n".join(FS._anti_predictive_paragraph({"anti_predictive_return": shape}))
+    assert "carry no settled wager at all" in text, text
+    assert "not a thin sample but an absent one" in text, text
+    assert f"{S.MINIMUM_BETS:,} settled wagers" not in text, (
+        "no bucket here is below the settled-wager floor, so naming that floor "
+        f"as the reason states a cause that is not the cause; got {text}"
+    )
+
+
+def test_a_deficit_visible_only_before_the_correction_is_not_called_one():
+    """The corrected bound, not the raw one — and a fixture that can tell them apart.
+
+    `RoiInterval.adjusted_low`/`adjusted_high` return the raw bounds unchanged
+    at `looks <= 1`, so every fixture written at one look leaves this rule
+    untested: `float(b["roi_adjusted_high"]) < 0.0` and
+    `float(b["roi_high"]) < 0.0` are the same test on the same number, and
+    swapping one for the other passes.
+
+    The bucket below is the case that separates them. Its RAW interval is
+    `[-10.0%, -1.0%]` — entirely below zero — and its family-corrected interval
+    over 24 looks spans zero. A report that read the raw bound would announce a
+    `demonstrated deficit` on a bucket whose corrected interval includes zero,
+    which is the reserved phrase used for a claim the correction withdrew.
+    """
+    borderline = _one_usable_bucket(-0.055, (-0.10, -0.01), looks=24)
+    shape = borderline["anti_predictive_return"]
+    bucket = shape["measured_buckets"][0]
+    assert bucket["roi_high"] < 0.0, (
+        "the RAW interval must lie entirely below zero, or this fixture cannot "
+        f"tell the two bounds apart; got {bucket}"
+    )
+    assert bucket["roi_adjusted_high"] > 0.0, (
+        "and the CORRECTED interval must span zero, which is the whole of the "
+        f"distinction; got {bucket}"
+    )
+    assert shape["demonstrated_deficits"] == 0, (
+        "counted off the corrected high bound; the raw one would say 1 here "
+        f"and that is the defect; got {shape}"
+    )
+    assert shape["deficit_buckets"] == [], shape
+    assert shape["negative_point_estimates"] == 1, shape
+
+    text = "\n".join(FS._anti_predictive_paragraph(borderline))
+    assert S.NO_DEMONSTRATED_EDGE in text, text
+    assert S.DEMONSTRATED_DEFICIT not in text, (
+        "a bucket whose corrected interval spans zero may not carry the phrase "
+        f"reserved for one that does not; got {text}"
+    )
+    assert "below zero at the point estimate" in text, text
+    assert "lost money" not in text, text
+
+
+def test_a_demonstrated_deficit_in_a_MIDDLE_bucket_reaches_the_compared_page():
+    """Three usable buckets: the comparison prints two cells and there are three.
+
+    `_anti_predictive_paragraph`'s `measurable: True` branch prints
+    `lowest_bucket` and `highest_bucket` and nothing else, and it did not call
+    :func:`_negative_return_lines` at all — on the written justification that
+    *"the sign is on the page there already, in the verdict beside each cell"*.
+    That is true of two cells. With three usable buckets and the loss in the
+    middle one, the record carried `demonstrated_deficits: 1` and the page
+    carried no figure for it, no verdict for it and no sentence about it.
+
+    This is the branch the lab occupies the moment wagers start settling, so it
+    is not a corner: it is the ordinary case with one more bucket in it.
+    """
+    three = _usable_buckets(
+        (0.0, 0.02, 0.02, (0.01, 0.03)),
+        (0.02, 0.05, -0.15, (-0.20, -0.10)),
+        (0.20, float("inf"), 0.01, (0.0, 0.02)),
+    )
+    shape = three["anti_predictive_return"]
+    assert shape["measurable"] is True and shape["usable_buckets"] == 3, shape
+    assert shape["falls_at_the_top"] is True and shape["demonstrated"] is False, (
+        "the ENDS must overlap, or the paragraph takes a different branch and "
+        f"this test is about a different page; got {shape}"
+    )
+    assert shape["demonstrated_deficits"] == 1, shape
+    middle = shape["deficit_buckets"][0]
+    assert (middle["low"], middle["high"]) == (0.02, 0.05), (
+        f"the deficit is the MIDDLE bucket, which is the point; got {middle}"
+    )
+
+    text = "\n".join(FS._anti_predictive_paragraph(three))
+    assert "the fall is not demonstrated" in text, text
+    assert "+2% to +5%" in text, (
+        "the middle bucket's own label has to reach the page, or the sentence "
+        f"below names a bucket the reader cannot find; got {text}"
+    )
+    assert "-15.0% over 400 settled wagers" in text, text
+    assert "family-corrected [-22.9%, -7.1%]" in text, text
+    assert S.DEMONSTRATED_DEFICIT in text, text
+    assert "lost money, and the loss survives the correction" in text, text
+    # And the two end cells are each printed exactly once: this paragraph
+    # prints them in its head, and the sign lines must not reprint them.
+    for label in ("+0% to +2%", "+20% and above"):
+        assert text.count(f"The {label} bucket returned") <= 1, text
+
+
+def test_the_deficit_named_is_the_bucket_that_demonstrated_it_not_the_worst_return():
+    """`worst_bucket` and the deficit count are selected by different numbers.
+
+    `worst_bucket` is the lowest POINT ESTIMATE; `demonstrated_deficits` counts
+    the corrected HIGH BOUND below zero. They are not the same bucket, and a
+    page that printed the first beside a claim justified by the second put a
+    figure reading `no demonstrated edge` directly above the sentence *"the
+    model's own claimed edge selected wagers that lost money"*.
+
+    Here A returns -20% under a corrected interval spanning zero and B returns
+    -5% under one entirely below it.
+    """
+    two = _usable_buckets(
+        (0.0, 0.02, -0.20, (-0.38, -0.02)),
+        (0.02, 0.05, -0.05, (-0.075, -0.025)),
+    )
+    shape = two["anti_predictive_return"]
+    worst = shape["worst_bucket"]
+    assert (worst["low"], worst["high"]) == (0.0, 0.02), worst
+    assert worst["verdict"] == S.NO_DEMONSTRATED_EDGE, (
+        "the worst-returning bucket demonstrates nothing, which is what makes "
+        f"it the wrong bucket to justify a loss with; got {worst}"
+    )
+    assert shape["demonstrated_deficits"] == 1, shape
+    named = shape["deficit_buckets"][0]
+    assert (named["low"], named["high"]) == (0.02, 0.05), named
+    assert named["verdict"] == S.DEMONSTRATED_DEFICIT, named
+
+    text = "\n".join(FS._anti_predictive_paragraph(two))
+    claim = [line for line in text.splitlines() if "lost money" in line]
+    assert len(claim) == 1, text
+    assert "+2% to +5%" in claim[0], (
+        "the sentence must name the bucket whose corrected interval is below "
+        f"zero, not the one with the lowest return; got {claim[0]}"
+    )
+    assert "+0% to +2%" not in claim[0], claim[0]
+    assert "-5.0% over 400 settled wagers" in text, (
+        f"and that bucket's own figure has to be on the page; got {text}"
+    )
+
+
+def test_the_three_unusable_reasons_and_the_usable_count_close_against_populated():
+    """The identity, in the form that is true.
+
+    `anti_predictive_return`'s docstring claimed `buckets_below_the_row_floor`,
+    `buckets_with_no_return_figure` and `buckets_below_the_bet_floor` were
+    *"disjoint and exhaust `populated`"*. They exhaust `populated` minus the
+    usable ones, and the difference is not academic: on the single-usable-bucket
+    fixture this whole change was written for, all three are zero against a
+    populated count of one. A reader who trusted the docstring and wrote
+    `below_row + no_return + below_bet == populated_buckets` got a red test on
+    the patch's own headline case.
+
+    Four shapes, so the check is not satisfied by one arrangement of zeroes.
+    """
+    shapes = {
+        "one usable and nothing else": _one_usable_bucket(-0.09, (-0.14, -0.04))[
+            "anti_predictive_return"
+        ],
+        "three usable": _usable_buckets(
+            (0.0, 0.02, 0.02, (0.01, 0.03)),
+            (0.02, 0.05, -0.15, (-0.20, -0.10)),
+            (0.20, float("inf"), 0.01, (0.0, 0.02)),
+        )["anti_predictive_return"],
+        "nothing settled anywhere": FS.anti_predictive_return(
+            [
+                {
+                    "low": low,
+                    "high": high,
+                    "rows": 5_000,
+                    "games": 900,
+                    "enough": True,
+                    "gap_to_model": 0.0,
+                }
+                for low, high in ((0.0, 0.02), (0.02, 0.05), (0.20, float("inf")))
+            ]
+        ),
+        "below the row floor": FS.anti_predictive_return(
+            [
+                {
+                    "low": 0.0,
+                    "high": 0.02,
+                    "rows": 3,
+                    "games": 2,
+                    "enough": False,
+                    "gap_to_model": 0.0,
+                }
+            ]
+        ),
+    }
+    seen = set()
+    for name, shape in shapes.items():
+        parts = (
+            shape["buckets_below_the_row_floor"],
+            shape["buckets_with_no_return_figure"],
+            shape["buckets_below_the_bet_floor"],
+            shape["usable_buckets"],
+        )
+        assert sum(parts) == shape["populated_buckets"], (
+            f"{name}: the three unusable reasons plus the usable count must "
+            f"close against the populated count; got {shape}"
+        )
+        seen.add(parts)
+    assert len(seen) == len(shapes), (
+        "four fixtures that produce the same four numbers test one arrangement "
+        f"four times; got {seen}"
+    )
+    # And the shorter claim the docstring used to make is FALSE on the first
+    # fixture, which is why it was corrected rather than kept as a shorthand.
+    one = shapes["one usable and nothing else"]
+    assert (
+        one["buckets_below_the_row_floor"]
+        + one["buckets_with_no_return_figure"]
+        + one["buckets_below_the_bet_floor"]
+        != one["populated_buckets"]
+    ), one
+
+
 def test_every_printed_return_interval_carries_its_verdict_in_the_mandated_words():
     """An interval printed with no verdict is a verdict the reader supplies.
 
@@ -1345,6 +1745,183 @@ def test_the_record_and_report_state_the_wagers_excluded_before_the_frame():
     assert section < report.index("3 graded wager(s) are in neither population above")
 
 
+def test_the_unpairable_census_carries_its_third_term_and_the_identity_closes():
+    """`supplied = paired + unpairable + no_pair_key` - all three, or none.
+
+    `build_skill_frame.UnpairableCensus` counts three disjoint buckets off the
+    graded frame, and `_excluded_unpairable` copied two of them. The third,
+    `no_pair_key`, was read back in `_excluded_lines` with a `.get(..., 0)`
+    default - so the report printed a hard zero for a term nobody had copied,
+    and the three figures a reader was invited to add up contained one that was
+    manufactured by a default. The fixture below puts a NON-ZERO count in that
+    term, which is the only shape in which the defect is visible at all: at
+    zero the dropped term and the default agree.
+    """
+    frame = _with_selected(graded_frame("anti"))
+    paired, unpairable, keyless = len(frame), 3, 7
+    census = {
+        "supplied": paired + unpairable + keyless,
+        "paired": paired,
+        "unpairable": unpairable,
+        "unpairable_selected": 0,
+        "no_pair_key": keyless,
+        "share": unpairable / (paired + unpairable + keyless),
+        "reconciles": True,
+        "reason": "their own book hung only one side of the wager",
+    }
+    record = FS.build_record(
+        FS.SkillInputs(graded=frame, pair_scope="book", unpairable=census), competition=CBB
+    )
+    excluded = record["populations"]["excluded_unpairable"]
+    assert excluded["no_pair_key"] == keyless, (
+        "the third term of the census never reached the record, so the report "
+        f"prints a default in its place; got {excluded}"
+    )
+    # `accounted` is this module's own sum over the terms it carries, which is
+    # a different statement from `== census["supplied"]`: that one is true by
+    # construction of this fixture and would survive `accounted = supplied`.
+    # The case that separates them — a census whose terms miss `supplied` — is
+    # `test_a_census_whose_three_terms_do_not_add_up_says_so_in_the_arithmetic`.
+    assert (
+        excluded["accounted"]
+        == excluded["paired"] + excluded["rows"] + excluded["no_pair_key"]
+    ), f"the sum must be of the three terms the record holds; got {excluded}"
+    assert excluded["accounted"] == census["supplied"], (
+        "and on this fixture they do add up to the wagers the frame-builder "
+        f"was handed; got {excluded}"
+    )
+
+    report = FS.render(record)
+    assert f"{keyless:,} carried a selection this lab forms no pair key for" in report
+    assert (
+        f"Census: {paired:,} paired + {unpairable:,} excluded + {keyless:,} "
+        f"with no pair key = {census['supplied']:,}, against "
+        f"{census['supplied']:,} graded wagers supplied." in report
+    ), report
+    assert "do not add up to the wagers supplied" not in report
+
+
+def test_a_census_whose_three_terms_do_not_add_up_says_so_in_the_arithmetic():
+    """The identity is independent of the frame-builder's own flag.
+
+    A census stated only when it works is a census whose failure is invisible:
+    a reader shown three numbers has to be shown what they sum to as well. But
+    that argument is only worth something in the case the flag MISSES — and the
+    fixture used to set `reconciles: False` as well, so the report was told
+    twice and either guard alone could have produced the page. A fixture that
+    satisfies two guards tests neither.
+
+    So `reconciles` is **True** here, which is the only arrangement in which
+    this module's arithmetic is the only thing that can fire. The flag being
+    False is covered on its own by
+    `test_the_report_refuses_to_present_a_census_that_does_not_reconcile`, and
+    the two are held apart on purpose.
+    """
+    frame = _with_selected(graded_frame("anti"))
+    paired, unpairable, keyless = len(frame), 3, 7
+    census = {
+        # Nine wagers the three buckets never account for.
+        "supplied": paired + unpairable + keyless + 9,
+        "paired": paired,
+        "unpairable": unpairable,
+        "no_pair_key": keyless,
+        "share": 0.0,
+        # The frame-builder says its census reconciles. It does not, by this
+        # module's own arithmetic over the terms this module carries, and that
+        # disagreement is exactly what the printed identity exists to surface.
+        "reconciles": True,
+        "reason": "their own book hung only one side of the wager",
+    }
+    record = FS.build_record(
+        FS.SkillInputs(graded=frame, pair_scope="book", unpairable=census), competition=CBB
+    )
+    excluded = record["populations"]["excluded_unpairable"]
+    assert excluded["reconciles"] is True, (
+        "the flag must say the census is fine, or the page has a second reason "
+        f"to print a warning and this test cannot tell which fired; {excluded}"
+    )
+    assert excluded["accounted"] == paired + unpairable + keyless
+    assert excluded["accounted"] != excluded["supplied"]
+    report = FS.render(record)
+    assert "**The frame-builder's census does not reconcile**" not in report, (
+        "the flag's own paragraph must be absent here; its presence would mean "
+        f"this test proves nothing about the identity; got {report}"
+    )
+    assert (
+        f"= {paired + unpairable + keyless:,}, against {census['supplied']:,} "
+        "graded wagers supplied." in report
+    ), report
+    assert "**Those three terms do not add up to the wagers supplied**" in report
+
+
+def test_a_census_missing_its_third_term_is_refused_rather_than_defaulted_to_zero():
+    """A record written before the third term was carried cannot be rendered.
+
+    This is the same defect arriving from the other direction. The records in
+    `data/outputs/` were written in a shape that holds two of the census's
+    three terms, and a `.get(..., 0)` in the renderer would print a hard zero
+    for the third — *"0 carried a selection this lab forms no pair key for"* —
+    over a run where nobody counted. The sum would balance, because one of its
+    addends was invented to make it balance. There is no honest rendering of
+    that record, so the report refuses it and names what is missing.
+    """
+    frame = _with_selected(graded_frame("anti"))
+    census = {
+        "supplied": len(frame) + 3,
+        "paired": len(frame),
+        "unpairable": 3,
+        "no_pair_key": 0,
+        "share": 3 / (len(frame) + 3),
+        "reconciles": True,
+        "reason": "their own book hung only one side of the wager",
+    }
+    record = FS.build_record(
+        FS.SkillInputs(graded=frame, pair_scope="book", unpairable=census), competition=CBB
+    )
+    assert FS.render(record), "the current shape must render"
+
+    stale = json.loads(json.dumps(record, default=str))
+    stale["populations"]["excluded_unpairable"].pop("no_pair_key")
+    with pytest.raises(FS.ForecastSkillError) as raised:
+        FS.render(stale)
+    assert "`no_pair_key`" in str(raised.value), raised.value
+    assert "Re-run the regression" in str(raised.value)
+
+
+def test_keyless_rows_are_never_reported_as_having_found_a_complement():
+    """Excluding nothing is not the same as pairing everything.
+
+    A graded row this lab forms no pair key for never went looking for a
+    complement. With `unpairable` at zero the report said *"All N graded wagers
+    found a complement at their own book"*, which is a claim about every one of
+    them - false of exactly the rows in the third term, and made in the one
+    branch where that term is the only thing separating `paired` from
+    `supplied`.
+    """
+    frame = _with_selected(graded_frame("anti"))
+    paired, keyless = len(frame), 5
+    census = {
+        "supplied": paired + keyless,
+        "paired": paired,
+        "unpairable": 0,
+        "no_pair_key": keyless,
+        "share": 0.0,
+        "reconciles": True,
+        "reason": "their own book hung only one side of the wager",
+    }
+    record = FS.build_record(
+        FS.SkillInputs(graded=frame, pair_scope="book", unpairable=census), competition=CBB
+    )
+    report = FS.render(record)
+    assert "**Nothing was excluded before this frame was built.**" in report
+    assert f"All {paired + keyless:,} graded wagers found a complement" not in report, (
+        "the keyless rows did not find a complement and were not excluded; a "
+        "sentence that folds them into `paired` states a pairing nobody made"
+    )
+    assert f"{keyless:,} carried a selection this lab forms no pair key for" in report
+    assert "it is not wholly a paired one" in report
+
+
 def test_a_frame_with_no_census_says_not_supplied_rather_than_none():
     """Absent is not zero. "Nothing was excluded" is a measurement nobody made.
 
@@ -1540,14 +2117,18 @@ def test_a_record_from_the_previous_shape_is_refused_and_named_as_older(tmp_path
     `anti_predictive_return` left `RECORD_VERSION` at 2, so this guard could not
     fire and a reader could not tell the two shapes apart.
     """
-    assert FS.RECORD_VERSION == 4, (
-        "the record's shape changed twice and the version moved with it both "
-        "times: when `anti_predictive` was split into overconfidence and "
+    assert FS.RECORD_VERSION == 5, (
+        "the record's shape changed three times and the version moved with it "
+        "every time: when `anti_predictive` was split into overconfidence and "
         "anti-predictive return with a corrected interval and a verdict on "
-        "every bucket (2 -> 3), and when `populations` gained "
+        "every bucket (2 -> 3); when `populations` gained "
         "`excluded_unpairable` — the graded wagers the frame-builder dropped "
-        "because their book hung one side only (3 -> 4). The version must move "
-        "with the shape or the staleness guard is decoration"
+        "because their book hung one side only (3 -> 4); and when the "
+        "unpairable census gained its dropped third term and "
+        "`anti_predictive_return` gained the buckets it had measured, the "
+        "reason it could not compare them, the sign of them and the buckets "
+        "whose corrected interval lies below zero (4 -> 5). The version must "
+        "move with the shape or the staleness guard is decoration"
     )
     stale = _version_2_shaped(anti)
     path = tmp_path / "stale.json"
@@ -1581,6 +2162,50 @@ def test_a_record_from_the_previous_shape_is_refused_and_named_as_older(tmp_path
         FS.read_record(path_3)
     assert "version 3 record" in str(raised_3.value)
     assert FS.UNPAIRABLE_NOT_SUPPLIED in FS.render(version_3)
+
+    # And version 4, which is the shape the records in `data/outputs/` were
+    # written in. Its `anti_predictive_return` stops at `measurable` on every
+    # cell that could not compare two buckets, so re-rendering one prints a
+    # sample-size floor as the reason for a silence that had a different cause
+    # — which is the defect the fifth version exists to close. Rendered anyway,
+    # it loses the counted reason outright.
+    version_4 = json.loads(json.dumps(anti, default=str))
+    version_4["record_version"] = 4
+    for cell in list(version_4.get("by_tier") or []) + [version_4.get("pooled") or {}]:
+        shape = cell.get("anti_predictive_return") or {}
+        for key in (
+            "measured_buckets",
+            "buckets_with_no_return_figure",
+            "buckets_below_the_bet_floor",
+            "buckets_below_the_row_floor",
+            "negative_point_estimates",
+            "demonstrated_deficits",
+            "deficit_buckets",
+            "worst_bucket",
+        ):
+            shape.pop(key, None)
+        shape["measurable"] = False
+    version_4["populations"]["excluded_unpairable"].pop("no_pair_key")
+    version_4["populations"]["excluded_unpairable"].pop("accounted")
+    path_4 = tmp_path / "version_4.json"
+    path_4.write_text(json.dumps(version_4, default=str), encoding="utf-8")
+    with pytest.raises(FS.ForecastSkillError) as raised_4:
+        FS.read_record(path_4)
+    assert "version 4 record" in str(raised_4.value)
+    assert "an older" in str(raised_4.value)
+    # Load-bearing in the same way the version 2 check above is: rendered
+    # anyway, the version 4 shape loses the comparison paragraph and prints a
+    # bare floor sentence in its place, with nothing on the page saying which
+    # buckets were measured or why the rest were not.
+    stale = FS.render(version_4)
+    assert headline not in stale
+    assert headline in FS.render(anti)
+    assert "Whatever cleared the floor is measured below" not in stale, (
+        "a version 4 record carries the COUNT of usable buckets and not the "
+        "buckets, so a paragraph keyed on the count would promise a figure "
+        "below it and print none"
+    )
+    assert "carry no settled wager at all" not in stale
 
 
 def test_the_disagreement_coefficient_survives_the_de_vig_choice(anti):

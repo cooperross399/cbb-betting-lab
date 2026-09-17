@@ -899,10 +899,25 @@ def _nothing(what: str) -> list[str]:
     ]
 
 
+# The discovery-stamp fields `stale_discovery` COMPARES — which is the same
+# list as the fields a record must carry to be able to answer the question at
+# all. One tuple, read by the refusal and by the comparison below, so a field
+# can never be required without being compared or compared without being
+# required. `build_record` writes eight keys into `discovery` and only these
+# five are ever read back: the other three (`cells`, `claims`,
+# `looks_when_scored`) describe the replication rather than the run it was
+# built against, so a stamp holding only those cannot identify the run either.
+COMPARED_DISCOVERY_COUNTS = ("bets_graded", "wagers_graded", "games", "days")
+COMPARED_DISCOVERY_FIELDS = ("generated_at",) + COMPARED_DISCOVERY_COUNTS
+
+
 def stale_discovery(record: Mapping, discovery_path) -> list[str]:
     """Every reason this replication is no longer about the discovery run it names.
 
-    Empty means the record still describes the file on disk.
+    Empty means the record still describes the file on disk, or that the file
+    is not there to be read — the ONE remaining case where empty does not mean
+    "checked and agreed", and the reason the caller has to report an absent
+    discovery record out loud rather than passing over it in silence.
 
     `build_record` has always stamped the discovery run into the record —
     `generated_at`, `bets_graded`, `wagers_graded`, `games`, `days` — which is
@@ -919,15 +934,68 @@ def stale_discovery(record: Mapping, discovery_path) -> list[str]:
     discipline, same reason: a record is a claim about files, and a claim about
     files is checked by reading them.
 
+    That sibling is copied on the hard case too. A record whose `discovery`
+    stamp does not carry all five of `COMPARED_DISCOVERY_FIELDS` CANNOT ANSWER
+    this question, and *"could not check"* is reported as a failure rather than
+    as a pass -- `what_we_can_claim.stale_inputs` returns a reason for a record
+    with no `evidence_inputs` and says why in its own docstring: *a check that
+    reads an unanswerable question as an answer of "fine" is the defect, not
+    the fix*. `build_record` stamps all five unconditionally and `read_record`
+    refuses any other `record_version`, so a version-1 record missing one was
+    edited or truncated after it was written, and it is the record that is
+    wrong rather than the pair. This used to `return []` there, which is the
+    same list an agreeing pair returns: the caller could not tell them apart,
+    and it emits no absent-file warning either, because that warning is keyed
+    on the FILE being missing rather than on the STAMP being missing.
+
+    The refusal is keyed on those five fields and NOT on the stamp being empty,
+    which is the narrower thing it first checked. `build_record` writes eight
+    keys into `discovery`; three of them — `cells`, `claims`,
+    `looks_when_scored` — describe the replication rather than the discovery
+    run and are never compared. So `{"cells": 32}` is a stamp that identifies
+    no run at all, and `if not stamped` was false for it: every comparison
+    below was skipped and the empty list of an agreeing pair came back. Losing
+    exactly the five that are read is a reachable truncation, not a contrived
+    one, and the branch's own reason for existing covered it in prose before it
+    covered it in code.
+
+    The one thing still reported as empty is an absent discovery FILE, and the
+    caller has to say so out loud -- see the comment on that branch below.
+
     Each reason names the file, what the record says it was, and what it is now
     — both figures, because "the discovery run is newer" is an assertion and
     "the record names 2026-09-05T16:35:06Z and the file says 2026-09-17T15:56:40Z"
     is a fact the reader can check.
     """
-    stamped = record.get("discovery") or {}
+    unstamped = record.get("discovery")
+    stamped = unstamped if isinstance(unstamped, Mapping) else {}
     path = Path(discovery_path)
-    if not stamped:
-        return []
+    # KEYED ON THE COMPARED FIELDS, NOT ON THE DICT BEING NON-EMPTY. `if not
+    # stamped` was truthy for a stamp that kept ANY key, so one truncated down
+    # to its three uncompared keys — `{"cells": 32, "claims": 1,
+    # "looks_when_scored": 130}` — skipped every comparison below and returned
+    # the empty list an AGREEING pair returns. That is the same "edited or
+    # truncated after it was written" shape this branch exists to refuse,
+    # arriving through the branch itself. Absence is tested by key rather than
+    # by value: `build_record` writes `generated_at` as `str(...)`, so a
+    # discovery run with no timestamp is stamped `""`, and that is a record
+    # that answered honestly rather than one that was cut.
+    missing = [field for field in COMPARED_DISCOVERY_FIELDS if field not in stamped]
+    if missing:
+        # CANNOT ANSWER IS NOT AGREES. Unlike the absent file below, nothing
+        # here can be repaired by putting a file back: the record itself does
+        # not say what it was built against, so no pair of files can be
+        # compared and no later run can recover the answer.
+        return [
+            "This replication record does not write down which discovery run "
+            f"it was built against — its `discovery` stamp is missing "
+            f"{', '.join(missing)} — so nothing can tell whether "
+            f"{path.name} is that run. `build_record` stamps all of "
+            f"{', '.join(COMPARED_DISCOVERY_FIELDS)} on every record it "
+            "writes, so this one was edited or truncated "
+            "after it was written. Re-run the replication rather than "
+            "re-rendering it."
+        ]
     if not path.is_file():
         # CANNOT CHECK IS NOT DISAGREES, and this returns the honest one. A
         # record-only tree — a rebuild from a distributed record, or a test
@@ -949,7 +1017,7 @@ def stale_discovery(record: Mapping, discovery_path) -> list[str]:
             f"{path.name} was generated at {now} and this replication was built "
             f"against the run generated at {then}."
         )
-    for field in ("bets_graded", "wagers_graded", "games", "days"):
+    for field in COMPARED_DISCOVERY_COUNTS:
         was, is_now = stamped.get(field), actual.get(field)
         if was is None or is_now is None or int(was) == int(is_now):
             continue

@@ -4418,6 +4418,22 @@ def test_a_first_push_that_cannot_fetch_main_fails_loudly() -> None:
     assert "sha=" not in output
 
 
+def _response_cache_steps() -> tuple[list[dict], list[dict]]:
+    """The purchase's response-cache steps, split into restores and saves.
+
+    Read by name of the action rather than by step name, because the thing
+    being checked is which half of `actions/cache` the workflow uses.
+    """
+    document = yaml.safe_load((WORKFLOWS_DIR / "historical-purchase.yml").read_text(encoding="utf-8"))
+    steps = [
+        step for job in document["jobs"].values() for step in steps_of(job)
+        if str(step.get("uses", "")).startswith("actions/cache")
+        and "historical_purchase" in str((step.get("with") or {}).get("path", ""))
+    ]
+    saves = [s for s in steps if str(s["uses"]).startswith("actions/cache/save@")]
+    return [s for s in steps if s not in saves], saves
+
+
 def test_the_purchase_restores_the_latest_cache_of_any_wave() -> None:
     """The cache restore must not be scoped to this run's wave.
 
@@ -4432,12 +4448,7 @@ def test_the_purchase_restores_the_latest_cache_of_any_wave() -> None:
     the most recently created cache — the last run of any wave, which already
     accumulated everything before it.
     """
-    document = yaml.safe_load((WORKFLOWS_DIR / "historical-purchase.yml").read_text(encoding="utf-8"))
-    restores = [
-        step for job in document["jobs"].values() for step in steps_of(job)
-        if str(step.get("uses", "")).startswith("actions/cache")
-        and "historical_purchase" in str((step.get("with") or {}).get("path", ""))
-    ]
+    restores, _ = _response_cache_steps()
     assert len(restores) == 1, f"expected one response-cache restore step, found {len(restores)}"
     with_ = restores[0]["with"]
     assert "github.run_id" in with_["key"], "the save key must be unique per run so every run saves"
@@ -4448,6 +4459,91 @@ def test_the_purchase_restores_the_latest_cache_of_any_wave() -> None:
         f"a wave-scoped restore key {restore_keys!r} hits before the any-wave one "
         "and shadows it — the exact defect this test pins"
     )
+
+
+def test_the_bought_responses_reach_the_resume_cache_on_a_red_job() -> None:
+    """THE `if: always()` CLAIM, MADE CHECKABLE.
+
+    `actions/cache`'s save is not a step: it is a post-step the runner
+    registers, and the runner skips it when the job's conclusion is not
+    success. `if: always()` on the combined action does not change that — `if:`
+    governs the main (restore) step only. So for as long as the response cache
+    was one `actions/cache@v4` step, every red run dropped its bought responses
+    out of the `cbb-bought-<window>-` chain: the next dispatch resolved the
+    prefix to the last SUCCESSFUL run's cache and re-bought everything the
+    stopped run had paid for, at ten times the live rate.
+
+    Two runs made that concrete. Defect S's OOM (33917619764, 1,199,926
+    credits) and, now that `buy_historical_prices.py` returns 7 on a quota
+    stop, every quota-stopped purchase — the exit code was added precisely so
+    those runs are red.
+
+    The shape that actually persists is `actions/cache/restore` plus an
+    explicit `actions/cache/save` with `if: always()`, which is a real step and
+    runs on a failed job. Pinned here on four points: the split exists, the
+    save carries `if: always()`, it writes the same path the restore read under
+    the restore's own (per-run, always-missing) key, and it sits before the
+    rebuild that was OOM-killed.
+    """
+    restores, saves = _response_cache_steps()
+    assert len(restores) == 1 and len(saves) == 1, (
+        f"the response cache is {len(restores)} restore step(s) and {len(saves)} "
+        "save step(s). A single combined `actions/cache` step saves at a "
+        "post-step gated on job success, so a red run persists nothing it bought."
+    )
+    restore, save = restores[0], saves[0]
+    assert str(restore["uses"]).startswith("actions/cache/restore@"), (
+        f"the restore step uses {restore['uses']!r}; the combined action's save "
+        "is a post-step the runner skips on a red job"
+    )
+    # NOT asserted here: that `save["uses"]` starts with `actions/cache/save@`.
+    # `_response_cache_steps` selects `saves` with exactly that predicate, so
+    # the assertion could never fail — any mutation that would break it empties
+    # `saves` and is caught by the `len(saves) == 1` above instead.
+    condition = str(save.get("if", "")).strip()
+    assert condition.startswith("always()"), (
+        f"the response-cache save carries `if: {save.get('if')!r}`. Without "
+        "`always()` a quota stop (exit 7) or an OOM-killed rebuild loses every "
+        "response the run paid for."
+    )
+    assert save["with"]["path"] == restore["with"]["path"], (
+        f"the save writes {save['with']['path']!r} and the restore read "
+        f"{restore['with']['path']!r}; a save of the wrong directory is defect L again"
+    )
+    assert save["with"]["key"] == restore["with"]["key"], (
+        "the save key differs from the restore key, so the cache the next "
+        "dispatch's prefix resolves to is not the one this run wrote"
+    )
+    assert "github.run_attempt" in str(save["with"]["key"]), (
+        f"the response-cache key is {save['with']['key']!r}, which is stable "
+        "across attempts of the same run. Once the save runs on red jobs, the "
+        "FIRST failed attempt reserves the key for ever, so `Re-run failed "
+        "jobs` — the recovery the exit-7 banner tells the operator to perform "
+        "— buys responses it can never write to the resume chain."
+    )
+    # Position read from the step list itself, by what each step DOES, so a
+    # renamed step is still found and a moved one is still caught.
+    document = yaml.safe_load((WORKFLOWS_DIR / "historical-purchase.yml").read_text(encoding="utf-8"))
+    steps = [s for job in document["jobs"].values() for s in steps_of(job)]
+    buy = next(i for i, s in enumerate(steps) if "buy_historical_prices.py $FLAGS" in str(s.get("run", "")))
+    saved = next(i for i, s in enumerate(steps) if str(s.get("uses", "")).startswith("actions/cache/save@"))
+    rebuild = next(i for i, s in enumerate(steps) if "--rebuild" in str(s.get("run", "")))
+    assert buy < saved < rebuild, (
+        "step order is "
+        f"{[s.get('name') or s.get('uses') for s in steps[min(buy, saved):max(rebuild, saved) + 1]]}. "
+        "The response-cache save must sit between Buy and the rebuild: defect "
+        "S's rebuild was OOM-killed and took every later step with it."
+    )
+
+    # THE DIRECTORY IS NO LONGER CREATED FOR THE SAVE'S BENEFIT. It was, once:
+    # `actions/cache/save` fails on a missing path and the default dispatch of
+    # this workflow is dry, so an unconditional `mkdir -p` kept a dry run from
+    # going red at its own persistence step. But that mkdir guaranteed there
+    # was always an empty directory to write, which is how an `always()` save
+    # could overwrite the head of the resume chain with nothing. The count gate
+    # replaces it and subsumes its reason: a dry run counts zero and skips the
+    # save, so there is no missing path to fail on.
+    # See `test_an_empty_response_directory_is_never_saved_over_the_resume_chain`.
 
 
 def test_the_purchase_can_merge_an_orphaned_lineage_from_its_artifact() -> None:
@@ -6617,4 +6713,64 @@ def test_a_card_comment_that_could_not_be_assembled_publishes_as_degraded():
     ), (
         "health now runs after the comment, so it can read the outcome "
         "directly and this indirection should be removed rather than kept"
+    )
+
+
+def test_an_empty_response_directory_is_never_saved_over_the_resume_chain() -> None:
+    """A SAVE THAT ALWAYS RUNS MUST NOT ALWAYS HAVE SOMETHING TO WRITE.
+
+    Splitting the response cache into `restore` + an `if: always()` `save` is
+    what stops a red job dropping what it bought. But `always()` also fires
+    when the job died BEFORE the restore — in the feed fetch, the table build,
+    the artifact merge. The response directory is empty then, and because the
+    `cbb-bought-<window>-` prefix resolves to the MOST RECENTLY CREATED match,
+    an empty save becomes the head of the chain and every later dispatch
+    restores nothing.
+
+    The first version of this step made that certain: it created the directory
+    unconditionally (`mkdir -p`) so `actions/cache/save` could not fail on a
+    missing path, which guaranteed there was always an empty thing to write. It
+    turned "a red job no longer loses what it bought" into "a red job can
+    destroy what every previous run bought" — strictly worse than the defect it
+    fixed, because those responses were paid for at ten times the live rate.
+
+    So the save is gated on a counted, non-zero directory, and the count step
+    runs `if: always()` too — a counter skipped on a red job gates nothing.
+    """
+    document = yaml.safe_load((WORKFLOWS_DIR / "historical-purchase.yml").read_text(encoding="utf-8"))
+    steps = [s for job in document["jobs"].values() for s in steps_of(job)]
+    _, saves = _response_cache_steps()
+    assert len(saves) == 1
+    condition = str(saves[0].get("if", ""))
+
+    counters = [s for s in steps if s.get("id") and "$GITHUB_OUTPUT" in str(s.get("run", ""))
+                and "historical_purchase" in str(s.get("run", ""))]
+    assert len(counters) == 1, (
+        f"{len(counters)} step(s) count the response directory into an output. "
+        "The save's gate is only as good as the step that computes it."
+    )
+    counter = counters[0]
+    assert str(counter.get("if", "")).strip() == "always()", (
+        f"the counting step carries `if: {counter.get('if')!r}`. A counter "
+        "skipped on a red job leaves its output empty, and an empty output "
+        "would either open the gate or close it for the wrong reason."
+    )
+    assert f"steps.{counter['id']}.outputs" in condition, (
+        f"the save's condition is `{condition}`, which does not read the "
+        f"counting step `{counter['id']}`. An ungated `always()` save writes "
+        "an empty directory over the head of the resume chain whenever the job "
+        "dies before the restore step runs."
+    )
+    assert "!= '0'" in condition or "> 0" in condition, (
+        f"the save's condition is `{condition}`; it must refuse a zero count, "
+        "not merely mention it."
+    )
+    # The mkdir that existed only to let an empty save succeed must be gone:
+    # with the gate, a path holding responses is never a missing path.
+    assert not [s for s in steps if "mkdir -p" in str(s.get("run", ""))
+                and "historical_purchase" in str(s.get("run", ""))
+                and "$GITHUB_OUTPUT" not in str(s.get("run", ""))], (
+        "a step still creates the response directory unconditionally. That "
+        "exists only to stop an empty save failing — which is exactly the save "
+        "that must not happen."
     )

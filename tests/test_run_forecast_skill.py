@@ -808,3 +808,253 @@ def test_the_realised_return_line_claims_a_fall_only_on_disjoint_corrected_inter
     assert "the fall is not demonstrated" in hedged
     assert "raising the threshold is the wrong response" not in hedged
     assert hedged.count(S.NO_DEMONSTRATED_EDGE) == 2, hedged
+
+
+def _console_bucket(
+    low: float, high: float, roi: float, ci: tuple[float, float], *, looks: int
+) -> dict:
+    """One `_return_bucket`-shaped cell, built by production code.
+
+    Through `stats.RoiInterval` and `forecast_skill._return_bucket`, so the
+    corrected bounds and the verdict are the module's and not this file's. And
+    `looks` is never 1: at one look `adjusted_high` IS `roi_high`, and a
+    console line read off the wrong one of the two would print the same string.
+    """
+    standard_error = (ci[1] - ci[0]) / (2.0 * S.Z95)
+    interval = S.RoiInterval(
+        roi=roi,
+        low=roi - S.Z95 * standard_error,
+        high=roi + S.Z95 * standard_error,
+        bets=400,
+        clusters=90,
+        standard_error=standard_error,
+        looks=looks,
+        cluster_unit="day",
+    )
+    return FS._return_bucket(
+        {
+            "low": low,
+            "high": high,
+            "rows": 400,
+            "games": 90,
+            "enough": True,
+            "gap_to_model": 0.0,
+            "roi": FS._interval_row(interval, name="realised return"),
+        }
+    )
+
+
+def _one_tier(shape: dict) -> dict:
+    return {
+        "by_tier": [],
+        "pooled": {
+            "label": "all",
+            "buckets": [
+                {
+                    "low": 0.20,
+                    "high": float("inf"),
+                    "rows": 400,
+                    "games": 90,
+                    "enough": True,
+                    "model_implied": 0.5,
+                    "market_implied": 0.5,
+                    "realised": 0.5,
+                    "wilson_low": 0.45,
+                    "wilson_high": 0.55,
+                    "gap_to_model": 0.0,
+                }
+            ],
+            "anti_predictive_return": shape,
+        },
+    }
+
+
+def test_a_single_bucket_demonstrated_deficit_is_not_silent_on_the_console():
+    """The operator watching the run sees what the markdown report names.
+
+    `print_buckets` gated its whole realised-return line on `measurable and
+    falls_at_the_top` — a predicate about whether a COMPARISON across buckets
+    came out one way. A run whose single usable bucket returns -9% under a
+    family-corrected interval entirely below zero fails both halves of that
+    gate, so stdout said nothing at all about a demonstrated deficit while the
+    report said it in bold. Same defect as the markdown one, on the surface an
+    operator actually reads during a run.
+    """
+    printer = script_namespace()["print_buckets"]
+    bucket = _console_bucket(0.20, float("inf"), -0.09, (-0.14, -0.04), looks=24)
+    assert bucket["verdict"] == S.DEMONSTRATED_DEFICIT, bucket
+    shown = io.StringIO()
+    with contextlib.redirect_stdout(shown):
+        printer(
+            _one_tier(
+                {
+                    "measurable": False,
+                    "usable_buckets": 1,
+                    "populated_buckets": 1,
+                    "measured_buckets": [bucket],
+                    "negative_point_estimates": 1,
+                    "demonstrated_deficits": 1,
+                    "deficit_buckets": [bucket],
+                    "worst_bucket": bucket,
+                }
+            )
+        )
+    text = shown.getvalue()
+    assert "+20% and above claimed edge" in text, text
+    assert "-9.0% over 400 settled wagers" in text, text
+    assert "95% interval [-14.0%, -4.0%]" in text, text
+    assert "family-corrected [-16.9%, -1.1%] across 24 looks" in text, text
+    assert S.DEMONSTRATED_DEFICIT in text, text
+    assert "lost" in text and "money" in text, text
+
+
+def test_a_console_deficit_is_never_read_off_the_uncorrected_bound():
+    """The corrected high bound, on the console too.
+
+    Raw `[-10.0%, -1.0%]`, corrected over 24 looks spans zero. A line that read
+    `roi_high` would announce a demonstrated deficit on a bucket whose
+    corrected interval includes zero.
+    """
+    printer = script_namespace()["print_buckets"]
+    bucket = _console_bucket(0.20, float("inf"), -0.055, (-0.10, -0.01), looks=24)
+    assert bucket["roi_high"] < 0.0 < bucket["roi_adjusted_high"], bucket
+    shown = io.StringIO()
+    with contextlib.redirect_stdout(shown):
+        printer(
+            _one_tier(
+                {
+                    "measurable": False,
+                    "usable_buckets": 1,
+                    "populated_buckets": 1,
+                    "measured_buckets": [bucket],
+                    "negative_point_estimates": 1,
+                    "demonstrated_deficits": 0,
+                    "deficit_buckets": [],
+                    "worst_bucket": bucket,
+                }
+            )
+        )
+    text = shown.getvalue()
+    assert S.NO_DEMONSTRATED_EDGE in text, text
+    assert S.DEMONSTRATED_DEFICIT not in text, text
+    assert "the point estimate is below zero" in text, text
+
+
+def test_the_console_names_the_bucket_the_corrected_bound_selected():
+    """Not the worst return: the bucket whose corrected interval excludes zero.
+
+    A returns -20% under a corrected interval spanning zero; B returns -5%
+    under one entirely below it. `worst_bucket` is A and the deficit is B.
+    """
+    printer = script_namespace()["print_buckets"]
+    a = _console_bucket(0.0, 0.02, -0.20, (-0.38, -0.02), looks=24)
+    b = _console_bucket(0.02, 0.05, -0.05, (-0.075, -0.025), looks=24)
+    assert a["verdict"] == S.NO_DEMONSTRATED_EDGE, a
+    assert b["verdict"] == S.DEMONSTRATED_DEFICIT, b
+    shown = io.StringIO()
+    with contextlib.redirect_stdout(shown):
+        printer(
+            _one_tier(
+                {
+                    "measurable": True,
+                    "falls_at_the_top": False,
+                    "usable_buckets": 2,
+                    "populated_buckets": 2,
+                    "looks": 24,
+                    "measured_buckets": [a, b],
+                    "negative_point_estimates": 2,
+                    "demonstrated_deficits": 1,
+                    "deficit_buckets": [b],
+                    "worst_bucket": a,
+                    "lowest_bucket": a,
+                    "highest_bucket": b,
+                }
+            )
+        )
+    claim = [line for line in shown.getvalue().splitlines() if "money" in line]
+    assert len(claim) == 1, shown.getvalue()
+    assert "+2% to +5% claimed edge" in claim[0], claim[0]
+    assert "-5.0% over 400 settled wagers" in claim[0], claim[0]
+    assert "+0% to +2%" not in claim[0], claim[0]
+
+
+def _census_record(*, unpairable: int, no_pair_key: int, paired: int = 1_000) -> dict:
+    supplied = paired + unpairable + no_pair_key
+    return {
+        "populations": {
+            "whole": {"rows": paired, "games": 100},
+            "selected": {"available": False},
+            "excluded_unpairable": {
+                "available": True,
+                "rows": unpairable,
+                "supplied": supplied,
+                "paired": paired,
+                "no_pair_key": no_pair_key,
+                "accounted": paired + unpairable + no_pair_key,
+                "share": unpairable / supplied,
+                "reason": "their own book hung only one side of the wager",
+            },
+        }
+    }
+
+
+def test_keyless_rows_are_never_reported_as_paired_on_the_console_either():
+    """Excluding nothing is not pairing everything — on stdout as in the report.
+
+    With `unpairable` at zero this printed *"none — all N graded wagers paired,
+    so the frame is the whole graded set"*. False of exactly the rows in the
+    third term: they never went looking for a complement, because this lab
+    forms no pair key for what they selected. The markdown renderer was fixed
+    and this one was not, which is the same sentence in two places and one of
+    them still saying it.
+    """
+    printer = script_namespace()["print_populations"]
+    shown = io.StringIO()
+    with contextlib.redirect_stdout(shown):
+        printer(_census_record(unpairable=0, no_pair_key=5))
+    text = shown.getvalue()
+    assert "all 1,005 graded wagers paired" not in text, text
+    assert "5 of 1,005 graded wagers carried a selection this lab forms no pair key for" in text, text
+    assert "is not wholly a paired one" in text, text
+    assert "census: 1,000 paired + 0 excluded + 5 with no pair key = 1,005" in text, text
+
+
+def test_the_console_census_prints_its_identity_even_when_it_closes():
+    """A sum printed only on failure is a sum nobody checks.
+
+    And with no keyless rows the old sentence is true and stays.
+    """
+    printer = script_namespace()["print_populations"]
+    shown = io.StringIO()
+    with contextlib.redirect_stdout(shown):
+        printer(_census_record(unpairable=0, no_pair_key=0))
+    text = shown.getvalue()
+    assert "all 1,000 graded wagers paired" in text, text
+    assert "census: 1,000 paired + 0 excluded + 0 with no pair key = 1,000" in text, text
+    assert "DO NOT ADD UP" not in text, text
+
+
+def test_a_console_census_that_does_not_close_says_so():
+    """The identity is printed whether or not it balances."""
+    printer = script_namespace()["print_populations"]
+    record = _census_record(unpairable=3, no_pair_key=7)
+    record["populations"]["excluded_unpairable"]["supplied"] += 9
+    shown = io.StringIO()
+    with contextlib.redirect_stdout(shown):
+        printer(record)
+    text = shown.getvalue()
+    assert "census: 1,000 paired + 3 excluded + 7 with no pair key = 1,010" in text, text
+    assert "against 1,019 graded wagers supplied" in text, text
+    assert "THOSE THREE TERMS DO NOT ADD UP" in text, text
+
+
+def test_a_console_census_missing_its_third_term_is_refused_not_defaulted():
+    """A `.get(..., 0)` here would invent the addend that makes the sum close."""
+    printer = script_namespace()["print_populations"]
+    record = _census_record(unpairable=0, no_pair_key=0)
+    record["populations"]["excluded_unpairable"].pop("no_pair_key")
+    with pytest.raises(SystemExit) as raised:
+        with contextlib.redirect_stdout(io.StringIO()):
+            printer(record)
+    assert "`no_pair_key`" in str(raised.value), raised.value
+    assert "Re-run the regression" in str(raised.value)

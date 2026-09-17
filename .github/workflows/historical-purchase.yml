@@ -22,9 +22,11 @@ name: Historical Purchase
 #
 # RESUMING COSTS NOTHING. Every response is cached raw and keyed by event and
 # market-chunk fingerprint, so an interrupted purchase resumes rather than
-# restarts. The cache is uploaded as an artifact on every run, including a
-# failed one — at ten times the live rate, losing a bought response is the most
-# expensive mistake available here.
+# restarts. The cache is uploaded as an artifact AND saved to the resume cache
+# on every run, including a failed one — at ten times the live rate, losing a
+# bought response is the most expensive mistake available here. Both of those
+# are `if: always()` steps of their own; `actions/cache`'s built-in post-step
+# save is NOT, and a red job skips it.
 
 on:
   workflow_dispatch:
@@ -125,18 +127,31 @@ jobs:
       # rows while the props cache held the complete surviving set. Defect U's
       # fix (`--waves all` in the rebuild) was defeated one layer up.
       #
-      # Now the key is unique per run (always a miss, so the post-step always
-      # SAVES) and the only restore key is the any-wave prefix, which
+      # Now the key is unique per run (always a miss, so the save below always
+      # writes) and the only restore key is the any-wave prefix, which
       # actions/cache resolves to the MOST RECENTLY CREATED match — i.e. the
       # last run of any wave, whose cache already accumulated every run before
       # it. Every run therefore starts from the whole surviving set and adds
       # its own. The early artifact upload after Buy is the 90-day backup for
       # the day this cache is evicted.
+      #
+      # RESTORE AND SAVE ARE SEPARATE STEPS BECAUSE `actions/cache`'s SAVE IS A
+      # POST-STEP GATED ON THE JOB SUCCEEDING. `if: always()` on the combined
+      # action would not have helped: `if:` governs the main step, and the post
+      # step it registers runs only when the job's conclusion is success. So
+      # every red run — the OOM of defect S, and now a quota stop, which exits
+      # 7 from `buy_historical_prices.py` ON PURPOSE — silently dropped its
+      # bought responses out of the `cbb-bought-<window>-` chain, and the next
+      # dispatch re-bought them at ten times the live rate. The supported shape
+      # is `actions/cache/restore` here plus an explicit `actions/cache/save`
+      # with `if: always()` below, which is a real step and therefore runs on a
+      # failed job. The save's key must equal the restore's `key` above.
       - name: Restore the bought responses
-        uses: actions/cache@v4
+        id: bought
+        uses: actions/cache/restore@v4
         with:
           path: data/raw/cbb/historical_purchase/${{ inputs.window }}
-          key: cbb-bought-${{ inputs.window }}-${{ github.run_id }}
+          key: cbb-bought-${{ inputs.window }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             cbb-bought-${{ inputs.window }}-
 
@@ -242,6 +257,57 @@ jobs:
           path: data/raw/cbb/historical_purchase/${{ inputs.window }}/**
           if-no-files-found: warn
           retention-days: 90
+
+      # THE SAME RESPONSES, INTO THE CHAIN THE NEXT DISPATCH RESTORES FROM.
+      # The artifact above is the 90-day backup an operator has to name by run
+      # id (`merge_artifact_runs`) to get back; this is the automatic path, and
+      # before this step existed a red job never reached it. `if: always()`,
+      # and placed here rather than at the end of the job, so a rebuild that is
+      # OOM-killed cannot take the purchase with it. The key is the restore
+      # step's own key, which is unique per run AND PER ATTEMPT, so it is
+      # always a miss and this writes on every run rather than skipping.
+      # The attempt matters: `github.run_id` alone is stable across "Re-run
+      # failed jobs", so once the save began running on red jobs the FIRST,
+      # failed attempt reserved the key for ever and the re-run — the exact
+      # recovery the exit-7 banner in `buy_historical_prices.py` tells the
+      # operator to perform — could no longer write what it bought.
+      # THE SAVE IS GATED ON THERE BEING SOMETHING TO SAVE, AND THAT GATE IS
+      # THE WHOLE POINT. A save that runs `if: always()` and nothing else will
+      # also run when the job died BEFORE the restore — in the feed fetch, in
+      # the table build, in the artifact merge. The response directory is then
+      # empty, and because the prefix `cbb-bought-<window>-` resolves to the
+      # MOST RECENTLY CREATED match, an empty save becomes the head of the
+      # chain and every later dispatch restores nothing. The first version of
+      # this step created the directory unconditionally so the save could not
+      # fail, which guaranteed there was always an empty thing to write. That
+      # turned "a red job no longer loses what it bought" into "a red job can
+      # destroy what every previous run bought", which is worse than the defect
+      # it was fixing: the responses it would overwrite were paid for at ten
+      # times the live rate.
+      #
+      # So: count first, and save only a non-empty directory. A dry run counts
+      # zero and skips the save, which also removes the reason the `mkdir -p`
+      # existed — `actions/cache/save` fails on a missing path, and a path with
+      # responses in it is never missing.
+      - name: Count the responses that would be saved
+        id: to_save
+        if: always()
+        run: |
+          DIR="data/raw/cbb/historical_purchase/${{ inputs.window }}"
+          N=0
+          [ -d "$DIR" ] && N=$(find "$DIR" -name '*.json' | wc -l | tr -d ' ')
+          echo "count=$N" >> "$GITHUB_OUTPUT"
+          echo "$N response(s) in $DIR"
+          if [ "$N" -eq 0 ]; then
+            echo "Nothing to save. The resume chain keeps whatever head it has: an empty save would become the newest match for the \`cbb-bought-${{ inputs.window }}-\` prefix and every later dispatch would restore nothing."
+          fi
+
+      - name: Save the bought responses (whatever this job's conclusion)
+        if: always() && steps.to_save.outputs.count != '0'
+        uses: actions/cache/save@v4
+        with:
+          path: data/raw/cbb/historical_purchase/${{ inputs.window }}
+          key: cbb-bought-${{ inputs.window }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       # THE LIVE BUY DOES NOT WRITE THE STORE. It caches every raw response and
       # counts the rows it staged, but the processed CSV is derived data built

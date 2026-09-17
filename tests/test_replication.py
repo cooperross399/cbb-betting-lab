@@ -7,7 +7,11 @@ test here is named for a specific way that sentence could be broken, and the
 first one reproduces the sibling lab's version of the mistake before anything
 else is asserted.
 
-The failure modes, in the order they are tested:
+The failure modes this file was built around. The list is maintained by hand
+and nothing enforces it, so it is a reading aid rather than a coverage claim --
+it went five modes out of date once already, and a reader who audits coverage
+from it and concludes a guard is unreached is the way a guard gets deleted.
+Read the test names for what is actually covered:
 
 * **A window that merely fails to contradict, reported as confirmation.** The
   NHL lab's `blocked_shots`: same sign, an interval far too wide to exclude
@@ -36,6 +40,11 @@ The failure modes, in the order they are tested:
 * **A settlement artefact**, which replicates by construction.
 * **A report that can only be produced by re-running the measurement**, which is
   a report nobody improves.
+* **A replication that no longer describes the discovery run it names**, and
+  the three quieter halves of that: a discovery record that is present and
+  cannot be parsed, a record that never stamped what it was built against, and
+  an absent discovery record — which is the one case that is not a refusal, and
+  so is the one that must be said out loud rather than passed over in silence.
 
 The end-to-end tests build two seasons on disk out of `test_run_price_backtest`'s
 own fixture builders rather than a second copy of them, score the first with the
@@ -51,6 +60,7 @@ import dataclasses
 import importlib.util
 import io
 import json
+import shutil
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -893,12 +903,20 @@ class TwoSeasons:
         with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(buffer):
             return self.lab.run("--model", spec, "--seasons", str(DISCOVERY_SEASON))
 
-    def replicate(self, *argv: str) -> tuple[int, str]:
+    def replicate(self, *argv: str, output_dir: Path | None = None) -> tuple[int, str]:
+        """The script against this lab's tables, writing to `output_dir`.
+
+        `output_dir` defaults to the shared `self.outputs`, which is what every
+        test that wants the real end-to-end run uses. A test asserting that a
+        refusal wrote NOTHING passes its own directory instead: an absence in
+        the shared tree is an assertion about what every other test in the
+        module did, and this module has two things that write the record there.
+        """
         return run_script(
             "--processed-dir",
             str(self.processed),
             "--output-dir",
-            str(self.outputs),
+            str(self.outputs if output_dir is None else output_dir),
             "--manual-dir",
             str(self.criteria_dir),
             *argv,
@@ -937,17 +955,44 @@ def test_a_missing_discovery_record_is_a_message_and_an_exit_code(tmp_path):
     assert not R.report_path(CBB, outputs).exists()
 
 
-def test_a_held_out_season_inside_the_discovery_window_is_refused(two_seasons):
-    """The script's loudest refusal, with its own exit code and nothing written."""
+def test_a_held_out_season_inside_the_discovery_window_is_refused(
+    two_seasons, tmp_path
+):
+    """The script's loudest refusal, with its own exit code and nothing written.
+
+    In an output tree of its own, holding nothing but the discovery record the
+    refusal has to read before it can tell the seasons overlap. "Nothing
+    written" asserted against the SHARED tree was an assertion about what every
+    other test in this module had done: `test_it_scores_the_held_out_season_
+    and_writes_both_outputs` writes that record, and so does the `replicated`
+    fixture, so the assert held only while this test happened to run first.
+    `pytest tests/test_replication.py::test_a_rebuild_beside_the_discovery_run_
+    it_names_re_renders_and_says_nothing ::test_a_held_out_season_inside_the_
+    discovery_window_is_refused` reds the second of the two on that line. Here
+    the tree is this test's own, so the absence is this refusal's.
+    """
+    alone = tmp_path / "discovery-only"
+    alone.mkdir()
+    shutil.copy(PB.record_path(CBB, two_seasons.outputs), PB.record_path(CBB, alone))
+    record_path, report_path = R.record_path(CBB, alone), R.report_path(CBB, alone)
+    assert not record_path.exists() and not report_path.exists(), (
+        "this test's own tree already holds the outputs whose absence it is "
+        "about to assert"
+    )
+
     code, output = two_seasons.replicate(
-        "--model", two_seasons.model_spec, "--seasons", str(DISCOVERY_SEASON)
+        "--model",
+        two_seasons.model_spec,
+        "--seasons",
+        str(DISCOVERY_SEASON),
+        output_dir=alone,
     )
 
     assert code == 5
     assert "inside the discovery window" in output
     assert "reproduces the selection rather than the effect" in output
-    assert not two_seasons.record_path.exists()
-    assert not two_seasons.report_path.exists()
+    assert not record_path.exists()
+    assert not report_path.exists()
 
 
 def test_it_scores_the_held_out_season_and_writes_both_outputs(two_seasons):
@@ -985,17 +1030,25 @@ def test_it_scores_the_held_out_season_and_writes_both_outputs(two_seasons):
     assert "REPLICATION, PER MARKET AND PER CONFERENCE TIER" in output
 
 
-def test_the_run_reads_the_ledgers_cumulative_count(two_seasons):
-    """Never the day's. The correction in the record is the one on disk."""
-    record = json.loads(two_seasons.record_path.read_text(encoding="utf-8"))
-    ledger = E.load(two_seasons.outputs / LEDGER_FILENAME)
+def test_the_run_reads_the_ledgers_cumulative_count(replicated):
+    """Never the day's. The correction in the record is the one on disk.
+
+    On `replicated` rather than `two_seasons` for the reason the staleness
+    tests below are: the record and report this reads are written by
+    `test_it_scores_the_held_out_season_and_writes_both_outputs`, and reading
+    them off the raw fixture makes this test's result depend on TEST ORDER
+    rather than on the code. Standalone it red on a missing record, for a
+    reason that had nothing to do with the cumulative count.
+    """
+    record = json.loads(replicated.record_path.read_text(encoding="utf-8"))
+    ledger = E.load(replicated.outputs / LEDGER_FILENAME)
 
     assert record["looks"] == ledger.count
     assert record["looks"] >= 30, "the fixture ledger holds thirty prior hypotheses"
     assert record["correction_factor"] == pytest.approx(
         S.bonferroni_factor(record["looks"])
     )
-    assert "cumulative" in two_seasons.report_path.read_text(encoding="utf-8")
+    assert "cumulative" in replicated.report_path.read_text(encoding="utf-8")
 
 
 def test_the_holdout_is_counted_in_the_ledger_before_it_is_taken(tmp_path):
@@ -1124,13 +1177,18 @@ def test_a_two_sided_look_is_admitted_at_the_holdout_stage_only():
 
 
 def test_rebuild_report_only_re_renders_without_the_store_or_the_tables(
-    two_seasons, tmp_path
+    replicated, tmp_path
 ):
-    """Improving a sentence must never cost a re-run, and must not need the data."""
+    """Improving a sentence must never cost a re-run, and must not need the data.
+
+    On `replicated` rather than `two_seasons` for the same reason the staleness
+    tests below are: the record this reads is written by the end-to-end test,
+    and depending on that is depending on test order.
+    """
     elsewhere = tmp_path / "outputs"
     elsewhere.mkdir()
     (elsewhere / R.record_path(CBB, elsewhere).name).write_text(
-        two_seasons.record_path.read_text(encoding="utf-8"), encoding="utf-8"
+        replicated.record_path.read_text(encoding="utf-8"), encoding="utf-8"
     )
 
     code, output = run_script(
@@ -1146,7 +1204,7 @@ def test_rebuild_report_only_re_renders_without_the_store_or_the_tables(
     assert "Nothing was re-scored" in output
     assert R.report_path(CBB, elsewhere).read_text(
         encoding="utf-8"
-    ) == two_seasons.report_path.read_text(encoding="utf-8")
+    ) == replicated.report_path.read_text(encoding="utf-8")
 
 
 def test_rebuild_report_only_without_a_record_says_so_and_exits_non_zero(tmp_path):
@@ -1155,6 +1213,61 @@ def test_rebuild_report_only_without_a_record_says_so_and_exits_non_zero(tmp_pat
     code, output = run_script("--output-dir", str(outputs), "--rebuild-report-only")
     assert code == 2
     assert "there is no record to re-render" in output
+
+
+def _fields_named_missing(reason: str) -> list[str]:
+    """The field names the cannot-answer refusal says the stamp is missing.
+
+    Read out of the sentence rather than searched for inside it. The same
+    reason also names every compared field in its "`build_record` stamps all
+    of ..." clause, so `"days" in reason` is true whether the refusal listed
+    `days` as missing or not — a test built on that substring would pass
+    against a refusal that named nothing.
+    """
+    head, _, tail = reason.partition("stamp is missing ")
+    assert head and tail, f"not a cannot-answer refusal: {reason}"
+    listed, _, _ = tail.partition(" —")
+    return [name.strip() for name in listed.split(",") if name.strip()]
+
+
+def test_the_compared_discovery_fields_are_the_five_the_record_stamps():
+    """The list, written out, and held against what `build_record` writes.
+
+    `COMPARED_DISCOVERY_FIELDS` is read by the refusal, by the comparison and
+    by the tests below, so a test that spells it `R.COMPARED_DISCOVERY_FIELDS`
+    asserts nothing about its contents: dropping `days` from the tuple drops it
+    from the expectation in the same edit and the suite stays green. Measured
+    -- that mutation left all 35 green before this test existed.
+
+    So the five names are LITERAL here, and they are held against the record a
+    real run writes rather than against the constant: `build_record` stamps
+    eight keys and these are the five that identify the discovery run. The
+    other three describe the replication and could not identify anything.
+    """
+    assert R.COMPARED_DISCOVERY_FIELDS == (
+        "generated_at",
+        "bets_graded",
+        "wagers_graded",
+        "games",
+        "days",
+    )
+    stamp = json.loads(
+        (REPO / "data/outputs/holdout/cbb_replication.json").read_text(
+            encoding="utf-8"
+        )
+    )["discovery"]
+    assert set(R.COMPARED_DISCOVERY_FIELDS) <= set(stamp), (
+        "the check requires a field the committed record does not carry, so "
+        "`--rebuild-report-only` refuses the lab's own published replication"
+    )
+    assert set(stamp) - set(R.COMPARED_DISCOVERY_FIELDS) == {
+        "cells",
+        "claims",
+        "looks_when_scored",
+    }, (
+        "`build_record` writes a discovery key this list neither compares nor "
+        "names as uncompared, so nobody knows which of the two it is"
+    )
 
 
 def test_a_replication_that_no_longer_describes_its_discovery_run_is_refused(tmp_path):
@@ -1206,6 +1319,27 @@ def test_a_replication_that_no_longer_describes_its_discovery_run_is_refused(tmp
     reasons = R.stale_discovery(record, discovery)
     assert len(reasons) == 1 and "119,275" in reasons[0] and "110,682" in reasons[0]
 
+    # EVERY COUNT SEPARATELY, because four fields compared in one loop are four
+    # terms of the same formula and a fixture that moves only one of them tests
+    # only one. The four stamped values are deliberately far apart, so a reason
+    # that named the wrong field would carry the wrong figures too. Dropping
+    # `days` from the compared tuple left the whole file green before this
+    # loop existed.
+    for field in ("bets_graded", "wagers_graded", "games", "days"):
+        moved = int(stamped[field]) + 1
+        discovery.write_text(json.dumps({**stamped, field: moved}), encoding="utf-8")
+        reasons = R.stale_discovery(record, discovery)
+        assert len(reasons) == 1, (
+            f"moving {field} alone produced {len(reasons)} reasons: {reasons}"
+        )
+        assert f"{moved:,} {field}" in reasons[0], (
+            f"{field} moved and the refusal does not say so: {reasons[0]}"
+        )
+        assert f"{int(stamped[field]):,}" in reasons[0], (
+            f"the reason names the new {field} and not the stamped one, so a "
+            f"reader cannot check it against the record: {reasons[0]}"
+        )
+
     # An ABSENT discovery record is "cannot check", not "disagrees". Refusing
     # there would make this a permanent red in any record-only tree — a rebuild
     # from a distributed record, a test world that writes no discovery file —
@@ -1213,3 +1347,528 @@ def test_a_replication_that_no_longer_describes_its_discovery_run_is_refused(tmp
     # warns instead; only a pair that is present and disagrees is refused.
     discovery.unlink()
     assert R.stale_discovery(record, discovery) == []
+
+    # A discovery record that is PRESENT and cannot be parsed is neither of
+    # those. Nothing was compared, and something is sitting there claiming to
+    # be the run this replication names, so the failure to read it is the
+    # answer -- reporting `[]` here would be the shape this whole check exists
+    # to close: an unreadable file rendering as a pair that agrees.
+    discovery.write_text('{"generated_at": "2026-09-1', encoding="utf-8")
+    reasons = R.stale_discovery(record, discovery)
+    assert len(reasons) == 1, reasons
+    assert "could not be read" in reasons[0] and discovery.name in reasons[0]
+
+    # A record whose stamp cannot IDENTIFY THE RUN cannot answer at all, and
+    # cannot-answer is reported as a failure rather than as a pass. This is the
+    # discipline of the sibling this function's docstring says it copies:
+    # `what_we_can_claim.stale_inputs` returns a reason for a record with no
+    # `evidence_inputs`, and `test_a_record_that_never_wrote_down_what_it_read_
+    # cannot_pass_the_check` holds it to returncode 1. This branch used to
+    # return `[]` -- the same list an agreeing pair returns, indistinguishable
+    # at the call site -- and the caller's absent-file warning does not cover
+    # it, because that warning is keyed on the FILE being missing.
+    discovery.write_text(json.dumps(stamped), encoding="utf-8")
+    unstamped = R.stale_discovery({"discovery": {}}, discovery)
+    assert len(unstamped) == 1, unstamped
+    assert "does not write down which discovery run" in unstamped[0]
+    assert R.stale_discovery({}, discovery) == unstamped, (
+        "a record with no `discovery` key at all is treated differently from "
+        "one with an empty stamp, and neither of them can answer"
+    )
+    # A `discovery` key that is not a MAPPING refuses too. Both shapes below,
+    # because they are not interchangeable: a string is missing every field
+    # under `in` and would refuse even without the `isinstance` guard, while a
+    # LIST of the field names CONTAINS all five under `in` — so it walks past
+    # the refusal and raises `AttributeError` on the first `.get`. A fixture of
+    # only the string tests the guard not at all. Measured: with the guard
+    # replaced by `unstamped or {}`, the string case stays green.
+    assert R.stale_discovery({"discovery": "2026-09-17"}, discovery) == unstamped
+    assert (
+        R.stale_discovery(
+            {"discovery": list(R.COMPARED_DISCOVERY_FIELDS)}, discovery
+        )
+        == unstamped
+    ), (
+        "a `discovery` key that is a list rather than a mapping raises out of "
+        "the check instead of refusing, so a hand-edited record crashes the "
+        "re-render rather than being told what is wrong with it"
+    )
+
+    # AND THE REFUSAL IS KEYED ON THE COMPARED FIELDS, NOT ON THE STAMP BEING
+    # EMPTY. `build_record` writes EIGHT keys into `discovery` and only five
+    # are ever read back, so a stamp truncated down to the other three is
+    # still a stamp -- truthy, non-empty -- and identifies no run whatever.
+    # `if not stamped` was false for it, every comparison above was skipped,
+    # and `[]` came back: the agreeing pair's answer, for a record that cannot
+    # be asked. Both directions are asserted here, because a refusal keyed too
+    # WIDELY is the permanent red that gets the check deleted.
+    uncompared = {"cells": 32, "claims": 1, "looks_when_scored": 130}
+    truncated = R.stale_discovery({"discovery": dict(uncompared)}, discovery)
+    assert len(truncated) == 1, truncated
+    assert "does not write down which discovery run" in truncated[0]
+    # Read the missing-list out of the sentence rather than looking for each
+    # name anywhere in it: the same sentence also names every compared field in
+    # its "`build_record` stamps all of ..." clause, so a bare substring search
+    # would pass against a refusal that listed nothing at all.
+    assert _fields_named_missing(truncated[0]) == list(R.COMPARED_DISCOVERY_FIELDS), (
+        "the refusal does not name the fields the stamp is missing, so a "
+        f"reader cannot tell what was cut out of it: {truncated[0]}"
+    )
+    # Every compared field alone is enough to lose, and losing any one of them
+    # loses the ability to answer: a fixture that dropped them all together
+    # would pass just as well against a check that required only ONE of them.
+    for field in R.COMPARED_DISCOVERY_FIELDS:
+        one_short = {k: v for k, v in stamped.items() if k != field}
+        reasons = R.stale_discovery({"discovery": one_short}, discovery)
+        assert len(reasons) == 1 and _fields_named_missing(reasons[0]) == [field], (
+            f"a stamp missing only {field} is compared on the four that "
+            f"remain and reported as agreeing: {reasons}"
+        )
+    # And the whole eight-key stamp `build_record` really writes still agrees.
+    assert R.stale_discovery({"discovery": {**stamped, **uncompared}}, discovery) == [], (
+        "the shape `build_record` actually writes is reported stale, so the "
+        "check is red on every record this lab produces"
+    )
+    # An absent `generated_at` is not the same as a truncated one. The stamp is
+    # written as `str(discovery.get("generated_at", ""))`, so a discovery run
+    # with no timestamp is stamped `""` -- a record that answered honestly, and
+    # the four counts still carry the comparison.
+    empty_timestamp = {**stamped, "generated_at": ""}
+    discovery.write_text(json.dumps(empty_timestamp), encoding="utf-8")
+    assert R.stale_discovery({"discovery": dict(empty_timestamp)}, discovery) == [], (
+        "a discovery run that filed no timestamp is refused as a truncated "
+        "record, which makes the check red on a record nothing edited"
+    )
+    discovery.write_text(json.dumps(stamped), encoding="utf-8")
+
+
+# --------------------------------------------------------------------------
+# The staleness check, driven through the script rather than called directly
+# --------------------------------------------------------------------------
+#
+# `stale_discovery` has its own unit test above. These six drive the WIRING:
+# `--rebuild-report-only` reading a record off disk, deciding whether the
+# discovery record beside it is the one that record was built against, and
+# saying so in its own output with its own exit code. Measured by mutation
+# before they were written: `stale = []` in `rebuild_report_only`, and deleting
+# the whole absent-record warning, each left the suite green. The check existed,
+# the function was tested, and nothing executed the path that uses it — which is
+# the same shape as the defect it was written to catch.
+#
+# The four states the pair can be in, one test each, because they are four
+# different answers and only one of them is a pass:
+#
+#   present and agrees        -> re-render, say nothing
+#   present and disagrees     -> refuse
+#   present and unreadable    -> refuse, naming the file it could not read
+#   absent                    -> re-render, and say the pair went UNCHECKED
+#
+# and a fifth and sixth for the record whose stamp cannot IDENTIFY the run —
+# absent entirely, or truncated down to the three keys `build_record` writes
+# and this check never compares. Neither is a question about the pair; both are
+# questions about the record, and no file can answer either, so both refuse.
+# The first three, the fifth and the sixth used to be one branch as far as the
+# caller could see — `[]` — and four of them are the shape "could not check,
+# rendered as a pass". The sixth is its own test because the fifth's condition
+# (`if not stamped`) was FALSE for it: a stamp that keeps any key at all is
+# truthy, so the empty-stamp test could not have caught it.
+#
+# One deviation per test. The agreeing pair is the real one the fixture
+# produced, so a test that passes here cannot be passing because its fixture
+# satisfied some other guard at the same time.
+
+
+@pytest.fixture(scope="module")
+def replicated(two_seasons):
+    """`two_seasons` with its held-out run scored, produced here rather than assumed.
+
+    The tests below read `two_seasons.record_path`, which is written by
+    `test_it_scores_the_held_out_season_and_writes_both_outputs`. Depending on
+    that is depending on TEST ORDER: running one of them alone, deselecting the
+    end-to-end test, or any random-order plugin would red them for a reason
+    that has nothing to do with the code under test. The fixture is
+    module-scoped like `two_seasons`, so when the end-to-end test has already
+    run this costs a `is_file()`, and when it has not it scores the holdout
+    itself.
+
+    That second case means this fixture WRITES `two_seasons.record_path`, so it
+    is a second producer of the shared tree's outputs. Any test asserting those
+    outputs are absent would then be asserting something this fixture can
+    falsify -- which is why `test_a_held_out_season_inside_the_discovery_
+    window_is_refused` asserts the absence in an output tree of its own
+    instead, and why every test that READS the record depends on this fixture
+    rather than on `two_seasons`.
+    """
+    if not two_seasons.record_path.is_file():
+        code, output = two_seasons.replicate(
+            "--model", two_seasons.model_spec, "--seasons", str(HOLDOUT_SEASON)
+        )
+        assert code == 0, output
+    assert two_seasons.record_path.is_file(), (
+        "the held-out run exited 0 and wrote no record, so there is nothing "
+        "for the staleness tests below to rebuild from"
+    )
+    return two_seasons
+
+
+def _a_replication_record_of_its_own(replicated, destination: Path) -> Path:
+    """The replication record alone, in a tree with no store and no report.
+
+    The discovery record is deliberately NOT copied: each test below puts it
+    there itself, or does not, or puts an unreadable one there, because that is
+    the one thing each of them varies. A helper that copied both would make the
+    absent case a second helper, and the two would drift.
+    """
+    destination.mkdir(parents=True, exist_ok=True)
+    shutil.copy(replicated.record_path, R.record_path(CBB, destination))
+    assert not R.report_path(CBB, destination).exists(), (
+        "the report must not pre-exist, or 'the refusal wrote nothing' below "
+        "would be satisfied by a file the refusal never touched"
+    )
+    return destination
+
+
+def _the_discovery_run_it_was_built_against(replicated, destination: Path) -> Path:
+    """The very discovery record the fixture's replication was scored against."""
+    source = PB.record_path(CBB, replicated.outputs)
+    assert source.is_file(), "the fixture's discovery run must have written one"
+    target = PB.record_path(CBB, destination)
+    shutil.copy(source, target)
+    return target
+
+
+def _reasons_printed(output: str) -> list[str]:
+    """The individual reason lines of a refusal, which the caller indents.
+
+    Counting them is the difference between "the refusal named the thing I
+    changed" and "the refusal named the thing I changed and nothing else".
+    """
+    return [line for line in output.splitlines() if line.startswith("::error::  ")]
+
+
+def test_a_rebuild_beside_the_discovery_run_it_names_re_renders_and_says_nothing(
+    replicated, tmp_path
+):
+    """The agreeing direction, asserted first, because it is the one that rots.
+
+    A staleness check that complains about a pair which genuinely agrees is a
+    permanent red, and a permanent red is a check somebody switches off. So the
+    real pair the fixture produced — this replication and the discovery record
+    it was actually scored against — must re-render silently: no refusal, and
+    no "could not check" either, because the record IS beside it and it WAS
+    checked.
+
+    Mutation: make the absent-record branch in `rebuild_report_only` fire
+    unconditionally (`if discovery_path is not None:`). This goes red on the
+    warning, along with the two refusal tests below that also assert the run
+    did not claim the file was missing; the absent-record test stays green,
+    which is the point — the warning must fire there and nowhere else.
+    """
+    beside = _a_replication_record_of_its_own(replicated, tmp_path / "agreeing")
+    _the_discovery_run_it_was_built_against(replicated, beside)
+
+    code, output = run_script(
+        "--output-dir",
+        str(beside),
+        "--processed-dir",
+        str(tmp_path / "does-not-exist"),
+        "--rebuild-report-only",
+    )
+
+    assert code == 0, output
+    assert R.report_path(CBB, beside).is_file()
+    assert "no longer describes the discovery run" not in output, (
+        "a pair that agrees is called stale, so the check is red from the day "
+        "it lands and the next person deletes it"
+    )
+    assert "is not beside this record" not in output, (
+        "the discovery record is beside this one and was read, so reporting "
+        "the pair as unchecked understates what the run actually did"
+    )
+
+
+def test_a_rebuild_whose_discovery_run_was_re_scored_underneath_it_is_refused(
+    replicated, tmp_path
+):
+    """The disagreeing direction, through the script, with both figures named.
+
+    The record stamps `discovery.bets_graded`; a re-scored discovery run leaves
+    the replication quoting a count that no longer exists. Re-rendering then
+    republishes a comparison that is no longer between those two things, so
+    this path refuses rather than warns — the report's whole subject is whether
+    a discovery finding held out, and that sentence means nothing once the
+    discovery half has moved.
+
+    Exactly one field is moved, so exactly one reason is expected: the printed
+    reasons are COUNTED and the untouched `generated_at` reason is asserted
+    absent, because a test that merely looked for its own substring would pass
+    just as well on a refusal that fired for a second, unrelated reason.
+
+    Mutation: `stale = []` in `rebuild_report_only` — 3 failed, 31 passed:
+    this and the two refusal tests below it, which are the three that consume
+    the check. The agreeing and absent cases stay green, because `[]` is the
+    right answer for both of them.
+    """
+    beside = _a_replication_record_of_its_own(replicated, tmp_path / "re-scored")
+    discovery_path = _the_discovery_run_it_was_built_against(replicated, beside)
+
+    stamped = json.loads(
+        R.record_path(CBB, beside).read_text(encoding="utf-8")
+    )["discovery"]
+    was = int(stamped["bets_graded"])
+    discovery = json.loads(discovery_path.read_text(encoding="utf-8"))
+    discovery["bets_graded"] = was + 8_593
+    discovery_path.write_text(json.dumps(discovery), encoding="utf-8")
+
+    code, output = run_script(
+        "--output-dir",
+        str(beside),
+        "--processed-dir",
+        str(tmp_path / "does-not-exist"),
+        "--rebuild-report-only",
+    )
+
+    assert code == 2, output
+    assert "no longer describes the discovery run it names" in output
+    printed = _reasons_printed(output)
+    assert len(printed) == 1, (
+        "one field was moved and the refusal printed "
+        f"{len(printed)} reasons: {printed}. A second reason means either this "
+        "test is passing on a disagreement it did not create, or the check "
+        "reports the same move twice"
+    )
+    assert "was generated at" not in output, (
+        "the discovery record's `generated_at` was not touched and the refusal "
+        "reports it as changed, so the reason that made this test pass is not "
+        "the reason it was written for"
+    )
+    assert f"{was + 8_593:,} bets_graded" in output and f"{was:,}" in output, (
+        "the refusal names one side of the disagreement, so a reader cannot "
+        "check it against what the record claims"
+    )
+    assert "Re-run the replication rather than re-rendering it." in output
+    assert not R.report_path(CBB, beside).is_file(), (
+        "the refusal still wrote the report, which is the republication it "
+        "exists to prevent"
+    )
+
+
+def test_a_rebuild_with_no_discovery_record_beside_it_says_it_could_not_check(
+    replicated, tmp_path
+):
+    """An absent discovery record renders as UNCHECKED, never as agreement.
+
+    This is the half that matters. `stale_discovery` returns `[]` for a file it
+    cannot read, and that is the honest answer — cannot-check is not disagrees,
+    and refusing in a record-only tree would make the check a permanent red. But
+    `[]` is also exactly what an agreeing pair returns, so the two are
+    indistinguishable at the call site, and a run that could not check would
+    otherwise be reported as a run that checked and found nothing wrong.
+
+    So the caller has to say which one happened, and this asserts that it does:
+    the re-render still succeeds, and the output says the pair is unchecked
+    rather than checked and found fine. Without this assertion the absent case
+    reads as a pass, which is the one shape this repository keeps shipping.
+
+    Mutation: delete the warning in `rebuild_report_only` — the run still exits
+    0 and still writes the report, every other test here stays green, and only
+    this one goes red.
+    """
+    beside = _a_replication_record_of_its_own(replicated, tmp_path / "record-only")
+    assert not PB.record_path(CBB, beside).exists(), "nothing to check against"
+
+    code, output = run_script(
+        "--output-dir",
+        str(beside),
+        "--processed-dir",
+        str(tmp_path / "does-not-exist"),
+        "--rebuild-report-only",
+    )
+
+    assert code == 0, output
+    assert R.report_path(CBB, beside).is_file(), (
+        "a record-only tree must still be able to re-render; refusing here is "
+        "the permanent red the empty return exists to avoid"
+    )
+    assert "unchecked rather than checked and found fine" in output, (
+        "the run could not check whether this replication still describes its "
+        "discovery run and said nothing, so the re-render reads as a pass"
+    )
+    assert PB.record_path(CBB, beside).name in output, (
+        "the absence is reported without naming the file that is absent, so a "
+        "reader cannot tell which half of the pair went missing"
+    )
+    assert "no longer describes the discovery run" not in output, (
+        "an absent discovery record is reported as a disagreement, which is a "
+        "claim about a file nobody read"
+    )
+
+
+def test_a_rebuild_beside_a_discovery_record_it_cannot_read_is_refused(
+    replicated, tmp_path
+):
+    """A discovery record that is present and unparseable is the quiet one.
+
+    An ABSENT discovery record is loud by its absence and the caller warns. A
+    DISAGREEING one is refused and names both figures. A file that is sitting
+    right there and cannot be parsed -- truncated by a killed run, half
+    written, or overwritten by a partial download -- looked like neither:
+    `stale_discovery` returns its reason, and nothing executed that branch, so
+    deleting the reason and returning `[]` left the suite green and re-rendered
+    the report at exit 0 with no complaint. An unreadable check rendering as a
+    pass is the exact shape this whole staleness check was written to close,
+    shipped inside the check itself.
+
+    Mutation: replace the `except (OSError, ValueError)` return in
+    `stale_discovery` with `return []` -- 2 failed, 32 passed: this test on the
+    exit code, and the unit test above on the reason. Nothing else moves.
+    """
+    beside = _a_replication_record_of_its_own(replicated, tmp_path / "unreadable")
+    discovery_path = _the_discovery_run_it_was_built_against(replicated, beside)
+    whole = discovery_path.read_text(encoding="utf-8")
+    discovery_path.write_text(whole[: len(whole) // 2], encoding="utf-8")
+
+    code, output = run_script(
+        "--output-dir",
+        str(beside),
+        "--processed-dir",
+        str(tmp_path / "does-not-exist"),
+        "--rebuild-report-only",
+    )
+
+    assert code == 2, output
+    printed = _reasons_printed(output)
+    assert len(printed) == 1, printed
+    assert "could not be read" in printed[0]
+    assert discovery_path.name in printed[0], (
+        "the refusal does not name the file it could not read, so a reader "
+        "cannot tell which half of the pair is damaged"
+    )
+    assert "is not beside this record" not in output, (
+        "an unreadable discovery record is reported as an absent one, which is "
+        "a claim about a file that is sitting right there"
+    )
+    assert not R.report_path(CBB, beside).is_file(), (
+        "the refusal still wrote the report, so an unverifiable comparison was "
+        "republished anyway"
+    )
+
+
+def test_a_rebuild_of_a_record_that_never_stamped_its_discovery_run_is_refused(
+    replicated, tmp_path
+):
+    """CANNOT ANSWER is reported as a failure, never as a pass.
+
+    The other four shapes are questions about a pair of files. This one is a
+    question about the record: with no `discovery` stamp there is nothing to
+    compare the file against, and no later run can recover what the
+    replication was built on. It used to `return []` -- the same list an
+    agreeing pair returns -- and the caller's absent-file warning does not
+    cover it either, because that warning is keyed on the FILE being missing
+    and here the file is present. So a hand-edited or truncated record sat
+    beside a discovery record from some other run and `--rebuild-report-only`
+    republished the comparison at exit 0, silently.
+
+    The sibling this check's docstring says it copies does the same thing and
+    says why: `what_we_can_claim.stale_inputs` returns a reason for a record
+    with no `evidence_inputs`, and
+    `test_a_record_that_never_wrote_down_what_it_read_cannot_pass_the_check`
+    holds it to a non-zero exit.
+
+    Mutation: restore `return []` in the `if missing:` branch -- this test on
+    the exit code, and the unit test above on the reason. Nothing else moves.
+    """
+    beside = _a_replication_record_of_its_own(replicated, tmp_path / "unstamped")
+    _the_discovery_run_it_was_built_against(replicated, beside)
+    record_target = R.record_path(CBB, beside)
+    payload = json.loads(record_target.read_text(encoding="utf-8"))
+    assert payload.pop("discovery"), "the fixture's record must carry the stamp"
+    record_target.write_text(json.dumps(payload), encoding="utf-8")
+
+    code, output = run_script(
+        "--output-dir",
+        str(beside),
+        "--processed-dir",
+        str(tmp_path / "does-not-exist"),
+        "--rebuild-report-only",
+    )
+
+    assert code == 2, output
+    printed = _reasons_printed(output)
+    assert len(printed) == 1, printed
+    assert "does not write down which discovery run" in printed[0]
+    assert "is not beside this record" not in output, (
+        "a record with no stamp is reported as a missing FILE, which is a "
+        "claim about a file that is present"
+    )
+    assert not R.report_path(CBB, beside).is_file(), (
+        "the refusal still wrote the report, so a comparison nothing could "
+        "check was republished anyway"
+    )
+
+
+def test_a_rebuild_whose_stamp_lost_the_fields_the_check_reads_is_refused(
+    replicated, tmp_path
+):
+    """A TRUNCATED stamp is a stamp, and it identifies no run at all.
+
+    The refusal above covers a record whose `discovery` key is gone. This one
+    covers the shape that reaches the same dead end through a stamp that is
+    still there: `build_record` writes EIGHT keys and `stale_discovery` reads
+    back FIVE, so a stamp cut down to `cells`, `claims` and `looks_when_scored`
+    is non-empty, truthy, and answers nothing. `if not stamped:` was false for
+    it, every comparison was skipped, and the empty list an AGREEING pair
+    returns came back -- the same "checked and agreed" rendering the branch's
+    own comment says must refuse, arriving through the branch itself.
+
+    Driven through the script rather than by calling the function, because the
+    defect is only reachable once the truncated stamp has been WRITTEN to disk
+    and read back by `read_record`: an in-memory dict never proves the record
+    survives the round trip, and `read_record` is the gate that would have to
+    reject it if anything did.
+
+    Mutation: `if missing:` -> `if not stamped:` in `stale_discovery` -- this
+    test on the exit code and the unit test above on the reason. The other four
+    script-level staleness tests stay green, because a full stamp, an absent
+    file and an unreadable file are unaffected by which condition is used.
+    """
+    beside = _a_replication_record_of_its_own(replicated, tmp_path / "truncated")
+    _the_discovery_run_it_was_built_against(replicated, beside)
+    record_target = R.record_path(CBB, beside)
+    payload = json.loads(record_target.read_text(encoding="utf-8"))
+    kept = {
+        key: value
+        for key, value in payload["discovery"].items()
+        if key not in R.COMPARED_DISCOVERY_FIELDS
+    }
+    assert kept, (
+        "`build_record` no longer writes any key this check does not compare, "
+        "so a truncation to the uncompared keys is an empty stamp and this "
+        "test now duplicates the one above rather than testing its own shape"
+    )
+    payload["discovery"] = kept
+    record_target.write_text(json.dumps(payload), encoding="utf-8")
+
+    code, output = run_script(
+        "--output-dir",
+        str(beside),
+        "--processed-dir",
+        str(tmp_path / "does-not-exist"),
+        "--rebuild-report-only",
+    )
+
+    assert code == 2, output
+    printed = _reasons_printed(output)
+    assert len(printed) == 1, printed
+    assert "does not write down which discovery run" in printed[0]
+    assert _fields_named_missing(printed[0]) == list(R.COMPARED_DISCOVERY_FIELDS), (
+        f"the refusal does not name what the stamp lost: {printed[0]}"
+    )
+    assert "is not beside this record" not in output, (
+        "a truncated stamp is reported as a missing FILE, which is a claim "
+        "about a file that is present and was copied in by this test"
+    )
+    assert not R.report_path(CBB, beside).is_file(), (
+        "the refusal still wrote the report, so a comparison nothing could "
+        "check was republished anyway"
+    )
