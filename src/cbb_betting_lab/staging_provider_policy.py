@@ -299,6 +299,33 @@ def _examine_receipt(
             f"an evidence record hashing to its cited sha256 ({name} cites "
             f"{cited[:12]}… for `{evidence_path}`, which hashes to {actual[:12]}…)"
         )
+    # THE ENTRY'S OWN CHECKSUM, WHICH NOTHING READ UNTIL 2026-09-17.
+    #
+    # `AllowlistEntry.evidence_checksum` declares an enforcement in its own
+    # docstring — "when the evidence moves, this stops matching and the gate
+    # goes red, which is how the NHL lab caught its own stale approval" — and
+    # was read by no code at all. `load()` parsed it, `save()` wrote it back,
+    # and the module-level `evidence_checksum()` helper that produces the value
+    # had zero callers. A guard that exists only in prose is documentation.
+    #
+    # It is NOT the same check as the hash above. That one asks whether the
+    # receipt's cited sha256 matches the evidence file it names, which catches
+    # evidence that moved under a receipt. This one asks whether the receipt
+    # still cites the evidence THE ENTRY WAS WRITTEN AGAINST — so swapping in a
+    # different receipt, internally consistent with different evidence, is
+    # caught too. The first binds a receipt to a file; this binds the allowlist
+    # to a receipt.
+    #
+    # Empty is "not recorded", never "matches": an entry written before the
+    # field was populated cannot be checked and must not read as checked.
+    if entry.evidence_checksum:
+        if entry.evidence_checksum.strip().casefold() != cited.strip().casefold():
+            return (
+                f"a receipt citing the evidence this allowlist entry was signed "
+                f"against ({name} cites {cited[:12]}…, the entry records "
+                f"{entry.evidence_checksum[:12]}…)"
+            )
+
     signed_by = str(payload.get("signed_by", "") or "").strip()
     if not signed_by:
         return f"a non-empty signed_by ({name} has none)"

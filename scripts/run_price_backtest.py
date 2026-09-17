@@ -912,6 +912,40 @@ def drop_player_markets(store):
     return store[~is_player]
 
 
+def keep_only_markets(store, markets: str):
+    """Cut the store to a named market set, or leave it whole when none is named.
+
+    The scope of every published record should be an argument this script takes.
+    `core_team_only/cbb_price_backtest.json` holds four markets against the
+    default record's ten, and nothing in the repository produced it: no flag, no
+    script, no documented command — it was made by filtering a store by hand,
+    and the only reason it could be regenerated at all is that the filtered
+    store happened to survive in `data/processed`.
+
+    A refusal on an unknown key rather than a silent empty cut: a typo that
+    scores nothing would otherwise produce a record with no cells and a verdict
+    of "not enough evidence" everywhere, which reads exactly like a measurement.
+    """
+    wanted = [m.strip() for m in str(markets or "").split(",") if m.strip()]
+    if not wanted:
+        return store
+    known = {clean_text(m) for m in store["market"].dropna().unique()}
+    unknown = [m for m in wanted if clean_text(m) not in known]
+    if unknown:
+        raise NothingToMeasure(
+            f"--markets names {unknown}, which this store does not carry. It "
+            f"holds {sorted(known)}. A market key that matches nothing would "
+            "score an empty population and report it as a measurement."
+        )
+    keep = {clean_text(m) for m in wanted}
+    cut = store[store["market"].map(clean_text).isin(keep)]
+    print(
+        f"Scope: --markets cut the store to {sorted(keep)}, "
+        f"{len(cut):,} quote(s) of {len(store):,}."
+    )
+    return cut
+
+
 def _grade_one(
     record: Mapping,
     *,
@@ -1402,6 +1436,21 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--processed-dir", default=str(PROCESSED_DIR))
+    parser.add_argument(
+        "--markets",
+        default="",
+        help=(
+            "Comma-separated market keys to score, e.g. "
+            "`moneyline,spread,team_total,total_points` for the core-team cut. "
+            "Blank scores every team market in the store. THE SCOPE OF A "
+            "PUBLISHED RECORD HAS TO BE AN ARGUMENT: "
+            "`core_team_only/cbb_price_backtest.json` carries exactly those "
+            "four markets and no flag of this script could produce it, so it "
+            "was reproducible only by pre-filtering a store by hand — which "
+            "means the record could not be regenerated from the repository, "
+            "and a record nobody can regenerate is one nobody can check."
+        ),
+    )
     parser.add_argument("--output-dir", default=str(OUTPUTS_DIR))
     parser.add_argument(
         "--ledger",
@@ -1443,6 +1492,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         store = load_store(competition, Path(args.processed_dir), window)
         store = drop_player_markets(store)
+        store = keep_only_markets(store, args.markets)
     except NothingToMeasure as exc:
         print(f"::error::{exc}", file=sys.stderr)
         return EXIT_NOTHING_TO_MEASURE

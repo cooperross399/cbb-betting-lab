@@ -312,3 +312,62 @@ def test_the_repository_has_no_receipt_and_its_policy_is_manual_only():
 def test_there_is_still_no_grant():
     for forbidden in ("grant", "allow", "approve", "sign", "write_receipt", "promote_market"):
         assert not hasattr(SPP, forbidden), f"{forbidden} exists on the policy module"
+
+
+def test_an_entry_signed_against_different_evidence_is_refused(tmp_path):
+    """`AllowlistEntry.evidence_checksum` was a guard written only in prose.
+
+    Its own docstring declares an enforcement — "when the evidence moves, this
+    stops matching and the gate goes red, which is how the NHL lab caught its
+    own stale approval" — and nothing read it. `load()` parsed it, `save()`
+    wrote it back, and the module-level `evidence_checksum()` helper that
+    produces the value had zero callers anywhere in src/ or scripts/.
+
+    It is NOT the check that was already there. That one asks whether the
+    receipt's cited sha256 matches the evidence file it names, catching evidence
+    that moved under a receipt. This asks whether the receipt still cites the
+    evidence THE ENTRY was signed against — so a different receipt, internally
+    consistent with different evidence, is caught too. One binds a receipt to a
+    file; the other binds the allowlist to a receipt.
+
+    Three cases, because the middle one is what makes it honest: matching
+    passes, mismatching refuses, and EMPTY is "not recorded" rather than
+    "matches" — an entry written before the field was populated must not read
+    as checked.
+    """
+    root = tmp_path
+    (root / "data" / "outputs").mkdir(parents=True)
+    (manual(root) / SPP.RECEIPTS_DIRNAME).mkdir(parents=True, exist_ok=True)
+    _, digest = evidence(root)
+    path = receipt(root)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+
+    agreeing = SPP.AllowlistEntry(
+        market="spread", receipt_id="r-spread-1", approved_on="2026-12-01",
+        roi_floor=-0.02, evidence_checksum=digest, minimum_bets=200,
+    )
+    assert SPP._examine_receipt(path, payload, agreeing, root) == "", (
+        "an entry recording the very checksum the receipt cites is refused, so "
+        "the check would be red from the day it landed"
+    )
+
+    other = "0" * 64
+    disagreeing = SPP.AllowlistEntry(
+        market="spread", receipt_id="r-spread-1", approved_on="2026-12-01",
+        roi_floor=-0.02, evidence_checksum=other, minimum_bets=200,
+    )
+    reason = SPP._examine_receipt(path, payload, disagreeing, root)
+    assert reason, "a receipt citing evidence the entry was not signed against passed"
+    assert digest[:12] in reason and other[:12] in reason, (
+        f"the refusal names only one side, so a reader cannot check it: {reason}"
+    )
+
+    unrecorded = SPP.AllowlistEntry(
+        market="spread", receipt_id="r-spread-1", approved_on="2026-12-01",
+        roi_floor=-0.02, evidence_checksum="", minimum_bets=200,
+    )
+    assert SPP._examine_receipt(path, payload, unrecorded, root) == "", (
+        "an empty checksum is 'not recorded' and must not refuse; it also must "
+        "not be treated as a match, which is what the caller's own reporting "
+        "is for"
+    )

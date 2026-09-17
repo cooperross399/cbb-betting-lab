@@ -899,6 +899,67 @@ def _nothing(what: str) -> list[str]:
     ]
 
 
+def stale_discovery(record: Mapping, discovery_path) -> list[str]:
+    """Every reason this replication is no longer about the discovery run it names.
+
+    Empty means the record still describes the file on disk.
+
+    `build_record` has always stamped the discovery run into the record —
+    `generated_at`, `bets_graded`, `wagers_graded`, `games`, `days` — which is
+    exactly the key that would prove the two still belong together. Nothing ever
+    read it back: `record["discovery"]["generated_at"]` appeared once in the
+    whole repository, at the line that writes it. So a discovery re-score left
+    the replication quoting a run that no longer existed, and
+    `--rebuild-report-only` would re-render that quotation without re-reading
+    anything. On 2026-09-17 the committed pair were nine days and 8,593 bets
+    apart and nothing said so.
+
+    The sibling check this copies is `what_we_can_claim.stale_inputs`, which
+    re-asks the disk for every piece of evidence its record names. Same
+    discipline, same reason: a record is a claim about files, and a claim about
+    files is checked by reading them.
+
+    Each reason names the file, what the record says it was, and what it is now
+    — both figures, because "the discovery run is newer" is an assertion and
+    "the record names 2026-09-05T16:35:06Z and the file says 2026-09-17T15:56:40Z"
+    is a fact the reader can check.
+    """
+    stamped = record.get("discovery") or {}
+    path = Path(discovery_path)
+    if not stamped:
+        return []
+    if not path.is_file():
+        # CANNOT CHECK IS NOT DISAGREES, and this returns the honest one. A
+        # record-only tree — a rebuild from a distributed record, or a test
+        # world that writes no discovery file — can legitimately have nothing
+        # to compare against, and refusing there would make the check a
+        # permanent red somebody eventually deletes. The caller reports the
+        # absence; only a pair that is present AND disagrees is stale.
+        return []
+    try:
+        actual = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return [f"{path.name} could not be read ({exc}), so the pair is unverifiable."]
+
+    reasons: list[str] = []
+    then = str(stamped.get("generated_at", ""))
+    now = str(actual.get("generated_at", ""))
+    if then and now and then != now:
+        reasons.append(
+            f"{path.name} was generated at {now} and this replication was built "
+            f"against the run generated at {then}."
+        )
+    for field in ("bets_graded", "wagers_graded", "games", "days"):
+        was, is_now = stamped.get(field), actual.get(field)
+        if was is None or is_now is None or int(was) == int(is_now):
+            continue
+        reasons.append(
+            f"{path.name} now carries {int(is_now):,} {field} and this "
+            f"replication was built against {int(was):,}."
+        )
+    return reasons
+
+
 def render(record: Mapping) -> str:
     """The report, as a pure function of the record. No clock, no network."""
     lines: list[str] = []

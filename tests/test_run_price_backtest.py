@@ -3081,3 +3081,37 @@ def test_the_pricer_hands_the_model_the_player_frame_it_declares(tmp_path):
         "the mismatch detector no longer recognises the shape it was written "
         f"for: dropped={dropped} unfilled={unfilled}"
     )
+
+
+def test_the_market_scope_of_a_published_record_is_an_argument(script):
+    """`core_team_only/` could not be produced by any flag of this script.
+
+    It carries four markets against the default record's ten, and nothing in
+    the repository made it: no flag, no script, no documented command. It was
+    filtered by hand, and the only reason it could be regenerated at all on
+    2026-09-17 is that the filtered store happened to have survived in
+    `data/processed`. A published record nobody can regenerate is one nobody
+    can check.
+
+    An unknown key is refused rather than cut to nothing, because an empty
+    population scores as "not enough evidence" in every cell — which reads
+    exactly like a measurement that was taken.
+    """
+    keep_only = script["keep_only_markets"]
+    store = pd.DataFrame(
+        {
+            "market": ["moneyline", "spread", "team_total", "total_points",
+                       "alternate_spread", "spread_h1"],
+            "selection": ["home"] * 6,
+        }
+    )
+
+    assert len(keep_only(store, "")) == 6, "no --markets must leave the store whole"
+
+    cut = keep_only(store, "moneyline,spread,team_total,total_points")
+    assert sorted(cut["market"]) == ["moneyline", "spread", "team_total", "total_points"]
+
+    with pytest.raises(script["NothingToMeasure"]) as raised:
+        keep_only(store, "moneyline,player_points")
+    assert "player_points" in str(raised.value)
+    assert "score an empty population" in str(raised.value)

@@ -2009,20 +2009,29 @@ def _render_season(season: dict, record: dict) -> list[str]:
     # -- the seam ---------------------------------------------------------
     seam = season.get("seam_comparison", [])
     if seam:
-        add(f"### The seam prices a different fit — season {season['season']}")
+        add(
+            f"### What cutting the history to the priced season is worth — "
+            f"season {season['season']}"
+        )
         add("")
         add(
-            "`ratings.matchups_for` hands `fit` every season of history it was "
-            "given, and `run_price_backtest.py` gives it all of them, so the "
-            "design matrix on the opening Monday already holds several seasons "
-            "of each team's games. `ratings.fit`'s own contract is the other "
-            "one — *history filtered to the season being priced*, because *a "
-            "team is not the team it was last March* — and this report fits "
-            "that way. Both are refitted on the days below **from the same "
-            "prior and the same tier table**, so the only thing that differs "
-            "between the two columns is where the history was cut. The seam's "
-            "other departure — a tier table built over the season it is pricing "
-            "— is a separate finding and is counted separately below."
+            "**This section described a live defect until 2026-09-17 and now "
+            "measures a repair.** It said `ratings.matchups_for` HANDED `fit` "
+            "every season of history it was given, so the design matrix on the "
+            "opening Monday already held several seasons of each team's games "
+            "and the prior's weight read 0.0% from November to April. That was "
+            "true when it was written and is not true now: `matchups_for` cuts "
+            "to the priced season, and builds its tier table from seasons "
+            "strictly earlier. The report went on asserting both after the "
+            "module had stopped doing either.\n\n"
+            "What the two columns compare is therefore no longer a seam "
+            "against a contract; it is the SAME contract fitted two ways, and "
+            "the right-hand column is what a card WOULD print if the cut were "
+            "ever removed. `ratings.fit`'s contract is *history filtered to the "
+            "season being priced*, because *a team is not the team it was last "
+            "March*. Both are refitted below **from the same prior and the same "
+            "tier table**, so the only thing that differs is where the history "
+            "was cut."
         )
         add("")
         add(
@@ -2043,9 +2052,10 @@ def _render_season(season: dict, record: dict) -> list[str]:
         add(
             "Offence's median is printed for compactness and every component is "
             "in the record; offence and defence differ, and both are there. "
-            "**The right-hand "
-            "column is the number a card produced through the seam would "
-            "print**, and it does not move all season."
+            "**The right-hand column is what a card would print if the cut "
+            "were removed**, and it does not move all season. It is the cost "
+            "of the repair stated as a number rather than a claim, and it is "
+            "not what the shipped seam does."
         )
         add("")
 
@@ -2054,12 +2064,17 @@ def _render_season(season: dict, record: dict) -> list[str]:
         add(
             f"**Tier table:** {_n(leak.get('changed'))} of {_n(leak.get('teams'))} "
             f"teams ({_pct(leak.get('share'), 1)}) change tier when the priced "
-            "season is allowed into `conferences.tier_table`. This report builds "
-            "it from seasons strictly earlier, which is that module's own rule; "
-            "the seam builds it over every season it holds a schedule for. A "
-            "tier is not a label — it chooses which home-court effect is "
-            "applied — so a team on the wrong side of a cut point is a "
-            "multi-point error on every market on its home games."
+            "season is allowed into `conferences.tier_table`. This report "
+            "builds it from seasons strictly earlier, which is that module's "
+            "own rule, and **so does the seam** — `matchups_for` takes "
+            "`earlier = tuple(s for s in sorted(schedules) if s < season)`. "
+            "This paragraph asserted the opposite until 2026-09-17, ten days "
+            "after the module stopped doing it. The figure above is therefore "
+            "what the leak WOULD cost if the rule were relaxed, not a live "
+            "defect. A tier is not a label — it chooses which home-court "
+            "effect is applied — so a team on the wrong side of a cut point is "
+            "a multi-point error on every market on its home games, which is "
+            "why the cost is still measured and printed."
         )
         add("")
         add(f"- strictly before: {leak.get('strictly_before', '')}")
