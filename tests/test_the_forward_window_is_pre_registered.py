@@ -254,13 +254,31 @@ RETRACTIONS = _REPO / "docs" / "retracted_readings.md"
 #: a collapse is not a coverage number. When a record legitimately gains or loses
 #: a reading this fails, and the commit that caused it says so.
 SCORED_RECORDS = {
-    "cbb_price_backtest.json": 225,
+    # 225 -> 138 on 2026-09-17, and BOTH halves of that are deliberate.
+    #
+    # The neutral-court exclusion (#80) refused 48,873 side wagers the store
+    # cannot orient, 15,207 of them bets. And the backtest declared its scope:
+    # it measures TEAM markets, so the 12 prop markets left `all_opinions` and
+    # `null_baseline` — blocks the record never published a prop cell from and
+    # which were therefore computed over a universe a third larger than the
+    # table they sit beside. The blind baseline went 280 readings -> 160.
+    #
+    # The published table did not move: 32 market-and-tier cells over the same
+    # 10 markets, the same 26,591 games and the same 791 days, before and after.
+    "cbb_price_backtest.json": 138,
     "holdout/cbb_price_backtest.json": 224,
     "core_team_only/cbb_price_backtest.json": 69,
     "holdout/cbb_replication.json": 67,
     "cbb_prop_grading.json": 194,
     "cbb_forecast_skill.json": 43,
-    "cbb_what_we_can_claim.json": 23,
+    # 23 -> 22 on 2026-09-17. Exactly one reading left this record, and it is
+    # named rather than absorbed: `claims | high_major | spread_h1`. Its
+    # neutral-court bets were refused by #80, its sample fell below the bar
+    # that earns a reading at all, and a cell with no reading is not a cell
+    # with a null one. It carried `no demonstrated edge`, so nothing that was
+    # ever a finding was lost — but a published reading did disappear, and this
+    # count is where that has to be said out loud.
+    "cbb_what_we_can_claim.json": 22,
 }
 
 
@@ -286,7 +304,20 @@ SCORED_RECORDS = {
 #: Raising a floor is a commit that says what was bought. Lowering one is the
 #: thing this refuses.
 POPULATION_FLOORS = {
-    "cbb_price_backtest.json": {"bets_graded": 191_053, "games": 26_591, "days": 791},
+    # LOWERED ONCE, ON 2026-09-17, AND THE REASON IS THE WHOLE POINT OF THE
+    # FLOOR. 191,053 -> 175,846 bets is not a store that shrank: it is 15,207
+    # bets on neutral courts that this store cannot orient and now refuses
+    # rather than grades, because `home` in a selection is the team the PRICE
+    # PROVIDER designated home and `home_away` in the results table is ESPN's,
+    # and on a neutral court those disagree about a third of the time.
+    #
+    # `games` and `days` are UNCHANGED at 26,591 and 791, which is the check
+    # that this was an exclusion of rows and not a loss of coverage: the same
+    # nights, the same fixtures, fewer gradeable side wagers within them.
+    #
+    # A future move of this number needs the same kind of sentence. The floor
+    # exists so that a shrink has to be argued for, not absorbed.
+    "cbb_price_backtest.json": {"bets_graded": 175_846, "games": 26_591, "days": 791},
     "holdout/cbb_price_backtest.json": {"bets_graded": 119_275, "games": 16_815},
     "core_team_only/cbb_price_backtest.json": {"bets_graded": 159_354, "games": 26_582},
 }

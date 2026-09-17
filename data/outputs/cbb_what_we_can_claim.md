@@ -2,10 +2,10 @@
 
 Generated from the measurement records on disk, so it cannot drift from them. The hand-written rules — written before the first measurement, which is the whole point of them — live in `docs/what_we_can_and_cannot_claim.md`. **This file is re-rendered from its own run record and is never edited by hand.**
 
-- Generated: 2026-09-16T02:12:23+00:00
+- Generated: 2026-09-17T05:07:33+00:00
 - Sample floor: **200 bets**, declared in advance. Below it this document prints a phrase and not a number.
 
-**The only result that survives is a loss.** 32 market-and-tier cell(s) across 10 market(s) are measured against real prices. None excludes zero on the winning side; 3 exclude(s) it on the **losing** side after correcting for everything this lab has ever tested, which is a **demonstrated deficit**: `team_total` / mid_major (historical price backtest, bets) at -5.8% over 13,478 bets across 384 days; `moneyline` / low_major (historical price backtest, bets) at -7.9% over 7,561 bets across 632 days; `total_points` / low_major (historical price backtest, bets) at -5.2% over 17,903 bets across 7,131 games. A demonstrated deficit is a finding, not a null result, and it is the finding this lab has.
+**The only result that survives is a loss.** 32 market-and-tier cell(s) across 10 market(s) are measured against real prices. None excludes zero on the winning side; 4 exclude(s) it on the **losing** side after correcting for everything this lab has ever tested, which is a **demonstrated deficit**: `moneyline` / mid_major (historical price backtest, bets) at -8.0% over 8,983 bets across 650 days; `team_total` / mid_major (historical price backtest, bets) at -6.5% over 11,690 bets across 345 days; `moneyline` / low_major (historical price backtest, bets) at -9.9% over 6,972 bets across 590 days; `total_points` / low_major (historical price backtest, bets) at -5.2% over 17,903 bets across 7,131 games. A demonstrated deficit is a finding, not a null result, and it is the finding this lab has.
 
 ## The correction this document applies
 
@@ -26,33 +26,33 @@ Prices bought after the games resolved. **A backtest that beats the opening numb
 
 | Market | Tier | Cut | Bets | Clusters | ROI | 95% interval | Family-corrected | Replication | Verdict |
 |:---|:---|:---|---:|---:|---:|:---|:---|:---|:---|
-| `alternate_spread` | high_major | bets | 2,551 | 70 games | -10.4% | -33.0% to +12.2% | -51.4% to +30.6% | no held-out test has been run | no demonstrated edge |
+| `alternate_spread` | high_major | bets | 2,148 | 55 games | -5.5% | -30.7% to +19.8% | -51.2% to +40.3% | no held-out test has been run | no demonstrated edge |
 | `alternate_total_points` | high_major | bets | 2,114 | 64 games | -1.1% | -31.0% to +28.7% | -55.2% to +52.9% | no held-out test has been run | no demonstrated edge |
-| `moneyline` | high_major | bets | 5,510 | 712 days | -3.5% | -9.3% to +2.4% | -14.1% to +7.2% | not enough evidence on the 2025, 2026 (held out) window | no demonstrated edge |
-| `moneyline_h1` | high_major | bets | 54 | 44 days | — | — | — | no held-out test has been run | not enough evidence (54 bets, below the 200 declared in advance) |
-| `spread` | high_major | bets | 13,242 | 712 days | -1.7% | -4.4% to +0.9% | -6.5% to +3.0% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
-| `spread_h1` | high_major | bets | 223 | 72 games | -24.7% | -47.9% to -1.5% | -66.8% to +17.4% | no held-out test has been run | no demonstrated edge |
-| `team_total` | high_major | bets | 7,109 | 2,933 games | -2.8% | -5.5% to -0.2% | -7.7% to +2.0% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
+| `moneyline` | high_major | bets | 4,411 | 606 days | -9.4% | -15.7% to -3.1% | -20.8% to +2.0% | not enough evidence on the 2025, 2026 (held out) window | no demonstrated edge |
+| `moneyline_h1` | high_major | bets | 46 | 38 days | — | — | — | no held-out test has been run | not enough evidence (46 bets, below the 200 declared in advance) |
+| `spread` | high_major | bets | 10,825 | 4,683 games | -2.8% | -5.7% to +0.1% | -8.0% to +2.4% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
+| `spread_h1` | high_major | bets | 198 | 60 games | — | — | — | no held-out test has been run | not enough evidence (198 bets, below the 200 declared in advance) |
+| `team_total` | high_major | bets | 5,607 | 2,310 games | -3.6% | -6.6% to -0.7% | -9.0% to +1.7% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
 | `total_points` | high_major | bets | 12,241 | 688 days | -3.3% | -6.4% to -0.3% | -8.8% to +2.2% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
 | `total_points_h1` | high_major | bets | 184 | 57 games | — | — | — | no held-out test has been run | not enough evidence (184 bets, below the 200 declared in advance) |
-| `alternate_spread` | mid_major | bets | 9,319 | 93 days | -3.4% | -13.9% to +7.1% | -22.5% to +15.7% | no held-out test has been run | no demonstrated edge |
-| `alternate_team_total` | mid_major | bets | 91 | 6 days | — | — | — | no held-out test has been run | not enough evidence (91 bets, below the 200 declared in advance) |
+| `alternate_spread` | mid_major | bets | 8,371 | 88 days | -6.9% | -16.9% to +3.0% | -25.1% to +11.2% | no held-out test has been run | no demonstrated edge |
+| `alternate_team_total` | mid_major | bets | 11 | 3 games | — | — | — | no held-out test has been run | not enough evidence (11 bets, below the 200 declared in advance) |
 | `alternate_total_points` | mid_major | bets | 7,467 | 230 games | -17.0% | -29.7% to -4.2% | -40.1% to +6.2% | no held-out test has been run | no demonstrated edge |
-| `moneyline` | mid_major | bets | 10,194 | 736 days | -4.5% | -7.9% to -1.1% | -10.7% to +1.7% | not enough evidence on the 2025, 2026 (held out) window | no demonstrated edge |
-| `moneyline_h1` | mid_major | bets | 184 | 79 days | — | — | — | no held-out test has been run | not enough evidence (184 bets, below the 200 declared in advance) |
-| `spread` | mid_major | bets | 22,891 | 732 days | -1.5% | -3.6% to +0.6% | -5.3% to +2.3% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
-| `spread_h1` | mid_major | bets | 799 | 238 games | -7.4% | -21.2% to +6.5% | -32.4% to +17.7% | no held-out test has been run | no demonstrated edge |
-| `team_total` | mid_major | bets | 13,478 | 384 days | -5.8% | -7.9% to -3.8% | -9.5% to -2.1% | nothing to replicate on the 2025, 2026 (held out) window | demonstrated deficit |
+| `moneyline` | mid_major | bets | 8,983 | 650 days | -8.0% | -11.6% to -4.5% | -14.5% to -1.6% | not enough evidence on the 2025, 2026 (held out) window | demonstrated deficit |
+| `moneyline_h1` | mid_major | bets | 165 | 165 games | — | — | — | no held-out test has been run | not enough evidence (165 bets, below the 200 declared in advance) |
+| `spread` | mid_major | bets | 20,191 | 649 days | -2.7% | -4.9% to -0.5% | -6.7% to +1.3% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
+| `spread_h1` | mid_major | bets | 678 | 217 games | -10.6% | -24.9% to +3.6% | -36.4% to +15.2% | no held-out test has been run | no demonstrated edge |
+| `team_total` | mid_major | bets | 11,690 | 345 days | -6.5% | -8.6% to -4.4% | -10.3% to -2.6% | nothing to replicate on the 2025, 2026 (held out) window | demonstrated deficit |
 | `total_points` | mid_major | bets | 23,327 | 728 days | -2.3% | -4.5% to -0.2% | -6.3% to +1.6% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
 | `total_points_h1` | mid_major | bets | 594 | 202 games | -2.4% | -17.4% to +12.6% | -29.6% to +24.8% | no held-out test has been run | no demonstrated edge |
-| `alternate_spread` | low_major | bets | 3,510 | 127 games | -2.1% | -19.2% to +15.0% | -33.1% to +28.9% | no held-out test has been run | no demonstrated edge |
+| `alternate_spread` | low_major | bets | 3,303 | 120 games | -6.2% | -23.7% to +11.3% | -37.8% to +25.5% | no held-out test has been run | no demonstrated edge |
 | `alternate_team_total` | low_major | bets | 11 | 1 games | — | — | — | no held-out test has been run | not enough evidence (11 bets, below the 200 declared in advance) |
 | `alternate_total_points` | low_major | bets | 3,785 | 121 games | -10.5% | -30.3% to +9.4% | -46.4% to +25.4% | no held-out test has been run | no demonstrated edge |
-| `moneyline` | low_major | bets | 7,561 | 632 days | -7.9% | -11.8% to -4.1% | -15.0% to -0.9% | not enough evidence on the 2025, 2026 (held out) window | demonstrated deficit |
-| `moneyline_h1` | low_major | bets | 82 | 82 games | — | — | — | no held-out test has been run | not enough evidence (82 bets, below the 200 declared in advance) |
-| `spread` | low_major | bets | 16,090 | 634 days | -0.1% | -2.4% to +2.3% | -4.3% to +4.2% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
-| `spread_h1` | low_major | bets | 405 | 121 games | +5.0% | -14.9% to +25.0% | -31.1% to +41.1% | no held-out test has been run | no demonstrated edge |
-| `team_total` | low_major | bets | 9,802 | 334 days | -4.1% | -6.7% to -1.5% | -8.8% to +0.7% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
+| `moneyline` | low_major | bets | 6,972 | 590 days | -9.9% | -13.8% to -6.0% | -17.0% to -2.9% | not enough evidence on the 2025, 2026 (held out) window | demonstrated deficit |
+| `moneyline_h1` | low_major | bets | 77 | 77 games | — | — | — | no held-out test has been run | not enough evidence (77 bets, below the 200 declared in advance) |
+| `spread` | low_major | bets | 14,826 | 591 days | -0.6% | -3.0% to +1.8% | -5.0% to +3.8% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
+| `spread_h1` | low_major | bets | 374 | 114 games | +5.0% | -15.8% to +25.8% | -32.6% to +42.6% | no held-out test has been run | no demonstrated edge |
+| `team_total` | low_major | bets | 9,012 | 314 days | -3.8% | -6.6% to -1.1% | -8.8% to +1.2% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
 | `total_points` | low_major | bets | 17,903 | 7,131 games | -5.2% | -7.5% to -2.8% | -9.5% to -0.8% | nothing to replicate on the 2025, 2026 (held out) window | demonstrated deficit |
 | `total_points_h1` | low_major | bets | 326 | 106 games | -11.4% | -32.3% to +9.5% | -49.2% to +26.5% | no held-out test has been run | no demonstrated edge |
 | `moneyline` | unplaced | bets | 1 | 1 games | — | — | — | no held-out test has been run | not enough evidence (1 bets, below the 200 declared in advance) |
@@ -65,17 +65,17 @@ Prices bought after the games resolved. **A backtest that beats the opening numb
 
 | Cell | Bets | Clusters | ROI | 95% interval | Family-corrected | Verdict |
 |:---|---:|---:|---:|:---|:---|:---|
-| alternate_spread | 15,380 | 464 games | -4.3% | -12.3% to +3.8% | -18.8% to +10.3% | no demonstrated edge |
-| alternate_team_total | 102 | 10 games | — | — | — | not enough evidence (102 bets, below the 200 declared in advance) |
+| alternate_spread | 13,822 | 419 games | -6.5% | -14.8% to +1.8% | -21.6% to +8.5% | no demonstrated edge |
+| alternate_team_total | 22 | 4 games | — | — | — | not enough evidence (22 bets, below the 200 declared in advance) |
 | alternate_total_points | 13,366 | 415 games | -12.6% | -22.9% to -2.4% | -31.2% to +5.9% | no demonstrated edge |
-| moneyline | 23,266 | 789 days | -5.4% | -7.9% to -2.8% | -10.0% to -0.7% | demonstrated deficit |
-| moneyline_h1 | 320 | 320 games | +7.6% | -10.9% to +26.1% | -26.0% to +41.2% | no demonstrated edge |
-| spread | 52,226 | 789 days | -1.1% | -2.4% to +0.2% | -3.5% to +1.3% | no demonstrated edge |
-| spread_h1 | 1,427 | 431 games | -6.6% | -16.9% to +3.8% | -25.3% to +12.2% | no demonstrated edge |
-| team_total | 30,389 | 412 days | -4.6% | -6.0% to -3.1% | -7.2% to -1.9% | demonstrated deficit |
+| moneyline | 20,367 | 693 days | -9.0% | -11.5% to -6.4% | -13.6% to -4.3% | demonstrated deficit |
+| moneyline_h1 | 288 | 288 games | +4.3% | -15.4% to +24.0% | -31.3% to +39.9% | no demonstrated edge |
+| spread | 45,845 | 20,716 games | -2.0% | -3.4% to -0.7% | -4.6% to +0.5% | no demonstrated edge |
+| spread_h1 | 1,250 | 391 games | -8.8% | -19.5% to +2.0% | -28.3% to +10.8% | no demonstrated edge |
+| team_total | 26,309 | 365 days | -5.0% | -6.5% to -3.4% | -7.7% to -2.2% | demonstrated deficit |
 | total_points | 53,473 | 21,076 games | -3.5% | -4.9% to -2.1% | -6.0% to -1.0% | demonstrated deficit |
 | total_points_h1 | 1,104 | 365 games | -5.5% | -16.7% to +5.6% | -25.7% to +14.7% | no demonstrated edge |
-| every market | 191,053 | 26,591 games | -4.0% | -5.3% to -2.6% | -6.5% to -1.5% | demonstrated deficit |
+| every market | 175,846 | 26,055 games | -4.9% | -6.4% to -3.5% | -7.5% to -2.4% | demonstrated deficit |
 
 ## What is in force, and what the card may actually use
 

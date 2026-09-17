@@ -1486,8 +1486,15 @@ def test_the_limitations_this_gate_ships_with():
     # the runs that produce numbers over these wagers file nothing, so neither
     # can pass the second half of the gate. `dispositions=` is the only way in
     # and both leave it at its default.
+    # `dispositions=`, THE KEYWORD, NOT THE WORD. The comment above has always
+    # said the keyword argument is the only way in; the check read the bare
+    # word, so it fired the day `run_price_backtest.py` gained a comment
+    # EXPLAINING that it files no dispositions and therefore does not grade
+    # props. A guard that goes red when someone documents why a thing is absent
+    # is a guard that charges for writing the reason down, and the next person
+    # pays it by deleting the comment.
     for name in ("run_price_backtest.py", "run_gameday_card.py"):
-        assert "dispositions" not in sources[name], (
+        assert "dispositions=" not in sources[name], (
             f"CLAUSE 5 HAS MOVED: {name} now passes a disposition to "
             "`opinions_for`. Check that it calls "
             "`assert_every_offered_prop_is_accounted` before it scores "

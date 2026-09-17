@@ -243,9 +243,9 @@ done, and names the file and the number it is waiting for.
 
 | Cut | Bets | ROI | Corrected | Verdict |
 |:---|---:|---:|:---|:---|
-| high-major | 43,228 | -3.2% | -8.2% to +1.7% | no demonstrated edge |
-| mid-major | 88,344 | -4.3% | -8.3% to -0.3% | demonstrated deficit |
-| low-major | 59,475 | -4.0% | -8.2% to +0.1% | no demonstrated edge |
+| high-major | 37,774 | -4.1% | -9.6% to +1.4% | no demonstrated edge |
+| mid-major | 81,477 | -5.5% | -9.5% to -1.5% | demonstrated deficit |
+| low-major | 56,589 | -4.7% | -8.9% to -0.4% | demonstrated deficit |
 
 | Measure | Cut | Estimate | Corrected | Verdict |
 |:---|:---|---:|:---|:---|
@@ -271,9 +271,14 @@ done, and names the file and the number it is waiting for.
 
 **Two published verdicts moved when those 33 hypotheses were registered, and
 both moved the same way.** At the 62 hypotheses in force before the
-registration (x1.7095) **low-major** read a demonstrated deficit at -8.0% to
--0.1% [@62]; it crosses zero at the 85th hypothesis and reads **no demonstrated edge** at the ledger's current count — the interval is in the
-generated table above, which is the only place this file states it. **A third verdict moved at
+registration (x1.7095) **low-major** read a demonstrated deficit; it crossed
+zero at the 85th hypothesis and read **no demonstrated edge** from then until
+2026-09-17, when refusing the neutral-court side wagers this store cannot
+orient made it a demonstrated deficit **again**. Its reading today is in the
+generated table above, which is the only place this file states it. The old
+figures are not restated here: they were measured over a population that
+included 15,207 bets now refused, so they no longer reproduce from any record
+and a file that quoted them would be quoting a measurement nothing can check. **A third verdict moved at
 98 -> 101 and went unnarrated**: `mid_major / player_threes` on the
 blind null-baseline side lost its demonstrated-deficit reading in both the
 full-store and the held-out backtest, its corrected high bound crossing zero between those two counts;
@@ -354,11 +359,17 @@ before the alternate ladders and the halves entered the population, this file
 called low-major *the only tier whose interval excludes zero, and it excludes
 zero on the losing side*. On 2026-09-04's partial store the same tier read **no
 demonstrated edge** and the claim was withdrawn. On the full store it was a
-**demonstrated deficit** again. It is now **no demonstrated edge**, on a record
-whose population, model and store did not change at all — the bets, the return
-and the corrected interval are in the generated table above. What changed is the family: 62 hypotheses became
-95. The uncorrected interval still excludes zero at -6.3% to -1.7%, so this is
-the search being counted in full and not the measurement moving. The
+**demonstrated deficit** again. It then read **no demonstrated edge** for a
+while on a record whose population, model and store did not change at all —
+what changed was the family, 62 hypotheses becoming 95 — and on 2026-09-17 it
+became a demonstrated deficit once more, this time because the POPULATION did
+change: 15,207 bets on neutral courts that this store cannot orient are now
+refused rather than graded, and a misgraded row is a sign flip that biases a
+return toward zero. The bets, the return and the CORRECTED interval are in the
+generated table above, which is the only place this file states them; the
+uncorrected interval is -7.0% to -2.3%, stated here because nothing in the
+generated block reaches it. Earlier bounds are not restated, because they were
+measured over a population that no longer exists and nothing can check them. The
 *exclusivity* the original wording claimed has not been true since the full
 store either: mid-major excludes zero and low-major no longer does, which is the
 opposite arrangement to the one retracted. No figure from the superseded run is
