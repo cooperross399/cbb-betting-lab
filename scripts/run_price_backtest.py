@@ -612,8 +612,8 @@ def make_price_day(
             history=history,
             prices=frame,
             competition=competition,
-            # BOTH NAMES, AND THE REASON IS THAT THEY ARE TWO DIFFERENT
-            # VOCABULARIES FOR ONE FRAME.
+            # ONE NAME, AND THE REASON IS THAT THERE ARE TWO VOCABULARIES
+            # FOR ONE FRAME.
             #
             # `player_history` is the walk-forward guard's name for it — the
             # `frames=` key this pricer declares it cut. `player_games` is what
@@ -626,10 +626,14 @@ def make_price_day(
             # while `cbb_ratings_fit.md` published "with roster terms" about the
             # same model.
             #
-            # `call_model` filters, so a model declaring only one of these gets
-            # only that one, and a model declaring neither gets neither.
+            # The first fix passed BOTH names here. That fixed this caller and
+            # left four others — the gameday card among them — still handing
+            # the model nothing, so for a few hours the card priced a different
+            # model than the backtest that licensed it. The join belongs in one
+            # place or it belongs in none: `call_model` now aliases the guard's
+            # name to whatever the model declares. See
+            # `price_backtest.FRAME_ALIASES` and the test that pins it.
             player_history=player_history,
-            player_games=player_history,
         )
         row_reasons: list[str] = []
         wagers, unparseable, reasons = card_pricing.build_wagers(

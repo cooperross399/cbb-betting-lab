@@ -3115,3 +3115,63 @@ def test_the_market_scope_of_a_published_record_is_an_argument(script):
         keep_only(store, "moneyline,player_points")
     assert "player_points" in str(raised.value)
     assert "score an empty population" in str(raised.value)
+
+
+def test_every_caller_that_offers_the_roster_frame_gets_it_to_the_model():
+    """Fixing one call site of five was worse than fixing none.
+
+    The walk-forward guard calls the player table `player_history`; the model
+    declares `player_games`. On 2026-09-17 `run_price_backtest.py` began
+    passing both names and `card_matchups.matchups_for_card`,
+    `run_prop_grading.py`, `run_prop_accounting.py`, `models/slate.py` and
+    `run_replication.py` did not — so the price backtest priced WITH roster
+    evidence and the card that ships on opening night priced WITHOUT it.
+
+    Decision 20 exists to forbid exactly that: *a backtest that quietly prices
+    with something other than the model the card runs measures a policy nobody
+    would have run, and it prints intervals while doing it.* The fix created
+    that condition rather than removing it.
+
+    So the join lives in `FRAME_ALIASES` and is asserted here on the ALIAS
+    mechanism — every caller offering the guard's name reaches a model
+    declaring the model's name, whichever caller it is. A per-caller test would
+    have to be remembered for the sixth caller; this cannot be.
+    """
+    received: dict = {}
+
+    def model(*, day, history, prices, competition, raw_dir=None, player_games=None):
+        received["frame"] = player_games
+        return {}
+
+    frame = pd.DataFrame({"athlete_id": [1, 2], "minutes": [31.0, 22.0]})
+    PB.call_model(
+        model,
+        "a caller that speaks the walk-forward guard's vocabulary",
+        day=DAYS[0],
+        history=team_games().iloc[0:0],
+        prices=price_store(team_games()),
+        competition=CBB,
+        player_history=frame,
+    )
+
+    assert received["frame"] is not None and len(received["frame"]) == 2, (
+        "a caller offering `player_history` reached a model declaring "
+        "`player_games` with nothing, so that caller prices with the roster "
+        "terms off while any caller that spells it the other way prices with "
+        "them on"
+    )
+
+    # A model that declares NEITHER name still gets neither — the alias adds a
+    # parameter the callee asked for, it does not force one on a model that
+    # declared no interest.
+    plain_seen: dict = {}
+
+    def plain(*, day, history, prices, competition):
+        plain_seen["called"] = True
+        return {}
+
+    PB.call_model(
+        plain, "the same caller", day=DAYS[0], history=team_games().iloc[0:0],
+        prices=price_store(team_games()), competition=CBB, player_history=frame,
+    )
+    assert plain_seen["called"]

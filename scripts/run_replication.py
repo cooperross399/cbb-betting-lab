@@ -212,13 +212,28 @@ def score_season(
     quotes = len(season_rows)
     wagers = PB.one_bet_per_wager(season_rows)
 
+    # ROSTER EVIDENCE IS READ WHENEVER THE TABLE IS THERE, matching
+    # `run_price_backtest.py`. This used to compute exactly the flag that was
+    # removed there on 2026-09-17 — whether the BOARD holds a player MARKET —
+    # and the held-out seasons 2025 and 2026 carry only moneyline, spread,
+    # team_total and total_points. So it was always False, the player table was
+    # never read, and the model priced the holdout with its roster terms off
+    # while the discovery half (scored by the fixed backtest) had them on.
+    #
+    # That is the one comparison this whole report exists to make, with its two
+    # halves priced by different models. The flag has to agree with the
+    # backtest's or the replication is not a replication.
+    grades_props = any(
+        (MARKETS_BY_KEY.get(m) is not None and MARKETS_BY_KEY[m].family == PLAYER)
+        for m in {clean_text(m) for m in wagers["market"].dropna().unique()}
+    )
+    roster_table = Path(processed_dir) / competition.output_name(
+        "player_games", ".csv"
+    )
     tables = backtest.load_tables(
         Path(processed_dir),
         competition,
-        players=any(
-            (MARKETS_BY_KEY.get(m) is not None and MARKETS_BY_KEY[m].family == PLAYER)
-            for m in {clean_text(m) for m in wagers["market"].dropna().unique()}
-        ),
+        players=grades_props or roster_table.is_file(),
     )
     team_games = tables["team_games"]
 

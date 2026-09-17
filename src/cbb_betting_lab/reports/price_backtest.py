@@ -658,6 +658,31 @@ def unsupplied_arguments(model: Callable, provided: Iterable[str]) -> list[str]:
     return unsupplied
 
 
+#: One frame, two vocabularies, joined HERE and nowhere else.
+#:
+#: The walk-forward guard knows the player table as `player_history` — that is
+#: the `frames=` key a pricer declares it cut, and there is no other way to say
+#: it. `models.ratings.matchups_for` declares the parameter `player_games`.
+#: `call_model` passes only what the callee declares, so a caller offering the
+#: guard's name alone handed the model NOTHING, and because that parameter
+#: carries a default of `None` nothing was required and nothing refused.
+#:
+#: FIXED AT ONE CALL SITE OF FIVE ON 2026-09-17, WHICH WAS WORSE THAN FIXING
+#: NONE. `run_price_backtest.py` began passing both names; the gameday card
+#: (`card_matchups.matchups_for_card`), `run_prop_grading.py`,
+#: `run_prop_accounting.py`, `models/slate.py` and `run_replication.py` did not.
+#: So for a few hours the price backtest priced WITH roster evidence and the
+#: card that ships on opening night priced WITHOUT it — the two halves of
+#: decision 20, which exists to forbid exactly that: "a backtest that quietly
+#: prices with something other than the model the card runs measures a policy
+#: nobody would have run, and it prints intervals while doing it."
+#:
+#: Aliasing here rather than at each caller is the point. Five call sites had to
+#: agree and did not; one mapping cannot disagree with itself, and a sixth
+#: caller added later inherits the join instead of having to remember it.
+FRAME_ALIASES: dict[str, tuple[str, ...]] = {"player_history": ("player_games",)}
+
+
 def call_model(model: Callable, caller: str, /, **arguments):
     """Call a model with the arguments it declares — or refuse, naming both.
 
@@ -713,7 +738,15 @@ def call_model(model: Callable, caller: str, /, **arguments):
         if parameter.kind
         in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
     }
-    return model(**{k: v for k, v in arguments.items() if k in passable})
+    supplied = {k: v for k, v in arguments.items() if k in passable}
+    # THE ONE PLACE THE TWO VOCABULARIES ARE JOINED. See FRAME_ALIASES.
+    for offered, others in FRAME_ALIASES.items():
+        if offered not in arguments:
+            continue
+        for alias in others:
+            if alias in passable and alias not in supplied:
+                supplied[alias] = arguments[offered]
+    return model(**supplied)
 
 
 def history_before(
