@@ -26,21 +26,16 @@ lives in `CLAUDE.md`. This file is the ledger of the fact.
 
 | record | block | leaf | season | tier | label | market | rule | ROI | demonstrated at | crossed at |
 |:---|:---|:---|:---|:---|:---|:---|:---|---:|---:|---:|
-| `cbb_price_backtest.json` | `null_baseline` | `—` | `—` | mid_major | `—` | player_threes | always the underdog | -7.30% | 95 | 99 |
 | `holdout/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | mid_major | `—` | player_threes | always the underdog | -7.30% | 95 | 99 |
 | `core_team_only/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | low_major | `—` | spread | always home | -3.41% | 30 | 62 |
 | `core_team_only/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | low_major | `—` | spread | always away | -3.35% | 30 | 49 |
 | `core_team_only/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | low_major | `—` | spread | always the favourite | -7.49% | 30 | 76 |
 | `core_team_only/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | low_major | `—` | team_total | always over | -3.75% | 30 | 38 |
 | `holdout/cbb_replication.json` | `markets` | `holdout` | `—` | mid_major | `—` | total_points | — | -6.36% | 62 | 95 |
-| `cbb_price_backtest.json` | `null_baseline` | `—` | `—` | high_major | `—` | spread | always away | -4.02% | 95 | 125 |
 | `holdout/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | high_major | `—` | spread | always away | -5.14% | 95 | 125 |
 | `core_team_only/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | high_major | `—` | spread | always away | -4.02% | 30 | 125 |
-| `cbb_price_backtest.json` | `null_baseline` | `—` | `—` | high_major | `—` | player_assists | always the underdog | -8.00% | 95 | 111 |
 | `holdout/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | high_major | `—` | player_assists | always the underdog | -8.00% | 95 | 111 |
-| `cbb_price_backtest.json` | `null_baseline` | `—` | `—` | high_major | `—` | player_rebounds | always the favourite | -4.56% | 95 | 123 |
 | `holdout/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | high_major | `—` | player_rebounds | always the favourite | -4.56% | 95 | 123 |
-| `cbb_price_backtest.json` | `null_baseline` | `—` | `—` | mid_major | `—` | player_rebounds_assists | always the favourite | -6.68% | 95 | 128 |
 | `holdout/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | mid_major | `—` | player_rebounds_assists | always the favourite | -6.68% | 95 | 128 |
 
 **None of these
@@ -76,3 +71,37 @@ finding: of the 27, exactly one survived its own correction, and that one
 this registration withdrew nine published deficits and added no new claim. That
 is the honest arithmetic of a search, and the reason the count is written down
 before the search rather than after it.
+
+## Five rows left this table on 2026-09-17, and neither cause was a correction
+
+A row here is a claim that a specific reading was withdrawn **by the family
+growing**. Five stopped being true at once, for two different reasons, and both
+are the opposite of the usual one: the readings did not dissolve under a wider
+correction, they stopped being retracted because the measurement under them
+changed.
+
+**Four were player-market baseline readings** — `high_major / player_assists`,
+`high_major / player_rebounds`, `mid_major / player_rebounds_assists` and
+`mid_major / player_threes`, all on the blind null-baseline side. They left
+`cbb_price_backtest.json` entirely when the backtest declared its scope: it
+measures TEAM markets, and a prop is `run_prop_grading.py`'s, under the
+per-wager accounting that script files and the backtest never has. The blind
+baseline went from 280 readings to 160. Those four readings are not retracted
+now; they are **not in this record at all**, which is a different statement and
+has to be made differently.
+
+They are still retracted where they still exist. The rows for
+`holdout/cbb_price_backtest.json` stand untouched, because that record has not
+been re-scored.
+
+**The fifth, `high_major / spread / always away`, is a team reading that came
+back.** Refusing the neutral-court side wagers it could not orient removed
+noise from that cell rather than signal — a misgraded row is a sign flip, which
+biases a return toward zero and inflates its variance — so the reading sharpened
+and stopped being dissolved by the correction at 130.
+
+That is worth stating plainly because it cuts against the direction this file
+usually records: **the restatement withdrew nothing and returned one reading.**
+It also added two demonstrated deficits that were not there before,
+`moneyline / mid_major` and the `low_major` tier. A cleaner measurement found
+more losing, not less.

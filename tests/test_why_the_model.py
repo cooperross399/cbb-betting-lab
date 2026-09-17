@@ -1270,11 +1270,20 @@ def test_the_retraction_reads_its_current_figure_from_the_record(outputs):
     record = build(outputs)
     tier_key = WHY.SUPERSEDED_CLAIM["tier"]
     current = next(row for row in record["tiers"] if row["tier"] == tier_key)
-    assert WHY.verdict_of(current) != WHY.SUPERSEDED_CLAIM["verdict_claimed"], (
-        "the committed record now reads the verdict the retracted claim made; "
-        "re-derive this test's branch from the record rather than re-pinning "
-        "the sentence"
-    )
+
+    # DERIVED, NOT PINNED. This half used to assert the committed record reads
+    # "no longer holds", and on 2026-09-17 it stopped being true: refusing the
+    # neutral-court side wagers the store cannot orient removed NOISE from
+    # low-major rather than signal — a misgraded row is a sign flip, which
+    # biases a return toward zero and inflates its variance — and the tier
+    # became a demonstrated deficit again. The retraction was itself retracted.
+    #
+    # Pinning either sentence makes this test a record of the day it was
+    # written. The generator chooses its branch from `verdict_of(current)` and
+    # nothing else, so this reads the same function and checks the branch it
+    # implies. Both branches are still exercised below, against rows this test
+    # builds, so neither can be hard-coded into the generator.
+    holds = WHY.verdict_of(current) == WHY.SUPERSEDED_CLAIM["verdict_claimed"]
     rendered = WHY.render(record)
     heading = f"### A claim this document has retracted, recorded {WHY.SUPERSEDED_CLAIM['recorded_on']}"
     assert heading in rendered
@@ -1284,20 +1293,23 @@ def test_the_retraction_reads_its_current_figure_from_the_record(outputs):
         "the retraction does not print what the record says the tier reads "
         "today, so it is a hand-typed figure again"
     )
-    assert "**It no longer holds.**" in section
-    assert "**It still holds.**" not in section
-
-    # And it says WHICH of the two things moved, read off the row. Here the
-    # uncorrected interval still excludes zero, so the correction is what
-    # widened it across and the paragraph has to say so rather than blame a
-    # population that did not change.
-    raw = WHY.printed_interval(current, bounds=("low", "high"))
-    assert not (raw.low <= 0.0 <= raw.high), (
-        "low-major's uncorrected interval now includes zero, so the retraction "
-        "takes the other branch; re-derive this assertion from the record"
+    said, not_said = (
+        ("**It still holds.**", "**It no longer holds.**")
+        if holds
+        else ("**It no longer holds.**", "**It still holds.**")
     )
-    assert "**The measurement did not move; the search did.**" in section
-    assert f"x{S.bonferroni_factor(current['looks']):.4f}" in section
+    assert said in section, f"the record reads holds={holds} and the section does not say so"
+    assert not_said not in section
+
+    # When it does NOT hold, it must also say WHICH of the two things moved,
+    # read off the row: an uncorrected interval that still excludes zero means
+    # the correction widened it across, and the paragraph has to say so rather
+    # than blame a population that did not change.
+    if not holds:
+        raw = WHY.printed_interval(current, bounds=("low", "high"))
+        if not (raw.low <= 0.0 <= raw.high):
+            assert "**The measurement did not move; the search did.**" in section
+            assert f"x{S.bonferroni_factor(current['looks']):.4f}" in section
 
     # A DIFFERENT row that does NOT hold. Asserting only that the
     # committed tier's figure appears is not enough: that string is also what a

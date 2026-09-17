@@ -842,6 +842,59 @@ def grade(
     )
 
 
+def drop_player_markets(store):
+    """This script measures TEAM markets. Props are `run_prop_grading.py`'s.
+
+    THIS IS A SCOPE DECLARATION, NOT A FILTER OF CONVENIENCE, and it is written
+    here because until now the scope was accidental.
+
+    Grading a prop requires more than a box score. `player_census` design
+    section 10 demands that every prop wager the store offers land in exactly
+    one of seven dispositions, reconciling against the store's own count with a
+    residual of EXACTLY 0 — "File one `RunDisposition` per wager as you price
+    ... or grade nothing." `scripts/run_prop_accounting.py`,
+    `scripts/run_prop_grading.py`, `forward_evidence` and the gameday card all
+    file them. **This script never has** — `git log -S RunDisposition` over it
+    returns nothing across the repository's whole history.
+
+    So once the bought store carried a prop, a full-population run graded every
+    wager, spent its entire runtime, and died at the write step with
+    `WagerCountMismatch`. Measured 2026-09-16: 50 minutes of scoring, no record
+    written, twice.
+
+    The published record was never about props anyway. Every cell it carries —
+    32 of them across 10 markets — is a team market, because a prop cell is
+    published by the prop-grading report under the accounting that makes it
+    honest. What the old record DID do was count prop opinions inside blocks it
+    never published a prop cell from: `all_opinions` and `null_baseline` were
+    computed over a universe a third larger than the one the table describes.
+
+    Declaring the scope here rather than pre-filtering a store means the
+    boundary is in the code, is testable, and cannot be forgotten by whoever
+    runs this next.
+    """
+    if store is None or store.empty or "market" not in store.columns:
+        return store
+    keys = store["market"].map(clean_text)
+    is_player = keys.map(
+        lambda key: (
+            MARKETS_BY_KEY.get(key) is not None
+            and MARKETS_BY_KEY[key].family == PLAYER
+        )
+    )
+    dropped = int(is_player.sum())
+    if dropped:
+        markets = sorted({k for k, flag in zip(keys, is_player) if flag})
+        print(
+            f"Scope: {dropped:,} player-prop quote(s) across {len(markets)} "
+            f"market(s) are not measured here. They are "
+            f"`run_prop_grading.py`'s, which files the per-wager dispositions "
+            f"`player_census` requires and this script has never filed. "
+            f"Excluded from the universe, not graded and lost: {markets}"
+        )
+    return store[~is_player]
+
+
 def _grade_one(
     record: Mapping,
     *,
@@ -1368,6 +1421,7 @@ def main(argv: list[str] | None = None) -> int:
     # ---- the store, and one bet per wager at the best price ----------------
     try:
         store = load_store(competition, Path(args.processed_dir), window)
+        store = drop_player_markets(store)
     except NothingToMeasure as exc:
         print(f"::error::{exc}", file=sys.stderr)
         return EXIT_NOTHING_TO_MEASURE
@@ -1411,6 +1465,33 @@ def main(argv: list[str] | None = None) -> int:
         (MARKETS_BY_KEY.get(m) is not None and MARKETS_BY_KEY[m].family == PLAYER)
         for m in markets_present
     )
+    # TAKE THE CENSUS BEFORE SCORING ANYTHING, WHICH IS WHAT ITS DOCSTRING SAYS
+    # A GRADING RUN DOES: "This is what a grading run calls before any scoring
+    # code runs. It raises on anything unreconciled."
+    #
+    # This script never called it, and `price_backtest.settled_opinions` gates
+    # on it having reconciled IN THIS PROCESS — so the moment the bought store
+    # carried a player market, a full-population run graded every wager, spent
+    # its whole runtime, and then died at the write step with
+    # `WagerCountMismatch`. Measured 2026-09-16: a full-store run reached that
+    # line after 50 minutes and wrote no record at all.
+    #
+    # The census was never the problem. Run standalone against the same store it
+    # reconciles — 46 compared checks, 23 declared, 30 pinned. The gate was
+    # sound, the call site was missing, and the failure only appears on the one
+    # invocation nobody runs weekly: the deliberate full-population pass.
+    if needs_players:
+        processed = Path(args.processed_dir)
+        try:
+            player_census.assert_reconciles(
+                store=H.store_path(competition, processed, window),
+                roster=processed / competition.output_name("player_games", ".csv"),
+                expected=processed / competition.output_name("player_census", ".json"),
+            )
+        except Exception as exc:  # noqa: BLE001 - reported, never swallowed
+            print(f"::error::{exc}", file=sys.stderr)
+            return EXIT_NOTHING_TO_MEASURE
+
     try:
         tables = load_tables(
             Path(args.processed_dir), competition, players=needs_players
