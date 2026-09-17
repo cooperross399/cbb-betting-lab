@@ -266,7 +266,20 @@ SCORED_RECORDS = {
     # The published table did not move: 32 market-and-tier cells over the same
     # 10 markets, the same 26,591 games and the same 791 days, before and after.
     "cbb_price_backtest.json": 138,
-    "holdout/cbb_price_backtest.json": 224,
+    # 224 -> 137 on 2026-09-17, for the same two reasons as the record above:
+    # the neutral-court exclusion refused 29,866 side wagers this cut cannot
+    # orient (8,436 of them bets), and the prop markets left `all_opinions` and
+    # `null_baseline` when the backtest declared its scope — 280 blind-baseline
+    # readings to 160. The published table is unchanged at 32 cells, and the
+    # held-out seasons still show ZERO demonstrated deficits before and after.
+    "holdout/cbb_price_backtest.json": 137,
+    # UNCHANGED at 69, and that is the useful part. This cut carries only the
+    # four core team markets, so it never held a prop reading to lose; the
+    # scope declaration cost it nothing and its blind baseline stayed at 58.
+    # Only the neutral-court exclusion touched it — 39,909 side wagers refused,
+    # 13,360 of them bets — and a reading count that did not move while the
+    # population did is the evidence that rows were excluded rather than cells
+    # lost.
     "core_team_only/cbb_price_backtest.json": 69,
     "holdout/cbb_replication.json": 67,
     "cbb_prop_grading.json": 194,
@@ -318,8 +331,12 @@ POPULATION_FLOORS = {
     # A future move of this number needs the same kind of sentence. The floor
     # exists so that a shrink has to be argued for, not absorbed.
     "cbb_price_backtest.json": {"bets_graded": 175_846, "games": 26_591, "days": 791},
-    "holdout/cbb_price_backtest.json": {"bets_graded": 119_275, "games": 16_815},
-    "core_team_only/cbb_price_backtest.json": {"bets_graded": 159_354, "games": 26_582},
+    # Both lowered once on 2026-09-17, by the neutral-court exclusion alone, and
+    # both keep their `games` unchanged — the check that this removed gradeable
+    # rows rather than coverage. Holdout 119,275 -> 110,839 bets over the same
+    # 16,815 games; core-team 159,354 -> 145,994 over the same 26,582.
+    "holdout/cbb_price_backtest.json": {"bets_graded": 110_839, "games": 16_815},
+    "core_team_only/cbb_price_backtest.json": {"bets_graded": 145_994, "games": 26_582},
 }
 
 
