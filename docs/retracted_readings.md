@@ -114,9 +114,29 @@ that edits its own history is not a record of anything.
 sides and one high-major — sharpened out of being dissolved once the 39,909
 neutral-court wagers that cut cannot orient were refused.
 
-**What the two restatements did to the findings.** The held-out cut still shows
-ZERO demonstrated deficits over 110,839 bets, before and after, which is the
-result that matters most and the one that did not move. The core-team cut went
+**What the two restatements did to the findings.** The record in
+`data/outputs/holdout/` still shows ZERO demonstrated deficits over 110,839
+bets, before and after.
+
+**And that record is the DISCOVERY window, not the held-out one.** The sentence
+here first called it "the held-out cut ... the result that matters most", which
+was wrong, and wrong in the direction that flatters: `data/outputs/holdout/` is
+the directory a replication run points `--output-dir` at, and the price-backtest
+record inside it covers seasons **2021-2024** — the discovery window, 16,815
+games. The genuinely held-out seasons are 2025 and 2026, 9,776 games, and their
+result lives only inside `holdout/cbb_replication.json`, where it remains **0
+replicated / 0 did not replicate / 0 reversed**.
+
+So zero deficits over 2021-2024 is a statement about the seasons the model was
+developed on, which is a weaker and different thing than the one that was
+published here. It is corrected in place rather than rewritten, because this is
+the file that records what this lab got wrong.
+
+The mechanism was the same one that produced the settlement defect four commits
+earlier: two vocabularies sharing a word — `holdout/` the directory and "held
+out" the seasons — joined on the word. `price_backtest.render` stored
+`season_label` in every record and printed it in none, so no report could tell
+the two windows apart. It prints the seasons now. The core-team cut went
 from five demonstrated deficits to **seven**: `high_major` joined mid- and
 low-major, so on the four core team markets every measured tier is now a
 demonstrated deficit.

@@ -22,6 +22,8 @@ correction is a fact about the tree rather than a promise in a docstring:
 from __future__ import annotations
 
 import json
+
+import pandas as pd
 import re
 from datetime import date
 from pathlib import Path
@@ -112,14 +114,31 @@ def test_the_window_was_registered_before_it_opened() -> None:
     # registers -- before any of it has been played.
     assert season.season_for_slate_date(stamped.isoformat()) == 2027
 
-    forward = json.loads(
-        (_REPO / "data" / "outputs" / "cbb_forward_evidence.json").read_text("utf-8")
+    # WRITTEN BLIND, PROVED AGAINST THE CALENDAR RATHER THAN AGAINST TODAY.
+    #
+    # This read the LIVE `cbb_forward_evidence.json` and asserted it held zero
+    # frozen opinions. That is a fact about 2026-09-10 being checked against
+    # whatever the file happens to say now — so the first night of the season
+    # freezes an opinion, the record gains rows, and this goes red. `Tests` is
+    # the required check on protected main, so the lab's CI would have broken
+    # on 2026-11-02: the one morning of the year when nobody can afford to be
+    # reading a red build to find out whether it matters.
+    #
+    # The window cannot have been registered blind if it was registered before
+    # its earliest season had played a game, and that is permanent. The opener
+    # is read off the cached schedule rather than typed, so it tracks the
+    # calendar the rest of the lab uses.
+    earliest = min(int(s) for entry in _entries() for s in entry["seasons"])
+    schedule = pd.read_parquet(
+        _REPO / "tests" / "fixtures" / "real_data" / f"mbb_schedule_{earliest}.parquet",
+        columns=["game_date"],
     )
-    assert int(forward.get("frozen_opinions", 0)) == 0, (
-        "forward evidence already existed when this window was registered, so "
-        "the direction cannot be shown to have been written blind"
+    opener = schedule["game_date"].astype("string").str.slice(0, 10).min()
+    assert stamped.isoformat() < opener, (
+        f"the window was registered on {stamped.isoformat()}, and season "
+        f"{earliest} opened on {opener}. A direction fixed after the first game "
+        "of the window it predicts is not a prediction."
     )
-    assert not forward.get("rows"), "the forward ledger is not empty"
 
 
 def test_the_window_is_three_seasons_because_one_cannot_answer_it() -> None:

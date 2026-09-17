@@ -2176,8 +2176,14 @@ def _reachability_section(
     lines.extend(
         _table(
             games.assign(
+                # THREE STATES HERE TOO. The paragraph above was taught to keep
+                # `unknown` apart from `vanished` and this table, two lines
+                # below it, was not — so the prose said one thing and the
+                # numbers underneath it said the old thing. The mutant written
+                # for that fix killed only the sentence, which is how a fix
+                # applied to the words and not to the artifact survives review.
                 reachability=[
-                    "survived" if _truthy(v) else "vanished"
+                    "survived" if _truthy(v) else "vanished" if _gone(v) else "unknown"
                     for v in games["price_survived"]
                 ]
             ),

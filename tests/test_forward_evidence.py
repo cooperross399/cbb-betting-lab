@@ -2025,3 +2025,17 @@ def test_a_bet_with_no_survival_reading_is_not_counted_as_a_vanished_price():
         "the 100 rows carrying no reading were counted as vanished prices"
     )
     assert "100 carry no survival reading at all" in report
+
+    # AND THE TABLE UNDERNEATH, which is the half the first fix missed: the
+    # paragraph kept the three states apart while the ROI table two lines below
+    # still labelled every unread row `vanished`. A row group that says
+    # `unknown` must exist, and `vanished` must hold only the 100 observed ones.
+    rows = [line for line in report.splitlines() if line.startswith("| ")]
+    assert any("| unknown" in line for line in rows), (
+        "the reachability table has no `unknown` group, so the three-state "
+        "split stopped at the sentence and never reached the numbers"
+    )
+    vanished_rows = [line for line in rows if "| vanished" in line]
+    assert vanished_rows and all("| 100 " in line for line in vanished_rows), (
+        f"the table's `vanished` group is not the 100 observed rows: {vanished_rows}"
+    )

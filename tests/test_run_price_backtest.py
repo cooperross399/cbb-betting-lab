@@ -2963,3 +2963,37 @@ def test_a_side_wager_on_a_neutral_court_is_refused_and_named(script):
     )
     assert outcome is not script["Outcome"].UNSETTLEABLE
     assert total_census.neutral_site_unorientable == 0
+
+
+def test_the_grading_census_reconciles_when_a_neutral_court_wager_is_refused(script):
+    """`rows == graded + unsettleable`, including through the refusal branch.
+
+    #80's refusal incremented `unsettleable` inside `_grade_one` while the
+    caller was already incrementing it for every UNSETTLEABLE outcome, so the
+    census over-counted by exactly the rows that branch refused — 48,873 on the
+    full store. A sub-count belongs to the branch; the total belongs to the
+    loop that sees every outcome.
+    """
+    census = script["GradingCensus"]()
+    bundle = {
+        "home": {"team_id": 10, "home_away": "home", "margin": 10, "total": 150},
+        "away": {"team_id": 20, "home_away": "away", "margin": -10, "total": 150},
+        "neutral_site": True,
+        "segment": None,
+    }
+    before = (census.rows, census.graded, census.unsettleable)
+    assert before == (0, 0, 0)
+
+    outcome, _, _ = script["_grade_one"](
+        {"market": "spread", "segment": "game", "selection": "home",
+         "line": -3.5, "american_odds": -110, "game_id": 1},
+        fixtures={1: bundle}, players={}, census=census,
+    )
+
+    assert outcome is script["Outcome"].UNSETTLEABLE
+    assert census.neutral_site_unorientable == 1
+    assert census.unsettleable == 0, (
+        "the refusal counted itself as unsettleable, and the caller counts it "
+        "again for every UNSETTLEABLE outcome — so the census over-reports by "
+        "one per refused row and rows == graded + unsettleable breaks"
+    )

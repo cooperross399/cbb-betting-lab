@@ -936,7 +936,11 @@ def _grade_one(
             # over/under — a game or half TOTAL, symmetric, which does not
             # consult a side at all and is unaffected by the designation.
             if bundle.get("neutral_site") and ROW_FOR_SELECTION.get(selection):
-                census.unsettleable += 1
+                # `unsettleable` is NOT incremented here. The caller does it for
+                # every UNSETTLEABLE outcome this function returns, and counting
+                # it again here broke the census identity
+                # `rows == graded + unsettleable` by exactly the number of rows
+                # this branch refused. Only the sub-count belongs to the branch.
                 census.neutral_site_unorientable += 1
                 return (
                     Outcome.UNSETTLEABLE,

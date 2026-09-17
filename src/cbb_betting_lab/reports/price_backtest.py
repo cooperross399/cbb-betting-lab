@@ -2188,11 +2188,29 @@ def render(record: dict) -> str:
     add("")
 
     bets = int(record.get("bets_graded", 0))
+    # THE SEASONS ARE PRINTED BECAUSE NOT PRINTING THEM COST A FALSE CLAIM.
+    #
+    # `season_label` has always been stored in the record and never rendered,
+    # so no report said which window it covered — and this lab has two records
+    # whose windows differ and whose FILENAMES do not: the full 2021-2026 one,
+    # and the 2021-2024 discovery record that a replication run leaves in
+    # `data/outputs/holdout/` because that is the directory it points
+    # `--output-dir` at. The directory says "holdout"; the record inside is the
+    # DISCOVERY window. The genuinely held-out seasons are 2025-2026 and their
+    # result lives only inside `cbb_replication.json`.
+    #
+    # On 2026-09-17 that produced a published sentence calling zero deficits
+    # over the 2021-2024 discovery window "the held-out cut ... the result that
+    # matters most". It is the same failure as the settlement defect three
+    # commits earlier — two vocabularies sharing a word, joined on the word —
+    # and the fix is the same: print the thing that tells them apart.
+    label = str(record.get("season_label") or "").strip()
+    seasons = f"seasons {label}, " if label else ""
     add(
         f"**{bets:,} graded bets** from {record.get('wagers_graded', 0):,} "
-        f"graded wagers offered, across {record.get('games', 0):,} games and "
-        f"{record.get('days', 0):,} slate days, at an edge threshold of "
-        f"{record.get('edge_threshold', 0):.0%} declared in advance."
+        f"graded wagers offered, {seasons}across {record.get('games', 0):,} "
+        f"games and {record.get('days', 0):,} slate days, at an edge threshold "
+        f"of {record.get('edge_threshold', 0):.0%} declared in advance."
     )
     add("")
     looks = int(record.get("looks", 1))
