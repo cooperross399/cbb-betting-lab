@@ -26,17 +26,7 @@ lives in `CLAUDE.md`. This file is the ledger of the fact.
 
 | record | block | leaf | season | tier | label | market | rule | ROI | demonstrated at | crossed at |
 |:---|:---|:---|:---|:---|:---|:---|:---|---:|---:|---:|
-| `holdout/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | mid_major | `—` | player_threes | always the underdog | -7.30% | 95 | 99 |
-| `core_team_only/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | low_major | `—` | spread | always home | -3.41% | 30 | 62 |
-| `core_team_only/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | low_major | `—` | spread | always away | -3.35% | 30 | 49 |
-| `core_team_only/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | low_major | `—` | spread | always the favourite | -7.49% | 30 | 76 |
-| `core_team_only/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | low_major | `—` | team_total | always over | -3.75% | 30 | 38 |
 | `holdout/cbb_replication.json` | `markets` | `holdout` | `—` | mid_major | `—` | total_points | — | -6.36% | 62 | 95 |
-| `holdout/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | high_major | `—` | spread | always away | -5.14% | 95 | 125 |
-| `core_team_only/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | high_major | `—` | spread | always away | -4.02% | 30 | 125 |
-| `holdout/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | high_major | `—` | player_assists | always the underdog | -8.00% | 95 | 111 |
-| `holdout/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | high_major | `—` | player_rebounds | always the favourite | -4.56% | 95 | 123 |
-| `holdout/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | mid_major | `—` | player_rebounds_assists | always the favourite | -6.68% | 95 | 128 |
 
 **None of these
  is a claim that was wrong.** Each was a correctly measured
@@ -90,9 +80,9 @@ baseline went from 280 readings to 160. Those four readings are not retracted
 now; they are **not in this record at all**, which is a different statement and
 has to be made differently.
 
-They are still retracted where they still exist. The rows for
-`holdout/cbb_price_backtest.json` stand untouched, because that record has not
-been re-scored.
+They were still retracted where they still existed — for one day. On
+2026-09-17 the held-out and core-team cuts were re-scored the same way, and
+their rows went too.
 
 **The fifth, `high_major / spread / always away`, is a team reading that came
 back.** Refusing the neutral-court side wagers it could not orient removed
@@ -105,3 +95,32 @@ usually records: **the restatement withdrew nothing and returned one reading.**
 It also added two demonstrated deficits that were not there before,
 `moneyline / mid_major` and the `low_major` tier. A cleaner measurement found
 more losing, not less.
+
+## Ten more rows left on 2026-09-17, when the other two cuts were restated
+
+`holdout/` and `core_team_only/` carried the same defect as the record above and
+were re-scored with the same exclusion. Ten more rows stopped being true, by the
+same two mechanisms and in the same proportion.
+
+**Five were prop baseline readings in `holdout/`** — the same four families as
+before plus `high_major / spread / always away` — which left that record when
+the backtest declared its scope. They are not retracted; they are not in that
+record. The sentence above, written the day before, said those rows stood
+untouched because the record had not been re-scored. It has now, and the
+sentence is corrected rather than quietly deleted, because a retraction file
+that edits its own history is not a record of anything.
+
+**Five were team readings in `core_team_only/` that came back** — four low-major
+sides and one high-major — sharpened out of being dissolved once the 39,909
+neutral-court wagers that cut cannot orient were refused.
+
+**What the two restatements did to the findings.** The held-out cut still shows
+ZERO demonstrated deficits over 110,839 bets, before and after, which is the
+result that matters most and the one that did not move. The core-team cut went
+from five demonstrated deficits to **seven**: `high_major` joined mid- and
+low-major, so on the four core team markets every measured tier is now a
+demonstrated deficit.
+
+Across all three records the direction is the same one this file keeps having to
+record in the unusual direction: the correction withdrew nothing and returned
+six readings, and cleaner measurement found MORE losing rather than less.
