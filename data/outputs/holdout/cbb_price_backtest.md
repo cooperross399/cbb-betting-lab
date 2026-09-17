@@ -6,7 +6,7 @@ Generated 2026-09-17T09:40:00Z.
 
 **One wager is one bet, at the best price.** Twenty-one books quoting one game is not twenty-one bets — counting it that way narrowed the NHL lab's intervals by about √2.83 and turned three markets that span zero into three demonstrated losses.
 
-**110,839 graded bets** from 411,034 graded wagers offered, across 16,815 games and 513 slate days, at an edge threshold of 2% declared in advance.
+**110,839 graded bets** from 411,034 graded wagers offered, seasons 2021-2024, across 16,815 games and 513 slate days, at an edge threshold of 2% declared in advance.
 
 **Family correction: 130 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.81. That is the ledger's cumulative count and never the day's — correcting today's findings across today's tests is a lie if more were tested last week.
 
