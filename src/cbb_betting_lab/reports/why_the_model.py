@@ -125,7 +125,95 @@ from cbb_betting_lab.reports import what_we_can_claim as WC
 #: Bumped whenever the record's shape changes, so a stale record fails loudly at
 #: re-render rather than rendering a report with holes in it. Same discipline as
 #: `price_backtest.RECORD_VERSION`, and for the same reason.
-RECORD_VERSION = 1
+#:
+#: Version 2 rebuilds `forecast.*.anti_predictive`. Version 1 read it off a key
+#: named `anti_predictive` that `forecast_skill` stopped writing on 2026-09-05,
+#: and a second key named `shortfall_widens_by` that it never wrote at all — so
+#: the block was `measurable: False` on every run and the per-tier paragraph
+#: was filtered off the page. It now reads `anti_predictive_return`, states the
+#: fall in realised RETURN under `falls_by` rather than the overconfidence
+#: vocabulary of a widening shortfall, carries `demonstrated` so the threshold
+#: sentence rests on disjoint corrected intervals, and carries
+#: `measured_buckets` — every claimed-edge bucket that cleared the floor, each
+#: as a printable row re-stated at today's correction — so a demonstrated
+#: deficit reaches this document instead of being filtered out with the
+#: comparison that could not be made.
+#:
+#: Version 2 also stops **copying** the forecast run's verdicts. `demonstrated`
+#: and the deficit count were read from the forecast record, taken under that
+#: run's family size, while the intervals printed beside them are re-stated at
+#: the ledger's. Both are now derived here from the re-stated bounds — see
+#: :func:`_restated_return_bucket` — so no sentence on this page can disagree
+#: with the figure above it.
+RECORD_VERSION = 2
+
+#: The **forecast** record shape this document's anti-predictiveness paragraph
+#: is written against, named here so the dependency is a constant rather than an
+#: assumption.
+#:
+#: `forecast_skill.read_record` refuses a record older than its own
+#: `RECORD_VERSION`; this module does not go through `read_record` — it reads
+#: the JSON directly, because it weighs three records and wants all three
+#: failures reported apart. That left the floor on the producer's side only:
+#: every key the anti-predictive block depends on
+#: (`measured_buckets`, `negative_point_estimates`, `demonstrated_deficits`,
+#: `worst_bucket`, `populated_buckets`) is absent from a version 4 forecast
+#: record, every read of one goes through `_as_int`/`_as_float`, and the block
+#: came back `measurable: False, demonstrated_deficits: 0, worst_bucket: {}` —
+#: zeros manufactured out of absent keys, indistinguishable on the page from a
+#: run in which nothing was found. The section then filtered itself off the
+#: document and nothing went red.
+#:
+#: So the version is checked here as well, and a stale forecast record does not
+#: produce a block of zeroes: it produces `{"readable": False}` and a paragraph
+#: that names the version and says this document cannot read it. A silence a
+#: reader cannot tell from a null result is the defect; a sentence saying which
+#: record is too old to answer is not.
+#:
+#: **WHAT THIS GATE DOES NOT COVER, and why it is not widened.** It gates the
+#: anti-predictive block and nothing else. `_forecast_tier` reads four further
+#: key groups off the same record with no shape check at all — `rows`,
+#: `brier.model` against `brier.base_rate_reference`,
+#: `brier.loses_to_the_handicapped_market`, and `brier.advantage_over_raw` —
+#: and `readable` does not reach any of them. That is deliberate, and the
+#: reason is the opposite of the one that put the gate here: a **version 4**
+#: forecast record carries all four, and this module reads all four correctly.
+#: Widening `readable` to cover them would replace a page of figures the record
+#: genuinely holds with a refusal paragraph — on this repository's own
+#: committed record, today. A gate that refuses readable evidence is not a
+#: stricter version of one that refuses manufactured zeros; it is a different
+#: and worse failure, and *"the version moved"* is not a reason to stop
+#: reporting a comparison that is still on the file.
+#:
+#: The hole that leaves is a **rename**, not a version bump: a future record
+#: that moved `brier.advantage_over_raw` would render the per-tier Brier table
+#: with `no comparison recorded` in every row and `not scored` in every
+#: verdict cell — the identical silence, one section over, with
+#: `anti_predictive_readable: True` beside it. That is closed where it can be
+#: closed without discarding evidence: :func:`_forecast_lines` refuses the
+#: whole-column silence by name when **no** measured tier carries a comparison.
+#: See `test_a_brier_column_with_no_comparison_anywhere_says_so_on_the_page`.
+#: A record in which one tier lost the key and the others kept it is still
+#: reported per row and is still not distinguishable from a comparison nobody
+#: made; that is written down here rather than claimed closed.
+#:
+#: **A literal, not `FS.RECORD_VERSION`.** Aliasing the producer's constant
+#: makes this gate follow every future bump on its own, so a forecast record in
+#: a shape this module has never been updated to read would sail through it —
+#: the gate would be satisfied by definition and could never fire.
+#: `test_this_document_states_which_forecast_shape_it_reads` pins the two
+#: together, so a bump over there is a red test here rather than a silent
+#: widening of what this module claims it can read.
+#:
+#: Moved 5 -> 6 with the forecast record's split of
+#: `buckets_with_no_return_figure` into `buckets_with_no_return_column` and
+#: `buckets_with_no_settled_wager`. This module reads neither counter, so the
+#: bump is mechanical here — but it is made deliberately rather than by alias,
+#: and the keys this block DOES read (`measurable`, `usable_buckets`,
+#: `populated_buckets`, `return_falls_by`, `lowest_bucket`, `highest_bucket`,
+#: `measured_buckets`) are unchanged in version 6 and were re-checked against
+#: it rather than assumed.
+FORECAST_RECORD_VERSION = 6
 
 #: `data/outputs/cbb_why_the_model.{json,md}`.
 REPORT_STEM = "why_the_model"
@@ -552,6 +640,31 @@ def _rows_of_the_record(record: Mapping) -> list[tuple[str, Mapping]]:
     identity, so a section this walk does not reach is a red test rather than a
     silently unchecked corner. Deleting `"blind"` from the tuple below, or
     adding a section to the record and not adding it here, fails that test.
+    **That test runs over the record read back from JSON as well as over the
+    one built in memory**, because the two are the same record by value and a
+    different record by `id` — see below.
+
+    **No row is reached "by identity" here, and nothing is deduplicated.**
+    This used to append only `anti_predictive.measured_buckets`, justified in
+    a comment reading *"`worst_bucket` and `deficit_buckets` hold rows from
+    this same list by identity, so walking it once reaches all three names"*.
+    That is true of the dict :func:`build_record` returns and false of every
+    record this repository actually renders: `run_why_the_model.py --check`
+    and `--rerender` both go through :func:`read_record`, and
+    `json.loads(json.dumps(...))` gives each of the three names its own
+    object. Ten rows — `worst_bucket` and `deficit_buckets[0]` on the pooled
+    block and on each of four tiers — were then reached by nothing, so
+    :func:`verdict_disagreements` never examined the very rows a hand-edit of
+    the record on disk would touch.
+
+    All three names are therefore appended. They are **not** deduplicated by
+    value: a row that appears at two names is two places in the record a hand
+    can edit, and collapsing them would mean a new section whose contents
+    happened to equal a walked row was silently exempt — the hole this walk's
+    own guard test exists to refuse. Duplicates cost a repeated complaint on a
+    record that is already being refused, and they keep the population
+    identical before and after the JSON round trip, which is what makes
+    :func:`render` the pure function of the record it says it is.
     """
     found: list[tuple[str, Mapping]] = []
     for key in ("tiers", "cells", "pooled", "blind"):
@@ -572,6 +685,31 @@ def _rows_of_the_record(record: Mapping) -> list[tuple[str, Mapping]]:
             advantage = block.get("advantage_over_raw")
             if isinstance(advantage, Mapping):
                 found.append((f"{label}.advantage_over_raw", advantage))
+            anti = block.get("anti_predictive")
+            if isinstance(anti, Mapping):
+                # All three names the block writes rows under, each reached by
+                # its own name. Only non-empty rows: an empty dict carries no
+                # bound and no claim, and yielding it would put a row here that
+                # `test_every_row_of_the_record_that_carries_a_figure_is_walked`
+                # finds nothing to match it against — `worst_bucket` is `{}` on
+                # every run that measured nothing.
+                for key in ("measured_buckets", "deficit_buckets"):
+                    rows = anti.get(key)
+                    if isinstance(rows, Sequence) and not isinstance(
+                        rows, (str, bytes)
+                    ):
+                        for index, row in enumerate(rows):
+                            if isinstance(row, Mapping) and row:
+                                found.append(
+                                    (
+                                        f"{label}.anti_predictive."
+                                        f"{key}[{index}]",
+                                        row,
+                                    )
+                                )
+                worst = anti.get("worst_bucket")
+                if isinstance(worst, Mapping) and worst:
+                    found.append((f"{label}.anti_predictive.worst_bucket", worst))
     return found
 
 
@@ -1268,15 +1406,235 @@ def _advantage(block: Mapping, *, looks: int) -> dict:
     }
 
 
-def _forecast_tier(block: Mapping, *, looks: int) -> dict:
-    brier = block.get("brier")
-    brier = brier if isinstance(brier, Mapping) else {}
-    anti = block.get("anti_predictive")
-    anti = anti if isinstance(anti, Mapping) else {}
+def _restated_return_bucket(bucket: Mapping, *, looks: int) -> dict:
+    """One claimed-edge bucket that cleared the floor, re-stated at `looks`.
+
+    Shaped like every other printable row in this record — `value`, both bound
+    pairs, the sample, the clustering and a verdict derived from the corrected
+    bounds — so it is checked by :func:`verdict_disagreements` and printed by
+    :func:`_figure` with no second formatter and no second idea of which side
+    of zero a pair of bounds is on. It is registered in
+    :func:`_rows_of_the_record` for that reason; a row carrying a return and a
+    verdict that the walk does not reach is a row that can hold any two numbers
+    it likes.
+
+    **The standard error is recovered from the uncorrected bounds**, the way
+    `what_we_can_claim._interval_from_forward_row` recovers it, because
+    `forecast_skill._return_bucket` stores the two bound pairs and not the
+    error between them. Recovering it is what lets the interval be re-stated at
+    **today's** family size rather than the one the forecast run was written
+    under: a bucket whose deficit survived 24 looks has not necessarily
+    survived 95, and this document states everything at one correction.
+
+    **Every claim this document makes about a bucket is then read back off the
+    row this returns**, never off a count the forecast run stored beside it.
+    That is the whole point of re-stating: `demonstrated_deficits` in the
+    forecast record counts buckets whose corrected interval excluded zero *at
+    the forecast run's look count*, and at 95 looks the same bucket's interval
+    can span it. Publishing that count beside this re-stated figure printed the
+    sentence *"selected wagers that lost money"* three lines under a figure
+    labelled `no demonstrated edge`.
+
+    A bucket with only one of its two uncorrected bounds is **refused**, not
+    dropped. Dropping it returned `{}`, the tier then failed the section filter
+    and vanished from the page carrying its deficit count with it — a malformed
+    record reported as *there was nothing here*. This is the same refusal
+    :func:`verdict_disagreements` makes on a half-carried bound pair, and for
+    the identical reason: the interval a missing bound fabricates is `[x, 0.0]`,
+    which has a side of zero and therefore a verdict.
+    """
+    low, high = _as_float(bucket.get("roi_low")), _as_float(bucket.get("roi_high"))
+    if low is None or high is None:
+        carried = [k for k in ("roi_low", "roi_high") if _as_float(bucket.get(k)) is not None]
+        raise WhyError(
+            "A claimed-edge return bucket in the forecast skill record carries "
+            + (f"`{carried[0]}` and not its partner" if carried else "neither of its bounds")
+            + ". An interval with one bound is not a narrower interval, it is "
+            "`[x, 0.0]` — a pair with a side of zero, and therefore a verdict. "
+            "Dropping the bucket instead would take the tier off this page "
+            "with its deficit count still in the record, which is the silence "
+            "this section exists to break. Re-run the forecast regression."
+        )
+    interval = S.RoiInterval(
+        roi=_as_float(bucket.get("roi")) or 0.0,
+        low=low,
+        high=high,
+        bets=_as_int(bucket.get("bets")),
+        clusters=_as_int(bucket.get("clusters")),
+        standard_error=(high - low) / (2.0 * S.Z95),
+        looks=looks,
+        cluster_unit=_text(bucket.get("cluster_unit")) or "game",
+    )
+    return {
+        # `bucket_label` rather than a second spelling of the same edges: a
+        # bucket called `+20% and above` in one report and `0.2 to inf` in
+        # another is two names for one row.
+        "name": FS.bucket_label(
+            float(bucket.get("low", 0.0)), float(bucket.get("high", 0.0))
+        ),
+        "value": _as_float(interval.roi),
+        "low": _as_float(interval.low),
+        "high": _as_float(interval.high),
+        "adjusted_low": _as_float(interval.adjusted_low),
+        "adjusted_high": _as_float(interval.adjusted_high),
+        "rows": interval.bets,
+        "clusters": interval.clusters,
+        "cluster_unit": interval.cluster_unit,
+        "enough_evidence": bool(interval.enough_evidence),
+        "verdict": interval.verdict(),
+    }
+
+
+def _measured_return_buckets(anti: Mapping, *, looks: int) -> list[dict]:
+    """Every bucket the forecast run measured, re-stated at today's `looks`.
+
+    All of them, not only the worst. The forecast record selects `worst_bucket`
+    by the lowest **point estimate**, and counts `demonstrated_deficits` off the
+    **corrected high bound** — two different orderings, so the bucket named
+    *worst* need not be the bucket that demonstrated anything. Printing the
+    first beside a claim justified by the second put a demonstrated loss on the
+    page with no figure under it and a figure on the page reading
+    `no demonstrated edge`. Carrying every measured bucket is what lets the
+    sentence and the figures be the same buckets.
+    """
+    measured = anti.get("measured_buckets")
+    if not isinstance(measured, Sequence) or isinstance(measured, (str, bytes)):
+        return []
+    return [
+        _restated_return_bucket(b, looks=looks)
+        for b in measured
+        if isinstance(b, Mapping) and b
+    ]
+
+
+def _deficit_buckets(rows: Sequence[Mapping]) -> list[Mapping]:
+    """The re-stated rows whose verdict — on the bounds printed — is a deficit.
+
+    `verdict_of` and nothing else. The alternative is the stored count, and the
+    stored count was taken at the forecast run's family size while the bounds
+    beside it are re-stated at today's; see :func:`_restated_return_bucket`.
+    """
+    return [row for row in rows if verdict_of(row) == S.DEMONSTRATED_DEFICIT]
+
+
+def _worst_measured_index(rows: Sequence[Mapping]) -> int | None:
+    """Which of `rows` is the worst-returning bucket, as a **position**.
+
+    `None` when there are no rows, which is the one case where there is no
+    worst bucket rather than an arbitrary one.
+
+    **One selection rule with one spelling, used on both sides of the record.**
+    :func:`_anti_predictive_block` writes `worst_bucket` from this, and
+    :func:`_forecast_lines` labels the printed row from this. The renderer used
+    to find the row instead by testing `row is block["worst_bucket"]`, which
+    reads the record's object graph rather than its values and therefore
+    answered differently before and after the record was written to disk and
+    read back. A position, taken from the rows the page is printing, cannot:
+    `min` over a range keeps the first of a tie exactly as `min` over the rows
+    does, so the two agree by construction and not by a comment.
+
+    The key is `value` — the return point estimate — and **not** the corrected
+    high bound that selects `deficit_buckets`. The two orderings are different
+    on purpose; see :func:`_measured_return_buckets`.
+    """
+    if not rows:
+        return None
+    return min(
+        range(len(rows)), key=lambda index: _as_float(rows[index].get("value")) or 0.0
+    )
+
+
+def _anti_predictive_block(anti: Mapping, *, looks: int, readable: bool) -> dict:
+    """The anti-predictiveness block for one tier, or a named refusal.
+
+    `readable` is the forecast record's own version against
+    :data:`FORECAST_RECORD_VERSION`. When it is False this returns
+    ``{"readable": False}`` and **no counts at all**: every key below is absent
+    from an older forecast record, `_as_int` of an absent key is `0`, and a
+    block reading `measurable: False, demonstrated_deficits: 0, worst_bucket:
+    {}` is a page that says *nothing was found* when the truth is *this record
+    was not asked*. A zero that arrives by default is indistinguishable from a
+    zero that was counted; that is the same argument
+    `forecast_skill._excluded_lines` makes about the census's third term, on
+    this side of the wire.
+    """
+    if not readable:
+        return {"readable": False}
     lowest = anti.get("lowest_bucket")
     lowest = lowest if isinstance(lowest, Mapping) else {}
     highest = anti.get("highest_bucket")
     highest = highest if isinstance(highest, Mapping) else {}
+    measured = _measured_return_buckets(anti, looks=looks)
+    # Both ends of the comparison, re-stated at today's count, so the
+    # disjointness the threshold sentence rests on is the disjointness of the
+    # intervals this document would print — not the one the forecast run
+    # recorded under its own, smaller family.
+    ends = [
+        _restated_return_bucket(b, looks=looks) for b in (lowest, highest) if b
+    ]
+    demonstrated = bool(anti.get("measurable")) and len(ends) == 2 and (
+        (_as_float(ends[0]["adjusted_low"]) or 0.0)
+        > (_as_float(ends[1]["adjusted_high"]) or 0.0)
+        or (_as_float(ends[1]["adjusted_low"]) or 0.0)
+        > (_as_float(ends[0]["adjusted_high"]) or 0.0)
+    )
+    # The worst by point estimate, for the headline figure — but the deficit
+    # claim is read off `deficit_buckets`, which is selected by the verdict on
+    # the printed bounds. The two need not be the same bucket.
+    #
+    # Through `_worst_measured_index` rather than an inline `min`, because the
+    # renderer labels the printed row with the same call: one rule, one
+    # spelling, and no way for the row this key names and the row the page
+    # calls *worst-returning* to be two different rows.
+    worst_index = _worst_measured_index(measured)
+    worst = measured[worst_index] if worst_index is not None else {}
+    return {
+        "readable": True,
+        "measurable": bool(anti.get("measurable")),
+        "usable_buckets": _as_int(anti.get("usable_buckets")),
+        "populated_buckets": _as_int(anti.get("populated_buckets")),
+        # `return_falls_by`, in percentage points of realised RETURN. The
+        # key it replaces was `shortfall_widens_by`, which never existed on
+        # this record and named the other quantity anyway: a shortfall that
+        # widens is realised-minus-model-implied, the winner's curse, and
+        # it lives under `overconfidence`. Two vocabularies were sharing
+        # one word and this document was printing the wrong one's name over
+        # nothing at all.
+        "falls_by": _as_float(anti.get("return_falls_by")),
+        # The only key a sentence about the SHAPE may lean on: whether the two
+        # family-corrected intervals are disjoint — **derived here at today's
+        # count**, never copied. `anti["demonstrated"]` is the forecast run's
+        # answer under the family it was written with, and a gap that survived
+        # 24 looks has not necessarily survived 95.
+        "demonstrated": demonstrated,
+        "lowest_rows": _as_int(lowest.get("rows")),
+        "highest_rows": _as_int(highest.get("rows")),
+        # The SIGN, which needs one bucket where the shape needs two. A run
+        # with a single usable bucket has no comparison to make and can
+        # still have measured a loss.
+        "negative_point_estimates": sum(
+            1 for row in measured if (_as_float(row["value"]) or 0.0) < 0.0
+        ),
+        "measured_buckets": measured,
+        "deficit_buckets": _deficit_buckets(measured),
+        "worst_bucket": worst,
+    }
+
+
+def _forecast_tier(block: Mapping, *, looks: int, readable: bool) -> dict:
+    brier = block.get("brier")
+    brier = brier if isinstance(brier, Mapping) else {}
+    # `anti_predictive_return`, not `anti_predictive`. The forecast record
+    # split that single key into `overconfidence` and `anti_predictive_return`
+    # on 2026-09-05 — two different quantities that had been sharing one name
+    # — and this consumer went on reading the name that no longer existed. It
+    # is a `.get`, so it never raised: `anti` was `{}` on every run, the block
+    # below rendered `measurable: False`, and the per-tier anti-predictiveness
+    # paragraph was filtered out of the document entirely. A reader of this
+    # page has had silence there ever since, which is the shape a dead key
+    # takes when everything around it is written defensively.
+    anti = block.get("anti_predictive_return")
+    anti = anti if isinstance(anti, Mapping) else {}
     raw = brier.get("advantage_over_raw")
     raw = raw if isinstance(raw, Mapping) else {}
     return {
@@ -1293,13 +1651,9 @@ def _forecast_tier(block: Mapping, *, looks: int) -> dict:
             brier.get("loses_to_the_handicapped_market")
         ),
         "advantage_over_raw": _advantage(raw, looks=looks) if raw else {},
-        "anti_predictive": {
-            "measurable": bool(anti.get("measurable")),
-            "usable_buckets": _as_int(anti.get("usable_buckets")),
-            "widens_by": _as_float(anti.get("shortfall_widens_by")),
-            "lowest_rows": _as_int(lowest.get("rows")),
-            "highest_rows": _as_int(highest.get("rows")),
-        },
+        "anti_predictive": _anti_predictive_block(
+            anti, looks=looks, readable=readable
+        ),
     }
 
 
@@ -1316,17 +1670,33 @@ def _forecast_section(payload: Mapping, path: Path, *, looks: int) -> dict:
             f"The forecast skill record at `{_repo_relative(path)}` carries a "
             "`by_tier` that is not a list."
         )
+    # **The version gate this document did not have.** `read_evidence` checks
+    # that the file exists, parses and is an object; it does not check the
+    # shape. `forecast_skill.read_record` refuses a stale record, and this
+    # module does not go through it — so the anti-predictive block's keys, all
+    # of which arrived with version 5, were read off an older record through
+    # `_as_int` and came back as a block of zeroes. See
+    # :data:`FORECAST_RECORD_VERSION`.
+    version = _as_int(payload.get("record_version"))
+    readable = version == FORECAST_RECORD_VERSION
     rendered = [
-        _forecast_tier(block, looks=looks) for block in tiers if isinstance(block, Mapping)
+        _forecast_tier(block, looks=looks, readable=readable)
+        for block in tiers
+        if isinstance(block, Mapping)
     ]
     rendered.sort(key=lambda t: _tier_rank(t["label"]))
     return {
         "generated_at": _text(payload.get("generated_at")),
-        "record_version": _as_int(payload.get("record_version")),
+        "record_version": version,
+        # The version this module's anti-predictiveness paragraph is written
+        # against, stored beside the one the record carries so the two can be
+        # compared by a reader of the record and not only by this renderer.
+        "anti_predictive_record_version": FORECAST_RECORD_VERSION,
+        "anti_predictive_readable": readable,
         "source": _text(payload.get("source")),
         "season_label": _text(payload.get("season_label")),
         "devig_method": _text(payload.get("devig_method")),
-        "pooled": _forecast_tier(pooled, looks=looks),
+        "pooled": _forecast_tier(pooled, looks=looks, readable=readable),
         "tiers": rendered,
     }
 
@@ -1850,6 +2220,32 @@ def _forecast_lines(record: Mapping) -> list[str]:
             f"| {reading} |"
         )
     lines.append("")
+    # **A column that is empty in every row is this document's silence, and it
+    # says so.** `FORECAST_RECORD_VERSION` gates the anti-predictive block and
+    # deliberately does not gate this one — a version 4 record carries
+    # `advantage_over_raw` and this module reads it correctly, so refusing on
+    # the version would throw away figures the record holds. What the version
+    # gate therefore cannot catch here is a RENAME: the key moving is exactly
+    # what happened to `anti_predictive` on 2026-09-05, and the symptom is a
+    # table of `no comparison recorded` under a heading that reads like a
+    # result. So the whole-column case is named rather than printed blank. A
+    # comparison nobody wrote is not a comparison that came out flat.
+    if not any(tier.get("advantage_over_raw") for tier in measured):
+        lines.append(
+            "**No tier above carries a Brier comparison at all, and that is "
+            "this document's silence rather than the model's result.** "
+            "`advantage_over_raw` is absent from every tier of the forecast "
+            "skill record this page was built from, so every cell reads *no "
+            "comparison recorded* and every verdict reads *not scored*. A "
+            "comparison nobody recorded is not a comparison of zero. Either "
+            "the forecast run did not score it, or the key it is written "
+            "under has moved — which is what happened to `anti_predictive` on "
+            "2026-09-05 and left the section below it blank for twelve days. "
+            "**Nothing in this table should be read as the model having been "
+            "cleared**: re-run the forecast regression, and if the key has "
+            "moved, this reader has to move with it."
+        )
+        lines.append("")
     lines.append(
         "A **negative** advantage is the model scoring worse than the price it "
         "is betting into. The verdict column reads the sign the same way every "
@@ -1870,36 +2266,179 @@ def _forecast_lines(record: Mapping) -> list[str]:
             f"In {named} the model's Brier is worse than the base rate: beaten "
             "by always predicting the league average."
         )
+    # **The stale-record sentence comes first, and it is not a silence.** A
+    # forecast record older than `FORECAST_RECORD_VERSION` carries none of the
+    # keys below; `_anti_predictive_block` refuses to manufacture them, and the
+    # section would otherwise simply not appear — a reader could not tell *this
+    # record cannot say* from *nothing was found*. See
+    # :data:`FORECAST_RECORD_VERSION`.
+    if not forecast.get("anti_predictive_readable"):
+        lines.append("")
+        lines.append(
+            "**Anti-predictiveness, per tier — not read from this record.** "
+            "The forecast skill record this document was built from is version "
+            f"{_as_int(forecast.get('record_version'))}; the measured "
+            "claimed-edge buckets, the reason a comparison could not be made "
+            "and the sign of the worst bucket are written only from version "
+            f"{_as_int(forecast.get('anti_predictive_record_version'))}. "
+            "Reading them here would print zero demonstrated deficits off keys "
+            "nobody wrote, which is a null result nobody measured. **Nothing "
+            "below should be read as the model having been cleared**: re-run "
+            "the forecast regression and re-render. The silence is this "
+            "document's and not the model's."
+        )
+        return lines
+    # A tier belongs here if it has either half of the finding: a comparison
+    # across buckets, or a measured bucket whose sign is a result on its own.
+    # Filtering on `measurable` alone drops every run with fewer than two
+    # usable buckets, which is exactly the run whose single bucket may be a
+    # demonstrated deficit — a loss, filtered off the page by a predicate about
+    # whether a *comparison* could be made.
     anti = [
         t
         for t in measured
         if isinstance(t.get("anti_predictive"), Mapping)
-        and t["anti_predictive"].get("measurable")
+        and (
+            t["anti_predictive"].get("measurable")
+            or t["anti_predictive"].get("measured_buckets")
+        )
     ]
     if anti:
         lines.append("")
+        # THIS PARAGRAPH HAD NEVER RENDERED, AND IT REFUSED ITS OWN DOCUMENT
+        # THE FIRST TIME IT DID. `anti` is empty unless the forecast record's
+        # anti-predictive block is both readable and populated, and until
+        # 2026-09-17 it was neither: the graded export's projection dropped the
+        # realised-return column, so no bucket carried an `roi` and
+        # `measured_buckets` was empty on every tier. With the column carried
+        # the branch became live, and the sentence below said "very nearly
+        # guaranteed" — `guaranteed` is in `what_we_can_claim.FORBIDDEN_PHRASES`,
+        # `write_report` checks the RENDERED text against that list, and so
+        # `scripts/run_why_the_model.py` exited 2 and could no longer rebuild
+        # `docs/why_the_model_does_or_does_not_have_an_edge.md` at all. The word
+        # was about a statistical artefact rather than about a result, which is
+        # why it read as harmless for as long as nothing rendered it; the gate
+        # is on the reader's text and does not take that distinction, and it is
+        # right not to — the sentence is rewritten rather than the gate.
         lines.append(
-            "**Anti-predictiveness, per tier.** By claimed edge, the shortfall "
-            "against the model's own probability widens from the smallest "
-            "bucket to the largest by:"
+            "**Anti-predictiveness, per tier — the realised RETURN by claimed "
+            "edge.** Not the shortfall against the model's own probability: "
+            "that is overconfidence, which the model's own selection produces "
+            "almost mechanically, and it is a different quantity reported "
+            "elsewhere. This is what the wagers paid."
         )
         lines.append("")
         for tier in anti:
             block = tier["anti_predictive"]
-            widens = _as_float(block.get("widens_by"))
-            lines.append(
-                f"- {_tier_label(_text(tier.get('label')))}: "
-                f"**{(widens or 0.0) * 100:.1f} pp** across "
-                f"{_as_int(block.get('usable_buckets'))} usable buckets "
-                f"({_as_int(block.get('lowest_rows')):,} rows in the smallest, "
-                f"{_as_int(block.get('highest_rows')):,} in the largest)"
-            )
+            label = _tier_label(_text(tier.get("label")))
+            falls = _as_float(block.get("falls_by"))
+            if block.get("measurable") and falls is not None:
+                shape = (
+                    f"the return falls by **{falls * 100:.1f} pp** from the "
+                    "smallest claimed-edge bucket to the largest across "
+                    f"{_as_int(block.get('usable_buckets'))} usable buckets "
+                    f"({_as_int(block.get('lowest_rows')):,} rows in the "
+                    f"smallest, {_as_int(block.get('highest_rows')):,} in the "
+                    "largest), and the two family-corrected intervals "
+                    + (
+                        "do not overlap"
+                        if block.get("demonstrated")
+                        else "**overlap, so the fall is not demonstrated**"
+                    )
+                )
+            else:
+                usable = _as_int(block.get("usable_buckets"))
+                shape = (
+                    f"{usable} of "
+                    f"{_as_int(block.get('populated_buckets'))} claimed-edge "
+                    f"buckets {'carries' if usable == 1 else 'carry'} a "
+                    "readable return, so no fall across the range was compared"
+                )
+            lines.append(f"- {label}: {shape}.")
+            # **Every measured bucket, not only the worst one.** The deficit
+            # sentence below names tiers by the verdict on these printed
+            # bounds, and the bucket that demonstrates a deficit is selected by
+            # its corrected high bound while `worst_bucket` is selected by its
+            # point estimate — two orderings, so printing only the worst put
+            # the claim on the page with its evidence missing. `_figure` prints
+            # the return, its sample and the corrected bounds, and derives the
+            # verdict from the two bounds on the line. Below the floor it
+            # prints the floor phrase and no number at all, which is why the
+            # figure is safe to emit here without a second sample-size test of
+            # its own.
+            # **Which row is the worst is DERIVED here, not matched against the
+            # stored `worst_bucket`.** This was `row is worst` — an object
+            # identity test against `block["worst_bucket"]`, which holds only
+            # while the record is the dict `build_record` just returned. Every
+            # path that renders a record this repository has actually written
+            # goes through `read_record`, and `json.loads` gives
+            # `worst_bucket` an object of its own: the label then matched
+            # nothing, every bucket printed as `claimed-edge bucket`, and the
+            # document `--check` compared against differed from the document
+            # the same record had produced an hour earlier — a diff blamed on a
+            # hand edit nobody made. `_worst_measured_index` makes the same
+            # selection `_anti_predictive_block` makes, off the rows on this
+            # page, so the label is a function of the record's VALUE.
+            rows = [
+                row
+                for row in block.get("measured_buckets") or []
+                if isinstance(row, Mapping) and row
+            ]
+            worst_index = _worst_measured_index(rows)
+            for index, row in enumerate(rows):
+                role = (
+                    "worst-returning bucket"
+                    if index == worst_index
+                    else "claimed-edge bucket"
+                )
+                lines.append(
+                    f"  - {role} ({_text(row.get('name'))}): {_figure(row)}"
+                )
         lines.append("")
-        lines.append(
-            "The biggest claimed edges do worst in every tier that can be "
-            "measured, so raising the edge threshold is the wrong response — "
-            "and it is the one move a disappointing backtest invites."
-        )
+        # **Read off the bounds printed above, never off a stored count.** The
+        # forecast record's `demonstrated_deficits` was counted at that run's
+        # family size; the intervals printed above are re-stated at today's. A
+        # bucket whose deficit survived 24 looks has not necessarily survived
+        # 95, and the two disagreeing put *"selected wagers that lost money"*
+        # three lines under a figure reading `no demonstrated edge`.
+        deficits = [t for t in anti if t["anti_predictive"].get("deficit_buckets")]
+        if deficits:
+            lines.append(
+                "A bucket whose family-corrected interval lies entirely below "
+                "zero is worse than no edge, not the same as it: in "
+                + ", ".join(
+                    f"{_tier_label(_text(t.get('label')))} "
+                    + ", ".join(
+                        _text(row.get("name"))
+                        for row in t["anti_predictive"]["deficit_buckets"]
+                    )
+                    for t in deficits
+                )
+                + " the model's own claimed edge selected wagers that lost "
+                "money on the evidence of this run. Each is printed above with "
+                "the corrected interval this sentence is read off."
+            )
+        # The threshold sentence is a claim about money and rests on disjoint
+        # family-corrected intervals — `demonstrated` — and on nothing else.
+        # It used to be printed for every tier that reached this paragraph,
+        # which meant it was printed off `measurable`: a filter that says a
+        # comparison was possible, not that it came out any particular way.
+        #
+        # **The population it quantifies over is the tiers that COULD be
+        # measured**, which is what the sentence says. It used to be every tier
+        # in `anti`, and `anti` now admits a tier on a single measured bucket
+        # with no comparison in it — a tier for which `demonstrated` is
+        # necessarily False. Quantifying over those suppressed a true sentence
+        # whenever one tier had too few buckets to compare, which is a guard
+        # that no longer meant what it said.
+        comparable = [t for t in anti if t["anti_predictive"].get("measurable")]
+        shown = [t for t in comparable if t["anti_predictive"].get("demonstrated")]
+        if shown and len(shown) == len(comparable):
+            lines.append(
+                "The biggest claimed edges do worst in every tier that can be "
+                "measured, so raising the edge threshold is the wrong response "
+                "— and it is the one move a disappointing backtest invites."
+            )
     return lines
 
 
@@ -2023,7 +2562,22 @@ def _open_questions(record: Mapping) -> list[str]:
 
 
 def render(record: Mapping) -> str:
-    """The document, as a pure function of the record. Reads no disk."""
+    """The document, as a pure function of the record. Reads no disk.
+
+    **A pure function of the record's VALUES, and that is now checked rather
+    than asserted.** The sentence above was true of everything except one line:
+    `_forecast_lines` found the worst claimed-edge bucket by testing
+    `row is block["worst_bucket"]`, so the same record rendered one document
+    before it was written to disk and a different one after it was read back —
+    and `scripts/run_why_the_model.py` writes the record from memory and
+    `--check` renders the record off disk, so the pair disagreed on the very
+    next run and the script blamed a hand edit. The claim is held by
+    ``test_the_page_is_the_same_document_after_the_record_is_written_and_read_
+    back``, which renders from `build_record`'s dict and from
+    `read_record(write_record(...))` and asserts the two texts are identical.
+    Anything this function reads off the object graph rather than the values
+    fails it.
+    """
     version = _as_int(record.get("record_version"))
     if version != RECORD_VERSION:
         raise WhyError(

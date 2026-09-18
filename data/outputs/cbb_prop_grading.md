@@ -4,12 +4,10 @@
 
 - Model: `cbb_betting_lab.models.slate:slate_model`
 - Control: `identity-blind role-prior control: the same engine, the same minutes lattice and the same lines, with every per-minute rate replaced by `role_prior[stat][projected-minutes bucket]` and the scoring mix replaced by the league `value_pmf` — `player_rates.shrink_rate` at credibility weight zero`
-- Store: `/private/tmp/wt-grading/data/processed/cbb_historical_prices__card.csv`, 977,613,435 bytes, sha256 `143d7d307d9bc3b21989d7857aac6a52f8abd010da2c1e0ea2df8c0f0b82b78b`
+- Store: `/Users/cooperross/Projects/cbb-betting-lab/data/processed/cbb_historical_prices__card.csv`, 977,613,435 bytes, sha256 `143d7d307d9bc3b21989d7857aac6a52f8abd010da2c1e0ea2df8c0f0b82b78b`
 - Season: 2024; snapshot window `card`
 - Subject fold for the athlete clustering: `stores.normalise_subject (casefold)`
 - Family correction: 133 cumulative hypotheses (x1.8145), read from the experiment ledger at render time
-
-**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 95 cumulative hypotheses (x1.7689), and `cbb_prop_grading.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 133 hypotheses (x1.8145), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
 
 ## What is compared against what
 

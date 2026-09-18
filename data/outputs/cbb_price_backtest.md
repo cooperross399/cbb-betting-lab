@@ -1,6 +1,6 @@
 # NCAA Division I men's basketball — price backtest
 
-Generated 2026-09-17T16:24:15Z.
+Generated 2026-09-18T03:02:12Z.
 
 **Walk-forward only.** Every model that priced a game was built from games strictly earlier than it, and every bet carries the day it was priced through. The stamp is checked rather than the code path: the football lab's compound markets looked good because a distribution loaded once outside the season loop had seen the future.
 
@@ -9,8 +9,6 @@ Generated 2026-09-17T16:24:15Z.
 **175,690 graded bets** from 614,890 graded wagers offered, seasons 2021-2026, across 26,622 games and 791 slate days, at an edge threshold of 2% declared in advance.
 
 **Family correction: 133 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.81. That is the ledger's cumulative count and never the day's — correcting today's findings across today's tests is a lie if more were tested last week.
-
-**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 130 cumulative hypotheses (x1.8115), and `cbb_price_backtest.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 133 hypotheses (x1.8145), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
 
 **Below 200 bets there is no number**, only the words *not enough evidence*. That floor was declared before any price was bought.
 

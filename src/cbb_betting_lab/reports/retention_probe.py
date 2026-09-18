@@ -74,6 +74,19 @@ separate things stop that here:
 3. A live run refuses to start when the cap is below the plan's pessimistic
    bound, unless the operator passes `--allow-partial` — and a partial run says
    so at the top of its own report.
+4. A **balance circuit-breaker inside the run**. The three above all watch this
+   run's own cap, which is a budget we chose; none of them watches the ACCOUNT.
+   When the account empties the provider stops returning quotes, and an empty
+   payload marks its markets ASKED with nothing priced, which is exactly a
+   `NOT_RETAINED` verdict. This module is the one that publishes those
+   verdicts, so an unwatched balance here turns a fact about our wallet into a
+   published fact about the provider's archive — the thing rule 3 forbids. The
+   breaker reads `x-requests-remaining` off each response and stops with
+   `QuotaExhausted` when the measured balance falls below a floor derived from
+   the widest single request. It never assumes a number: a response that
+   reports no balance leaves the breaker blind for that response and the report
+   says so, and **only a run whose balance was measured throughout may have a
+   `NOT_RETAINED` verdict described as a fact about the archive.**
 
 ## What "measurable" means, declared here in advance
 
@@ -147,6 +160,7 @@ from cbb_betting_lab.providers.odds_api import (
     CreditCapReached,
     OddsApiProvider,
     ProviderError,
+    QuotaExhausted,
     Spend,
     markets_fingerprint,
 )
@@ -912,11 +926,30 @@ def probe(
     use_cache: bool = True,
     allow_partial: bool = False,
     generated_at: str = "",
+    quota_floor: int | None = None,
 ) -> dict:
     """Ask the archive, count what comes back, and return the run record.
 
     The record is the artefact. Everything the report says is a function of it,
     so the wording can be improved forever without spending a credit twice.
+
+    `quota_floor` is the ACCOUNT balance below which the run stops, and it is
+    derived rather than invented: the default is the pessimistic bound of the
+    single largest request this run can make, `10 x chunk_size x regions`, so
+    the breaker trips while the request in flight could still have been
+    answered whole. THIS IS NOT THE CREDIT CAP. The cap is this run's own
+    budget, and stopping against it leaves markets unasked — which this module
+    already reports as `NOT_PROBED`, never `NOT_RETAINED`. The account emptying
+    is worse and looks better: the provider keeps answering, with nothing in
+    the payload, so `asked` records the market as fully asked and `verdict()`
+    returns `NOT_RETAINED` over an empty wallet. That is a fabricated fact
+    about the provider's archive, published under this lab's name, and it is
+    the one thing this module exists not to do.
+
+    Nothing here ever assumes a balance. When a response reports none the
+    breaker is blind for that response and the count of those reaches the
+    record, so the report can tell a run watched throughout from one watched
+    once and blind afterwards.
     """
     keys = tuple(sorted(set(str(k) for k in provider_keys)))
     chunks = market_chunks(keys, size=chunk_size)
@@ -945,6 +978,54 @@ def probe(
     served_from_cache = 0
     completed = True
     stopped_because = ""
+    # The breaker's state. `stopped_on_quota` is kept apart from `completed`
+    # because the two say opposite things about what this run's silence proves:
+    # a capped run left markets UNASKED and reports them `NOT_PROBED`, an
+    # exhausted-account run left them ANSWERED WITH NOTHING, which is
+    # indistinguishable from an unretained market in every count below.
+    stopped_on_quota = False
+    quota_ever_reported = False
+    quota_unwatched_responses = 0
+    quota_last_measured: int | None = None
+    floor = (
+        int(quota_floor)
+        if quota_floor is not None
+        else HISTORICAL_MULTIPLIER * int(chunk_size) * int(regions)
+    )
+
+    def check_quota(where: str) -> None:
+        """The circuit-breaker. Raises rather than returning a verdict.
+
+        Read from the response in hand, never carried forward from an earlier
+        one: a stale balance compared against a floor is a breaker that cannot
+        fire while reporting that it is armed.
+        """
+        nonlocal quota_ever_reported, quota_unwatched_responses
+        nonlocal quota_last_measured
+        remaining = spend.remaining_credits()
+        if remaining is None:
+            quota_unwatched_responses += 1
+            return
+        quota_ever_reported = True
+        quota_last_measured = remaining
+        if remaining >= floor:
+            return
+        raise QuotaExhausted(
+            f"The provider reports {remaining:,} credit(s) remaining on the "
+            f"account, below this probe's floor of {floor:,}, measured while "
+            f"fetching {where}. **STOPPED ON QUOTA.** The run stopped at once "
+            "rather than continuing: once the balance is gone the provider "
+            "returns payloads with no bookmakers in them, and a payload with "
+            "no bookmakers marks its markets ASKED and PRICED-BY-NOBODY, which "
+            "is this module's definition of NOT_RETAINED. Not one verdict in "
+            "this run may be read as a statement about the archive."
+        )
+
+    def stop_on_quota(exc: QuotaExhausted) -> None:
+        nonlocal completed, stopped_on_quota, stopped_because
+        completed = False
+        stopped_on_quota = True
+        stopped_because = redact(str(exc))
 
     cache_root = Path(cache_dir)
 
@@ -993,6 +1074,15 @@ def probe(
                     listings[event.snapshot] = []
                     continue
                 _write_cache(path, listing)
+                # OUTSIDE the ProviderError handler above on purpose:
+                # `QuotaExhausted` is a `ProviderError`, and catching it there
+                # would file the account running out as one failed request and
+                # let the probe carry on asking questions nobody will answer.
+                try:
+                    check_quota(f"the slate listing at {event.snapshot}")
+                except QuotaExhausted as exc:
+                    stop_on_quota(exc)
+                    break
             listings[event.snapshot] = listing
 
         provider_event_id, reason = match_provider_event(listing, event, index)
@@ -1044,6 +1134,17 @@ def probe(
                     continue
                 charged = spend.credits_spent - before
                 _write_cache(path, payload)
+                # BEFORE `asked` IS UPDATED, two lines below. That line is what
+                # turns a response into evidence: it marks every key in the
+                # chunk as asked, and an asked key with nothing priced against
+                # it is a `NOT_RETAINED` verdict. Once the account is empty the
+                # payloads are empty too, so the check has to stand between the
+                # response and the bookkeeping, not after it.
+                try:
+                    check_quota(f"event {event.game_id}")
+                except QuotaExhausted as exc:
+                    stop_on_quota(exc)
+                    break
             else:
                 served_from_cache += 1
             asked[event.game_id] |= set(chunk)
@@ -1109,6 +1210,11 @@ def probe(
         bound=bound,
         completed=completed,
         stopped_because=stopped_because,
+        stopped_on_quota=stopped_on_quota,
+        quota_floor=floor,
+        quota_ever_reported=quota_ever_reported,
+        quota_unwatched_responses=quota_unwatched_responses,
+        quota_last_measured=quota_last_measured,
         served_from_cache=served_from_cache,
         allow_partial=allow_partial,
         regions=provider.regions,
@@ -1144,6 +1250,11 @@ def build_record(
     sport_key: str,
     generated_at: str,
     live: bool,
+    stopped_on_quota: bool = False,
+    quota_floor: int = 0,
+    quota_ever_reported: bool = False,
+    quota_unwatched_responses: int = 0,
+    quota_last_measured: int | None = None,
 ) -> dict:
     """Everything the report will ever need, in one JSON-safe dictionary."""
     event_tier = {e.game_id: e.tier for e in plan.events}
@@ -1251,6 +1362,21 @@ def build_record(
         "live": bool(live),
         "completed": bool(completed),
         "stopped_because": str(stopped_because),
+        # THE SCHEMA VERSION DELIBERATELY DID NOT MOVE FOR THESE KEYS.
+        #
+        # Every one of them is absent from a record written before the balance
+        # breaker existed, and `render` reads each with a default that fails
+        # CLOSED — no breaker, not watched, nothing claimed about the archive.
+        # Bumping the version would only make the committed record of the
+        # 2026-09-01 probe unrenderable, and that record's own honest reading
+        # is precisely "nothing measured the balance during this run".
+        "stopped_on_quota": bool(stopped_on_quota),
+        "quota_floor": int(quota_floor),
+        "quota_ever_reported": bool(quota_ever_reported),
+        "quota_unwatched_responses": int(quota_unwatched_responses),
+        "quota_last_measured": (
+            None if quota_last_measured is None else int(quota_last_measured)
+        ),
         "allow_partial": bool(allow_partial),
         "credit_cap": int(credit_cap),
         "pessimistic_bound": int(bound),
@@ -1258,7 +1384,11 @@ def build_record(
         "credits_estimated": int(spend.credits_estimated),
         "requests_made": int(spend.requests_made),
         "responses_served_from_cache": int(served_from_cache),
+        # What the LAST response reported, which is empty when it reported
+        # nothing — not the last figure the run ever saw. See `Spend`.
         "quota_remaining": str(spend.quota_remaining),
+        "quota_remaining_last_reported": str(spend.quota_remaining_last_reported),
+        "responses_since_quota_reported": int(spend.responses_since_quota_reported),
         "spend_notes": list(spend.notes),
         "request_failures": [dict(f) for f in failures],
         "thresholds": {
@@ -1452,8 +1582,59 @@ def render(record: Mapping) -> str:
         f"| Responses served from cache | "
         f"{int(record.get('responses_served_from_cache', 0)):,} |"
     )
-    add(f"| Quota remaining afterwards | {record.get('quota_remaining') or 'unrecorded'} |")
+    # WHAT THE BALANCE BREAKER ACTUALLY SAW, DECIDED ONCE AND READ EVERYWHERE.
+    #
+    # Three states, not two. A run the breaker watched from end to end, a run
+    # in which the provider reported a balance and then stopped while the
+    # account drained, and a run in which it never reported one at all. The
+    # middle state is the dangerous one, because "a balance was reported" reads
+    # as the safe answer while the breaker was blind for the rest of the run.
+    # Only the first state licenses the sentence below that calls a
+    # `NOT_RETAINED` verdict a fact about the archive.
+    #
+    # Every key here is absent from a record written before the breaker
+    # existed, and every default fails CLOSED.
+    breaker_ran = live and "quota_floor" in record
+    quota_ever_reported = bool(record.get("quota_ever_reported"))
+    quota_unwatched = int(record.get("quota_unwatched_responses", 0))
+    quota_watched_throughout = (
+        breaker_ran
+        and quota_ever_reported
+        and "quota_unwatched_responses" in record
+        and quota_unwatched == 0
+    )
+    # A balance is stated as the balance AFTERWARDS only when the run's last
+    # response actually carried one; otherwise the last figure the provider
+    # gave is printed as exactly that, with its age.
+    current_quota = str(record.get("quota_remaining", "")).strip()
+    last_quota = str(record.get("quota_remaining_last_reported", "")).strip()
+    if current_quota:
+        quota_text = current_quota
+    elif last_quota:
+        quota_text = (
+            f"not reported on the last response; **{last_quota}** as of "
+            f"{int(record.get('responses_since_quota_reported', 0)):,} "
+            "response(s) before the end, which is the last figure the provider "
+            "gave and not the balance the run finished on"
+        )
+    else:
+        quota_text = "unrecorded"
+    add(f"| Quota remaining afterwards | {quota_text} |")
+    if not live:
+        floor_text = "not applicable: nothing was requested"
+    elif "quota_floor" in record:
+        floor_text = f"{int(record['quota_floor']):,}"
+    else:
+        floor_text = "none: this record predates the balance circuit-breaker"
+    add(f"| Account balance floor this run watched | {floor_text} |")
     add(f"| Run completed | **{'yes' if completed else 'no'}** |")
+    if not live:
+        stopped_text = "not applicable: nothing was requested"
+    elif "stopped_on_quota" in record:
+        stopped_text = "**yes**" if record.get("stopped_on_quota") else "**no**"
+    else:
+        stopped_text = "unrecorded: this record predates the balance circuit-breaker"
+    add(f"| **Stopped on quota** | {stopped_text} |")
     add("")
     if not live:
         add(
@@ -1462,6 +1643,26 @@ def render(record: Mapping) -> str:
             "`NOT_PROBED`, which is the correct answer for a run that asked "
             "nothing — and is deliberately not one of the three retention "
             "verdicts."
+        )
+        add("")
+    elif record.get("stopped_on_quota"):
+        # THE CASE THAT MUST NOT READ AS THE ORDINARY STARVED RUN. Stopping at
+        # this run's own cap leaves markets UNASKED, and this module already
+        # reports those as `NOT_PROBED`. An emptied ACCOUNT does something the
+        # `NOT_PROBED` machinery cannot catch: the provider keeps answering
+        # with payloads that hold no bookmakers, so the markets in them are
+        # recorded as asked and unpriced — which is this module's own
+        # definition of `NOT_RETAINED`, manufactured out of our balance.
+        add("> # STOPPED ON QUOTA")
+        add(f"> {record.get('stopped_because') or 'The account ran out of credits.'}")
+        add(
+            "> **No verdict in this report is a statement about the archive.** "
+            "`NOT_RETAINED` here means *this run saw no price for it*, and this "
+            "run stopped because the account could no longer pay for answers. "
+            "An empty payload from an exhausted balance and an empty payload "
+            "from a market the provider does not retain are the same bytes. "
+            "Top the balance up and re-run; nothing already cached is asked "
+            "for twice."
         )
         add("")
     elif not completed:
@@ -1475,13 +1676,64 @@ def render(record: Mapping) -> str:
             "the archive being empty of a market this run did not reach."
         )
         add("")
+    elif quota_watched_throughout:
+        # THE ONLY BRANCH ALLOWED TO CALL A VERDICT A FACT ABOUT THE ARCHIVE.
+        #
+        # It used to be the only completed branch there was, so it printed this
+        # sentence for every run that finished inside its cap — including a run
+        # in which nothing ever read the account's balance. That is the exact
+        # statement this module exists to prevent, published by this module,
+        # about the verdicts this module produces.
+        add(
+            "The run completed inside its cap, and the account's balance was "
+            "measured on every response and stayed above this run's floor "
+            "throughout — so a `NOT_RETAINED` verdict below is a fact about "
+            "the archive rather than a fact about the budget. **A starved "
+            "fetch and an unquoted market look identical**, which is why the "
+            "cap, the bound, the measured spend and the balance floor are all "
+            "printed above rather than summarised."
+        )
+        add("")
     else:
         add(
-            "The run completed inside its cap, so a `NOT_RETAINED` verdict "
-            "below is a fact about the archive rather than a fact about the "
-            "budget. **A starved fetch and an unquoted market look identical**, "
-            "which is why the cap, the bound and the measured spend are all "
-            "printed above rather than summarised."
+            "The run completed inside its cap and asked everything it planned "
+            "to. **A `NOT_RETAINED` verdict below is NOT established as a fact "
+            "about the archive**, because the account's balance was not "
+            "measured throughout this run — see the note immediately below. An "
+            "exhausted account returns payloads with no bookmakers in them, "
+            "and this report cannot tell those apart from a market the "
+            "provider does not retain. Every `NOT_RETAINED` below reads only "
+            "as *this run saw no price for it*."
+        )
+        add("")
+    if live and not breaker_ran:
+        add(
+            "> **This record predates the balance circuit-breaker.** Nothing "
+            "read `x-requests-remaining` during this run, so nothing would "
+            "have stopped it had the account emptied part-way through. That is "
+            "not a measurement that the balance was healthy; it is the absence "
+            "of one, and no quota figure has been assumed in its place."
+        )
+        add("")
+    elif breaker_ran and not quota_ever_reported:
+        add(
+            "> **The provider reported no remaining account quota on any "
+            "response in this run, so the balance circuit-breaker had nothing "
+            "to watch.** That is not a measurement that the balance was "
+            "healthy; it is the absence of one. No quota figure has been "
+            "assumed in its place."
+        )
+        add("")
+    elif breaker_ran and not quota_watched_throughout:
+        add(
+            f"> **The provider stopped reporting a remaining account quota: "
+            f"the breaker looked {quota_unwatched:,} time(s) and found no "
+            "balance to compare.** It was therefore blind for that part of the "
+            "run. The figure in the table above is the last one the provider "
+            "gave, not the balance the run ended on, and it is not carried "
+            "forward as though it were: a stale balance compared against a "
+            "floor is a breaker that cannot fire while reporting that it is "
+            "armed."
         )
         add("")
     if record.get("spend_notes"):
@@ -1627,6 +1879,22 @@ def render(record: Mapping) -> str:
         "has an interval spanning roughly 37% to 64%."
     )
     add("")
+    # THE DISCLAIMER GOES BESIDE THE TABLE, NOT ONLY AT THE TOP OF THE PAGE.
+    #
+    # This table is the thing that gets quoted, screenshotted and pasted into
+    # another document, and it carries the word `NOT_RETAINED` in the summary
+    # voice. A qualification thirty paragraphs above it does not travel with
+    # it.
+    if live and not quota_watched_throughout:
+        add(
+            "> **Every `NOT_RETAINED` in this table means only *this run saw no "
+            "price for it*.** The account's balance was not measured throughout "
+            "this run, and an exhausted balance returns payloads with no "
+            "bookmakers in them — the same bytes as a market the archive does "
+            "not hold. Nothing in this column may be quoted as a fact about the "
+            "provider's archive."
+        )
+        add("")
     add(
         "| Market | Tier | Priced on | Books | Rows | Credits | Verdict |"
     )

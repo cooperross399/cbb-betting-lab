@@ -612,8 +612,8 @@ def make_price_day(
             history=history,
             prices=frame,
             competition=competition,
-            # BOTH NAMES, AND THE REASON IS THAT THEY ARE TWO DIFFERENT
-            # VOCABULARIES FOR ONE FRAME.
+            # ONE NAME, AND THE REASON IS THAT THERE ARE TWO VOCABULARIES
+            # FOR ONE FRAME.
             #
             # `player_history` is the walk-forward guard's name for it — the
             # `frames=` key this pricer declares it cut. `player_games` is what
@@ -626,10 +626,14 @@ def make_price_day(
             # while `cbb_ratings_fit.md` published "with roster terms" about the
             # same model.
             #
-            # `call_model` filters, so a model declaring only one of these gets
-            # only that one, and a model declaring neither gets neither.
+            # The first fix passed BOTH names here. That fixed this caller and
+            # left four others — the gameday card among them — still handing
+            # the model nothing, so for a few hours the card priced a different
+            # model than the backtest that licensed it. The join belongs in one
+            # place or it belongs in none: `call_model` now aliases the guard's
+            # name to whatever the model declares. See
+            # `price_backtest.FRAME_ALIASES` and the test that pins it.
             player_history=player_history,
-            player_games=player_history,
         )
         row_reasons: list[str] = []
         wagers, unparseable, reasons = card_pricing.build_wagers(
@@ -1415,7 +1419,10 @@ def build_parser() -> argparse.ArgumentParser:
         default="",
         help=(
             "Write EVERY settled wager the model had an opinion on to this CSV, "
-            "carrying `forecast_skill.SKILL_COLUMNS`, `book`, and a boolean "
+            "carrying `forecast_skill.SKILL_COLUMNS`, `book`, `profit_units` "
+            "— the realised return, without which the skill report can write no "
+            "`roi` onto any claimed-edge bucket and reports anti-predictiveness "
+            "as not measurable — and a boolean "
             "`selected` that is True exactly for the rows that cleared the edge "
             "threshold (the bets). It is what lets the market-vs-model "
             "regression run over the BOUGHT population rather than only over "
@@ -1751,15 +1758,55 @@ def main(argv: list[str] | None = None) -> int:
         opinions_frame = opinions_frame.assign(
             selected=PB.bet_mask(opinions_frame, threshold=float(args.edge_threshold))
         )
-        # `book` is carried alongside the declared columns because
-        # `forecast_skill` de-vigs WITHIN a book by default, and it refuses to
-        # run without it rather than pooling every row into one nameless book —
-        # which would pair quotes across books and understate the hold,
-        # sometimes to nothing. The refusal is correct; the fix is the column.
+        # THE PROJECTION IS DERIVED FROM THE CONSUMER'S DECLARATION, NEVER
+        # HAND-LISTED. It was a hand-list, and the hand-list is what dropped
+        # `profit_units`: `forecast_skill` writes an `roi` onto a claimed-edge
+        # bucket ONLY when the frame carries that column, so every real tier
+        # came back with zero readable buckets and the report said
+        # anti-predictiveness "is not measured here" — a false statement about
+        # an archive of 270,504 settled rows, every one of which had been
+        # graded to a profit. `settled_opinions` keeps a row only where
+        # `profit_units` is non-null, so the column was in hand the whole time.
+        #
+        # Adding that one name back would have left the NEXT optional column in
+        # exactly the same position, and there were two of them:
+        #
+        #   `player` — `forecast_skill.pair_key` builds the de-vig pair key from
+        #     `_text(record.get("player")).casefold()`, and `_text(None)` is the
+        #     empty string. With the column absent, two athletes' props on one
+        #     event, market, segment and line collapse into ONE pair key and get
+        #     de-vigged against each other. Unreachable today only because
+        #     `drop_player_markets` takes every prop out of this script's
+        #     universe — measured: 504,394 quotes carry a `player`, 0 of them
+        #     survive the scope declaration — so the column is written all-blank
+        #     and costs nothing. It is the arm that would break silently the day
+        #     the scope changed.
+        #
+        #   `edge` — declared so this report uses the edge AS SUPPLIED rather
+        #     than recomputing it, so the report and the card cannot disagree
+        #     about what the card claimed. `build_record` falls back to
+        #     `price_backtest.add_edge`, which is the same function `priced`
+        #     was stamped with, so carrying it changes no measurement: over the
+        #     1,053,468-row frame the CSV round trip moves it by at most
+        #     1.78e-15 and flips 0 `selected` flags and 0 bucket memberships.
+        #
+        # `book` was the one optional name the hand-list did carry, because
+        # `forecast_skill` de-vigs WITHIN a book by default and refuses to run
+        # without it rather than pooling every row into one nameless book.
+        #
+        # Deriving the list means no column the consumer declares can be left
+        # out by omission again, and the run says which ones it had and which it
+        # did not so the pin downstream can tell "dropped" from "never held".
         columns = list(FS.SKILL_COLUMNS)
-        if "book" in opinions_frame.columns and "book" not in columns:
-            columns.append("book")
-        columns.append(FS.SELECTED_COLUMN)
+        carried, absent = [], []
+        for optional in FS.OPTIONAL_SKILL_COLUMNS:
+            if optional in columns:
+                continue
+            if optional in opinions_frame.columns:
+                columns.append(optional)
+                carried.append(optional)
+            else:
+                absent.append(optional)
         opinions_frame[columns].to_csv(target, index=False)
         selected_count = int(opinions_frame[FS.SELECTED_COLUMN].sum())
         print(
@@ -1768,6 +1815,10 @@ def main(argv: list[str] | None = None) -> int:
             f"the threshold-selected bets (`{FS.SELECTED_COLUMN}` is True). "
             "The regression's population is every opinion; the selected subset "
             "is reported beside it as the winner's-curse comparison."
+        )
+        print(
+            f"Optional columns the skill report declares: carried {carried}; "
+            f"not on the graded frame and therefore not written {absent}."
         )
 
     margins, totals = key_number_inputs(team_games, game_ids)

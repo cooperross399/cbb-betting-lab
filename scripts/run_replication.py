@@ -212,13 +212,28 @@ def score_season(
     quotes = len(season_rows)
     wagers = PB.one_bet_per_wager(season_rows)
 
+    # ROSTER EVIDENCE IS READ WHENEVER THE TABLE IS THERE, matching
+    # `run_price_backtest.py`. This used to compute exactly the flag that was
+    # removed there on 2026-09-17 — whether the BOARD holds a player MARKET —
+    # and the held-out seasons 2025 and 2026 carry only moneyline, spread,
+    # team_total and total_points. So it was always False, the player table was
+    # never read, and the model priced the holdout with its roster terms off
+    # while the discovery half (scored by the fixed backtest) had them on.
+    #
+    # That is the one comparison this whole report exists to make, with its two
+    # halves priced by different models. The flag has to agree with the
+    # backtest's or the replication is not a replication.
+    grades_props = any(
+        (MARKETS_BY_KEY.get(m) is not None and MARKETS_BY_KEY[m].family == PLAYER)
+        for m in {clean_text(m) for m in wagers["market"].dropna().unique()}
+    )
+    roster_table = Path(processed_dir) / competition.output_name(
+        "player_games", ".csv"
+    )
     tables = backtest.load_tables(
         Path(processed_dir),
         competition,
-        players=any(
-            (MARKETS_BY_KEY.get(m) is not None and MARKETS_BY_KEY[m].family == PLAYER)
-            for m in {clean_text(m) for m in wagers["market"].dropna().unique()}
-        ),
+        players=grades_props or roster_table.is_file(),
     )
     team_games = tables["team_games"]
 
@@ -466,6 +481,17 @@ def rebuild_report_only(
     # A refusal rather than a warning, because the report's whole subject is
     # whether a discovery finding held on held-out seasons — and that sentence
     # means nothing if the discovery half has moved underneath it.
+    #
+    # Three shapes reach the refusal, and only one of them is a disagreement:
+    # the stamped figures differ from the file's; the file is present and
+    # cannot be parsed; or the record's stamp does not carry the fields the
+    # comparison reads — `R.COMPARED_DISCOVERY_FIELDS` — and so cannot be
+    # asked, whether that stamp is absent, empty, or truncated down to the
+    # three keys nothing compares. The warning below is a fourth and is NOT a
+    # refusal — it is keyed
+    # on the discovery FILE being absent, which is the one case a record-only
+    # tree can legitimately be in, and it exists so that "could not check"
+    # never leaves this script silent and reads as "checked and found fine".
     if discovery_path is not None and not Path(discovery_path).is_file():
         print(
             f"::warning::{Path(discovery_path).name} is not beside this record, "
@@ -477,8 +503,9 @@ def rebuild_report_only(
     if stale:
         print(
             "::error::this replication no longer describes the discovery run "
-            "it names, so re-rendering it would republish a comparison that is "
-            "no longer between those two things:",
+            "it names, or can no longer show that it does, so re-rendering it "
+            "would republish a comparison that is not known to be between "
+            "those two things:",
             file=sys.stderr,
         )
         for reason in stale:

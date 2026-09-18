@@ -22,6 +22,7 @@ document against it, so the claim cannot become false again without a red build.
 from __future__ import annotations
 
 import copy
+import difflib
 import json
 import re
 import shutil
@@ -91,6 +92,69 @@ def committed_record() -> dict:
     if path.is_file():
         return WHY.read_record(path)
     return build(OUTPUTS)
+
+
+def read_back(record: Mapping, tmp_path: Path) -> dict:
+    """`record`, through the file the production path actually writes it to.
+
+    `WHY.write_record` then `WHY.read_record`, not `copy.deepcopy` and not a
+    hand-rolled `json.dumps` beside them: the difference this exists to expose
+    is precisely the difference between the dict `build_record` returns and the
+    dict that comes back off disk, and only the production pair is guaranteed
+    to *be* that difference. A copy of the dumping options spelled out here
+    would drift from `write_record` and start round-tripping something no run
+    ever wrote.
+    """
+    return WHY.read_record(WHY.write_record(record, tmp_path / "round_trip.json"))
+
+
+def rendered_both_ways(record: Mapping, tmp_path: Path) -> str:
+    """`render(record)` — asserted to be the SAME document read back off disk.
+
+    **Every other test in this file builds the record in memory and renders
+    that**, so until this existed no test in the file could see a renderer that
+    reads anything but the record's values. One did: `_forecast_lines` labelled
+    the worst claimed-edge bucket with `row is worst`, an object-identity test
+    against `block["worst_bucket"]`, and `json.loads` gives that key an object
+    of its own. In memory three lines read `worst-returning bucket`; off disk
+    none of them did.
+
+    That is not a cosmetic difference. `scripts/run_why_the_model.py` writes
+    the record with `write_record` and the document from the record **in
+    memory**; the next `--check` run reads the record back and renders it, so
+    the two disagree and the script exits 1 with *"does not match what ...
+    renders to. Re-render it rather than editing it"* — accusing a hand edit
+    nobody made, on a document no re-render can fix.
+
+    So the assertion is equality of the two documents, which is the assertion
+    that makes `render`'s docstring — *"The document, as a pure function of the
+    record"* — true rather than nearly true. Anything the renderer reads that
+    survives `json.dumps`/`json.loads` unchanged passes it; anything it reads
+    off the object graph does not.
+    """
+    in_memory = WHY.render(record)
+    through_disk = WHY.render(read_back(record, tmp_path))
+    if in_memory != through_disk:
+        diff = "\n".join(
+            difflib.unified_diff(
+                in_memory.splitlines(),
+                through_disk.splitlines(),
+                fromfile="rendered from the record in memory",
+                tofile="rendered from the same record read back off disk",
+                lineterm="",
+                n=1,
+            )
+        )
+        raise AssertionError(
+            "`render` is not a pure function of the record: the same record "
+            "renders two different documents before and after it is written "
+            "and read back. Something in the renderer is reading the object "
+            "graph — an `is` against another key of the record, a cached "
+            "object — rather than the values. This is what makes "
+            "`run_why_the_model.py --check` fail on a document nobody "
+            f"touched.\n{diff[:4000]}"
+        )
+    return in_memory
 
 
 def run_script(*args: str) -> subprocess.CompletedProcess:
@@ -899,7 +963,110 @@ def test_the_bound_keys_this_guard_knows_about_are_the_ones_the_record_writes(ou
         )
 
 
-def test_every_row_of_the_record_that_carries_a_figure_is_walked(outputs):
+#: The claimed-edge buckets the round-trip fixtures plant, by what they make
+#: separately observable. Two rows whose worst-by-return and
+#: whose-interval-is-below-zero are DIFFERENT rows, because a fixture in which
+#: the two coincide cannot tell the two labels apart — and the label is the
+#: thing the round trip broke.
+ROUND_TRIP_BUCKETS: dict = {
+    "one measured bucket": [(0.20, float("inf"), -0.09, (-0.10, -0.08))],
+    "worst is not the deficit": [
+        (0.0, 0.02, -0.20, (-0.45, 0.05)),
+        (0.02, 0.05, -0.05, (-0.065, -0.035)),
+    ],
+}
+
+
+def _plant_round_trip_buckets(outputs: Path, shape: str) -> None:
+    """Give every forecast cell the buckets `shape` names, in every tier."""
+    cells = [_bucket_cell(*args) for args in ROUND_TRIP_BUCKETS[shape]]
+    _plant_per_tier(
+        outputs,
+        {
+            label: cells
+            for label in ("high_major", "mid_major", "low_major", "every tier pooled")
+        },
+    )
+
+
+@pytest.mark.parametrize("shape", sorted(ROUND_TRIP_BUCKETS))
+def test_the_page_is_the_same_document_after_the_record_is_written_and_read_back(
+    outputs, tmp_path, shape
+):
+    """**The record is written and read back, and the page must not move.**
+
+    The defect: `_forecast_lines` found the worst claimed-edge bucket with
+    `row is worst`, an identity test against `block["worst_bucket"]`. That key
+    holds the very object `measured_buckets` holds while the record is the dict
+    `build_record` returned, and a different object with the same value once
+    the record has been through JSON — which is every path that renders a
+    record this repository has written: `--check`, `--rerender`, and
+    `test_the_committed_document_matches_what_its_committed_record_renders_to`,
+    all of which go through `read_record`.
+
+    Both fixtures below make the two labels separately observable. *worst is
+    not the deficit* plants a bucket returning -20% under an interval spanning
+    zero and one returning -5% entirely below it, so the worst-returning row
+    and the row that demonstrates the deficit are different rows and a renderer
+    that labelled either of them by accident would print the wrong one. The
+    assertion is not that the label is present — `test_the_page_names_the_
+    bucket_whose_own_interval_is_below_zero` holds that — but that the two
+    documents are IDENTICAL, which is the whole of what `render`'s docstring
+    promises and the only form of the claim a value/identity confusion cannot
+    satisfy by accident.
+    """
+    _plant_round_trip_buckets(outputs, shape)
+    record = build(outputs)
+    assert record["forecast"]["pooled"]["anti_predictive"]["measured_buckets"], (
+        "the planted buckets must reach the record, or this test round-trips a "
+        "document with no claimed-edge bucket in it and proves nothing"
+    )
+
+    page = rendered_both_ways(record, tmp_path)
+
+    # The section this is about really is on the page, once per tier that
+    # reaches it, with the label the identity test used to produce. A
+    # round-trip equality that held because neither document said anything
+    # would be the vacuous fixture this file refuses elsewhere — and the
+    # expected count is read off the record rather than typed, so a fixture
+    # that stops reaching a tier is a red test and not a quieter one.
+    printing = [
+        tier
+        for tier in record["forecast"]["tiers"]
+        if WHY._as_int(tier.get("rows")) >= S.MINIMUM_BETS
+        and tier["anti_predictive"].get("measured_buckets")
+    ]
+    assert printing, "no tier reached the anti-predictiveness section"
+    assert page.count("worst-returning bucket") == len(printing), page[:2000]
+    assert page.count("claimed-edge bucket (") == len(printing) * (
+        len(ROUND_TRIP_BUCKETS[shape]) - 1
+    ), page[:2000]
+
+
+def test_the_committed_evidence_renders_the_same_document_off_disk(tmp_path):
+    """The same equality on the evidence this repository actually publishes.
+
+    The fixtures above plant buckets the committed forecast record does not
+    carry. This one asserts the property on the record built from `data/
+    outputs/` — the pair `--check` reads every week — so the guarantee is not
+    one that only holds on planted evidence.
+
+    Built from the evidence rather than read from `data/outputs/cbb_why_the_
+    model.json`: that committed record is a version behind this module and
+    `render` refuses it by design, which is a different failure and one this
+    test is not about.
+    """
+    rendered_both_ways(build(OUTPUTS), tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("planted", "round_trip"),
+    [(False, False), (True, False), (True, True)],
+    ids=["as committed", "with buckets", "with buckets, read back off disk"],
+)
+def test_every_row_of_the_record_that_carries_a_figure_is_walked(
+    outputs, tmp_path, planted, round_trip
+):
     """The population the coherence check runs over is derived from the record.
 
     `_rows_of_the_record` names its sections — `tiers`, `cells`, `pooled`,
@@ -916,8 +1083,57 @@ def test_every_row_of_the_record_that_carries_a_figure_is_walked(outputs):
     precisely the row refusal 2 exists for, so a section of them was neither
     walked nor missed. The definition is now the bound keys plus
     `CLAIM_KEYS`, the same vocabulary `verdict_disagreements` reads.
+
+    **And it runs over the record READ BACK OFF DISK**, which is the arm that
+    matters. Both in-memory arms passed over a walk that reached
+    `anti_predictive.measured_buckets` and nothing else, because in that one
+    shape `worst_bucket` and `deficit_buckets[i]` are the *same objects* as
+    entries of that list — the walk's own comment said so and used it as the
+    justification for one append. `json.loads` gives each of them an object of
+    its own, and every path this repository renders from goes through
+    `read_record`: ten rows on a two-bucket record, the ones a hand-edit of the
+    file would touch, were examined by nothing. An identity-matched coverage
+    test over a record whose identities coincide asserts full coverage over the
+    one shape in which coverage is free.
     """
+    if planted:
+        # **Run once over a record that HOLDS the rows this walk gained.** The
+        # committed forecast record is version 4, so `anti_predictive` comes
+        # back `{"readable": False}` and carries no bucket at all — this test
+        # would pass over the new section by never meeting it, which is the
+        # vacuous-fixture shape it exists to refuse elsewhere.
+        #
+        # Two buckets, and NOT two of the same shape: -20% under an interval
+        # spanning zero and -5% under one entirely below it, so `worst_bucket`
+        # (lowest return) and `deficit_buckets` (corrected high bound below
+        # zero) are different rows. A fixture where the two coincide leaves one
+        # of the two appends untested.
+        _plant_round_trip_buckets(outputs, "worst is not the deficit")
     record = build(outputs)
+    if planted:
+        assert record["forecast"]["pooled"]["anti_predictive"]["measured_buckets"], (
+            "the planted buckets must be in the record, or this arm is the "
+            "unplanted one under a different name"
+        )
+    if round_trip:
+        block = record["forecast"]["pooled"]["anti_predictive"]
+        assert any(block["worst_bucket"] is row for row in block["measured_buckets"]), (
+            "this arm is about the identity the in-memory record HAS and the "
+            "one off disk does not; if the built record no longer aliases "
+            "them, the arm is no longer the contrast it was written as"
+        )
+        record = read_back(record, tmp_path)
+        block = record["forecast"]["pooled"]["anti_predictive"]
+        assert not any(
+            block["worst_bucket"] is row for row in block["measured_buckets"]
+        ), (
+            "the round trip did not separate the objects, so this arm is the "
+            "in-memory one under a different name"
+        )
+        assert block["worst_bucket"] in block["measured_buckets"], (
+            "and it must still be the same row BY VALUE, or the fixture has "
+            "stopped being the pair the defect is about"
+        )
     bound_keys = {key for pair in WHY.INTERVAL_BOUND_KEYS for key in pair}
     claim_keys = set(WHY.CLAIM_KEYS)
     walked = {id(row) for _, row in WHY._rows_of_the_record(record)}
@@ -987,6 +1203,347 @@ def test_a_demonstrated_deficit_is_named_and_never_folded_into_the_edges(outputs
     line = WHY.headline({"tiers": [loser]})
     assert "demonstrated deficit" in line
     assert "shows a demonstrated edge" not in line
+
+
+def _plant_one_measured_bucket(
+    outputs: Path, roi: float, ci: tuple[float, float], *, looks: int = 1
+) -> None:
+    """Give every forecast cell in `outputs` exactly ONE usable claimed-edge bucket.
+
+    Written into the **copy** of the output tree the `outputs` fixture makes,
+    never into `data/outputs/`. One bucket is the shape the across-bucket
+    comparison cannot use: `measurable` comes back False, and the only thing
+    left to report is the sign of the money in that bucket. That is the shape
+    this document used to render as nothing at all.
+
+    The bucket's return cell is a real `stats.RoiInterval` through
+    `forecast_skill._interval_row`, so the bounds, the correction and the
+    verdict are production code's and not this file's arithmetic.
+
+    **`record_version` is stamped forward with the shape.** The committed
+    forecast record is version 4 and carries none of the keys written here; a
+    fixture that plants version 5 content under a version 4 stamp is a record
+    no run could produce, and — before `_forecast_section` checked the version
+    — it was the only reason these tests passed at all. What the stamp does not
+    claim: `populations` is left exactly as the committed run wrote it, because
+    this document reads no key from it. A test of the census belongs in
+    `test_forecast_skill.py`, where the renderer that reads it lives.
+
+    `looks` is the family size the FORECAST RUN recorded the bucket under, and
+    it is deliberately separate from the ledger count this document re-states
+    at. The two being different is the whole of
+    `test_a_deficit_that_does_not_survive_todays_correction_is_not_called_one`.
+    """
+    path = outputs / "cbb_forecast_skill.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["record_version"] = FS.RECORD_VERSION
+    standard_error = (ci[1] - ci[0]) / (2.0 * S.Z95)
+    interval = S.RoiInterval(
+        roi=roi,
+        low=roi - S.Z95 * standard_error,
+        high=roi + S.Z95 * standard_error,
+        bets=400,
+        clusters=90,
+        standard_error=standard_error,
+        looks=looks,
+        cluster_unit="day",
+    )
+    assert interval.low == pytest.approx(ci[0]) and interval.high == pytest.approx(ci[1])
+    for cell in [payload["pooled"], *payload["by_tier"]]:
+        bucket = {
+            "low": 0.20,
+            "high": float("inf"),
+            "rows": 400,
+            "games": 90,
+            "enough": True,
+            "gap_to_model": 0.0,
+            "roi": FS._interval_row(interval, name="realised return"),
+        }
+        cell["buckets"] = [bucket]
+        cell["anti_predictive_return"] = FS.anti_predictive_return([bucket])
+    path.write_text(json.dumps(payload, default=str), encoding="utf-8")
+
+
+def test_a_demonstrated_deficit_in_one_claimed_edge_bucket_reaches_this_page(outputs):
+    """The dead key, and the silence behind it.
+
+    `_forecast_tier` read `anti_predictive` — a key `forecast_skill` stopped
+    writing on 2026-09-05, when the quantity it held was split into
+    `overconfidence` and `anti_predictive_return` because the two are not the
+    same thing. It was a `.get`, so nothing raised and nothing went red: the
+    block came back `measurable: False` on every run, the per-tier paragraph
+    was filtered out of the document, and this page said nothing about
+    anti-predictiveness at all.
+
+    So the test is not that a key was renamed. It is that a **measured loss**
+    now reaches the rendered page: a claimed-edge bucket of 400 settled wagers
+    returning -9% with a family-corrected interval entirely below zero.
+    """
+    _plant_one_measured_bucket(outputs, -0.09, (-0.10, -0.08))
+    record = build(outputs)
+    block = record["forecast"]["pooled"]["anti_predictive"]
+    assert block["measurable"] is False, (
+        "one bucket is not two, so the across-bucket comparison is still not "
+        f"measurable — and that must no longer be the end of it; got {block}"
+    )
+    assert len(block["deficit_buckets"]) == 1, block
+    worst = block["worst_bucket"]
+    assert worst, "the losing bucket never reached this record"
+    assert worst["verdict"] == S.DEMONSTRATED_DEFICIT, worst
+    assert WHY.verdict_of(worst) == S.DEMONSTRATED_DEFICIT, (
+        "the verdict on the page is derived from the two bounds printed beside "
+        f"the return, and it must agree with the stored one; got {worst}"
+    )
+
+    page = WHY.render(record)
+    assert "Anti-predictiveness, per tier" in page, page[:400]
+    assert "worst-returning bucket" in page
+    assert "+20% and above" in page
+    assert "**-9.0%**" in page, (
+        "the return itself has to reach the page; naming a verdict with no "
+        "number under it is the same silence in a louder font"
+    )
+    assert "400 bets" in page
+    assert S.DEMONSTRATED_DEFICIT in page
+    assert "lost money on the evidence of this run" in page
+    # And the threshold sentence is NOT earned here: it rests on two buckets'
+    # corrected intervals being disjoint, and there is only one bucket.
+    assert "raising the edge threshold is the wrong response" not in page
+
+
+def test_a_losing_point_estimate_under_a_wide_interval_is_not_called_a_deficit(outputs):
+    """The same wiring, the other sign, and the vocabulary held apart.
+
+    A bucket returning -9% under an interval from -30% to +12% has lost nothing
+    that has been shown. The page prints the figure and the phrase reserved for
+    an interval spanning zero, and never the phrase reserved for one that does
+    not — the distinction rule 7 of this lab's standing instructions is about.
+    """
+    _plant_one_measured_bucket(outputs, -0.09, (-0.30, 0.12))
+    record = build(outputs)
+    block = record["forecast"]["pooled"]["anti_predictive"]
+    assert block["negative_point_estimates"] == 1, block
+    assert block["deficit_buckets"] == [], block
+
+    page = WHY.render(record)
+    assert "worst-returning bucket" in page
+    assert "**-9.0%**" in page
+    assert S.NO_DEMONSTRATED_EDGE in page
+    assert "lost money on the evidence of this run" not in page, (
+        "an interval that spans zero is not a loss that has been shown"
+    )
+
+
+def test_a_deficit_that_does_not_survive_todays_correction_is_not_called_one(outputs):
+    """The sentence and the figure beside it are read at ONE family size.
+
+    `_restated_return_bucket` re-states every bucket at the ledger's look count
+    on purpose — a bucket whose deficit survived the forecast run's family has
+    not necessarily survived today's. The deficit COUNT was then copied
+    un-restated out of the forecast record, so the two disagreed: the figure
+    printed the re-stated interval and read `no demonstrated edge`, and three
+    lines below it the page said the model's claimed edge *"selected wagers
+    that lost money on the evidence of this run"*.
+
+    The bucket below is exactly that shape. At the forecast run's one look the
+    corrected interval IS the raw one, `[-10.0%, -1.0%]`, entirely below zero —
+    so the forecast record records a demonstrated deficit and stores that
+    verdict. At the ledger's count the same standard error gives a corrected
+    interval that spans zero, and no claim of a loss is available.
+    """
+    _plant_one_measured_bucket(outputs, -0.055, (-0.10, -0.01), looks=1)
+    planted = json.loads(
+        (outputs / "cbb_forecast_skill.json").read_text(encoding="utf-8")
+    )
+    stored = planted["pooled"]["anti_predictive_return"]
+    assert stored["demonstrated_deficits"] == 1, (
+        "the forecast run must record a deficit, or this test is not about a "
+        f"restatement withdrawing one; got {stored}"
+    )
+    assert stored["worst_bucket"]["verdict"] == S.DEMONSTRATED_DEFICIT, stored
+
+    record = build(outputs)
+    block = record["forecast"]["pooled"]["anti_predictive"]
+    worst = block["worst_bucket"]
+    assert WHY.verdict_of(worst) == S.NO_DEMONSTRATED_EDGE, (
+        "at the ledger's look count this interval spans zero; the verdict on "
+        f"the page is read off the bounds on the page; got {worst}"
+    )
+    assert block["deficit_buckets"] == [], (
+        "a deficit the correction withdrew is not a deficit this document may "
+        f"count; got {block}"
+    )
+
+    page = WHY.render(record)
+    assert "lost money on the evidence of this run" not in page, (
+        "a demonstrated-loss claim printed beside a figure labelled no "
+        "demonstrated edge is the page contradicting itself in three lines"
+    )
+    # The figure itself, on its own line. `demonstrated deficit` is a true
+    # reading of other cells elsewhere on this page — the backtest's tiers are
+    # genuinely below zero — so the assertion is scoped to the line this test
+    # is about rather than to the document.
+    printed = [line for line in page.splitlines() if "worst-returning bucket" in line]
+    assert printed, "the figure the sentence would have contradicted must be on the page"
+    for line in printed:
+        assert S.NO_DEMONSTRATED_EDGE in line, line
+        assert not line.endswith(S.DEMONSTRATED_DEFICIT), line
+
+
+def test_a_forecast_record_older_than_this_document_reads_says_so_on_the_page(outputs):
+    """A silence a reader cannot tell from a null result is the defect.
+
+    Every key the anti-predictiveness paragraph depends on arrived with
+    `forecast_skill.RECORD_VERSION` 5. `read_evidence` checks that the record
+    exists, parses and is an object — not that it is the shape this document
+    reads — so an older record was read through `_as_int`/`_as_float` and came
+    back `measurable: False, demonstrated_deficits: 0, worst_bucket: {}`. The
+    section filter then dropped every tier and the whole paragraph left the
+    page, green.
+
+    **The committed record used to BE that older shape and no longer is**, so
+    the older version is planted here rather than relied on. The regression was
+    re-run on 2026-09-17 and the record caught up — which is exactly the case
+    the assertion below used to warn about, and its instruction was to plant an
+    older version rather than delete the test. The planted version is
+    `RECORD_VERSION - 1`, read off the producer's own constant so that this
+    stays one version behind through every future bump instead of pinning a
+    number that will drift into being the current one again.
+
+    Planting it on the copy is safe: the `outputs` fixture is a writable copy of
+    the committed tree, so nothing under `data/outputs/` is touched.
+    """
+    path = outputs / "cbb_forecast_skill.json"
+    committed = json.loads(path.read_text(encoding="utf-8"))
+    assert committed["record_version"] == FS.RECORD_VERSION, (
+        "the committed record is expected to be current; if it is not, the "
+        "regression needs re-running rather than this test needing an edit"
+    )
+    committed["record_version"] = FS.RECORD_VERSION - 1
+    path.write_text(json.dumps(committed, default=str), encoding="utf-8")
+
+    record = build(outputs)
+    section = record["forecast"]
+    assert section["anti_predictive_readable"] is False, section["record_version"]
+    block = record["forecast"]["pooled"]["anti_predictive"]
+    assert block == {"readable": False}, (
+        "an older record carries none of these keys, and `_as_int` of an "
+        f"absent key is a zero nobody counted; got {block}"
+    )
+
+    page = WHY.render(record)
+    assert "Anti-predictiveness, per tier — not read from this record." in page, (
+        "the section may not simply vanish: a reader cannot tell a section "
+        "that was dropped from a section that found nothing"
+    )
+    assert f"is version {committed['record_version']}" in page
+    assert "re-run the forecast regression" in page
+    assert "Nothing below should be read as the model having been cleared" in page
+    # And no measurement vocabulary, in either direction, over a record that
+    # was never asked.
+    assert "worst-returning bucket" not in page
+    assert "lost money on the evidence of this run" not in page
+    assert "raising the edge threshold is the wrong response" not in page
+
+
+BRIER_SILENCE = "No tier above carries a Brier comparison at all"
+
+
+def test_a_brier_column_with_no_comparison_anywhere_says_so_on_the_page(outputs):
+    """**The hole `FORECAST_RECORD_VERSION` deliberately does not cover.**
+
+    The version gate is on the anti-predictive block alone, and on purpose: a
+    version 4 forecast record carries `brier.advantage_over_raw` and this
+    module reads it correctly, so gating the Brier table on the version would
+    refuse figures the record holds. What the version cannot catch there is a
+    **rename** — the same event that killed `anti_predictive` on 2026-09-05 —
+    and its symptom is a table of `no comparison recorded` in every row with
+    `not scored` in every verdict cell, under `anti_predictive_readable: True`
+    and a green suite.
+
+    So the whole-column silence is named. This test moves the key exactly as a
+    rename would, asserts the sentence, and asserts it is **absent** from the
+    committed shape — a guard that fired on every record would be a guard that
+    says nothing.
+    """
+    page_before = WHY.render(build(outputs))
+    assert BRIER_SILENCE not in page_before, (
+        "the committed record carries the comparison, so the refusal must not "
+        "be on the page; a sentence printed unconditionally measures nothing"
+    )
+    assert "no comparison recorded" not in page_before, (
+        "the table has to be carrying real comparisons before the key is "
+        "moved, or the contrast this test draws is between two silences"
+    )
+
+    path = outputs / "cbb_forecast_skill.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    moved = 0
+    for cell in [payload["pooled"], *payload["by_tier"]]:
+        brier = cell.get("brier") or {}
+        if "advantage_over_raw" in brier:
+            brier["advantage_over_raw_v2"] = brier.pop("advantage_over_raw")
+            moved += 1
+    assert moved, "no cell carried the key, so the rename planted nothing"
+    path.write_text(json.dumps(payload, default=str), encoding="utf-8")
+
+    record = build(outputs)
+    assert all(
+        tier["advantage_over_raw"] == {} for tier in record["forecast"]["tiers"]
+    ), "the rename must empty the block, or this test is not about a rename"
+
+    page = WHY.render(record)
+    assert page.count("no comparison recorded") >= 3, page[:1500]
+    assert BRIER_SILENCE in page, (
+        "every cell of the Brier table reads `no comparison recorded` and "
+        "every verdict reads `not scored`, which is indistinguishable from a "
+        "comparison that came out flat. The page has to say which it is"
+    )
+    assert "re-run the forecast regression" in page
+    assert (
+        "Nothing in this table should be read as the model having been cleared"
+        in page
+    )
+
+
+def test_the_brier_silence_is_not_claimed_when_one_tier_still_carries_a_comparison(
+    outputs,
+):
+    """*"No tier above carries a Brier comparison at all"* is a census, and a
+    census printed over a table that holds one is a false sentence.
+
+    This is the boundary the guard above is written at: `not any(...)`, not
+    `not all(...)`. A record in which one tier lost the key and the others kept
+    it prints the surviving figures and one `no comparison recorded` cell — a
+    partial silence this document does **not** distinguish from a comparison
+    the run did not make, disclosed as an open gap beside
+    `FORECAST_RECORD_VERSION` rather than claimed closed. What it may not do is
+    say *no tier* while a tier is right there in the table.
+    """
+    path = outputs / "cbb_forecast_skill.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    scored = [
+        cell
+        for cell in payload["by_tier"]
+        if "advantage_over_raw" in (cell.get("brier") or {})
+    ]
+    assert len(scored) >= 2, (
+        "this test needs one tier to lose the key and at least one to keep it; "
+        f"only {len(scored)} tiers carry it"
+    )
+    brier = scored[0]["brier"]
+    brier["advantage_over_raw_v2"] = brier.pop("advantage_over_raw")
+    path.write_text(json.dumps(payload, default=str), encoding="utf-8")
+
+    page = WHY.render(build(outputs))
+    assert "no comparison recorded" in page, (
+        "the tier that lost the key must show the empty cell, or nothing was "
+        "planted"
+    )
+    assert BRIER_SILENCE not in page, (
+        "the page claimed no tier carries a comparison while "
+        f"{len(scored) - 1} of them still do"
+    )
 
 
 @pytest.mark.parametrize(
@@ -1447,7 +2004,7 @@ def test_the_status_row_for_the_regression_carries_the_measured_per_tier_figures
         )
         # **The figures moved into the generated block, and this reads them
         # there.** It used to require them TYPED in the row, in one exact
-        # prose spelling -- which was the right guard while the document was
+        # prose spelling — which was the right guard while the document was
         # hand-written and the wrong one once it was not: it would have forced
         # a second, hand-maintained copy of three intervals to sit outside the
         # fence that exists to stop exactly that. What it is really asserting
@@ -1535,6 +2092,70 @@ def test_check_passes_on_the_committed_pair_and_fails_on_a_hand_edit(tmp_path):
     )
     assert completed.returncode == 1, completed.stdout + completed.stderr
     assert "edited by hand" in completed.stderr or "does not match" in completed.stderr
+
+
+def test_check_refuses_a_record_older_than_the_evidence_it_says_it_read(tmp_path):
+    """The freshness gate, driven through the script rather than called directly.
+
+    `stale_inputs` has four unit tests above. The `--check` wiring that consumes
+    it had none: replacing `stale = WHY.stale_inputs(record)` in
+    `scripts/run_why_the_model.py` with `stale = []` left
+    `tests/test_why_the_model.py` and `tests/test_contract_strings.py` -- the
+    only two files that name that script -- at 99 passed, so the refusal could
+    have been deleted outright with the suite green. A guard nothing executes
+    is a guard that is not there, and this is the same shape as the defect in
+    `replication.stale_discovery` that these two commits were written for.
+
+    The record is aged rather than the evidence, because `generated_at` is the
+    one field `rederivation_differences` treats as volatile: the re-derivation
+    still agrees, so this reaches the freshness check instead of stopping at
+    the gate above it. That is also the real shape -- `what_we_can_claim`'s
+    `--check` passed while the document it checked called a committed backtest
+    of 118,050 graded bets *not found*, because the record predated the
+    measurement.
+
+    Mutation: `stale = []` at that line. Measured over
+    `tests/test_why_the_model.py tests/test_contract_strings.py`: 1 failed, 99
+    passed -- this test alone. The run exits 0 with *"matches its run record"*,
+    because `render` does not print `generated_at` and the report comparison
+    below therefore still passes, so nothing else in either file can see it.
+    """
+    record, report = _pair_to_check(tmp_path)
+    aged = tmp_path / "aged.json"
+    payload = json.loads(record.read_text(encoding="utf-8"))
+    assert payload.get("evidence_inputs"), (
+        "the record names no evidence, so ageing it tests the cannot-answer "
+        "branch rather than the older-than-the-evidence one"
+    )
+    payload["generated_at"] = "2000-01-01T00:00:00Z"
+    aged.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+    completed = run_script(
+        "--competition", "cbb",
+        "--record", str(aged),
+        "--report", str(report),
+        "--check",
+    )
+
+    assert completed.returncode == 1, completed.stdout + completed.stderr
+    assert "older than the evidence it says it read" in completed.stderr, (
+        "the run exited non-zero for some other reason, so this would pass "
+        "with the freshness check deleted"
+    )
+    reasons = [
+        line for line in completed.stderr.splitlines() if line.startswith("::error::  ")
+    ]
+    assert len(reasons) == len(payload["evidence_inputs"]), (
+        f"{len(reasons)} reasons for {len(payload['evidence_inputs'])} evidence "
+        "files: every input this record names is newer than the record now, so "
+        "a run that reported only some of them is reporting a subset as the whole"
+    )
+    for line in reasons:
+        assert "cannot have read evidence that did not exist yet" in line, line
+    assert "2000-01-01T00:00:00Z" in completed.stderr, (
+        "the refusal names the evidence's stamp and not the record's, so a "
+        "reader cannot see which of the two is the stale one"
+    )
 
 
 def test_a_figure_planted_in_the_record_is_refused_rather_than_published(tmp_path):
@@ -1888,3 +2509,284 @@ def test_the_tolerance_still_catches_everything_a_hand_could_type(label, mutate)
     edited = copy.deepcopy(record)
     mutate(edited)
     assert WHY._differs(record, edited), f"{label} was not caught."
+
+
+def _bucket_cell(
+    low: float, high: float, roi: float, ci: tuple[float, float], *, looks: int = 1
+) -> dict:
+    """One claimed-edge bucket, its ROI cell built by `forecast_skill`."""
+    standard_error = (ci[1] - ci[0]) / (2.0 * S.Z95)
+    interval = S.RoiInterval(
+        roi=roi,
+        low=roi - S.Z95 * standard_error,
+        high=roi + S.Z95 * standard_error,
+        bets=400,
+        clusters=90,
+        standard_error=standard_error,
+        looks=looks,
+        cluster_unit="day",
+    )
+    assert interval.low == pytest.approx(ci[0]) and interval.high == pytest.approx(ci[1])
+    return {
+        "low": low,
+        "high": high,
+        "rows": 400,
+        "games": 90,
+        "enough": True,
+        "gap_to_model": 0.0,
+        "roi": FS._interval_row(interval, name="realised return"),
+    }
+
+
+def _plant_per_tier(outputs: Path, by_label: Mapping) -> dict:
+    """Plant a DIFFERENT set of claimed-edge buckets into each named cell.
+
+    `_plant_one_measured_bucket` gives every cell the same shape, which cannot
+    build the record a per-tier quantifier is about: tiers that differ. Keyed by
+    the cell's own `label`, and a label the record does not carry is a failure
+    rather than a silent no-op — a fixture that plants nothing and asserts a
+    silence is a test of nothing.
+    """
+    path = outputs / "cbb_forecast_skill.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["record_version"] = FS.RECORD_VERSION
+    cells = {c.get("label"): c for c in [payload["pooled"], *payload["by_tier"]]}
+    unknown = set(by_label) - set(cells)
+    assert not unknown, f"no cell in this record is labelled {unknown}; has {set(cells)}"
+    for label, buckets in by_label.items():
+        cells[label]["buckets"] = list(buckets)
+        cells[label]["anti_predictive_return"] = FS.anti_predictive_return(list(buckets))
+    path.write_text(json.dumps(payload, default=str), encoding="utf-8")
+    return payload
+
+
+def test_a_return_bucket_carrying_one_bound_is_refused_not_dropped(outputs):
+    """A malformed record is refused; it is not reported as an empty page.
+
+    `_restated_return_bucket` used to `return {}` when either uncorrected bound
+    was missing. The tier then had no measured bucket, failed the section
+    filter, and left the document — taking its deficit with it. A missing bound
+    was reported as *there was nothing here*, which is the same shape as the
+    silence this whole section exists to break, and it is the opposite of what
+    `verdict_disagreements` does with a half-carried bound pair: that refuses
+    outright, because `[x, 0.0]` has a side of zero and therefore a verdict.
+    """
+    _plant_one_measured_bucket(outputs, -0.09, (-0.14, -0.04))
+    path = outputs / "cbb_forecast_skill.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    for cell in [payload["pooled"], *payload["by_tier"]]:
+        shape = cell["anti_predictive_return"]
+        for bucket in shape["measured_buckets"]:
+            bucket.pop("roi_low")
+    path.write_text(json.dumps(payload, default=str), encoding="utf-8")
+
+    with pytest.raises(WHY.WhyError) as raised:
+        build(outputs)
+    assert "one bound" in str(raised.value), raised.value
+    assert "Re-run the forecast regression" in str(raised.value)
+
+
+def test_the_threshold_sentence_quantifies_over_the_tiers_that_could_be_measured(
+    outputs,
+):
+    """"in every tier that can be measured" — so the gate counts those tiers.
+
+    The gate was `shown and len(shown) == len(anti)`, and `anti` now admits a
+    tier on a single measured bucket, for which no comparison exists and
+    `demonstrated` is necessarily False. So one tier with too few buckets to
+    compare suppressed the sentence over every tier that DID compare and did
+    come out disjoint — a guard that no longer meant what its own words said.
+
+    Below: high-major and mid-major each compare two buckets whose corrected
+    intervals are disjoint; low-major carries one bucket and no comparison.
+    """
+    compared = [
+        _bucket_cell(0.0, 0.02, 0.06, (0.04, 0.08)),
+        _bucket_cell(0.20, float("inf"), -0.09, (-0.11, -0.07)),
+    ]
+    _plant_per_tier(
+        outputs,
+        {
+            "high_major": compared,
+            "mid_major": compared,
+            "low_major": [_bucket_cell(0.20, float("inf"), -0.09, (-0.11, -0.07))],
+            "every tier pooled": compared,
+        },
+    )
+    record = build(outputs)
+    blocks = {
+        str(t.get("label") or ""): t["anti_predictive"]
+        for t in record["forecast"]["tiers"]
+    }
+    assert blocks["high_major"]["demonstrated"] is True, blocks["high_major"]
+    assert blocks["mid_major"]["demonstrated"] is True, blocks["mid_major"]
+    assert blocks["low_major"]["measurable"] is False, blocks["low_major"]
+    assert blocks["low_major"]["measured_buckets"], (
+        "low-major must still reach the page on its single bucket, or this "
+        "test is not about the population the quantifier ranges over"
+    )
+
+    page = WHY.render(record)
+    assert "raising the edge threshold is the wrong response" in page, (
+        "both tiers that could be measured came out disjoint, which is exactly "
+        "what the sentence claims; a third tier that could not be compared is "
+        "not a counterexample to it"
+    )
+    assert "low_major" in page or "low-major" in page, page
+
+
+def test_the_threshold_sentence_is_withheld_when_a_compared_tier_overlaps(outputs):
+    """The other side of the same gate, so it is not simply always printed.
+
+    One comparable tier's corrected intervals overlap, so the fall is not
+    demonstrated there and the sentence may not be printed for any of them.
+    """
+    disjoint = [
+        _bucket_cell(0.0, 0.02, 0.06, (0.04, 0.08)),
+        _bucket_cell(0.20, float("inf"), -0.09, (-0.11, -0.07)),
+    ]
+    overlapping = [
+        _bucket_cell(0.0, 0.02, 0.06, (-0.20, 0.32)),
+        _bucket_cell(0.20, float("inf"), -0.09, (-0.35, 0.17)),
+    ]
+    _plant_per_tier(
+        outputs,
+        {
+            "high_major": disjoint,
+            "mid_major": overlapping,
+            "low_major": disjoint,
+            "every tier pooled": disjoint,
+        },
+    )
+    record = build(outputs)
+    blocks = {
+        str(t.get("label") or ""): t["anti_predictive"]
+        for t in record["forecast"]["tiers"]
+    }
+    assert blocks["mid_major"]["measurable"] is True, blocks["mid_major"]
+    assert blocks["mid_major"]["demonstrated"] is False, blocks["mid_major"]
+    page = WHY.render(record)
+    assert "raising the edge threshold is the wrong response" not in page, page
+
+
+def test_this_document_states_which_forecast_shape_it_reads():
+    """The consumer's floor is pinned to the producer's version, not aliased.
+
+    `FORECAST_RECORD_VERSION` is a literal. Written as `FS.RECORD_VERSION` it
+    would be satisfied by every future forecast shape by definition — a gate
+    that cannot fire, which is the failure mode one layer up from the one it
+    was added to close. Pinned here instead, so the day `forecast_skill`
+    changes shape this test is what says the anti-predictiveness paragraph has
+    not been read against the new one yet.
+    """
+    assert WHY.FORECAST_RECORD_VERSION == FS.RECORD_VERSION, (
+        "`forecast_skill.RECORD_VERSION` has moved and this document has not "
+        "been re-read against the new shape. Check what the anti-predictive "
+        "block gained or lost, update `_anti_predictive_block`, then move this "
+        "constant — in that order. Moving the constant first turns the gate "
+        "off without reading anything"
+    )
+
+
+def test_a_fall_that_does_not_survive_todays_correction_does_not_earn_the_sentence(
+    outputs,
+):
+    """`demonstrated` is derived at today's count, not copied from the run.
+
+    The threshold sentence is a claim about money and rests on the two
+    family-corrected intervals being disjoint. That answer was read out of the
+    forecast record, where it was taken under that run's family — while the
+    intervals this document prints beside it are re-stated at the ledger's. A
+    gap that survived one look has not necessarily survived 133.
+
+    The two buckets below are disjoint at the forecast run's single look
+    (`[+4.0%, +6.0%]` against `[+1.0%, +3.0%]`) and overlap once re-stated. The
+    forecast record therefore stores `demonstrated: True`, and the sentence may
+    not be printed.
+    """
+    compared = [
+        _bucket_cell(0.0, 0.02, 0.05, (0.04, 0.06)),
+        _bucket_cell(0.20, float("inf"), 0.02, (0.01, 0.03)),
+    ]
+    payload = _plant_per_tier(
+        outputs,
+        {
+            "high_major": compared,
+            "mid_major": compared,
+            "low_major": compared,
+            "every tier pooled": compared,
+        },
+    )
+    stored = payload["pooled"]["anti_predictive_return"]
+    assert stored["falls_at_the_top"] is True, stored
+    assert stored["demonstrated"] is True, (
+        "the forecast run must record the fall as demonstrated, or this test "
+        f"is not about a restatement withdrawing one; got {stored}"
+    )
+
+    record = build(outputs)
+    block = record["forecast"]["pooled"]["anti_predictive"]
+    assert block["measurable"] is True, block
+    assert block["demonstrated"] is False, (
+        "re-stated at the ledger's count the two corrected intervals overlap, "
+        f"so the fall is not demonstrated today; got {block}"
+    )
+    page = WHY.render(record)
+    assert "overlap, so the fall is not demonstrated" in page, page
+    assert "raising the edge threshold is the wrong response" not in page, (
+        "a sentence about money resting on a gap the correction closed is the "
+        "document publishing the forecast run's answer under its own bounds"
+    )
+
+
+def test_the_page_names_the_bucket_whose_own_interval_is_below_zero(outputs):
+    """Not the worst return: the bucket the printed bounds convict.
+
+    `worst_bucket` in the forecast record is the lowest POINT ESTIMATE and the
+    deficit count is taken off the corrected HIGH BOUND, so they are routinely
+    different buckets. This page printed the first and justified it with the
+    second: a figure reading `no demonstrated edge` with *"selected wagers that
+    lost money"* three lines under it, and the bucket that actually lost the
+    money nowhere on the page.
+
+    A returns -20% under an interval spanning zero; B returns -5% under one
+    entirely below zero after this document's own correction.
+    """
+    a = _bucket_cell(0.0, 0.02, -0.20, (-0.45, 0.05))
+    b = _bucket_cell(0.02, 0.05, -0.05, (-0.065, -0.035))
+    _plant_per_tier(
+        outputs,
+        {
+            "high_major": [a, b],
+            "mid_major": [a, b],
+            "low_major": [a, b],
+            "every tier pooled": [a, b],
+        },
+    )
+    record = build(outputs)
+    block = record["forecast"]["pooled"]["anti_predictive"]
+    worst = block["worst_bucket"]
+    assert worst["name"] == "+0% to +2%", worst
+    assert WHY.verdict_of(worst) == S.NO_DEMONSTRATED_EDGE, (
+        f"the worst-returning bucket demonstrates nothing; got {worst}"
+    )
+    named = block["deficit_buckets"]
+    assert [row["name"] for row in named] == ["+2% to +5%"], block
+    assert WHY.verdict_of(named[0]) == S.DEMONSTRATED_DEFICIT, named[0]
+
+    page = WHY.render(record)
+    claim = [line for line in page.splitlines() if "lost money on the evidence" in line]
+    assert len(claim) == 1, page
+    assert "+2% to +5%" in claim[0], (
+        f"the sentence must name the bucket its bounds convict; got {claim[0]}"
+    )
+    # And that bucket's own figure is on the page, with its verdict beside it.
+    figures = [line for line in page.splitlines() if "+2% to +5%" in line and "bets" in line]
+    assert figures, page
+    for line in figures:
+        assert S.DEMONSTRATED_DEFICIT in line, line
+    # The worst-returning bucket is printed too, and reads what it is.
+    worst_lines = [line for line in page.splitlines() if "worst-returning bucket" in line]
+    assert worst_lines, page
+    for line in worst_lines:
+        assert "+0% to +2%" in line and S.NO_DEMONSTRATED_EDGE in line, line

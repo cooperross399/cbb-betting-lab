@@ -340,19 +340,67 @@ def print_populations(record: Mapping) -> None:
             "beside this frame, so whether it is the whole graded set is "
             "unknown rather than yes"
         )
-    elif int(excluded.get("rows", 0)):
-        print(
-            f"  {FS.UNPAIRABLE_LABEL}: {int(excluded.get('rows', 0)):,} of "
-            f"{int(excluded.get('supplied', 0)):,} graded wagers "
-            f"({float(excluded.get('share', 0.0)):.6%}) — "
-            f"{excluded.get('reason') or FS.UNPAIRABLE_ROLE}. Both counts "
-            "above are counts of the subset that remained."
-        )
     else:
+        # **All THREE terms, and the identity, on the console too.** This
+        # printed `unpairable` and `supplied` and never `no_pair_key` — the
+        # third bucket of `build_skill_frame.UnpairableCensus` — so with
+        # `unpairable` at zero it took the `else` below and said *"none — all
+        # N graded wagers paired, so the frame is the whole graded set"* over
+        # rows that never went looking for a complement. That is the identical
+        # false sentence `test_keyless_rows_are_never_reported_as_having_found_
+        # a_complement` forbids in the markdown renderer, printed to the
+        # operator who is actually watching the run.
+        #
+        # Refused rather than defaulted, for the reason `_excluded_lines`
+        # gives: a `.get(..., 0)` here would print a hard zero for a term
+        # nobody copied, and a sum that balances because one of its addends was
+        # invented is worse than no sum.
+        missing = [k for k in ("no_pair_key", "accounted") if k not in excluded]
+        if missing:
+            raise SystemExit(
+                f"  {FS.UNPAIRABLE_LABEL}: this record's census carries no "
+                + " and no ".join(f"`{k}`" for k in missing)
+                + f". `read_record` writes version {FS.RECORD_VERSION}, which "
+                "carries all three terms and their sum. Re-run the regression "
+                "rather than re-rendering."
+            )
+        rows = int(excluded.get("rows", 0))
+        supplied = int(excluded.get("supplied", 0))
+        paired = int(excluded.get("paired", 0))
+        no_pair_key = int(excluded["no_pair_key"])
+        accounted = int(excluded["accounted"])
+        if rows:
+            print(
+                f"  {FS.UNPAIRABLE_LABEL}: {rows:,} of {supplied:,} graded "
+                f"wagers ({float(excluded.get('share', 0.0)):.6%}) — "
+                f"{excluded.get('reason') or FS.UNPAIRABLE_ROLE}. Both counts "
+                "above are counts of the subset that remained."
+            )
+        elif no_pair_key:
+            print(
+                f"  {FS.UNPAIRABLE_LABEL}: none excluded — but {no_pair_key:,} "
+                f"of {supplied:,} graded wagers carried a selection this lab "
+                "forms no pair key for and were kept unpaired, so the frame is "
+                "the whole graded set and is not wholly a paired one"
+            )
+        else:
+            print(
+                f"  {FS.UNPAIRABLE_LABEL}: none — all {supplied:,} graded "
+                "wagers paired, so the frame is the whole graded set"
+            )
+        # Printed whether or not it closes: a census stated only when it works
+        # is a census whose failure is invisible.
         print(
-            f"  {FS.UNPAIRABLE_LABEL}: none — all "
-            f"{int(excluded.get('supplied', 0)):,} graded wagers paired, so "
-            "the frame is the whole graded set"
+            f"  census: {paired:,} paired + {rows:,} excluded + "
+            f"{no_pair_key:,} with no pair key = {accounted:,}, against "
+            f"{supplied:,} graded wagers supplied"
+            + (
+                ""
+                if accounted == supplied
+                else " — ! THOSE THREE TERMS DO NOT ADD UP, so a graded wager "
+                "reached none of the three buckets and the counts above are of "
+                "unknown completeness"
+            )
         )
 
 
@@ -483,6 +531,43 @@ def _return_cell(bucket: Mapping) -> str:
     )
 
 
+def _print_return_sign(shape: Mapping) -> None:
+    """Whatever the measured buckets say about the sign, printed or nothing.
+
+    The same three outcomes `forecast_skill._negative_return_lines` states, in
+    the same reserved words, read off the same keys — the corrected high bound
+    for a deficit and the point estimate for a negative reading under an
+    interval that spans zero. The DEFICIT buckets are selected by the corrected
+    bound rather than by the lowest return, because those are two different
+    buckets and the console may not name one and justify it with the other.
+
+    Nothing at all when nothing was measured: a console that printed a line
+    here on an empty list would be inventing a null result.
+    """
+    measured = [b for b in (shape.get("measured_buckets") or []) if b]
+    if not measured:
+        return
+    deficits = [b for b in measured if float(b["roi_adjusted_high"]) < 0.0]
+    if deficits:
+        for bucket in deficits:
+            print(
+                f"    ! {FS.bucket_label(bucket['low'], bucket['high'])} "
+                f"claimed edge: {_return_cell(bucket)} — the wagers in it lost "
+                f"money and the loss survives the correction ({S.DEMONSTRATED_DEFICIT})."
+            )
+        return
+    negative = [b for b in measured if float(b["roi"]) < 0.0]
+    if not negative:
+        return
+    worst = min(negative, key=lambda b: float(b["roi"]))
+    print(
+        f"    . {FS.bucket_label(worst['low'], worst['high'])} claimed edge: "
+        f"{_return_cell(worst)} — the point estimate is below zero and the "
+        "family-corrected interval spans it, so both are said and neither "
+        "stands in for the other."
+    )
+
+
 def print_buckets(record: Mapping) -> None:
     """Anti-predictiveness as a shape rather than as a minus sign."""
     print("")
@@ -548,6 +633,15 @@ def print_buckets(record: Mapping) -> None:
                     "on it."
                 )
             )
+        # **The SIGN, on every path, which the gate above cannot reach.**
+        # `measurable and falls_at_the_top` asks whether a COMPARISON across
+        # buckets came out one way. A single bucket returning -9% under a
+        # corrected interval entirely below zero fails both halves of it, and
+        # this console was silent about a demonstrated deficit the markdown
+        # report names — the operator watching a run saw nothing at all.
+        # `forecast_skill._negative_return_lines` owns the vocabulary; the two
+        # figures below come from the same `_return_cell` as the line above.
+        _print_return_sign(shape)
 
 
 def print_census(record: Mapping) -> None:

@@ -472,6 +472,12 @@ DOCUMENTS_THAT_STATE_A_CORRECTION: tuple[str, ...] = (
     # never whether the document states the wrong family size outright. So the
     # whole registration shipped green with the count wrong in both.
     "docs/project_status.md",
+    # Hand-written, and on the roster since 2026-09-18 because its
+    # `retraction_history` fence renders the family size it holds every reading
+    # to. The block compares each state of a record at ONE family size, so if
+    # that size fell behind the ledger the whole block would be comparing
+    # readings at a correction this lab no longer applies.
+    "docs/retracted_readings.md",
 )
 
 
@@ -736,6 +742,830 @@ def test_a_restated_report_names_both_counts():
 HAND_WRITTEN = ("CLAUDE.md", "docs/project_status.md")
 
 
+def _forecast_record() -> dict:
+    return json.loads(
+        (OUTPUTS / "cbb_forecast_skill.json").read_text(encoding="utf-8")
+    )
+
+
+def _skill_tier(payload: dict, label: str) -> dict:
+    return next(row for row in payload["by_tier"] if row.get("label") == label)
+
+
+#: Record facts these two documents state IN PROSE, outside the generated fence.
+#:
+#: **The fence covers corrected intervals, the correction factor and the family
+#: size, and nothing else.** Every other number a record produces -- how many
+#: wagers it was fitted on, how many claimed-edge buckets carry a readable
+#: return, how big the smallest and largest buckets are, what the model's Brier
+#: actually is -- is hand-typed prose, is re-derived by nobody, and goes stale
+#: the moment a record is regenerated. That is not hypothetical: on 2026-09-17
+#: both documents were still asserting that return by claimed-edge bucket was
+#: *"not measurable on this record (0 usable buckets of 8 populated)"* against a
+#: record committed in the same change that reads 8 usable of 8 on every real
+#: tier, alongside a population of 293,661 for a record holding 270,504 and an
+#: overconfidence span of +13.4 pp over 24,416 rows for one of +13.3 over
+#: 21,290. Every stale-figure guard in this file ran green, because none of
+#: those is interval-shaped.
+#:
+#: **This checks PRESENCE, and deliberately not absence.** A claim is stale when
+#: the live value is missing from the document; a document that narrates an old
+#: value beside the live one is doing what these documents are for, and this
+#: cannot fire on it -- narration adds text, and adding text cannot remove a
+#: spelling. The cost is that a stale figure sitting beside a correct one is not
+#: caught here; the benefit is a guard nobody has to defeat to write history.
+#:
+#: **This is a roster, and a roster only guards what it names.** The round that
+#: wrote it listed five facts and the next round found five more figures it does
+#: not name, which is the failure this shape has every time. It is kept because
+#: what it provides is the OTHER direction -- the live value must be PRESENT --
+#: and it is no longer the thing standing between these documents and a stale
+#: count: `test_every_count_the_documents_state_is_accounted_for` enumerates
+#: every comma-formatted figure on the page and refuses the ones nothing states,
+#: so a figure nobody thought to list is caught by shape rather than by roster.
+#: A sixth entry here would be the wrong fix for anything.
+#:
+#: The tier entry that used to sit here is gone: it collapsed three tiers into a
+#: set and popped one, so a three-tier sentence was pinned against one tier.
+#: It is `test_the_usable_bucket_claim_holds_on_every_tier_it_names` now.
+PROSE_FACTS = {
+    "the population the regression is fitted on": lambda: [
+        f"{_forecast_record()['pooled']['rows']:,}"
+    ],
+    "the threshold-selected population": lambda: [
+        f"{_forecast_record()['selected']['pooled']['rows']:,}"
+    ],
+    "the high-major overconfidence span": lambda: [
+        f"{_skill_tier(_forecast_record(), 'high_major')['buckets'][0]['gap_to_model'] * 100:+.1f} pp",
+        f"{_skill_tier(_forecast_record(), 'high_major')['buckets'][-1]['gap_to_model'] * 100:+.1f} pp",
+        f"{_skill_tier(_forecast_record(), 'high_major')['buckets'][0]['rows']:,}",
+        f"{_skill_tier(_forecast_record(), 'high_major')['buckets'][-1]['rows']:,}",
+    ],
+    "the high-major Brier against the base rate": lambda: [
+        f"{_skill_tier(_forecast_record(), 'high_major')['brier']['model']:.5f}",
+        f"{_skill_tier(_forecast_record(), 'high_major')['brier']['base_rate_reference']:.5f}",
+        f"{_skill_tier(_forecast_record(), 'high_major')['rows']:,}",
+    ],
+}
+
+
+#: The tiers the "on each real tier" sentence is a claim ABOUT.
+REAL_TIERS = ("high_major", "mid_major", "low_major")
+
+
+@pytest.mark.parametrize("document", HAND_WRITTEN)
+def test_the_usable_bucket_claim_holds_on_every_tier_it_names(document):
+    """A three-tier sentence, checked on three tiers.
+
+    **This was an entry in `PROSE_FACTS` that collapsed the three tiers into a
+    SET and called `.pop()` on it.** When the tiers agree the set has one member
+    and the check is right by accident; when one tier moves the set has two,
+    `.pop()` returns an arbitrary member, and it can return the one the stale
+    sentence already contains -- a review that enumerated six plausible
+    disagreements found it doing so in four of them.
+
+    Measured on the pre-change file, not argued: with `PROSE_FACTS` carrying
+    the `.pop()` entry and `low_major`'s `usable_buckets` set to 7 in the
+    record, `pytest tests/test_no_report_states_a_stale_correction.py` gives
+    96 passed and exit 0, while both documents go on asserting 8-of-8 "on each
+    of high-major, mid-major and low-major".
+
+    A sentence about three tiers is checked on three tiers. If they stop
+    agreeing, that is the finding, and it fails by naming the tier that moved
+    rather than by silently pinning the other two to it.
+    """
+    record = _forecast_record()
+    readings = {
+        label: (
+            _skill_tier(record, label)["anti_predictive_return"]["usable_buckets"],
+            _skill_tier(record, label)["anti_predictive_return"]["populated_buckets"],
+        )
+        for label in REAL_TIERS
+    }
+    distinct = set(readings.values())
+    assert len(distinct) == 1, (
+        "the real tiers no longer read the same usable/populated pair: "
+        + ", ".join(f"{label} {u} of {p}" for label, (u, p) in sorted(readings.items()))
+        + ". Both documents state this as one figure covering all three "
+        "('on each of high-major, mid-major and low-major', 'on each real "
+        "tier'), so that sentence is now false for at least one of them. "
+        "Re-write it per tier -- do not pick one tier's numbers for the "
+        "sentence and leave the others unstated."
+    )
+    usable, populated = distinct.pop()
+    spelling = f"{usable} usable buckets of {populated} populated"
+    assert spelling in _unwrapped((REPO / document).read_text(encoding="utf-8")), (
+        f"{document} does not state `{spelling}`, which is what all three real "
+        "tiers of `data/outputs/cbb_forecast_skill.json` now read. This is "
+        "prose outside the generated fence; re-derive the sentence."
+    )
+
+
+@pytest.mark.parametrize("document", HAND_WRITTEN)
+def test_every_prose_fact_outside_the_fence_is_the_records(document):
+    """The claims the fence does not reach, pinned to the record that makes them.
+
+    Mutation: change any one of these in `data/outputs/cbb_forecast_skill.json`
+    -- or re-run the regression and leave the prose alone -- and this is RED,
+    naming the claim and both values. Writing a NEW sentence about the old value
+    keeps it green, which is the point.
+    """
+    text = _unwrapped((REPO / document).read_text(encoding="utf-8"))
+    for claim, live in sorted(PROSE_FACTS.items()):
+        for spelling in live():
+            assert spelling in text, (
+                f"{document} does not state {claim} as `{spelling}`, which is "
+                "what the record on disk now reads. This is prose OUTSIDE the "
+                "generated fence, so `scripts/splice_headline_table.py` does "
+                "not touch it and no other guard in this file can see it -- it "
+                "is not interval-shaped. Re-derive the sentence. If the "
+                "document deliberately stopped making this claim, take it out "
+                "of PROSE_FACTS in the same commit."
+            )
+
+
+
+
+# ---------------------------------------------------------------------------
+# 3b. Every COUNT the documents state is accounted for
+# ---------------------------------------------------------------------------
+
+#: Every document whose counts are enumerated. `HAND_WRITTEN` plus the ledger of
+#: withdrawn readings, which quoted a replication population and a discovery
+#: window that the records contradicted, with nothing in this file able to see
+#: either: it is not on `HAND_WRITTEN` and `PROSE_FACTS` reads one record.
+COUNTED_DOCUMENTS = HAND_WRITTEN + ("docs/retracted_readings.md",)
+
+#: A comma-formatted count: `8,267`, `270,504`, `1,493,589`.
+#:
+#: **This is the shape the interval guards could not see.** Everything in this
+#: file before it works on intervals and on corrections; a population, a bet
+#: count, a tally of cells by verdict is none of those, so four rounds of
+#: adversarial review each found more of them stale and each fixed only the ones
+#: it was handed. The fifth round measured the class instead of listing it: 105
+#: comma-formatted counts across the two hand-written documents, of which 51
+#: were equal to an integer some record stores and 54 were not.
+#:
+#: **THE TRAILING LOOKAHEAD USED TO BE `(?![\w.])`, AND IT EXEMPTED A COUNT AT
+#: THE END OF A SENTENCE.** That is this repository's own recorded failure
+#: shape, written down after `(?![\d,.])` skipped decimals and sentence-final
+#: periods alike, and it was reintroduced in the guard built to end this class:
+#: `The archive settled 9,317.` was invisible while `The archive settled 9,317
+#: wagers.` was refused, same file, same falsity, the full stop the only
+#: difference. Two live counts stated by no record were sitting in the hole.
+#: Worse, the lookahead made the match TRUNCATE rather than fail: `4,321,987.`
+#: backtracked to `4,321` and the guard checked a number the page does not say.
+#:
+#: What ends a count is a digit, a comma-and-digit, or a decimal point-and-digit
+#: — the three continuations that mean the figure is not finished. A full stop
+#: followed by a space is the end of a sentence and the count is complete. A
+#: comma-formatted DECIMAL (`1,234.56`) matches nothing at all rather than
+#: matching its integer part: refusing it whole is right, because a decimal is
+#: not a count, and truncating it would put a figure the page never states into
+#: the failure message. That limit is written into the documents.
+#:
+#: Uncommafied integers are NOT in scope, and that limit is written into all
+#: three documents where a reader meets it. `\d+` over English prose is every
+#: decision number, ordinal, season, defect count and percentage on the page;
+#: the class this refuses is the one that is a population or a tally by
+#: construction.
+COUNT = re.compile(r"(?<![\w.,])\d{1,3}(?:,\d{3})+(?!\d|,\d|\.\d)")
+
+#: `[src: 10,587 in data/outputs/cbb_forecast_skill.json#/by_tier/2/rows]`
+#:
+#: **A RECORD CLAIM NAMES THE FIELD IT CLAIMS.** The guard this replaces asked
+#: one question of a count — "does SOME record under `data/outputs/` state this
+#: integer SOMEWHERE" — and that is not a question about the sentence. It is a
+#: question about the whole store of integers, and the store is dense: 2,484
+#: distinct integers, 1,157 of them four digits, so roughly one four-digit
+#: figure in eight passes by coincidence with nothing behind it. It happened on
+#: the page: `docs/project_status.md` published a test-suite tally of 1,574
+#: against a suite of some two and a half thousand, and the guard accepted it
+#: because `cbb_shot_zones_2026.json` stores 1574 as a basketball team's shot
+#: attempts. A basketball statistic vouched for a test count, and the guard
+#: would have REFUSED the true figure.
+#:
+#: So a claim that says it comes from a record has to say WHICH FIELD OF WHICH
+#: RECORD, and the field is read. `#` separates the record from a JSON pointer;
+#: list indices are path steps. A coincidence in an unrelated file cannot
+#: satisfy it, a re-scoring that moves the field turns it red and names the
+#: field, and a reader can follow the pointer by hand.
+BOUND = re.compile(r"\[src:\s*([\d,]+)\s+in\s+([^\]\s#]+)#(/[^\]\s]*)\s*\]")
+
+#: `[src: 45,391 in src/cbb_betting_lab/forward_evidence.py]`
+#:
+#: **A figure that cannot name a record field is not a record claim.** It is a
+#: count this lab keeps somewhere else — in a module, in the decision log, in
+#: another test — and the marker names that file, which is read and checked. A
+#: path under `data/outputs/` is REFUSED here: a record claim must be bound by
+#: `BOUND` to the field it claims, or the coincidence hole is open again with a
+#: marker over it.
+WITNESSED = re.compile(r"\[src:\s*([\d,]+)\s+in\s+([^\]\s#]+)\s*\]")
+
+#: `[superseded: 293,661 on 2026-09-17]` -- a count this repository no longer
+#: holds anywhere, and the date it stopped holding it.
+#:
+#: **THE MARKER LIVES ON THE LINE THAT STATES THE FIGURE, not in a list at the
+#: foot of the document.** The list was measured: a present-tense sentence at
+#: line 231 was excused by a bullet at line 270, and in `CLAUDE.md` the list
+#: sits at line 856 of an 877-line file, so a claim could be 656 lines from the
+#: thing that excuses it. `[@N]` is anchored to its interval for exactly this
+#: reason. A `[src:]` marker may sit at the foot because a bound figure cannot
+#: be false — the field is read — but history is a claim about TENSE, and the
+#: only reader who can check the tense is the one reading the sentence.
+SUPERSEDED_COUNT = re.compile(
+    r"\[superseded:\s*([\d,]+)\s+on\s+(\d{4}-\d{2}-\d{2})\s*\]"
+)
+
+#: Anything shaped like one of the three markers, well-formed or not.
+#:
+#: **A marker that does not parse exempts nothing and says nothing, and it
+#: reads exactly like provenance.** `[superseded: 920,712]` with no date, a
+#: pointer with a typo in it, `[src: 45,391 at <path>]` — each of those used to
+#: be silently inert. The count guard would still refuse the figure, so nothing
+#: false could ship; but the author would be told the figure is unaccounted for
+#: while looking straight at a marker for it. This names the real fault.
+#:
+#: **IT REQUIRED THE VALUE TO BEGIN WITH A DIGIT**, so a marker written
+#: `[src: ~36,000 in docs/credit_cost.md]` was not marker-shaped to this
+#: pattern at all: the count guard still refused the figure, and the author
+#: was told it "says nothing about where it comes from" while looking
+#: straight at a marker for it — which is the exact fault this test names.
+#: An approximation prefix is admitted now. What is still NOT admitted is a
+#: value that begins with a letter, because these documents explain the
+#: marker syntax to a reader with `[src: <figure> in ...]` written out, and a
+#: pattern that cannot tell a template from a marker makes the explanation
+#: unwritable.
+ANY_MARKER = re.compile(r"\[(?:src|superseded):\s*[~<>≈]?\s*(?:about|around|roughly|some|nearly)?\s*\d[^\]]*\]")
+
+#: The generated fences, removed from a document before its counts are swept.
+#:
+#: **A figure inside a fence is accounted for by a stricter check than any
+#: marker.** `test_the_committed_block_is_what_the_record_renders_to` compares
+#: the committed bytes with what the records render to right now, and
+#: `splice_headline_table.py --check` does the same in CI, so a fenced count is
+#: not merely traceable to a record — it IS the record, byte for byte, or the
+#: suite is red. Sweeping them here as well would mean demanding a marker for a
+#: figure nobody typed.
+def _splice_script():
+    return _load_script("splice_headline_table")
+
+
+def _prose_of(document: str) -> str:
+    """A document's hand-written prose, soft wraps joined, fences removed."""
+    text = (REPO / document).read_text(encoding="utf-8")
+    return _unwrapped(_splice_script().outside_every_fence(text))
+
+
+def _counts_every_record_states(fields_only: bool = False) -> dict[int, list[str]]:
+    """Every count a record under `data/outputs/` states, and where it states it.
+
+    **This is no longer what accounts for a figure.** It was, and that was the
+    defect: "some record holds this integer" is a fact about the store, not
+    about the sentence. What it is for now is the two NEGATIVE checks, where
+    "somewhere in the store" is exactly the right question — a figure witnessed
+    against a file outside `data/outputs/` must not be one a record holds
+    (it would have to be bound instead), and a figure declared superseded must
+    not be one a record still states (the history would be false).
+
+    Three ways a record states a count, all of them counted here:
+
+    * a stored integer, at any depth -- `bets_graded`, `rows`, `clusters`;
+    * a comma-formatted integer inside a stored STRING, because several records
+      carry a `why`/`note` field that states its own population in prose, and a
+      document quoting that prose is quoting the record;
+    * a comma-formatted integer in the markdown that record renders to, since
+      those files are generated from the record by this repository's own
+      scripts and are re-rendered whenever it moves.
+    """
+    stated: dict[int, list[str]] = {}
+
+    def note(value: int, where: str) -> None:
+        if len(stated.setdefault(value, [])) < 4:
+            stated[value].append(where)
+
+    def walk(node, where: str) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                walk(value, f"{where}/{key}")
+        elif isinstance(node, list):
+            for index, value in enumerate(node):
+                walk(value, f"{where}[{index}]")
+        elif isinstance(node, bool):
+            return
+        elif isinstance(node, int):
+            note(node, where)
+        elif isinstance(node, str):
+            for found in COUNT.finditer(node):
+                note(int(found.group(0).replace(",", "")), f"{where} (in its own text)")
+
+    for record in sorted(OUTPUTS.rglob("*.json")):
+        walk(
+            json.loads(record.read_text(encoding="utf-8")),
+            record.relative_to(REPO).as_posix(),
+        )
+    if not fields_only:
+        for rendered in sorted(OUTPUTS.rglob("*.md")):
+            relative = rendered.relative_to(REPO).as_posix()
+            for found in COUNT.finditer(rendered.read_text(encoding="utf-8")):
+                note(int(found.group(0).replace(",", "")), relative)
+    return stated
+
+
+def _value_at(relative: str, pointer: str):
+    """The value at a JSON pointer in a record, or an AssertionError saying where
+    the walk stopped. `/by_tier/2/rows`; a list index is a step like any other.
+    """
+    path = REPO / relative
+    assert path.is_file(), f"no record at {relative}."
+    node = json.loads(path.read_text(encoding="utf-8"))
+    walked = ""
+    for step in [part for part in pointer.split("/") if part != ""]:
+        walked += f"/{step}"
+        if isinstance(node, list):
+            assert step.lstrip("-").isdigit() and -len(node) <= int(step) < len(node), (
+                f"{relative}{walked} is not a position in a list of {len(node)}."
+            )
+            node = node[int(step)]
+        else:
+            assert isinstance(node, dict) and step in node, (
+                f"{relative}{walked} is not a field of the record. "
+                f"The walk reached a {type(node).__name__} at {walked.rsplit('/', 1)[0] or '/'}."
+            )
+            node = node[step]
+    return node
+
+
+def _declared_counts(text: str):
+    """(bound -> [(record, pointer)], witnessed -> [file], superseded -> date).
+
+    **The first two are LISTS, because one figure can be two claims.** 174,136
+    is the count of scorable bets the half-point reconstruction was checked on
+    AND the count of selected bets the calibration is measured over; they are
+    different fields of the same record that happen to hold the same integer.
+    A dict keyed by value would silently keep whichever marker was written last
+    and leave the other claim bound to nothing.
+    """
+    bound: dict[int, list[tuple[str, str]]] = {}
+    for found in BOUND.finditer(text):
+        value = int(found.group(1).replace(",", ""))
+        bound.setdefault(value, []).append((found.group(2), found.group(3)))
+    witnessed: dict[int, list[str]] = {}
+    for found in WITNESSED.finditer(text):
+        value = int(found.group(1).replace(",", ""))
+        witnessed.setdefault(value, []).append(found.group(2))
+    superseded = {
+        int(found.group(1).replace(",", "")): found.group(2)
+        for found in SUPERSEDED_COUNT.finditer(text)
+    }
+    return bound, witnessed, superseded
+
+
+def _lines_with_offsets(text: str) -> list[tuple[int, int, str]]:
+    """(start, end, line) over the unwrapped text: a paragraph's sentence, a
+    table row, a list item. This is the scope `[superseded:]` must sit inside.
+    """
+    spans = []
+    start = 0
+    for line in text.split("\n"):
+        spans.append((start, start + len(line), line))
+        start += len(line) + 1
+    return spans
+
+
+def _line_around(spans, position: int) -> str:
+    for start, end, line in spans:
+        if start <= position <= end:
+            return line
+    return ""  # pragma: no cover - a position is always inside some line
+
+
+#: A suite size typed into prose: `44 tests`, `1,574 tests`, `93 assertions`.
+#:
+#: **A TEST COUNT IS THE ONE FIGURE NOTHING IN THIS REPOSITORY CAN ACCOUNT
+#: FOR.** It is not in a record, so it cannot be bound to a field; nothing
+#: regenerates it, so it cannot be fenced; and it is stale the moment a test is
+#: added, which happens in most commits. Two of them sat in the same
+#: Definition-of-Done table: `1,574` — low by about a thousand, and waved
+#: through by the count guard because a shot-zone record happens to store 1574
+#: as a team's field-goal attempts — and `44`, wrong by twelve and invisible
+#: because it carries no comma. The first was removed in one round and the
+#: second survived it, one row away, which is what a class looks like when only
+#: its instances are fixed.
+#:
+#: The authority is `pytest tests/ --collect-only -q`, run by the reader. There
+#: is no honest way to publish the number, so it is not published.
+TEST_COUNT = re.compile(
+    r"(?<![\w.,])\d[\d,]*\s+(?:tests?|assertions?|test\s+cases?|checks)\b",
+    re.IGNORECASE,
+)
+
+
+#: A figure measured from *today*, typed into a file that is not re-rendered.
+#:
+#: **A COUNTDOWN IS STALE THE DAY AFTER IT IS WRITTEN, AND BOTH OF THESE WERE.**
+#: `docs/project_status.md` published "The season opens in 59 days" under a
+#: "Last updated 2026-09-05" stamp, which was wrong under that stamp and wrong
+#: again under the date of the six sentences the same file carries from twelve
+#: days later; `CLAUDE.md` published "That is 61 days from today" under an "As
+#: of 2026-09-01" heading, wrong under both. Neither carries a comma, so the
+#: count sweep never saw either.
+#:
+#: There is no honest way to publish one: a fence cannot hold it without going
+#: red every midnight, and no record stores it. The dates themselves are facts
+#: and are published; the difference between a date and *today* is not.
+COUNTDOWN = re.compile(
+    r"\b[\d,]+\s+(?:days?|weeks?|months?|years?)\s+"
+    r"(?:from\s+(?:today|now|here)|away|out\b)"
+    r"|\b(?:in|within)\s+[\d,]+\s+(?:days?|weeks?|months?|years?)\b"
+    r"|\bopens\s+in\s+[\d,]+"
+    r"|\b[\d,]+\s+(?:days?|weeks?|months?)\s+(?:to|until|till)\s+(?:go|the\s+\w+)",
+    re.IGNORECASE,
+)
+
+
+@pytest.mark.parametrize("document", COUNTED_DOCUMENTS)
+def test_no_document_publishes_a_countdown(document):
+    """A distance from *today* cannot be kept true by anything in this tree.
+
+    Mutation: put "The season opens in 59 days" back in the headline — RED.
+    Put "That is 61 days from today" back beside the opener — RED.
+    """
+    found = sorted({match.group(0).strip() for match in COUNTDOWN.finditer(_prose_of(document))})
+    assert not found, (
+        f"{document} publishes a countdown: {found}. A figure measured from "
+        "today is wrong tomorrow, no record stores it, and a generated block "
+        "holding one would go red every midnight. Publish the DATE — that is a "
+        "fact and it stays one — and let the reader do the subtraction."
+    )
+
+
+@pytest.mark.parametrize("document", COUNTED_DOCUMENTS)
+def test_no_document_publishes_a_test_count(document):
+    """Neither of the two spellings, and neither of the two tables.
+
+    Mutation: put `44 tests` back in row 22 of the Definition of Done — RED.
+    Put `1,574 tests` back in row 1 — RED, here rather than only in the count
+    sweep, and by name rather than by "unaccounted for".
+    """
+    found = sorted({match.group(0) for match in TEST_COUNT.finditer(_prose_of(document))})
+    assert not found, (
+        f"{document} publishes a test count: {found}. There is nothing in this "
+        "repository that can keep one honest — it is in no record, so it cannot "
+        "be bound to a field; nothing renders it, so it cannot be fenced; and it "
+        "is wrong the next time anybody adds a test. Both of the ones this "
+        "document carried were wrong when they were found, one by about a "
+        "thousand and one by twelve. Name the test file and let the reader run "
+        "`pytest tests/ --collect-only -q`."
+    )
+
+
+@pytest.mark.parametrize("document", COUNTED_DOCUMENTS)
+def test_every_count_the_documents_state_is_accounted_for(document):
+    """Nothing comma-formatted goes unexamined, and nothing is accounted for by
+    a coincidence.
+
+    **A count outside a generated fence has to be one of three things**, and
+    the first of them changed in the round that wrote this docstring:
+
+    * BOUND — `[src: N in <record>#<pointer>]`, and the guard reads that field
+      of that record and checks it holds N. What this replaces was "N is equal
+      to some integer somewhere under `data/outputs/`", which accepted a
+      test-suite tally because a shot-zone record stored the same number as a
+      team's attempts, and which would have refused the true figure.
+    * WITNESSED — `[src: N in <file outside data/outputs/>]`, read and checked.
+      A figure that cannot name a record field is not a record claim, and is
+      made to say what it actually is.
+    * SUPERSEDED — `[superseded: N on YYYY-MM-DD]`, on the line that states it,
+      and refused if any record still holds N.
+
+    A count INSIDE a fence is not swept here at all, because it is checked
+    harder: the fence's bytes are compared with what the records render to.
+    That is the fourth option and the only one that needs no marker — and it is
+    the one to reach for, because a generated figure cannot go stale.
+
+    It is DEFAULT-DENY: a count nobody thought about fails, which is the
+    property every hand-maintained roster in this file has had to be rescued
+    from.
+
+    Mutations it must catch, each run: revert one corrected population to its
+    stale value -> RED naming the figure and the document; append a paragraph
+    narrating an old value WITHOUT a marker -> RED; state a figure whose named
+    field does not hold it -> RED even when another record does hold it. And
+    the one it must NOT catch: a paragraph narrating an old value WITH
+    `[superseded: N on DATE]` beside it stays green, because a guard that fires
+    on honest documentation is a defect this repository has already shipped.
+    """
+    text = _prose_of(document)
+    bound, witnessed, superseded = _declared_counts(text)
+
+    for match in COUNT.finditer(text):
+        value = int(match.group(0).replace(",", ""))
+        if value in bound or value in witnessed or value in superseded:
+            continue
+        window = text[max(0, match.start() - 110) : match.end() + 60]
+        raise AssertionError(
+            f"{document} states {match.group(0)} outside every generated "
+            "fence, and nothing on the page says where it comes from.\n"
+            f"  …{window}…\n"
+            "Four things a count may be, and it must be one of them. (1) The "
+            "best: GENERATED — move the figure inside a fence "
+            "`scripts/splice_headline_table.py` renders, and it can never go "
+            "stale again. (2) A RECORD CLAIM: write `[src: "
+            f"{match.group(0)} in data/outputs/<record>.json#/<pointer>]` in "
+            "the list at the foot of this document, naming the FIELD the claim "
+            "is about; the guard reads that field. Naming a record without a "
+            "field is refused — that is how a shot-zone attempt total came to "
+            "vouch for a test count. (3) A figure this lab keeps somewhere "
+            f"else: `[src: {match.group(0)} in <path outside data/outputs/>]`, "
+            "and the guard reads that file. (4) History: write "
+            f"`[superseded: {match.group(0)} on YYYY-MM-DD]` ON THIS LINE, "
+            "which is refused if any record still states it."
+        )
+
+
+@pytest.mark.parametrize("document", COUNTED_DOCUMENTS)
+def test_every_bound_count_is_the_value_at_the_field_it_names(document):
+    """The binding is read. This is the check the old guard did not have.
+
+    `docs/project_status.md` published `1,574 tests` for a suite of some two
+    and a half thousand, and the count guard passed it because
+    `cbb_shot_zones_2026.json` stores 1574 as a team's shot attempts. Twelve
+    per cent of four-digit integers are somewhere in that store. Naming the
+    field closes it: a claim about the test suite cannot name a field of a
+    shot-zone record without a reader seeing what it did, and if it names one,
+    THAT field is what gets read.
+    """
+    text = _prose_of(document)
+    bound, _, _ = _declared_counts(text)
+    for value, claims in sorted(bound.items()):
+        for relative, pointer in claims:
+            assert relative.startswith("data/outputs/") and relative.endswith(".json"), (
+                f"{document} binds {value:,} to {relative}, which is not a "
+                "record under data/outputs/. A pointer only means anything "
+                "against a record; witness a figure kept elsewhere with a "
+                f"plain `[src: {value:,} in {relative}]` instead."
+            )
+            found = _value_at(relative, pointer)
+            if isinstance(found, str):
+                # **A SUBSTRING TEST IS NOT A VALUE TEST**, and this branch was
+                # one: `f"{value:,}" in found` accepts a figure bound to a
+                # field whose text states a LONGER number, off by any number of
+                # orders of magnitude. Two of the live bindings point at string
+                # fields — one reads "Player-games: 1,493,589 rows" — so a page
+                # could claim "the processed player table holds 1,493 rows",
+                # name that field, and be told the field holds it. That is the
+                # coincidence the whole binding rule was written to close,
+                # reintroduced inside the branch that reads a field. The
+                # boundaries are the count guard's own: a digit, a
+                # comma-and-digit or a point-and-digit means the number in the
+                # text is not the number claimed.
+                assert re.search(
+                    rf"(?<![\w.,]){re.escape(f'{value:,}')}(?!\d|,\d|\.\d)", found
+                ), (
+                    f"{document} says {relative}#{pointer} states {value:,}. "
+                    f"That field is text and does not state it as a figure of "
+                    f"its own: {found[:160]!r}"
+                )
+                continue
+            assert isinstance(found, int) and not isinstance(found, bool), (
+                f"{document} binds {value:,} to {relative}#{pointer}, which "
+                f"holds {found!r} — not a count. Point at the field the claim "
+                "is about."
+            )
+            assert found == value, (
+                f"{document} states {value:,} and names {relative}#{pointer} "
+                f"as where it comes from. That field holds {found:,}. Either "
+                "the record moved and the sentence has to move with it, or the "
+                "pointer is aimed at the wrong cell. Re-derive the figure from "
+                "the record; do not retype it from a report."
+            )
+
+
+@pytest.mark.parametrize("document", COUNTED_DOCUMENTS)
+def test_every_witnessed_count_is_stated_by_the_file_it_names(document):
+    """An exemption that names a witness has to have one.
+
+    Without this the marker is a comment: an author writes `[src: 920,712 in
+    docs/decision_log.md]` and the count is exempt forever whether that file
+    says anything of the kind. The witness is read.
+
+    **There is no longer an assertion that the document witnesses anything.**
+    There was, and it made this guard's own ideal end-state a failure: a page
+    that honestly stopped making any un-recorded claim went RED, and the only
+    way back to green was to keep an un-recorded figure on it. A guard that
+    cannot be satisfied by honest documentation is a defect this repository has
+    shipped before. What the assertion was really worried about — markers that
+    stopped parsing — is `test_every_marker_on_the_page_parses`, which reads
+    the marker shape rather than the count.
+    """
+    text = _prose_of(document)
+    _, witnessed, _ = _declared_counts(text)
+    # **FIELDS, not rendered markdown.** The refusal below says "a figure a
+    # record holds is bound to the field it claims", and that instruction has
+    # to be followable. Two figures on these pages -- the monthly credit
+    # authorisation and the full catalogue's price -- are printed by
+    # `cbb_credit_cost.md`'s renderer and stored in no field of
+    # `cbb_credit_cost.json`, so there is no pointer to write. Refusing the
+    # witness as well would leave no legal option at all, which is the shape of
+    # guard this file has already had to be rescued from once. They are
+    # witnessed against `docs/credit_cost.md`, which states both.
+    stated = _counts_every_record_states(fields_only=True)
+    for value, names in sorted(witnessed.items()):
+        for relative in names:
+            assert not relative.startswith("data/outputs/"), (
+                f"{document} witnesses {value:,} against the record "
+                f"{relative} without naming a field. A record claim is bound "
+                f"to its field: write `[src: {value:,} in {relative}#/"
+                "<pointer>]`. A bare record path asks the same question the "
+                "old guard asked — is this integer anywhere in the store — and "
+                "that question accepted a shot-zone attempt total as the "
+                "source of a test count."
+            )
+            assert value not in stated, (
+                f"{document} witnesses {value:,} against {relative}, but a "
+                f"record states it: {stated[value][0]}. A figure a record "
+                "holds is bound to the field it claims; an exemption over it "
+                "is a hole with a comment on it."
+            )
+            witness = REPO / relative
+            assert witness.is_file(), (
+                f"{document} witnesses {value:,} against {relative}, which is "
+                "not a file in this repository."
+            )
+            assert f"{value:,}" in witness.read_text(encoding="utf-8"), (
+                f"{document} says {relative} states {value:,}. It does not. "
+                "Either the witness moved and the marker has to follow it, or "
+                "the figure was never anywhere but this page."
+            )
+
+
+@pytest.mark.parametrize("document", COUNTED_DOCUMENTS)
+def test_every_marker_on_the_page_parses(document):
+    """A marker that does not parse is worse than no marker.
+
+    It exempts nothing — so nothing false ships — but it reads as provenance to
+    every human who meets it, and it tells the author who wrote it that the
+    figure is unaccounted for while they are looking straight at the thing they
+    wrote to account for it. `[superseded: 920,712]` without a date is the live
+    example: the date became part of the grammar in the round that anchored
+    these markers to their sentences.
+    """
+    text = _prose_of(document)
+    for found in ANY_MARKER.finditer(text):
+        marker = found.group(0)
+        parses = (
+            BOUND.fullmatch(marker)
+            or WITNESSED.fullmatch(marker)
+            or SUPERSEDED_COUNT.fullmatch(marker)
+        )
+        assert parses, (
+            f"{document} carries {marker!r}, which is not one of the three "
+            "markers this file reads. They are `[src: N in "
+            "data/outputs/<record>.json#/<pointer>]`, `[src: N in <path "
+            "outside data/outputs/>]` and `[superseded: N on YYYY-MM-DD]`."
+        )
+
+
+@pytest.mark.parametrize("document", COUNTED_DOCUMENTS)
+def test_no_count_declared_superseded_is_one_a_record_still_states(document):
+    """The other direction, exactly as `[@N]` has it.
+
+    `[superseded: N on DATE]` tells a reader the figure is history. Put on a
+    figure a record still holds, it is a false history -- and it would also buy
+    silence from the guard above for a live number. What this CANNOT check is
+    that the figure was ever true; that limit is written into the documents.
+    """
+    text = _prose_of(document)
+    _, _, superseded = _declared_counts(text)
+    stated = _counts_every_record_states()
+    for value in sorted(superseded):
+        assert value not in stated, (
+            f"{document} declares {value:,} superseded, and a record states it: "
+            f"{stated[value][0]}. Either the figure is current -- in which case "
+            "the marker is a false history and the sentence around it is "
+            "probably wrong too -- or the record it is being read out of is not "
+            "the one the sentence is about."
+        )
+
+
+@pytest.mark.parametrize("document", COUNTED_DOCUMENTS)
+def test_every_superseded_figure_is_marked_where_it_is_stated(document):
+    """The excuse sits beside the claim, not in a list the reader never reaches.
+
+    Measured before this was written: a present-tense sentence stating a stale
+    held-out population at line 231 was made green by a bullet at line 270, and
+    `CLAUDE.md`'s list is at line 856 of an 877-line file. The marker asserts
+    something about TENSE — this WAS the figure — and the only reader who can
+    judge that is the one reading the sentence. `[@N]` is anchored to its
+    interval for the same reason and for four rounds' worth of the same
+    argument.
+
+    The scope is one line of the unwrapped text: a sentence of a paragraph, a
+    row of a table, an item of a list.
+    """
+    text = _prose_of(document)
+    _, _, superseded = _declared_counts(text)
+    spans = _lines_with_offsets(text)
+    for match in COUNT.finditer(text):
+        value = int(match.group(0).replace(",", ""))
+        if value not in superseded:
+            continue
+        line = _line_around(spans, match.start())
+        assert any(
+            int(found.group(1).replace(",", "")) == value
+            for found in SUPERSEDED_COUNT.finditer(line)
+        ), (
+            f"{document} states {match.group(0)} and declares it superseded "
+            "somewhere else on the page. Put the marker where the figure is:\n"
+            f"  …{line.strip()[:220]}…\n"
+            f"`[superseded: {match.group(0)} on {superseded[value]}]` belongs "
+            "on this line. A reader meeting a present-tense sentence has no "
+            "way to know a bullet hundreds of lines away excuses it."
+        )
+
+
+#: Every hand-written markdown file in this repository, for the cross-document
+#: check below. `data/outputs/` is excluded: those are generated.
+def _every_hand_written_document() -> list[str]:
+    return ["CLAUDE.md"] + sorted(
+        path.relative_to(REPO).as_posix() for path in DOCS.glob("*.md")
+    )
+
+
+def test_no_document_states_a_figure_another_declares_superseded():
+    """A figure cannot be history on one page and today's number on another.
+
+    Measured: `docs/project_status.md` declared 920,712 superseded and
+    `docs/ported_defects.md` said in the present tense that "the population is
+    920,712 today". A reader following the marker to find out what the figure
+    WAS landed on a sibling asserting it IS. Neither guard could see it: the
+    superseded check reads records, and the count guard reads three documents.
+    """
+    superseded: dict[int, tuple[str, str]] = {}
+    for document in COUNTED_DOCUMENTS:
+        _, _, found = _declared_counts(_prose_of(document))
+        for value, date in found.items():
+            superseded[value] = (document, date)
+
+    for relative in _every_hand_written_document():
+        text = _unwrapped((REPO / relative).read_text(encoding="utf-8"))
+        spans = _lines_with_offsets(text)
+        for match in COUNT.finditer(text):
+            value = int(match.group(0).replace(",", ""))
+            if value not in superseded:
+                continue
+            declared_in, date = superseded[value]
+            line = _line_around(spans, match.start())
+            assert any(
+                int(found.group(1).replace(",", "")) == value
+                for found in SUPERSEDED_COUNT.finditer(line)
+            ), (
+                f"{relative} states {match.group(0)}, which {declared_in} "
+                f"declares superseded as of {date}.\n"
+                f"  …{line.strip()[:220]}…\n"
+                "One of the two pages is wrong about the tense. If the figure "
+                "is history here too, mark it: "
+                f"`[superseded: {match.group(0)} on {date}]` on this line."
+            )
+
+
+@pytest.mark.parametrize("document", COUNTED_DOCUMENTS)
+def test_every_count_marker_belongs_to_a_figure_the_document_states(document):
+    """No marker floats free of a count the page actually carries.
+
+    A marker that accounts for nothing reads as provenance and carries none --
+    and it is how an exemption list silently outlives the sentence it was
+    written for.
+    """
+    text = _prose_of(document)
+    bound, witnessed, superseded = _declared_counts(text)
+    written = {int(found.group(0).replace(",", "")) for found in COUNT.finditer(text)}
+    markers = list(BOUND.finditer(text)) + list(WITNESSED.finditer(text))
+    markers += list(SUPERSEDED_COUNT.finditer(text))
+    for value in sorted(set(bound) | set(witnessed) | set(superseded)):
+        assert value in written, (  # pragma: no cover - unreachable by construction
+            f"{document} carries a marker for {value:,} and never states it."
+        )
+        occurrences = sum(
+            1
+            for found in COUNT.finditer(text)
+            if int(found.group(0).replace(",", "")) == value
+        )
+        carried = sum(
+            1
+            for found in markers
+            if int(found.group(1).replace(",", "")) == value
+        )
+        assert occurrences > carried, (
+            f"{document} carries {carried} marker(s) for {value:,} and states "
+            f"the figure {occurrences} time(s) in total, so the marker accounts "
+            "for nothing but itself. Take it out with the sentence it was "
+            "written for."
+        )
+
+
+
 def test_every_hand_written_document_states_the_ledgers_current_count():
     """The hole that let nine sentences go stale in one commit.
 
@@ -844,12 +1674,27 @@ def _spellings(cell: dict, looks: int) -> tuple[str, ...]:
     """
     rebuilt = RESTATEMENT.rebuild_cell(cell, looks=looks)
     low, high = rebuilt["adjusted_low"], rebuilt["adjusted_high"]
-    return (
-        f"{low * 100:+.1f}% to {high * 100:+.1f}%",
-        f"{low:.5f} to {high:.5f}",
-        f"{low:+.5f} to {high:+.5f}",
-        f"{low:+.3f} to {high:+.3f}",
-        f"{low:+.4f} to {high:+.4f}",
+    return _with_between(
+        (
+            f"{low * 100:+.1f}% to {high * 100:+.1f}%",
+            f"{low:.5f} to {high:.5f}",
+            f"{low:+.5f} to {high:+.5f}",
+            f"{low:+.3f} to {high:+.3f}",
+            f"{low:+.4f} to {high:+.4f}",
+        )
+    )
+
+
+def _with_between(forms: tuple[str, ...]) -> tuple[str, ...]:
+    """Each `X to Y` form, and the `between X and Y` form of the same reading.
+
+    **The literal searches in this file look a spelling up by its exact text**,
+    so a figure written `between -7.6% and -0.7%` was invisible to them even
+    once `INTERVAL` learned to see it. Generated here rather than listed,
+    because the two spellings of one reading must not be able to drift apart.
+    """
+    return tuple(forms) + tuple(
+        "between " + form.replace(" to ", " and ") for form in forms
     )
 
 
@@ -1079,10 +1924,12 @@ def _uncorrected_spellings(cell: dict) -> tuple[str, ...]:
     check is an interval anyone can retype.
     """
     low, high = cell["low"], cell["high"]
-    return (
-        f"{low * 100:+.1f}% to {high * 100:+.1f}%",
-        f"{low:+.4f} to {high:+.4f}",
-        f"{low:+.5f} to {high:+.5f}",
+    return _with_between(
+        (
+            f"{low * 100:+.1f}% to {high * 100:+.1f}%",
+            f"{low:+.4f} to {high:+.4f}",
+            f"{low:+.5f} to {high:+.5f}",
+        )
     )
 
 
@@ -1281,10 +2128,32 @@ def test_unwrapping_joins_a_soft_wrap_and_preserves_every_character():
 #: `scripts/splice_headline_table.py` is the first step of it: the per-tier
 #: headline is already generated and already single-source. Everything below is
 #: a net under the prose that remains, and a net has holes by construction.
+#: **`between X and Y` WAS NOT IN THE SEPARATOR ALTERNATION**, and it is the
+#: plainest English spelling of an interval there is. The alternation was
+#: `(?:to|through)|[–—]`, so `between -7.6% and -0.7%` matched nothing at all:
+#: `test_every_interval_in_the_document_is_accounted_for` never examined it and
+#: the literal stale-spelling search never found it either, while this test's
+#: own docstring said "Nothing interval-shaped goes unexamined, whatever
+#: spelling it is in … There is no fifth option and no silent skip" and all
+#: three documents told the reader so. `and` is only a separator after
+#: `between` -- on its own it joins any two numbers in any sentence -- so it is
+#: matched only in that company, and the endpoint groups are named so the
+#: spelling can be normalised to the `X to Y` form the roster renders.
+#: The `between` branch carries the SAME two tolerances as the ` to ` branch
+#: below it, and it did not when it was added. It was written without
+#: `re.IGNORECASE` and without the `[*_`]*` emphasis class, so a sentence that
+#: OPENED with the interval -- the plainest place to put one -- and endpoints in
+#: this repository's house bold style were both invisible to it. Both escapes
+#: were measured, green over the whole document set, while the ` to ` spelling
+#: of the identical claim went red. A branch added to close a gap must be tested
+#: against the spelling the documents actually use, not the one the example used.
 INTERVAL = re.compile(
-    r"[-−+]?\d+(?:\.\d+)?\s*%?"
+    r"between\s*[*_`]*\s*(?P<low>[-−+]?\d+(?:\.\d+)?\s*%?)\s*[*_`]*"
+    r"\s+and\s*[*_`]*\s*(?P<high>[-−+]?\d+(?:\.\d+)?\s*%?)\s*[*_`]*"
+    r"|[-−+]?\d+(?:\.\d+)?\s*%?"
     r"\s*(?:[*_`]*\s*(?:to|through)\s*[*_`]*|[–—])\s*"
-    r"[-−+]?\d+(?:\.\d+)?\s*%?"
+    r"[-−+]?\d+(?:\.\d+)?\s*%?",
+    re.IGNORECASE,
 )
 
 #: Interval-shaped strings in these documents that are not corrected intervals.
@@ -1307,6 +2176,15 @@ NOT_A_READING = frozenset(
         # red is answered by one line here after the collision check clears it.
         "-19 through 2025",
         "2021–2026",
+        # A CLAIMED-EDGE BUCKET'S NAME, NOT ITS READING. `forecast_skill`
+        # renders a bucket's band with `bucket_label`, which spells it exactly
+        # like an interval -- `-5% to +0%` -- and both documents now name the
+        # one bucket that is a demonstrated deficit. Writing the band any other
+        # way would give one row two names, which is the thing `bucket_label`'s
+        # own docstring exists to stop. The reading of that bucket is not typed
+        # in either document; it is the return and the interval beside the name,
+        # and those are the record's to state.
+        "-5% to +0%",
     }
 )
 
@@ -1377,14 +2255,30 @@ def test_no_exemption_collides_with_a_real_reading():
 
 @pytest.mark.parametrize("document", HAND_WRITTEN)
 def test_every_interval_in_the_document_is_accounted_for(document):
-    """Nothing interval-shaped goes unexamined, whatever spelling it is in.
+    """Every interval `INTERVAL` matches has to account for itself.
 
     Four rounds of this guard worked by looking for figures it already knew how
     to spell, which meant an unrecognised figure was indistinguishable from no
-    figure at all. Here an interval is found by its shape and then has to be one
-    of four things: today's reading, an attributed historical one, a cell's
-    uncorrected interval, or an entry on a short exemption list that is itself
-    checked for collisions. There is no fifth option and no silent skip.
+    figure at all. An interval this finds has to be one of four things: today's
+    reading, an attributed historical one, a cell's uncorrected interval, or an
+    entry on a short exemption list that is itself checked for collisions. There
+    is no fifth option for anything it matches.
+
+    **Its limit, stated here rather than implied, because the version of this
+    docstring that ran until 2026-09-18 did not state it and was false.** It
+    opened "Nothing interval-shaped goes unexamined, whatever spelling it is in"
+    and closed "There is no fifth option and no silent skip", and all three
+    documents repeated the promise to the reader. It was never true: this guard
+    can only examine what `INTERVAL` matches, and every round of review has
+    found a spelling it did not. `between X and Y` was invisible until it was
+    added; then the added branch was itself blind to a capitalised `Between`
+    and to bolded endpoints, both measured green while the ` to ` spelling of
+    the same claim went red.
+
+    So the honest statement is the narrow one: an interval this guard SEES is
+    accounted for, and the set it sees is whatever `INTERVAL` spells today. A
+    guard that claims to catch every spelling stops anyone looking for the next
+    one, which is the more expensive failure of the two.
     """
     text = _unwrapped((REPO / document).read_text(encoding="utf-8"))
     index = _readings_by_spelling()
@@ -1837,7 +2731,15 @@ def test_the_refusal_gate_still_lets_a_census_name_what_it_refuses():
 #: generated block, and a composition's total is exactly a statement of what the
 #: ledger holds today. So the addends are the claim, and their sum is checked
 #: against the authority here.
-COMPOSITION = re.compile(r"(?<![\d.+])((?:\d+\s*\+\s*){2,}\d+)(?![\s*+\d])")
+#: **THE TRAILING LOOKAHEAD HAD THE SAME DEFECT AS `COUNT`'s, and it is the
+#: reason that one was not the only regex re-read.** `(?![\s*+\d])` exempted a
+#: composition followed by a SPACE — that is, every composition written
+#: anywhere but at the end of a line or immediately before punctuation. The one
+#: on the page happens to be followed by a comma, so the guard bit; move the
+#: sentence one word and it stops biting, silently. What may not follow a
+#: finished composition is a digit (the match would be truncated) or another
+#: `+` addend (the same). A space may.
+COMPOSITION = re.compile(r"(?<![\d.+])((?:\d+\s*\+\s*){2,}\d+)(?!\d|\s*\+)")
 
 
 def test_a_hand_written_composition_sums_to_the_ledgers_count():

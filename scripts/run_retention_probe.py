@@ -41,6 +41,7 @@ from cbb_betting_lab.config import OUTPUTS_DIR, PROCESSED_DIR, RAW_DIR
 from cbb_betting_lab.providers.env_file import load_provider_env, redact
 from cbb_betting_lab.providers.odds_api import (
     DEFAULT_REGIONS,
+    PROBE_STARVATION,
     OddsApiProvider,
     ProviderError,
     sufficient_quota,
@@ -225,7 +226,9 @@ def main(argv: list[str] | None = None) -> int:
         except ProviderError as exc:
             print(redact(f"::error::{exc}"), file=sys.stderr)
             return 2
-        enough, note = sufficient_quota(headers, int(args.credit_cap))
+        enough, note = sufficient_quota(
+            headers, int(args.credit_cap), why=PROBE_STARVATION
+        )
         print(note)
         if not enough:
             print("::error::Refusing to start. Nothing was fetched.", file=sys.stderr)
@@ -273,6 +276,23 @@ def main(argv: list[str] | None = None) -> int:
         f"{record['credit_cap']:,}; the pessimistic bound was "
         f"{record['pessimistic_bound']:,}."
     )
+    if record.get("stopped_on_quota"):
+        # ITS OWN EXIT CODE, LOUDER THAN THE ORDINARY INCOMPLETE RUN. A capped
+        # run left markets unasked and this module reports those as NOT_PROBED.
+        # An emptied ACCOUNT is not caught by that machinery at all: the
+        # provider keeps answering with payloads holding no bookmakers, so the
+        # markets in them are recorded as asked and unpriced, which is this
+        # module's own definition of NOT_RETAINED.
+        print(
+            "::error::STOPPED ON QUOTA. The account's measured balance fell "
+            "below this probe's floor and the run stopped. NO VERDICT IN THIS "
+            "REPORT IS A STATEMENT ABOUT THE ARCHIVE: an exhausted balance "
+            "returns payloads with no bookmakers in them, which are the same "
+            "bytes as a market the provider does not retain. Top the balance "
+            "up and re-run; nothing already cached is asked for twice.",
+            file=sys.stderr,
+        )
+        return 7
     if not record["completed"]:
         print(
             "::warning::The run did not complete. Every market it never "
@@ -281,6 +301,20 @@ def main(argv: list[str] | None = None) -> int:
             "the guard that tells them apart."
         )
         return 1
+    if not record.get("quota_ever_reported") or int(
+        record.get("quota_unwatched_responses", 0)
+    ):
+        # Not a failure — nothing went wrong and everything planned was asked —
+        # but it is not the clean bill of health a bare exit 0 reads as. The
+        # balance was not measured throughout, so no NOT_RETAINED verdict in
+        # this run is established as a fact about the archive, and the operator
+        # has to see that without opening the report.
+        print(
+            "::warning::The account's balance was not measured throughout this "
+            "run, so every NOT_RETAINED verdict in it reads only as 'this run "
+            "saw no price for it' and none is established as a fact about the "
+            "provider's archive. The report says so in the same words."
+        )
     return 0
 
 

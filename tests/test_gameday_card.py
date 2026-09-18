@@ -2475,3 +2475,269 @@ def test_a_card_given_no_join_census_says_nothing_rather_than_an_empty_line(
     assert "resolved to a scheduled game" not in card, (
         "a card with no join census still grew the census's own phrasing"
     )
+
+
+# ---------------------------------------------------------------------------
+# The ACCOUNT's balance during a live card, which is not this run's cap
+#
+# The card had the free pre-flight and no in-run breaker. The cap machinery
+# cannot see an emptied account at all: `fetch_event_odds` does not fail, it
+# returns a payload with no bookmakers in it, `events_asked_per_event` keeps
+# climbing, `per_event_complete` stays True, and the silence is frozen into the
+# ledger as a night on which no book hung those markets.
+# ---------------------------------------------------------------------------
+
+
+def _slate_of(now, count: int) -> list[dict]:
+    return [
+        {
+            "id": f"evt-{i}",
+            "commence_time": _iso(now + timedelta(hours=6)),
+            "home_team": "Duke Blue Devils",
+            "away_team": "Kansas Jayhawks",
+        }
+        for i in range(count)
+    ]
+
+
+def _balance_driven_provider(now, balances, *, events=4, regions=None):
+    """A provider whose per-event responses report a falling account balance.
+
+    The slate listing is free and carries no headers, so the first billed
+    response is the bulk call and every one after it is a per-event odds call.
+
+    `regions` is settable because the floor is `keys x regions` and a fixture
+    that never varies the region count cannot tell the two factors apart.
+    """
+    state = {"billed": 0}
+
+    def requester(url, *, params, timeout):
+        if url.endswith("/events"):
+            return FakeResponse(_slate_of(now, events), {})
+        index = min(state["billed"], len(balances) - 1)
+        state["billed"] += 1
+        headers = {"x-requests-last": "1"}
+        balance = balances[index]
+        if balance is not None:
+            headers["x-requests-remaining"] = str(balance)
+        return FakeResponse(board_payloads(now), headers)
+
+    kwargs = {} if regions is None else {"regions": regions}
+    return odds_api.OddsApiProvider(
+        CBB, environment={"CBB_ODDS_API_KEY": "x" * 20}, requester=requester, **kwargs
+    ), state
+
+
+def test_the_card_stops_the_per_event_stage_when_the_account_empties(now):
+    """The breaker the card did not have.
+
+    The bulk response reports a healthy balance, so the stage starts; the first
+    per-event response reports the account below the floor and the stage stops
+    at once. Everything after it would have been answered with an empty payload
+    and staged as a market nobody hung.
+    """
+    provider, state = _balance_driven_provider(now, [5_000_000, 2], events=4)
+    board = GC.fetch_board(
+        provider, competition=CBB, credit_cap=1_000_000, day="2027-01-12"
+    )
+
+    assert board.stopped_on_quota is True
+    assert board.per_event_complete is False, (
+        "an exhausted account left the stage marked complete, so its rows are "
+        "eligible to be frozen into the ledger as a night's coverage"
+    )
+    assert board.events_asked_per_event == 1
+    assert state["billed"] == 2, (
+        "the card kept asking for prices after the account had been measured "
+        "below its floor"
+    )
+    assert any("STOPPED ON QUOTA" in reason for reason in board.degraded)
+    assert any(
+        "may be read as a market not being quoted tonight" in reason
+        for reason in board.degraded
+    )
+
+
+def test_a_healthy_balance_leaves_the_card_stage_complete(now):
+    """THE CONTROL. Same slate, same payloads; only the reported balance
+    differs. Without it a breaker wired to fire on every run would pass the
+    test above while quietly costing the lab every night's ladders."""
+    provider, state = _balance_driven_provider(now, [5_000_000], events=4)
+    board = GC.fetch_board(
+        provider, competition=CBB, credit_cap=1_000_000, day="2027-01-12"
+    )
+
+    assert board.stopped_on_quota is False
+    assert board.per_event_complete is True
+    assert board.events_asked_per_event == 4
+    assert board.quota_watched_throughout is True
+    assert not board.degraded
+
+
+def test_the_card_floor_is_derived_from_the_widest_request_not_invented(now):
+    """`max(per-event keys, bulk keys) x regions` — the largest single request
+    this fetch can make, so the breaker trips while the request in flight could
+    still have been answered whole.
+
+    EACH TERM IS SEPARATELY OBSERVABLE, WHICH THE PREVIOUS VERSION OF THIS TEST
+    COULD NOT CLAIM. It ran the default tiers, where `per_event_provider_keys`
+    returns 48 keys against the bulk call's 3, so `max` never decided anything
+    and the whole of it could be deleted: mutating the module to
+    `len(per_event_keys) * regions` left all 81 tests in this file green. That
+    is the card's copy of the defect already recorded for the historical floor
+    — a fixture whose values make two terms of a formula indistinguishable
+    tests neither.
+
+    So the floor is read twice, once from each side of the `max`, with a
+    different region count each time:
+
+      * `--market-tiers 1` is one per-event key (`team_totals`) against three
+        bulk keys, so the BULK side decides. Under the mutant the floor would
+        be 3 rather than 9 — and with a tier selection that yields no per-event
+        keys at all it would be **0**, which is `remaining >= 0` for every
+        balance the provider can report: a breaker that can never fire.
+      * the default tiers are 48 per-event keys against the same three, so the
+        PER-EVENT side decides and a floor taken from the bulk keys alone would
+        be 6 rather than 96.
+
+    Both are pinned as literals, and the region count differs between them so
+    `x regions` cannot be confused with either key count.
+    """
+    narrow, _ = _balance_driven_provider(
+        now, [5_000_000], events=1, regions="us,us2,uk"
+    )
+    board = GC.fetch_board(
+        narrow, competition=CBB, credit_cap=1_000_000, day="2027-01-12",
+        market_tiers=(1,),
+    )
+    assert len(GC.per_event_provider_keys(tiers=(1,))) == 1, (
+        "tier 1 no longer has exactly one per-event key, so this fixture no "
+        "longer puts the bulk side of the max on top. Re-pick the tiers."
+    )
+    assert board.quota_floor == 9, (
+        f"the floor is {board.quota_floor}, not max(per-event 1, bulk 3) x 3 "
+        "regions. A floor read from the per-event keys alone is 3 here, and 0 "
+        "for a tier selection with no per-event keys at all — a breaker that "
+        "never fires."
+    )
+    assert board.quota_floor != 1 * 3, (
+        "the floor dropped the max and took the per-event keys, so the widest "
+        "request this fetch makes — the bulk call — can be billed in full "
+        "below the floor"
+    )
+    assert board.quota_floor != max(1, 3), "the region count was not applied"
+
+    wide, _ = _balance_driven_provider(now, [5_000_000], events=1, regions="us,us2")
+    board = GC.fetch_board(
+        wide, competition=CBB, credit_cap=1_000_000, day="2027-01-12",
+    )
+    assert len(GC.per_event_provider_keys(tiers=(1, 2, 3))) == 48, (
+        "the default tiers no longer hold 48 per-event keys; re-pin the literal"
+    )
+    assert board.quota_floor == 96, (
+        f"the floor is {board.quota_floor}, not max(per-event 48, bulk 3) x 2 "
+        "regions"
+    )
+    assert board.quota_floor != 3 * 2, (
+        "the floor was taken from the bulk keys alone, so a per-event request "
+        "sixteen times wider than the floor can be billed below it"
+    )
+    assert board.quota_floor > 0, "a floor of zero is a breaker that never fires"
+
+
+def test_a_card_whose_balance_was_never_reported_says_so(now):
+    """The absence of a stop is not a measurement. A run whose responses never
+    carried `x-requests-remaining` had a breaker with nothing to compare, and
+    every empty market in it could be an empty account."""
+    provider, _ = _balance_driven_provider(now, [None], events=2)
+    board = GC.fetch_board(
+        provider, competition=CBB, credit_cap=1_000_000, day="2027-01-12"
+    )
+
+    assert board.quota_ever_reported is False
+    assert board.stopped_on_quota is False
+    assert board.per_event_complete is True, (
+        "an unreported balance is not a reason to withhold a complete stage; "
+        "it is a reason to say the balance was not watched"
+    )
+    assert board.quota_watched_throughout is False
+
+
+def test_a_balance_reported_once_does_not_arm_the_cards_breaker_for_ever(now):
+    """The sticky-field defect at the third site. One header on the bulk
+    response used to stay in `Spend.quota_remaining` for the whole card, so the
+    breaker compared that same figure against its floor after every later
+    response while the account drained."""
+    provider, _ = _balance_driven_provider(now, [5_000_000, None], events=4)
+    board = GC.fetch_board(
+        provider, competition=CBB, credit_cap=1_000_000, day="2027-01-12"
+    )
+
+    assert board.quota_ever_reported is True
+    assert board.quota_unwatched_responses > 0, (
+        "the breaker reported itself as armed for responses on which the "
+        "provider told it nothing"
+    )
+    assert board.quota_watched_throughout is False
+
+
+def test_the_card_never_opens_the_per_event_stage_on_an_empty_account(now):
+    """The other check, isolated. The BULK response — the first billed one — is
+    the one that measures the account below the floor, so the per-event stage
+    is never entered at all and a stop here can only have come from the check
+    that stands between the bulk call and the loop."""
+    provider, state = _balance_driven_provider(now, [2], events=4)
+    board = GC.fetch_board(
+        provider, competition=CBB, credit_cap=1_000_000, day="2027-01-12"
+    )
+
+    assert board.stopped_on_quota is True
+    assert board.per_event_asked is False
+    assert board.events_asked_per_event == 0
+    assert state["billed"] == 1, (
+        "the card opened the per-event stage after the bulk response had "
+        "already measured the account below its floor"
+    )
+    assert any("before the per-event stage" in r for r in board.degraded)
+
+
+def test_the_card_says_when_its_balance_was_never_watched(now, day, tmp_path):
+    """THE NOTICE GOES ON THE CARD, not only into a Board field.
+
+    The absence of a stop is not a measurement, and a reader of the card cannot
+    see `board.quota_ever_reported`. A run whose responses never carried
+    `x-requests-remaining` had a breaker with nothing to compare, so no empty
+    market in it is established as a market nobody hung — and the card has to
+    say that where coverage is reported, not in a run record.
+    """
+    blind, _ = _balance_driven_provider(now, [None], events=2)
+    watched, _ = _balance_driven_provider(now, [5_000_000], events=2)
+
+    blind_board = GC.fetch_board(
+        blind, competition=CBB, credit_cap=1_000_000, day="2027-01-12"
+    )
+    watched_board = GC.fetch_board(
+        watched, competition=CBB, credit_cap=1_000_000, day="2027-01-12"
+    )
+
+    def card_of(board_):
+        return GC.render_card(
+            GC.run_card(
+                board_, competition=CBB, day=day, card_slot="morning",
+                archive_dir=tmp_path / str(id(board_)),
+            )
+        )
+
+    blind_text = card_of(blind_board)
+    watched_text = card_of(watched_board)
+
+    assert "had nothing to watch" in blind_text, (
+        "the card reports its coverage without saying that nothing measured "
+        "the account's balance, so an empty market reads as a market nobody "
+        "hung rather than as possibly an empty wallet"
+    )
+    assert "no absence below is established" in blind_text.lower()
+    # The control, on the same fixture with one thing changed: a watched run
+    # must NOT carry the notice, or the sentence is decoration rather than a
+    # statement about this run.
+    assert "had nothing to watch" not in watched_text

@@ -21,9 +21,9 @@ Read `docs/what_we_can_and_cannot_claim.md` first. This says what the evidence
 
 Every figure below is read from a record on disk by `scripts/run_why_the_model.py`, never typed. The records, and the moment each stamped itself with:
 
-- **price backtest** — `data/outputs/cbb_price_backtest.json`, generated 2026-09-17T16:24:15Z
-- **forecast skill** — `data/outputs/cbb_forecast_skill.json`, generated 2026-09-05T15:56:38Z
-- **held-out replication** — `data/outputs/holdout/cbb_replication.json`, generated 2026-09-17T16:47:13Z
+- **price backtest** — `data/outputs/cbb_price_backtest.json`, generated 2026-09-18T03:02:12Z
+- **forecast skill** — `data/outputs/cbb_forecast_skill.json`, generated 2026-09-18T03:04:50Z
+- **held-out replication** — `data/outputs/holdout/cbb_replication.json`, generated 2026-09-18T00:22:10Z
 
 Read `docs/what_we_can_and_cannot_claim.md` first. This says what the evidence *is*; that says how to read it.
 
@@ -84,13 +84,45 @@ Each is a rule that needs no model at all. All 3 measured tiers return more than
 
 | Tier | Rows | Model minus raw market | Reading |
 |:---|---:|:---|:---|
-| high-major | 62,163 | -0.01663, corrected -0.02211 to -0.01116 | demonstrated deficit |
-| mid-major | 137,296 | -0.00962, corrected -0.01328 to -0.00595 | demonstrated deficit |
-| low-major | 94,182 | -0.00776, corrected -0.01111 to -0.00440 | demonstrated deficit |
+| high-major | 53,844 | -0.01783, corrected -0.02379 to -0.01186 | demonstrated deficit |
+| mid-major | 127,094 | -0.01066, corrected -0.01429 to -0.00704 | demonstrated deficit |
+| low-major | 89,546 | -0.00782, corrected -0.01120 to -0.00444 | demonstrated deficit |
 
 A **negative** advantage is the model scoring worse than the price it is betting into. The verdict column reads the sign the same way every other interval in this repository does; it is a Brier difference and not a return, and it is never added to one.
 
-In high-major (0.25118 against 0.25000, 62,163 rows) the model's Brier is worse than the base rate: beaten by always predicting the league average.
+In high-major (0.25160 against 0.25000, 53,844 rows) the model's Brier is worse than the base rate: beaten by always predicting the league average.
+
+**Anti-predictiveness, per tier — the realised RETURN by claimed edge.** Not the shortfall against the model's own probability: that is overconfidence, which the model's own selection produces almost mechanically, and it is a different quantity reported elsewhere. This is what the wagers paid.
+
+- high-major: the return falls by **-0.6 pp** from the smallest claimed-edge bucket to the largest across 8 usable buckets (21,290 rows in the smallest, 9,559 in the largest), and the two family-corrected intervals **overlap, so the fall is not demonstrated**.
+  - claimed-edge bucket (below -10%): 21,290 bets, **-3.5%**, corrected -9.0% to +2.1% — no demonstrated edge
+  - claimed-edge bucket (-10% to -5%): 4,642 bets, **-0.8%**, corrected -8.4% to +6.8% — no demonstrated edge
+  - claimed-edge bucket (-5% to +0%): 4,847 bets, **-5.2%**, corrected -11.9% to +1.6% — no demonstrated edge
+  - claimed-edge bucket (+0% to +2%): 1,769 bets, **-6.4%**, corrected -19.6% to +6.7% — no demonstrated edge
+  - worst-returning bucket (+2% to +5%): 2,474 bets, **-9.5%**, corrected -19.1% to +0.1% — no demonstrated edge
+  - claimed-edge bucket (+5% to +10%): 3,654 bets, **-4.7%**, corrected -15.4% to +6.0% — no demonstrated edge
+  - claimed-edge bucket (+10% to +20%): 5,609 bets, **-3.8%**, corrected -12.4% to +4.8% — no demonstrated edge
+  - claimed-edge bucket (+20% and above): 9,559 bets, **-2.9%**, corrected -10.9% to +5.2% — no demonstrated edge
+- mid-major: the return falls by **1.4 pp** from the smallest claimed-edge bucket to the largest across 8 usable buckets (46,974 rows in the smallest, 16,132 in the largest), and the two family-corrected intervals **overlap, so the fall is not demonstrated**.
+  - claimed-edge bucket (below -10%): 46,974 bets, **-4.3%**, corrected -8.8% to +0.1% — no demonstrated edge
+  - claimed-edge bucket (-10% to -5%): 13,774 bets, **-1.4%**, corrected -5.5% to +2.8% — no demonstrated edge
+  - claimed-edge bucket (-5% to +0%): 14,264 bets, **-4.0%**, corrected -8.6% to +0.5% — no demonstrated edge
+  - claimed-edge bucket (+0% to +2%): 5,177 bets, **-4.8%**, corrected -12.4% to +2.7% — no demonstrated edge
+  - claimed-edge bucket (+2% to +5%): 7,278 bets, **-5.1%**, corrected -12.0% to +1.9% — no demonstrated edge
+  - worst-returning bucket (+5% to +10%): 10,038 bets, **-6.2%**, corrected -12.8% to +0.5% — no demonstrated edge
+  - claimed-edge bucket (+10% to +20%): 13,457 bets, **-2.7%**, corrected -9.2% to +3.8% — no demonstrated edge
+  - claimed-edge bucket (+20% and above): 16,132 bets, **-5.7%**, corrected -12.8% to +1.4% — no demonstrated edge
+- low-major: the return falls by **2.7 pp** from the smallest claimed-edge bucket to the largest across 8 usable buckets (31,462 rows in the smallest, 9,225 in the largest), and the two family-corrected intervals **overlap, so the fall is not demonstrated**.
+  - claimed-edge bucket (below -10%): 31,462 bets, **-3.1%**, corrected -7.7% to +1.6% — no demonstrated edge
+  - claimed-edge bucket (-10% to -5%): 10,863 bets, **-0.6%**, corrected -4.8% to +3.6% — no demonstrated edge
+  - claimed-edge bucket (-5% to +0%): 10,587 bets, **-5.3%**, corrected -9.7% to -0.8% — demonstrated deficit
+  - claimed-edge bucket (+0% to +2%): 3,985 bets, **-1.4%**, corrected -9.2% to +6.5% — no demonstrated edge
+  - claimed-edge bucket (+2% to +5%): 5,418 bets, **-4.1%**, corrected -11.5% to +3.3% — no demonstrated edge
+  - claimed-edge bucket (+5% to +10%): 7,820 bets, **-3.9%**, corrected -10.2% to +2.5% — no demonstrated edge
+  - claimed-edge bucket (+10% to +20%): 10,186 bets, **-5.5%**, corrected -12.6% to +1.6% — no demonstrated edge
+  - worst-returning bucket (+20% and above): 9,225 bets, **-5.8%**, corrected -14.0% to +2.3% — no demonstrated edge
+
+A bucket whose family-corrected interval lies entirely below zero is worse than no edge, not the same as it: in low-major -5% to +0% the model's own claimed edge selected wagers that lost money on the evidence of this run. Each is printed above with the corrected interval this sentence is read off.
 
 **Calibration, over the whole population and over the bets the model selected.** These are counts of rows across Division I rather than a return, and they are reported together because only the second one is evidence about the bets this lab would place:
 
@@ -101,7 +133,7 @@ The overall figure is not evidence about a betting policy. Nothing stakes money 
 
 ## The held-out test
 
-The held-out test is 2025, 2026 (held out), discovered on 2021-2024 and **not declared in advance** — the seasons held out were chosen after the discovery numbers had been seen, so this is a second look at the data rather than a pre-registered test. It graded 65,007 held-out bets over 9,776 games against 110,682 on the discovery seasons, across 32 cells:
+The held-out test is 2025, 2026 (held out), discovered on 2021-2024 and **not declared in advance** — the seasons held out were chosen after the discovery numbers had been seen, so this is a second look at the data rather than a pre-registered test. It graded 65,008 held-out bets over 9,810 games against 110,682 on the discovery seasons, across 32 cells:
 
 - did not replicate: **0** of 32
 - not enough evidence: **3** of 32

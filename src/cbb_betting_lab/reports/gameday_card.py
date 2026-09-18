@@ -500,8 +500,34 @@ class Board:
     #: Events whose per-event call failed on its own. Scattered rather than
     #: ordered, so they do not make the stage a prefix.
     events_failed: int = 0
+    #: True only when the ACCOUNT's measured balance fell below this run's
+    #: floor mid-fetch. Kept apart from the cap stop above, which sets
+    #: `per_event_complete` for a different reason: a capped stage left the
+    #: late tips UNASKED, an exhausted account leaves them UNANSWERED. The
+    #: provider does not fail on an empty balance, it returns payloads with
+    #: nothing in them — so a card that does not watch the balance stages
+    #: silence and reports it as a board nobody priced.
+    stopped_on_quota: bool = False
+    #: The balance below which the fetch stops, derived from the widest single
+    #: request it can make. Zero on a board that made no request.
+    quota_floor: int = 0
+    quota_last_measured: int | None = None
+    #: Whether the provider reported a balance at all, and how many responses
+    #: it reported none on. Three states, not two: watched throughout, watched
+    #: and then blinded, never able to watch. The middle one reads as the
+    #: safest and is the worst.
+    quota_ever_reported: bool = False
+    quota_unwatched_responses: int = 0
     notes: list[str] = field(default_factory=list)
     degraded: list[str] = field(default_factory=list)
+
+    @property
+    def quota_watched_throughout(self) -> bool:
+        return bool(
+            self.quota_floor
+            and self.quota_ever_reported
+            and not self.quota_unwatched_responses
+        )
 
 
 def board_from_payloads(
@@ -605,6 +631,25 @@ def fetch_board(
     own credit arithmetic — the NHL lab capped a run at 200,000 and spent
     289,984 by estimating from markets asked rather than markets returned, and
     its test asserted the cap "cannot be breached" the whole time.
+
+    ## The ACCOUNT's balance is watched too, and it is not the cap
+
+    The cap is this run's own budget and hitting it leaves markets UNASKED,
+    which everything above handles honestly. An emptied account does something
+    the cap machinery cannot see: the provider keeps answering and returns
+    payloads with nothing in them. `fetch_event_odds` raises nothing,
+    `events_asked_per_event` keeps climbing, `per_event_complete` stays True,
+    and the empty rows are frozen into the ledger as a night on which no book
+    quoted those markets. That is a fact about our wallet published as a fact
+    about the board.
+
+    So the measured balance is re-read after every response, against a floor
+    derived from the widest single request this fetch can make, and a fetch
+    that crosses it stops with `stopped_on_quota`, marks the stage incomplete
+    so nothing outside the bulk markets can be frozen, and degrades the run so
+    the reason reaches `latest_status.json` rather than an artifact. No number
+    is assumed: a response that reports no balance leaves the breaker blind for
+    that response and the count of those reaches the board.
     """
     spend = Spend()
     board = Board(
@@ -631,6 +676,39 @@ def fetch_board(
 
     frames: list[pd.DataFrame] = []
     bulk_keys = tuple(sorted(BULK_SAFE_MARKETS))
+    # Hoisted above the bulk call so the balance floor exists before the first
+    # request rather than after it. Neither depends on what the bulk call
+    # returns.
+    per_event_keys = tuple(
+        k for k in per_event_provider_keys(tiers=market_tiers) if k not in BULK_SAFE_MARKETS
+    )
+    regions = len([r for r in provider.regions.split(",") if r.strip()]) or 1
+    # The widest single request this fetch can make, so the breaker trips while
+    # the request in flight could still have been answered whole. A floor of
+    # zero would let the fetch make a request the account cannot pay for, and a
+    # partially-billed response is exactly the one whose silence is unreadable.
+    board.quota_floor = max(len(per_event_keys), len(bulk_keys)) * regions
+
+    def balance_fell() -> str:
+        """A reason to stop, or `""`. Reads the response in hand and no other.
+
+        Never carried forward from an earlier response: a stale balance
+        compared against a floor is a breaker that cannot fire while reporting
+        that it is armed.
+        """
+        remaining = spend.remaining_credits()
+        if remaining is None:
+            board.quota_unwatched_responses += 1
+            return ""
+        board.quota_ever_reported = True
+        board.quota_last_measured = remaining
+        if remaining >= board.quota_floor:
+            return ""
+        return (
+            f"The provider reports {remaining:,} credit(s) remaining on the "
+            f"account, below this run's floor of {board.quota_floor:,}."
+        )
+
     try:
         payloads = provider.fetch_bulk(bulk_keys, spend=spend, credit_cap=credit_cap)
         rows, counts = staging.stage_payloads(payloads, competition=competition)
@@ -647,14 +725,25 @@ def fetch_board(
         board.rows = pd.concat(frames, ignore_index=True) if frames else board.rows
         return board
 
-    per_event_keys = tuple(
-        k for k in per_event_provider_keys(tiers=market_tiers) if k not in BULK_SAFE_MARKETS
-    )
-    regions = len([r for r in provider.regions.split(",") if r.strip()]) or 1
     stage_bound = len(on_the_day) * len(per_event_keys) * regions
     board.per_event_asked = bool(on_the_day and per_event_keys)
 
-    if not board.per_event_asked:
+    fell = balance_fell()
+    if fell:
+        # Measured on the bulk response, before a single per-event request.
+        board.stopped_on_quota = True
+        board.per_event_asked = False
+        board.per_event_complete = False
+        board.degraded.append(
+            f"**STOPPED ON QUOTA before the per-event stage.** {fell} Nothing "
+            "beyond the featured markets was asked for. This is not the cap: a "
+            "capped stage leaves the late tips UNASKED, and an empty account "
+            "leaves them UNANSWERED — the provider keeps replying with payloads "
+            "that hold no quotes, which is indistinguishable from a market no "
+            "book hung. **Nothing in this run may be read as a market not being "
+            "quoted tonight.**"
+        )
+    elif not board.per_event_asked:
         board.notes.append(
             "No per-event market was asked for: "
             + ("the slate is empty." if not on_the_day else "no tier asked for one.")
@@ -705,6 +794,29 @@ def fetch_board(
             frames.append(rows)
             board.counts.merge(counts)
             board.events_asked_per_event += 1
+            # AFTER STAGING, BEFORE THE NEXT REQUEST. The response in hand was
+            # paid for and is evidence whatever the breaker decides next;
+            # discarding it would throw away a bought answer. What must not
+            # happen is the NEXT request, and every one after it, coming back
+            # empty because the account is empty and being staged as a board
+            # nobody priced.
+            fell = balance_fell()
+            if fell:
+                board.stopped_on_quota = True
+                board.per_event_complete = False
+                board.degraded.append(
+                    f"**STOPPED ON QUOTA** after "
+                    f"{board.events_asked_per_event:,} of {len(ordered):,} "
+                    f"game(s). {fell} This is not the cap stop above: a capped "
+                    "stage leaves the remaining games UNASKED, and an empty "
+                    "account leaves them UNANSWERED — the provider does not "
+                    "fail, it returns payloads with no quotes in them, and a "
+                    "staged empty payload is indistinguishable from a market no "
+                    "book hung. Those rows are staged and are **not** frozen. "
+                    "**Nothing in this run may be read as a market not being "
+                    "quoted tonight.**"
+                )
+                break
 
     board.rows = (
         pd.concat(frames, ignore_index=True)[list(staging.STAGED_COLUMNS)]
@@ -2788,6 +2900,35 @@ def _board_section(run: CardRun) -> list[str]:
             ),
             "",
         ]
+    # THE BALANCE, SAID OUT LOUD, WHETHER OR NOT IT STOPPED ANYTHING.
+    #
+    # The absence of a stop is not a measurement. A run whose responses never
+    # carried `x-requests-remaining` — or carried it once and then stopped —
+    # had a breaker with nothing to compare, and every empty market in it could
+    # be an empty account rather than a board no book hung. The card says which
+    # of the three states it was in, in the section a reader actually reads.
+    if board.quota_floor and not board.quota_watched_throughout:
+        if not board.quota_ever_reported:
+            lines += [
+                "**The provider reported no remaining account quota on any "
+                "response in this run, so the balance circuit-breaker had "
+                "nothing to watch.** That is not a measurement that the balance "
+                "was healthy; it is the absence of one, and no quota figure has "
+                "been assumed in its place. An empty account returns payloads "
+                "with no quotes in them, so no absence below is established as "
+                "a market nobody hung.",
+                "",
+            ]
+        else:
+            lines += [
+                "**The provider stopped reporting a remaining account quota: "
+                f"the breaker looked {board.quota_unwatched_responses:,} "
+                "time(s) and found no balance to compare**, so it was blind for "
+                "that part of the run. The last figure it was given is not "
+                "carried forward as though it were current. No absence below is "
+                "established as a market nobody hung.",
+                "",
+            ]
     for note in board.notes:
         lines += [note, ""]
     if run.snapshot_path is not None:
