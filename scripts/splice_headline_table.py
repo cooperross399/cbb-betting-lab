@@ -655,9 +655,14 @@ def record_states(relative: str) -> list[tuple[str, str, dict]]:
     """(label, what changed it, readings) for a record, oldest first.
 
     Every committed state of the record, read with `git show`, and the working
-    tree last when it differs from the newest commit. The working tree is the
-    state a reader is looking at, so a block that stopped at HEAD would narrate
-    a record nobody has.
+    tree ALWAYS last. The working tree is the state a reader is looking at, so a
+    block that stopped at HEAD would narrate a record nobody has.
+
+    "Always" is the whole of it. The working tree used to be added only when it
+    DIFFERED from the newest commit, which made this function's output depend on
+    whether the tree was dirty -- and therefore made the rendered block change
+    meaning the moment it was committed. See the comment on the terminal state
+    below and `test_the_terminal_state_is_on_disk_even_when_the_tree_is_clean`.
     """
     path = f"data/outputs/{relative}"
     states: list[tuple[str, str, dict]] = []

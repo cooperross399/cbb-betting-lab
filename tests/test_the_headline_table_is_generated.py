@@ -841,3 +841,50 @@ def test_every_cut_on_disk_has_its_english_name():
         f"CUT_WORDS names {stale}, which no longer exist under data/outputs/. A "
         "roster that outlives what it names stops being checkable."
     )
+
+
+def test_the_terminal_state_is_on_disk_even_when_the_tree_is_clean(tmp_path, monkeypatch):
+    """The block must not change meaning when it is committed.
+
+    `record_states` used to append the on-disk state only when it DIFFERED from
+    the newest committed one. So the same records rendered
+    `| today | on disk |` from a dirty tree and `| today | <sha> |` from a
+    clean one, and a commit carrying both the records and the block made
+    itself stale: the records became the newest revision, the on-disk row
+    stopped being appended, and a fresh render no longer matched what had just
+    been committed. A commit that changed both could never be green.
+
+    **A test run against the real repository cannot catch this**, and that is
+    the whole reason this one builds its own. On a dirty tree the broken code
+    and the fixed code agree, so the suite passed at 2586 immediately before
+    the commit that broke it, and only CI — which always sees a clean tree —
+    could tell them apart. The scratch repository below is committed and clean
+    by construction, which is the state the defect needs.
+    """
+    scratch = tmp_path / "repo"
+    (scratch / "data" / "outputs").mkdir(parents=True)
+    record = scratch / "data" / "outputs" / "cbb_price_backtest.json"
+    record.write_text(json.dumps({"looks": 3, "by_tier": []}), encoding="utf-8")
+
+    def git(*arguments):
+        subprocess.run(
+            ["git", "-C", str(scratch), *arguments],
+            check=True, capture_output=True, text=True,
+        )
+    git("init", "-q")
+    git("config", "user.email", "t@example.com")
+    git("config", "user.name", "t")
+    git("add", "-A")
+    git("commit", "-q", "-m", "the record")
+
+    monkeypatch.setattr(GENERATOR, "REPO", scratch)
+    states = GENERATOR.record_states("cbb_price_backtest.json")
+
+    assert states, "a committed record yielded no states at all"
+    label = states[-1][0]
+    assert label == "on disk", (
+        f"the terminal state of a CLEAN tree is labelled {label!r}, not 'on disk'. "
+        "The block then says something different once it is committed than it "
+        "said when it was rendered, so the commit that carries both the records "
+        "and the block is stale the moment it lands."
+    )
