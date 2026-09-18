@@ -84,7 +84,17 @@ jobs:
         with:
           # The secrets guard runs `git ls-files`, so it needs a real
           # repository rather than an export.
-          fetch-depth: 1
+          #
+          # FULL HISTORY, NOT A SHALLOW ONE, SINCE 2026-09-18. The retraction
+          # ledger's `retraction_history` fence is rendered by reading each
+          # record at the revision that changed it -- `git show <rev>:<path>`
+          # -- so that what a restatement did to a reading is diffed rather
+          # than described. Under `fetch-depth: 1` those revisions are not in
+          # the clone, `git log -- <path>` returns one commit, and the fence
+          # renders a block that cannot match the committed one: a false red
+          # on every run, on a check whose whole value is that a real red
+          # means the records moved.
+          fetch-depth: 0
           # Nothing here pushes. A token left in .git/config is blast radius.
           persist-credentials: false
 

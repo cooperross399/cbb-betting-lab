@@ -19,6 +19,12 @@ data/raw/cbb/team_box/
 data/raw/cbb/player_box/
 data/raw/cbb/schedules/
 data/processed/*.csv
+# The frame-builder's unpairable census, written beside the frame it describes.
+# It is a count OF an ignored file and is regenerated with it, so committing it
+# would publish a census of a frame nobody else has. It was untracked and not
+# ignored, which is worse than either: a `git add -A` from a concurrent session
+# sweeps it into somebody else's commit.
+data/processed/*__unpairable.json
 # The weekly loop's drift measurements. A bounded one-season cut, read by
 # whoever runs the loop and never published: committing it would put a second
 # set of verdicts beside the full population's for the same markets.

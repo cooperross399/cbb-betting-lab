@@ -204,7 +204,16 @@ RECORD_VERSION = 2
 #: `test_this_document_states_which_forecast_shape_it_reads` pins the two
 #: together, so a bump over there is a red test here rather than a silent
 #: widening of what this module claims it can read.
-FORECAST_RECORD_VERSION = 5
+#:
+#: Moved 5 -> 6 with the forecast record's split of
+#: `buckets_with_no_return_figure` into `buckets_with_no_return_column` and
+#: `buckets_with_no_settled_wager`. This module reads neither counter, so the
+#: bump is mechanical here — but it is made deliberately rather than by alias,
+#: and the keys this block DOES read (`measurable`, `usable_buckets`,
+#: `populated_buckets`, `return_falls_by`, `lowest_bucket`, `highest_bucket`,
+#: `measured_buckets`) are unchanged in version 6 and were re-checked against
+#: it rather than assumed.
+FORECAST_RECORD_VERSION = 6
 
 #: `data/outputs/cbb_why_the_model.{json,md}`.
 REPORT_STEM = "why_the_model"
@@ -2296,11 +2305,26 @@ def _forecast_lines(record: Mapping) -> list[str]:
     ]
     if anti:
         lines.append("")
+        # THIS PARAGRAPH HAD NEVER RENDERED, AND IT REFUSED ITS OWN DOCUMENT
+        # THE FIRST TIME IT DID. `anti` is empty unless the forecast record's
+        # anti-predictive block is both readable and populated, and until
+        # 2026-09-17 it was neither: the graded export's projection dropped the
+        # realised-return column, so no bucket carried an `roi` and
+        # `measured_buckets` was empty on every tier. With the column carried
+        # the branch became live, and the sentence below said "very nearly
+        # guaranteed" — `guaranteed` is in `what_we_can_claim.FORBIDDEN_PHRASES`,
+        # `write_report` checks the RENDERED text against that list, and so
+        # `scripts/run_why_the_model.py` exited 2 and could no longer rebuild
+        # `docs/why_the_model_does_or_does_not_have_an_edge.md` at all. The word
+        # was about a statistical artefact rather than about a result, which is
+        # why it read as harmless for as long as nothing rendered it; the gate
+        # is on the reader's text and does not take that distinction, and it is
+        # right not to — the sentence is rewritten rather than the gate.
         lines.append(
             "**Anti-predictiveness, per tier — the realised RETURN by claimed "
             "edge.** Not the shortfall against the model's own probability: "
-            "that is overconfidence, it is very nearly guaranteed by the "
-            "model's own selection, and it is a different quantity reported "
+            "that is overconfidence, which the model's own selection produces "
+            "almost mechanically, and it is a different quantity reported "
             "elsewhere. This is what the wagers paid."
         )
         lines.append("")

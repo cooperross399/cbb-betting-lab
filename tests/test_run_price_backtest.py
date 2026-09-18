@@ -2683,6 +2683,192 @@ def test_the_graded_export_is_every_settled_opinion_with_the_bets_flagged(scored
     ), scored.stdout
 
 
+def test_the_graded_export_drops_no_column_the_skill_report_can_read(scored):
+    """**Producer to consumer, pinned at the file.**
+
+    `--write-graded` projects onto a hand-listed set of columns immediately
+    before `.to_csv`, and on 2026-09-17 that list held every REQUIRED column
+    and one optional one. `profit_units` is optional to `forecast_skill` and
+    **required** by `price_backtest.BET_COLUMNS` — so every row of this export
+    had a realised profit, guaranteed twice over by `settled_opinions`, which
+    keeps a row only where that column is non-null. The projection dropped it
+    one line before the write, and nothing raised: the skill report simply
+    stopped writing an `roi` onto any bucket, found nothing usable on any real
+    tier, and printed that anti-predictiveness could not be measured because
+    *"nothing in them has been graded to a profit"* — a false statement about
+    an archive of 270,504 settled rows.
+
+    Nothing caught it for a fortnight because every fixture in
+    `tests/test_forecast_skill.py` planted `profit_units` itself. The consumer
+    was tested against a frame the producer does not write.
+
+    So this reads the two declarations from the two modules that own them and
+    checks the **file**:
+
+    * `price_backtest.BET_COLUMNS | price_backtest.OPTIONAL_BET_COLUMNS` — what
+      the producer declares it can have in hand, required and optional alike.
+    * `FS.SKILL_COLUMNS | FS.OPTIONAL_SKILL_COLUMNS` — what the consumer
+      declares it reads, required and optional alike.
+
+    A column in both is one the producer HAS and the consumer WILL USE, and the
+    projection may not drop it. Neither list is owned by both sides, so this
+    cannot be satisfied by a report comparing itself to itself.
+
+    **`producer_has` was `BET_COLUMNS` alone, and that made this blind to the
+    next instance of the defect it was written for.** `player` sits in
+    `OPTIONAL_BET_COLUMNS`, is on the real `opinions_frame`, is declared by
+    `forecast_skill` as a column it reads — its `pair_key` builds the de-vig
+    pair key from `_text(record.get("player")).casefold()`, and `_text(None)` is
+    `""` — and it was dropped by the SAME projection line that dropped
+    `profit_units`. Intersecting the REQUIRED half only put it outside a check
+    whose own sentence above says it covers "a column the producer HAS and the
+    consumer WILL USE". `edge` was outside it for the same reason.
+
+    **The producer says which optional columns it actually held**, because
+    "dropped by the projection" and "never on the frame" are different facts and
+    a check that cannot tell them apart has to pick one and be wrong about the
+    other. The run prints both lists; this reads them rather than inferring.
+
+    The consumer can now DERIVE a return when the column is absent, which is
+    deliberate belt-and-braces — and it is exactly why this check has to be on
+    the column set rather than on the report's output. A behavioural check
+    downstream would pass with the projection broken.
+    """
+    written = set(pd.read_csv(scored.lab.graded_path, nrows=0).columns)
+    producer_has = set(PB.BET_COLUMNS) | set(PB.OPTIONAL_BET_COLUMNS)
+    consumer_reads = set(FS.SKILL_COLUMNS) | set(FS.OPTIONAL_SKILL_COLUMNS)
+
+    needed = producer_has & consumer_reads
+    for column in ("profit_units", "player", "edge"):
+        assert column in needed, (
+            f"the two declarations no longer agree that {column!r} is a column "
+            "the producer holds and the consumer reads, which is the thing "
+            "this test exists to pin"
+        )
+
+    absent = re.search(
+        r"not on the graded frame and therefore not written \[([^\]]*)\]",
+        scored.stdout,
+    )
+    assert absent, (
+        "the run does not say which optional columns its graded frame lacked, "
+        "so a column missing from the export cannot be told apart from a "
+        "column the producer never had:\n" + scored.stdout
+    )
+    never_held = {
+        name.strip().strip("\"'") for name in absent.group(1).split(",") if name.strip()
+    }
+    assert never_held <= consumer_reads, (
+        f"the run reports {sorted(never_held - consumer_reads)} as optional "
+        "columns the consumer reads; the consumer does not declare them"
+    )
+
+    # The two halves of the run's own census, against the bytes it wrote. A
+    # producer that named a column absent while dropping it would satisfy the
+    # check above; it cannot satisfy this one, because the partition has to
+    # cover the consumer's declaration exactly and the carried half has to be
+    # in the file.
+    held = re.search(r"declares: carried \[([^\]]*)\]", scored.stdout)
+    assert held, "the run does not say which optional columns it carried"
+    carried = {
+        name.strip().strip("\"'") for name in held.group(1).split(",") if name.strip()
+    }
+    assert carried | never_held == set(FS.OPTIONAL_SKILL_COLUMNS), (
+        f"the run's census covers {sorted(carried | never_held)}; the consumer "
+        f"declares {sorted(FS.OPTIONAL_SKILL_COLUMNS)}. A projection that "
+        "reports on fewer columns than the consumer reads is the hand-list "
+        "again, one layer out."
+    )
+    assert not carried & never_held, (
+        f"the run reports {sorted(carried & never_held)} as both carried and "
+        "absent"
+    )
+    assert carried <= written, (
+        f"the run says it carried {sorted(carried - written)} and the file does "
+        "not hold them: the census and the write disagree"
+    )
+
+    # AND THE CENSUS IS NOT TAKEN ON TRUST. Subtracting a producer-declared
+    # "never held" list from the check is a hole the producer can climb through:
+    # a projection that skipped `player` and reported it absent satisfied every
+    # assertion above, and 83 tests stayed green. The fixture's store is built
+    # by THIS file and carries every optional column the consumer declares, so
+    # on this run the absent list has to be EMPTY -- which makes the subtraction
+    # a no-op here and the check below the strong form, while leaving the
+    # subtraction correct for a producer whose frame genuinely lacks a column.
+    assert not never_held, (
+        f"the run reports {sorted(never_held)} as optional columns its graded "
+        "frame did not hold. This fixture's store carries all of "
+        f"{sorted(FS.OPTIONAL_SKILL_COLUMNS)}, so either the fixture stopped "
+        "building one of them -- in which case this check no longer covers it "
+        "and the fixture is what to fix -- or the projection is skipping a "
+        "column it has in hand and calling it absent."
+    )
+
+    dropped = sorted(needed - written - never_held)
+    assert not dropped, (
+        f"the graded export dropped {dropped!r}. Each of these is declared by "
+        "`price_backtest`, so the producer can have it in hand, was on the "
+        "frame at write time (the run did not report it absent), and is "
+        "declared by `forecast_skill` as a column it reads, so the report will "
+        "use it. A column projection immediately before `.to_csv` is where the "
+        "last one went, and the report went quiet rather than erroring"
+    )
+
+    # And past the declarations to the bytes: the export's own filter keeps a
+    # row only where the realised profit is non-null, so a blank cell in this
+    # column would mean the filter and the write disagree about the population.
+    frame = pd.read_csv(scored.lab.graded_path)
+    assert frame["profit_units"].notna().all(), (
+        "`settled_opinions` keeps a row only where `profit_units` is non-null, "
+        "so every exported row must carry one. A blank here means the column "
+        "written is not the column filtered on"
+    )
+
+
+def test_the_skill_report_derives_the_same_return_the_backtest_graded(scored):
+    """The belt is the same arithmetic as the braces, on a real producer run.
+
+    `forecast_skill._with_realised_return` derives a missing `profit_units`
+    from `outcome` and `american_odds` with `forward_evidence.profit_units` —
+    the function this script's own `grade()` settles with. The claim in its
+    comment is that deriving is *equivalent*, not merely similar. Here it is
+    checked against the producer's own column, cell for cell, on the frame the
+    producer actually wrote: drop the column, derive it back, compare.
+
+    Missingness is compared too -- and on this fixture that comparison is two
+    identical all-`False` masks, because every exported row carries a profit by
+    construction. The claim it is meant to pin is tested where it can actually
+    fail, on a frame holding a won bet at an unreadable price:
+    `test_forecast_skill.test_a_won_bet_at_an_unreadable_price_derives_a_missing_
+    profit_not_a_zero`. Without that one, `.fillna(0.0)` on the derivation
+    passed every test in this change.
+
+    **"Cell for cell" is at pandas' default tolerance, and that is not a
+    quibble.** `assert_series_equal` compares at rtol 1e-5. On the producer's
+    own 526,735-row export the two columns are NOT bit-equal: 149,868 cells
+    differ, by at most 1.11e-16 -- `0.925925925925926` on disk against
+    `0.9259259259259259` recomputed, for `american_odds` -110 on a won bet. The
+    cause is the CSV round trip and not the arithmetic; `read_csv` cannot
+    recover the last ULP `to_csv` wrote. Missingness itself does match exactly,
+    at 526,735 non-null on both sides. A reader who took `(a == b).all()` from
+    the words would find it False on the producer's file, so the words say what
+    the comparison is.
+    """
+    frame = pd.read_csv(scored.lab.graded_path)
+    assert "profit_units" in frame.columns, "nothing to compare against"
+
+    derived, carries = FS._with_realised_return(frame.drop(columns=["profit_units"]))
+    assert carries is True
+
+    theirs = pd.to_numeric(frame["profit_units"], errors="coerce")
+    ours = pd.to_numeric(derived["profit_units"], errors="coerce")
+    assert ours.isna().tolist() == theirs.isna().tolist(), (
+        "the derived column is missing in different places than the graded one"
+    )
+    pd.testing.assert_series_equal(ours, theirs, check_names=False)
+
+
 def test_the_selected_flag_agrees_with_the_bets_predicate_row_by_row(scored):
     """`selected` is `PB.bet_mask`, not a second definition of a bet.
 

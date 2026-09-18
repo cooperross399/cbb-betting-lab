@@ -1401,17 +1401,26 @@ def test_a_forecast_record_older_than_this_document_reads_says_so_on_the_page(ou
     section filter then dropped every tier and the whole paragraph left the
     page, green.
 
-    The committed record IS that older shape, so this test needs no fixture
-    edit at all: it renders the tree as checked in.
+    **The committed record used to BE that older shape and no longer is**, so
+    the older version is planted here rather than relied on. The regression was
+    re-run on 2026-09-17 and the record caught up — which is exactly the case
+    the assertion below used to warn about, and its instruction was to plant an
+    older version rather than delete the test. The planted version is
+    `RECORD_VERSION - 1`, read off the producer's own constant so that this
+    stays one version behind through every future bump instead of pinning a
+    number that will drift into being the current one again.
+
+    Planting it on the copy is safe: the `outputs` fixture is a writable copy of
+    the committed tree, so nothing under `data/outputs/` is touched.
     """
-    committed = json.loads(
-        (outputs / "cbb_forecast_skill.json").read_text(encoding="utf-8")
+    path = outputs / "cbb_forecast_skill.json"
+    committed = json.loads(path.read_text(encoding="utf-8"))
+    assert committed["record_version"] == FS.RECORD_VERSION, (
+        "the committed record is expected to be current; if it is not, the "
+        "regression needs re-running rather than this test needing an edit"
     )
-    assert committed["record_version"] < FS.RECORD_VERSION, (
-        "this test is about a record older than the one this document reads; "
-        "when the regression is re-run and the committed record catches up, "
-        "plant an older version here rather than deleting the test"
-    )
+    committed["record_version"] = FS.RECORD_VERSION - 1
+    path.write_text(json.dumps(committed, default=str), encoding="utf-8")
 
     record = build(outputs)
     section = record["forecast"]

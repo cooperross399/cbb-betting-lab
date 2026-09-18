@@ -31,6 +31,7 @@ from pathlib import Path
 import pytest
 
 from cbb_betting_lab import season
+from cbb_betting_lab.reports.forecast_skill import bucket_label
 
 _REPO = Path(__file__).resolve().parents[1]
 _LEDGER = _REPO / "data" / "outputs" / "experiment_ledger.json"
@@ -256,8 +257,77 @@ def test_the_registration_cost_is_paid_by_everything_already_published() -> None
     )
 
 
+def test_every_published_reading_has_a_key_of_its_own():
+    """A retraction ledger addresses cells by key, so two cells may not share one.
+
+    **This is the check `_key`'s own docstring describes and nothing enforced.**
+    It says "a retraction ledger whose keys collide is a ledger with blanks in
+    it", and the collision it was written about -- 795 readings over 580 keys --
+    was fixed by hand and then left unguarded, so the next one arrived the same
+    way. On 2026-09-17 the 48 restored realised-return readings landed on 8 keys:
+    `cbb_forecast_skill.json` went 91 cells / 51 keys while every other record on
+    the roster stayed injective, and 40 published readings became unaddressable.
+
+    Both halves of `test_the_registration_cost_is_paid_by_everything_already_published`
+    compare SETS. Under a collision `missing = set(retracted) - set(recorded)`
+    empties as soon as ONE row exists for the key, `surplus` accepts that row
+    while seven readings under it stay unstated, and `by_key` keeps only the last
+    cell -- so the ROI, demonstrated-at and crossed-at columns are checked
+    against a reading the row does not name. None of that is visible while the
+    table is empty, which is exactly when it is cheapest to fix.
+
+    Mutation: drop `band` from `_key`'s tuple (or delete the `claimed_edge`
+    branch in `_cells`) and this is RED with the eight colliding keys named,
+    while every other test in this file stays green.
+    """
+    collisions = {}
+    for relative in SCORED_RECORDS:
+        payload = json.loads(
+            (_REPO / "data" / "outputs" / relative).read_text(encoding="utf-8")
+        )
+        seen: dict[tuple, int] = {}
+        for cell in _cells(payload, payload.get("looks")):
+            key = _key(relative, cell)
+            seen[key] = seen.get(key, 0) + 1
+        shared = {key: count for key, count in seen.items() if count > 1}
+        if shared:
+            collisions[relative] = shared
+    assert not collisions, (
+        "published readings share a retraction key, so the ledger cannot "
+        "address them apart:\n"
+        + "\n".join(
+            f"  {relative}: {sum(s.values())} cells over {len(s)} key(s)\n"
+            + "\n".join(f"    x{count}  " + " | ".join(key) for key, count in sorted(s.items()))
+            for relative, s in sorted(collisions.items())
+        )
+        + "\n\nAdd the dimension that tells them apart to `_key` and to the "
+        "table in docs/retracted_readings.md. Do NOT fix this by dropping "
+        "cells: a reading that is not walked is not addressable either, and it "
+        "is also not counted."
+    )
+
+
 #: The hand-written ledger of readings the growing family has withdrawn.
 RETRACTIONS = _REPO / "docs" / "retracted_readings.md"
+
+
+def _outside_every_fence(text: str) -> str:
+    """The ledger's hand-written prose, every generated block removed.
+
+    The generator owns the list of fences; a second copy here would be the
+    second hand-maintained roster this file has already been rescued from.
+    Loaded lazily so that importing this module does not import the generator,
+    which imports this module back for its walker.
+    """
+    import importlib.util as _importlib
+
+    spec = _importlib.spec_from_file_location(
+        "_splice_for_the_retraction_ledger",
+        _REPO / "scripts" / "splice_headline_table.py",
+    )
+    module = _importlib.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.outside_every_fence(text)
 
 #: Every record that publishes a verdict a person could act on.
 #:
@@ -289,8 +359,17 @@ SCORED_RECORDS = {
     # the neutral-court exclusion refused 29,866 side wagers this cut cannot
     # orient (8,436 of them bets), and the prop markets left `all_opinions` and
     # `null_baseline` when the backtest declared its scope — 280 blind-baseline
-    # readings to 160. The published table is unchanged at 32 cells, and the
-    # held-out seasons still show ZERO demonstrated deficits before and after.
+    # readings to 160. The published table is unchanged at 32 cells.
+    #
+    # THIS COMMENT ALSO SAID "the held-out seasons still show ZERO demonstrated
+    # deficits before and after", AND THAT IS FALSE TWICE OVER. This record
+    # covers the DISCOVERY seasons — `holdout/` is the directory a replication
+    # run writes to, not the held-out window — and it holds demonstrated
+    # deficits, one of which arrived in #87. The tally is rendered per record
+    # and per block by `scripts/splice_headline_table.py` into
+    # `docs/retracted_readings.md`; it is not stated here, because a comment is
+    # the one place in this repository where a figure has no guard at all and
+    # this file was being used as a WITNESS for exactly such a figure.
     "holdout/cbb_price_backtest.json": 137,
     # UNCHANGED at 69, and that is the useful part. This cut carries only the
     # four core team markets, so it never held a prop reading to lose; the
@@ -308,7 +387,24 @@ SCORED_RECORDS = {
     # earns a reading at all.
     "holdout/cbb_replication.json": 66,
     "cbb_prop_grading.json": 194,
-    "cbb_forecast_skill.json": 43,
+    # 43 -> 91 on 2026-09-17. The record GAINED 48 readings and lost none, and
+    # all 48 are the same leaf: `roi`, the realised return of one claimed-edge
+    # bucket. They did not exist before because they were never computed. The
+    # graded export's column projection dropped `profit_units` one line before
+    # the write, `forecast_skill` writes an `roi` onto a bucket only when the
+    # frame carries that column, and so every claimed-edge bucket on every tier
+    # came back blank while the page said anti-predictiveness *"is not measured
+    # here"* and that nothing in those buckets *"has been graded to a profit"*.
+    # The archive had graded every one of them. The count breaks down as
+    # 27 coefficients + 8 Brier-over-devigged + 8 Brier-over-raw = the old 43,
+    # plus 48 realised returns = 91, so nothing that was previously read has
+    # stopped being read.
+    #
+    # Those 48 are new readings in a family already corrected at the ledger's
+    # cumulative count, and the check below re-derives every one of them at
+    # today's count rather than at the count they were measured under, so the
+    # cost of the restoration is paid here in the same commit that makes it.
+    "cbb_forecast_skill.json": 91,
     # 23 -> 22 on 2026-09-17. Exactly one reading left this record, and it is
     # named rather than absorbed: `claims | high_major | spread_h1`. Its
     # neutral-court bets were refused by #80, its sample fell below the bar
@@ -317,6 +413,13 @@ SCORED_RECORDS = {
     # ever a finding was lost — but a published reading did disappear, and this
     # count is where that has to be said out loud.
     "cbb_what_we_can_claim.json": 22,
+    # 0 -> 21 on 2026-09-18, and none of that is a re-measurement: this record
+    # published 23 scored readings the whole time and the walker keyed its
+    # point estimate under a name it did not read (`mean`). 21 rather than 23
+    # because two of the 23 carry `enough_evidence: false` and a cell below the
+    # bar is not a scored reading. None of the 21 is retracted at today's
+    # count, which is luck and not a check -- it was never checked before.
+    "cbb_ratings_fit.json": 21,
 }
 
 
@@ -366,8 +469,15 @@ POPULATION_FLOORS = {
     #
     # Both lowered once on 2026-09-17, by the neutral-court exclusion alone, and
     # both keep their `games` unchanged — the check that this removed gradeable
-    # rows rather than coverage. Holdout 119,275 -> 110,839 bets over the same
-    # 16,815 games; core-team 159,354 -> 145,994 over the same 26,582.
+    # rows rather than coverage.
+    #
+    # THE BEFORE-AND-AFTER FIGURES THAT STOOD HERE DESCRIBED A STATE THE ROSTER
+    # BELOW HAD ALREADY LEFT — the roster seam moved both records again in the
+    # same day — and `docs/retracted_readings.md` was citing this comment as
+    # the WITNESS for one of them, so a stale figure in a source comment was
+    # excusing a stale figure on a published page. The floors below are the
+    # figures; they are read from the records by the test, and a narration of
+    # what they used to be belongs in the commit that moved them.
     "holdout/cbb_price_backtest.json": {"bets_graded": 110_682, "games": 16_812},
     "core_team_only/cbb_price_backtest.json": {"bets_graded": 145_739, "games": 26_582},
 }
@@ -428,6 +538,23 @@ def _key(record: str, cell: dict) -> tuple:
     would also break the table whenever a record re-rendered in a different
     order, which trains a reader to retype the key rather than read it. Block,
     leaf and season are all carried in the data.
+
+    **The key carries the claimed-edge BAND, and without it `cbb_forecast_skill`
+    was not injective either.** The 48 realised-return readings restored on
+    2026-09-17 are one per claimed-edge bucket, and a bucket carries no `market`
+    and no per-bucket `name` -- every bucket of a tier reads `realised return`.
+    So all eight buckets of a tier collapsed to one key: 91 cells over 51 keys,
+    8 keys covering 48 cells, while every other record on the roster stayed
+    injective (138/138, 137/137, 69/69, 66/66, 194/194, 22/22). Both halves of
+    the cost check compare SETS, so one row in the table would have discharged
+    the obligation for all eight buckets of a tier, `by_key` keeps only the last
+    cell under a key so the ROI and crossing columns would be checked against a
+    reading the row does not name, and 40 of the 48 would be unaddressable.
+
+    The band is the bucket's own name on the page -- `-5% to +0%` -- rendered by
+    `forecast_skill.bucket_label`, IMPORTED rather than re-spelled here. A
+    second formatter would be free to label a bucket differently, and a key a
+    reader cannot find in the report is a key nobody can use.
     """
     return (
         record,
@@ -437,6 +564,7 @@ def _key(record: str, cell: dict) -> tuple:
         cell.get("tier") or "",
         cell.get("label") or "",
         cell.get("market") or "",
+        cell.get("band") or "",
         cell.get("name") or "",
     )
 
@@ -450,6 +578,7 @@ def _cells(
     tier=None,
     label=None,
     market=None,
+    band=None,
     name=None,
 ):
     """Every scored reading in a record, AT ANY DEPTH.
@@ -474,12 +603,37 @@ def _cells(
         market = node.get("market", market)
         name = node.get("name", name)
         season = node.get("season", season)
+        # A CLAIMED-EDGE BUCKET IS IDENTIFIED BY ITS BAND AND BY NOTHING ELSE.
+        # It carries no market, and every bucket's `name` is `realised return`,
+        # so without this the eight buckets of a tier keyed identically -- see
+        # `_key`. `claimed_edge` is the field that makes a node a bucket; the
+        # label is the producer's own, so the key a failure prints is the name
+        # the report gives that row.
+        if node.get("claimed_edge") is not None and "low" in node and "high" in node:
+            band = bucket_label(node["low"], node["high"])
         # `estimate` as well: a regression coefficient stores its point estimate
         # under that name, and 33 of them in cbb_forecast_skill.json were walked
         # past in silence -- neither counted nor keyed nor retractable -- while
         # that record's own prose calls one of them "the whole answer". Five are
         # published today as a demonstrated edge or deficit.
-        value = node.get("roi", node.get("value", node.get("estimate")))
+        #
+        # AND `mean`, WHICH IS THE SAME OMISSION ONE RECORD FURTHER ALONG.
+        # `cbb_ratings_fit.json` is on the generated record census, is scored
+        # at its own `looks`, and publishes 23 nodes carrying `standard_error`,
+        # `adjusted_low`/`adjusted_high` and `survives_correction` -- and it
+        # keys the point estimate `mean`, so this walker yielded ZERO cells
+        # from it. Both documents said the cost check "compares this table
+        # against every scored reading in every published record, in both
+        # directions" while an entire published record contributed nothing,
+        # and `test_the_roster_names_every_record_that_publishes_a_verdict`
+        # could not report the gap because it derives its expectation by
+        # calling this function: the roster and the walker agreed with each
+        # other and neither could see the hole. That is this repository's own
+        # lesson -- a roster only guards what it names -- with the walker in
+        # the roster's place.
+        value = node.get(
+            "roi", node.get("value", node.get("estimate", node.get("mean")))
+        )
         if value is not None and node.get("standard_error") is not None:
             if node.get("enough_evidence", True):
                 scored = node.get("looks", record_looks)
@@ -491,10 +645,22 @@ def _cells(
                         "tier": tier,
                         "label": label,
                         "market": market,
+                        "band": band,
                         "name": name,
                         "value": value,
                         "standard_error": node["standard_error"],
                         "scored": scored,
+                        # CARRIED SO THAT NOBODY HAS TO WALK THE RECORD TWICE.
+                        # `scripts/splice_headline_table.py` renders what a
+                        # restatement did to a reading -- estimate, error,
+                        # population and verdict, before and after -- and the
+                        # population and the verdict are the two a reader
+                        # cannot re-derive from the three above. A second
+                        # walker for them would be a second answer to "what is
+                        # a published reading", which is the shape this file
+                        # has already been rescued from twice.
+                        "bets": node.get("bets", node.get("rows")),
+                        "verdict": node.get("verdict"),
                     }
         for key, child in node.items():
             yield from _cells(
@@ -506,12 +672,22 @@ def _cells(
                 tier,
                 label,
                 market,
+                band,
                 name,
             )
     elif isinstance(node, list):
         for child in node:
             yield from _cells(
-                child, record_looks, block, leaf, season, tier, label, market, name
+                child,
+                record_looks,
+                block,
+                leaf,
+                season,
+                tier,
+                label,
+                market,
+                band,
+                name,
             )
 
 
@@ -541,6 +717,83 @@ def test_the_roster_names_every_record_that_publishes_a_verdict():
         f"  publishes a verdict and is NOT on the roster: {sorted(publishing - named)}\n"
         f"  on the roster and publishes nothing: {sorted(named - publishing)}\n"
         "A record missing from this dict is not checked and does not complain."
+    )
+
+
+def test_the_records_this_file_says_the_walker_cannot_classify_are_the_records_it_cannot_classify():
+    """The disclosed limit is derived from the records, not typed on trust.
+
+    **This is the half of the completeness claim that cannot be closed by
+    fixing a walker.** `docs/retracted_readings.md` said until 2026-09-18 that
+    the cost check reads "every scored reading in every published record, in
+    both directions". One half of that was a bug -- the walker did not read
+    `mean`, so `cbb_ratings_fit.json` contributed nothing -- and it is fixed.
+    The other half is structural and permanent: a retraction is a claim about
+    an interval's width, so a cell that publishes a `verdict` with no stored
+    `standard_error` cannot be classified as retracted by any walker at all.
+
+    A limit stated falsely is worse than no limit, and a limit stated TRULY and
+    then left to rot is the same defect one render later. So the page names the
+    records in that position and this derives the same set from disk. Add a
+    verdict without an error to a record and the page must say so; give one of
+    the five a standard error everywhere and the page must stop saying so.
+
+    Mutation: delete `cbb_retention_probe.json` from the paragraph -> RED
+    naming it as disclosed-too-few; add `cbb_price_backtest.json` to the
+    paragraph -> RED naming it as disclosed-too-many.
+    """
+    outputs = _REPO / "data" / "outputs"
+
+    def _nodes(node):
+        if isinstance(node, dict):
+            yield node
+            for child in node.values():
+                yield from _nodes(child)
+        elif isinstance(node, list):
+            for child in node:
+                yield from _nodes(child)
+
+    unclassifiable = set()
+    for path in sorted(outputs.rglob("*.json")):
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        for node in _nodes(payload):
+            if isinstance(node.get("verdict"), str) and not isinstance(
+                node.get("standard_error"), (int, float)
+            ):
+                unclassifiable.add(path.relative_to(outputs).as_posix())
+                break
+
+    assert unclassifiable, (
+        "no record on disk publishes a verdict without a standard error. That "
+        "would be good news and it has never been true; far more likely the "
+        "field was renamed and this check now passes by finding nothing."
+    )
+
+    prose = _outside_every_fence(RETRACTIONS.read_text(encoding="utf-8"))
+    paragraph = next(
+        (
+            block
+            for block in prose.split("\n\n")
+            if "cannot be classified as retracted at all" in block
+        ),
+        None,
+    )
+    assert paragraph is not None, (
+        f"{RETRACTIONS.name} no longer carries the paragraph that discloses "
+        "which published verdicts this check cannot classify. The limit is "
+        "permanent; deleting the sentence does not close it."
+    )
+    named = {
+        found
+        for found in re.findall(r"`([\w./-]+\.json)`", paragraph)
+    }
+    assert named == unclassifiable, (
+        f"{RETRACTIONS.name}'s disclosed limit and the records on disk "
+        "disagree.\n"
+        f"  publishes a verdict the walker cannot classify and is NOT named: "
+        f"{sorted(unclassifiable - named)}\n"
+        f"  named and publishes no such verdict: {sorted(named - unclassifiable)}\n"
+        "A limit stated falsely is worse than no limit."
     )
 
 
@@ -586,24 +839,77 @@ def _recorded_retractions() -> dict[tuple, dict]:
         f"{RETRACTIONS.name} is gone. It is the only place this lab states what "
         "a registration cost; without it nothing records a withdrawn reading."
     )
+    # THE ROWS ARE THE ONES UNDER THE HEADER, NOT EVERY BACK-TICKED ROW IN THE
+    # FILE. This read `line.startswith("| `")` over the whole document, and the
+    # document is mostly PROSE -- its own opening paragraph says the narration
+    # is the part that survives when the table empties. The first narration
+    # table anybody wrote with a back-ticked first cell was parsed as a
+    # retraction row and the check died on its column count, which is a guard
+    # failing on the file's intended use. Narrowing to the block under the
+    # header cannot hide a missing retraction: a reading absent from the table
+    # is absent whether it was ignored or never written, and `missing` fires
+    # either way.
+    #
+    # WHAT THAT NARROWING COST, AND HOW IT IS PAID BACK BELOW. A row written
+    # OUTSIDE the table was no longer read, so `surplus` could not reject a
+    # false retraction claim typed under a prose heading -- a real loss of
+    # reach, measured by an adversarial review that put a syntactically perfect
+    # and entirely false 12-column row below the table and watched eight tests
+    # pass. The reach is restored here without re-breaking on the narration:
+    # a row anywhere in the document whose FIRST CELL NAMES A FILE UNDER
+    # `data/outputs/` is a retraction claim and is read, wherever it sits. The
+    # narration tables key their rows by a path INSIDE a record
+    # (`selected / by_tier / high_major / fit / disagreement`), which is not a
+    # file, so they are still prose to this parser -- and a row that looks like
+    # a retraction of a real record can no longer hide by being written
+    # somewhere else on the page.
+    #
+    # AND THE GENERATED FENCES ARE NOT PROSE EITHER. The retraction ledger now
+    # carries a `retraction_history` block rendered from the records at each
+    # revision that changed them, and its second table keys rows by a record
+    # path. Those rows are not retraction claims -- they are a generated tally,
+    # pinned byte-for-byte to a fresh render by
+    # `test_the_committed_block_is_what_the_record_renders_to` -- and reading
+    # them here died on the column count, which is a guard failing on the
+    # file's intended use. The fence list lives in the generator, so stripping
+    # it here cannot fall behind a fence somebody adds later.
     dash = "\u2014"
     rows: dict[tuple, dict] = {}
-    for line in RETRACTIONS.read_text(encoding="utf-8").splitlines():
+    lines = _outside_every_fence(
+        RETRACTIONS.read_text(encoding="utf-8")
+    ).splitlines()
+    body: list[str] = []
+    for index, line in enumerate(lines):
+        if not line.startswith("| record | block |"):
+            continue
+        for candidate in lines[index + 2 :]:
+            if not candidate.startswith("|"):
+                break
+            body.append(candidate)
+        break
+    outputs = _REPO / "data" / "outputs"
+    for line in lines:
+        if line in body or not line.startswith("| `"):
+            continue
+        named = line.strip().strip("|").split("|")[0].strip().strip("`")
+        if named and (outputs / named).is_file():
+            body.append(line)
+    for line in body:
         if not line.startswith("| `"):
             continue
         fields = [f.strip().strip("`") for f in line.strip().strip("|").split("|")]
-        assert len(fields) == 11, (
-            f"a row of {RETRACTIONS.name} has {len(fields)} columns, expected 11: "
+        assert len(fields) == 12, (
+            f"a row of {RETRACTIONS.name} has {len(fields)} columns, expected 12: "
             f"{line!r}. If the table's shape changed, change this parser with it "
             "rather than letting it read a prefix and ignore the rest."
         )
         blank = lambda value: "" if value == dash else value
-        key = tuple(blank(field) for field in fields[:8])
+        key = tuple(blank(field) for field in fields[:9])
         assert key not in rows, f"{RETRACTIONS.name} names {key} twice."
         rows[key] = {
-            "roi": float(fields[8].rstrip("%")) / 100.0,
-            "demonstrated_at": int(fields[9]),
-            "crossed_at": int(fields[10]),
+            "roi": float(fields[9].rstrip("%")) / 100.0,
+            "demonstrated_at": int(fields[10]),
+            "crossed_at": int(fields[11]),
         }
     # AN EMPTY TABLE IS A STATE, AND IT IS NOT THE SAME STATE AS A BROKEN ONE.
     #
@@ -620,7 +926,9 @@ def _recorded_retractions() -> dict[tuple, dict]:
     # go when somebody rewrites the section. So the parser refuses a file with
     # no header and accepts one with a header and no body.
     text = RETRACTIONS.read_text(encoding="utf-8")
-    header = "| record | block | leaf | season | tier | label | market | rule |"
+    header = (
+        "| record | block | leaf | season | tier | label | market | band | rule |"
+    )
     assert header in text, (
         f"{RETRACTIONS.name} has no table header this parser recognises, so "
         "reading zero rows out of it proves nothing. Rows start `| ` followed "
@@ -631,8 +939,65 @@ def _recorded_retractions() -> dict[tuple, dict]:
 
 
 def _crossing_point(S, cell) -> int:
-    """The first cumulative count at which this reading stops excluding zero."""
-    for looks in range(cell["scored"], 1000):
+    """The first cumulative count at which this reading stops excluding zero.
+
+    **Searched from ONE, not from the count the record was scored at.** For a
+    RETRACTED reading the two are the same answer by construction: a retracted
+    reading still excludes zero at its own `scored`, `bonferroni_z` is
+    increasing, so the first crossing at or above 1 is the first crossing at or
+    above `scored`. `test_the_crossing_point_is_the_same_for_a_retracted_reading`
+    pins that, because it is the property that makes this rewrite safe for the
+    cost check, which calls this on retracted cells only.
+
+    For a reading that is NOT retracted the two differ, and the from-`scored`
+    answer is the misleading one: it returns `scored` itself, which reads as
+    "crossed at 130" for a cell that was never demonstrated at 130. The
+    retraction ledger's generated block prints this column for readings on both
+    sides of a restatement, and a column that says "130" about a cell that
+    never cleared the bar there is the sort of figure this file exists to stop
+    publishing.
+    """
+    for looks in range(1, 1000):
         if abs(cell["value"]) <= S.bonferroni_z(looks) * cell["standard_error"]:
             return looks
     raise AssertionError(f"{cell!r} does not cross within 1000 hypotheses")
+
+
+def test_the_crossing_point_is_the_same_for_a_retracted_reading():
+    """The rewrite above is an identity on every reading the cost check uses.
+
+    `_crossing_point` is called by
+    `test_the_registration_cost_is_paid_by_everything_already_published` only
+    on cells the retraction walk classified as retracted, and widening its
+    search from `scored` down to 1 must not move any of those answers. Checked
+    against every retracted reading in the tree AND against constructed cells,
+    so it is not vacuous on a day when nothing is retracted.
+    """
+    from cbb_betting_lab import stats as S
+
+    def from_scored(cell):
+        for looks in range(cell["scored"], 1000):
+            if abs(cell["value"]) <= S.bonferroni_z(looks) * cell["standard_error"]:
+                return looks
+        raise AssertionError("no crossing")
+
+    payload = json.loads(_LEDGER.read_text(encoding="utf-8"))
+    looks = len(payload["hypotheses"])
+    _, retracted_cells = _readings_across_every_record(S, looks)
+
+    built = [
+        {"value": -0.04024, "standard_error": 0.01137, "scored": 95},
+        {"value": -0.07485, "standard_error": 0.02198, "scored": 30},
+        {"value": -0.06364, "standard_error": 0.01836, "scored": 62},
+    ]
+    for cell in built:
+        assert abs(cell["value"]) > S.bonferroni_z(cell["scored"]) * cell["standard_error"], (
+            "this fixture no longer excludes zero at its own count, so it is "
+            "not a retracted reading and proves nothing about the identity"
+        )
+    for cell in built + [cell for _, cell in retracted_cells]:
+        assert _crossing_point(S, cell) == from_scored(cell), (
+            f"{cell!r} crosses at a different count depending on where the "
+            "search starts, and the cost check compares this column against "
+            "the retraction table."
+        )
