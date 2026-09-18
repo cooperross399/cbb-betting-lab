@@ -669,11 +669,28 @@ def record_states(relative: str) -> list[tuple[str, str, dict]]:
         newest = text
         subject = _git("log", "-1", "--format=%s", rev).strip()
         states.append((rev[:7], subject, _cells_by_key(relative, json.loads(text))))
+    # THE TERMINAL STATE IS ALWAYS "ON DISK", NEVER A REVISION.
+    #
+    # It was appended only when the working tree was dirty, so the block a
+    # generator produced depended on git state and not only on the records:
+    # rendered dirty it ended `| today | on disk |`, and the moment that render
+    # was COMMITTED the same records became the newest revision, the on-disk row
+    # stopped being appended, and a fresh render ended `| today | <sha> |`. The
+    # block invalidated itself by being committed, and a commit that changes both
+    # the records and the block could never be green -- caught by CI on #89 after
+    # a local suite that ran before the commit existed and passed.
+    #
+    # Replacing rather than appending keeps the sequence the same length across
+    # that transition: dirty gives N committed states plus one, and once
+    # committed it gives N+1 states whose last is relabelled, which is the same
+    # rows carrying the same data. Committing the block is now a no-op for it.
     on_disk = (REPO / path).read_text(encoding="utf-8")
-    if newest is None or on_disk != newest:
-        states.append(
-            ("on disk", "uncommitted", _cells_by_key(relative, json.loads(on_disk)))
-        )
+    terminal = ("on disk", "the records as they stand",
+                _cells_by_key(relative, json.loads(on_disk)))
+    if newest is not None and on_disk == newest:
+        states[-1] = terminal
+    else:
+        states.append(terminal)
     if not states:
         raise SystemExit(f"{path} has no committed state and is not on disk")
     return states
