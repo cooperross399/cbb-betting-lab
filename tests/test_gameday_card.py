@@ -418,8 +418,17 @@ def test_the_workflow_writes_the_two_filenames_the_workflow_reads(board, day, tm
 def test_the_card_says_it_is_accumulating_evidence_and_makes_no_call(
     board, day, tmp_path
 ):
-    """No market is allowlisted, so there is no selection, no lean, no pass and
-    no stake — and the card says why in the gate's own words."""
+    """The card denies making a call, in whichever words its state calls for.
+
+    This asserted the manual-only phrasing exactly: "not a pass, an avoid, or
+    a no-value call" and "No selection, no lean, no pass and no stake." The
+    card already renders a second, allowlisted form — "None of the above is a
+    pass, an avoid, or a no-value call" — so the first signed receipt turned
+    this test red against a card that was behaving correctly.
+
+    The property is the denial, not the sentence. Both forms deny it; the test
+    now accepts either and still refuses a card that denies nothing.
+    """
     run = GC.run_card(
         board, competition=CBB, day=day, card_slot="morning",
         archive_dir=tmp_path / "archive",
@@ -429,9 +438,19 @@ def test_the_card_says_it_is_accumulating_evidence_and_makes_no_call(
     assert run.selections == []
     assert run.decision is GC.Decision.NO_SELECTIONS
     assert GC.ACCUMULATING_NOTE in text
-    assert "No selection, no lean, no pass and no stake." in text
-    assert "not a pass, an avoid, or a no-value call" in text
-    assert "manual-only" in text
+    # One of the two denials, matching the policy the card was run under.
+    denials = (
+        "not a pass, an avoid, or a no-value call",          # manual-only
+        "None of the above is a pass, an avoid, or a no-value call",
+    )
+    assert any(d in text for d in denials), (
+        "the card produced no selection and did not say that this is not a "
+        "pass, an avoid or a no-value call — which is the sentence that stops "
+        "an empty card reading as a judgement"
+    )
+    if not run.policy.allowlist:
+        assert "No selection, no lean, no pass and no stake." in text
+        assert "manual-only" in text
     for banned in ("lean", "avoid", "no value", "no-value"):
         # Every mention of one of these words must be inside a denial. A card
         # that says "no value here" has made a call.

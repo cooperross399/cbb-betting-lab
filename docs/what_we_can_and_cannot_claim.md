@@ -298,8 +298,8 @@ Prices bought after the games resolved. **A backtest that beats the opening numb
 
 ## What is in force, and what the card may actually use
 
-- `the_odds_api:cbb` is **manual-only**. No market is allowlisted, the card produces no selection, and that is the correct state for a lab with no signed receipt.
-- **No market is allowlisted, and that is the correct state.** `withdraw()` exists in `staging_provider_policy.py` and `grant()` does not: this lab may take a market away from the card and may never give it one. Adding a market is a receipt Cooper signs, in a pull request whose `Policy Gate` check is green — `.github/workflows/policy-gate.yml`, which runs on every pull request, verifies every allowlisted market against a receipt on disk, and is red while any market lacks one.
+- `the_odds_api:cbb` allowlists **10 markets**, each behind a receipt signed on 2026-09-23. Allowlisting says a market's prices may be used; it says nothing about whether the model beats them. No measured market shows an edge: of 32 market-and-tier cells, 17 are no demonstrated edge, 10 are not enough evidence, and 5 are a demonstrated deficit — moneyline in all three tiers, over 20,233 bets.
+- **10 markets are allowlisted, against the measurement's own recommendation, and that is recorded here rather than left to be inferred.** `withdraw()` exists in `staging_provider_policy.py` and `grant()` does not: this lab may take a market away from the card and may never give it one. Adding a market is a receipt Cooper signs, in a pull request whose `Policy Gate` check is green — `.github/workflows/policy-gate.yml`, which runs on every pull request, verifies every allowlisted market against a receipt on disk, and is red while any market lacks one.
 
 Every modelling policy is a **recorded verdict read from disk**, never an assertion in code, so what ships is auditable against the experiment that decided it. A missing verdict file ships nothing — the conservative reading of *no recorded decision* is *no policy in force*.
 

@@ -6,7 +6,7 @@
     "edge_threshold": 0.02,
     "found": true,
     "games": 26622,
-    "looks_when_run": 130,
+    "looks_when_run": 133,
     "path": "data/outputs/cbb_price_backtest.json",
     "season_label": "2021-2026",
     "snapshot_phase": "card",
@@ -978,7 +978,7 @@
     },
     {
       "found": true,
-      "generated_at": "2026-09-17T16:24:15Z",
+      "generated_at": "2026-09-18T03:02:12Z",
       "label": "Price backtest",
       "path": "data/outputs/cbb_price_backtest.json"
     },
@@ -996,7 +996,7 @@
     },
     {
       "found": true,
-      "generated_at": "2026-09-17T16:47:13Z",
+      "generated_at": "2026-09-18T00:22:10Z",
       "label": "Replication record",
       "path": "data/outputs/holdout/cbb_replication.json"
     }
@@ -1096,16 +1096,27 @@
       "title": "First team basket scorer"
     }
   ],
-  "generated_at": "2026-09-17T16:49:12+00:00",
+  "generated_at": "2026-09-23T18:52:06+00:00",
   "headline": "**The only result that survives is a loss.** 32 market-and-tier cell(s) across 10 market(s) are measured against real prices. None excludes zero on the winning side; 5 exclude(s) it on the **losing** side after correcting for everything this lab has ever tested, which is a **demonstrated deficit**: `moneyline` / high_major (historical price backtest, bets) at -11.1% over 4,393 bets across 609 days; `moneyline` / mid_major (historical price backtest, bets) at -8.0% over 8,873 bets across 648 days; `team_total` / mid_major (historical price backtest, bets) at -6.3% over 11,618 bets across 345 days; `moneyline` / low_major (historical price backtest, bets) at -9.8% over 6,967 bets across 590 days; `total_points` / low_major (historical price backtest, bets) at -5.2% over 17,978 bets across 7,137 games. A demonstrated deficit is a finding, not a null result, and it is the finding this lab has.",
   "minimum_bets": 200,
   "no_demonstrated_edge_phrase": "no demonstrated edge",
   "policy": {
-    "allowlisted": [],
-    "manual_only": true,
-    "mode": "manual_only",
+    "allowlisted": [
+      "alternate_spread",
+      "alternate_team_total",
+      "alternate_total_points",
+      "moneyline",
+      "moneyline_h1",
+      "spread",
+      "spread_h1",
+      "team_total",
+      "total_points",
+      "total_points_h1"
+    ],
+    "manual_only": false,
+    "mode": "allowlisted",
     "provider": "the_odds_api",
-    "summary": "`the_odds_api:cbb` is **manual-only**. No market is allowlisted, the card produces no selection, and that is the correct state for a lab with no signed receipt.",
+    "summary": "`the_odds_api:cbb` allowlists 10 market(s): alternate_spread, alternate_team_total, alternate_total_points, moneyline, moneyline_h1, spread, spread_h1, team_total, total_points, total_points_h1, each behind a verified human acceptance receipt.",
     "withdrawn": 0
   },
   "pooled": [
@@ -1352,7 +1363,7 @@
     {
       "family": "team",
       "market": "moneyline_h2",
-      "reason": "historical prices for it **have** been bought and no measurement has scored them yet. That is a step this lab has not run, not a market the provider does not serve",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
       "segment": "h2",
       "settles_on": "half_margin",
       "tier": 2,
@@ -1361,7 +1372,7 @@
     {
       "family": "team",
       "market": "spread_h2",
-      "reason": "historical prices for it **have** been bought and no measurement has scored them yet. That is a step this lab has not run, not a market the provider does not serve",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
       "segment": "h2",
       "settles_on": "half_margin",
       "tier": 2,
@@ -1370,7 +1381,7 @@
     {
       "family": "team",
       "market": "total_points_h2",
-      "reason": "historical prices for it **have** been bought and no measurement has scored them yet. That is a step this lab has not run, not a market the provider does not serve",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled",
       "segment": "h2",
       "settles_on": "half_total",
       "tier": 2,
@@ -1388,7 +1399,7 @@
     {
       "family": "player",
       "market": "player_points",
-      "reason": "historical prices for it **have** been bought, and they are scored against a de-vigged two-sided fair price in `cbb_prop_grading.{json,md}` \u2014 a mean-log-loss comparison rather than a return, so it produces no ROI claim in this document and appears here. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled, so this lab has no price for it. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
       "segment": "game",
       "settles_on": "player_points",
       "tier": 3,
@@ -1397,7 +1408,7 @@
     {
       "family": "player",
       "market": "player_rebounds",
-      "reason": "historical prices for it **have** been bought, and they are scored against a de-vigged two-sided fair price in `cbb_prop_grading.{json,md}` \u2014 a mean-log-loss comparison rather than a return, so it produces no ROI claim in this document and appears here. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled, so this lab has no price for it. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
       "segment": "game",
       "settles_on": "player_rebounds",
       "tier": 3,
@@ -1406,7 +1417,7 @@
     {
       "family": "player",
       "market": "player_assists",
-      "reason": "historical prices for it **have** been bought, and they are scored against a de-vigged two-sided fair price in `cbb_prop_grading.{json,md}` \u2014 a mean-log-loss comparison rather than a return, so it produces no ROI claim in this document and appears here. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled, so this lab has no price for it. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
       "segment": "game",
       "settles_on": "player_assists",
       "tier": 3,
@@ -1415,7 +1426,7 @@
     {
       "family": "player",
       "market": "player_threes",
-      "reason": "historical prices for it **have** been bought, and they are scored against a de-vigged two-sided fair price in `cbb_prop_grading.{json,md}` \u2014 a mean-log-loss comparison rather than a return, so it produces no ROI claim in this document and appears here. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled, so this lab has no price for it. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
       "segment": "game",
       "settles_on": "player_threes_made",
       "tier": 3,
@@ -1433,7 +1444,7 @@
     {
       "family": "player",
       "market": "player_steals",
-      "reason": "historical prices for it **have** been bought, and they are scored against a de-vigged two-sided fair price in `cbb_prop_grading.{json,md}` \u2014 a mean-log-loss comparison rather than a return, so it produces no ROI claim in this document and appears here. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled, so this lab has no price for it. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
       "segment": "game",
       "settles_on": "player_steals",
       "tier": 3,
@@ -1442,7 +1453,7 @@
     {
       "family": "player",
       "market": "player_turnovers",
-      "reason": "historical prices for it **have** been bought, and they are scored against a de-vigged two-sided fair price in `cbb_prop_grading.{json,md}` \u2014 a mean-log-loss comparison rather than a return, so it produces no ROI claim in this document and appears here. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled, so this lab has no price for it. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
       "segment": "game",
       "settles_on": "player_turnovers",
       "tier": 3,
@@ -1478,7 +1489,7 @@
     {
       "family": "player",
       "market": "player_pra",
-      "reason": "historical prices for it **have** been bought, and they are scored against a de-vigged two-sided fair price in `cbb_prop_grading.{json,md}` \u2014 a mean-log-loss comparison rather than a return, so it produces no ROI claim in this document and appears here. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled, so this lab has no price for it. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
       "segment": "game",
       "settles_on": "player_pra",
       "tier": 3,
@@ -1487,7 +1498,7 @@
     {
       "family": "player",
       "market": "player_points_rebounds",
-      "reason": "historical prices for it **have** been bought, and they are scored against a de-vigged two-sided fair price in `cbb_prop_grading.{json,md}` \u2014 a mean-log-loss comparison rather than a return, so it produces no ROI claim in this document and appears here. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled, so this lab has no price for it. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
       "segment": "game",
       "settles_on": "player_points_rebounds",
       "tier": 3,
@@ -1496,7 +1507,7 @@
     {
       "family": "player",
       "market": "player_points_assists",
-      "reason": "historical prices for it **have** been bought, and they are scored against a de-vigged two-sided fair price in `cbb_prop_grading.{json,md}` \u2014 a mean-log-loss comparison rather than a return, so it produces no ROI claim in this document and appears here. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled, so this lab has no price for it. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
       "segment": "game",
       "settles_on": "player_points_assists",
       "tier": 3,
@@ -1505,7 +1516,7 @@
     {
       "family": "player",
       "market": "player_rebounds_assists",
-      "reason": "historical prices for it **have** been bought, and they are scored against a de-vigged two-sided fair price in `cbb_prop_grading.{json,md}` \u2014 a mean-log-loss comparison rather than a return, so it produces no ROI claim in this document and appears here. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
+      "reason": "no historical price has been bought for it and no forward opinion on it has settled, so this lab has no price for it. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either",
       "segment": "game",
       "settles_on": "player_rebounds_assists",
       "tier": 3,

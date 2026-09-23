@@ -2230,16 +2230,39 @@ def render(record: Mapping) -> str:
     add("")
     policy = record.get("policy", {}) or {}
     add(f"- {_text(policy.get('summary'))}")
+    # The gate paragraph is emitted in BOTH states. It used to appear only
+    # under `manual_only`, so the moment a market was allowlisted the document
+    # stopped naming the check at all — the guarantee disappearing from the
+    # record at exactly the point it starts doing something. A reader of an
+    # allowlisted lab needs it more, not less.
+    #
+    # The check's name is not spelled here in any comment or string: it is
+    # rendered from POLICY_GATE_CHECK, and test_the_claims_report_renders_the_
+    # gate_name_from_the_constant greps this whole file for the literal, so a
+    # comment mentioning it reads to that test exactly like hard-coding it.
+    gate = (
+        f"in a pull request whose `{policy_module.POLICY_GATE_CHECK}` check "
+        f"is green — `{policy_module.POLICY_GATE_WORKFLOW}`, which runs on "
+        "every pull request, verifies every allowlisted market against a "
+        "receipt on disk, and is red while any market lacks one."
+    )
     if policy.get("manual_only"):
         add(
             "- **No market is allowlisted, and that is the correct state.** "
             "`withdraw()` exists in `staging_provider_policy.py` and `grant()` "
             "does not: this lab may take a market away from the card and may "
-            "never give it one. Adding a market is a receipt Cooper signs, in a "
-            f"pull request whose `{policy_module.POLICY_GATE_CHECK}` check is "
-            f"green — `{policy_module.POLICY_GATE_WORKFLOW}`, which runs on "
-            "every pull request, verifies every allowlisted market against a "
-            "receipt on disk, and is red while any market lacks one."
+            f"never give it one. Adding a market is a receipt Cooper signs, "
+            f"{gate}"
+        )
+    else:
+        add(
+            "- **Every allowlisted market is there because Cooper signed a "
+            "receipt for it**, and for no other reason: `withdraw()` exists in "
+            "`staging_provider_policy.py` and `grant()` does not, so this lab "
+            f"may take a market away from the card and may never give it one. "
+            f"Each was added {gate} Allowlisting says a market's prices may be "
+            "used. It says nothing about whether the model beats them, and "
+            "nothing below changes because a market was approved."
         )
     if _as_int(policy.get("withdrawn")):
         add(
