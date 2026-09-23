@@ -1,0 +1,168 @@
+name: Publish Board
+
+# Builds this lab's public board.json and deploys it to this repository's
+# GitHub Pages. The projections site (hosted from nhl-betting-lab) reads it
+# by URL in the browser, so no cross-repository token exists anywhere.
+#
+# Runs after every CBB Gameday Refresh and on its own clock, so a dark day still
+# refreshes the slate. Read-only on repository contents (see permissions),
+# pushes to no branch, fetches no odds, spends no credit, edits no policy,
+# and places no bet.
+on:
+  schedule:
+    - cron: "0 12 * * *"   # 12:00 UTC daily; the two card slots retrigger it
+  workflow_run:
+    workflows: ["CBB Gameday Refresh"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: publish-board
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish Board
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -e .
+
+      - name: Restore the lab's latest run and the board's history
+        # Allowed to find nothing: before the first card the board is schedule-only and says so.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -u
+          # THE ARTIFACT IS NAMED PER RUN, so it cannot be asked for by a
+          # fixed string. `cbb-gameday-refresh.yml` uploads
+          # `cbb-gameday-<day>-<slot>` over `data/outputs/`,
+          # `data/processed/cbb_forward_evidence.csv`,
+          # `data/archive/priced_snapshots/` and `data/staging/` — four paths
+          # whose common ancestor is `data/`, so the archive's own entries are
+          # `outputs/…`, `processed/…`, `archive/…` and `staging/…`. It is
+          # unpacked somewhere else and those four directories are merged into
+          # `data/` by name: a download straight into `data/` would land the
+          # files one level wrong the moment a run produces only one of the
+          # four, and a board built off files nothing reads is a board that
+          # says nothing while looking healthy.
+          # AN EMPTY ANSWER AND A FAILED QUESTION ARE DIFFERENT, and the
+          # difference is invisible in `$(...)`: both are the empty string.
+          # The gameday workflow's own restore step makes the same
+          # distinction, for the same reason — "no card yet" is a fact about
+          # the season and "the API could not be asked" is a fact about this
+          # run, and a board that prints the first while the second happened
+          # is a board lying quietly.
+          if ! previous=$(gh run list --workflow cbb-gameday-refresh.yml --status success \
+            --limit 1 --json databaseId --jq '.[0].databaseId // empty'); then
+            echo "::warning::The last CBB Gameday Refresh could not be looked up; this board is schedule-only because the question failed, not because there is no card."
+            previous=""
+          fi
+          if [ -n "$previous" ]; then
+            artifact=$(gh api "repos/${{ github.repository }}/actions/runs/$previous/artifacts" \
+              --jq '[.artifacts[] | select(.expired | not) | select(.name | startswith("cbb-gameday-"))] | last | .name // empty')
+            if [ -n "$artifact" ]; then
+              restored="$RUNNER_TEMP/gameday"
+              mkdir -p "$restored" data
+              if gh run download "$previous" --name "$artifact" --dir "$restored"; then
+                for part in outputs processed archive staging; do
+                  if [ -d "$restored/$part" ]; then
+                    mkdir -p "data/$part"
+                    cp -R "$restored/$part/." "data/$part/"
+                    echo "Restored data/$part from $artifact ($(find "data/$part" -type f | wc -l) file(s))."
+                  else
+                    echo "$artifact carries no $part/; data/$part is whatever this checkout holds."
+                  fi
+                done
+              else
+                echo "Artifact $artifact on run $previous could not be downloaded."
+              fi
+            else
+              echo "Run $previous holds no unexpired cbb-gameday-* artifact; building schedule-only."
+            fi
+          else
+            echo "No successful CBB Gameday Refresh yet; building schedule-only."
+          fi
+          if ! last=$(gh run list --workflow publish-board.yml --status success \
+            --limit 1 --json databaseId --jq '.[0].databaseId // empty'); then
+            echo "::warning::The last publish could not be looked up; today's history starts empty because the question failed, not because there is no history."
+            last=""
+          fi
+          mkdir -p dist/data/history
+          if [ -n "$last" ]; then
+            gh run download "$last" --name board-history --dir dist/data/history || echo "No board-history artifact on run $last."
+          else
+            echo "No previous publish; the history starts today."
+          fi
+
+      - name: Assemble the site
+        # This subdomain serves the BOARD, not just its feed. web/ holds the
+        # page, support.js, lib/ and the bundled sample data; the build step
+        # below drops the real board.json in beside them, so the page fetches
+        # ./data/board.json same-origin and no CORS question arises.
+        #
+        # build_board_json.py is removed from dist because publishing the
+        # generator alongside what it generated invites someone to read the
+        # published copy as the one that ran.
+        run: |
+          mkdir -p dist
+          cp -R web/. dist/
+          rm -f dist/build_board_json.py
+          rm -rf dist/__pycache__
+          touch dist/.nojekyll
+
+      - name: Build the board
+        env:
+          PYTHONPATH: src
+        run: |
+          python web/build_board_json.py --lab . --out dist/data
+
+      - name: Keep the history
+        uses: actions/upload-artifact@v4
+        with:
+          name: board-history
+          path: dist/data/history
+          if-no-files-found: warn
+          retention-days: 400
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Report the outcome
+        if: always()
+        run: |
+          echo "This job built the public CBB board from the schedule and the lab's outputs."
+          echo "It fetched no odds, spent no credit, pushed no branch, edited no policy,"
+          echo "and placed no bet."
