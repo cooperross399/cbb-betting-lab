@@ -1,0 +1,296 @@
+{
+ "generatedAt": "2026-11-14T13:00:00Z",
+ "season": "2026–27",
+ "resultsDate": "2026-11-13",
+ "notice": null,
+ "summary": {
+  "straightUp": {
+   "w": 4,
+   "l": 1
+  },
+  "picks": {
+   "w": 1,
+   "l": 1,
+   "p": 0
+  },
+  "ats": {
+   "w": 3,
+   "l": 2,
+   "p": 0
+  },
+  "totals": {
+   "w": 2,
+   "l": 3,
+   "p": 0
+  }
+ },
+ "teams": {
+  "DUKE": {
+   "name": "Duke",
+   "short": "Duke",
+   "color": "#003087",
+   "fg": "#fff"
+  },
+  "UNC": {
+   "name": "North Carolina",
+   "short": "North Carolina",
+   "color": "#7BAFD4",
+   "fg": "#000"
+  },
+  "KU": {
+   "name": "Kansas",
+   "short": "Kansas",
+   "color": "#0051BA",
+   "fg": "#fff"
+  },
+  "UK": {
+   "name": "Kentucky",
+   "short": "Kentucky",
+   "color": "#0033A0",
+   "fg": "#fff"
+  },
+  "UCONN": {
+   "name": "UConn",
+   "short": "UConn",
+   "color": "#000E2F",
+   "fg": "#fff"
+  },
+  "PUR": {
+   "name": "Purdue",
+   "short": "Purdue",
+   "color": "#CEB888",
+   "fg": "#000"
+  },
+  "HOU": {
+   "name": "Houston",
+   "short": "Houston",
+   "color": "#C8102E",
+   "fg": "#fff"
+  },
+  "GONZ": {
+   "name": "Gonzaga",
+   "short": "Gonzaga",
+   "color": "#041E42",
+   "fg": "#fff"
+  },
+  "ALA": {
+   "name": "Alabama",
+   "short": "Alabama",
+   "color": "#9E1B32",
+   "fg": "#fff"
+  },
+  "TENN": {
+   "name": "Tennessee",
+   "short": "Tennessee",
+   "color": "#FF8200",
+   "fg": "#000"
+  },
+  "ARIZ": {
+   "name": "Arizona",
+   "short": "Arizona",
+   "color": "#CC0033",
+   "fg": "#fff"
+  },
+  "MICH": {
+   "name": "Michigan",
+   "short": "Michigan",
+   "color": "#00274C",
+   "fg": "#fff"
+  },
+  "AUB": {
+   "name": "Auburn",
+   "short": "Auburn",
+   "color": "#0C2340",
+   "fg": "#fff"
+  },
+  "ISU": {
+   "name": "Iowa State",
+   "short": "Iowa State",
+   "color": "#C8102E",
+   "fg": "#fff"
+  },
+  "MSU": {
+   "name": "Michigan St",
+   "short": "Michigan St",
+   "color": "#18453B",
+   "fg": "#fff"
+  },
+  "TEX": {
+   "name": "Texas",
+   "short": "Texas",
+   "color": "#BF5700",
+   "fg": "#fff"
+  },
+  "ND": {
+   "name": "Notre Dame",
+   "short": "Notre Dame",
+   "color": "#0C2340",
+   "fg": "#fff"
+  },
+  "NOVA": {
+   "name": "Villanova",
+   "short": "Villanova",
+   "color": "#00205B",
+   "fg": "#fff"
+  },
+  "CREI": {
+   "name": "Creighton",
+   "short": "Creighton",
+   "color": "#005CA9",
+   "fg": "#fff"
+  },
+  "SDSU": {
+   "name": "San Diego St",
+   "short": "San Diego St",
+   "color": "#A6192E",
+   "fg": "#fff"
+  }
+ },
+ "games": [
+  {
+   "id": "UKDUKE",
+   "tip": "2026-11-13T00:00:00Z",
+   "away": {
+    "abbr": "UK",
+    "projPts": 72,
+    "final": 71
+   },
+   "home": {
+    "abbr": "DUKE",
+    "projPts": 79.6,
+    "final": 78
+   },
+   "finish": "REG",
+   "projWinner": "DUKE",
+   "markets": {
+    "spread": {
+     "line": -7.5,
+     "proj": -7.6
+    },
+    "total": {
+     "line": 151.5,
+     "proj": 151.6
+    }
+   },
+   "pick": {
+    "market": "Spread",
+    "label": "Duke −7.5",
+    "price": -110,
+    "result": "loss"
+   }
+  },
+  {
+   "id": "GONZUCONN",
+   "tip": "2026-11-13T00:00:00Z",
+   "away": {
+    "abbr": "GONZ",
+    "projPts": 70.5,
+    "final": 66
+   },
+   "home": {
+    "abbr": "UCONN",
+    "projPts": 74,
+    "final": 74
+   },
+   "finish": "REG",
+   "projWinner": "UCONN",
+   "markets": {
+    "spread": {
+     "line": -3.5,
+     "proj": -3.5
+    },
+    "total": {
+     "line": 146.5,
+     "proj": 144.5
+    }
+   },
+   "pick": {
+    "market": "Total",
+    "label": "Under 146.5",
+    "price": -110,
+    "result": "win"
+   }
+  },
+  {
+   "id": "TEXKU",
+   "tip": "2026-11-13T00:00:00Z",
+   "away": {
+    "abbr": "TEX",
+    "projPts": 68,
+    "final": 64
+   },
+   "home": {
+    "abbr": "KU",
+    "projPts": 75,
+    "final": 69
+   },
+   "finish": "REG",
+   "projWinner": "KU",
+   "markets": {
+    "spread": {
+     "line": -6.5,
+     "proj": -7
+    },
+    "total": {
+     "line": 141.5,
+     "proj": 143
+    }
+   },
+   "pick": null
+  },
+  {
+   "id": "CREIHOU",
+   "tip": "2026-11-13T00:00:00Z",
+   "away": {
+    "abbr": "CREI",
+    "projPts": 66,
+    "final": 60
+   },
+   "home": {
+    "abbr": "HOU",
+    "projPts": 70,
+    "final": 71
+   },
+   "finish": "REG",
+   "projWinner": "HOU",
+   "markets": {
+    "spread": {
+     "line": -5.5,
+     "proj": -4
+    },
+    "total": {
+     "line": 136.5,
+     "proj": 136
+    }
+   },
+   "pick": null
+  },
+  {
+   "id": "ALAARIZ",
+   "tip": "2026-11-13T00:00:00Z",
+   "away": {
+    "abbr": "ALA",
+    "projPts": 79.5,
+    "final": 83
+   },
+   "home": {
+    "abbr": "ARIZ",
+    "projPts": 78,
+    "final": 80
+   },
+   "finish": "REG",
+   "projWinner": "ALA",
+   "markets": {
+    "spread": {
+     "line": 1.5,
+     "proj": -1.5
+    },
+    "total": {
+     "line": 159.5,
+     "proj": 157.5
+    }
+   },
+   "pick": null
+  }
+ ]
+}
