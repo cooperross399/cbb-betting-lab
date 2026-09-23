@@ -436,17 +436,38 @@ def test_the_rendered_claims_about_the_policy_gate_are_true_of_the_gate(relative
         "reported on the pull requests it filters out, so 'every' would be false."
     )
 
-    assert "No market is allowlisted, and that is the correct state" in flowed, (
-        f"{relative} no longer says no market is allowlisted; if a market has "
-        "been added, this document has to say so rather than go quiet."
-    )
+    # This asserted the literal sentence "No market is allowlisted, and that
+    # is the correct state", plus `shipped.allowlist == {}`. Its own failure
+    # message named the intent the assertion did not implement: "if a market
+    # has been added, this document has to say so rather than go quiet."
+    #
+    # Only the manual-only half was held, so the first signed receipt made the
+    # test red and the only route back to green was to weaken it — in the same
+    # commit as the signature. The property is that the document and the
+    # policy file agree, and it holds in both directions.
     shipped = policy_module.load()
-    assert shipped.allowlist == {}, (
-        f"{relative} says no market is allowlisted and "
-        f"{CONTRACTS['Policy gate workflow file']}'s policy file allowlists "
-        f"{sorted(shipped.allowlist)}. The rendered claim is now false, and it "
-        "is the claim a human reads before deciding what this lab may say."
-    )
+    if shipped.allowlist:
+        says_allowlisted = any(
+            phrase in flowed
+            for phrase in ("allowlists", "are allowlisted", "is allowlisted")
+        )
+        assert says_allowlisted, (
+            f"{relative} has gone quiet: the policy file allowlists "
+            f"{sorted(shipped.allowlist)} and this document says nothing about "
+            "any market being allowlisted. It is the claim a human reads "
+            "before deciding what this lab may say."
+        )
+        assert "No market is allowlisted, and that is the correct state" not in flowed, (
+            f"{relative} still says no market is allowlisted while the policy "
+            f"file allowlists {sorted(shipped.allowlist)}. The rendered claim "
+            "is false."
+        )
+    else:
+        assert "No market is allowlisted, and that is the correct state" in flowed, (
+            f"{relative} no longer says no market is allowlisted, and the "
+            "policy file allowlists nothing. The document has gone quiet about "
+            "a state it is supposed to record."
+        )
 
 
 def test_the_claims_report_renders_the_gate_name_from_the_constant():

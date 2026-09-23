@@ -2,7 +2,7 @@
 
 Generated from the measurement records on disk, so it cannot drift from them. The hand-written rules — written before the first measurement, which is the whole point of them — live in `docs/what_we_can_and_cannot_claim.md`. **This file is re-rendered from its own run record and is never edited by hand.**
 
-- Generated: 2026-09-17T16:49:12+00:00
+- Generated: 2026-09-23T18:52:06+00:00
 - Sample floor: **200 bets**, declared in advance. Below it this document prints a phrase and not a number.
 
 **The only result that survives is a loss.** 32 market-and-tier cell(s) across 10 market(s) are measured against real prices. None excludes zero on the winning side; 5 exclude(s) it on the **losing** side after correcting for everything this lab has ever tested, which is a **demonstrated deficit**: `moneyline` / high_major (historical price backtest, bets) at -11.1% over 4,393 bets across 609 days; `moneyline` / mid_major (historical price backtest, bets) at -8.0% over 8,873 bets across 648 days; `team_total` / mid_major (historical price backtest, bets) at -6.3% over 11,618 bets across 345 days; `moneyline` / low_major (historical price backtest, bets) at -9.8% over 6,967 bets across 590 days; `total_points` / low_major (historical price backtest, bets) at -5.2% over 17,978 bets across 7,137 games. A demonstrated deficit is a finding, not a null result, and it is the finding this lab has.
@@ -79,8 +79,8 @@ Prices bought after the games resolved. **A backtest that beats the opening numb
 
 ## What is in force, and what the card may actually use
 
-- `the_odds_api:cbb` is **manual-only**. No market is allowlisted, the card produces no selection, and that is the correct state for a lab with no signed receipt.
-- **No market is allowlisted, and that is the correct state.** `withdraw()` exists in `staging_provider_policy.py` and `grant()` does not: this lab may take a market away from the card and may never give it one. Adding a market is a receipt Cooper signs, in a pull request whose `Policy Gate` check is green — `.github/workflows/policy-gate.yml`, which runs on every pull request, verifies every allowlisted market against a receipt on disk, and is red while any market lacks one.
+- `the_odds_api:cbb` allowlists 10 market(s): alternate_spread, alternate_team_total, alternate_total_points, moneyline, moneyline_h1, spread, spread_h1, team_total, total_points, total_points_h1, each behind a verified human acceptance receipt.
+- **Every allowlisted market is there because Cooper signed a receipt for it**, and for no other reason: `withdraw()` exists in `staging_provider_policy.py` and `grant()` does not, so this lab may take a market away from the card and may never give it one. Each was added in a pull request whose `Policy Gate` check is green — `.github/workflows/policy-gate.yml`, which runs on every pull request, verifies every allowlisted market against a receipt on disk, and is red while any market lacks one. Allowlisting says a market's prices may be used. It says nothing about whether the model beats them, and nothing below changes because a market was approved.
 
 Every modelling policy is a **recorded verdict read from disk**, never an assertion in code, so what ships is auditable against the experiment that decided it. A missing verdict file ships nothing — the conservative reading of *no recorded decision* is *no policy in force*.
 
@@ -96,14 +96,10 @@ Every modelling policy is a **recorded verdict read from disk**, never an assert
 
 ## Not measured against real prices
 
-- **10 market(s)** — historical prices for it **have** been bought, and they are scored against a de-vigged two-sided fair price in `cbb_prop_grading.{json,md}` — a mean-log-loss comparison rather than a return, so it produces no ROI claim in this document and appears here. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either.
-  - `player_points` (settles on `player_points`), `player_rebounds` (settles on `player_rebounds`), `player_assists` (settles on `player_assists`), `player_threes` (settles on `player_threes_made`), `player_steals` (settles on `player_steals`), `player_turnovers` (settles on `player_turnovers`), `player_pra` (settles on `player_pra`), `player_points_rebounds` (settles on `player_points_rebounds`), `player_points_assists` (settles on `player_points_assists`), `player_rebounds_assists` (settles on `player_rebounds_assists`)
-- **7 market(s)** — no historical price has been bought for it and no forward opinion on it has settled, so this lab has no price for it. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either.
-  - `player_blocks` (settles on `player_blocks`), `player_field_goals` (settles on `player_field_goals_made`), `player_frees_made` (settles on `player_free_throws_made`), `player_frees_attempts` (settles on `player_free_throws_attempted`), `player_blocks_steals` (settles on `player_blocks_steals`), `player_triple_double` (settles on `player_triple_double`), `player_first_team_basket` (settles on `player_first_team_basket`)
-- **3 market(s)** — historical prices for it **have** been bought and no measurement has scored them yet. That is a step this lab has not run, not a market the provider does not serve.
-  - `moneyline_h2` (settles on `half_margin`), `spread_h2` (settles on `half_margin`), `total_points_h2` (settles on `half_total`)
-- **2 market(s)** — no historical price has been bought for it and no forward opinion on it has settled.
-  - `team_total_h1` (settles on `half_team_score`), `team_total_h2` (settles on `half_team_score`)
+- **17 market(s)** — no historical price has been bought for it and no forward opinion on it has settled, so this lab has no price for it. It is also gated: nothing in this sport reaches `Availability.CONFIRMED`, so a price would not produce a selection either.
+  - `player_points` (settles on `player_points`), `player_rebounds` (settles on `player_rebounds`), `player_assists` (settles on `player_assists`), `player_threes` (settles on `player_threes_made`), `player_blocks` (settles on `player_blocks`), `player_steals` (settles on `player_steals`), `player_turnovers` (settles on `player_turnovers`), `player_field_goals` (settles on `player_field_goals_made`), `player_frees_made` (settles on `player_free_throws_made`), `player_frees_attempts` (settles on `player_free_throws_attempted`), `player_pra` (settles on `player_pra`), `player_points_rebounds` (settles on `player_points_rebounds`), `player_points_assists` (settles on `player_points_assists`), `player_rebounds_assists` (settles on `player_rebounds_assists`), `player_blocks_steals` (settles on `player_blocks_steals`), `player_triple_double` (settles on `player_triple_double`), `player_first_team_basket` (settles on `player_first_team_basket`)
+- **5 market(s)** — no historical price has been bought for it and no forward opinion on it has settled.
+  - `team_total_h1` (settles on `half_team_score`), `moneyline_h2` (settles on `half_margin`), `spread_h2` (settles on `half_margin`), `total_points_h2` (settles on `half_total`), `team_total_h2` (settles on `half_team_score`)
 - **2 market(s)** — **refused by the model BY NAME**, so it is never priced and never scored whatever the store holds. Its own section below carries the model's own words for why.
   - `player_double_double` (settles on `player_double_double`), `player_first_basket` (settles on `player_first_basket`)
 - **1 market(s)** — a futures market, served under a separate provider sport key, settling on a clock measured in months. Nothing has been bought for it and nothing has settled.
