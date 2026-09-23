@@ -46,6 +46,7 @@ from cbb_betting_lab.staging_provider_policy import (
     StagingProviderPolicy,
 )
 from cbb_betting_lab.staging_provider_policy import load as load_policy
+from cbb_betting_lab import staging_provider_policy as SPP_MODULE
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "scripts" / "run_gameday_card.py"
@@ -442,12 +443,43 @@ def test_the_card_says_it_is_accumulating_evidence_and_makes_no_call(
                 ), sentence
 
 
-def test_the_policy_on_disk_is_manual_only_and_nothing_here_changed_it():
-    """`grant()` does not exist, and no test may become one."""
+def test_no_market_reaches_the_card_without_a_receipt_and_no_test_grants_one():
+    """`grant()` does not exist, and no test may become one.
+
+    This asserted `mode == MANUAL_ONLY` and `allowlist == {}` — the state the
+    repository was in, written as a constant. That is the wrong shape for a
+    guard against `grant()`: the moment Cooper signs a receipt the assertion
+    becomes false, and the only way to make the suite green is to loosen or
+    delete it. A guard whose correct response to a legitimate change is its
+    own removal is a guard that will be removed.
+
+    So it holds the property that actually matters instead, and holds it in
+    every state. Whatever the policy allowlists, each entry must carry a
+    receipt the loader accepted. An allowlist that appears without receipts
+    still fails here, which is the thing `grant()` would have done; an
+    allowlist that appears WITH them passes, which is Cooper's decision and
+    not this file's to refuse.
+
+    `receipt_failures` is the loader's own verdict, not a re-derivation: a
+    second opinion computed here could disagree with the one the card obeys,
+    and then the card and its test would be guarding different things.
+    """
     policy = load_policy()
 
-    assert policy.mode == MANUAL_ONLY
-    assert policy.allowlist == {}
+    assert policy.receipt_failures == {}, (
+        "a market is allowlisted whose receipt the loader refused: "
+        f"{policy.receipt_failures}"
+    )
+    if policy.allowlist:
+        assert policy.mode != MANUAL_ONLY, (
+            "markets are allowlisted while the mode is manual-only, so the "
+            "card reads none of them — the file contradicts itself"
+        )
+    else:
+        assert policy.mode == MANUAL_ONLY, (
+            "the mode permits reading staging while nothing is allowlisted"
+        )
+    assert not hasattr(SPP_MODULE, "grant"), "grant() exists on the policy module"
 
 
 def test_the_empty_card_names_the_bar_that_actually_stopped_the_wagers(

@@ -297,16 +297,61 @@ def test_withdraw_then_save_keeps_the_declared_mode_and_grants_nothing(root):
 # ---------------------------------------------------------------------------
 
 
-def test_the_repository_has_no_receipt_and_its_policy_is_manual_only():
-    """The state this lab expects to remain in. If a receipt ever appears here,
-    it was Cooper who put it there, and this test is the place to rewrite."""
-    receipts = REPO / "data" / "manual" / SPP.RECEIPTS_DIRNAME
-    signed = sorted(receipts.glob("*.json")) if receipts.is_dir() else []
-    assert signed == [], f"receipts exist in the repository: {signed}"
+def test_every_receipt_in_the_repository_is_one_the_loader_accepts():
+    """Rewritten where the old version said to rewrite it.
+
+    It read: "The state this lab expects to remain in. If a receipt ever
+    appears here, it was Cooper who put it there, and this test is the place
+    to rewrite." It asserted the receipts directory was empty and the policy
+    manual-only — the state, as a constant.
+
+    A constant is the wrong shape here for the same reason it was wrong in
+    the board's notice and in the workflow census: it is a fact about a file
+    a human may change, so the first legitimate change makes the assertion
+    false and the only way back to green is to weaken it. This lab has three
+    guards that would all have had to be loosened in the same commit as a
+    signature, which is exactly when nobody wants to be loosening guards.
+
+    What it holds now is the property the emptiness was standing in for:
+    whatever is on disk, every receipt is one the loader accepted, and the
+    policy and the receipts agree with each other. An unreceipted allowlist
+    still fails. A receipt signed by Claude still fails, in the loader,
+    where `FORBIDDEN_SIGNER` refuses it.
+    """
     loaded = SPP.load()
-    assert loaded.mode == SPP.MANUAL_ONLY
-    assert loaded.allowlist == {}
-    assert loaded.receipt_failures == {}
+
+    assert loaded.receipt_failures == {}, (
+        f"receipts the loader refused: {loaded.receipt_failures}"
+    )
+    if loaded.allowlist:
+        assert loaded.mode != SPP.MANUAL_ONLY, (
+            "markets are allowlisted but the mode is manual-only, so the card "
+            "reads none of them"
+        )
+        for market, entry in sorted(loaded.allowlist.items()):
+            assert entry.receipt_id, f"{market} is allowlisted with no receipt id"
+    else:
+        assert loaded.mode == SPP.MANUAL_ONLY, (
+            "the mode permits reading staging while nothing is allowlisted"
+        )
+
+
+def test_a_receipt_on_disk_that_belongs_to_no_allowlisted_market_is_visible():
+    """A signed receipt for a market nobody allowlisted is not an approval.
+
+    It is also not nothing: it is a decision that was made and then not
+    carried into the policy, and reading the directory as if it were the
+    allowlist is how the two drift apart.
+    """
+    receipts = REPO / "data" / "manual" / SPP.RECEIPTS_DIRNAME
+    on_disk = {p.stem for p in receipts.glob("*.json")} if receipts.is_dir() else set()
+    cited = {e.receipt_id for e in SPP.load().allowlist.values()}
+    orphans = sorted(on_disk - cited)
+    assert not orphans, (
+        "receipts exist that no allowlisted market cites: "
+        f"{orphans}. Either the policy is missing an entry or the receipt "
+        "was superseded and belongs under superseded/."
+    )
 
 
 def test_there_is_still_no_grant():
