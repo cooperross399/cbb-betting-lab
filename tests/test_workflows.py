@@ -4166,10 +4166,14 @@ def test_the_disclosed_holes_are_real(tmp_path: Path) -> None:
        `python x.py --key "$(printenv CBB_ODDS_API_KEY)"` names the variable
        with no `$` in front of it and passes. The rule catches the `$` shape
        wherever it sits, including an intermediate assignment.
-    7. The six operational workflows are held to the corpus rules only.
+    7. The seven operational workflows are held to the corpus rules only.
        Their `continue-on-error`, `|| true` and `if-no-files-found: warn` are
        deliberate and are not executed here — and warn is the family of the
        purchase defect this file pins by path. That is a scope, stated.
+       `publish-board.yml` is the seventh and is inside that scope: its
+       restore step carries `continue-on-error` because a board built before
+       the first card is schedule-only on purpose, and its history upload
+       carries `warn` because the first publish has no history to keep.
 
     Three more from attacking the 2026-09-04 rules, each measured:
 
@@ -4191,7 +4195,7 @@ def test_the_disclosed_holes_are_real(tmp_path: Path) -> None:
        interpreter puts the SCRIPT'S OWN directory at `sys.path[0]` and the
        working directory nowhere on the path. So the gate step's exposure is
        a tracked `scripts/<stdlib name>.py`, and the byte-compile step's is
-       the root-level one; the six operational workflows run both shapes.
+       the root-level one; the seven operational workflows run both shapes.
        An earlier version of this item named the working directory for all of
        them, which is the wrong mechanism for the gate step. Both arms are run
        below, and so is the one that shows what the variable buys: under
@@ -4301,7 +4305,7 @@ def test_the_disclosed_holes_are_real(tmp_path: Path) -> None:
     assert REQUIRED_CHECK not in ledger_job_names, ledger_job_names
 
     operational = [p for p in WORKFLOW_FILES if p.name not in GATE_WORKFLOWS]
-    assert len(operational) == 6, [p.name for p in operational]
+    assert len(operational) == 7, [p.name for p in operational]
     warning_uploads = [
         p.name for p in operational
         for step in steps_using(load(p), "actions/upload-artifact")

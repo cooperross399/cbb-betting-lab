@@ -32,7 +32,7 @@
 # other, so a red `Ledger Guard` does not block the merge button.
 # `required_status_checks.strict` is false, so the tick that satisfies the rule
 # may have been earned against a base main has since moved past. Nothing in
-# this file constrains the six operational workflows beyond the corpus rules.
+# this file constrains the seven operational workflows beyond the corpus rules.
 # And a `cd` before pytest, or a swallow inside a nested `bash -c`, is
 # disclosed open in tests/test_workflows.py::test_the_disclosed_holes_are_real
 # rather than claimed closed.
