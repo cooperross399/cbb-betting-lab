@@ -949,6 +949,34 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
+      # The three files the RATINGS need, in their own artifact and on a short
+      # clock. `build_datasets.py` writes them earlier in this same job, so
+      # they are on the runner already; they are simply not in the artifact
+      # above, which is why every published board so far has said "the ratings
+      # were not available to the site build".
+      #
+      # That sentence and "the model was asked and declined" look alike on the
+      # page and are not the same fact. One is this workflow failing to hand
+      # over a file; the other is the lab's connectivity guard refusing to
+      # price a team it has too little evidence about. The board can only tell
+      # them apart if it gets the files.
+      #
+      # Separate artifact, and `retention-days: 3` rather than the 90 above:
+      # the board reads only the newest run, these compress to roughly 48 MB
+      # against the main artifact's few, and ninety days of twice-daily copies
+      # is several gigabytes bought for nothing.
+      - name: Upload the model inputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbb-gameday-inputs-${{ steps.identity.outputs.day }}-${{ steps.identity.outputs.slot }}
+          path: |
+            data/processed/cbb_team_games.csv
+            data/processed/cbb_player_games.csv
+            data/raw/cbb/schedules/
+          if-no-files-found: warn
+          retention-days: 3
+
       - name: Report the outcome
         # Last, and the only step that may fail the job. Everything above is
         # allowed to degrade so the card still gets built, published and

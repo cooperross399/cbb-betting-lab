@@ -106,6 +106,34 @@ jobs:
             else
               echo "Run $previous holds no unexpired cbb-gameday-* artifact; building schedule-only."
             fi
+            # The ratings' three inputs ride in their own artifact on a
+            # three-day clock (cbb-gameday-refresh.yml, "Upload the model
+            # inputs"). Without them the board cannot tell "the model was
+            # asked and declined" from "nobody handed me the files", and it
+            # has been saying the second while meaning neither.
+            #
+            # Absence here is not a failure: past the retention window there
+            # is genuinely nothing to fetch, and the board falls back to
+            # saying the ratings were unavailable, which is then true.
+            inputs=$(gh api "repos/${{ github.repository }}/actions/runs/$previous/artifacts" \
+              --jq '[.artifacts[] | select(.expired | not) | select(.name | startswith("cbb-gameday-inputs-"))] | last | .name // empty')
+            if [ -n "$inputs" ]; then
+              seeded="$RUNNER_TEMP/inputs"
+              mkdir -p "$seeded"
+              if gh run download "$previous" --name "$inputs" --dir "$seeded"; then
+                for part in processed raw; do
+                  if [ -d "$seeded/$part" ]; then
+                    mkdir -p "data/$part"
+                    cp -R "$seeded/$part/." "data/$part/"
+                    echo "Restored data/$part from $inputs ($(find "data/$part" -type f | wc -l) file(s))."
+                  fi
+                done
+              else
+                echo "Artifact $inputs on run $previous could not be downloaded; the board will say the ratings were unavailable."
+              fi
+            else
+              echo "Run $previous holds no unexpired cbb-gameday-inputs-* artifact; the board will say the ratings were unavailable."
+            fi
           else
             echo "No successful CBB Gameday Refresh yet; building schedule-only."
           fi
