@@ -580,6 +580,30 @@ def load_record(lab: Path) -> dict:
     return out
 
 
+def load_policy(lab: Path):
+    """The provider policy the card reads, or None if it cannot be read.
+
+    Imported lazily and inside a try: this script also runs offline against a
+    checkout that may not have the package importable, and a board that fails
+    to build because it could not read a policy is worse than a board that
+    says "no market is allowlisted" — which is this repository's standing
+    state and the safe thing to say when the answer is unavailable.
+
+    None therefore reads as "nothing allowlisted", which is the same direction
+    the policy loader itself fails in: every unreadable state there resolves
+    to an allowlist of nothing.
+    """
+    try:
+        from cbb_betting_lab import staging_provider_policy as spp
+    except Exception:
+        return None
+    try:
+        return spp.load(Path(lab) / "data" / "manual")
+    except Exception as exc:
+        print(f"policy unreadable, board will say nothing is allowlisted: {exc}")
+        return None
+
+
 def build(lab: Path, day: date) -> dict:
     now = datetime.now(timezone.utc)
     status = load_status(lab, day)
@@ -648,11 +672,40 @@ def build(lab: Path, day: date) -> dict:
                 row["total"]["overProb"] = round(over, 4)
                 row["total"]["fairOverPrice"] = fair_two_way(over, under)
         games.append(row)
-    if not any(g["pick"] for g in games):
-        notice = ("No selection is published: no market is allowlisted and the model has no demonstrated edge. "
-                  "The slate, the board's prices and the model's numbers are shown; nothing here is a recommendation.")
+    # "No market is allowlisted" was written into both sentences as a
+    # constant. It is a fact about a file that Cooper can change in one pull
+    # request, and a page that states it from a string keeps stating it after
+    # it stops being true. So the sentence reads the policy the card reads.
+    #
+    # "No demonstrated edge" is NOT conditional and does not move with the
+    # allowlist: approving a market says its prices may be used, not that the
+    # model beats them. All 32 measured market-and-tier cells come back no
+    # demonstrated edge, not enough evidence, or a demonstrated deficit, and
+    # none of the three is an edge.
+    policy = load_policy(lab)
+    allowlisted = sorted(policy.allowlist) if policy else []
+    forced_manual = bool(policy and policy.receipt_failures)
+    if forced_manual:
+        gate = (
+            f"{len(allowlisted)} market(s) are listed in the policy but at "
+            "least one lacks a valid human acceptance receipt, so the card "
+            "reads nothing from staging"
+        )
+    elif allowlisted:
+        gate = f"{len(allowlisted)} market(s) are allowlisted"
     else:
-        notice = ("Every pick shown is a frozen opinion, not a recommendation: no market is allowlisted, "
+        gate = "no market is allowlisted"
+
+    if not any(g["pick"] for g in games):
+        notice = (f"No selection is published: {gate} and the model has no demonstrated edge. "
+                  "The slate, the board's prices and the model's numbers are shown; nothing here is a recommendation.")
+    elif allowlisted and not forced_manual:
+        notice = (f"{gate.capitalize()}, so the picks below are the card's own selections. "
+                  "The model still has no demonstrated edge in any measured market: every one comes back "
+                  "no demonstrated edge, not enough evidence, or a demonstrated deficit. "
+                  "Allowlisting says a market's prices may be used, not that the model beats them.")
+    else:
+        notice = (f"Every pick shown is a frozen opinion, not a recommendation: {gate}, "
                   "so nothing on this board cleared the bar that would make it a bet.")
     # A MODEL THAT ANSWERED NOTHING IS NOT A MODEL THAT WAS NEVER ASKED, and
     # the two look identical on a board full of dashes. `card_matchups` says
