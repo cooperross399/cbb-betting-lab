@@ -1,0 +1,10 @@
+{
+  "market": "spread_h1",
+  "receipt_id": "spread_h1-<YYYYMMDD>-<signer>",
+  "evidence": {
+    "path": "data/outputs/cbb_price_backtest.md",
+    "sha256": "3989a26da06a07725906fbd8591b3176930cac67e53c4502e729083f0f7c1a88"
+  },
+  "signed_by": "",
+  "signed_on": ""
+}

@@ -1,6 +1,47 @@
 {
   "provider": "the_odds_api",
-  "mode": "manual_only",
-  "allowlist": [],
+  "mode": "allowlisted",
+  "allowlist": [
+    {
+      "market": "alternate_spread",
+      "receipt_id": "alternate_spread-<YYYYMMDD>-<signer>"
+    },
+    {
+      "market": "alternate_team_total",
+      "receipt_id": "alternate_team_total-<YYYYMMDD>-<signer>"
+    },
+    {
+      "market": "alternate_total_points",
+      "receipt_id": "alternate_total_points-<YYYYMMDD>-<signer>"
+    },
+    {
+      "market": "moneyline",
+      "receipt_id": "moneyline-<YYYYMMDD>-<signer>"
+    },
+    {
+      "market": "moneyline_h1",
+      "receipt_id": "moneyline_h1-<YYYYMMDD>-<signer>"
+    },
+    {
+      "market": "spread",
+      "receipt_id": "spread-<YYYYMMDD>-<signer>"
+    },
+    {
+      "market": "spread_h1",
+      "receipt_id": "spread_h1-<YYYYMMDD>-<signer>"
+    },
+    {
+      "market": "team_total",
+      "receipt_id": "team_total-<YYYYMMDD>-<signer>"
+    },
+    {
+      "market": "total_points",
+      "receipt_id": "total_points-<YYYYMMDD>-<signer>"
+    },
+    {
+      "market": "total_points_h1",
+      "receipt_id": "total_points_h1-<YYYYMMDD>-<signer>"
+    }
+  ],
   "withdrawn": []
 }
