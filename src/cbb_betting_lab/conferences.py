@@ -122,10 +122,45 @@ def _long_form(schedule: pd.DataFrame) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
+#: Statuses of a game that was played to a result, for a schedule that does
+#: not carry ESPN's own `status_type_completed` flag. On every real season
+#: from 2019 to 2027 these two names are exactly the rows the flag marks True.
+COMPLETED_STATUSES = ("STATUS_FINAL", "STATUS_FORFEIT")
+
+
+def played_games(schedule: pd.DataFrame) -> pd.DataFrame:
+    """The rows of one season's schedule that were played to a result.
+
+    **An unplayed fixture carries a score of 0-0, not a missing one.** The
+    2027 schedule arrives with all 1,629 games `STATUS_SCHEDULED` and both
+    scores stored as integer zeros, and `dropna` on the scores let every one of
+    them into the tier margins as a game decided by nothing: 27 of 365 teams
+    would change tier on the first refit to include 2027. Postponed and
+    cancelled fixtures in earlier seasons (64 of them, 2023-2026) got in the
+    same way, and moved no tier. A schedule that says neither way is refused
+    rather than assumed played.
+
+    Call it per season, BEFORE any concat: a season missing the flag would
+    otherwise read NaN for it and leave the table without a word.
+    """
+    if "status_type_completed" in schedule.columns:
+        flag = schedule["status_type_completed"].map(
+            lambda value: value is True or str(value).strip().lower() == "true"
+        )
+        return schedule[flag.astype(bool)]
+    if "status_type_name" in schedule.columns:
+        return schedule[schedule["status_type_name"].isin(COMPLETED_STATUSES)]
+    raise ValueError(
+        "This schedule carries neither `status_type_completed` nor "
+        "`status_type_name`, so a played game cannot be told from an unplayed "
+        "fixture stored as 0-0. Refusing to compute tiers from it."
+    )
+
+
 def tier_table(schedules: dict[int, pd.DataFrame], seasons: tuple[int, ...]) -> TierTable:
     """Tiers from the named seasons only. Pass seasons strictly before the
     one being priced."""
-    usable = [schedules[s] for s in seasons if s in schedules]
+    usable = [played_games(schedules[s]) for s in seasons if s in schedules]
     if not usable:
         return TierTable({}, {}, {}, {}, seasons)
     schedule = pd.concat(usable, ignore_index=True)

@@ -119,6 +119,10 @@ def _game(game_id: int, season: int, day: str, hour: int, home: int, away: int) 
         "date": _iso_utc(day, hour),
         "home_score": home_score,
         "away_score": away_score,
+        # Every real schedule carries these, and `tier_table` now reads them:
+        # an unplayed fixture is stored as 0-0, not as a missing score.
+        "status_type_completed": True,
+        "status_type_name": "STATUS_FINAL",
         **_side("home", home),
         **_side("away", away),
     }

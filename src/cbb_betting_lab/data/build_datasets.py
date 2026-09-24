@@ -467,8 +467,14 @@ def build(seasons: tuple[int, ...], *, raw_dir: Path | None = None,
         except hoopr.FeedError:
             _skip("game_segments", season, "feed not cached")
             continue
-        if not frame.empty:
-            segments.append(frame)
+        # An empty play-by-play is a season with no segments, and it is
+        # reported like a missing one. It used to fall through here with no
+        # record, leaving that season out of the table and nulling every one
+        # of its team games' halftime and period fields in silence.
+        if frame.empty:
+            _skip("game_segments", season, "play-by-play is empty")
+            continue
+        segments.append(frame)
     if segments:
         frame = pd.concat(segments, ignore_index=True)
         frame.to_csv(target / "cbb_game_segments.csv", index=False, lineterminator="\n")
