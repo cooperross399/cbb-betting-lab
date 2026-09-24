@@ -42,6 +42,9 @@ edge. `assert_single_window` raises rather than warns.
 `read_store(..., for_append=True)` raises on a parse error rather than
 returning an empty frame, because writing then would replace a damaged file
 with a shorter one. And `append` refuses to write fewer rows than it read.
+Nor does a store lose a column: the same strict read refuses one the schema
+no longer declares while it still holds data, because the write that follows
+would erase it from every row while the row count went up.
 """
 
 from __future__ import annotations
@@ -53,6 +56,14 @@ import pandas as pd
 
 class CorruptStoreError(RuntimeError):
     """A store could not be read, and the caller was about to overwrite it."""
+
+
+class UndeclaredColumnError(CorruptStoreError):
+    """A store holds data in a column its declared schema no longer lists.
+
+    A subclass so every caller that already refuses an unreadable store
+    refuses this too: both are a file the append would damage by writing.
+    """
 
 
 #: What makes two rows the same quote. **No timestamp.** Adding one here
@@ -185,6 +196,31 @@ def read_store(
                 "parses into the wrong shape is not this store; padding the "
                 "absent columns would make nonsense read as an empty record."
             )
+        # THE OTHER DIRECTION. The check above refuses a column the file
+        # lacks; this one refuses a column the schema lacks. Selecting the
+        # declared columns below drops it from the frame, and every
+        # `for_append` caller writes that frame back over the file, so the
+        # column would leave every row already on disk while the row count
+        # rises and the shrink guard sees nothing. The sibling football lab
+        # lost two of three seasons of injury designations to the NaN half of
+        # this on 2026-09-23; this is the half that erases instead of blanks.
+        # A column that holds nothing is a leftover header, not evidence, and
+        # is trimmed as before.
+        if for_append:
+            undeclared = [c for c in frame.columns if c not in columns]
+            holding = [
+                c for c in undeclared
+                if frame[c].map(_dedupe_value).ne("").any()
+            ]
+            if holding:
+                raise UndeclaredColumnError(
+                    f"{target} holds data in {holding!r}, which this store's "
+                    "declared columns do not list. Refusing: this caller writes "
+                    "the declared columns back, which would erase those values "
+                    "from every row already written, and this store cannot be "
+                    "rebuilt. Declare the columns again, or remove them from "
+                    "the file deliberately in a commit of their own."
+                )
         for column in missing:
             frame[column] = pd.NA
         frame = frame[list(columns)]
