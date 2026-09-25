@@ -46,7 +46,7 @@ name: Weekly Refit and Measure
 
 on:
   schedule:
-    # MONDAY 11:00 UTC, and both halves of that are measured rather than chosen.
+    # MONDAY 10:00 UTC, and both halves of that are measured rather than chosen.
     #
     # MONDAY, because Saturday carries roughly a third of the season on its own
     # — 2,049, 2,072 and 1,955 games of ~6,300 in the three cached seasons —
@@ -57,23 +57,26 @@ on:
     # Saturday's ~2,000), so a two-hour refit does not contend with the heaviest
     # card day.
     #
-    # 11:00 UTC, because of the lateness. Cooper's repositories have fired
-    # 4.5-5.3 hours late since 2026-08-27, and
-    # `schedule_contract.OBSERVED_LATENESS_H` is 5.3. Nominal 11:00 UTC lands at
-    # 16:18 UTC at that worst case — still Monday, in UTC and in Eastern, with
-    # about 8 hours of Monday left over. That margin is the whole point: the
-    # alpha budget's bucket is the ISO WEEK the run stamps, so a trigger that
-    # can slip across a Sunday/Monday boundary would spend next week's budget on
-    # this week's search. A Sunday-evening cron would do exactly that.
+    # 10:00 UTC, because of the lateness. `schedule_contract.OBSERVED_LATENESS_H`
+    # is 7.4 hours, measured on Cooper's repositories — this workflow's old
+    # 11:00 UTC cron fired 5.84 hours late on 2026-09-21, and a sibling's Monday
+    # 10:00 UTC cron 7.30 on 2026-08-31 — and nominal 10:00 UTC lands at 17:24 UTC
+    # at that worst case: still Monday, in UTC and in Eastern, with 6.6 hours
+    # of Monday left over. That margin is the whole point: the alpha budget's
+    # bucket is the ISO WEEK the run stamps, so a trigger that can slip across
+    # a Sunday/Monday boundary would spend next week's budget on this week's
+    # search. A Sunday-evening cron would do exactly that.
     # `tests/test_weekly_loop.py` recomputes the margin from the constant and
-    # fails if raising it ever makes this cron unsafe.
+    # holds it to six hours; raising the constant from 5.3 to 7.4 on 2026-09-25
+    # left 11:00 UTC with 5.6, and the test moved this cron rather than the
+    # other way round.
     #
     # YEAR-ROUND, not November-to-April. It spends nothing, and the line-movement
     # capture already established the reason: the first in-season run must not
     # be the first run ever. An off-season week refits on the cached seasons,
     # re-renders a claims document that says nothing has been measured, and
     # proves the machinery still works.
-    - cron: "0 11 * * 1"
+    - cron: "0 10 * * 1"
   workflow_dispatch:
     inputs:
       seasons:

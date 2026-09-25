@@ -20,8 +20,9 @@ name: CBB Gameday Refresh
 # rather than markets *returned*.
 #
 # FOUR CRONS, TWO SLOTS. `docs/card_cadence.md` has the arithmetic. The slate
-# spans twelve hours — first tip 11:00 ET, last tip 23:00 ET, and **45.3% of
-# 6,318 games in 2025-26 had still not tipped at 19:00 ET**. One freeze cannot
+# spans twelve hours — first tip 11:00 ET, last tip 23:00 ET, and **54.7% of
+# 6,318 games in 2025-26 had still not tipped at 19:00 ET** (this line said
+# 45.3%, which is the share that HAD tipped by then). One freeze cannot
 # price a noon tip and an eleven o'clock tip, so there are two slots, each with
 # a primary and a backup an hour apart, and the backup stands down when the
 # primary published that slot cleanly.
@@ -31,49 +32,73 @@ name: CBB Gameday Refresh
 # not, and may never re-price one it did. Without that rule two cards a day is
 # two bites at the same apple and the ledger records the better of two guesses.
 #
-# THE CRON TIMES ASSUME GITHUB IS LATE, because it is. Cooper's repositories
-# have fired 4.5-5.3 hours late since 2026-08-27, so every landing here is
-# checked against `nominal + schedule_contract.OBSERVED_LATENESS_H`. At the
-# worst lateness observed, the morning backup lands 10:18 ET (42 minutes before
-# the 11:00 ET first tip) and the evening backup 17:18 ET (1h42 before the
-# 19:00 ET block). `tests/test_the_card_schedule_survives_cron_lateness.py`
-# recomputes that table from the constant and fails if a slot stops preceding
-# its block.
+# THE CRON TIMES ASSUME GITHUB IS LATE, because it is. Every landing here is
+# checked against `nominal + schedule_contract.OBSERVED_LATENESS_H`, which is
+# 7.4 hours: the worst lateness measured on Cooper's repositories on every day
+# since 2026-08-27 but the first (`data/outputs/cbb_cron_lateness.json`; the
+# two runs on that first day were 9.6-9.9h late and nothing here survives
+# them). This header used to say 4.5-5.3 hours, and the same account's crons
+# had already run 7.38 hours late.
+#
+# AT 7.4 HOURS LATE, IN EST: the morning primary lands 09:24 ET and can freeze
+# every tip from 10:24, clearing the 11:00 ET first tip; the morning backup
+# lands 10:24 ET and freezes nothing before 11:24, so it does NOT cover the
+# 11:00 block; the evening primary lands 16:24 ET and the backup 17:24 ET, and
+# both clear the 19:00 ET block. `tests/test_the_card_schedule_survives_cron_lateness.py`
+# recomputes that table from the constant, fails if a primary stops being able
+# to freeze its block, and names every cell that cannot, one by one.
 #
 # THOSE ARE EST FIGURES. A cron is fixed in UTC, so when DST begins on
 # 2027-03-14 and the offset moves from UTC-5 to UTC-4 every landing reads an
-# hour LATER on an Eastern clock (10:00 UTC is 05:00 EST on the 13th and 06:00
-# EDT on the 14th). From that date the morning backup's worst case is 11:18 ET,
-# 18 minutes after the first tip; the morning primary (10:18 ET) and both
-# evening triggers still hold. `schedule_contract` records that gap and the
-# same test pins the sign on those two instants. The crons were not moved.
+# hour LATER on an Eastern clock (08:00 UTC is 03:00 EST on the 13th and 04:00
+# EDT on the 14th). From that date the morning primary lands 10:24 ET and the
+# backup 11:24 ET, so neither covers the 11:00 block; the evening primary lands
+# 17:24 ET and still covers 19:00, and the evening backup lands 18:24 ET and
+# does not.
 #
-# THREE GAMES A SEASON TIP BEFORE THE MORNING BACKUP'S WORST-CASE LANDING —
-# 0.05% of the slate, and one of them is the 2026-27 opener in Rome at 09:30 ET
-# on 2026-11-01. That is a coverage gap, recorded rather than chased: moving
-# the cron earlier would card the whole day earlier, with less information, to
-# buy three games.
+# WHY 07:00 AND 14:00 UTC, NOT 09:00 AND 16:00. At 7.4 hours a 09:00 UTC
+# primary could not freeze its own block, and — the constraint that set the
+# hours — the card also has to reach Cooper, whose chat tasks read Drive at
+# 11:15 and 18:15 ET. The relay that puts it there runs at 10:52 and 17:52 ET,
+# so each primary must have landed and finished by then under EDT, when a UTC
+# cron reads latest. `schedule_contract.MORNING` and `.EVENING` carry the
+# arithmetic, and the test checks the whole chain in both offsets.
+#
+# AN ON-TIME 07:00 UTC RUN IS 02:00 EST, before the one Honolulu game at 01:00
+# ET has finished. It would settle that game on the evening run instead, which
+# costs nothing: settlement is "whatever finished", every run. In practice no
+# cron due 06:00-08:00 UTC has fired less than 3.5 hours late.
+#
+# THIRTY-SEVEN GAMES A SEASON TIP BEFORE THE MORNING BACKUP CAN FREEZE THEM —
+# 0.59% of the slate, 34 of them the 11:00 ET block, and one the 2026-27 opener
+# in Rome at 09:30 ET on 2026-11-01. That is a coverage gap, recorded rather
+# than chased: it bites only when the primary was dropped as well.
 
 on:
   schedule:
-    # `morning` primary. 09:00 UTC is 04:00 ET nominal and 09:18 ET at the
-    # worst lateness observed. It also runs after the last game of the previous
-    # night is final (the latest tip is 23:00 ET, plus one Honolulu game at
-    # 01:00 ET), which is why the post-slate settlement lives in this run
-    # rather than in a workflow of its own: settlement needs the ledger, and
-    # the ledger only comes back from the branch the one writing workflow can
-    # reach.
-    - cron: "0 9 * 11,12,1,2,3,4 *"
+    # `morning` primary. 07:00 UTC is 02:00 EST nominal and 09:24 EST at the
+    # worst lateness observed. It also runs after the previous night's slate
+    # is final (the latest tip is 23:00 ET, plus one Honolulu game at 01:00 ET
+    # that an on-time run would leave to the evening), which is why the
+    # post-slate settlement lives in this run rather than in a workflow of its
+    # own: settlement needs the ledger, and the ledger only comes back from the
+    # branch the one writing workflow can reach.
+    #
+    # THESE HOURS ARE ALSO WRITTEN IN THE `case` IN THE `already-published`
+    # JOB BELOW, which is how a run knows its slot. A test runs that step
+    # against every cron here, so moving one without the other is a red build
+    # rather than an evening card published as the morning's.
+    - cron: "0 7 * 11,12,1,2,3,4 *"
     # `morning` backup, an hour later. It stands down when the primary
     # published this slot cleanly, so on a healthy day it costs one
     # authenticated fetch of a status file and no credits at all.
-    - cron: "0 10 * 11,12,1,2,3,4 *"
+    - cron: "0 8 * 11,12,1,2,3,4 *"
     # `evening` primary. 55% of the slate had not been priced by anybody at the
     # morning slot; this is the run that covers it, and it exists for no other
     # reason.
-    - cron: "0 16 * 11,12,1,2,3,4 *"
+    - cron: "0 14 * 11,12,1,2,3,4 *"
     # `evening` backup.
-    - cron: "0 17 * 11,12,1,2,3,4 *"
+    - cron: "0 15 * 11,12,1,2,3,4 *"
   workflow_dispatch:
     inputs:
       card_slot:
@@ -168,11 +193,25 @@ jobs:
           # two triggers of a pair agree on which slot they are covering — the
           # backup has to compare against the primary's publication, not
           # against "today".
+          #
+          # AN HOUR THIS DOES NOT KNOW IS AN ERROR, NOT A MORNING. It used to
+          # fall through to `morning`, so a cron moved in `on.schedule` and not
+          # here would have published every evening card as the morning's —
+          # and then stood the evening down on any day the morning card was
+          # clean, because the guard below would find "this slot" already
+          # published. `test_every_declared_cron_names_its_own_slot_when_the_guard_runs`
+          # runs this step against each contract cron. An empty hour is a
+          # dispatch, which names its slot itself.
           HOUR=$(printf '%s\n' "${SCHEDULE:-}" | awk '{print $2}')
           SLOT="${DISPATCH_SLOT:-morning}"
           case "$HOUR" in
-            9|10) SLOT=morning ;;
-            16|17) SLOT=evening ;;
+            7|8) SLOT=morning ;;
+            14|15) SLOT=evening ;;
+            "") ;;
+            *)
+              echo "::error::Cron '${SCHEDULE}' fired at hour $HOUR, which belongs to no card slot. Refusing to guess a slot: the hours here must match schedule_contract."
+              exit 1
+              ;;
           esac
           echo "card_slot=$SLOT" >> "$GITHUB_OUTPUT"
           echo "This run is the '$SLOT' slot."

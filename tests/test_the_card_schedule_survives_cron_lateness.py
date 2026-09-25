@@ -1,10 +1,11 @@
 """Every slot must be able to FREEZE its games, at the worst lateness observed.
 
-GitHub has been firing Cooper's crons 4.5-5.3 hours late since 2026-08-27, so a
-schedule checked against its nominal time is a schedule checked against a
-fiction. This test recomputes the whole table from `OBSERVED_LATENESS_H`, which
-means raising that constant when GitHub gets worse is a one-line change that
-proves itself rather than a note somebody has to act on.
+GitHub fires Cooper's crons hours late — 7.38 hours at worst on every day since
+2026-08-27 but the first, `data/outputs/cbb_cron_lateness.json` — so a schedule
+checked against its nominal time is a schedule checked against a fiction. This
+test recomputes the whole table from `OBSERVED_LATENESS_H`, which means raising
+that constant when GitHub gets worse is a one-line change that proves itself
+rather than a note somebody has to act on.
 
 **And landing is not freezing.** Every check in this file used to compare a
 landing to a tip hour, which is the arithmetic `schedule_contract.holds()` did
@@ -35,6 +36,7 @@ from cbb_betting_lab.gates import can_be_played, tip_state
 from cbb_betting_lab.schedule_contract import (
     CARD_LEAD_H,
     CARD_LEAD_MINUTES,
+    CARD_RUN_BUDGET_MINUTES,
     CRON_MINUTE,
     EASTERN,
     EDT_OFFSET_H,
@@ -42,21 +44,26 @@ from cbb_betting_lab.schedule_contract import (
     EVENING,
     MORNING,
     OBSERVED_LATENESS_H,
+    READER_ET_HOUR,
+    RELAY_BUDGET_MINUTES,
+    RELAY_TIMEZONE,
     SEASON_CRON_MONTHS,
+    SLOT_NAMES,
     SLOTS,
     CardSlot,
     cron_expressions,
     eastern_offset_h,
     freeze_bar_et_hour,
     landing_et,
+    relay_cron_expression,
     slot_for,
 )
 
-#: The same cron instant — 10:00 UTC, the morning backup — on the last day of
+#: The same cron instant — 08:00 UTC, the morning backup — on the last day of
 #: EST and the first day of EDT. DST begins 2027-03-14 at 02:00 EST (07:00
-#: UTC), so 10:00 UTC on the 14th is already an EDT instant.
-LAST_EST_MORNING = datetime(2027, 3, 13, 10, 0, tzinfo=timezone.utc)
-FIRST_EDT_MORNING = datetime(2027, 3, 14, 10, 0, tzinfo=timezone.utc)
+#: UTC), so 08:00 UTC on the 14th is already an EDT instant.
+LAST_EST_MORNING = datetime(2027, 3, 13, 8, 0, tzinfo=timezone.utc)
+FIRST_EDT_MORNING = datetime(2027, 3, 14, 8, 0, tzinfo=timezone.utc)
 
 
 def test_every_slot_can_freeze_its_block_from_its_primary_even_at_worst_lateness():
@@ -68,7 +75,8 @@ def test_every_slot_can_freeze_its_block_from_its_primary_even_at_worst_lateness
     minutes below the bar `gates` actually enforces. Under that reading all
     four slot/offset cells passed; under the real one, three of them cannot
     freeze the block they name, and the morning backup has not covered its
-    11:00 ET block at any point since the lateness reached 5.0h. It is 5.3h.
+    11:00 ET block at any point since the lateness reached 5.0h. It is 7.4h,
+    and the crons moved earlier on 2026-09-25 so that this still holds.
 
     So the promise left that every slot keeps is the PRIMARY's: at the worst
     lateness observed, each slot's first trigger still lands a full
@@ -97,18 +105,21 @@ def test_every_slot_can_freeze_its_block_from_its_primary_even_at_worst_lateness
 def test_dst_moves_a_fixed_utc_cron_later_on_an_eastern_clock():
     """`schedule_contract.py` used to say DST moves every landing an hour
     *earlier* in ET, "the safe direction". Measured on two concrete instants
-    from the tz database, not asserted: 10:00 UTC is 05:00 on 2027-03-13 and
-    06:00 on 2027-03-14. Later, by exactly one hour, toward the first tip."""
+    from the tz database, not asserted: 08:00 UTC is 03:00 on 2027-03-13 and
+    04:00 on 2027-03-14. Later, by exactly one hour, toward the first tip."""
     eastern = ZoneInfo("America/New_York")
-    assert LAST_EST_MORNING.astimezone(eastern).strftime("%H:%M %Z") == "05:00 EST"
-    assert FIRST_EDT_MORNING.astimezone(eastern).strftime("%H:%M %Z") == "06:00 EDT"
+    assert LAST_EST_MORNING.hour == FIRST_EDT_MORNING.hour == max(MORNING.cron_hours_utc), (
+        "these instants are named for the morning backup; move them with it"
+    )
+    assert LAST_EST_MORNING.astimezone(eastern).strftime("%H:%M %Z") == "03:00 EST"
+    assert FIRST_EDT_MORNING.astimezone(eastern).strftime("%H:%M %Z") == "04:00 EDT"
 
     assert eastern_offset_h(LAST_EST_MORNING) == EST_OFFSET_H == -5
     assert eastern_offset_h(FIRST_EDT_MORNING) == EDT_OFFSET_H == -4
 
-    before = landing_et(10, date(2027, 3, 13))
-    after = landing_et(10, date(2027, 3, 14))
-    assert (before, after) == (5.0, 6.0)
+    before = landing_et(8, date(2027, 3, 13))
+    after = landing_et(8, date(2027, 3, 14))
+    assert (before, after) == (3.0, 4.0)
     assert after - before == 1.0, "a fixed UTC cron lands LATER in Eastern wall-clock time under DST, not earlier"
 
     # The slot arithmetic agrees with the tz database on both sides of the switch.
@@ -136,7 +147,11 @@ def test_dst_moves_a_fixed_utc_cron_later_on_an_eastern_clock():
 #: the `CARD_LEAD_MINUTES` the tip guard actually enforces, the morning backup
 #: misses its 11:00 ET block in EST too, which is the whole season and not the
 #: last three weeks of it; the morning primary joins it under EDT; and the
-#: evening backup lands 18:18 EDT and so reaches nothing before 19:18.
+#: evening backup lands 18:24 EDT and so reaches nothing before 19:24.
+#:
+#: **The same four at 7.4 hours.** The lateness rose from 5.3 to 7.4 on
+#: 2026-09-25 and every card cron moved two hours earlier with it, so each
+#: landing moved six minutes and no cell changed sides.
 CELLS_THAT_CANNOT_FREEZE_THEIR_BLOCK = {
     ("morning", "EST", "backup"),
     ("morning", "EDT", "primary"),
@@ -157,7 +172,7 @@ def test_the_cells_that_cannot_freeze_their_block_are_the_ones_written_down():
 
     These gaps are recorded rather than chased, on the same reasoning the lab
     applied when it was one gap instead of four: moving the morning pair to
-    08:00/09:00 UTC would close the EST half of it, and would card every day of
+    06:00/07:00 UTC would close the EST half of it, and would card every day of
     the season an hour earlier with an hour less information, to buy a handful
     of 11:00 ET tips on the days the primary was also dropped. **It is a
     coverage gap, not a fault** — but it is four cells and 0.59% of the slate,
@@ -186,20 +201,20 @@ def test_the_cells_that_cannot_freeze_their_block_are_the_ones_written_down():
     # backup's landing under EDT, and the tip bar an hour past it.
     backup = MORNING.backup_worst_case_landing_et(EDT_OFFSET_H)
     assert backup == pytest.approx(max(MORNING.cron_hours_utc) + OBSERVED_LATENESS_H + EDT_OFFSET_H)
-    assert backup == pytest.approx(11.3), (
-        f"the recorded gap is the morning backup landing 11:18 ET under EDT; it now lands {backup:.2f} ET. "
+    assert backup == pytest.approx(11.4), (
+        f"the recorded gap is the morning backup landing 11:24 ET under EDT; it now lands {backup:.2f} ET. "
         "Update docs/card_cadence.md, the workflow header and this test together."
     )
     assert MORNING.backup_worst_case_freeze_bar_et(EDT_OFFSET_H) == pytest.approx(
-        11.3 + CARD_LEAD_H
+        11.4 + CARD_LEAD_H
     )
 
-    # And the EST cell the old bar hid: the backup lands 42 minutes before the
-    # first tip, which is INSIDE the lab's own 60-minute guard. That 42 is the
-    # figure `docs/card_cadence.md` and the workflow header both printed as the
-    # slot's safety margin.
+    # And the EST cell the old bar hid: the backup lands 36 minutes before the
+    # first tip, which is INSIDE the lab's own 60-minute guard. At 5.3 hours it
+    # was 42, and 42 is the figure `docs/card_cadence.md` and the workflow
+    # header both printed as the slot's safety margin.
     margin_h = MORNING.must_precede_et_hour - MORNING.backup_worst_case_landing_et(EST_OFFSET_H)
-    assert margin_h == pytest.approx(0.7)
+    assert margin_h == pytest.approx(0.6)
     assert margin_h * 60 < CARD_LEAD_MINUTES, (
         f"the morning backup's EST margin is {margin_h * 60:.0f} minutes against a "
         f"{CARD_LEAD_MINUTES}-minute card lead. If this has become a real margin the "
@@ -222,14 +237,19 @@ def test_a_landing_near_midnight_does_not_wrap_into_the_next_morning():
     assert freeze_bar_et_hour(23.3) == pytest.approx(23.3 + CARD_LEAD_H)
     assert freeze_bar_et_hour(23.3) > 24, "the bar wrapped, and a wrapped bar covers tomorrow"
 
+    # At the 7.4 hours measured on 2026-09-25 a 21:00 UTC backup lands 23:24
+    # ET. It was (22, 23) at 5.3 hours, which now lands at 01:24 and would pin
+    # nothing about the wrap; the pair moves with the constant, the assertions
+    # do not.
     midnight = CardSlot(
         name="midnight",
-        cron_hours_utc=(22, 23),
+        cron_hours_utc=(20, 21),
         must_precede_et_hour=11,
         what="a slot this lab does not run, here only to pin the wrap",
     )
-    assert midnight.backup_worst_case_landing_et() == pytest.approx(23.3)
-    assert not midnight.holds(), "a slot landing 23:18 ET covers no 11:00 ET block"
+    assert midnight.backup_worst_case_landing_et() == pytest.approx(23.4)
+    assert midnight.backup_worst_case_freeze_bar_et() > 24
+    assert not midnight.holds(), "a slot landing 23:24 ET covers no 11:00 ET block"
     assert not midnight.primary_holds()
 
 
@@ -300,10 +320,65 @@ def test_each_slot_has_a_trigger_pair():
 
 
 def test_the_lateness_constant_is_not_quietly_optimistic():
-    assert OBSERVED_LATENESS_H >= 5.3, (
-        "5.3 hours is the worst lateness actually observed. Lowering this "
+    assert OBSERVED_LATENESS_H >= 7.4, (
+        "7.4 hours is the worst lateness measured on every day but one since "
+        "2026-08-27 (data/outputs/cbb_cron_lateness.json). Lowering this "
         "constant makes every deadline in this repository pass on paper "
         "without changing anything about when a card lands."
+    )
+
+
+LATENESS_RECORD = Path(__file__).resolve().parents[1] / "data" / "outputs" / "cbb_cron_lateness.json"
+
+#: Every run in the lateness record that fired later than `OBSERVED_LATENESS_H`,
+#: as (repository, workflow, nominal instant). **The schedule does not survive
+#: these, and says so here rather than by leaving them out of the record.** Both
+#: are EPL's Thursday crons on 2026-08-27, the first day of the lateness Cooper
+#: reported, at 9.61h and 9.85h. Sizing for them would move the morning card
+#: to 04:00 UTC and the evening card to 11:00 UTC; that is Cooper's call.
+RUNS_LATER_THAN_THE_CONSTANT = {
+    ("epl-betting-lab", "matchday-refresh.yml", "2026-08-27T11:30:00+00:00"),
+    ("epl-betting-lab", "matchday-refresh.yml", "2026-08-27T13:00:00+00:00"),
+}
+
+
+def test_the_lateness_constant_covers_every_measured_run_but_the_named_ones():
+    """The floor above is a number somebody typed. This one is an observation.
+
+    `OBSERVED_LATENESS_H` was 5.3 for four weeks under a docstring that said
+    "measured", while the same account's crons had run 7.38 hours late. Nothing
+    held the constant to a measurement because there was none on disk; now
+    `scripts/measure_cron_lateness.py` writes one, and this fails the day a
+    re-measurement finds a run later than the constant that is not named in
+    `RUNS_LATER_THAN_THE_CONSTANT` — in either direction, so a named run that
+    disappears from the record is a change somebody has to look at too.
+    """
+    import json
+
+    record = json.loads(LATENESS_RECORD.read_text(encoding="utf-8"))
+    runs = record["worst_runs"]
+    assert record["matched_runs"] >= 500 and len(runs) >= 10, (
+        "the lateness record is too thin to hold a constant to"
+    )
+    assert record["worst_h"] == max(run["lateness_h"] for run in runs)
+    # The record keeps only the worst runs. If even the last of them is later
+    # than the constant, runs the constant does not cover may have been cut.
+    assert min(run["lateness_h"] for run in runs) <= OBSERVED_LATENESS_H, (
+        "every run the record kept is later than the constant, so it may have "
+        "truncated some that are too; raise TOP_N in the script and re-measure"
+    )
+    later = {
+        (run["repository"], run["workflow"], run["nominal_utc"])
+        for run in runs
+        if run["lateness_h"] > OBSERVED_LATENESS_H
+    }
+    assert later == RUNS_LATER_THAN_THE_CONSTANT, (
+        f"runs later than {OBSERVED_LATENESS_H}h have changed.\n"
+        f"  in the record: {sorted(later)}\n"
+        f"  named here:    {sorted(RUNS_LATER_THAN_THE_CONSTANT)}\n"
+        "Raise OBSERVED_LATENESS_H and let the tests below say which crons "
+        "move, or name the run here and tell Cooper the schedule does not "
+        "survive it. Do not edit the record."
     )
 
 
@@ -327,7 +402,9 @@ def test_the_uncardable_share_is_the_measured_one_and_named_rather_than_zero():
 
     **The bar is not the landing.** `gates.IMMINENT_MINUTES` **is**
     `CARD_LEAD_MINUTES`, so a run landing at 10:18 ET freezes nothing tipping
-    at or before 11:18 ET — the tip guard calls those games `IMMINENT`,
+    at or before 11:18 ET — and at the 7.4 hours and moved crons of
+    2026-09-25, a run landing 10:24 nothing at or before 11:24, which is the
+    same 37 games because none tips in between — the tip guard calls those games `IMMINENT`,
     `_rows_to_freeze` drops them, and they never reach the append-only store.
     Measured on the same completed 2025-26 fixture, to the minute rather than
     the hour: **37 games, 0.59% of the slate, over 27 dates from 2025-11-03 to
@@ -363,7 +440,7 @@ def test_the_uncardable_share_is_the_measured_one_and_named_rather_than_zero():
     morning = slot_for("morning")
     landing = morning.backup_worst_case_landing_et()
     bar = morning.backup_worst_case_freeze_bar_et()
-    assert bar == pytest.approx(landing + CARD_LEAD_H) and bar == pytest.approx(11.3)
+    assert bar == pytest.approx(landing + CARD_LEAD_H) and bar == pytest.approx(11.4)
 
     # `<=`, because `tip_state` quarantines `delta <= IMMINENT_MINUTES`: a game
     # tipping exactly on the bar is uncardable too. No game in this fixture sits
@@ -519,3 +596,250 @@ def test_every_declared_cron_is_a_trigger_of_a_slot_that_survives_the_lateness()
             "precede. Move the cron earlier — do not lower the lateness "
             "constant, and do not drop the lead."
         )
+
+
+# --------------------------------------------------------------------------
+# The slot a run publishes as, decided by a shell `case` nothing pinned
+#
+# The workflow names its slot from the hour of the cron that fired it, in a
+# `case` inside the `already-published` job, and an hour it did not list fell
+# through to `morning`. The pin above held `on.schedule` to the contract and
+# nothing held the `case` to either: moving the crons as this file demands
+# would have published every evening card as the morning's, and then stood
+# the evening down on any day the morning card was clean. This runs that step.
+# --------------------------------------------------------------------------
+
+
+def _run_the_slot_guard(tmp_path: Path, *, event: str, schedule: str, dispatch_slot: str = ""):
+    """The `already-published` job's `check` step, as written, under real bash
+    and awk, with a `git` that cannot fetch — the step's own "no card-feed
+    branch yet" path, so it decides the slot exactly as a runner would and
+    then stops without touching a network."""
+    import shutil
+    import subprocess
+
+    import yaml
+
+    document = yaml.safe_load(GAMEDAY_WORKFLOW.read_text(encoding="utf-8"))
+    steps = document["jobs"]["already-published"]["steps"]
+    (step,) = [s for s in steps if s.get("id") == "check"]
+    script = step["run"]
+    script = script.replace("${{ github.event_name }}", event)
+    script = script.replace("${{ github.repository }}", "owner/repository")
+    assert "${{" not in script, "the check step reads an expression this harness does not supply"
+
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_git = bin_dir / "git"
+    fake_git.write_text(
+        "#!/bin/sh\n"
+        'if [ "$1" = init ]; then for last; do :; done; /bin/mkdir -p "$last"; exit 0; fi\n'
+        "exit 1\n",
+        encoding="utf-8",
+    )
+    fake_git.chmod(0o755)
+    output = tmp_path / "github_output"
+    output.write_text("", encoding="utf-8")
+    (tmp_path / "step.sh").write_text(script, encoding="utf-8")
+    bash = shutil.which("bash")
+    assert bash, "no bash on PATH: the slot guard cannot be run"
+    completed = subprocess.run(
+        [bash, "-e", str(tmp_path / "step.sh")],
+        cwd=tmp_path,
+        env={
+            "PATH": f"{bin_dir}:/usr/bin:/bin",
+            "HOME": str(tmp_path),
+            "GITHUB_OUTPUT": str(output),
+            "GH_TOKEN": "not-a-token",
+            "SCHEDULE": schedule,
+            "DISPATCH_SLOT": dispatch_slot,
+        },
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    outputs = dict(
+        line.split("=", 1) for line in output.read_text(encoding="utf-8").splitlines() if "=" in line
+    )
+    return completed, outputs
+
+
+def test_every_declared_cron_names_its_own_slot_when_the_guard_runs(tmp_path: Path):
+    expected = {
+        f"{CRON_MINUTE} {hour} * {SEASON_CRON_MONTHS} *": slot.name
+        for slot in SLOTS
+        for hour in slot.cron_hours_utc
+    }
+    assert set(expected) == set(cron_expressions())
+    for expression, slot_name in expected.items():
+        case = tmp_path / expression.split()[1]
+        case.mkdir()
+        completed, outputs = _run_the_slot_guard(case, event="schedule", schedule=expression)
+        assert completed.returncode == 0, (
+            f"the slot guard failed for the contract cron {expression!r}:\n{completed.stdout}{completed.stderr}"
+        )
+        assert outputs.get("card_slot") == slot_name, (
+            f"a run fired by {expression!r} publishes as {outputs.get('card_slot')!r}, "
+            f"and the contract says it is the {slot_name!r} slot. The hours in the "
+            "`case` of the `already-published` job must follow `schedule_contract`."
+        )
+        assert outputs.get("run") == "yes"
+
+
+def test_a_cron_hour_the_guard_does_not_know_is_refused_rather_than_called_morning(tmp_path: Path):
+    """The fall-through was the defect. An hour no slot owns must stop the run
+    loudly — a failed run is noticed; a mislabelled card is not."""
+    declared = {hour for slot in SLOTS for hour in slot.cron_hours_utc}
+    stray = next(hour for hour in range(24) if hour not in declared)
+    completed, outputs = _run_the_slot_guard(
+        tmp_path, event="schedule", schedule=f"0 {stray} * {SEASON_CRON_MONTHS} *"
+    )
+    assert completed.returncode != 0
+    assert "card_slot" not in outputs and "run" not in outputs
+    assert "belongs to no card slot" in completed.stdout
+
+
+def test_a_dispatch_publishes_as_the_slot_it_asked_for(tmp_path: Path):
+    for slot in SLOTS:
+        case = tmp_path / slot.name
+        case.mkdir()
+        completed, outputs = _run_the_slot_guard(
+            case, event="workflow_dispatch", schedule="", dispatch_slot=slot.name
+        )
+        assert completed.returncode == 0, completed.stderr
+        assert outputs == {"card_slot": slot.name, "run": "yes"}
+
+
+# --------------------------------------------------------------------------
+# The chain past `card-feed`: relay, then reader, on one real clock
+#
+# Everything above asks whether a card can be FROZEN. Cooper sees a card only if
+# the relay copied it into Drive before his chat task read Drive, and that was
+# checked by nothing: the relay's "worst-case" runs were sized for 5.3 hours in
+# EST and pinned to UTC, so from 2027-03-14 they would have run after both
+# reads. These put a card run, the relay runs and the reads on real Eastern
+# instants — the tz database, not this module's offset arithmetic — on one day
+# either side of the switch.
+# --------------------------------------------------------------------------
+
+
+def relay_runs_on(day: date) -> list[datetime]:
+    """The relay's runs on `day`, read back out of its cron string rather than
+    out of the constants that built it, so a hand-edited string is checked too."""
+    prefix, minute, hours, day_of_month, months, day_of_week = relay_cron_expression().split()
+    assert prefix == f"CRON_TZ={RELAY_TIMEZONE}" and RELAY_TIMEZONE == "America/New_York"
+    assert (day_of_month, day_of_week, months) == ("*", "*", SEASON_CRON_MONTHS)
+    return [
+        eastern_instant(day, int(hour) + int(minute) / 60) for hour in hours.split(",")
+    ]
+
+
+def card_ready(slot: CardSlot, day: date, lateness_h: float) -> datetime:
+    """When `card-feed` holds this slot's card: the primary's UTC cron, late,
+    plus the time the run itself takes."""
+    fired = datetime(day.year, day.month, day.day, tzinfo=timezone.utc) + timedelta(
+        hours=min(slot.cron_hours_utc) + lateness_h
+    )
+    return fired + timedelta(minutes=CARD_RUN_BUDGET_MINUTES)
+
+
+def test_every_card_reaches_its_reader_on_time_and_at_worst_lateness_in_both_offsets():
+    """The goal the schedule exists for, stated end to end.
+
+    For each slot, in EST and in EDT, with GitHub on time and at
+    `OBSERVED_LATENESS_H`: some relay run fires after the card is on
+    `card-feed` and finishes before that slot's reader. The relay first
+    proposed for this — `52 4,10,11,17` Eastern with the card crons left at
+    09:00/16:00 UTC — holds in EST at 6.4 hours and fails here for the evening
+    under EDT: a 16:00 UTC card 6.4 hours late is on `card-feed` at 18:44 EDT,
+    after the 17:52 relay and the 18:15 read.
+    """
+    assert set(READER_ET_HOUR) == set(SLOT_NAMES)
+    for slot in SLOTS:
+        for label, offset_h, day in (
+            ("EST", EST_OFFSET_H, AN_EST_SLATE_DAY),
+            ("EDT", EDT_OFFSET_H, AN_EDT_SLATE_DAY),
+        ):
+            reader = eastern_instant(day, READER_ET_HOUR[slot.name])
+            assert eastern_offset_h(reader) == offset_h
+            for case, lateness_h in (("on time", 0.0), ("worst", OBSERVED_LATENESS_H)):
+                ready = card_ready(slot, day, lateness_h)
+                carriers = [
+                    run for run in relay_runs_on(day)
+                    if ready <= run
+                    and run + timedelta(minutes=RELAY_BUDGET_MINUTES) <= reader
+                ]
+                assert carriers, (
+                    f"{slot.name}/{label}/{case}: the card is on card-feed at "
+                    f"{ready.astimezone(EASTERN):%H:%M %Z} and the {slot.name} reader "
+                    f"reads Drive at {reader:%H:%M %Z}, and no relay run "
+                    f"({', '.join(f'{r:%H:%M}' for r in relay_runs_on(day))} ET) fires "
+                    f"after the first and finishes {RELAY_BUDGET_MINUTES} minutes "
+                    "before the second. Move the card cron earlier or the relay — "
+                    "do not lower the lateness, and do not shrink a budget to fit."
+                )
+
+
+def test_an_on_time_card_is_relayed_before_the_next_slot_can_replace_it():
+    """Why the relay has a run at 03:52.
+
+    The relay copies whatever is newest on `card-feed`, so a card is lost to
+    Drive if the next slot publishes before any relay run has copied it. On a
+    day GitHub fires on time the morning card is ready at 02:20 EST and the
+    evening card could be on the feed from 09:00 EST; without an early run the
+    first run after the morning card would find the evening one. This holds
+    only for the on-time day — at worst lateness a morning card can land after
+    an on-time evening card, and no relay schedule prevents that.
+    """
+    for label, day in (("EST", AN_EST_SLATE_DAY), ("EDT", AN_EDT_SLATE_DAY)):
+        for index, slot in enumerate(SLOTS):
+            following = SLOTS[(index + 1) % len(SLOTS)]
+            next_day = day if index + 1 < len(SLOTS) else day + timedelta(days=1)
+            ready = card_ready(slot, day, 0.0)
+            replaced_from = datetime(
+                next_day.year, next_day.month, next_day.day, tzinfo=timezone.utc
+            ) + timedelta(hours=min(following.cron_hours_utc))
+            relays = relay_runs_on(day) + relay_runs_on(next_day)
+            assert any(ready <= run < replaced_from for run in relays), (
+                f"{slot.name}/{label}: an on-time card is ready at "
+                f"{ready.astimezone(EASTERN):%H:%M %Z} and an on-time {following.name} "
+                f"card can replace it from {replaced_from.astimezone(EASTERN):%H:%M %Z}; "
+                "no relay run falls between."
+            )
+
+
+def test_the_relay_script_builds_the_contract_cron():
+    import importlib.util
+
+    path = Path(__file__).resolve().parents[1] / "scripts" / "create_card_relay_routine.py"
+    spec = importlib.util.spec_from_file_location("create_card_relay_routine", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.body()["cron_expression"] == relay_cron_expression()
+    # The two figures the relay prompt carried that the repository contradicts.
+    assert "private repository" not in module.PROMPT
+    assert "45% of games have not tipped" not in module.PROMPT
+
+
+DOCS = Path(__file__).resolve().parents[1] / "docs"
+
+
+def test_the_readers_cooper_was_told_to_set_are_the_ones_the_contract_checks():
+    """`docs/chat_task_prompt.md` is where Cooper was given his read times. If
+    that page and `READER_ET_HOUR` disagree, the chain above is checked against
+    reads that do not happen."""
+    import re
+
+    text = (DOCS / "chat_task_prompt.md").read_text(encoding="utf-8")
+    rows = dict(re.findall(r"\|\s*`CBB CARD — (\w+)`\s*\|\s*\*\*(\d{1,2}:\d{2})\*\*", text))
+    assert rows, "chat_task_prompt.md's table of read times did not parse"
+    as_hours = {name: int(t[:-3]) + int(t[-2:]) / 60 for name, t in rows.items()}
+    assert as_hours == READER_ET_HOUR
+
+
+def test_the_delivery_chain_page_names_the_relay_cron_the_contract_builds():
+    text = (DOCS / "delivery_chain.md").read_text(encoding="utf-8")
+    assert f"`{relay_cron_expression()}`" in text, (
+        "docs/delivery_chain.md does not name the relay cron the contract builds"
+    )

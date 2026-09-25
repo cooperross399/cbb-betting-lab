@@ -127,8 +127,8 @@ has the rest.
   saying tiers are never a name list, and contradicted by the table's own
   61 / 131 / 172.) Cut points `HIGH_MAJOR_MARGIN = 8.0` and `MID_MAJOR_MARGIN =
   −3.0` were declared **before any market was measured per tier**.
-- **The slate spans twelve hours** — 11:00 ET to 23:00 ET, 45% of games still to
-  tip at 19:00 ET. That is why there are two card slots and why the tip guard
+- **The slate spans twelve hours** — 11:00 ET to 23:00 ET, 55% of games still to
+  tip at 19:00 ET (this said 45%, the share that has tipped by then). That is why there are two card slots and why the tip guard
   runs per game rather than against one deadline.
 - **Peak slate: 200 games in a single day** (opening Monday of 2022-23). The
   credit cap is set above it, because a cap below the worst slate starves it.
@@ -883,9 +883,12 @@ this table.
 - **Never edit protected manual files** except through the one permitted path:
   `data/manual/staging_provider_policy.json` (withdrawal only) and
   `data/manual/human_acceptance_receipts/*` (never).
-- **Do not trust the nominal cron time.** GitHub has been firing these repos'
-  crons 4.5-5.3 hours late since 2026-08-27. Every deadline is checked against
-  `nominal + schedule_contract.OBSERVED_LATENESS_H`.
+- **Do not trust the nominal cron time.** Every deadline is checked against
+  `nominal + schedule_contract.OBSERVED_LATENESS_H`, which is 7.4 hours and held
+  to a measurement: `data/outputs/cbb_cron_lateness.json`, re-taken with
+  `scripts/measure_cron_lateness.py`. This line said 4.5-5.3 hours while the
+  account's crons had run 7.38 late, and 9.85 on 2026-08-27 — the one day the
+  schedule is not sized for, named in the test and left to Cooper.
 
 ## How the hard rules are enforced, and where they are not
 

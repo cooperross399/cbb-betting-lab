@@ -23,10 +23,13 @@ layer, and a routine that did not run is not the card failing.
 ## Link 1 — the workflow, which is the only thing that matters
 
 `.github/workflows/cbb-gameday-refresh.yml`, workflow name **`CBB Gameday
-Refresh`**. Four crons: 09:00 and 10:00 UTC for the `morning` slot, 16:00 and
-17:00 UTC for the `evening` slot, each a primary and a backup. The reasoning is
+Refresh`**. Four crons: 07:00 and 08:00 UTC for the `morning` slot, 14:00 and
+15:00 UTC for the `evening` slot, each a primary and a backup. The reasoning is
 in `docs/card_cadence.md`; the short version is that the slate spans twelve
-hours and one freeze cannot serve it.
+hours and one freeze cannot serve it, and that GitHub fires these crons up to
+7.4 hours late, so each is set early enough that its card has reached this
+page's last link before Cooper reads it. They were 09:00/10:00 and
+16:00/17:00 until 2026-09-25.
 
 **It needs no laptop and no terminal.** Never tell Cooper to open a terminal to
 get a card.
@@ -162,20 +165,39 @@ parent only, **not content**, so updating one file in place is not possible —
 each run creates `CBB Card <date> <slot>`, and a re-run whose content is
 byte-identical changes nothing.
 
-**Cron: `37 9,15,16,22 * 11,12,1,2,3,4 *`** — four runs a day through the season
-only. That is a **pair per slot**, and the pairing is the brief's rule that one
-trigger cannot hold both the relay deadline and a freshness requirement:
+**Cron: `CRON_TZ=America/New_York 52 3,10,17 * 11,12,1,2,3,4 *`** — three runs
+a day through the season only, **on the readers' clock**. It comes from
+`schedule_contract.relay_cron_expression()`, and
+`tests/test_the_card_schedule_survives_cron_lateness.py` checks the whole chain
+on real Eastern instants either side of 2027-03-14: every slot's card, with
+GitHub on time and at `OBSERVED_LATENESS_H`, is on `card-feed` before some relay
+run that has finished before that slot's read.
 
-| Run | Catches |
-|:---|:---|
-| 09:37 UTC | the morning workflow firing on time (card ready ~09:15) |
-| 15:37 UTC | the morning workflow firing at the worst observed lateness (~15:18) |
-| 16:37 UTC | the evening workflow firing on time |
-| 22:37 UTC | the evening workflow at worst-case lateness (~22:18) |
+| Run (ET) | Catches | Card on `card-feed` by (EST / EDT) |
+|:---|:---|:---|
+| 03:52 | the morning card, GitHub on time | 02:20 / 03:20 |
+| 10:52 | the morning card at 7.4h late; the evening card on time | 09:44 / 10:44; 09:20 / 10:20 |
+| 17:52 | the evening card at 7.4h late | 16:44 / 17:44 |
 
-Without the second of each pair, a late GitHub cron means no card that slot.
-Without the first, an on-time card sits unread for six hours — and the morning
-card exists precisely to precede an 11:00 ET tip.
+"On `card-feed` by" is the primary's worst landing plus a 20-minute allowance
+for the run (`CARD_RUN_BUDGET_MINUTES` — an allowance, because no in-season run
+exists to time yet), and each relay run is allowed 20 minutes to finish before
+the 11:15 and 18:15 ET reads, because Cooper's routines have been measured
+firing up to fifteen minutes after their cron.
+
+**It was `37 9,15,16,22 * 11,12,1,2,3,4 *` until 2026-09-25, and that cron was
+wrong twice.** It was sized for 5.3 hours of lateness when the account had
+already seen 7.38. And it was fixed in UTC while the readers are not: from
+2027-03-14 its late runs are 11:37 and 18:37 EDT, after both reads, for the
+whole tournament. A relay pinned to Eastern keeps its gap to the reader
+constant; the gap that moves with DST is the one from the UTC card cron to the
+relay, and that is the one the test checks in both offsets.
+
+**The live routine is changed by hand, not by this repository.** Its cron is a
+top-level field of the routine and can be updated on its own;
+`RemoteTrigger get` on `trig_013PaobEWhpXv7vwN3wVxEXS` shows the one it runs.
+Anything else in it — the prompt included — lives in `job_config.ccr`, which an
+update replaces wholesale.
 
 ---
 
@@ -226,7 +248,7 @@ Order of verification, and each step must be observed rather than assumed:
 **Status 2026-09-03: the whole chain carries bytes, proven by reading the file
 that landed rather than by a green run.**
 
-- `CBB CARD RELAY` — `trig_013PaobEWhpXv7vwN3wVxEXS`, cron
+- `CBB CARD RELAY` — `trig_013PaobEWhpXv7vwN3wVxEXS`, cron (then)
   `37 9,15,16,22 * 11,12,1,2,3,4 *`, next run 2026-11-01 09:37 UTC.
 - The Drive file: **`CBB Card CHAIN VERIFICATION 2026-09-03 (safe to delete)`,
   8,013 bytes, `text/markdown`**, read back in full. It carries the status line,
