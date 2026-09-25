@@ -1,0 +1,612 @@
+{
+  "measured_at_utc": "2026-09-25T12:20:22+00:00",
+  "since": "2026-08-27",
+  "repositories": [
+    "cooperross399/cbb-betting-lab",
+    "cooperross399/football-betting-lab",
+    "cooperross399/nhl-betting-lab",
+    "cooperross399/epl-betting-lab",
+    "cooperross399/golf-betting-lab",
+    "cooperross399/ncaaf-betting-lab"
+  ],
+  "method": "Scheduled runs, first attempts only, matched first-in-first-out to the crons their workflow declared at the commit that fired them, each run taking the latest unmatched nominal instant at or before it. Every figure is therefore a LOWER bound on the real lateness. Lateness is created_at minus the nominal cron instant.",
+  "matched_runs": 565,
+  "worst_h": 9.849,
+  "worst": {
+    "repository": "epl-betting-lab",
+    "workflow": "matchday-refresh.yml",
+    "cron": "0 13 * * 4",
+    "nominal_utc": "2026-08-27T13:00:00+00:00",
+    "created_utc": "2026-08-27T22:50:58+00:00",
+    "lateness_h": 9.849,
+    "run_url": "https://github.com/cooperross399/epl-betting-lab/actions/runs/33124095008"
+  },
+  "by_nominal_hour_utc": {
+    "03": {
+      "runs": 36,
+      "median_h": 4.92,
+      "max_h": 5.716
+    },
+    "04": {
+      "runs": 17,
+      "median_h": 4.67,
+      "max_h": 5.65
+    },
+    "05": {
+      "runs": 4,
+      "median_h": 4.52,
+      "max_h": 4.773
+    },
+    "06": {
+      "runs": 53,
+      "median_h": 4.79,
+      "max_h": 7.384
+    },
+    "08": {
+      "runs": 13,
+      "median_h": 5.2,
+      "max_h": 5.405
+    },
+    "09": {
+      "runs": 35,
+      "median_h": 4.39,
+      "max_h": 6.827
+    },
+    "10": {
+      "runs": 38,
+      "median_h": 4.04,
+      "max_h": 7.303
+    },
+    "11": {
+      "runs": 35,
+      "median_h": 3.94,
+      "max_h": 9.609
+    },
+    "12": {
+      "runs": 30,
+      "median_h": 3.66,
+      "max_h": 5.566
+    },
+    "13": {
+      "runs": 27,
+      "median_h": 3.9,
+      "max_h": 9.849
+    },
+    "14": {
+      "runs": 54,
+      "median_h": 3.68,
+      "max_h": 5.223
+    },
+    "15": {
+      "runs": 30,
+      "median_h": 3.34,
+      "max_h": 4.893
+    },
+    "16": {
+      "runs": 27,
+      "median_h": 2.92,
+      "max_h": 4.217
+    },
+    "17": {
+      "runs": 23,
+      "median_h": 2.69,
+      "max_h": 3.717
+    },
+    "18": {
+      "runs": 50,
+      "median_h": 2.74,
+      "max_h": 3.743
+    },
+    "19": {
+      "runs": 23,
+      "median_h": 2.52,
+      "max_h": 3.373
+    },
+    "20": {
+      "runs": 21,
+      "median_h": 2.39,
+      "max_h": 3.089
+    },
+    "21": {
+      "runs": 25,
+      "median_h": 1.93,
+      "max_h": 2.744
+    },
+    "23": {
+      "runs": 24,
+      "median_h": 1.87,
+      "max_h": 2.375
+    }
+  },
+  "by_workflow": [
+    {
+      "repository": "epl-betting-lab",
+      "workflow": "matchday-refresh.yml",
+      "crons": [
+        "30 11 * * 4",
+        "0 13 * * 4",
+        "30 11 * * 5",
+        "0 13 * * 5",
+        "0 9 * * 6",
+        "30 10 * * 6",
+        "0 9 * * 0",
+        "30 10 * * 0",
+        "30 11 * * 1",
+        "0 13 * * 1"
+      ],
+      "matched_runs": 2,
+      "median_h": 9.73,
+      "max_h": 9.849
+    },
+    {
+      "repository": "football-betting-lab",
+      "workflow": "provider-quota.yml",
+      "crons": [
+        "0 6 * * *"
+      ],
+      "matched_runs": 28,
+      "median_h": 5.3,
+      "max_h": 7.384
+    },
+    {
+      "repository": "epl-betting-lab",
+      "workflow": "weekly-lab-check.yml",
+      "crons": [
+        "0 10 * * 1"
+      ],
+      "matched_runs": 4,
+      "median_h": 6.07,
+      "max_h": 7.303
+    },
+    {
+      "repository": "epl-betting-lab",
+      "workflow": "matchday-refresh.yml",
+      "crons": [
+        "0 3 * * 5",
+        "30 4 * * 5",
+        "0 9 * * 5",
+        "30 10 * * 5",
+        "0 3 * * 6",
+        "30 4 * * 6",
+        "0 9 * * 6",
+        "30 10 * * 6",
+        "0 3 * * 0",
+        "30 4 * * 0",
+        "0 9 * * 0",
+        "30 10 * * 0",
+        "0 3 * * 1",
+        "30 4 * * 1",
+        "0 9 * * 1",
+        "30 10 * * 1",
+        "15 4 * * 4",
+        "45 5 * * 4",
+        "15 8 * * 4"
+      ],
+      "matched_runs": 62,
+      "median_h": 4.55,
+      "max_h": 6.827
+    },
+    {
+      "repository": "football-betting-lab",
+      "workflow": "football-gameday-refresh.yml",
+      "crons": [
+        "0 9 * 9-12,1 *",
+        "0 10 * 9-12,1 *",
+        "0 11 * 9-12,1 *",
+        "0 12 * 9-12,1 *",
+        "0 13 * 9-12,1 *",
+        "0 14 * 9-12,1 *",
+        "0 15 * 9-12,1 *",
+        "0 16 * 9-12,1 *",
+        "0 17 * 9-12,1 *",
+        "0 18 * 9-12,1 *",
+        "0 19 * 9-12,1 *",
+        "0 20 * 9-12,1 *",
+        "0 21 * 9-12,1 *"
+      ],
+      "matched_runs": 274,
+      "median_h": 3.19,
+      "max_h": 6.388
+    },
+    {
+      "repository": "cbb-betting-lab",
+      "workflow": "weekly-refit-and-measure.yml",
+      "crons": [
+        "0 11 * * 1"
+      ],
+      "matched_runs": 3,
+      "median_h": 5.82,
+      "max_h": 5.836
+    },
+    {
+      "repository": "cbb-betting-lab",
+      "workflow": "line-movement.yml",
+      "crons": [
+        "13 14 * * *",
+        "13 18 * * *",
+        "13 23 * * *",
+        "13 3 * * *"
+      ],
+      "matched_runs": 94,
+      "median_h": 3.22,
+      "max_h": 5.716
+    },
+    {
+      "repository": "golf-betting-lab",
+      "workflow": "golf-card-refresh.yml",
+      "crons": [
+        "0 8 * * 3",
+        "0 11 * * 3",
+        "0 14 * * 3",
+        "0 8 * * 4",
+        "0 11 * * 4",
+        "0 8 * * 5",
+        "0 11 * * 5",
+        "0 12 * * 6",
+        "0 12 * * 0"
+      ],
+      "matched_runs": 20,
+      "median_h": 4.25,
+      "max_h": 5.405
+    },
+    {
+      "repository": "epl-betting-lab",
+      "workflow": "matchday-refresh.yml",
+      "crons": [
+        "30 4 * * 4",
+        "0 8 * * 4",
+        "30 10 * * 4",
+        "0 9 * * 5",
+        "30 10 * * 5",
+        "0 9 * * 6",
+        "30 10 * * 6",
+        "0 9 * * 0",
+        "30 10 * * 0",
+        "0 9 * * 1",
+        "30 10 * * 1"
+      ],
+      "matched_runs": 2,
+      "median_h": 4.88,
+      "max_h": 5.315
+    },
+    {
+      "repository": "epl-betting-lab",
+      "workflow": "publish-board.yml",
+      "crons": [
+        "30 8 * * *"
+      ],
+      "matched_runs": 2,
+      "median_h": 5.25,
+      "max_h": 5.293
+    },
+    {
+      "repository": "cbb-betting-lab",
+      "workflow": "provider-quota.yml",
+      "crons": [
+        "0 6 * * *"
+      ],
+      "matched_runs": 25,
+      "median_h": 4.18,
+      "max_h": 5.174
+    },
+    {
+      "repository": "golf-betting-lab",
+      "workflow": "shopping-card.yml",
+      "crons": [
+        "0 13 * * 2",
+        "0 15 * * 2",
+        "0 17 * * 2",
+        "0 19 * * 2",
+        "0 21 * * 2"
+      ],
+      "matched_runs": 10,
+      "median_h": 3.06,
+      "max_h": 4.539
+    },
+    {
+      "repository": "cbb-betting-lab",
+      "workflow": "publish-board.yml",
+      "crons": [
+        "0 12 * * *"
+      ],
+      "matched_runs": 2,
+      "median_h": 4.29,
+      "max_h": 4.491
+    },
+    {
+      "repository": "nhl-betting-lab",
+      "workflow": "experiment-refresh.yml",
+      "crons": [
+        "0 16 * * 1"
+      ],
+      "matched_runs": 3,
+      "median_h": 4.1,
+      "max_h": 4.217
+    },
+    {
+      "repository": "football-betting-lab",
+      "workflow": "weekly-ledger-check.yml",
+      "crons": [
+        "0 14 * * 2"
+      ],
+      "matched_runs": 4,
+      "median_h": 3.85,
+      "max_h": 3.958
+    },
+    {
+      "repository": "epl-betting-lab",
+      "workflow": "closing-snapshot.yml",
+      "crons": [
+        "10 11 * * 6",
+        "40 13 * * 6",
+        "10 16 * * 6",
+        "40 12 * * 0",
+        "10 15 * * 0",
+        "40 18 * * 5",
+        "40 18 * * 1"
+      ],
+      "matched_runs": 21,
+      "median_h": 2.92,
+      "max_h": 3.94
+    },
+    {
+      "repository": "nhl-betting-lab",
+      "workflow": "publish-site.yml",
+      "crons": [
+        "45 14 * * *"
+      ],
+      "matched_runs": 2,
+      "median_h": 3.88,
+      "max_h": 3.904
+    },
+    {
+      "repository": "golf-betting-lab",
+      "workflow": "weekly-check.yml",
+      "crons": [
+        "0 15 * * 2"
+      ],
+      "matched_runs": 2,
+      "median_h": 3.5,
+      "max_h": 3.59
+    },
+    {
+      "repository": "football-betting-lab",
+      "workflow": "football-gameday-refresh.yml",
+      "crons": [
+        "0 14 * 9-12,1 *",
+        "30 15 * 9-12,1 *",
+        "0 21 * 9-12,1 *"
+      ],
+      "matched_runs": 5,
+      "median_h": 3.31,
+      "max_h": 3.557
+    }
+  ],
+  "worst_runs": [
+    {
+      "repository": "epl-betting-lab",
+      "workflow": "matchday-refresh.yml",
+      "cron": "0 13 * * 4",
+      "nominal_utc": "2026-08-27T13:00:00+00:00",
+      "created_utc": "2026-08-27T22:50:58+00:00",
+      "lateness_h": 9.849,
+      "run_url": "https://github.com/cooperross399/epl-betting-lab/actions/runs/33124095008"
+    },
+    {
+      "repository": "epl-betting-lab",
+      "workflow": "matchday-refresh.yml",
+      "cron": "30 11 * * 4",
+      "nominal_utc": "2026-08-27T11:30:00+00:00",
+      "created_utc": "2026-08-27T21:06:32+00:00",
+      "lateness_h": 9.609,
+      "run_url": "https://github.com/cooperross399/epl-betting-lab/actions/runs/33116572179"
+    },
+    {
+      "repository": "football-betting-lab",
+      "workflow": "provider-quota.yml",
+      "cron": "0 6 * * *",
+      "nominal_utc": "2026-08-31T06:00:00+00:00",
+      "created_utc": "2026-08-31T13:23:01+00:00",
+      "lateness_h": 7.384,
+      "run_url": "https://github.com/cooperross399/football-betting-lab/actions/runs/33396666889"
+    },
+    {
+      "repository": "epl-betting-lab",
+      "workflow": "weekly-lab-check.yml",
+      "cron": "0 10 * * 1",
+      "nominal_utc": "2026-08-31T10:00:00+00:00",
+      "created_utc": "2026-08-31T17:18:12+00:00",
+      "lateness_h": 7.303,
+      "run_url": "https://github.com/cooperross399/epl-betting-lab/actions/runs/33418823512"
+    },
+    {
+      "repository": "epl-betting-lab",
+      "workflow": "matchday-refresh.yml",
+      "cron": "0 9 * * 1",
+      "nominal_utc": "2026-09-14T09:00:00+00:00",
+      "created_utc": "2026-09-14T15:49:39+00:00",
+      "lateness_h": 6.827,
+      "run_url": "https://github.com/cooperross399/epl-betting-lab/actions/runs/34864707907"
+    },
+    {
+      "repository": "epl-betting-lab",
+      "workflow": "matchday-refresh.yml",
+      "cron": "0 9 * * 1",
+      "nominal_utc": "2026-09-21T09:00:00+00:00",
+      "created_utc": "2026-09-21T15:49:06+00:00",
+      "lateness_h": 6.818,
+      "run_url": "https://github.com/cooperross399/epl-betting-lab/actions/runs/35621505617"
+    },
+    {
+      "repository": "football-betting-lab",
+      "workflow": "provider-quota.yml",
+      "cron": "0 6 * * *",
+      "nominal_utc": "2026-08-29T06:00:00+00:00",
+      "created_utc": "2026-08-29T12:35:23+00:00",
+      "lateness_h": 6.59,
+      "run_url": "https://github.com/cooperross399/football-betting-lab/actions/runs/33252884120"
+    },
+    {
+      "repository": "football-betting-lab",
+      "workflow": "provider-quota.yml",
+      "cron": "0 6 * * *",
+      "nominal_utc": "2026-09-21T06:00:00+00:00",
+      "created_utc": "2026-09-21T12:34:12+00:00",
+      "lateness_h": 6.57,
+      "run_url": "https://github.com/cooperross399/football-betting-lab/actions/runs/35600294942"
+    },
+    {
+      "repository": "football-betting-lab",
+      "workflow": "provider-quota.yml",
+      "cron": "0 6 * * *",
+      "nominal_utc": "2026-09-14T06:00:00+00:00",
+      "created_utc": "2026-09-14T12:27:48+00:00",
+      "lateness_h": 6.463,
+      "run_url": "https://github.com/cooperross399/football-betting-lab/actions/runs/34843554699"
+    },
+    {
+      "repository": "football-betting-lab",
+      "workflow": "football-gameday-refresh.yml",
+      "cron": "0 9 * 9-12,1 *",
+      "nominal_utc": "2026-09-21T09:00:00+00:00",
+      "created_utc": "2026-09-21T15:23:17+00:00",
+      "lateness_h": 6.388,
+      "run_url": "https://github.com/cooperross399/football-betting-lab/actions/runs/35618585494"
+    },
+    {
+      "repository": "football-betting-lab",
+      "workflow": "football-gameday-refresh.yml",
+      "cron": "0 9 * 9-12,1 *",
+      "nominal_utc": "2026-09-14T09:00:00+00:00",
+      "created_utc": "2026-09-14T15:18:19+00:00",
+      "lateness_h": 6.305,
+      "run_url": "https://github.com/cooperross399/football-betting-lab/actions/runs/34861278141"
+    },
+    {
+      "repository": "football-betting-lab",
+      "workflow": "provider-quota.yml",
+      "cron": "0 6 * * *",
+      "nominal_utc": "2026-09-07T06:00:00+00:00",
+      "created_utc": "2026-09-07T12:11:54+00:00",
+      "lateness_h": 6.198,
+      "run_url": "https://github.com/cooperross399/football-betting-lab/actions/runs/34120561581"
+    },
+    {
+      "repository": "epl-betting-lab",
+      "workflow": "weekly-lab-check.yml",
+      "cron": "0 10 * * 1",
+      "nominal_utc": "2026-09-21T10:00:00+00:00",
+      "created_utc": "2026-09-21T16:05:17+00:00",
+      "lateness_h": 6.088,
+      "run_url": "https://github.com/cooperross399/epl-betting-lab/actions/runs/35623310922"
+    },
+    {
+      "repository": "epl-betting-lab",
+      "workflow": "weekly-lab-check.yml",
+      "cron": "0 10 * * 1",
+      "nominal_utc": "2026-09-14T10:00:00+00:00",
+      "created_utc": "2026-09-14T16:03:19+00:00",
+      "lateness_h": 6.055,
+      "run_url": "https://github.com/cooperross399/epl-betting-lab/actions/runs/34866165320"
+    },
+    {
+      "repository": "epl-betting-lab",
+      "workflow": "matchday-refresh.yml",
+      "cron": "30 10 * * 1",
+      "nominal_utc": "2026-09-21T10:30:00+00:00",
+      "created_utc": "2026-09-21T16:33:15+00:00",
+      "lateness_h": 6.054,
+      "run_url": "https://github.com/cooperross399/epl-betting-lab/actions/runs/35626332030"
+    },
+    {
+      "repository": "football-betting-lab",
+      "workflow": "football-gameday-refresh.yml",
+      "cron": "0 10 * 9-12,1 *",
+      "nominal_utc": "2026-09-21T10:00:00+00:00",
+      "created_utc": "2026-09-21T16:01:56+00:00",
+      "lateness_h": 6.032,
+      "run_url": "https://github.com/cooperross399/football-betting-lab/actions/runs/35622932926"
+    },
+    {
+      "repository": "football-betting-lab",
+      "workflow": "football-gameday-refresh.yml",
+      "cron": "0 10 * 9-12,1 *",
+      "nominal_utc": "2026-09-14T10:00:00+00:00",
+      "created_utc": "2026-09-14T16:00:17+00:00",
+      "lateness_h": 6.005,
+      "run_url": "https://github.com/cooperross399/football-betting-lab/actions/runs/34865836707"
+    },
+    {
+      "repository": "epl-betting-lab",
+      "workflow": "matchday-refresh.yml",
+      "cron": "30 10 * * 1",
+      "nominal_utc": "2026-09-14T10:30:00+00:00",
+      "created_utc": "2026-09-14T16:28:36+00:00",
+      "lateness_h": 5.977,
+      "run_url": "https://github.com/cooperross399/epl-betting-lab/actions/runs/34868843252"
+    },
+    {
+      "repository": "epl-betting-lab",
+      "workflow": "matchday-refresh.yml",
+      "cron": "0 9 * * 1",
+      "nominal_utc": "2026-09-07T09:00:00+00:00",
+      "created_utc": "2026-09-07T14:58:05+00:00",
+      "lateness_h": 5.968,
+      "run_url": "https://github.com/cooperross399/epl-betting-lab/actions/runs/34135806275"
+    },
+    {
+      "repository": "cbb-betting-lab",
+      "workflow": "weekly-refit-and-measure.yml",
+      "cron": "0 11 * * 1",
+      "nominal_utc": "2026-09-21T11:00:00+00:00",
+      "created_utc": "2026-09-21T16:50:09+00:00",
+      "lateness_h": 5.836,
+      "run_url": "https://github.com/cooperross399/cbb-betting-lab/actions/runs/35628132053"
+    },
+    {
+      "repository": "cbb-betting-lab",
+      "workflow": "weekly-refit-and-measure.yml",
+      "cron": "0 11 * * 1",
+      "nominal_utc": "2026-09-14T11:00:00+00:00",
+      "created_utc": "2026-09-14T16:49:22+00:00",
+      "lateness_h": 5.823,
+      "run_url": "https://github.com/cooperross399/cbb-betting-lab/actions/runs/34870972455"
+    },
+    {
+      "repository": "football-betting-lab",
+      "workflow": "provider-quota.yml",
+      "cron": "0 6 * * *",
+      "nominal_utc": "2026-08-30T06:00:00+00:00",
+      "created_utc": "2026-08-30T11:43:21+00:00",
+      "lateness_h": 5.723,
+      "run_url": "https://github.com/cooperross399/football-betting-lab/actions/runs/33309635137"
+    },
+    {
+      "repository": "football-betting-lab",
+      "workflow": "football-gameday-refresh.yml",
+      "cron": "0 11 * 9-12,1 *",
+      "nominal_utc": "2026-09-14T11:00:00+00:00",
+      "created_utc": "2026-09-14T16:43:09+00:00",
+      "lateness_h": 5.719,
+      "run_url": "https://github.com/cooperross399/football-betting-lab/actions/runs/34870334811"
+    },
+    {
+      "repository": "cbb-betting-lab",
+      "workflow": "line-movement.yml",
+      "cron": "13 3 * * *",
+      "nominal_utc": "2026-09-21T03:13:00+00:00",
+      "created_utc": "2026-09-21T08:55:56+00:00",
+      "lateness_h": 5.716,
+      "run_url": "https://github.com/cooperross399/cbb-betting-lab/actions/runs/35580474329"
+    },
+    {
+      "repository": "football-betting-lab",
+      "workflow": "football-gameday-refresh.yml",
+      "cron": "0 11 * 9-12,1 *",
+      "nominal_utc": "2026-09-21T11:00:00+00:00",
+      "created_utc": "2026-09-21T16:42:53+00:00",
+      "lateness_h": 5.715,
+      "run_url": "https://github.com/cooperross399/football-betting-lab/actions/runs/35627360050"
+    }
+  ]
+}

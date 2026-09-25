@@ -103,7 +103,7 @@ silent, and both were caught before a single row was joined.
 
 **The card cadence was designed before the slate's shape was measured.** The
 first version had one card a day, which the hour-by-hour distribution then made
-obviously wrong — 45% of games still to tip at 19:00 ET. It cost nothing because
+obviously wrong — 55% of games still to tip at 19:00 ET. It cost nothing because
 nothing had been built on it, but the measurement should have come first.
 
 **A test was written that banned a word rather than an assertion**, three

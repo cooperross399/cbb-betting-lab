@@ -1008,8 +1008,9 @@ def test_the_weekly_cron_cannot_land_in_the_following_iso_week():
 
     The alpha budget's bucket is the ISO week the run stamps. A trigger that can
     slip across a Sunday/Monday boundary spends next week's budget on this
-    week's search — and GitHub has been firing these repositories' crons 4.5-5.3
-    hours late since 2026-08-27, so the margin is not theoretical.
+    week's search — and GitHub has fired these repositories' crons up to 7.38
+    hours late since 2026-08-28 (`data/outputs/cbb_cron_lateness.json`), so the
+    margin is not theoretical.
     """
     crons = workflow_crons()
     assert crons, "the weekly workflow has no cron; this test would pass vacuously"
