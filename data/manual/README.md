@@ -7,7 +7,7 @@ whole point of a decision living in a file is that a script cannot make it.
 | File | Who may write it |
 |:---|:---|
 | `staging_provider_policy.json` | **Cooper**, in a pull request with a signed receipt beside it and a green **`Policy Gate`** check. Claude may call `staging_provider_policy.withdraw()` on it — the one exception — because withdrawal can only ever reduce what the card may do. |
-| `human_acceptance_receipts/*` | **Cooper.** Claude drafts a receipt with truthful provenance and never signs one. | A receipt is a JSON object with `market`, `receipt_id`, `evidence` (`{"path", "sha256"}` of a record that exists and hashes to that value; a relative path is read from the repository root), `signed_by` (a person, never Claude) and `signed_on` (`YYYY-MM-DD`). `staging_provider_policy.load()` checks all of it for every allowlisted market and loads the whole policy manual-only when any market lacks one. |
+| `human_acceptance_receipts/*` | **Cooper.** Claude drafts a receipt with truthful provenance and never signs one. | A receipt is a JSON object with `market`, `receipt_id`, `evidence` (`{"path", "sha256"}` of a record that exists, hashes to that value and resolves INSIDE the repository — evidence outside the checkout is in no diff a reviewer reads; a relative path is read from the repository root), `signed_by` (Cooper, by the folded letters of his name, and never Claude) and `signed_on` (`YYYY-MM-DD`). The allowlist ENTRY must carry `receipt_id` and `evidence_checksum`: both were optional until 2026-09-26, and an entry that records neither binds to whichever receipt happens to name its market. Exactly one receipt may claim an entry — two claiming one approval refuses, because the earlier FILENAME used to win. A market named in `withdrawn` is refused unless its approval is NEWER than the withdrawal. `staging_provider_policy.load()` checks all of it for every allowlisted market and loads the whole policy manual-only when any market lacks one. |
 | `human_acceptance_receipts/superseded/*` | Moved here when a receipt is withdrawn. Kept, never deleted: a superseded receipt is the record of a decision that was really made. |
 
 `Policy Gate` is `.github/workflows/policy-gate.yml`. It runs on every pull
@@ -39,9 +39,14 @@ paraphrase or a misspelling is not removed, and both are written down in
 No condition stands between a pull request and that verdict — the job carries
 no `if:`, no `needs:` and no `strategy:`, and a check skipped by a condition
 is reported by GitHub as a success. What the gate checks about a signature is exactly this: that
-`signed_by` is not one of the spellings of Claude it refuses. Nothing here is
+`signed_by` is not one of the spellings of Claude it refuses, and that its
+letters are one of `staging_provider_policy.ACCEPTED_SIGNERS` — a source
+constant no argument, environment variable, git config or config file reaches.
+Until 2026-09-26 only the first half ran, which is a deny list of ONE NAME, so
+every string that did not spell `claude` was a signature. Nothing here is
 cryptographic and no identity is verified, so whether the person named
-actually signed is decided by whoever reviews the pull request. Until
+actually signed is still decided by whoever reviews the pull request; what the
+second list buys is that a forgery has to carry Cooper's own name. Until
 2026-09-05 the row above named a gate that did not exist: nothing under
 `.github/workflows/` opened a receipt. It is
 not a context branch protection requires — measured 2026-09-05, main requires

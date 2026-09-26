@@ -75,6 +75,7 @@ enforced here: `Ledger Guard` is not a required context, and
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import importlib.util
 import json
@@ -4862,7 +4863,22 @@ def policy_checkout(root: Path) -> Path:
     return tree
 
 
-def write_policy(tree: Path, *markets: str, mode: str = "reviewed") -> None:
+#: The evidence bytes `write_receipt` writes unless a test asks for others, and
+#: their digest. The digest is a constant here because the allowlist ENTRY has
+#: to record it: since 2026-09-26 `verify_receipt` refuses an entry whose
+#: `evidence_checksum` is empty, because an entry that records none is bound to
+#: no particular receipt and any receipt carrying the right `receipt_id` stands
+#: behind it. All ten of this lab's live entries carried an empty one.
+DEFAULT_EVIDENCE = b'{"roi": -0.031, "bets": 4830}\n'
+DEFAULT_EVIDENCE_DIGEST = hashlib.sha256(DEFAULT_EVIDENCE).hexdigest()
+
+
+def write_policy(
+    tree: Path,
+    *markets: str,
+    mode: str = "reviewed",
+    evidence_checksum: str = DEFAULT_EVIDENCE_DIGEST,
+) -> None:
     (tree / POLICY_FILE_RELATIVE).write_text(
         json.dumps(
             {
@@ -4874,7 +4890,7 @@ def write_policy(tree: Path, *markets: str, mode: str = "reviewed") -> None:
                         "receipt_id": f"r-{market}",
                         "approved_on": "2026-12-01",
                         "roi_floor": -0.02,
-                        "evidence_checksum": "",
+                        "evidence_checksum": evidence_checksum,
                         "minimum_bets": 200,
                         "note": "synthetic, in a temporary directory, for a test",
                     }
@@ -4894,7 +4910,7 @@ def write_receipt(
     market: str,
     *,
     signed_by: str = "Cooper Ross",
-    evidence: bytes = b'{"roi": -0.031, "bets": 4830}\n',
+    evidence: bytes = DEFAULT_EVIDENCE,
     cite_instead: bytes | None = None,
     delete_evidence: bool = False,
 ) -> Path:
@@ -6778,3 +6794,170 @@ def test_an_empty_response_directory_is_never_saved_over_the_resume_chain() -> N
         "exists only to stop an empty save failing — which is exactly the save "
         "that must not happen."
     )
+
+
+# --------------------------------------------------------------------------
+# 2026-09-26: the gate resolves `git` itself, rather than asking PATH
+#
+# `subprocess.run(["git", ...])` resolves `git` through PATH, and PATH is an
+# environment variable anything able to run this gate can set. Measured on the
+# parent commit against this very tree: a twelve-line shell script called
+# `git`, placed earlier on PATH, WITH NO EDIT ANYWHERE IN THIS REPOSITORY,
+# rewrote the summary's
+#
+#   "This change ADDS `moneyline`, `spread`, … to the allowlist."
+#
+# into
+#
+#   "This change adds no market to the allowlist."
+#
+# It could not flip the exit status — the receipt verification never shells
+# out — but the sentence it rewrote is the one a human reads before pressing
+# merge, and a gate whose findings can be edited from outside it is reporting
+# on a tree nobody has.
+# --------------------------------------------------------------------------
+
+#: A `git` that lies about the base commit, in the smallest form that does it.
+LYING_GIT = """#!/bin/sh
+case "$*" in
+  *cat-file*) exit 0 ;;
+  *show*)
+    printf '%s\\n' '{"provider":"the_odds_api","mode":"reviewed","allowlist":[{"market":"moneyline"}],"withdrawn":[]}'
+    exit 0 ;;
+esac
+exit 1
+"""
+
+
+def receipt_checker_module():
+    """The gate's checker, imported as a module so its own resolution of `git`
+    can be asked about directly."""
+    spec = importlib.util.spec_from_file_location(
+        "cbb_receipt_checker_under_test", PROJECT_ROOT / RECEIPT_CHECKER
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_a_git_earlier_on_path_cannot_rewrite_which_markets_the_change_adds(
+    tmp_path: Path,
+) -> None:
+    """The measurement above, run as a rule.
+
+    The same tree is checked twice: once with an honest PATH and once with a
+    `git` that reports the base commit as already allowlisting `moneyline`.
+    The two summaries have to say the same thing, because they are about the
+    same two commits and only one of them is true.
+    """
+    root = tmp_path / "shimmed"
+    root.mkdir()
+    tree = policy_checkout(root)
+    write_policy(tree)
+    base = commit_policy_tree(tree)
+
+    write_policy(tree, "moneyline")
+    write_receipt(tree, "moneyline")
+    honest, honest_summary = run_policy_gate_for_real(
+        tree, event="pull_request", base_sha=base
+    )
+    assert honest.returncode == 0, f"{honest.stdout}\n{honest.stderr}"
+    assert "ADDS `moneyline`" in honest_summary, honest_summary
+
+    binaries = tree.parent / "bin"
+    binaries.mkdir(exist_ok=True)
+    planted = binaries / "git"
+    planted.write_text(LYING_GIT, encoding="utf-8")
+    planted.chmod(0o755)
+
+    shimmed, shimmed_summary = run_policy_gate_for_real(
+        tree, event="pull_request", base_sha=base
+    )
+    assert "ADDS `moneyline`" in shimmed_summary, (
+        "a `git` earlier on PATH rewrote the sentence saying which market this "
+        f"change adds, and the gate believed it:\n{shimmed_summary}"
+    )
+    assert "adds no market" not in shimmed_summary, shimmed_summary
+    assert shimmed.returncode == honest.returncode, (
+        f"the planted git changed the gate's verdict: {shimmed.stdout}"
+    )
+
+
+def test_the_checker_never_resolves_git_through_path() -> None:
+    """The property behind the measurement, read off the source.
+
+    A behavioural test can only plant the shims somebody thought of. This one
+    says the bare name is never handed to `subprocess` at all.
+    """
+    module = receipt_checker_module()
+    for candidate in module.GIT_CANDIDATES:
+        assert candidate.startswith("/"), (
+            f"{candidate} is not an absolute path, so PATH decides what runs"
+        )
+    # READ THE CODE, NOT THE PROSE. Grepping the file for the bare name is
+    # what this rule wanted, and it cannot have it: the comment explaining
+    # WHY the bare name is refused has to quote the bare name, and a guard
+    # that a correct explanation of itself sets off is a guard that gets
+    # deleted. Same hazard as the `contents: write` grep in the NHL lab, and
+    # the same answer — ask a question comments are not part of. The AST has
+    # no comments in it.
+    tree = ast.parse((PROJECT_ROOT / RECEIPT_CHECKER).read_text(encoding="utf-8"))
+    calls = 0
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        called = ast.unparse(node.func)
+        if not called.startswith("subprocess."):
+            continue
+        calls += 1
+        assert node.args, f"{called} is called with no argument vector"
+        vector = node.args[0]
+        assert isinstance(vector, (ast.List, ast.Tuple)), (
+            f"{called} is handed {ast.unparse(vector)}, which this rule cannot "
+            "read; spell the argument vector as a literal list or tuple"
+        )
+        assert vector.elts, f"{called} is handed an empty argument vector"
+        head = vector.elts[0]
+        if isinstance(head, ast.Constant) and isinstance(head.value, str):
+            assert head.value.startswith("/"), (
+                f"{RECEIPT_CHECKER} runs the bare name `{head.value}`, which "
+                "`subprocess` resolves through PATH. The executable must come "
+                "from GIT_CANDIDATES by absolute path."
+            )
+        else:
+            assert "trusted" in called or "git" in ast.unparse(head).casefold(), (
+                f"{called} runs {ast.unparse(head)}, which this rule cannot "
+                "trace back to a trusted absolute path"
+            )
+    assert calls >= 2, (
+        f"only {calls} subprocess calls were found in {RECEIPT_CHECKER}; the "
+        "rule is reading the wrong file or the calls changed shape"
+    )
+    assert "shutil.which" not in ast.unparse(tree), (
+        "`shutil.which` searches PATH, which is the thing being refused"
+    )
+
+
+def test_a_file_at_a_trusted_path_that_is_not_git_is_refused(tmp_path: Path) -> None:
+    """WHERE it is and WHAT it is are two questions, and a forger who can
+    answer the first must still answer the second."""
+    module = receipt_checker_module()
+    impostor = tmp_path / "git"
+    impostor.write_text("#!/bin/sh\necho 'not git at all'\nexit 0\n", encoding="utf-8")
+    impostor.chmod(0o755)
+    module.GIT_CANDIDATES = (str(impostor),)
+    with pytest.raises(RuntimeError) as refused:
+        module.trusted_git()
+    assert "no trusted `git`" in str(refused.value), refused.value
+
+
+def test_a_gate_that_cannot_find_git_is_broken_and_not_green(tmp_path: Path) -> None:
+    """"I could not check" and "there was nothing to check" must not share a
+    branch — the same rule the unreadable-policy case already holds."""
+    module = receipt_checker_module()
+    module.GIT_CANDIDATES = (str(tmp_path / "nothing" / "here"),)
+    status, lines = module.report(PROJECT_ROOT, "HEAD")
+    assert status == module.BROKEN, (
+        f"a gate that could not resolve git returned {status}, not BROKEN"
+    )
+    assert any("Broken gate" in line for line in lines), lines

@@ -4,43 +4,63 @@
   "allowlist": [
     {
       "market": "alternate_spread",
-      "receipt_id": "alternate_spread-20260923-cooperross399"
+      "receipt_id": "alternate_spread-20260923-cooperross399",
+      "approved_on": "2026-09-23",
+      "evidence_checksum": "3989a26da06a07725906fbd8591b3176930cac67e53c4502e729083f0f7c1a88"
     },
     {
       "market": "alternate_team_total",
-      "receipt_id": "alternate_team_total-20260923-cooperross399"
+      "receipt_id": "alternate_team_total-20260923-cooperross399",
+      "approved_on": "2026-09-23",
+      "evidence_checksum": "3989a26da06a07725906fbd8591b3176930cac67e53c4502e729083f0f7c1a88"
     },
     {
       "market": "alternate_total_points",
-      "receipt_id": "alternate_total_points-20260923-cooperross399"
+      "receipt_id": "alternate_total_points-20260923-cooperross399",
+      "approved_on": "2026-09-23",
+      "evidence_checksum": "3989a26da06a07725906fbd8591b3176930cac67e53c4502e729083f0f7c1a88"
     },
     {
       "market": "moneyline",
-      "receipt_id": "moneyline-20260923-cooperross399"
+      "receipt_id": "moneyline-20260923-cooperross399",
+      "approved_on": "2026-09-23",
+      "evidence_checksum": "3989a26da06a07725906fbd8591b3176930cac67e53c4502e729083f0f7c1a88"
     },
     {
       "market": "moneyline_h1",
-      "receipt_id": "moneyline_h1-20260923-cooperross399"
+      "receipt_id": "moneyline_h1-20260923-cooperross399",
+      "approved_on": "2026-09-23",
+      "evidence_checksum": "3989a26da06a07725906fbd8591b3176930cac67e53c4502e729083f0f7c1a88"
     },
     {
       "market": "spread",
-      "receipt_id": "spread-20260923-cooperross399"
+      "receipt_id": "spread-20260923-cooperross399",
+      "approved_on": "2026-09-23",
+      "evidence_checksum": "3989a26da06a07725906fbd8591b3176930cac67e53c4502e729083f0f7c1a88"
     },
     {
       "market": "spread_h1",
-      "receipt_id": "spread_h1-20260923-cooperross399"
+      "receipt_id": "spread_h1-20260923-cooperross399",
+      "approved_on": "2026-09-23",
+      "evidence_checksum": "3989a26da06a07725906fbd8591b3176930cac67e53c4502e729083f0f7c1a88"
     },
     {
       "market": "team_total",
-      "receipt_id": "team_total-20260923-cooperross399"
+      "receipt_id": "team_total-20260923-cooperross399",
+      "approved_on": "2026-09-23",
+      "evidence_checksum": "3989a26da06a07725906fbd8591b3176930cac67e53c4502e729083f0f7c1a88"
     },
     {
       "market": "total_points",
-      "receipt_id": "total_points-20260923-cooperross399"
+      "receipt_id": "total_points-20260923-cooperross399",
+      "approved_on": "2026-09-23",
+      "evidence_checksum": "3989a26da06a07725906fbd8591b3176930cac67e53c4502e729083f0f7c1a88"
     },
     {
       "market": "total_points_h1",
-      "receipt_id": "total_points_h1-20260923-cooperross399"
+      "receipt_id": "total_points_h1-20260923-cooperross399",
+      "approved_on": "2026-09-23",
+      "evidence_checksum": "3989a26da06a07725906fbd8591b3176930cac67e53c4502e729083f0f7c1a88"
     }
   ],
   "withdrawn": []

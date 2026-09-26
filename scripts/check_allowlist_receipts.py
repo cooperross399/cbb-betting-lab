@@ -52,11 +52,26 @@ not the evidence. There is still no `grant()`.
 
 WHAT IT CANNOT DO. It cannot tell a real signature from a forged one. Nothing
 here is cryptographic and no identity is checked: `signed_by` is a string in a
-JSON file, and all this gate can say about it is that it is not one of the
-spellings of Claude it knows to refuse. Whether the person named actually
-signed is decided by the human reviewing the pull request, and the summary
-this script prints says so in those words rather than claiming an enforcement
-it does not have.
+JSON file, and what this gate can say about it is that it is not one of the
+spellings of Claude it refuses AND that its letters are one of
+`staging_provider_policy.ACCEPTED_SIGNERS` — a source constant no argument,
+environment variable, git config or config file reaches. Until 2026-09-26 only
+the first half ran, which is a deny list of ONE NAME, so `Anonymous Bot` and
+`fixture-signer` were both signatures; measured, each loaded a market live.
+Whether the person named actually signed is still decided by the human
+reviewing the pull request, and the summary this script prints says so in those
+words rather than claiming an enforcement it does not have.
+
+AND IT RESOLVES `git` ITSELF. A subprocess call handed the bare name of a
+binary resolves it through `PATH`, and `PATH` is an environment variable
+anything able to run this gate can set. Measured 2026-09-26: a twelve-line
+shell script named after git, placed earlier on `PATH`, WITH NO EDIT ANYWHERE
+IN THIS REPOSITORY, rewrote "This change ADDS `moneyline` ... to the allowlist"
+into "This change adds no market to the allowlist." It could not move the exit
+status — the receipt verification never shells out — but the sentence it edited
+is the one a human reads before pressing merge. `trusted_git()` takes the
+binary from `GIT_CANDIDATES` by absolute path and makes it answer `--version`
+with git's own banner, and finding none is a BROKEN GATE rather than a pass.
 
 EXIT STATUS. `0` when every allowlisted market is receipted, `1` when one is
 not, and `2` when the check could not be run at all — an unreadable base ref,
@@ -187,11 +202,15 @@ SIGNATURE_NOTE = (
     "What this gate checks about a signature, exactly: that `signed_by` is not "
     "one of the spellings of Claude it knows to refuse — any value whose "
     "letters spell `claude`, whatever the case and whatever the punctuation "
-    "between them. That is the whole of it. Nothing here is cryptographic and "
-    "no identity is verified, so this gate cannot tell a real signature from a "
-    "forged one and does not claim to: whether the person named actually "
-    "signed a receipt is decided by the human reviewing this pull request, "
-    "not here."
+    "between them — and that its letters ARE one of the names the door opens "
+    "for, which is a list in the module's own source that no argument, "
+    "environment variable, git config or config file reaches. That is the "
+    "whole of it. Nothing here is cryptographic and no identity is verified, "
+    "so this gate cannot tell a real signature from a forged one and does not "
+    "claim to: whether the person named actually signed a receipt is decided "
+    "by the human reviewing this pull request, not here. What the two lists "
+    "together buy is that a receipt has to carry the OWNER'S name to be "
+    "considered at all, which is a narrower forgery than any name at all."
 )
 
 
@@ -491,24 +510,101 @@ def unreadable_policy(path: Path) -> str:
     return ""
 
 
+#: Where a real `git` lives. An ABSOLUTE path out of this list, never a name
+#: looked up on `PATH`.
+#:
+#: A subprocess call handed the bare NAME of the binary resolves it through
+#: `PATH`, and `PATH` is an environment variable that anything able to run
+#: this gate can set.
+#: Measured 2026-09-26 on this tree: a twelve-line shell script called `git`,
+#: placed earlier on `PATH`, with NO EDIT ANYWHERE IN THIS REPOSITORY, turned
+#: the summary's "This change ADDS `moneyline`, `spread`, … to the allowlist"
+#: into "This change adds no market to the allowlist." It could not flip the
+#: exit status — the receipt verification below never shells out — but the
+#: sentence it rewrote is the one a human reads before pressing merge, which
+#: makes it worth as much to a forger as the status is.
+#:
+#: The threat model is an agent with code execution on this machine. "Only
+#: forgeable by something that can run code here" describes the attack, not a
+#: mitigation.
+GIT_CANDIDATES: tuple[str, ...] = (
+    "/usr/bin/git",
+    "/bin/git",
+    "/opt/homebrew/bin/git",
+    "/usr/local/bin/git",
+)
+
+#: The environment the resolved git runs in. `PATH` is pinned to the system
+#: directories so that git's own helper lookups cannot be redirected either,
+#: and the three `GIT_*` settings below stop a planted config file from
+#: rewriting what `git show` returns. `HOME` is not passed, so `~/.gitconfig`
+#: is not read.
+GIT_ENVIRONMENT: dict[str, str] = {
+    "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
+    "GIT_CONFIG_GLOBAL": os.devnull,
+    "GIT_CONFIG_SYSTEM": os.devnull,
+    "GIT_CONFIG_NOSYSTEM": "1",
+}
+
+
+def trusted_git() -> str:
+    """The absolute path of a real `git`, or `RuntimeError`.
+
+    Two questions, because either alone is answerable by a forger. WHERE it
+    is: one of :data:`GIT_CANDIDATES`, so a `git` earlier on `PATH` is not
+    consulted at all. WHAT it is: it must answer `--version` with git's own
+    banner, so a file dropped at one of those paths by something that already
+    had the privileges to write there is at least made to impersonate git
+    rather than merely be named it.
+
+    Finding none is a BROKEN GATE and never a pass. A gate that could not read
+    the base commit has not compared this change against it.
+    """
+    for candidate in GIT_CANDIDATES:
+        git_path = Path(candidate)
+        if not git_path.is_file() or not os.access(git_path, os.X_OK):
+            continue
+        try:
+            banner = subprocess.run(
+                [str(git_path), "--version"],
+                capture_output=True,
+                text=True,
+                env=GIT_ENVIRONMENT,
+                timeout=30,
+            )
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if banner.returncode == 0 and banner.stdout.strip().startswith("git version"):
+            return str(git_path)
+    raise RuntimeError(
+        "no trusted `git` was found at any of "
+        + ", ".join(f"`{c}`" for c in GIT_CANDIDATES)
+        + ". This gate resolves git by absolute path rather than through "
+        "`PATH`, because a `git` earlier on `PATH` rewrites the sentence "
+        "saying which markets this change adds"
+    )
+
+
+def _git(git: str, root: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [git, "-C", str(root), *arguments],
+        capture_output=True,
+        text=True,
+        env=GIT_ENVIRONMENT,
+    )
+
+
 def base_allowlist(root: Path, ref: str) -> tuple[set[str], str]:
     """The markets allowlisted at `ref`, and one line saying where they came
     from. Raises `RuntimeError` when the ref itself cannot be read."""
-    resolved = subprocess.run(
-        ["git", "-C", str(root), "cat-file", "-e", f"{ref}^{{commit}}"],
-        capture_output=True,
-        text=True,
-    )
+    git = trusted_git()
+    resolved = _git(git, root, "cat-file", "-e", f"{ref}^{{commit}}")
     if resolved.returncode != 0:
         raise RuntimeError(
             f"cannot resolve the base commit `{ref}` in {root}: "
             f"{resolved.stderr.strip() or 'git said nothing'}"
         )
-    shown = subprocess.run(
-        ["git", "-C", str(root), "show", f"{ref}:{POLICY_RELATIVE}"],
-        capture_output=True,
-        text=True,
-    )
+    shown = _git(git, root, "show", f"{ref}:{POLICY_RELATIVE}")
     if shown.returncode != 0:
         return set(), (
             f"`{POLICY_RELATIVE}` does not exist at the base commit `{ref}`, so "
@@ -592,7 +688,9 @@ def report(root: Path, base_ref: str) -> tuple[int, list[str]]:
 
     failures: dict[str, str] = {}
     for market in markets:
-        receipt, reason = SPP.verify_receipt(policy.allowlist[market], manual)
+        receipt, reason = SPP.verify_receipt(
+            policy.allowlist[market], manual, withdrawn=policy.withdrawn
+        )
         if receipt is None:
             failures[market] = reason
             lines.append(f"| `{_plain(market)}` | — | **RED** — lacks {_plain(reason)} |")

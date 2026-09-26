@@ -46,7 +46,17 @@ def _lab(tmp_path: Path, *, allowlist: list[str], valid_receipt: bool = True) ->
     entries = []
     for market in allowlist:
         rid = f"{market}-20260923-fixture"
-        entries.append({"market": market, "receipt_id": rid})
+        # `evidence_checksum` is not optional since 2026-09-26: an entry that
+        # records none is bound to no particular receipt, so `verify_receipt`
+        # refuses it. All ten of this lab's live entries carried an empty one.
+        entries.append(
+            {
+                "market": market,
+                "receipt_id": rid,
+                "approved_on": "2026-09-23",
+                "evidence_checksum": digest,
+            }
+        )
         if valid_receipt:
             (manual / f"{rid}.json").write_text(
                 json.dumps(
@@ -54,10 +64,21 @@ def _lab(tmp_path: Path, *, allowlist: list[str], valid_receipt: bool = True) ->
                         "market": market,
                         "receipt_id": rid,
                         "evidence": {"path": EVIDENCE, "sha256": digest},
-                        # Never a real person and never Claude: the loader
-                        # refuses `claude` in any spelling, and this fixture
-                        # must not look like a signature anyone made.
-                        "signed_by": "fixture-signer",
+                        # This read `fixture-signer`, with the note "never a
+                        # real person and never Claude ... this fixture must
+                        # not look like a signature anyone made". The first
+                        # half of that is now unreachable: since 2026-09-26
+                        # the loader refuses every `signed_by` whose letters
+                        # are not the owner's, because a deny list of one name
+                        # let `fixture-signer` — and `Anonymous Bot`, and
+                        # `automated` — open the door on the real policy file.
+                        # A fixture that cannot satisfy the door cannot test
+                        # what the door lets through.
+                        #
+                        # The second half is kept where it can still be kept:
+                        # this tree is `tmp_path`, it is deleted with the test,
+                        # and nothing here writes into `data/manual/`.
+                        "signed_by": "Cooper Ross",
                         "signed_on": "2026-09-23",
                     }
                 ),
