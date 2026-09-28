@@ -15,12 +15,96 @@
       "receipt_id": "alternate_total_points-20260923-cooperross399"
     },
     {
+      "market": "championship_winner",
+      "receipt_id": "championship_winner-20260928-delegated-cooperross399"
+    },
+    {
       "market": "moneyline",
       "receipt_id": "moneyline-20260923-cooperross399"
     },
     {
       "market": "moneyline_h1",
       "receipt_id": "moneyline_h1-20260923-cooperross399"
+    },
+    {
+      "market": "moneyline_h2",
+      "receipt_id": "moneyline_h2-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_assists",
+      "receipt_id": "player_assists-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_blocks",
+      "receipt_id": "player_blocks-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_blocks_steals",
+      "receipt_id": "player_blocks_steals-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_double_double",
+      "receipt_id": "player_double_double-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_field_goals",
+      "receipt_id": "player_field_goals-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_first_basket",
+      "receipt_id": "player_first_basket-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_first_team_basket",
+      "receipt_id": "player_first_team_basket-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_frees_attempts",
+      "receipt_id": "player_frees_attempts-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_frees_made",
+      "receipt_id": "player_frees_made-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_points",
+      "receipt_id": "player_points-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_points_assists",
+      "receipt_id": "player_points_assists-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_points_rebounds",
+      "receipt_id": "player_points_rebounds-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_pra",
+      "receipt_id": "player_pra-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_rebounds",
+      "receipt_id": "player_rebounds-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_rebounds_assists",
+      "receipt_id": "player_rebounds_assists-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_steals",
+      "receipt_id": "player_steals-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_threes",
+      "receipt_id": "player_threes-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_triple_double",
+      "receipt_id": "player_triple_double-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "player_turnovers",
+      "receipt_id": "player_turnovers-20260928-delegated-cooperross399"
     },
     {
       "market": "spread",
@@ -31,8 +115,20 @@
       "receipt_id": "spread_h1-20260923-cooperross399"
     },
     {
+      "market": "spread_h2",
+      "receipt_id": "spread_h2-20260928-delegated-cooperross399"
+    },
+    {
       "market": "team_total",
       "receipt_id": "team_total-20260923-cooperross399"
+    },
+    {
+      "market": "team_total_h1",
+      "receipt_id": "team_total_h1-20260928-delegated-cooperross399"
+    },
+    {
+      "market": "team_total_h2",
+      "receipt_id": "team_total_h2-20260928-delegated-cooperross399"
     },
     {
       "market": "total_points",
@@ -41,6 +137,10 @@
     {
       "market": "total_points_h1",
       "receipt_id": "total_points_h1-20260923-cooperross399"
+    },
+    {
+      "market": "total_points_h2",
+      "receipt_id": "total_points_h2-20260928-delegated-cooperross399"
     }
   ],
   "withdrawn": []
