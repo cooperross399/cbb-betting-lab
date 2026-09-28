@@ -1,0 +1,18 @@
+{
+  "market": "total_points_h2",
+  "receipt_id": "total_points_h2-20260928-delegated-cooperross399",
+  "evidence": {
+    "path": "data/outputs/cbb_price_backtest.md",
+    "sha256": "3989a26da06a07725906fbd8591b3176930cac67e53c4502e729083f0f7c1a88"
+  },
+  "signed_by": "Cooper Ross (delegated: executed by his AI assistant on his written instruction)",
+  "executed_by": "Claude",
+  "signed_on": "2026-09-28",
+  "authorisation": {
+    "instruction": "I am givin full permission for you to sign for me as i already have done before",
+    "earlier": "i want every market allowlisted. If it never produces a pick then so be it but i want it to try. (2026-09-25)",
+    "then": "Chose 'All five' proposals (EPL #318, NFL #54, CBB #101, golf #5, NCAAF #4) when asked which to sign, and said 'go'",
+    "session": "https://claude.ai/code/session_01MLyv5sDrNt4PF58XBr3M2w"
+  },
+  "statement": "Executed by Claude on Cooper Ross's explicit written instruction, as his delegate; Cooper did not personally review this evidence first. This market has never been measured against real prices. The lab's evidence bundle says of the markets it has measured: 'The only result that survives is a loss' (5 cells exclude zero on the losing side). This receipt records an owner's decision to run the market forward and accumulate a live record, not a finding that an edge exists."
+}
