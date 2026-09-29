@@ -30,11 +30,24 @@ on:
     #
     # Spread across the day so consecutive captures bracket the hours when a
     # board actually moves: mid-morning, early afternoon, an hour before the
-    # first tips, and late in the evening slate.
-    - cron: "13 14 * * *"
-    - cron: "13 18 * * *"
-    - cron: "13 23 * * *"
-    - cron: "13 3 * * *"
+    # 19:00 ET block, and late in the evening slate. THOSE ARE THE ROUNDS:
+    # 14:13, 18:13, 23:13 and 03:13 UTC.
+    #
+    # EACH CRON FIRES EIGHT HOURS BEFORE ITS ROUND, and the `wait` jobs below
+    # hold the run until the round (scripts/wait_for_round.py). GitHub starts
+    # this account's scheduled runs hours late: these crons, written at their
+    # rounds, ran a median 3.1 h and at worst 6.6 h late over 86 runs from
+    # 2026-09-08 to 09-29. At that lateness the 23:13 round landed after the
+    # 19:00 ET block had tipped and the 03:13 round after the whole night had
+    # finished, and a quote captured after tip-off is no price. Lateness up to
+    # eight hours now costs nothing. Moving a round means moving its cron to
+    # eight hours before it, and each cron must name one minute and one hour,
+    # because the wait reads them back to find its round.
+    # `tests/test_a_late_capture_still_lands_on_its_round.py` pins all of it.
+    - cron: "13 6 * * *"
+    - cron: "13 10 * * *"
+    - cron: "13 15 * * *"
+    - cron: "13 19 * * *"
 
 permissions:
   # Writes the capture store to its own ref. A capture must never be able to
@@ -44,10 +57,57 @@ permissions:
   contents: write
 
 jobs:
+  # Hold a scheduled run until its round. Two jobs, because one may run for at
+  # most six hours and a round can be eight away; each waits at most 340
+  # minutes and the second recomputes the round from the same cron. They check
+  # out the repository for the script and nothing else: no install, no secret,
+  # no credit. A manual dispatch has no schedule and does not wait.
+  wait:
+    name: Wait for the round
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Wait for the round
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+        run: python3 scripts/wait_for_round.py --schedule "$SCHEDULE" --budget-minutes 340
+
+  wait-more:
+    name: Wait for the round (continued)
+    needs: wait
+    # A wait that failed must not cost the round: capture late rather than not
+    # at all.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Wait for the round
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+        run: python3 scripts/wait_for_round.py --schedule "$SCHEDULE" --budget-minutes 340
+
   capture:
     name: Line Movement
+    needs: wait-more
+    # Spelled out: a bare `if` (or none) carries an implicit success() over
+    # every job upstream, so a wait that failed would skip the capture.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Captures never run two at once, so a restore always reads the previous
+    # round's push and the publish always fast-forwards. On the JOB, not the
+    # workflow: runs now wait for hours and overlap, and a workflow-level
+    # group keeps only one run pending, so a waiting run would be cancelled by
+    # the next cron that fired behind it.
+    concurrency:
+      group: line-movement
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
