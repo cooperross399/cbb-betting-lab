@@ -5,9 +5,14 @@ my repos' crons 4.5-5.3 hours late since 2026-08-27. Check every deadline
 against `nominal + OBSERVED_LATENESS_H`."*
 
 This module holds those constants in one place so the workflow, the docs and
-the test that proves the schedule works all read the same numbers. Raising
-:data:`OBSERVED_LATENESS_H` when GitHub gets worse is a one-line change that
-proves itself, because the test recomputes the whole table from it.
+the test that proves the schedule works all read the same numbers.
+
+**Since 2026-09-29 the card does not ride the lateness; it absorbs it.** Each
+card cron fires :data:`WAIT_LEAD_H` (eight hours) before a fixed SLOT, and the
+workflow waits for the slot, so the card lands at the same UTC time every day
+whatever GitHub does below eight hours (decision 61 in `docs/decision_log.md`).
+:data:`OBSERVED_LATENESS_H` is what the lead has to exceed, and it is still the
+constant the weekly refit is sized by.
 
 **A landing is not a deadline.** Every deadline here is a landing plus
 :data:`CARD_LEAD_MINUTES`, because the tip guard the card actually runs
@@ -46,21 +51,18 @@ from zoneinfo import ZoneInfo
 #: a lower bound, and `tests/test_the_card_schedule_survives_cron_lateness.py`
 #: fails when a run in it is later than this constant and not named there.
 #:
-#: **TWO RUNS ARE LATER, AND THIS SCHEDULE DOES NOT SURVIVE THEM.** On
-#: 2026-08-27 — the first day of the lateness Cooper reported — EPL's two
-#: Thursday crons fired **9.61h and 9.85h** late. Sizing every deadline for 9.85
-#: would move the morning card to 04:00 UTC and the evening card to 11:00 UTC,
-#: pricing every day of the season hours earlier against a repeat of one day.
-#: That is Cooper's trade to make and not a constant's, so 7.4 is the worst
-#: lateness on every OTHER day since 2026-08-27, rounded up, and the two runs it
-#: does not cover are named in the test rather than dropped from the record.
+#: **TWO RUNS ARE LATER.** On 2026-08-27 — the first day of the lateness Cooper
+#: reported — EPL's two Thursday crons fired **9.61h and 9.85h** late. 7.4 is
+#: the worst lateness on every OTHER day since 2026-08-27, rounded up, and the
+#: two runs it does not cover are named in the test rather than dropped from the
+#: record. They exceed :data:`WAIT_LEAD_H` too, and what a card fired that late
+#: does is computed by :meth:`CardSlot.landing_utc_hour` and pinned in the test.
 #:
-#: Lateness is not flat across the day, and one constant ignores that on
-#: purpose. Crons due 03:00-10:00 UTC run worst (every run over 6.2h but the
-#: two above was due 06:00-10:00 UTC, most of them on a Monday); none due at or
-#: after 16:00 UTC has been more than 4.22h late. Applying the morning's worst to
-#: the evening is pessimistic by about two hours, and it is the pessimism that
-#: moved the evening card — see :data:`EVENING`.
+#: Lateness is not flat across the day. Crons due 03:00-10:00 UTC run worst
+#: (every run over 6.2h but the two above was due 06:00-10:00 UTC, most of them
+#: on a Monday); none due at or after 16:00 UTC has been more than 4.22h late.
+#: The morning card's crons (04:00, 05:00 UTC) sit in the worst band, which is
+#: why the lead is sized to the account-wide worst and not to an hour's.
 OBSERVED_LATENESS_H = 7.4
 
 #: Eastern standard time offset, UTC-5. The college basketball season runs
@@ -73,22 +75,17 @@ EST_OFFSET_H = -5
 #: it used to say DST moves every landing an hour *earlier* in ET, "the safe
 #: direction". A cron is fixed in UTC, so when the offset shrinks from -5 to -4
 #: the same instant reads an hour LATER on an Eastern clock — 08:00 UTC, the
-#: morning backup, is 03:00 EST on 2027-03-13 and 04:00 EDT on 2027-03-14. Later
-#: is the unsafe direction, toward the first tip, and at the worst observed
-#: lateness it moves the morning backup from 10:24 ET to 11:24 ET, past its
-#: 11:00 ET block.
+#: morning backup's slot, is 08:00 EST on 2027-03-13 and 09:00 EDT on
+#: 2027-03-14. Later is the unsafe direction, toward the first tip and toward
+#: the relay, so EDT is the offset that sets every slot hour: the slots of
+#: 2026-09-29 were chosen as the latest whose BACKUP still freezes its block and
+#: reaches the relay under EDT. EDT also covers the season's first days in a
+#: year whose first Sunday of November falls after the 1st.
 #:
-#: This comment used to end "the morning primary (10:18 ET) and both evening
-#: triggers still hold", and that sentence was the same sixty-minute omission
-#: :func:`freeze_bar_et_hour` exists to close. A run landing at 10:24 cannot
-#: freeze an 11:00 tip: the tip guard quarantines it. Under EDT the morning
-#: primary therefore misses the 11:00 block too, and the evening backup lands
-#: 18:24 and cannot reach the 19:00 block it exists for. Those gaps are
-#: recorded rather than chased — the crons moved on 2026-09-25 for the lateness
-#: and for the relay, not to close them — and
-#: `tests/test_the_card_schedule_survives_cron_lateness.py` pins the sign on
-#: those two instants and the whole set of cells that cannot freeze their block
-#: as written.
+#: Under the lateness-driven schedule this offset cost four cells that could not
+#: freeze their block, recorded rather than closed. With the wait there are
+#: none, and `tests/test_the_card_schedule_survives_cron_lateness.py` pins the
+#: sign on the two instants above and the empty set of cells, both ways.
 EDT_OFFSET_H = -4
 
 EASTERN = ZoneInfo("America/New_York")
@@ -166,78 +163,132 @@ def freeze_bar_et_hour(landing_hour_et: float) -> float:
     return landing_hour_et + CARD_LEAD_H
 
 
+#: How far before its SLOT every card cron fires, in hours. Since 2026-09-29
+#: (decision 61) a card no longer lands whenever GitHub gets round to it: the
+#: cron fires this long before the slot, and the workflow's `wait` and
+#: `wait-more` jobs hold the run until the slot (`scripts/wait_for_round.py`,
+#: whose `ROUND_LEAD` a test holds equal to this). Lateness up to the lead
+#: therefore costs nothing, and the card lands AT its slot every day, in a
+#: window of minutes rather than the seven hours it used to wander across.
+#:
+#: Eight, as in the NHL lab and `line-movement.yml`: above the 7.4h
+#: :data:`OBSERVED_LATENESS_H` and the account-wide 7.38h it rounds. The two
+#: runs of 2026-08-27 (9.61h and 9.85h) exceed it; a run that late starts after
+#: its slot and runs at once, which is what every run did before, and
+#: :meth:`CardSlot.landing_utc_hour` says where it lands.
+WAIT_LEAD_H = 8
+
+
+def cron_hour_for(slot_hour_utc: int) -> int:
+    """The UTC hour of the cron that serves a slot at `slot_hour_utc`.
+
+    **A slot before 08:00 UTC is refused, not wrapped.** Its cron would fire on
+    the previous UTC day, and the season's month field would then fire it on
+    30 April for a 1 May slot nobody plays and never on 31 October for the
+    1 November slot that opens the season. Every slot here is at or after
+    12:00 UTC, so every cron fires on its slot's own UTC date and the month
+    field needs no shift. A slot that needs one is a change to
+    :func:`cron_expressions` — an extra day-of-month line for the first day —
+    and not something to discover on the season's opening morning.
+    """
+    hour = int(slot_hour_utc) - WAIT_LEAD_H
+    if not 0 <= hour < 24:
+        raise ValueError(
+            f"a slot at {slot_hour_utc:02d}:00 UTC needs its cron at {hour % 24:02d}:00 UTC "
+            "on the PREVIOUS day, and the season month field would then miss the "
+            "season's first day (1 November) and fire for 1 May. Shift the month and "
+            "day fields deliberately in cron_expressions() before using such a slot."
+        )
+    return hour
+
+
 @dataclass(frozen=True)
 class CardSlot:
-    """One publishing slot: when it nominally fires and what it must precede."""
+    """One publishing slot: when it lands, and what it must precede."""
 
     name: str
-    #: Nominal cron hours in UTC. Two of them: a primary and a backup an hour
-    #: later, where the backup stands down if the primary published cleanly.
-    cron_hours_utc: tuple[int, ...]
-    #: The ET hour this slot's games start at. The slot must land a full
-    #: :data:`CARD_LEAD_MINUTES` before it even at worst-case lateness — not
-    #: merely before it, see :func:`freeze_bar_et_hour`.
+    #: The UTC hours the card LANDS, primary then backup an hour later; the
+    #: backup stands down if the primary published cleanly. The crons are
+    #: derived: :attr:`cron_hours_utc` is each of these less
+    #: :data:`WAIT_LEAD_H`.
+    slot_hours_utc: tuple[int, ...]
+    #: The ET hour this slot's games start at. The slot must be able to FREEZE
+    #: it — see :meth:`worst_case_freeze_bar_et` — not merely land before it.
     must_precede_et_hour: int
     what: str
 
+    @property
+    def cron_hours_utc(self) -> tuple[int, ...]:
+        """The crons that fire this slot, :data:`WAIT_LEAD_H` before it."""
+        return tuple(cron_hour_for(hour) for hour in self.slot_hours_utc)
+
+    def _slot_hour(self, trigger: str) -> int:
+        if trigger == "primary":
+            return min(self.slot_hours_utc)
+        if trigger == "backup":
+            return max(self.slot_hours_utc)
+        raise KeyError(f"unknown trigger {trigger!r}; a slot has a 'primary' and a 'backup'")
+
+    def landing_utc_hour(self, trigger: str = "primary", lateness_h: float = 0.0) -> float:
+        """The UTC hour-of-day `trigger`'s card job starts, its cron
+        `lateness_h` late: the slot, unless GitHub started the run after it.
+
+        The wait releases the run at the slot and never before it, so any
+        lateness from zero to :data:`WAIT_LEAD_H` lands exactly on the slot.
+        Beyond the lead the run starts late and does not wait at all.
+        """
+        slot = self._slot_hour(trigger)
+        return max(float(slot), cron_hour_for(slot) + float(lateness_h))
+
     def worst_case_landing_et(self, offset_h: float = EST_OFFSET_H) -> float:
-        """The latest ET hour this slot can land, at observed worst lateness.
-        `offset_h` is the Eastern offset in force: EST for the season's bulk,
-        `EDT_OFFSET_H` from 2027-03-14, which lands an hour later."""
-        primary = min(self.cron_hours_utc)
-        return (primary + OBSERVED_LATENESS_H + offset_h) % 24
+        """The latest ET hour the PRIMARY lands at any lateness the wait
+        absorbs — which is the slot itself. `offset_h` is the Eastern offset in
+        force: EST for the season's bulk, EDT for the tournament, when a fixed
+        UTC slot reads an hour later."""
+        return (self.landing_utc_hour("primary", WAIT_LEAD_H) + offset_h) % 24
 
     def backup_worst_case_landing_et(self, offset_h: float = EST_OFFSET_H) -> float:
-        backup = max(self.cron_hours_utc)
-        return (backup + OBSERVED_LATENESS_H + offset_h) % 24
+        return (self.landing_utc_hour("backup", WAIT_LEAD_H) + offset_h) % 24
 
     def worst_case_freeze_bar_et(self, offset_h: float = EST_OFFSET_H) -> float:
-        """The earliest tip the PRIMARY can still freeze, at worst lateness:
-        its landing plus the card lead. See :func:`freeze_bar_et_hour`."""
-        return freeze_bar_et_hour(self.worst_case_landing_et(offset_h))
+        """The earliest tip the PRIMARY is sure to freeze: its landing, plus
+        the whole :data:`CARD_RUN_BUDGET_MINUTES` (the freeze happens somewhere
+        inside the run, so take its end), plus the card lead. See
+        :func:`freeze_bar_et_hour`."""
+        return freeze_bar_et_hour(self.worst_case_landing_et(offset_h) + CARD_RUN_BUDGET_H)
 
     def backup_worst_case_freeze_bar_et(self, offset_h: float = EST_OFFSET_H) -> float:
-        """The earliest tip the BACKUP can still freeze, at worst lateness."""
-        return freeze_bar_et_hour(self.backup_worst_case_landing_et(offset_h))
+        """The earliest tip the BACKUP is sure to freeze."""
+        return freeze_bar_et_hour(self.backup_worst_case_landing_et(offset_h) + CARD_RUN_BUDGET_H)
 
     def primary_holds(self, offset_h: float = EST_OFFSET_H) -> bool:
-        """True when the primary trigger can still freeze the block's first tip.
-
-        The weaker of the two promises, and the only one the morning slot keeps
-        under EST. It is stated separately because the backup exists precisely
-        for the day the primary was dropped, so "the primary holds" is not a
-        substitute for "the slot holds" — it is the smaller thing that is true.
-        """
+        """True when the primary can freeze the block's first tip."""
         return self.worst_case_freeze_bar_et(offset_h) < self.must_precede_et_hour
 
     def holds(self, offset_h: float = EST_OFFSET_H) -> bool:
-        """True when even the backup trigger can still FREEZE the block's first
-        tip — landing plus :data:`CARD_LEAD_MINUTES`, not the bare landing.
+        """True when even the BACKUP can freeze the block's first tip.
 
-        This method asked `backup_worst_case_landing_et(offset_h) <
-        must_precede_et_hour` until 2026-09-15, with no lead term, twenty-seven
-        lines below the constant that defines the lead. Three of the four
-        slot/offset cells it passed cannot in fact freeze the block they name,
-        and the uncardable share the repository had recorded off the same
-        omission (0.05%) understated the real one (0.59%) by eighteen times.
+        Under the lateness-driven schedule this failed in four of the eight
+        slot/offset/trigger cells, and those gaps were recorded rather than
+        closed. With the wait every trigger lands on its slot, so the slots
+        were chosen for this to hold in all of them, in EST and in EDT.
         """
         return self.backup_worst_case_freeze_bar_et(offset_h) < self.must_precede_et_hour
 
 
-#: 11:00 ET is the earliest tip in a full season (3 games); 12:00 ET is the
-#: earliest with meaningful volume. The morning slot is held to 11:00.
+#: 11:00 ET is the earliest tip in a full season with any volume (34 games in
+#: 2025-26); 12:00 ET is the earliest with meaningful volume. The morning slot
+#: is held to 11:00.
 #:
-#: 07:00/08:00 UTC since 2026-09-25, from 09:00/10:00, and two constraints set
-#: it. At 7.4h late a 09:00 UTC primary lands 11:24 EST and can freeze nothing
-#: before 12:24, so it no longer covered its own block at all; 08:00 would. But
-#: the card also has to REACH Cooper, and from 2027-03-14 an 08:00 UTC primary
-#: lands 11:24 EDT at worst — after the 11:15 ET reader. 07:00 UTC lands 10:24
-#: EDT, is ready by 10:44 on :data:`CARD_RUN_BUDGET_MINUTES`, and the relay's
-#: 10:52 ET run carries it. The tests hold both constraints, so the next change
-#: to the lateness says which of them moves this pair.
+#: **12:00 and 13:00 UTC since 2026-09-29** (decision 61), from crons at 07:00
+#: and 08:00 UTC that landed wherever GitHub's lateness put them. The latest
+#: pair whose BACKUP still freezes the 11:00 ET block under EDT: 13:00 UTC is
+#: 09:00 EDT, done by 09:20, freezing everything from 10:20. A 14:00 UTC backup
+#: is 10:00 EDT and can freeze nothing before 11:20. In EST the pair is 07:00
+#: and 08:00. Both are on `card-feed` well before the relay's 10:52 ET run.
 MORNING = CardSlot(
     name="morning",
-    cron_hours_utc=(7, 8),
+    slot_hours_utc=(12, 13),
     must_precede_et_hour=11,
     what="every cardable game tipping at least an hour after the run",
 )
@@ -246,19 +297,17 @@ MORNING = CardSlot(
 #: slot exists for the 55% the morning card priced half a day out or not at
 #: all, and is held to the 19:00 ET block.
 #:
-#: 14:00/15:00 UTC since 2026-09-25, from 16:00/17:00, and the reason is the
-#: reader rather than the block. At 7.4h late a 16:00 UTC primary lands 18:24
-#: EST and freezes nothing before 19:24. 15:00 UTC would freeze the block in
-#: EST, but under EDT it lands 18:24 — after the 18:15 ET reader, for the whole
-#: tournament. 14:00 UTC lands 16:24 EST / 17:24 EDT and the relay's 17:52 ET
-#: run carries it either way. **On the evidence this is pessimism, not need**:
-#: no cron due at or after 16:00 UTC has run more than 4.22h late, and the 7.4h
-#: this slot is sized for was a 06:00 UTC cron on a Monday. A lateness that
-#: varied by hour would keep the evening card later; one constant is the
-#: design, and what it costs this slot is written here rather than hidden in it.
+#: **20:00 and 21:00 UTC since 2026-09-29** (decision 61), from crons at 14:00
+#: and 15:00 UTC. Two constraints bind together and at the same hour: the
+#: backup, at 21:00 UTC, is 17:00 EDT, on `card-feed` by 17:20 — 32 minutes
+#: before the relay's 17:52 ET run — and freezes everything from 18:20. A
+#: 22:00 UTC backup would be 18:00 EDT: on the feed after the 17:52 relay and
+#: the 18:15 read, and unable to freeze the 19:00 block. In EST the pair is
+#: 15:00 and 16:00, so the 19:00 block is priced three to four hours out
+#: instead of the seven to ten the old crons gave it.
 EVENING = CardSlot(
     name="evening",
-    cron_hours_utc=(14, 15),
+    slot_hours_utc=(20, 21),
     must_precede_et_hour=19,
     what="every cardable game not already frozen today, tipping at least an "
          "hour after the run",
@@ -274,24 +323,29 @@ SLOT_NAMES: tuple[str, ...] = tuple(s.name for s in SLOTS)
 #: fault — but it is an observation the line-movement capture is already
 #: making, four times a day, for six credits.
 #:
+#: **It needs no shift for the wait**, and that is by construction rather than
+#: luck: :func:`cron_hour_for` refuses any slot whose cron would fire on the
+#: previous UTC day, so the cron for the 1 November slot fires on 1 November.
+#:
 #: It lives here rather than in the workflow alone because
 #: `docs/card_cadence.md` claimed the tests pinned the workflow's cron strings
 #: to this module and **nothing did**. Only the hours were here, and a month
 #: field is half of what a cron says about when a card fires.
 SEASON_CRON_MONTHS = "11,12,1,2,3,4"
 
-#: Minute-of-the-hour for every card trigger. On the hour, and the lateness
-#: arithmetic is done in whole hours because GitHub's own lateness is measured
-#: in hours: a cron at :30 would buy thirty minutes against a delay of five
-#: hours and read as precision this schedule does not have.
+#: Minute-of-the-hour for every card cron, and so for every slot. On the hour:
+#: the slots are whole hours because the constraints that set them — the
+#: relay's :52 and the blocks' first tips — leave whole-hour room, and the
+#: wait script reads one minute and one hour back out of the cron.
 CRON_MINUTE = 0
 
 
 def cron_expressions() -> tuple[str, ...]:
     """Every cron string the gameday workflow must declare, in slot order.
 
-    Derived from :data:`SLOTS`, so moving a trigger is a one-line change here
-    that turns the build red until the workflow follows.
+    Derived from :data:`SLOTS` through :func:`cron_hour_for`, so moving a slot
+    is a one-line change here that turns the build red until the workflow — its
+    `on.schedule` and the hour `case` in `already-published` — follows.
     `tests/test_the_card_schedule_survives_cron_lateness.py` compares this
     against the `on.schedule` of `.github/workflows/cbb-gameday-refresh.yml`
     and fails on any difference in either direction — a cron the contract does
@@ -304,7 +358,6 @@ def cron_expressions() -> tuple[str, ...]:
         for slot in SLOTS
         for hour in sorted(slot.cron_hours_utc)
     )
-
 
 # --------------------------------------------------------------------------
 # The rest of the chain: the relay, and the two reads it exists for
@@ -336,18 +389,24 @@ RELAY_TIMEZONE = "America/New_York"
 #: a :15 read, with three minutes spare.
 RELAY_MINUTE = 52
 
-#: The Eastern hours the relay runs, each for a stated reason:
+#: The Eastern hours the relay runs. **The live routine runs these and this
+#: repository does not change them**: the card slots of 2026-09-29 were chosen
+#: to fit this schedule as it stands, so no routine had to move with them.
 #:
-#: * 03:52 — the morning card when GitHub is ON TIME (07:00 UTC is 02:00 EST,
-#:   03:00 EDT). Without it an on-time morning card could be replaced on
-#:   `card-feed` by an on-time evening card before any relay copied it.
-#: * 10:52 — the morning card at worst lateness (ready 09:44 EST, 10:44 EDT),
-#:   and the evening card when GitHub is on time (ready 09:20 EST, 10:20 EDT).
-#: * 17:52 — the evening card at worst lateness (ready 16:44 EST, 17:44 EDT).
+#: * 10:52 — the morning card. It is on `card-feed` by 07:20 EST / 08:20 EDT
+#:   from the primary and 08:20 EST / 09:20 EDT from the backup.
+#: * 17:52 — the evening card: 15:20 EST / 16:20 EDT from the primary, 16:20
+#:   EST / 17:20 EDT from the backup, 32 minutes clear at the tightest.
+#: * 03:52 — carries nothing new since the card crons began waiting for their
+#:   slots. It was set for a morning card GitHub fired on time at 07:00 UTC;
+#:   no card lands before 07:00 ET now, so this run finds the previous
+#:   evening's card, which the relay has already written, and a re-run whose
+#:   content is byte-identical changes nothing (`docs/delivery_chain.md`). It
+#:   is harmless and left in place, because the routine is Cooper's to edit.
 #:
-#: Three runs where the UTC schedule had four: an on-time evening card no
-#: longer needs a run of its own, because the morning's late run is already
-#: after it.
+#: Between the two slots there is always a relay run: the morning card is
+#: copied at 10:52 before the evening card can exist (15:00 ET at the
+#: earliest), and the evening card at 17:52 before the next morning's.
 RELAY_ET_HOURS: tuple[int, ...] = (3, 10, 17)
 
 #: How long a card run takes from the moment GitHub starts it to the moment
@@ -356,9 +415,12 @@ RELAY_ET_HOURS: tuple[int, ...] = (3, 10, 17)
 #: board took 1m34s (2026-09-01, dispatch), and a rehearsal against a real slate
 #: would spend credits. Twenty minutes is thirteen times the measured run, and
 #: the job's own timeout is ninety. Replace it with the first in-season runs'
-#: durations: at 7.4h late the morning and evening cards have eight minutes to
-#: spare against it under EDT.
+#: durations. The tightest place it is spent is the evening backup under EDT,
+#: which starts at 17:00 and has 52 minutes to reach the 17:52 relay run.
 CARD_RUN_BUDGET_MINUTES = 20
+
+#: The same allowance in hours, derived, for the ET hour-of-day arithmetic.
+CARD_RUN_BUDGET_H = CARD_RUN_BUDGET_MINUTES / 60.0
 
 #: How long after its cron a relay run can still be writing to Drive. Measured
 #: 2026-09-25 from Cooper's live routines: they fire up to 15m11s after their

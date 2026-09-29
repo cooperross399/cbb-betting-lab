@@ -32,73 +32,71 @@ name: CBB Gameday Refresh
 # not, and may never re-price one it did. Without that rule two cards a day is
 # two bites at the same apple and the ledger records the better of two guesses.
 #
-# THE CRON TIMES ASSUME GITHUB IS LATE, because it is. Every landing here is
-# checked against `nominal + schedule_contract.OBSERVED_LATENESS_H`, which is
-# 7.4 hours: the worst lateness measured on Cooper's repositories on every day
-# since 2026-08-27 but the first (`data/outputs/cbb_cron_lateness.json`; the
-# two runs on that first day were 9.6-9.9h late and nothing here survives
-# them). This header used to say 4.5-5.3 hours, and the same account's crons
-# had already run 7.38 hours late.
+# THE CARD LANDS AT A FIXED SLOT, AND THE CRONS FIRE EIGHT HOURS BEFORE IT.
+# GitHub starts this account's scheduled runs hours late — 7.38h at worst on
+# every day since 2026-08-27 but the first (`data/outputs/cbb_cron_lateness.json`)
+# — and until 2026-09-29 the card rode that lateness: its crons were set early
+# enough that any landing up to 7.4h late still froze its block, so a card
+# landed anywhere in a seven-hour window and the evening card priced the 19:00
+# ET block seven to ten hours out. Now each cron fires
+# `schedule_contract.WAIT_LEAD_H` (8h) before its slot and the `wait` and
+# `wait-more` jobs hold the run until the slot (`scripts/wait_for_round.py`,
+# as `line-movement.yml` does since #103). Lateness up to eight hours costs
+# nothing; beyond it the run starts late and goes at once, as every run did
+# before. Decision 61 in `docs/decision_log.md`.
 #
-# AT 7.4 HOURS LATE, IN EST: the morning primary lands 09:24 ET and can freeze
-# every tip from 10:24, clearing the 11:00 ET first tip; the morning backup
-# lands 10:24 ET and freezes nothing before 11:24, so it does NOT cover the
-# 11:00 block; the evening primary lands 16:24 ET and the backup 17:24 ET, and
-# both clear the 19:00 ET block. `tests/test_the_card_schedule_survives_cron_lateness.py`
-# recomputes that table from the constant, fails if a primary stops being able
-# to freeze its block, and names every cell that cannot, one by one.
+# THE SLOTS, AND WHAT SET THEM. Each is the latest whole hour whose BACKUP,
+# under EDT (when a fixed UTC hour reads latest on an Eastern clock), still
+# freezes its block — slot + 20-minute run budget + 60-minute card lead before
+# the first tip — and is on `card-feed` before the relay run that carries it.
+# The relay's times are unchanged (`CRON_TZ=America/New_York 52 3,10,17`) and
+# Cooper's readers are at 11:15 and 18:15 ET.
 #
-# THOSE ARE EST FIGURES. A cron is fixed in UTC, so when DST begins on
-# 2027-03-14 and the offset moves from UTC-5 to UTC-4 every landing reads an
-# hour LATER on an Eastern clock (08:00 UTC is 03:00 EST on the 13th and 04:00
-# EDT on the 14th). From that date the morning primary lands 10:24 ET and the
-# backup 11:24 ET, so neither covers the 11:00 block; the evening primary lands
-# 17:24 ET and still covers 19:00, and the evening backup lands 18:24 ET and
-# does not.
+#   morning 12:00 / 13:00 UTC = 07:00 / 08:00 EST, 08:00 / 09:00 EDT
+#       backup under EDT: on the feed 09:20, freezes from 10:20 (11:00 block),
+#       relay 10:52
+#   evening 20:00 / 21:00 UTC = 15:00 / 16:00 EST, 16:00 / 17:00 EDT
+#       backup under EDT: on the feed 17:20, freezes from 18:20 (19:00 block),
+#       relay 17:52 — the tightest margin in the chain, 32 minutes
 #
-# WHY 07:00 AND 14:00 UTC, NOT 09:00 AND 16:00. At 7.4 hours a 09:00 UTC
-# primary could not freeze its own block, and — the constraint that set the
-# hours — the card also has to reach Cooper, whose chat tasks read Drive at
-# 11:15 and 18:15 ET. The relay that puts it there runs at 10:52 and 17:52 ET,
-# so each primary must have landed and finished by then under EDT, when a UTC
-# cron reads latest. `schedule_contract.MORNING` and `.EVENING` carry the
-# arithmetic, and the test checks the whole chain in both offsets.
+# `tests/test_the_card_schedule_survives_cron_lateness.py` computes all of it
+# from `schedule_contract`, in both offsets, on real Eastern instants.
 #
-# AN ON-TIME 07:00 UTC RUN IS 02:00 EST, before the one Honolulu game at 01:00
-# ET has finished. It would settle that game on the evening run instead, which
-# costs nothing: settlement is "whatever finished", every run. In practice no
-# cron due 06:00-08:00 UTC has fired less than 3.5 hours late.
+# THE SEASON'S FIRST DAY NEEDS NO SPECIAL CRON. Every cron fires on its slot's
+# own UTC date (04:00 for 12:00, 13:00 for 21:00), so the 1 November slot's cron
+# fires on 1 November inside the season's month field. A slot before 08:00 UTC
+# would need its cron on 31 October; `schedule_contract.cron_hour_for` refuses
+# one rather than let the season open without its first card.
 #
-# THIRTY-SEVEN GAMES A SEASON TIP BEFORE THE MORNING BACKUP CAN FREEZE THEM —
-# 0.59% of the slate, 34 of them the 11:00 ET block, and one the 2026-27 opener
-# in Rome at 09:30 ET on 2026-11-01. That is a coverage gap, recorded rather
-# than chased: it bites only when the primary was dropped as well.
+# THE 07:00 EST MORNING SLOT RUNS AFTER THE PREVIOUS NIGHT IS FINAL, including
+# the one Honolulu game at 01:00 ET, which is why post-slate settlement lives in
+# the morning run.
 
 on:
   schedule:
-    # `morning` primary. 07:00 UTC is 02:00 EST nominal and 09:24 EST at the
-    # worst lateness observed. It also runs after the previous night's slate
-    # is final (the latest tip is 23:00 ET, plus one Honolulu game at 01:00 ET
-    # that an on-time run would leave to the evening), which is why the
-    # post-slate settlement lives in this run rather than in a workflow of its
-    # own: settlement needs the ledger, and the ledger only comes back from the
-    # branch the one writing workflow can reach.
+    # EACH CRON IS ITS SLOT LESS EIGHT HOURS, and each names one minute and
+    # one hour, because the wait reads them back to find its slot.
     #
     # THESE HOURS ARE ALSO WRITTEN IN THE `case` IN THE `already-published`
     # JOB BELOW, which is how a run knows its slot. A test runs that step
     # against every cron here, so moving one without the other is a red build
     # rather than an evening card published as the morning's.
-    - cron: "0 7 * 11,12,1,2,3,4 *"
-    # `morning` backup, an hour later. It stands down when the primary
-    # published this slot cleanly, so on a healthy day it costs one
+    #
+    # `morning` primary: 04:00 UTC, for the 12:00 UTC slot (07:00 EST, 08:00
+    # EDT). The post-slate settlement lives in this run rather than in a
+    # workflow of its own: settlement needs the ledger, and the ledger only
+    # comes back from the branch the one writing workflow can reach.
+    - cron: "0 4 * 11,12,1,2,3,4 *"
+    # `morning` backup: 05:00 UTC, for 13:00 UTC. It stands down when the
+    # primary published this slot cleanly, so on a healthy day it costs one
     # authenticated fetch of a status file and no credits at all.
-    - cron: "0 8 * 11,12,1,2,3,4 *"
-    # `evening` primary. 55% of the slate had not been priced by anybody at the
-    # morning slot; this is the run that covers it, and it exists for no other
-    # reason.
-    - cron: "0 14 * 11,12,1,2,3,4 *"
-    # `evening` backup.
-    - cron: "0 15 * 11,12,1,2,3,4 *"
+    - cron: "0 5 * 11,12,1,2,3,4 *"
+    # `evening` primary: 12:00 UTC, for 20:00 UTC (15:00 EST, 16:00 EDT). 55%
+    # of the slate had not been priced by anybody at the morning slot; this is
+    # the run that covers it, and it exists for no other reason.
+    - cron: "0 12 * 11,12,1,2,3,4 *"
+    # `evening` backup: 13:00 UTC, for 21:00 UTC.
+    - cron: "0 13 * 11,12,1,2,3,4 *"
   workflow_dispatch:
     inputs:
       card_slot:
@@ -145,15 +143,42 @@ permissions:
   # workflows on disk, so it cannot go stale silently again.
   contents: write
 
-concurrency:
-  # Serialised, never cancelled. A cancelled run that has already frozen a
-  # snapshot but not yet settled or published leaves the day half-recorded, and
-  # a frozen opinion is evidence precisely because it was written before the
-  # game — it cannot be re-made afterwards.
-  group: cbb-gameday-refresh
-  cancel-in-progress: false
-
 jobs:
+  # Hold a scheduled run until its slot. Two jobs, because one may run for at
+  # most six hours and a slot is eight away; each waits at most 340 minutes
+  # and the second recomputes the slot from the same cron. They check out the
+  # repository for the script and nothing else: no install, no secret, no
+  # credit. A manual dispatch has no schedule and does not wait.
+  wait:
+    name: Wait for the slot
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Wait for the slot
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+        run: python3 scripts/wait_for_round.py --schedule "$SCHEDULE" --budget-minutes 340
+
+  wait-more:
+    name: Wait for the slot (continued)
+    needs: wait
+    # A wait that failed must not cost the card: publish late rather than not
+    # at all.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Wait for the slot
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+        run: python3 scripts/wait_for_round.py --schedule "$SCHEDULE" --budget-minutes 340
+
   already-published:
     # The backup trigger exists only to cover a dropped primary, and when the
     # primary worked it has nothing to add: it would refetch the same board for
@@ -162,7 +187,13 @@ jobs:
     # today, and stands down when it is.
     #
     # A manual dispatch never skips. Asking for a run by hand means run it.
+    #
+    # AFTER THE WAIT, so the backup asks at its own slot, an hour after the
+    # primary's, and finds the primary's card. `!cancelled()` rather than the
+    # implicit success(): a wait that failed must not skip the card.
     name: Already published?
+    needs: wait-more
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -205,8 +236,8 @@ jobs:
           HOUR=$(printf '%s\n' "${SCHEDULE:-}" | awk '{print $2}')
           SLOT="${DISPATCH_SLOT:-morning}"
           case "$HOUR" in
-            7|8) SLOT=morning ;;
-            14|15) SLOT=evening ;;
+            4|5) SLOT=morning ;;
+            12|13) SLOT=evening ;;
             "") ;;
             *)
               echo "::error::Cron '${SCHEDULE}' fired at hour $HOUR, which belongs to no card slot. Refusing to guess a slot: the hours here must match schedule_contract."
@@ -259,9 +290,26 @@ jobs:
   card:
     name: Card
     needs: already-published
-    if: needs.already-published.outputs.run == 'yes'
+    # Spelled out. A bare condition carries an implicit success() over EVERY
+    # job upstream, the two waits included, so a wait that failed would skip
+    # the card. The guard itself must have succeeded: a guard that refused an
+    # unknown cron hour has named no slot, and nothing may publish as a guess.
+    if: ${{ !cancelled() && needs.already-published.result == 'success' && needs.already-published.outputs.run == 'yes' }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    # Serialised, never cancelled. A cancelled run that has already frozen a
+    # snapshot but not yet settled or published leaves the day half-recorded, and
+    # a frozen opinion is evidence precisely because it was written before the
+    # game — it cannot be re-made afterwards.
+    #
+    # ON THE JOB, NOT THE WORKFLOW, since the waits of 2026-09-29. Every run
+    # now spends up to eight hours in its wait jobs, so runs overlap, and a
+    # workflow-level group keeps only one run pending and cancels the one
+    # before it: the morning backup's run, pending behind the primary's
+    # eight-hour wait, would be cancelled by the evening primary's cron.
+    concurrency:
+      group: cbb-gameday-refresh
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:

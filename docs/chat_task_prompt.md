@@ -23,9 +23,10 @@ decision for Cooper, not an inference from this paragraph.
 | `CBB CARD — evening` | **18:15** | the evening refresh, before the 19:00 block |
 
 Both are 23 minutes after the relay's last run for that slot (10:52 and 17:52
-ET), and that run is set so a card fired at GitHub's worst measured lateness is
-already in Drive when it finishes — in EST and in EDT, because the relay runs on
-the Eastern clock just as these tasks do. **If either time here moves, move
+ET), and each card lands at a fixed slot early enough to be in Drive when that
+run finishes — in EST and in EDT, because the relay runs on the Eastern clock
+just as these tasks do, and the card waits out GitHub's lateness before its
+slot rather than landing wherever it falls. **If either time here moves, move
 `schedule_contract.READER_ET_HOUR` with it**: a test holds this table to that
 constant, and the chain is checked against the times in it. Set them daily, and
 they will report the off-season in one line from May to October rather than

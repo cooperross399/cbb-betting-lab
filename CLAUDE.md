@@ -887,8 +887,11 @@ this table.
   `nominal + schedule_contract.OBSERVED_LATENESS_H`, which is 7.4 hours and held
   to a measurement: `data/outputs/cbb_cron_lateness.json`, re-taken with
   `scripts/measure_cron_lateness.py`. This line said 4.5-5.3 hours while the
-  account's crons had run 7.38 late, and 9.85 on 2026-08-27 — the one day the
-  schedule is not sized for, named in the test and left to Cooper.
+  account's crons had run 7.38 late, and 9.85 on 2026-08-27, named in the test.
+  **The card and the line-movement capture no longer ride it**: each cron fires
+  eight hours before a fixed slot or round and the run waits
+  (`scripts/wait_for_round.py`, decision 61), so they land on time at any
+  lateness up to eight hours.
 
 ## How the hard rules are enforced, and where they are not
 
