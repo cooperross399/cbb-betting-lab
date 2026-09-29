@@ -23,13 +23,16 @@ layer, and a routine that did not run is not the card failing.
 ## Link 1 — the workflow, which is the only thing that matters
 
 `.github/workflows/cbb-gameday-refresh.yml`, workflow name **`CBB Gameday
-Refresh`**. Four crons: 07:00 and 08:00 UTC for the `morning` slot, 14:00 and
-15:00 UTC for the `evening` slot, each a primary and a backup. The reasoning is
-in `docs/card_cadence.md`; the short version is that the slate spans twelve
-hours and one freeze cannot serve it, and that GitHub fires these crons up to
-7.4 hours late, so each is set early enough that its card has reached this
-page's last link before Cooper reads it. They were 09:00/10:00 and
-16:00/17:00 until 2026-09-25.
+Refresh`**. Two slots, each a primary and a backup an hour apart, **landing at
+fixed times**: 12:00 and 13:00 UTC for the `morning` slot (07:00/08:00 EST,
+08:00/09:00 EDT), 20:00 and 21:00 UTC for the `evening` slot (15:00/16:00 EST,
+16:00/17:00 EDT). GitHub fires this account's crons up to 7.4 hours late, so
+each cron fires eight hours before its slot — 04:00, 05:00, 12:00 and 13:00
+UTC — and the run waits for the slot (`scripts/wait_for_round.py`). The
+reasoning is in `docs/card_cadence.md` and decision 61. Until 2026-09-29 the
+crons were 07:00/08:00 and 14:00/15:00 UTC with no wait, and a card landed
+anywhere in a seven-hour window; before 2026-09-25, 09:00/10:00 and
+16:00/17:00.
 
 **It needs no laptop and no terminal.** Never tell Cooper to open a terminal to
 get a card.
@@ -169,21 +172,26 @@ byte-identical changes nothing.
 a day through the season only, **on the readers' clock**. It comes from
 `schedule_contract.relay_cron_expression()`, and
 `tests/test_the_card_schedule_survives_cron_lateness.py` checks the whole chain
-on real Eastern instants either side of 2027-03-14: every slot's card, with
-GitHub on time and at `OBSERVED_LATENESS_H`, is on `card-feed` before some relay
-run that has finished before that slot's read.
+on real Eastern instants either side of 2027-03-14: both triggers of every
+slot, at any lateness the eight-hour wait absorbs, are on `card-feed` at least
+30 minutes before the relay run that carries them, and that run has finished
+before the slot's read. **The card slots were fitted to this relay schedule on
+2026-09-29; the relay did not move.**
 
-| Run (ET) | Catches | Card on `card-feed` by (EST / EDT) |
+| Run (ET) | Catches | Card on `card-feed` by, primary / backup (EST; EDT) |
 |:---|:---|:---|
-| 03:52 | the morning card, GitHub on time | 02:20 / 03:20 |
-| 10:52 | the morning card at 7.4h late; the evening card on time | 09:44 / 10:44; 09:20 / 10:20 |
-| 17:52 | the evening card at 7.4h late | 16:44 / 17:44 |
+| 03:52 | nothing new — it re-reads the previous evening's card, which changes nothing | — |
+| 10:52 | the morning card | 07:20 / 08:20; 08:20 / 09:20 |
+| 17:52 | the evening card | 15:20 / 16:20; 16:20 / **17:20** |
 
-"On `card-feed` by" is the primary's worst landing plus a 20-minute allowance
-for the run (`CARD_RUN_BUDGET_MINUTES` — an allowance, because no in-season run
-exists to time yet), and each relay run is allowed 20 minutes to finish before
-the 11:15 and 18:15 ET reads, because Cooper's routines have been measured
-firing up to fifteen minutes after their cron.
+"On `card-feed` by" is the slot plus a 20-minute allowance for the run
+(`CARD_RUN_BUDGET_MINUTES` — an allowance, because no in-season run exists to
+time yet); the tightest cell is the evening backup under EDT, 32 minutes clear
+of its relay run. Each relay run is allowed 20 minutes to finish before the
+11:15 and 18:15 ET reads, because Cooper's routines have been measured firing
+up to fifteen minutes after their cron. The 03:52 run was set for a morning
+card GitHub fired on time at 07:00 UTC; no card lands before 07:00 ET now, and
+dropping the run is Cooper's to do or not — it costs nothing either way.
 
 **It was `37 9,15,16,22 * 11,12,1,2,3,4 *` until 2026-09-25, and that cron was
 wrong twice.** It was sized for 5.3 hours of lateness when the account had

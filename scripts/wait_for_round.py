@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hold a scheduled Line Movement run until the round it was scheduled for.
+"""Hold a scheduled run until the round it was scheduled for.
 
     python3 scripts/wait_for_round.py --schedule "13 15 * * *" --budget-minutes 340
 
@@ -19,6 +19,13 @@ hours a board moves, and the 23:13 UTC round is the one an hour before the
 has tipped, and a quote captured after tip-off is no price at all. The 03:13
 round, six hours late, lands after the whole night has finished. Lateness moves
 by hours from day to day, so no cron time can be aimed at a round.
+
+**The card uses it too, since 2026-09-29.** `cbb-gameday-refresh.yml` fires
+each card cron :data:`ROUND_LEAD` before a fixed slot and waits here, before
+its `already-published` guard, so the card lands at the slot rather than
+wherever the lateness put it (decision 61). For the card a "round" is a slot,
+and `schedule_contract.WAIT_LEAD_H` is held equal to :data:`ROUND_LEAD` by
+`tests/test_the_card_schedule_survives_cron_lateness.py`.
 
 So every cron fires :data:`ROUND_LEAD` before its round, and the run waits
 here, before the capture, until the round. Lateness up to the lead then costs
@@ -44,7 +51,7 @@ import sys
 import time
 from datetime import datetime, timedelta, timezone
 
-#: How far before its round every Line Movement cron fires. Covers the
+#: How far before its round every Line Movement cron, and every card cron, fires. Covers the
 #: account-wide worst lateness measured since 2026-08-27 on every day but the
 #: first (7.38 h, a 06:00 UTC cron), and this workflow's own worst (6.58 h).
 #: The two runs of 2026-08-27 (9.61 h and 9.85 h) are not covered; a run that
@@ -71,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if not args.schedule.strip():
-        print("Started by hand: capturing now.")
+        print("Started by hand: running now.")
         return 0
     now = datetime.now(timezone.utc)
     try:
@@ -84,7 +91,7 @@ def main(argv: list[str] | None = None) -> int:
     if remaining <= timedelta(0):
         print(
             f"This round was due at {stamp}; the run started {-remaining} "
-            "after it, so it captures now."
+            "after it, so it runs now."
         )
         return 0
     wait = min(remaining, timedelta(minutes=args.budget_minutes))
