@@ -467,7 +467,25 @@ def pick_from_frozen(frozen_rows: list[dict], home_abbr: str, away_abbr: str) ->
     model_probability = finite(top.get("model_probability"))
     return {"kind": "pass", "market": MARKETS[m], "label": label, "price": price, "book": top.get("book"), "tier": top.get("tier") or None,
             "units": None, "edgePct": percent(top.get("edge")),
-            "modelProb": None if model_probability is None else round(model_probability, 4)}
+            "modelProb": None if model_probability is None else round(model_probability, 4),
+            **pick_side_and_line(m, s, line)}
+
+
+def pick_side_and_line(market: str, selection: str, line: object) -> dict:
+    """What `web/lib/live.js::pickStatusFor` needs to judge a pick against the
+    live score: the frozen row's own selection, and its line for a spread
+    (the picked side's handicap, as the label prints it) or a total. A row
+    whose selection or line is not one of these gets no side, so the page
+    shows no live status rather than a guess.
+    """
+    number = finite(line)
+    if market == "moneyline" and selection in ("home", "away"):
+        return {"side": selection, "line": None}
+    if market == "spread" and selection in ("home", "away") and number is not None:
+        return {"side": selection, "line": number}
+    if market == "total" and selection in ("over", "under") and number is not None:
+        return {"side": selection, "line": number}
+    return {"side": None, "line": None}
 
 
 def load_status(lab: Path, day: date) -> dict:
