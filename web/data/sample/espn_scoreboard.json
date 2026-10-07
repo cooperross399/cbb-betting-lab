@@ -1,0 +1,420 @@
+{
+ "events": [
+  {
+   "id": "40161",
+   "date": "2026-11-14T17:00:00Z",
+   "competitions": [
+    {
+     "date": "2026-11-14T17:00:00Z",
+     "status": {
+      "displayClock": "0:00",
+      "period": 2,
+      "type": {
+       "state": "post",
+       "shortDetail": "Final",
+       "detail": "Final"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "75",
+       "team": {
+        "abbreviation": "ND",
+        "displayName": "Notre Dame",
+        "location": "Notre Dame"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "68",
+       "team": {
+        "abbreviation": "VILL",
+        "displayName": "Villanova",
+        "location": "Villanova"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "40162",
+   "date": "2026-11-14T19:00:00Z",
+   "competitions": [
+    {
+     "date": "2026-11-14T19:00:00Z",
+     "status": {
+      "displayClock": "8:14",
+      "period": 2,
+      "type": {
+       "state": "in",
+       "shortDetail": "8:14 - 2nd Half",
+       "detail": "8:14 - 2nd Half"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "49",
+       "team": {
+        "abbreviation": "CONN",
+        "displayName": "UConn",
+        "location": "UConn"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "51",
+       "team": {
+        "abbreviation": "CREI",
+        "displayName": "Creighton",
+        "location": "Creighton"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "40163",
+   "date": "2026-11-14T21:00:00Z",
+   "competitions": [
+    {
+     "date": "2026-11-14T21:00:00Z",
+     "status": {
+      "displayClock": "0:00",
+      "period": 1,
+      "type": {
+       "state": "in",
+       "shortDetail": "Halftime",
+       "detail": "Halftime"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "30",
+       "team": {
+        "abbreviation": "DUKE",
+        "displayName": "Duke",
+        "location": "Duke"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "33",
+       "team": {
+        "abbreviation": "MICH",
+        "displayName": "Michigan",
+        "location": "Michigan"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "40164",
+   "date": "2026-11-14T22:00:00Z",
+   "competitions": [
+    {
+     "date": "2026-11-14T22:00:00Z",
+     "status": {
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "state": "pre",
+       "shortDetail": "7:00 PM",
+       "detail": "7:00 PM"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "ARIZ",
+        "displayName": "Arizona",
+        "location": "Arizona"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "SDSU",
+        "displayName": "San Diego St",
+        "location": "San Diego St"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "40165",
+   "date": "2026-11-15T00:00:00Z",
+   "competitions": [
+    {
+     "date": "2026-11-15T00:00:00Z",
+     "status": {
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "state": "pre",
+       "shortDetail": "7:00 PM",
+       "detail": "7:00 PM"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "UK",
+        "displayName": "Kentucky",
+        "location": "Kentucky"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "KU",
+        "displayName": "Kansas",
+        "location": "Kansas"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "40166",
+   "date": "2026-11-15T00:00:00Z",
+   "competitions": [
+    {
+     "date": "2026-11-15T00:00:00Z",
+     "status": {
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "state": "pre",
+       "shortDetail": "7:00 PM",
+       "detail": "7:00 PM"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "ALA",
+        "displayName": "Alabama",
+        "location": "Alabama"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "TENN",
+        "displayName": "Tennessee",
+        "location": "Tennessee"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "40167",
+   "date": "2026-11-15T01:00:00Z",
+   "competitions": [
+    {
+     "date": "2026-11-15T01:00:00Z",
+     "status": {
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "state": "pre",
+       "shortDetail": "7:00 PM",
+       "detail": "7:00 PM"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "HOU",
+        "displayName": "Houston",
+        "location": "Houston"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "PUR",
+        "displayName": "Purdue",
+        "location": "Purdue"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "40168",
+   "date": "2026-11-15T02:00:00Z",
+   "competitions": [
+    {
+     "date": "2026-11-15T02:00:00Z",
+     "status": {
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "state": "pre",
+       "shortDetail": "7:00 PM",
+       "detail": "7:00 PM"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "GONZ",
+        "displayName": "Gonzaga",
+        "location": "Gonzaga"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "MSU",
+        "displayName": "Michigan St",
+        "location": "Michigan St"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "40169",
+   "date": "2026-11-15T02:00:00Z",
+   "competitions": [
+    {
+     "date": "2026-11-15T02:00:00Z",
+     "status": {
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "state": "pre",
+       "shortDetail": "7:00 PM",
+       "detail": "7:00 PM"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "TEX",
+        "displayName": "Texas",
+        "location": "Texas"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "ISU",
+        "displayName": "Iowa State",
+        "location": "Iowa State"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401610",
+   "date": "2026-11-15T02:30:00Z",
+   "competitions": [
+    {
+     "date": "2026-11-15T02:30:00Z",
+     "status": {
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "state": "pre",
+       "shortDetail": "7:00 PM",
+       "detail": "7:00 PM"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "UNC",
+        "displayName": "North Carolina",
+        "location": "North Carolina"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "AUB",
+        "displayName": "Auburn",
+        "location": "Auburn"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401699",
+   "date": "2026-11-14T22:00:00Z",
+   "competitions": [
+    {
+     "date": "2026-11-14T22:00:00Z",
+     "status": {
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "state": "pre",
+       "shortDetail": "5:00 PM",
+       "detail": "5:00 PM"
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "DUKE",
+        "displayName": "Duke Blue Devils"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "ARMY",
+        "displayName": "Army Black Knights"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
