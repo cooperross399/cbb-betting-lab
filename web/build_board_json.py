@@ -16,7 +16,9 @@ copied out of it:
     `providers.staging.staging_path` builds: the whole board, every book. Its
     columns are `providers.staging.STAGED_COLUMNS`, and its `market` column
     carries **this lab's** market key, never the provider's — see
-    :data:`PROVIDER_KEYS`.
+    :data:`PROVIDER_KEYS`. Each file is one capture: a game's current price
+    is the latest capture holding it, its `open` the first (null when only
+    one capture held it), and `lineHistory` one point per capture.
   * `data/archive/priced_snapshots/<date>.csv`, the path
     `forward_evidence.snapshot_path` builds: the frozen wagers, one row per
     wager at the best price, columns `forward_evidence.SNAPSHOT_COLUMNS`.
@@ -182,6 +184,105 @@ def read_csvs(pattern: str) -> list[dict]:
         with open(path, newline="", encoding="utf-8") as fh:
             rows.extend(csv.DictReader(fh))
     return rows
+
+
+def read_csv(path: Path) -> list[dict]:
+    """One CSV's rows. Opened by name rather than through `glob`, so a lab
+    path holding a `[` (a parametrised test's tmp dir) is still read."""
+    with path.open(newline="", encoding="utf-8") as fh:
+        return list(csv.DictReader(fh))
+
+
+def _slots() -> tuple[tuple[str, int | None], ...]:
+    """The card's slots in the order they run, each with its scheduled UTC hour.
+
+    Read from `schedule_contract.SLOTS`, which is where the slots are defined;
+    the literal is the fallback for a checkout with no package on the path,
+    and it is a copy. The hour is the slot's first scheduled run
+    (`slot_hours_utc[0]`): the staged file records no capture instant of its
+    own, and the card run waits for its slot (`scripts/wait_for_round.py`).
+    """
+    try:
+        from cbb_betting_lab.schedule_contract import SLOTS  # type: ignore
+    except ImportError:
+        return (("morning", None), ("evening", None))
+    return tuple((str(s.name), int(s.slot_hours_utc[0])) for s in SLOTS)
+
+
+SLOTS = _slots()
+
+
+def staged_captures(lab: Path, day: date, key) -> list[dict]:
+    """Every staged read of the board for the slate day, the first capture first.
+
+    `providers.staging.staging_path` writes one file per slate day and slot,
+    `data/staging/cbb/<day>_<slot>.csv`, so each file IS one capture. They are
+    ordered by the slot order the card runs in (morning before evening), never
+    by name, because "evening" sorts before "morning". A slot this file does
+    not know sorts after the known ones, by name.
+
+    Each capture is `{"slot", "t", "games"}`: `t` is the slot's scheduled UTC
+    instant (None when the slot is unknown), `games` the capture's full-game
+    team rows grouped by `(home, away)` exactly as the board groups them.
+    """
+    folder = lab / "data" / "staging" / "cbb"
+    if not folder.is_dir():
+        return []
+    prefix = f"{day.isoformat()}_"
+    order = [name for name, _ in SLOTS]
+    hours = dict(SLOTS)
+    found = []
+    for path in folder.glob(f"{day.isoformat()}_*.csv"):
+        slot = path.stem[len(prefix):]
+        found.append((order.index(slot) if slot in order else len(order), slot, path))
+    out = []
+    for _, slot, path in sorted(found):
+        hour = hours.get(slot)
+        out.append({"slot": slot, "t": None if hour is None else f"{day.isoformat()}T{hour:02d}:00:00Z",
+                    "games": group_rows(read_csv(path), key)})
+    return out
+
+
+def capture_values(rows: list[dict]) -> dict:
+    """What one capture says about one game, in `lineHistory`'s keys
+    (`web/site_history.py::SERIES`): the best home moneyline, and the most
+    common home spread and total line. A value the capture did not hold is
+    None and is left out of the series rather than drawn as a zero."""
+    return {"ml_home": best(rows, "moneyline", "home"),
+            "spread": consensus_line(rows, "spread", "home"),
+            "total": consensus_line(rows, "total")}
+
+
+def line_history(holding: list[dict], key: tuple[str, str]) -> dict:
+    """`lineHistory[gameId]`: one point per capture that held this game.
+
+    A series needs two points to be a line, so a key with fewer is left out,
+    and a game held by a single capture gets nothing at all. A point is
+    `{"t", "slot", "v"}`, the shape `site_history.py` writes (`t`, `v`) with
+    the slot it came from beside it.
+    """
+    series: dict[str, list[dict]] = {}
+    for capture in holding:
+        for name, value in capture_values(capture["games"][key]).items():
+            if value is not None:
+                series.setdefault(name, []).append({"t": capture["t"], "slot": capture["slot"], "v": value})
+    return {name: points for name, points in series.items() if len(points) >= 2}
+
+
+def opening_prices(rows: list[dict] | None) -> dict:
+    """The open of each market from the first capture, or None for each.
+
+    `rows` is None when only one capture held the game: the open is then
+    unknown, not equal to the current, and is published as null. A moneyline
+    open needs both sides — the page reads the pair to name the favourite —
+    so a capture holding one side opens nothing.
+    """
+    if not rows:
+        return {"moneyline": None, "spread": None, "total": None}
+    pair = {"home": best(rows, "moneyline", "home"), "away": best(rows, "moneyline", "away")}
+    return {"moneyline": pair if None not in pair.values() else None,
+            "spread": consensus_line(rows, "spread", "home"),
+            "total": consensus_line(rows, "total")}
 
 
 def norm_market(r: dict) -> str:
@@ -633,11 +734,16 @@ def build(lab: Path, day: date) -> dict:
     def by_name(label):
         return resolve(names, label)
 
-    priced_rows = group_rows(read_csvs(str(lab / "data" / "staging" / "cbb" / f"{day.isoformat()}_*.csv")), by_name)
+    # One capture per staged file, first first. The current price is the
+    # latest capture that holds the game and the open is the first, so two
+    # reads of the board are no longer pooled into one "current" -- which let
+    # the morning's best price stand as tonight's -- and a game that tipped
+    # before the evening read keeps the morning's prices as its last.
+    captures = staged_captures(lab, day, by_name)
     frozen_rows = group_rows(load_frozen(lab, day), by_name)
     slate = slate_for(day)
     model = load_model(lab, day, slate)
-    teams, games = {}, []
+    teams, games, history = {}, [], {}
     for g in slate:
         h, a = g["home"], g["away"]
         ha, aa = h["abbr"] or h["name"][:4].upper(), a["abbr"] or a["name"][:4].upper()
@@ -647,7 +753,13 @@ def build(lab: Path, day: date) -> dict:
             if (LOGOS / f"{abbr}.png").is_file():
                 teams[abbr]["logo"] = f"./logos/{abbr}.png"
         hk, ak = resolve(names, h["name"]), resolve(names, a["name"])
-        mine = priced_rows.get((hk, ak), [])
+        holding = [c for c in captures if c["games"].get((hk, ak))]
+        mine = holding[-1]["games"][(hk, ak)] if holding else []
+        opens = opening_prices(holding[0]["games"][(hk, ak)] if len(holding) >= 2 else None)
+        if len(holding) >= 2:
+            moved = line_history(holding, (hk, ak))
+            if moved:
+                history[g["id"]] = moved
         my_frozen = frozen_rows.get((hk, ak), [])
         # One slot for the whole board: `forward_evidence.SNAPSHOT_COLUMNS`
         # carries no `card_slot`, so a per-game slot read off a frozen row
@@ -659,9 +771,9 @@ def build(lab: Path, day: date) -> dict:
         if mine:
             spread_line = consensus_line(mine, "spread", "home")
             total_line = consensus_line(mine, "total")
-            row["moneyline"] = {"open": None, "current": {"home": best(mine, "moneyline", "home"), "away": best(mine, "moneyline", "away")}, "fair": None}
-            row["spread"] = {"open": None, "current": spread_line, "homePrice": best(mine, "spread", "home", spread_line), "proj": None}
-            row["total"] = {"open": None, "current": total_line, "overPrice": best(mine, "total", "over", total_line), "proj": None}
+            row["moneyline"] = {"open": opens["moneyline"], "current": {"home": best(mine, "moneyline", "home"), "away": best(mine, "moneyline", "away")}, "fair": None}
+            row["spread"] = {"open": opens["spread"], "current": spread_line, "homePrice": best(mine, "spread", "home", spread_line), "proj": None}
+            row["total"] = {"open": opens["total"], "current": total_line, "overPrice": best(mine, "total", "over", total_line), "proj": None}
             # Model probabilities the freeze recorded, when there is no live
             # model to ask. Through `finite`, because the column is a CSV
             # round-trip: an empty cell reads back as the float NaN and a
@@ -750,9 +862,14 @@ def build(lab: Path, day: date) -> dict:
         notice += (f" {declined} game(s) carry no projection: the schedule this lab prices from and "
                    "tonight's neutral-site flag disagree about where they are played, and a game "
                    "mislabelled neutral is a multi-point error on every market on it.")
-    return {"generatedAt": now.isoformat(timespec="seconds").replace("+00:00", "Z"), "season": SEASON, "slateDate": day.isoformat(), "cardSlot": slot,
-            "decision": status.get("decision"), "notice": notice, "unitDollars": 25, "record": load_record(lab),
-            "model": census, "teams": teams, "games": games}
+    out = {"generatedAt": now.isoformat(timespec="seconds").replace("+00:00", "Z"), "season": SEASON, "slateDate": day.isoformat(), "cardSlot": slot,
+           "decision": status.get("decision"), "notice": notice, "unitDollars": 25, "record": load_record(lab),
+           "model": census, "teams": teams, "games": games}
+    # Absent, not empty, when no game was held by two captures: one read of
+    # the board is a price, not a movement.
+    if history:
+        out["lineHistory"] = history
+    return out
 
 
 def main(argv=None) -> int:
