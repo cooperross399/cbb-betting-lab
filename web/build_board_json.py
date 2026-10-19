@@ -50,6 +50,8 @@ ESPN = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-ba
 USER_AGENT = "cbb-betting-lab-site/1.0 (+https://github.com/cooperross399/cbb-betting-lab)"
 SEASON = "2026–27"
 MARKETS = {"moneyline": "Moneyline", "spread": "Spread", "total": "Total"}
+#: `web/logos/<ABBR>.png`, filled by `fetch_logos.py`; `teams[abbr].logo` is written only for a file that exists.
+LOGOS = Path(__file__).resolve().parent / "logos"
 
 #: The board's three market slots, and the key `markets.py` gives each one.
 #: The staged and frozen rows carry the **lab's** market key in their `market`
@@ -642,6 +644,8 @@ def build(lab: Path, day: date) -> dict:
         for abbr, t in ((ha, h), (aa, a)):
             color = f"#{t['color']}" if t.get("color") else "#14151a"
             teams.setdefault(abbr, {"name": t["name"], "short": t["name"].replace(" Fighting", "").replace(" Blue Devils", "").split(" ")[0] if len(t["name"]) > 18 else t["name"], "color": color, "fg": ink_for(color)})
+            if (LOGOS / f"{abbr}.png").is_file():
+                teams[abbr]["logo"] = f"./logos/{abbr}.png"
         hk, ak = resolve(names, h["name"]), resolve(names, a["name"])
         mine = priced_rows.get((hk, ak), [])
         my_frozen = frozen_rows.get((hk, ak), [])
