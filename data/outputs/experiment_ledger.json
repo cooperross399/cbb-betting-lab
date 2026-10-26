@@ -1946,6 +1946,62 @@
       "predicted_direction": "either",
       "stage": "holdout",
       "realised_direction": ""
+    },
+    {
+      "search": "card_context_2026_10_26",
+      "name": "last-five-games form (shrunk residual net efficiency, card_factors.FORM_*) raises the return of the card's team selections against the card-time price over the season ratings alone",
+      "tested_on": "2026-10-26",
+      "seasons": [
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "card_context_2026_10_26",
+      "name": "days-since-last-game rest buckets (card_factors.REST_*) raise the return of the card's team selections against the card-time price over the season ratings alone",
+      "tested_on": "2026-10-26",
+      "seasons": [
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "card_context_2026_10_26",
+      "name": "a rotation player who sat the club's last game treated as out (card_factors.ROTATION_*, AVAILABILITY_*) raises the return of the card's team selections against the card-time price",
+      "tested_on": "2026-10-26",
+      "seasons": [
+        2024,
+        2025,
+        2026
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "card_context_2026_10_26",
+      "name": "blending a published adjusted-efficiency table at card_factors.BLEND_WEIGHT raises the return of the card's team selections against the card-time price (forward ledger only; the table has no archive)",
+      "tested_on": "2026-10-26",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
     }
   ]
 }

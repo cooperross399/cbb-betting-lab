@@ -844,6 +844,70 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         stage="discovery",
     ),
 
+    # ---------------------------------------------------------------------
+    # Tonight's context on the card, 2026-10-26 (`models/card_factors.py`).
+    # Four layers went onto the live card on Cooper's instruction, before any
+    # of them was measured against prices; each is registered here so the
+    # price backtest that measures them (it prices through the same seam)
+    # pays for the look. Direction: each layer is predicted to RAISE the
+    # return of the card's selections against the card-time price over the
+    # season view alone. The second opinion cannot be measured on bought
+    # history at all — the table has no archive — so its entry is the forward
+    # ledger's and is recorded as such.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="card_context_2026_10_26",
+        name=(
+            "last-five-games form (shrunk residual net efficiency, "
+            "card_factors.FORM_*) raises the return of the card's team selections "
+            "against the card-time price over the season ratings alone"
+        ),
+        tested_on="2026-10-26",
+        seasons=FULL,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="card_context_2026_10_26",
+        name=(
+            "days-since-last-game rest buckets (card_factors.REST_*) raise the "
+            "return of the card's team selections against the card-time price "
+            "over the season ratings alone"
+        ),
+        tested_on="2026-10-26",
+        seasons=FULL,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="card_context_2026_10_26",
+        name=(
+            "a rotation player who sat the club's last game treated as out "
+            "(card_factors.ROTATION_*, AVAILABILITY_*) raises the return of the "
+            "card's team selections against the card-time price"
+        ),
+        tested_on="2026-10-26",
+        seasons=FULL,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="card_context_2026_10_26",
+        name=(
+            "blending a published adjusted-efficiency table at "
+            "card_factors.BLEND_WEIGHT raises the return of the card's team "
+            "selections against the card-time price (forward ledger only; the "
+            "table has no archive)"
+        ),
+        tested_on="2026-10-26",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 

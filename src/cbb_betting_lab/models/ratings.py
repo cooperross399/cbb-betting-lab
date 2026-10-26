@@ -258,7 +258,7 @@ from cbb_betting_lab import config, verdicts
 from cbb_betting_lab.competitions import CBB, Competition
 from cbb_betting_lab.conferences import Tier, TierTable, tier_table
 from cbb_betting_lab.data.build_datasets import REGULATION_PERIODS
-from cbb_betting_lab.models import distributions
+from cbb_betting_lab.models import card_factors, distributions
 from cbb_betting_lab.population import GameState, VenueState, classify, home_venues
 from cbb_betting_lab.season import clean_text, season_for_slate_date
 
@@ -2128,6 +2128,15 @@ class Matchup:
     venue_home_effect: float = 0.0
     priced_through: str = ""
     as_of: str = ""
+    #: What the venue added to each side's per-100 efficiency, so tonight's
+    #: context (`card_factors`) can start its breakdown from the neutral floor.
+    venue_home_add: float = 0.0
+    venue_away_add: float = 0.0
+    #: Tonight's context, layer by layer (`card_factors.LAYERS`): each entry is
+    #: the price after that layer. Empty for a matchup priced on the season
+    #: view alone, and for every refusal.
+    layers: tuple = ()
+    context: dict = field(default_factory=dict)
 
     @property
     def expected_margin(self) -> float:
@@ -2289,6 +2298,8 @@ def matchup(
         home_prior_weight=float(home_weight),
         away_prior_weight=float(away_weight),
         venue_home_effect=float(applied),
+        venue_home_add=float(home_effect),
+        venue_away_add=float(away_effect),
         **common,
     )
 
@@ -2762,7 +2773,9 @@ def matchups_for(
     local = local_teams({season: schedule})
     venues = venue_ids({season: schedule})
 
-    out: dict[str, Matchup] = {}
+    # The events first, so tonight's context is built once for the teams in
+    # play rather than once per game.
+    asked: list[tuple[str, int, int, int]] = []
     seen: set[str] = set()
     for record in prices.to_dict("records"):
         event_id = clean_text(record.get("event_id"))
@@ -2784,13 +2797,48 @@ def matchups_for(
             away_team_id = int(fixture.get("away_id"))
         except (TypeError, ValueError):
             continue
-        out[event_id] = matchup(
+        asked.append((event_id, game_id, home_team_id, away_team_id))
+
+    out: dict[str, Matchup] = {}
+    if not asked:
+        return out
+
+    # TONIGHT'S CONTEXT, on the same seam. Form, rest and who is missing are
+    # read off the frames this function was handed — already cut strictly
+    # before the day, and refused again inside `build_context` if not — and the
+    # second opinion off a table on disk dated on or before the day. The
+    # backtest, the card, the forward freeze and the site all pass through
+    # here, so a game is priced with the same context wherever it is priced.
+    context = card_factors.build_context(
+        day=str(day),
+        ratings=ratings,
+        season_rows=season_rows,
+        history_rows=prepared.rows,
+        player_history=player_games,
+        raw_dir=raw_dir,
+        teams={t for _, _, h, a in asked for t in (h, a)},
+    )
+
+    for event_id, game_id, home_team_id, away_team_id in asked:
+        fixture = fixtures[game_id]
+        state = clean_text(fixture.get("venue_state"))
+        local_side = local.get(game_id)
+        base = matchup(
             ratings,
             home_team_id=home_team_id,
             away_team_id=away_team_id,
-            venue_state=clean_text(fixture.get("venue_state")),
-            local_team_id=local.get(game_id),
+            venue_state=state,
+            local_team_id=local_side,
             venue_id=venues.get(game_id),
             event_id=event_id,
+        )
+        if local_side is None and state == VenueState.HOME.value:
+            local_side = home_team_id
+        out[event_id] = card_factors.apply(
+            base,
+            ratings=ratings,
+            context=context,
+            venue_id=venues.get(game_id),
+            local_team_id=local_side,
         )
     return out

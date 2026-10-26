@@ -36,7 +36,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
+from cbb_betting_lab import restatement as RESTATEMENT  # noqa: E402
+from cbb_betting_lab import staging_provider_policy as SPP  # noqa: E402
 from cbb_betting_lab import stats as S  # noqa: E402
+from cbb_betting_lab.reports import price_backtest as PB  # noqa: E402
 
 BEGIN_MARKER = "<!-- BEGIN GENERATED: headline_table -->"
 CENSUS_MARKER = "<!-- BEGIN GENERATED: record_census -->"
@@ -350,6 +353,8 @@ def render_census() -> str:
             f"x{payload['correction_factor']:.4f} |"
         )
 
+    lines += _receipt_pins(scored)
+
     backtest = scored["cbb_price_backtest.json"]
     core = scored["core_team_only/cbb_price_backtest.json"]
     discovery = scored["holdout/cbb_price_backtest.json"]
@@ -412,6 +417,83 @@ def render_census() -> str:
         "`data/outputs/`. Do not edit between the markers; re-run the script.*",
     ]
     return "\n".join(lines)
+
+
+def _receipt_pins(scored: dict) -> list[str]:
+    """The reports a human acceptance receipt pins by checksum, and whether
+    their judgements still hold at the ledger's count.
+
+    **Two of this lab's gates met on 2026-10-26 and this sentence is the
+    record of which one won.** The receipts of 2026-09-23 and 2026-09-28 cite
+    `data/outputs/cbb_price_backtest.md` by sha256; the stale-correction gate
+    re-renders every report at the ledger's cumulative count. The first
+    hypothesis registered after the signatures made the two incompatible:
+    re-render the report and every receipt fails, which collapses the
+    allowlist to nothing; leave it and it states the correction it was signed
+    under. The receipt wins, because it is Cooper's decision and nothing in
+    this repository may re-sign it. The report is held at the signed render,
+    the gap is named here in the open, and the gate asks the stricter
+    question instead — whether a single judgement in it would differ at the
+    ledger's count. Computed, not typed: the same comparison the test makes.
+    """
+    pins = SPP.pinned_evidence(REPO / "data" / "manual")
+    if not pins:
+        return []
+    ledger = RESTATEMENT.current(REPO / "data" / "outputs" / "experiment_ledger.json")
+    out = [""]
+    for relative, receipts in sorted(pins.items()):
+        record_name = Path(relative).relative_to("data/outputs").with_suffix(".json").as_posix()
+        payload = scored.get(record_name)
+        if payload is None or not record_name.endswith("price_backtest.json"):
+            raise SystemExit(
+                f"{relative} is pinned by {len(receipts)} receipt(s) and is not a "
+                "price-backtest report with a record in the census; this block "
+                "cannot say whether its verdicts still hold."
+            )
+        looks = int(payload["looks"])
+        at_pin = PB.restated(dict(payload), looks=looks, record_name=record_name)
+        today = PB.restated(
+            dict(payload),
+            looks=RESTATEMENT.widened(looks, ledger),
+            record_name=record_name,
+        )
+        cells = 0
+        moved = 0
+        for (_w, was), (_n, now) in zip(_interval_cells(at_pin), _interval_cells(today)):
+            cells += 1
+            if any(
+                was.get(k) != now.get(k)
+                for k in ("verdict", "survives_correction", "enough_evidence", "claims")
+            ):
+                moved += 1
+        holds = (
+            f"all {cells} of its judgements are what the ledger's count gives; the "
+            "gap is interval width only"
+            if not moved
+            else f"**{moved} of its {cells} judgements would differ at the ledger's "
+            "count, so the signed evidence no longer supports its own verdicts**"
+        )
+        out.append(
+            f"**`{relative}` is held at the render {len(receipts)} human acceptance "
+            f"receipt(s) cite** (scored under {looks} looks, "
+            f"x{payload['correction_factor']:.4f}): the receipts pin it by checksum, "
+            "this lab may not re-sign them, and so it is the one generated report "
+            f"not re-rendered when the ledger grows. Restated at the ledger's count, "
+            f"{holds}. Lifting the pin is Cooper's: re-read the current render and "
+            "sign again."
+        )
+    return out
+
+
+def _interval_cells(node, path=""):
+    if isinstance(node, dict):
+        if RESTATEMENT.is_interval_cell(node):
+            yield path, node
+        for key, value in node.items():
+            yield from _interval_cells(value, f"{path}/{key}")
+    elif isinstance(node, list):
+        for index, value in enumerate(node):
+            yield from _interval_cells(value, f"{path}[{index}]")
 
 
 def _blind_baseline(backtest: dict) -> list[str]:
