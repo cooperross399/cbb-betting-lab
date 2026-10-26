@@ -23,8 +23,8 @@ BY ESPN TEAM ID — ids do not drift the way abbreviations do — so a school th
 lab's own schedule calls Division I and the logo list does not know is a
 failure here rather than a dash on the board.
 
-PNG validity is checked with the standard library (signature, IHDR, 500 px,
-more than 2 KB, every IDAT inflating to the size the header promises), the
+PNG validity is checked with the standard library (signature, IHDR, 128 px,
+more than 1 KB, every IDAT inflating to the size the header promises), the
 same check the fetch script applies, because CI installs no imaging library.
 """
 
@@ -79,7 +79,7 @@ def test_every_team_on_the_list_has_a_valid_logo_file() -> None:
         if not path.is_file():
             problems[row["file"]] = "listed in SOURCES.md but not on disk"
             continue
-        problem = fetch.png_problem(path.read_bytes())
+        problem = fetch.png_problem(path.read_bytes(), fetch.PUBLISHED_PX, fetch.PUBLISHED_MIN_BYTES)
         if problem:
             problems[row["file"]] = problem
     assert not problems, f"{len(problems)} logo file(s) are not usable: {problems}"

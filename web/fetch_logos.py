@@ -77,6 +77,33 @@ COMMONS_USER_AGENT = (
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 MIN_BYTES = 2048
 SIDE = 500
+
+
+#: Committed and published at this size (2026-10-26): a 500-px crest drawn in
+#: a small circle cost about 1.5 MB on a full board. A download is still
+#: checked at its source size above, then shrunk before it is written.
+PUBLISHED_PX = 128
+PUBLISHED_MIN_BYTES = 1024
+
+
+def shrink(data: bytes) -> bytes:
+    """The logo fitted inside a transparent PUBLISHED_PX square, centred and
+    optimised. Needs Pillow (`pip install pillow`); only this hand-run fetch
+    does, so nothing the workflows or the suite import requires it."""
+    import io
+
+    try:
+        from PIL import Image
+    except ImportError as exc:  # pragma: no cover - a hand-run step
+        raise SystemExit("web/fetch_logos.py needs Pillow to shrink logos: pip install pillow") from exc
+    image = Image.open(io.BytesIO(data)).convert("RGBA")
+    image.thumbnail((PUBLISHED_PX, PUBLISHED_PX), Image.LANCZOS)
+    canvas = Image.new("RGBA", (PUBLISHED_PX, PUBLISHED_PX))
+    canvas.paste(image, ((PUBLISHED_PX - image.width) // 2, (PUBLISHED_PX - image.height) // 2))
+    out = io.BytesIO()
+    canvas.save(out, format="PNG", optimize=True)
+    return out.getvalue()
+
 #: Bytes per pixel for each PNG colour type at 8 bits per sample.
 _CHANNELS = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}
 
@@ -97,10 +124,11 @@ identification only.
 # PNG validation (stdlib: signature, IHDR, and a full inflate of the IDATs)
 # --------------------------------------------------------------------------
 
-def png_problem(data: bytes) -> str | None:
-    """Why `data` is not a usable logo, or None when it is."""
-    if len(data) <= MIN_BYTES:
-        return f"{len(data)} bytes, not more than {MIN_BYTES}"
+def png_problem(data: bytes, side: int = SIDE, min_bytes: int = MIN_BYTES) -> str | None:
+    """Why `data` is not a usable logo, or None when it is: a download at
+    SIDE px, a committed file at PUBLISHED_PX (`side`, `min_bytes`)."""
+    if len(data) <= min_bytes:
+        return f"{len(data)} bytes, not more than {min_bytes}"
     if not data.startswith(PNG_SIGNATURE):
         return "not a PNG (signature)"
     pos, idat, width = len(PNG_SIGNATURE), [], None
@@ -123,8 +151,8 @@ def png_problem(data: bytes) -> str | None:
         return "no IHDR"
     if not idat:
         return "no image data"
-    if SIDE not in (width, height):
-        return f"{width}x{height}, not {SIDE} px on a side"
+    if side not in (width, height):
+        return f"{width}x{height}, not {side} px on a side"
     try:
         raw = zlib.decompress(b"".join(idat))
     except zlib.error as exc:
@@ -380,7 +408,7 @@ def main(argv=None) -> int:
             continue
         filename = f"{abbr}.png"
         target = logos / filename
-        if target.is_file() and png_problem(target.read_bytes()) is None:
+        if target.is_file() and png_problem(target.read_bytes(), PUBLISHED_PX, PUBLISHED_MIN_BYTES) is None:
             tally["kept"] += 1
             rows.append((filename, name, team_id, previous.get(filename, "existing file (source not recorded)")))
             continue
@@ -395,7 +423,7 @@ def main(argv=None) -> int:
             print(f"no logo: {abbr} {name}")
             continue
         data, url = got
-        _write(target, data)
+        _write(target, shrink(data))
         tally[kind] += 1
         rows.append((filename, name, team_id, url))
 
