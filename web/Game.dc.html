@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <title>Game — Maverick Hightower</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="One college basketball game: our call in plain words, the steps that built the number, both teams' ratings, the odds and the pick.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Maverick Hightower">
+  <meta property="og:title" content="Game — Maverick Hightower">
+  <meta property="og:image" content="https://maverickhightower.com/share.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@mavhightower">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root, html[data-sport="cbb"], html[data-sport="cbb"] [data-theme="light"] { color-scheme: light; --paper:#ffffff; --ink:#14151a; --ink-2:#2a2d3a; --mute:#62656f; --mute-2:#9a9ca6; --rule:#dddbd6; --rule-2:#ecebe7; --on-ink:#d6d3cc; --alert:#b0341f; --on-alert:#ffffff; --win:#2c7a5a; --on-win:#ffffff; --desk:#eeede9; }
+    @media (prefers-color-scheme: dark) { html[data-sport="cbb"] { color-scheme: dark; --paper:#0f1a2b; --ink:#eef1f6; --ink-2:#cdd4e0; --mute:#9ba6b8; --mute-2:#7a869a; --rule:#2b3a52; --rule-2:#1c2a3f; --on-ink:#2b3a52; --alert:#f08a72; --on-alert:#0f1a2b; --win:#5cc196; --on-win:#0f1a2b; --desk:#0a1220; } }
+    html[data-sport="cbb"] [data-theme="dark"] { color-scheme: dark; --paper:#0f1a2b; --ink:#eef1f6; --ink-2:#cdd4e0; --mute:#9ba6b8; --mute-2:#7a869a; --rule:#2b3a52; --rule-2:#1c2a3f; --on-ink:#2b3a52; --alert:#f08a72; --on-alert:#0f1a2b; --win:#5cc196; --on-win:#0f1a2b; --desk:#0a1220; }
+    html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: "IBM Plex Sans", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    * { box-sizing: border-box; }
+    a { color: var(--ink); text-decoration: none; }
+    a:hover { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
+    a:focus-visible, button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+    .mono { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+    .cond { font-family: "Barlow Condensed", sans-serif; }
+    .skip { position: absolute; left: 12px; top: -60px; background: var(--ink); color: var(--paper); padding: 10px 14px; z-index: 10; font-size: 14px; }
+    .skip:focus { top: 12px; }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+  </style>
+  <meta name="theme-color" content="#ffffff">
+  <script>(function(){if(typeof document!=="undefined"){document.documentElement.setAttribute("data-sport","cbb");}})();</script>
+</helmet>
+<div data-screen-label="Game" style="min-height:100vh;background:var(--paper);color:var(--ink);">
+  <a href="#main" class="skip">Skip to the game</a>
+  <div style="max-width:1240px;margin:0 auto;padding:0 clamp(16px,3vw,24px) 80px;">
+
+    <header style="border-top:4px solid var(--ink);padding:10px 0 4px;display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;">
+      <a href="https://maverickhightower.com/" aria-label="Maverick Hightower home" style="display:flex;align-items:center;gap:12px;min-height:44px;">
+        <span aria-hidden="true" style="width:36px;height:36px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;letter-spacing:.04em;">MH</span>
+        <span style="display:flex;flex-direction:column;line-height:1.1;">
+          <span style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">Maverick Hightower</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;letter-spacing:.02em;text-transform:uppercase;">College Basketball</span>
+        </span>
+      </a>
+      <nav aria-label="Site" style="display:flex;gap:0 18px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;font-weight:500;flex-wrap:wrap;">
+        <a href="Methods.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Methods</a>
+        <a href="https://maverickhightower.com/about.html" style="display:inline-flex;align-items:center;min-height:44px;">About</a>
+        <a href="https://nhl.maverickhightower.com/" style="display:inline-flex;align-items:center;min-height:44px;">NHL</a>
+        <a href="https://epl.maverickhightower.com/" style="display:inline-flex;align-items:center;min-height:44px;">EPL</a>
+      </nav>
+    </header>
+
+    <nav aria-label="Board sections" style="position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--ink);display:flex;overflow-x:auto;scrollbar-width:none;">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
+        <a href="{{ t.href }}" style="flex:1 1 0;max-width:150px;min-width:64px;display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;white-space:nowrap;text-decoration:none;color:var(--mute);">{{ t.label }}</a>
+      </sc-for>
+    </nav>
+
+    <sc-if value="{{ isSample }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:start;padding:14px 0;border-bottom:1px solid var(--ink);">
+        <span class="cond" style="font-weight:700;font-size:14px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--ink);padding:4px 9px;">Sample</span>
+        <p style="margin:0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:760px;text-wrap:pretty;">Sample game. On the live site this page reads one game off tonight's board, or an archived board when the link names a date.</p>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ missing }}" hint-placeholder-val="{{ false }}">
+      <section id="main" style="padding:40px 0;">
+        <div style="border:1px dashed var(--mute);padding:16px 18px;max-width:760px;">
+          <div class="cond" style="font-weight:700;font-size:22px;line-height:1;text-transform:uppercase;color:var(--mute);">{{ missingTitle }}</div>
+          <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);">{{ missingNote }} <a href="Board.dc.html" style="text-decoration:underline;text-underline-offset:3px;">Back to tonight's board.</a></p>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+
+      <section id="main" style="padding:30px 0 22px;border-bottom:1px solid var(--ink);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;">
+          <div style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ kicker }}</div>
+          <div style="display:flex;gap:2px;">
+            <a href="{{ prevHref }}" aria-label="Previous game" style="display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;border:1px solid var(--rule);color:{{ prevColor }};" class="mono">‹</a>
+            <a href="{{ nextHref }}" aria-label="Next game" style="display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;border:1px solid var(--rule);color:{{ nextColor }};" class="mono">›</a>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px 18px;align-items:center;margin-top:12px;">
+          <sc-for list="{{ sides }}" as="s" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;gap:12px;min-width:0;justify-content:{{ s.justify }};text-align:{{ s.align }};order:{{ s.order }};">
+              <span aria-hidden="true" style="position:relative;width:52px;height:52px;border-radius:50%;flex:none;overflow:hidden;background:{{ s.color }};box-shadow:0 0 0 1px var(--rule);order:{{ s.logoOrder }};"><img src="{{ s.logo }}" alt="" loading="lazy" decoding="async" onLoad="{{ s.onLogoLoad }}" onError="{{ s.onLogoError }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;padding:3px;"></span>
+              <span style="min-width:0;">
+                <span class="cond" style="display:block;font-weight:800;font-size:clamp(28px,5vw,48px);line-height:.95;text-transform:uppercase;">{{ s.abbr }}</span>
+                <span style="display:block;font-size:14px;color:var(--ink-2);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ s.name }}</span>
+                <span class="mono" style="display:block;font-size:12px;color:var(--mute);margin-top:2px;">{{ s.meta }}</span>
+              </span>
+            </div>
+          </sc-for>
+          <div style="order:2;text-align:center;min-width:72px;">
+            <div class="cond" style="font-weight:700;font-size:16px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ atLabel }}</div>
+            <div class="mono" style="font-size:12px;color:var(--mute);margin-top:4px;white-space:nowrap;">{{ tipLine }}</div>
+          </div>
+        </div>
+        <p class="mono" style="margin:12px 0 0;font-size:12px;color:var(--mute);">{{ whereLine }}</p>
+      </section>
+
+      <sc-if value="{{ hasFinal }}" hint-placeholder-val="{{ false }}">
+        <section aria-label="Final" style="padding:18px 0;border-bottom:1px solid var(--ink);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px 24px;align-items:baseline;">
+          <div><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">Final</div><div class="cond" style="font-weight:800;font-size:40px;line-height:1;margin-top:6px;">{{ finalScore }}</div><div class="mono" style="font-size:12px;color:var(--mute);margin-top:4px;">{{ finalFinish }}</div></div>
+          <div><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">Our call</div><div style="font-size:15px;line-height:1.5;color:var(--ink-2);margin-top:6px;">{{ finalCall }}</div></div>
+          <sc-if value="{{ hasPickResult }}" hint-placeholder-val="{{ false }}"><div><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">The pick</div><div style="margin-top:6px;"><span class="cond" style="display:inline-block;padding:3px 8px;font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;background:{{ pickResultBg }};color:{{ pickResultFg }};border:1px solid {{ pickResultBorder }};">{{ pickResult }}</span> <span class="mono" style="font-size:12px;color:var(--mute);">{{ pickResultNote }}</span></div></div></sc-if>
+        </section>
+      </sc-if>
+
+      <section aria-labelledby="call-h" style="padding:26px 0 24px;border-bottom:1px solid var(--ink);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px 40px;align-items:start;">
+        <div style="min-width:0;">
+          <h2 id="call-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">Our call</h2>
+          <p style="margin:12px 0 0;font-size:clamp(18px,2.6vw,24px);line-height:1.3;font-weight:500;max-width:620px;text-wrap:pretty;">{{ callLine }}</p>
+          <p style="margin:10px 0 0;font-size:14px;line-height:1.55;color:var(--ink-2);max-width:620px;text-wrap:pretty;">{{ callNote }}</p>
+          <sc-if value="{{ hasPick }}" hint-placeholder-val="{{ true }}">
+            <div style="margin-top:14px;display:inline-flex;align-items:center;gap:10px;border:1px solid var(--ink);padding:8px 12px;">
+              <span class="cond" style="font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;background:{{ pickBg }};color:{{ pickFg }};padding:3px 7px;">{{ pickKind }}</span>
+              <span style="font-weight:600;">{{ pickLabel }}</span>
+              <span class="mono" style="font-size:12px;color:var(--mute);">{{ pickMeta }}</span>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 14px;border-top:2px solid var(--ink);">
+          <sc-for list="{{ stats }}" as="c" hint-placeholder-count="3">
+            <div style="padding:12px 0;"><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ c.label }}</div><div class="cond" style="font-weight:700;font-size:34px;line-height:1;margin-top:6px;">{{ c.value }}</div><div class="mono" style="font-size:12px;color:var(--ink-2);margin-top:4px;">{{ c.sub }}</div></div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section aria-labelledby="why-h" style="padding:26px 0 24px;border-bottom:1px solid var(--ink);">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;">
+          <h2 id="why-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">How the number was built</h2>
+          <span class="mono" style="font-size:12px;color:var(--mute);">{{ whyStamp }}</span>
+        </div>
+        <sc-if value="{{ noFactors }}" hint-placeholder-val="{{ false }}"><p style="margin:10px 0 0;font-size:14px;color:var(--ink-2);max-width:720px;">{{ noFactorsNote }}</p></sc-if>
+        <sc-if value="{{ hasFactors }}" hint-placeholder-val="{{ true }}">
+          <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:720px;text-wrap:pretty;">Each step is the home win chance the card would have published had it stopped there, in the order the card applies them. The last step is the number on the board.</p>
+          <div style="margin-top:14px;border-top:2px solid var(--ink);max-width:960px;">
+            <sc-for list="{{ steps }}" as="f" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(140px,2fr) 70px 80px;gap:0 12px;padding:10px 0;border-top:1px solid var(--rule-2);align-items:center;">
+                <div style="min-width:0;"><div style="font-weight:600;font-size:14px;">{{ f.label }}</div><div style="font-size:12px;line-height:1.45;color:var(--mute);text-wrap:pretty;">{{ f.plain }}</div></div>
+                <div style="position:relative;height:18px;background:var(--rule-2);" aria-hidden="true"><span style="position:absolute;top:0;bottom:0;left:{{ f.barLeft }}%;width:{{ f.barWidth }}%;background:{{ f.barColor }};opacity:.7;"></span><span style="position:absolute;top:-3px;bottom:-3px;left:50%;width:1px;background:var(--mute);"></span></div>
+                <span class="mono" style="text-align:right;font-size:13px;color:{{ f.deltaColor }};">{{ f.delta }}</span>
+                <span class="mono" style="text-align:right;font-size:15px;font-weight:600;">{{ f.homeWin }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <p class="mono" style="margin:8px 0 0;font-size:11px;color:var(--mute);">Bar: distance from a coin flip, in points of home win chance. {{ whyFoot }}</p>
+        </sc-if>
+      </section>
+
+      <section aria-labelledby="h2h-h" style="padding:26px 0 24px;border-bottom:1px solid var(--ink);">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;">
+          <h2 id="h2h-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">Head to head</h2>
+          <span class="mono" style="font-size:12px;color:var(--mute);">points per 100 possessions against the Division I average</span>
+        </div>
+        <sc-if value="{{ noRatings }}" hint-placeholder-val="{{ false }}"><p style="margin:10px 0 0;font-size:14px;color:var(--ink-2);">The ratings behind this game were not published with the board.</p></sc-if>
+        <sc-if value="{{ hasRatings }}" hint-placeholder-val="{{ true }}">
+          <div style="margin-top:14px;max-width:960px;">
+            <div style="display:grid;grid-template-columns:72px minmax(0,1fr) 130px minmax(0,1fr) 72px;gap:0 10px;padding:6px 0;border-bottom:2px solid var(--ink);" class="mono"><span style="font-size:12px;font-weight:600;">{{ awayAbbr }}</span><span></span><span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);text-align:center;">measure</span><span></span><span style="font-size:12px;font-weight:600;text-align:right;">{{ homeAbbr }}</span></div>
+            <sc-for list="{{ compare }}" as="r" hint-placeholder-count="5">
+              <div style="display:grid;grid-template-columns:72px minmax(0,1fr) 130px minmax(0,1fr) 72px;gap:0 10px;padding:9px 0;border-bottom:1px solid var(--rule-2);align-items:center;">
+                <span class="mono" style="font-size:14px;font-weight:600;">{{ r.awayText }}</span>
+                <span style="position:relative;height:10px;background:var(--rule-2);" aria-hidden="true"><span style="position:absolute;top:0;bottom:0;right:0;width:{{ r.awayWidth }}%;background:{{ r.awayColor }};"></span></span>
+                <span style="text-align:center;min-width:0;"><span style="display:block;font-size:13px;font-weight:500;">{{ r.label }}</span><span class="mono" style="display:block;font-size:11px;color:var(--mute);">{{ r.sub }}</span></span>
+                <span style="position:relative;height:10px;background:var(--rule-2);" aria-hidden="true"><span style="position:absolute;top:0;bottom:0;left:0;width:{{ r.homeWidth }}%;background:{{ r.homeColor }};"></span></span>
+                <span class="mono" style="font-size:14px;font-weight:600;text-align:right;">{{ r.homeText }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px 40px;margin-top:16px;">
+            <sc-for list="{{ tonightSides }}" as="s" hint-placeholder-count="2">
+              <div style="border-top:2px solid var(--ink);padding-top:8px;">
+                <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ s.title }}</div>
+                <sc-for list="{{ s.lines }}" as="l" hint-placeholder-count="4">
+                  <div style="display:grid;grid-template-columns:110px minmax(0,1fr);gap:0 12px;padding:6px 0;border-top:1px solid var(--rule-2);font-size:13px;"><span style="color:var(--mute);">{{ l.k }}</span><span style="color:var(--ink-2);">{{ l.v }}</span></div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </section>
+
+      <section aria-labelledby="odds-h" style="padding:26px 0 24px;border-bottom:1px solid var(--ink);">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;">
+          <h2 id="odds-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">The odds</h2>
+          <span class="mono" style="font-size:12px;color:var(--mute);">{{ oddsStamp }}</span>
+        </div>
+        <sc-if value="{{ noOdds }}" hint-placeholder-val="{{ false }}"><p style="margin:10px 0 0;font-size:14px;color:var(--ink-2);">No book had priced this game when the board was built. Fair prices are shown where the model has a number; nothing here is a pass.</p></sc-if>
+        <div style="margin-top:12px;overflow-x:auto;scrollbar-width:thin;margin-left:calc(-1 * clamp(16px,3vw,24px));margin-right:calc(-1 * clamp(16px,3vw,24px));padding:0 clamp(16px,3vw,24px);">
+          <div role="table" style="min-width:620px;border-top:2px solid var(--ink);max-width:960px;">
+            <div role="row" class="mono" style="display:grid;grid-template-columns:minmax(120px,1.4fr) repeat(5,minmax(80px,1fr));gap:0 10px;padding:6px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);"><span>Market</span><span style="text-align:right;">Open</span><span style="text-align:right;">Now</span><span style="text-align:right;">Our chance</span><span style="text-align:right;">Fair price</span><span style="text-align:right;">Edge</span></div>
+            <sc-for list="{{ markets }}" as="m" hint-placeholder-count="3">
+              <div role="row" style="display:grid;grid-template-columns:minmax(120px,1.4fr) repeat(5,minmax(80px,1fr));gap:0 10px;padding:9px 0;border-top:1px solid var(--rule-2);align-items:center;font-size:13px;">
+                <span style="min-width:0;"><span style="font-weight:600;">{{ m.label }}</span> <sc-if value="{{ m.tag }}" hint-placeholder-val="{{ false }}"><span class="cond" style="display:inline-block;margin-left:6px;padding:1px 6px;font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:{{ m.tagBg }};color:{{ m.tagFg }};">{{ m.tag }}</span></sc-if></span>
+                <span class="mono" style="text-align:right;color:var(--mute);">{{ m.open }}</span>
+                <span class="mono" style="text-align:right;">{{ m.now }}</span>
+                <span class="mono" style="text-align:right;">{{ m.chance }}</span>
+                <span class="mono" style="text-align:right;">{{ m.fair }}</span>
+                <span class="mono" style="text-align:right;color:{{ m.edgeColor }};">{{ m.edge }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <p style="margin:10px 0 0;font-size:13px;line-height:1.5;color:var(--mute);max-width:760px;text-wrap:pretty;">Edge is our chance minus the chance the price implies: for the moneyline with the book's margin removed across both sides, for the spread and total against the posted price itself, which overstates the book by its margin. A positive edge is not a profit: the measured record is on <a href="Tracker.dc.html" style="text-decoration:underline;text-underline-offset:3px;">All results</a>, and no measured market shows a demonstrated edge.</p>
+      </section>
+
+      <section style="padding:26px 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px 40px;align-items:start;">
+        <div style="border:1px solid var(--ink);padding:16px 18px;">
+          <h2 class="cond" style="margin:0;font-weight:700;font-size:16px;letter-spacing:.14em;text-transform:uppercase;">How to read this</h2>
+          <ul style="margin:10px 0 0;padding-left:18px;font-size:14px;line-height:1.55;color:var(--ink-2);display:flex;flex-direction:column;gap:6px;text-wrap:pretty;">
+            <li>The win chance includes overtime. Projected scores are the means of the model's score distribution, so they include overtime too.</li>
+            <li>A bet is a frozen opinion the card selected on an allowlisted market. A pass is an opinion the card priced and did not select. "Not priced" means nothing was judged.</li>
+            <li>Every step above is the lab's own number; the second opinion is a published ratings table blended in at half weight, and it is named in the lab's documentation, not here.</li>
+          </ul>
+        </div>
+        <div style="font-size:14px;line-height:1.55;color:var(--ink-2);display:flex;flex-direction:column;gap:10px;text-wrap:pretty;">
+          <p style="margin:0;"><a href="Methods.dc.html" style="text-decoration:underline;text-underline-offset:3px;">Methods</a>: what each step is, how it is built and how much to trust it.</p>
+          <p style="margin:0;"><a href="Record.dc.html" style="text-decoration:underline;text-underline-offset:3px;">Record</a>: how often games we rate like this one land.</p>
+          <p style="margin:0;color:var(--mute);">The site recommends; it never places bets.</p>
+        </div>
+      </section>
+
+    </sc-if>
+
+    <footer style="border-top:1px solid var(--ink);margin-top:40px;padding:18px 0 0;display:flex;flex-wrap:wrap;gap:6px 24px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--mute);">
+      <span>© 2026 Maverick Hightower</span>
+      <a href="Board.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Board</a>
+      <a href="Record.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Record</a>
+      <a href="Methods.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Methods</a>
+      <a href="https://maverickhightower.com/about.html" style="display:inline-flex;align-items:center;min-height:44px;">About</a>
+      <a href="https://x.com/mavhightower" style="display:inline-flex;align-items:center;min-height:44px;">@mavhightower</a>
+    </footer>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;scenario&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Sample game&quot;,&quot;Game not found&quot;],&quot;default&quot;:&quot;Sample game&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Preview&quot;}}">
+class Component extends DCLogic {
+  state = { board: null, game: null, final: null, loadedFor: null, isSample: false, err: "" };
+  static PLAIN = {
+    strength: (g) => "Both teams' season ratings on a neutral floor: offence against defence, at the pace they play.",
+    home_court: (g) => g.neutral ? "A neutral floor: no home court is added." : "The home side's edge: the measured effect for its tier, plus how its own building has departed from that.",
+    form: (g) => "Each side's last five games against what the ratings expected of them, shrunk hard so a hot week cannot swamp a season.",
+    rest: (g) => "Days since each side last played, in four buckets, fitted on past seasons for teams like these.",
+    lineup: (g) => "A regular who sat out the most recent game is treated as out; half his share of the scoring comes off his team's attack.",
+    second_opinion: (g) => "An independent published rating of both teams, blended in at half weight.",
+  };
+  onSite() { return /(^|\.)maverickhightower\.com$/.test(location.hostname); }
+  async load() {
+    const want = (this.props.scenario || "") + location.search;
+    if (this.state.loadedFor === want) return;
+    this.setState({ loadedFor: want });
+    const [S, F] = await Promise.all([import("./lib/sports.js"), import("./lib/format.js")]);
+    this.F = F;
+    const { deployed } = await S.detectSport("cbb"); void deployed;
+    const scenario = this.onSite() ? "Normal" : this.props.scenario || "Sample game";
+    const live = this.onSite() || scenario === "Normal";
+    const q = new URLSearchParams(location.search);
+    const id = q.get("id") || "", day = q.get("date") || "";
+    const get = async (u) => { try { const r = await fetch(u, { cache: "no-store" }); return r.ok ? await r.json() : null; } catch (_) { return null; } };
+    let board = null, final = null;
+    if (!live) {
+      board = await get("./data/sample/board.json");
+    } else if (day) {
+      const index = await get("./data/history/index.json");
+      const files = (index && (index.days || index.files || index.boards || [])) || [];
+      const match = files.find((f) => (typeof f === "string" ? f : f && (f.file || f.name || "")).toString().startsWith(day));
+      const name = match ? (typeof match === "string" ? match : match.file || match.name) : `${day}_morning.json`;
+      board = await get(`./data/history/${name}`);
+      const settled = await get(`./data/history/settled/${day}.json`);
+      const graded = settled && Array.isArray(settled.graded) ? settled.graded.find((x) => String(x.id) === id) : null;
+      if (graded && graded.home && graded.away && typeof graded.home.final === "number") final = { home: graded.home.final, away: graded.away.final, finish: graded.finish || "REG", pick: graded.pick || null };
+    } else {
+      board = await get("./data/board.json");
+    }
+    const games = (board && board.games) || [];
+    const game = scenario === "Game not found" ? null : (games.find((g) => String(g.id) === id) || (!live ? games[0] : null));
+    this.setState({ board, game, final, isSample: !live, err: board ? "" : "unreachable" });
+  }
+  componentDidMount() { this.load(); }
+  componentDidUpdate() { this.load(); }
+  renderVals() {
+    const F = this.F || {}, b = this.state.board, g = this.state.game, T = (b && b.teams) || {};
+    const tabs = [["Tonight", "Board.dc.html"], ["Results", "Results.dc.html"], ["All results", "Tracker.dc.html"], ["Season", "Season.dc.html"], ["Record", "Record.dc.html"], ["Methods", "Methods.dc.html"]].map(([label, href]) => ({ label, href }));
+    const base = { tabs, isSample: !!this.state.isSample };
+    if (!g) return { ...base, ready: false, missing: true, missingTitle: this.state.err ? "The board is unreachable" : "No game by that id", missingNote: this.state.err ? "The board's data file did not load." : "The link names a game that is not on this board. A game page lives as long as its board does." };
+    const pct = (p) => (typeof p === "number" ? `${Math.round(p * 100)}%` : "—");
+    const pts = (p) => (typeof p === "number" ? `${p > 0 ? "+" : p < 0 ? "−" : ""}${Math.abs(p * 100).toFixed(1)}` : "—");
+    const odds = (v) => (typeof v === "number" ? (F.fmtOdds ? F.fmtOdds(v) : (v > 0 ? `+${v}` : String(v))) : "—");
+    const line = (v, signed) => (typeof v === "number" ? (signed ? `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v)}` : String(v)) : "—");
+    const home = g.home || {}, away = g.away || {};
+    const th = T[home.abbr] || {}, ta = T[away.abbr] || {};
+    const logoOf = (abbr, t) => (t.logo === null ? "" : t.logo || `./logos/${encodeURIComponent(abbr)}.png`);
+    const hideLogo = (e) => { e.currentTarget.style.display = "none"; }, showLogo = (e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.background = "var(--paper)"; };
+    const R = g.ratings || null, rh = R ? R.home : null, ra = R ? R.away : null;
+    const tierOf = (s) => (s && s.tier ? s.tier.replace("_", " ") : "");
+    const sides = [
+      { abbr: away.abbr, name: ta.name || away.abbr, meta: [away.record, tierOf(ra)].filter(Boolean).join(" · "), color: ta.color || "var(--rule)", logo: logoOf(away.abbr, ta), justify: "flex-start", align: "left", order: 1, logoOrder: 0, onLogoLoad: showLogo, onLogoError: hideLogo },
+      { abbr: home.abbr, name: th.name || home.abbr, meta: [home.record, tierOf(rh)].filter(Boolean).join(" · "), color: th.color || "var(--rule)", logo: logoOf(home.abbr, th), justify: "flex-end", align: "right", order: 3, logoOrder: 1, onLogoLoad: showLogo, onLogoError: hideLogo },
+    ];
+    const tip = g.tip ? new Date(g.tip) : null;
+    const tipLine = tip && !isNaN(tip) ? tip.toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+    const where = [g.venue, g.city].filter(Boolean).join(", ");
+    const whereLine = `${g.neutral ? "Neutral floor" : "Home floor"}${where ? ` · ${where}` : ""}${g.tv ? ` · ${g.tv}` : ""}${g.started ? " · tipped" : ""}`;
+    // The call
+    const hw = typeof home.winProb === "number" ? home.winProb : null;
+    const fav = hw == null ? null : hw >= 0.5 ? "home" : "away", favAbbr = fav === "home" ? home.abbr : away.abbr, favP = hw == null ? null : Math.max(hw, 1 - hw);
+    const hp = home.projPts, ap = away.projPts;
+    const callLine = hw == null ? "Not priced: the model had no number for this game when the board was built." : `${favAbbr} ${pct(favP)} to win${typeof hp === "number" && typeof ap === "number" ? `, projected ${away.abbr} ${ap.toFixed(0)}, ${home.abbr} ${hp.toFixed(0)}` : ""}.`;
+    const fairML = g.moneyline && g.moneyline.fair;
+    const callNote = hw == null ? "" : `Fair price ${odds(fairML ? fairML[fav] : null)} for ${favAbbr}. ${favP >= 0.8 ? "A heavy favourite: the question is the spread, not the winner." : favP >= 0.6 ? "A clear favourite, with real room for the other side." : "Close to a coin flip."}`;
+    const pick = g.pick || null;
+    const kind = pick ? (pick.kind || "bet") : null;
+    const stats = [
+      { label: "Home win", value: pct(hw), sub: hw == null ? "no number" : `fair ${odds(fairML ? fairML.home : null)}` },
+      { label: "Spread", value: g.spread && typeof g.spread.proj === "number" ? line(g.spread.proj, true) : "—", sub: g.spread && typeof g.spread.current === "number" ? `market ${line(g.spread.current, true)}` : "no line" },
+      { label: "Total", value: g.total && typeof g.total.proj === "number" ? g.total.proj.toFixed(1) : "—", sub: g.total && typeof g.total.current === "number" ? `market ${g.total.current}` : "no line" },
+    ];
+    // Steps
+    const steps0 = Array.isArray(g.factors) ? g.factors : [];
+    const steps = steps0.map((f) => { const d = typeof f.delta === "number" ? f.delta : 0; const w = Math.min(50, Math.abs((f.homeWin || 0.5) - 0.5) * 100); const plain = (this.constructor.PLAIN[f.key] || (() => f.note || ""))(g); return { label: f.label, plain, homeWin: pct(f.homeWin), delta: pts(d), deltaColor: d > 0.0005 ? "var(--win)" : d < -0.0005 ? "var(--alert)" : "var(--mute)", barLeft: ((f.homeWin || 0.5) >= 0.5 ? 50 : 50 - w).toFixed(1), barWidth: w.toFixed(1), barColor: (f.homeWin || 0.5) >= 0.5 ? "var(--ink)" : "var(--mute)" }; });
+    const biggest = steps0.slice(1).map((f) => ({ f, a: Math.abs(f.delta || 0) })).sort((x, y) => y.a - x.a)[0];
+    const whyFoot = biggest ? `The biggest move after strength was ${biggest.f.label.toLowerCase()} (${pts(biggest.f.delta)} points).` : "";
+    // Head to head
+    const num = (v) => (typeof v === "number" ? v : null);
+    const row = (label, sub, ah, hh, lowerBetter, fmt, scale) => { const a = num(ah), h = num(hh); const width = (v) => (v == null ? 0 : Math.min(100, (Math.abs(v) / scale) * 100)); const good = (v) => (v == null ? "var(--rule)" : (lowerBetter ? v < 0 : v > 0) ? "var(--win)" : "var(--alert)"); return { label, sub, awayText: a == null ? "—" : fmt(a), homeText: h == null ? "—" : fmt(h), awayWidth: width(a).toFixed(1), homeWidth: width(h).toFixed(1), awayColor: good(a), homeColor: good(h) }; };
+    const signed = (v) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(1)}`;
+    const compare = R ? [
+      row("Offence", "points scored per 100 vs average", ra.offence, rh.offence, false, signed, 15),
+      row("Defence", "points allowed per 100 vs average", ra.defence, rh.defence, true, signed, 15),
+      row("Net", "offence minus defence", ra.net, rh.net, false, signed, 25),
+      row("Tempo", "possessions per game vs average", ra.tempo, rh.tempo, false, signed, 8),
+      row("Last five", "net vs what the ratings expected", ra.form, rh.form, false, signed, 3),
+    ] : [];
+    const restText = (s) => (s && typeof s.restDays === "number" ? `${s.restDays} day${s.restDays === 1 ? "" : "s"}${s.restBucket ? ` (${s.restBucket})` : ""}${typeof s.restEffect === "number" && Math.abs(s.restEffect) > 0.0005 ? `, ${signed(s.restEffect)} per 100` : ""}` : "unknown");
+    const missingText = (s) => (s && Array.isArray(s.missing) && s.missing.length ? `${s.missing.join(", ")}${typeof s.lineupFactor === "number" ? ` (attack ×${s.lineupFactor.toFixed(3)})` : ""}` : "nobody flagged");
+    const soText = (s) => (s && s.secondOpinion ? `offence ${s.secondOpinion.offence}, defence ${s.secondOpinion.defence}, tempo ${s.secondOpinion.tempo}` : "not read for this team");
+    const tonightSides = R ? [[away.abbr, ra], [home.abbr, rh]].map(([abbr, s]) => ({ title: `${abbr} tonight`, lines: [{ k: "Rest", v: restText(s) }, { k: "Missing", v: missingText(s) }, { k: "Second opinion", v: soText(s) }, { k: "Tier", v: tierOf(s) || "unplaced" }] })) : [];
+    // Odds
+    const ml = g.moneyline || {}, sp = g.spread || {}, tt = g.total || {};
+    const noVig = (pair) => { if (!pair || typeof pair.home !== "number" || typeof pair.away !== "number") return null; const imp = (a) => (a > 0 ? 100 / (a + 100) : -a / (-a + 100)); const h = imp(pair.home), a = imp(pair.away); return h + a > 0 ? h / (h + a) : null; };
+    const mlMarket = noVig(ml.current);
+    const edgeOf = (ours, market) => (typeof ours === "number" && typeof market === "number" ? ours - market : null);
+    const imp2 = (price) => (typeof price === "number" ? (price > 0 ? 100 / (price + 100) : -price / (-price + 100)) : null);
+    const tag = (marketKey) => (pick && String(pick.market || "").toLowerCase() === marketKey ? (kind === "bet" ? "Bet" : kind === "lean" ? "Lean" : "Pass") : "");
+    const tagStyle = (t) => (t === "Bet" ? ["var(--ink)", "var(--paper)"] : t === "Lean" ? ["var(--rule)", "var(--ink)"] : ["transparent", "var(--mute)"]);
+    const mk = (label, key, open, now, chance, fair, edge) => { const t = tag(key), [bg, fg] = tagStyle(t); return { label, tag: t, tagBg: bg, tagFg: fg, open, now, chance, fair, edge: edge == null ? "—" : pts(edge), edgeColor: edge == null ? "var(--mute)" : edge > 0 ? "var(--win)" : "var(--alert)" }; };
+    const mlEdge = fav && mlMarket != null ? edgeOf(favP, fav === "home" ? mlMarket : 1 - mlMarket) : null;
+    const markets = [
+      mk(`Moneyline · ${favAbbr || home.abbr}`, "moneyline", ml.open ? `${odds(ml.open[fav || "home"])}` : "—", ml.current ? odds(ml.current[fav || "home"]) : "—", pct(favP), odds(fairML ? fairML[fav || "home"] : null), mlEdge),
+      mk(`Spread · ${home.abbr} ${line(sp.current, true)}`, "spread", typeof sp.open === "number" ? line(sp.open, true) : "—", typeof sp.current === "number" ? `${line(sp.current, true)} (${odds(sp.homePrice)})` : "—", pct(sp.coverProb), odds(sp.fairHomePrice), typeof sp.coverProb === "number" && typeof sp.homePrice === "number" ? sp.coverProb - imp2(sp.homePrice) : null),
+      mk(`Total · over ${line(tt.current)}`, "total", typeof tt.open === "number" ? String(tt.open) : "—", typeof tt.current === "number" ? `${tt.current} (${odds(tt.overPrice)})` : "—", pct(tt.overProb), odds(tt.fairOverPrice), typeof tt.overProb === "number" && typeof tt.overPrice === "number" ? tt.overProb - imp2(tt.overPrice) : null),
+    ];
+    const noOdds = !(ml.current || typeof sp.current === "number" || typeof tt.current === "number");
+    // Pick box
+    const pickKind = kind === "bet" ? "Best bet" : kind === "lean" ? "Lean" : "Opinion, not a bet";
+    const [pickBg, pickFg] = kind === "bet" ? ["var(--ink)", "var(--paper)"] : ["var(--rule-2)", "var(--ink)"];
+    const pickMeta = pick ? [odds(pick.price), pick.book, pick.tier ? `tier ${pick.tier}` : "", typeof pick.edgePct === "number" ? `edge ${pick.edgePct > 0 ? "+" : ""}${pick.edgePct.toFixed(1)}` : ""].filter(Boolean).join(" · ") : "";
+    // Final
+    const fin = this.state.final;
+    const hasFinal = !!fin;
+    const finalScore = fin ? `${away.abbr} ${fin.away}, ${home.abbr} ${fin.home}` : "";
+    const finalCall = fin && hw != null ? `${favAbbr} at ${pct(favP)}: ${(fin.home > fin.away) === (fav === "home") ? "the favourite won." : "the other side won."}` : fin ? "No number was published for this game." : "";
+    const res = fin && fin.pick && fin.pick.result ? fin.pick.result : "";
+    const CHIP = { win: ["Win", "var(--win)", "var(--on-win)", "var(--win)"], loss: ["Loss", "transparent", "var(--alert)", "var(--alert)"], push: ["Push", "transparent", "var(--mute)", "var(--rule)"] };
+    const chip = CHIP[res] || null;
+    // Prev / next by tip on the same board
+    const ordered = ((b && b.games) || []).slice().sort((x, y) => String(x.tip || "").localeCompare(String(y.tip || "")));
+    const at = ordered.findIndex((x) => String(x.id) === String(g.id));
+    const href = (x) => (x ? `Game.dc.html?id=${encodeURIComponent(x.id)}${location.search.includes("date=") ? `&date=${encodeURIComponent(new URLSearchParams(location.search).get("date"))}` : ""}` : "#");
+    const prev = at > 0 ? ordered[at - 1] : null, next = at >= 0 && at < ordered.length - 1 ? ordered[at + 1] : null;
+    return { ...base, ready: true, missing: false,
+      kicker: `College basketball · ${b.slateDate || ""}${b.cardSlot ? ` · ${b.cardSlot} card` : ""}`,
+      prevHref: href(prev), nextHref: href(next), prevColor: prev ? "var(--ink)" : "var(--rule)", nextColor: next ? "var(--ink)" : "var(--rule)",
+      sides, atLabel: g.neutral ? "vs" : "@", tipLine, whereLine, awayAbbr: away.abbr, homeAbbr: home.abbr,
+      hasFinal, finalScore, finalFinish: fin ? (fin.finish === "OT" ? "after overtime" : "regulation") : "", finalCall, hasPickResult: !!chip, pickResult: chip ? chip[0] : "", pickResultBg: chip ? chip[1] : "", pickResultFg: chip ? chip[2] : "", pickResultBorder: chip ? chip[3] : "", pickResultNote: fin && fin.pick ? `${fin.pick.label || ""} ${odds(fin.pick.price)}` : "",
+      callLine, callNote, hasPick: !!pick, pickKind, pickBg, pickFg, pickLabel: pick ? `${pick.market}: ${pick.label}` : "", pickMeta, stats,
+      whyStamp: steps.length ? `${steps.length} steps` : "", noFactors: steps.length === 0, noFactorsNote: hw == null ? "No number, so no steps." : "This board was built before the steps were published; the win chance stands.", hasFactors: steps.length > 0, steps, whyFoot,
+      noRatings: !R, hasRatings: !!R, compare, tonightSides,
+      oddsStamp: b.generatedAt ? `board built ${new Date(b.generatedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : "", noOdds, markets };
+  }
+}
+</script>
+</body>
+</html>

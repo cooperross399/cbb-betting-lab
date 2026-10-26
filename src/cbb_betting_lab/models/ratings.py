@@ -2534,6 +2534,26 @@ _CLASSIFIED_CACHE: dict[tuple, "pd.DataFrame"] = {}
 #: 6,318 schedule rows on every slate day is the same waste in miniature.
 _FIXTURES_CACHE: dict[tuple, dict] = {}
 
+#: What the most recent `matchups_for` fitted and read: the day, the season,
+#: the `Ratings`, the `card_factors.DayContext` and the matchups it returned.
+#: A side channel for a reader that needs the ratings themselves — the site's
+#: ratings and season pages — without fitting a second time. Nothing prices
+#: through it; every price still comes out of `matchups_for`.
+_LAST_FIT: dict = {}
+
+
+def last_fit() -> dict:
+    """A copy of what the most recent `matchups_for` fitted, or `{}`."""
+    return dict(_LAST_FIT)
+
+
+def _record_fit(day, season, ratings, context, matchups) -> None:
+    _LAST_FIT.clear()
+    _LAST_FIT.update(
+        {"day": str(day), "season": int(season), "ratings": ratings,
+         "context": context, "matchups": dict(matchups)}
+    )
+
 
 def clear_caches() -> None:
     """Drop every memo. Tests that change the cached feeds call this."""
@@ -2801,6 +2821,7 @@ def matchups_for(
 
     out: dict[str, Matchup] = {}
     if not asked:
+        _record_fit(day, season, ratings, None, out)
         return out
 
     # TONIGHT'S CONTEXT, on the same seam. Form, rest and who is missing are
@@ -2841,4 +2862,5 @@ def matchups_for(
             venue_id=venues.get(game_id),
             local_team_id=local_side,
         )
+    _record_fit(day, season, ratings, context, out)
     return out

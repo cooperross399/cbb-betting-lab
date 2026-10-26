@@ -1,0 +1,40 @@
+{
+ "generatedAt": "2026-11-14T14:05:00Z",
+ "nights": 0,
+ "firstDate": null,
+ "lastDate": null,
+ "teamPickDefaultUnits": 1,
+ "overall": {
+  "w": 0,
+  "l": 0,
+  "p": 0,
+  "bets": 0,
+  "staked": 0.0,
+  "units": 0.0,
+  "returnPct": null
+ },
+ "byMarket": [],
+ "byTeam": [],
+ "byTier": [],
+ "byPrice": [],
+ "byMonth": [],
+ "opinions": {
+  "overall": {
+   "w": 0,
+   "l": 0,
+   "p": 0,
+   "bets": 0,
+   "staked": 0.0,
+   "units": 0.0,
+   "returnPct": null
+  },
+  "byMarket": [],
+  "byKind": []
+ },
+ "rows": [],
+ "notes": [
+  "A bet is a frozen opinion the card selected: it cleared the edge bar on an allowlisted market with a human receipt behind it. Each is counted at one flat unit at the board's price.",
+  "An opinion is a frozen price the card did not select. It is graded for the record and stakes nothing.",
+  "Ten or more bets to read a row; fewer swing with one week."
+ ]
+}

@@ -227,8 +227,16 @@ def _write_state(path: Path, run: GC.CardRun) -> None:
                 "fingerprint": run.fingerprint,
                 "decision": run.decision.value,
                 "generated_at": run.generated_at,
+                # The selections themselves, as `card_pricing.select` kept
+                # them: the one structured record of what the card staked,
+                # for the public board to label a frozen opinion the card
+                # selected as a bet and every other one as an opinion. A
+                # rehearsal's are written too, and refused by the reader
+                # with the rest of its state.
+                "selections": [dict(row) for row in run.selections],
             },
             indent=2,
+            default=str,
         )
         + "\n",
         encoding="utf-8",

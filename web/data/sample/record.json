@@ -1,0 +1,341 @@
+{
+ "generatedAt": "2026-11-14T14:05:00Z",
+ "through": "2026-11-29",
+ "nights": 25,
+ "games": 129,
+ "buckets": [
+  {
+   "low": 0.5,
+   "high": 0.55,
+   "games": 17,
+   "predicted": 0.5245,
+   "actual": 0.5294,
+   "interval": [
+    0.3096,
+    0.7384
+   ]
+  },
+  {
+   "low": 0.55,
+   "high": 0.6,
+   "games": 20,
+   "predicted": 0.5817,
+   "actual": 0.7,
+   "interval": [
+    0.481,
+    0.8545
+   ]
+  },
+  {
+   "low": 0.6,
+   "high": 0.65,
+   "games": 15,
+   "predicted": 0.6195,
+   "actual": 0.6,
+   "interval": [
+    0.3575,
+    0.8018
+   ]
+  },
+  {
+   "low": 0.65,
+   "high": 0.7,
+   "games": 15,
+   "predicted": 0.6747,
+   "actual": 0.6,
+   "interval": [
+    0.3575,
+    0.8018
+   ]
+  },
+  {
+   "low": 0.7,
+   "high": 0.8,
+   "games": 24,
+   "predicted": 0.7385,
+   "actual": 0.6667,
+   "interval": [
+    0.4671,
+    0.8203
+   ]
+  },
+  {
+   "low": 0.8,
+   "high": 1.0,
+   "games": 38,
+   "predicted": 0.8592,
+   "actual": 0.8421,
+   "interval": [
+    0.6958,
+    0.9256
+   ]
+  }
+ ],
+ "byTier": {
+  "High major": {
+   "games": 66,
+   "buckets": [
+    {
+     "low": 0.5,
+     "high": 0.55,
+     "games": 7,
+     "predicted": 0.528,
+     "actual": 0.4286,
+     "interval": [
+      0.1582,
+      0.7495
+     ]
+    },
+    {
+     "low": 0.55,
+     "high": 0.6,
+     "games": 12,
+     "predicted": 0.5845,
+     "actual": 0.75,
+     "interval": [
+      0.4677,
+      0.9111
+     ]
+    },
+    {
+     "low": 0.6,
+     "high": 0.65,
+     "games": 8,
+     "predicted": 0.6299,
+     "actual": 0.375,
+     "interval": [
+      0.1368,
+      0.6943
+     ]
+    },
+    {
+     "low": 0.65,
+     "high": 0.7,
+     "games": 9,
+     "predicted": 0.6748,
+     "actual": 0.6667,
+     "interval": [
+      0.3542,
+      0.8794
+     ]
+    },
+    {
+     "low": 0.7,
+     "high": 0.8,
+     "games": 13,
+     "predicted": 0.734,
+     "actual": 0.6923,
+     "interval": [
+      0.4237,
+      0.8732
+     ]
+    },
+    {
+     "low": 0.8,
+     "high": 1.0,
+     "games": 17,
+     "predicted": 0.8526,
+     "actual": 0.8824,
+     "interval": [
+      0.6566,
+      0.9671
+     ]
+    }
+   ]
+  },
+  "Low major": {
+   "games": 31,
+   "buckets": [
+    {
+     "low": 0.5,
+     "high": 0.55,
+     "games": 5,
+     "predicted": 0.5194,
+     "actual": 0.6,
+     "interval": [
+      0.2307,
+      0.8824
+     ]
+    },
+    {
+     "low": 0.55,
+     "high": 0.6,
+     "games": 4,
+     "predicted": 0.5765,
+     "actual": 0.75,
+     "interval": [
+      0.3006,
+      0.9544
+     ]
+    },
+    {
+     "low": 0.6,
+     "high": 0.65,
+     "games": 3,
+     "predicted": 0.6153,
+     "actual": 0.6667,
+     "interval": [
+      0.2077,
+      0.9385
+     ]
+    },
+    {
+     "low": 0.65,
+     "high": 0.7,
+     "games": 2,
+     "predicted": 0.677,
+     "actual": 0.5,
+     "interval": [
+      0.0945,
+      0.9055
+     ]
+    },
+    {
+     "low": 0.7,
+     "high": 0.8,
+     "games": 8,
+     "predicted": 0.7442,
+     "actual": 0.5,
+     "interval": [
+      0.2152,
+      0.7848
+     ]
+    },
+    {
+     "low": 0.8,
+     "high": 1.0,
+     "games": 9,
+     "predicted": 0.8449,
+     "actual": 0.8889,
+     "interval": [
+      0.565,
+      0.9801
+     ]
+    }
+   ]
+  },
+  "Mid major": {
+   "games": 32,
+   "buckets": [
+    {
+     "low": 0.5,
+     "high": 0.55,
+     "games": 5,
+     "predicted": 0.5246,
+     "actual": 0.6,
+     "interval": [
+      0.2307,
+      0.8824
+     ]
+    },
+    {
+     "low": 0.55,
+     "high": 0.6,
+     "games": 4,
+     "predicted": 0.5782,
+     "actual": 0.5,
+     "interval": [
+      0.15,
+      0.85
+     ]
+    },
+    {
+     "low": 0.6,
+     "high": 0.65,
+     "games": 4,
+     "predicted": 0.602,
+     "actual": 1.0,
+     "interval": [
+      0.5101,
+      1.0
+     ]
+    },
+    {
+     "low": 0.65,
+     "high": 0.7,
+     "games": 4,
+     "predicted": 0.6735,
+     "actual": 0.5,
+     "interval": [
+      0.15,
+      0.85
+     ]
+    },
+    {
+     "low": 0.7,
+     "high": 0.8,
+     "games": 3,
+     "predicted": 0.743,
+     "actual": 1.0,
+     "interval": [
+      0.4385,
+      1.0
+     ]
+    },
+    {
+     "low": 0.8,
+     "high": 1.0,
+     "games": 12,
+     "predicted": 0.8792,
+     "actual": 0.75,
+     "interval": [
+      0.4677,
+      0.9111
+     ]
+    }
+   ]
+  }
+ },
+ "brier": {
+  "games": 129,
+  "model": 0.2064,
+  "market": 0.2059,
+  "modelAll": 0.2064
+ },
+ "markets": {
+  "spread": {
+   "games": 128,
+   "buckets": [
+    {
+     "low": 0.5,
+     "high": 0.55,
+     "games": 128,
+     "predicted": 0.5114,
+     "actual": 0.4609,
+     "interval": [
+      0.377,
+      0.5472
+     ]
+    }
+   ]
+  },
+  "total": {
+   "games": 127,
+   "buckets": [
+    {
+     "low": 0.5,
+     "high": 0.55,
+     "games": 127,
+     "predicted": 0.5125,
+     "actual": 0.5276,
+     "interval": [
+      0.4412,
+      0.6123
+     ]
+    }
+   ]
+  }
+ },
+ "movement": {
+  "toward": 5,
+  "against": 3,
+  "flat": 5,
+  "picks": 13
+ },
+ "notes": [
+  "Each game is counted once, under the side the board favoured, so a 40% home chance is a 60% away favourite.",
+  "Brier is the mean squared error of the home win chance; lower is better, 0.25 is a coin flip. The market column is the frozen board's best moneyline pair with the margin removed, on the games that carried both prices.",
+  "Spread and total bands use the chance the board published for the favoured side at the board's own line; pushes are left out.",
+  "Movement compares the picked side's price at the first and last reads of the board; no closing line is fetched."
+ ]
+}
