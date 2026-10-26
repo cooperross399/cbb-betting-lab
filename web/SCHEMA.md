@@ -41,6 +41,14 @@ Each game may carry, beside the keys the shared Board reads:
   `total.fairOverPrice`: the model's chances and fair prices on the posted
   lines.
 
+At the top level, `league: {efficiency, tempo}` is the Division I average
+the ratings are measured against (points per 100 possessions, possessions
+per game), so the game page can show each team as "+N% vs average". Absent
+when the board was built without a fit.
+
+The game page reads `factors` only to rank the three biggest reasons behind
+the number; it draws no waterfall and prints no step.
+
 ## record.json
 
 Accuracy only, never a return.

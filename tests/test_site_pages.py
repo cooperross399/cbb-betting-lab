@@ -283,3 +283,105 @@ def test_the_schema_names_every_feed():
     schema = (WEB / "SCHEMA.md").read_text(encoding="utf-8")
     for feed in ("record.json", "tracker.json", "season.json", "ratings.json", "board.json"):
         assert feed in schema
+
+
+# --- The game page is for a reader, not an analyst (2026-10-26, evening) ---
+#
+# Cooper found the first NHL game pages "way too complicated". The CBB page
+# follows the plain format they were redone in: our call in one sentence, the
+# three biggest reasons, head to head as "+N% vs average", who is out, the
+# odds and the result. No waterfall, no formulas, no uncertainty band.
+
+_GAME_DRIVER = r"""
+import { readFileSync } from "node:fs";
+const [pagePath, boardPath] = process.argv.slice(2);
+const page = readFileSync(pagePath, "utf8");
+const board = JSON.parse(readFileSync(boardPath, "utf8"));
+const m = /<script type="text\/x-dc"[^>]*>([\s\S]*?)<\/script>/.exec(page);
+globalThis.location = { search: "", hostname: "localhost" };
+class DCLogic { constructor(props) { this.props = props || {}; } setState(s) { Object.assign(this.state, s); } }
+const Component = new Function("DCLogic", `${m[1]}; return Component;`)(DCLogic);
+const F = { fmtOdds: (v) => (v > 0 ? `+${v}` : String(v)) };
+const render = (game, props) => { const c = new Component(props); c.F = F; c.state.board = board; c.state.isSample = true; c.state.game = game; return c.renderVals(); };
+const out = {};
+for (const [name, id] of Object.entries(Component.PREVIEW)) out[name] = render(board.games.find((g) => String(g.id) === id), { scenario: "Sample game", game: name, afterGame: false });
+out.after = render(board.games[0], { scenario: "Sample game", afterGame: true });
+const refused = { ...board.games[0], id: "x", home: { abbr: "ND", record: "2–0" }, away: { abbr: "NOVA", record: "1–1" } };
+for (const k of ["factors", "ratings", "pick", "moneyline", "spread", "total", "tiers", "homeCourt"]) delete refused[k];
+out.refused = render(refused, { scenario: "Sample game" });
+process.stdout.write(JSON.stringify(out));
+"""
+
+
+def _render_game_page(tmp_path: Path) -> dict:
+    import subprocess
+
+    node = shutil.which("node")
+    assert node, "node is not on PATH; this test renders the game page's own component"
+    site = tmp_path / "game-render"
+    site.mkdir()
+    (site / "package.json").write_text('{"type": "module"}\n', encoding="utf-8")
+    (site / "render.mjs").write_text(_GAME_DRIVER, encoding="utf-8")
+    result = subprocess.run(
+        [node, str(site / "render.mjs"), str(WEB / "Game.dc.html"), str(WEB / "data" / "sample" / "board.json")],
+        capture_output=True, text=True, timeout=60, check=False,
+    )
+    assert result.returncode == 0, f"the game page's component threw:\n{result.stderr}"
+    text = result.stdout
+    assert "NaN" not in text and "undefined" not in text and "Infinity" not in text
+    return json.loads(text)
+
+
+def test_the_game_page_carries_no_waterfall_and_reads_in_sentences():
+    text = (WEB / "Game.dc.html").read_text(encoding="utf-8")
+    for gone in ("How the number was built", "waterfall", "barWidth", "How to read this", "Fair price", ">Edge<"):
+        assert gone not in text, f"the game page still carries {gone!r}"
+    for kept in (">Our call<", ">Why<", ">Head to head<", ">Who is out<", ">The odds<", ">After the game<", "no demonstrated edge"):
+        assert kept in text, f"the game page lost {kept!r}"
+
+
+def test_the_game_page_renders_the_sample_games_in_plain_english(tmp_path):
+    out = _render_game_page(tmp_path)
+    for name, v in out.items():
+        if name in ("after", "refused"):
+            continue
+        assert re.fullmatch(r"(We like .+ to win\. We give them a \d+% chance\.|Close to a coin flip\. We give .+ a slight edge, \d+%\.)", v["headline"]), (name, v["headline"])
+        assert v["scoreLine"].startswith("Projected score: ")
+        assert 1 <= len(v["why"]) <= 3 and all(w["text"].endswith(".") and w["label"] for w in v["why"]), (name, v["why"])
+        assert [r["label"] for r in v["cmp"]] == ["Scoring", "Defence", "Last five games"]
+        for r in v["cmp"]:
+            for cell in (r["away"], r["home"]):
+                assert re.fullmatch(r"Avg|[+−]\d+%", cell), (name, r)
+        assert v["cmpNote"] == "Compared with an average Division I team. Plus is better."
+        assert v["paceLine"].startswith("Pace: ") and "possessions" in v["paceLine"]
+        assert len(v["lineups"]) == 2 and all(k["name"] and k["tag"] for k in v["lineups"])
+        assert v["after"]["pending"] is True
+        for row in v["markets"]:
+            assert row["chance"] != "—" or row["tag"] == "", (name, row)  # a tagged pick always shows its chance
+    best, lean, none = out["NOVA @ ND · best bet"], out["SDSU @ ARIZ · lean"], out["MICH @ DUKE · no pick"]
+    assert best["pick"]["isBet"] and best["pick"]["sub"].endswith("1 unit")
+    assert [r["tag"] for r in best["markets"] if r["tag"]] == ["Best bet"]
+    assert lean["pick"]["isLean"] and [r["tag"] for r in lean["markets"] if r["tag"]] == ["Lean"]
+    assert none["pick"]["isNone"] and not any(r["tag"] for r in none["markets"])
+    after = out["after"]["after"]
+    assert after["done"] is True and after["grade"] in ("Win", "Loss", "Push") and after["winnerProb"].endswith("%")
+    refused = out["refused"]
+    assert refused["unpriced"] and refused["hasWhy"] is False and refused["hasRatings"] is False and refused["priced"] is False
+    assert refused["unpricedNote"].startswith("The model had no number")
+    assert not refused["pick"]["isNone"], "a refused game is never a pass"
+
+
+def test_the_board_carries_the_league_averages_the_ratings_are_measured_against(built):
+    _builder, board, _fit = built
+    assert board["league"]["efficiency"] > 50 and board["league"]["tempo"] > 40
+
+
+def test_the_sample_board_matches_the_builders_pick_shape():
+    board = json.loads((WEB / "data" / "sample" / "board.json").read_text(encoding="utf-8"))
+    assert board["league"]["efficiency"] > 50
+    for g in board["games"]:
+        pick = g.get("pick")
+        if not pick:
+            continue
+        assert pick["units"] == (1.0 if pick["kind"] == "bet" else None), (g["home"]["abbr"], pick)
+        assert pick["tier"] in ("high_major", "mid_major", "low_major") and 0 < pick["modelProb"] < 1

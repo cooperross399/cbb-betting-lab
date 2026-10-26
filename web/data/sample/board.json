@@ -1,6 +1,6 @@
 {
  "generatedAt": "2026-11-14T14:20:00Z",
- "season": "2026\u201327",
+ "season": "2026–27",
  "slateDate": "2026-11-14",
  "cardSlot": "morning",
  "notice": null,
@@ -173,13 +173,13 @@
    "cardSlot": "morning",
    "away": {
     "abbr": "NOVA",
-    "record": "1\u20131",
+    "record": "1–1",
     "projPts": 70.4,
     "winProb": 0.36
    },
    "home": {
     "abbr": "ND",
-    "record": "2\u20130",
+    "record": "2–0",
     "projPts": 74.8,
     "winProb": 0.64
    },
@@ -216,14 +216,15 @@
    "pick": {
     "kind": "bet",
     "market": "Spread",
-    "label": "Notre Dame \u22124",
+    "label": "Notre Dame −4",
     "price": -110,
     "book": "DraftKings",
-    "tier": "B",
-    "units": 0.25,
+    "tier": "high_major",
+    "units": 1.0,
     "edgePct": 3.8,
     "side": "home",
-    "line": -4
+    "line": -4,
+    "modelProb": 0.5145
    },
    "factors": [
     {
@@ -294,11 +295,11 @@
      "net": 13.63,
      "tempo": 2.06,
      "tier": "high_major",
-     "form": -1.743,
+     "form": 2.291,
      "formGames": 5,
      "restDays": 4,
      "restBucket": "four or five days off",
-     "restEffect": 0.249,
+     "restEffect": 0.207,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
@@ -313,11 +314,11 @@
      "net": 17.04,
      "tempo": 0.14,
      "tier": "high_major",
-     "form": 2.291,
+     "form": -1.743,
      "formGames": 5,
      "restDays": 7,
      "restBucket": "six or more days off",
-     "restEffect": 0.164,
+     "restEffect": 0.207,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
@@ -347,13 +348,13 @@
    "cardSlot": "morning",
    "away": {
     "abbr": "CREI",
-    "record": "2\u20130",
+    "record": "2–0",
     "projPts": 71.1,
     "winProb": 0.31
    },
    "home": {
     "abbr": "UCONN",
-    "record": "2\u20130",
+    "record": "2–0",
     "projPts": 76.9,
     "winProb": 0.69
    },
@@ -395,7 +396,10 @@
     "book": "FanDuel",
     "edgePct": 0.4,
     "side": "under",
-    "line": 148
+    "line": 148,
+    "tier": "high_major",
+    "units": null,
+    "modelProb": 0.48
    },
    "factors": [
     {
@@ -470,7 +474,7 @@
      "formGames": 5,
      "restDays": 2,
      "restBucket": "one day off",
-     "restEffect": -0.708,
+     "restEffect": -1.013,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
@@ -489,7 +493,7 @@
      "formGames": 5,
      "restDays": 3,
      "restBucket": "two or three days off",
-     "restEffect": -1.013,
+     "restEffect": -0.708,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
@@ -519,13 +523,13 @@
    "cardSlot": "morning",
    "away": {
     "abbr": "MICH",
-    "record": "2\u20130",
+    "record": "2–0",
     "projPts": 72.3,
     "winProb": 0.28
    },
    "home": {
     "abbr": "DUKE",
-    "record": "2\u20130",
+    "record": "2–0",
     "projPts": 79.6,
     "winProb": 0.72
    },
@@ -629,17 +633,17 @@
      "net": 8.22,
      "tempo": -1.49,
      "tier": "high_major",
-     "form": 0.211,
+     "form": 0.291,
      "formGames": 5,
      "restDays": 3,
      "restBucket": "two or three days off",
-     "restEffect": -0.417,
+     "restEffect": -0.467,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
-      "offence": 10.2,
-      "defence": -5.2,
-      "tempo": -0.2
+      "offence": 11.0,
+      "defence": -9.2,
+      "tempo": -2.8
      }
     },
     "away": {
@@ -648,17 +652,17 @@
      "net": 16.83,
      "tempo": -2.52,
      "tier": "high_major",
-     "form": 0.372,
+     "form": 0.291,
      "formGames": 5,
      "restDays": 7,
      "restBucket": "six or more days off",
-     "restEffect": -0.517,
+     "restEffect": -0.467,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
-      "offence": 11.0,
-      "defence": -9.2,
-      "tempo": -2.8
+      "offence": 10.2,
+      "defence": -5.2,
+      "tempo": -0.2
      }
     }
    },
@@ -682,13 +686,13 @@
    "cardSlot": "morning",
    "away": {
     "abbr": "SDSU",
-    "record": "1\u20131",
+    "record": "1–1",
     "projPts": 66.8,
     "winProb": 0.25
    },
    "home": {
     "abbr": "ARIZ",
-    "record": "2\u20130",
+    "record": "2–0",
     "projPts": 75.2,
     "winProb": 0.75
    },
@@ -730,7 +734,10 @@
     "book": "DraftKings",
     "edgePct": 2.6,
     "side": "away",
-    "line": 9
+    "line": 9,
+    "tier": "high_major",
+    "units": null,
+    "modelProb": 0.5017
    },
    "factors": [
     {
@@ -805,7 +812,7 @@
      "formGames": 5,
      "restDays": 7,
      "restBucket": "six or more days off",
-     "restEffect": 0.501,
+     "restEffect": 0.561,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
@@ -824,7 +831,7 @@
      "formGames": 5,
      "restDays": 2,
      "restBucket": "one day off",
-     "restEffect": 0.622,
+     "restEffect": 0.561,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
@@ -854,13 +861,13 @@
    "cardSlot": "evening",
    "away": {
     "abbr": "KU",
-    "record": "2\u20130",
+    "record": "2–0",
     "projPts": 75.9,
     "winProb": 0.46
    },
    "home": {
     "abbr": "UK",
-    "record": "2\u20130",
+    "record": "2–0",
     "projPts": 77.1,
     "winProb": 0.54
    },
@@ -900,10 +907,11 @@
     "label": "Kansas ML",
     "price": 100,
     "book": "FanDuel",
-    "tier": "C",
-    "units": 0.1,
+    "tier": "high_major",
+    "units": 1.0,
     "edgePct": 3.2,
-    "side": "away"
+    "side": "away",
+    "modelProb": 0.46
    },
    "factors": [
     {
@@ -974,17 +982,17 @@
      "net": 14.8,
      "tempo": 3.27,
      "tier": "high_major",
-     "form": -0.093,
+     "form": 1.627,
      "formGames": 5,
-     "restDays": 2,
+     "restDays": 1,
      "restBucket": "one day off",
      "restEffect": -0.863,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
-      "offence": 5.1,
-      "defence": -3.0,
-      "tempo": 0.9
+      "offence": 3.5,
+      "defence": -9.5,
+      "tempo": 0.3
      }
     },
     "away": {
@@ -993,7 +1001,7 @@
      "net": 21.34,
      "tempo": -2.93,
      "tier": "high_major",
-     "form": 1.627,
+     "form": -0.093,
      "formGames": 5,
      "restDays": 2,
      "restBucket": "one day off",
@@ -1001,9 +1009,9 @@
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
-      "offence": 3.5,
-      "defence": -9.5,
-      "tempo": 0.3
+      "offence": 5.1,
+      "defence": -3.0,
+      "tempo": 0.9
      }
     }
    },
@@ -1027,13 +1035,13 @@
    "cardSlot": "evening",
    "away": {
     "abbr": "TENN",
-    "record": "2\u20130",
+    "record": "2–0",
     "projPts": 76.2,
     "winProb": 0.34
    },
    "home": {
     "abbr": "ALA",
-    "record": "1\u20131",
+    "record": "1–1",
     "projPts": 81.5,
     "winProb": 0.66
    },
@@ -1070,12 +1078,15 @@
    "pick": {
     "kind": "pass",
     "market": "Spread",
-    "label": "Alabama \u22125",
+    "label": "Alabama −5",
     "price": -110,
     "book": "DraftKings",
     "edgePct": 1.3,
     "side": "home",
-    "line": -5
+    "line": -5,
+    "tier": "high_major",
+    "units": null,
+    "modelProb": 0.5109
    },
    "factors": [
     {
@@ -1146,11 +1157,11 @@
      "net": 12.45,
      "tempo": -3.37,
      "tier": "high_major",
-     "form": 1.492,
+     "form": 0.798,
      "formGames": 5,
      "restDays": 7,
      "restBucket": "six or more days off",
-     "restEffect": -0.157,
+     "restEffect": -0.337,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
@@ -1165,11 +1176,11 @@
      "net": 14.39,
      "tempo": 3.34,
      "tier": "high_major",
-     "form": 0.798,
+     "form": 1.492,
      "formGames": 5,
      "restDays": 3,
      "restBucket": "two or three days off",
-     "restEffect": -0.517,
+     "restEffect": -0.337,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
@@ -1199,13 +1210,13 @@
    "cardSlot": "evening",
    "away": {
     "abbr": "PUR",
-    "record": "2\u20130",
+    "record": "2–0",
     "projPts": 64.7,
     "winProb": 0.34
    },
    "home": {
     "abbr": "HOU",
-    "record": "2\u20130",
+    "record": "2–0",
     "projPts": 68.9,
     "winProb": 0.66
    },
@@ -1247,7 +1258,10 @@
     "book": "FanDuel",
     "edgePct": 2.2,
     "side": "under",
-    "line": 134
+    "line": 134,
+    "tier": "high_major",
+    "units": null,
+    "modelProb": 0.49
    },
    "factors": [
     {
@@ -1318,17 +1332,17 @@
      "net": 16.55,
      "tempo": 0.87,
      "tier": "high_major",
-     "form": 2.229,
+     "form": 2.46,
      "formGames": 5,
      "restDays": 3,
      "restBucket": "two or three days off",
-     "restEffect": 0.639,
+     "restEffect": 0.408,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
-      "offence": 7.2,
-      "defence": -3.5,
-      "tempo": -0.7
+      "offence": 4.4,
+      "defence": -2.4,
+      "tempo": -2.0
      }
     },
     "away": {
@@ -1337,17 +1351,17 @@
      "net": 20.3,
      "tempo": 0.69,
      "tier": "high_major",
-     "form": 2.46,
+     "form": 2.229,
      "formGames": 5,
      "restDays": 7,
      "restBucket": "six or more days off",
-     "restEffect": 0.178,
+     "restEffect": 0.408,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
-      "offence": 4.4,
-      "defence": -2.4,
-      "tempo": -2.0
+      "offence": 7.2,
+      "defence": -3.5,
+      "tempo": -0.7
      }
     }
    },
@@ -1371,13 +1385,13 @@
    "cardSlot": "evening",
    "away": {
     "abbr": "MSU",
-    "record": "1\u20131",
+    "record": "1–1",
     "projPts": 70,
     "winProb": 0.26
    },
    "home": {
     "abbr": "GONZ",
-    "record": "2\u20130",
+    "record": "2–0",
     "projPts": 77.8,
     "winProb": 0.74
    },
@@ -1485,7 +1499,7 @@
      "formGames": 5,
      "restDays": 2,
      "restBucket": "one day off",
-     "restEffect": -0.716,
+     "restEffect": -0.625,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
@@ -1504,7 +1518,7 @@
      "formGames": 5,
      "restDays": 7,
      "restBucket": "six or more days off",
-     "restEffect": -0.535,
+     "restEffect": -0.625,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
@@ -1534,13 +1548,13 @@
    "cardSlot": "evening",
    "away": {
     "abbr": "ISU",
-    "record": "2\u20130",
+    "record": "2–0",
     "projPts": 68.4,
     "winProb": 0.45
    },
    "home": {
     "abbr": "TEX",
-    "record": "1\u20131",
+    "record": "1–1",
     "projPts": 70.2,
     "winProb": 0.55
    },
@@ -1581,7 +1595,10 @@
     "price": 105,
     "book": "DraftKings",
     "edgePct": 0.8,
-    "side": "away"
+    "side": "away",
+    "tier": "high_major",
+    "units": null,
+    "modelProb": 0.45
    },
    "factors": [
     {
@@ -1652,11 +1669,11 @@
      "net": 17.75,
      "tempo": -3.44,
      "tier": "high_major",
-     "form": 0.794,
+     "form": -1.432,
      "formGames": 5,
      "restDays": 3,
      "restBucket": "two or three days off",
-     "restEffect": 0.621,
+     "restEffect": 0.322,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
@@ -1671,11 +1688,11 @@
      "net": 21.93,
      "tempo": 0.16,
      "tier": "high_major",
-     "form": -1.432,
+     "form": 0.794,
      "formGames": 5,
      "restDays": 4,
      "restBucket": "four or five days off",
-     "restEffect": 0.022,
+     "restEffect": 0.322,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
@@ -1705,13 +1722,13 @@
    "cardSlot": "evening",
    "away": {
     "abbr": "AUB",
-    "record": "2\u20130",
+    "record": "2–0",
     "projPts": 77.5,
     "winProb": 0.44
    },
    "home": {
     "abbr": "UNC",
-    "record": "2\u20130",
+    "record": "2–0",
     "projPts": 79.3,
     "winProb": 0.56
    },
@@ -1751,10 +1768,11 @@
     "label": "Auburn ML",
     "price": 120,
     "book": "FanDuel",
-    "tier": "B",
-    "units": 0.25,
+    "tier": "high_major",
+    "units": 1.0,
     "edgePct": 4.1,
-    "side": "away"
+    "side": "away",
+    "modelProb": 0.44
    },
    "factors": [
     {
@@ -1825,17 +1843,17 @@
      "net": 17.56,
      "tempo": -2.02,
      "tier": "high_major",
-     "form": 1.359,
+     "form": -0.783,
      "formGames": 5,
      "restDays": 7,
      "restBucket": "six or more days off",
-     "restEffect": -0.921,
+     "restEffect": -0.399,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
-      "offence": 7.8,
+      "offence": 11.9,
       "defence": -3.8,
-      "tempo": 0.6
+      "tempo": 0.5
      }
     },
     "away": {
@@ -1844,17 +1862,17 @@
      "net": 21.53,
      "tempo": 1.2,
      "tier": "high_major",
-     "form": -0.783,
+     "form": 1.359,
      "formGames": 5,
      "restDays": 3,
      "restBucket": "two or three days off",
-     "restEffect": 0.123,
+     "restEffect": -0.399,
      "missing": [],
      "lineupFactor": 1.0,
      "secondOpinion": {
-      "offence": 11.9,
+      "offence": 7.8,
       "defence": -3.8,
-      "tempo": 0.5
+      "tempo": 0.6
      }
     }
    },
@@ -2550,5 +2568,9 @@
     }
    ]
   }
+ },
+ "league": {
+  "efficiency": 108.76,
+  "tempo": 69.1
  }
 }

@@ -993,6 +993,13 @@ def build(lab: Path, day: date) -> dict:
     out = {"generatedAt": now.isoformat(timespec="seconds").replace("+00:00", "Z"), "season": SEASON, "slateDate": day.isoformat(), "cardSlot": slot,
            "decision": status.get("decision"), "notice": notice, "unitDollars": 25, "record": load_record(lab),
            "model": census, "teams": teams, "games": games}
+    # The league averages the ratings are measured against, so the game page
+    # can say "+N% vs average" instead of points per 100 possessions.
+    rated = fit.get("ratings") if fit else None
+    if rated is not None:
+        league = {"efficiency": finite(getattr(rated, "league_efficiency", None)), "tempo": finite(getattr(rated, "league_tempo", None))}
+        if any(v is not None for v in league.values()):
+            out["league"] = {k: (None if v is None else round(v, 2)) for k, v in league.items()}
     # Absent, not empty, when no game was held by two captures: one read of
     # the board is a price, not a movement.
     if history:
