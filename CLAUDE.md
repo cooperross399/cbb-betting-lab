@@ -1109,3 +1109,7 @@ Every marker below names a figure this page states outside the fences.
   `docs/project_status.md` and `docs/retracted_readings.md` have their counts
   enumerated. The one thing checked across all of them is that a figure one of
   these three declares superseded is not stated as current somewhere else.
+
+## Design drops
+
+- Branches named design/** come from Claude Design, in nhl-betting-lab only; there they may change only page files (see nhl-betting-lab/.github/workflows/design-drop-guard.yml) and auto-merge on green. Never rebase or edit them by hand; ask Claude Design for a new drop instead. The shared pages reach this repository as a `shared-sync/<tag>` pull request opened by nhl-betting-lab's Design Drop workflow, copying a tag of `cooperross399/betting-lab-shared` byte for byte and re-pinning the lock; it merges itself when every check passes and starts this repository's publish. Do not edit those branches either.
