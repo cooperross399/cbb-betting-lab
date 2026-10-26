@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <title>Methods — Maverick Hightower</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="How the college basketball numbers are built, in plain words: ratings per 100 possessions, tiers, home court, last five, rest, who is missing, the second opinion, the price, the edge, and what is graded.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Maverick Hightower">
+  <meta property="og:title" content="Methods — Maverick Hightower">
+  <meta property="og:image" content="https://maverickhightower.com/share.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@mavhightower">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root, html[data-sport="cbb"], html[data-sport="cbb"] [data-theme="light"] { color-scheme: light; --paper:#ffffff; --ink:#14151a; --ink-2:#2a2d3a; --mute:#62656f; --mute-2:#9a9ca6; --rule:#dddbd6; --rule-2:#ecebe7; --on-ink:#d6d3cc; --alert:#b0341f; --on-alert:#ffffff; --win:#2c7a5a; --on-win:#ffffff; --desk:#eeede9; }
+    @media (prefers-color-scheme: dark) { html[data-sport="cbb"] { color-scheme: dark; --paper:#0f1a2b; --ink:#eef1f6; --ink-2:#cdd4e0; --mute:#9ba6b8; --mute-2:#7a869a; --rule:#2b3a52; --rule-2:#1c2a3f; --on-ink:#2b3a52; --alert:#f08a72; --on-alert:#0f1a2b; --win:#5cc196; --on-win:#0f1a2b; --desk:#0a1220; } }
+    html[data-sport="cbb"] [data-theme="dark"] { color-scheme: dark; --paper:#0f1a2b; --ink:#eef1f6; --ink-2:#cdd4e0; --mute:#9ba6b8; --mute-2:#7a869a; --rule:#2b3a52; --rule-2:#1c2a3f; --on-ink:#2b3a52; --alert:#f08a72; --on-alert:#0f1a2b; --win:#5cc196; --on-win:#0f1a2b; --desk:#0a1220; }
+    html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: "IBM Plex Sans", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; scroll-behavior: smooth; }
+    * { box-sizing: border-box; }
+    a { color: var(--ink); text-decoration: none; }
+    a:hover { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
+    a:focus-visible, button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+    .mono { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+    .cond { font-family: "Barlow Condensed", sans-serif; }
+    .skip { position: absolute; left: 12px; top: -60px; background: var(--ink); color: var(--paper); padding: 10px 14px; z-index: 10; font-size: 14px; }
+    .skip:focus { top: 12px; }
+    .entry { scroll-margin-top: 64px; }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+  </style>
+  <meta name="theme-color" content="#ffffff">
+  <script>(function(){if(typeof document!=="undefined"){document.documentElement.setAttribute("data-sport","cbb");}})();</script>
+</helmet>
+<div data-screen-label="Methods" style="min-height:100vh;background:var(--paper);color:var(--ink);">
+  <a href="#main" class="skip">Skip to the methods</a>
+  <div style="max-width:1240px;margin:0 auto;padding:0 clamp(16px,3vw,24px) 80px;">
+
+    <header style="border-top:4px solid var(--ink);padding:10px 0 4px;display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;">
+      <a href="https://maverickhightower.com/" aria-label="Maverick Hightower home" style="display:flex;align-items:center;gap:12px;min-height:44px;">
+        <span aria-hidden="true" style="width:36px;height:36px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;letter-spacing:.04em;">MH</span>
+        <span style="display:flex;flex-direction:column;line-height:1.1;">
+          <span style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">Maverick Hightower</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;letter-spacing:.02em;text-transform:uppercase;">College Basketball</span>
+        </span>
+      </a>
+      <nav aria-label="Site" style="display:flex;gap:0 18px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;font-weight:500;flex-wrap:wrap;">
+        <a href="Methods.dc.html" aria-current="page" style="display:inline-flex;align-items:center;min-height:44px;">Methods</a>
+        <a href="https://maverickhightower.com/about.html" style="display:inline-flex;align-items:center;min-height:44px;">About</a>
+        <a href="https://nhl.maverickhightower.com/" style="display:inline-flex;align-items:center;min-height:44px;">NHL</a>
+        <a href="https://epl.maverickhightower.com/" style="display:inline-flex;align-items:center;min-height:44px;">EPL</a>
+      </nav>
+    </header>
+
+    <nav aria-label="Board sections" style="position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--ink);display:flex;overflow-x:auto;scrollbar-width:none;">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
+        <a href="{{ t.href }}" aria-current="{{ t.current }}" style="flex:1 1 0;max-width:150px;min-width:64px;display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;white-space:nowrap;text-decoration:none;color:{{ t.color }};border-bottom:3px solid {{ t.line }};">{{ t.label }}</a>
+      </sc-for>
+    </nav>
+
+    <section id="main" style="padding:30px 0 22px;border-bottom:1px solid var(--ink);">
+      <div style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">Methods · updated {{ updated }}</div>
+      <h1 class="cond" style="margin:8px 0 0;font-weight:800;font-size:clamp(34px,6vw,60px);line-height:.95;text-transform:uppercase;letter-spacing:.01em;max-width:14ch;">How the numbers are built</h1>
+      <p style="margin:14px 0 0;font-size:16px;line-height:1.55;color:var(--ink-2);max-width:720px;text-wrap:pretty;">Every figure on this site comes from one of the steps below, in the order the card applies them. Each entry says what the thing is, how it is built, the formula where one fits in a sentence, and how sure we are of it. Nothing here is a claim of an edge: the measured record is on <a href="Tracker.dc.html" style="text-decoration:underline;text-underline-offset:3px;">All results</a> and the honesty of the chances on <a href="Record.dc.html" style="text-decoration:underline;text-underline-offset:3px;">Record</a>.</p>
+      <label style="display:flex;align-items:center;gap:10px;margin-top:16px;max-width:460px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);">Jump to
+        <select onChange="{{ onJump }}" value="{{ jumpValue }}" style="flex:1;min-height:44px;background:var(--paper);color:var(--ink);border:1px solid var(--ink);font-family:inherit;font-size:13px;padding:0 10px;">
+          <sc-for list="{{ jumpOptions }}" as="o" hint-placeholder-count="16"><option value="{{ o.id }}">{{ o.label }}</option></sc-for>
+        </select>
+      </label>
+    </section>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:0;">
+      <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+        <section aria-labelledby="{{ g.hid }}" style="padding:26px 0 8px;border-bottom:1px solid var(--ink);">
+          <h2 id="{{ g.hid }}" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">{{ g.title }}</h2>
+          <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:720px;text-wrap:pretty;">{{ g.lede }}</p>
+          <sc-for list="{{ g.entries }}" as="e" hint-placeholder-count="5">
+            <article id="{{ e.id }}" class="entry" style="display:grid;grid-template-columns:minmax(0,1fr);gap:8px 40px;padding:18px 0;border-top:1px solid var(--rule-2);">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;">
+                <h3 class="cond" style="margin:0;font-weight:700;font-size:22px;line-height:1;text-transform:uppercase;">{{ e.title }}</h3>
+                <span class="mono" style="font-size:11px;color:var(--mute);">{{ e.updated }}</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:10px 40px;">
+                <div><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">What it is</div><p style="margin:4px 0 0;font-size:14px;line-height:1.55;color:var(--ink-2);text-wrap:pretty;">{{ e.def }}</p></div>
+                <div><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">How it is built</div><p style="margin:4px 0 0;font-size:14px;line-height:1.55;color:var(--ink-2);text-wrap:pretty;">{{ e.build }}</p></div>
+              </div>
+              <sc-if value="{{ e.hasFormula }}" hint-placeholder-val="{{ true }}"><div class="mono" style="font-size:12px;line-height:1.6;color:var(--ink);background:var(--desk);padding:8px 12px;overflow-x:auto;">{{ e.formula }}</div></sc-if>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span class="cond" style="font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:3px 8px;background:{{ e.sureBg }};color:{{ e.sureFg }};border:1px solid {{ e.sureBorder }};">{{ e.sureLabel }}</span>
+                <span style="font-size:13px;line-height:1.5;color:var(--ink-2);">{{ e.sure }}</span>
+              </div>
+            </article>
+          </sc-for>
+        </section>
+      </sc-for>
+    </div>
+
+    <section aria-labelledby="log-h" style="padding:26px 0 0;">
+      <h2 id="log-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">What changed</h2>
+      <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:720px;">Every change to how a number is built is dated here, because a record is only readable if you know what was being measured on each night.</p>
+      <div style="margin-top:12px;border-top:2px solid var(--ink);max-width:900px;">
+        <sc-for list="{{ changelog }}" as="c" hint-placeholder-count="6">
+          <div style="display:grid;grid-template-columns:110px minmax(0,1fr);gap:0 16px;padding:10px 0;border-top:1px solid var(--rule-2);"><span class="mono" style="font-size:12px;color:var(--mute);">{{ c.date }}</span><span style="font-size:14px;line-height:1.5;color:var(--ink-2);text-wrap:pretty;">{{ c.text }}</span></div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="padding:30px 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px 40px;align-items:start;">
+      <div style="border:1px solid var(--ink);padding:16px 18px;">
+        <h2 class="cond" style="margin:0;font-weight:700;font-size:16px;letter-spacing:.14em;text-transform:uppercase;">Three rules</h2>
+        <ul style="margin:10px 0 0;padding-left:18px;font-size:14px;line-height:1.55;color:var(--ink-2);display:flex;flex-direction:column;gap:6px;text-wrap:pretty;">
+          <li>A missing price stays missing. Nothing on the board is ever filled in, and a game the model refuses to price is shown as not priced, never as a pass.</li>
+          <li>A number is checked against what happened before it is believed. Where a check can only rule a method out, it is never read as ruling one in.</li>
+          <li>A market reaches the card only after it has been measured against real prices and a person has approved it in writing. The card recommends; it never places a bet.</li>
+        </ul>
+      </div>
+      <div style="font-size:14px;line-height:1.55;color:var(--ink-2);display:flex;flex-direction:column;gap:10px;text-wrap:pretty;">
+        <p style="margin:0;">The full ratings table, every team in Division I, is the <a href="Season.dc.html?view=ratings" style="text-decoration:underline;text-underline-offset:3px;">Ratings view of the Season page</a>. Each game's page shows the steps as they were applied to that game.</p>
+        <p style="margin:0;">The lab's own documentation names its sources and every measurement behind these entries; this page gives the method, not the credit.</p>
+        <p style="margin:0;color:var(--mute);">The site recommends; it never places bets.</p>
+      </div>
+    </section>
+
+    <footer style="border-top:1px solid var(--ink);margin-top:40px;padding:18px 0 0;display:flex;flex-wrap:wrap;gap:6px 24px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--mute);">
+      <span>© 2026 Maverick Hightower</span>
+      <a href="Board.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Board</a>
+      <a href="Record.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Record</a>
+      <a href="Tracker.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">All results</a>
+      <a href="https://maverickhightower.com/about.html" style="display:inline-flex;align-items:center;min-height:44px;">About</a>
+      <a href="https://x.com/mavhightower" style="display:inline-flex;align-items:center;min-height:44px;">@mavhightower</a>
+    </footer>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  state = { jump: "" };
+  static UPDATED = "2026-10-26";
+  static SURE = {
+    measured: ["Measured", "var(--ink)", "var(--paper)", "var(--ink)", "checked against past games or prices and it held"],
+    partly: ["Partly measured", "transparent", "var(--ink)", "var(--ink)", "checked on outcomes or in part; the price test is still open"],
+    chosen: ["A choice", "transparent", "var(--mute)", "var(--rule)", "a constant or rule picked on reasoning, not yet measured against prices"],
+  };
+  static GROUPS = [
+    { id: "ratings", title: "The ratings", lede: "What a team is, before tonight's context is added. Everything below is per 100 possessions against the Division I average, fitted from box scores on the lab's own rules.", entries: [
+      { id: "efficiency", updated: "2026-10-26", title: "Adjusted offence and defence", def: "Points a team scores (offence) and allows (defence) per 100 possessions, after who it played and where. A positive offence is good; a negative defence is good; net is the difference.", build: "One fit over the season's games: each game's points per possession is explained by the offence of one side, the defence of the other and the venue, with every team pulled toward the average by a prior that is strongest before the first game and fades as games are played. Possessions are estimated from the box score, since the NCAA does not publish them.", formula: "points per 100 = league average + offence(team) + defence(opponent) + home court, fitted by least squares with a shrinkage prior", sure: "measured", sureNote: "The ratings are backtested against two seasons of real prices per tier; no tier shows a demonstrated edge, which is the honest reading of a rating that is about as good as the market's." },
+      { id: "tempo", updated: "2026-10-26", title: "Tempo", def: "How many possessions a team plays per game against the average, after its opponents' tempo. Two slow teams meet at fewer possessions than either plays on average; the total depends on it as much as on efficiency.", build: "Fitted the same way as efficiency, on possessions instead of points, with both teams' tempo entering a game's expected pace.", formula: "possessions = league average + tempo(home) + tempo(away)", sure: "measured", sureNote: "Part of the same fit and the same backtest; the total's calibration is on Record." },
+      { id: "prior", updated: "2026-10-26", title: "The prior and when a rating is refused", def: "Before the first game a team is its last season carried forward and its returning production. Early in the season the fit is thin, so a game whose two teams are not yet joined by enough common opponents is refused rather than guessed.", build: "The prior weight falls as games are played. The refusal reads the games-played graph: two teams must be connected by at least as much evidence as one meeting between them, or the matchup is not priced. In a normal season that refuses almost everything before late November and almost nothing after.", formula: "refuse when effective resistance between the two teams on the games graph > 1.0", sure: "measured", sureNote: "The refusal's bar was set by measuring where early-season prices stop being beatable; a refused game is shown as not priced, never as a pass." },
+      { id: "tiers", updated: "2026-10-26", title: "Tiers", def: "Every team is high-major, mid-major or low-major by its conference. The three are measured apart everywhere on this site, because a number that holds in one can fail in another and one pooled figure would hide it.", build: "Conference membership from the schedule. A game takes the higher of its two teams' tiers for grading.", formula: "", sure: "measured", sureNote: "The price backtest is run per tier and the lab never publishes a pooled Division I headline." },
+    ] },
+    { id: "tonight", title: "Tonight's context", lede: "Five steps the card adds to the ratings on the day, in this order. A game's page shows each one's effect on that game.", entries: [
+      { id: "home-court", updated: "2026-10-26", title: "Home court", def: "The edge of playing at home, which is larger in some tiers and some buildings than others. A neutral floor gets none; a game at one team's home that is nominally neutral gets a reduced one.", build: "A measured margin per tier, plus how far a team's own building has departed from its tier's figure over past seasons, shrunk toward the tier when the building has few games.", formula: "home court = tier margin + shrunk departure of the venue", sure: "measured", sureNote: "The tier margins are fitted on past seasons; the venue departures are shrunk hard because most buildings have too few games to say much on their own." },
+      { id: "form", updated: "2026-10-26", title: "Last five games", def: "How each team has played lately against what the ratings expected of it, so a side that has been better or worse than its season number for a fortnight moves a little toward that.", build: "The mean of the last five games' residuals, net of the ratings' own prediction, shrunk hard and clamped, so a hot week moves a team by a point or two per 100 at most and never swamps a season.", formula: "form = clamp(mean residual over last 5 × 5 / (5 + k))", sure: "chosen", sureNote: "The weight and the clamp are the lab's choice. Form is measured on outcomes in the walk-forward test and has not yet been tested against prices on its own." },
+      { id: "rest", updated: "2026-10-26", title: "Rest", def: "Days since each team last played, in four buckets: a second game in two days, a normal gap, a week off, and longer.", build: "Each bucket's effect on points per 100 is fitted on past seasons, for and against, and applied to tonight's two teams by their own gap.", formula: "", sure: "partly", sureNote: "Fitted on outcomes; the effect is small and its price test is still open." },
+      { id: "lineup", updated: "2026-10-26", title: "Who is missing", def: "A regular who sat out the most recent game is treated as out tonight, and his share of his team's scoring comes partly off its attack.", build: "Regulars are the players with the most minutes over the team's recent games; a regular absent from the last box score is flagged, and half his share of the points comes off the attack, floored so one player cannot sink a team.", formula: "attack × (1 − 0.5 × missing share of points), floored", sure: "chosen", sureNote: "The site has no injury feed; a player who returns tonight, or a star who sits for the first time tonight, is missed. The half weight is the lab's choice." },
+      { id: "second-opinion", updated: "2026-10-26", title: "The second opinion", def: "An independently built, published rating of both teams, blended into ours at half weight when it is dated for the day. It is a cross-check, not a credit, and this page does not name it.", build: "The published offence, defence and tempo are read as deviations from their own average and averaged with ours, half each, before the game is priced. Absent or stale, the card prices on its own ratings and says so.", formula: "rating used = 0.5 × ours + 0.5 × published", sure: "chosen", sureNote: "The half weight was picked before any price was read and is the lab's choice; the walk-forward test measures its effect on outcomes." },
+    ] },
+    { id: "price", title: "From ratings to a price", lede: "Turning two teams' numbers into a score, a chance and a fair price.", entries: [
+      { id: "projection", updated: "2026-10-26", title: "Projected score", def: "Each side's expected points: its offence against the other's defence, at the possessions the two tempos imply, plus home court.", build: "Expected points per possession for each side times the expected possessions. The projected margin and total on the board are these two numbers.", formula: "points(home) = possessions × (average + offence(home) + defence(away) + home court) / 100", sure: "measured", sureNote: "The projected margin's calibration against the spread, and the total's against the posted total, are on Record." },
+      { id: "chance", updated: "2026-10-26", title: "Win chance, spread and total chances", def: "The chance each side wins, covers a spread, or the game goes over a total, read off a bell curve around the projected margin and total.", build: "The margin is treated as normal around its projection with the fit's own residual spread; the total the same. A cover chance is the chance the margin beats the posted line; a push is counted when the line is a whole number.", formula: "P(home wins) = Φ(projected margin / σ)", sure: "measured", sureNote: "Record groups games by the published chance and shows how often the favourite won in each band." },
+      { id: "fair-price", updated: "2026-10-26", title: "Fair price and edge", def: "The American odds that match our chance exactly, and how far the best posted price is from it, in points of probability.", build: "The book's margin is removed from the posted prices on both sides before comparing; the edge is our chance minus the no-vig chance the best book implies.", formula: "edge = our chance − implied chance of the best price after de-vigging", sure: "measured", sureNote: "An edge is a disagreement with the market, not a profit; the price backtests show no demonstrated edge in any tier." },
+    ] },
+    { id: "board", title: "What goes on the board", lede: "Which opinions become picks, and how every pick is graded.", entries: [
+      { id: "bet", updated: "2026-10-26", title: "Best bet, lean, pass, not priced", def: "A best bet is an opinion on an allowlisted market whose edge clears the bar for its tier. A lean cleared part of it. A pass is a priced game with no edge. Not priced means the model refused the game, which is never a pass.", build: "Bars differ by tier and are fixed before the season. Only markets measured against real prices and approved in writing may carry a best bet. Every opinion is frozen when the board is built and never repriced; the morning's number is the one that is graded.", formula: "", sure: "measured", sureNote: "The bars come from the per-tier backtest; the record of what they select is All results." },
+      { id: "grading", updated: "2026-10-26", title: "Grading", def: "Every best bet is graded on the final score at the price and book the board showed, at one flat unit. Opinions are graded the same way and staked nothing.", build: "Moneyline on the winner, spread on the margin against the line, total on the sum against the line; a push returns the stake; overtime counts. Finals come from the schedule the morning after; a game with no final inside two weeks is left ungraded, never guessed.", formula: "units = +price payout on a win, −1 on a loss, 0 on a push", sure: "measured", sureNote: "A unit is the reader's to set; the card itself sizes nothing." },
+      { id: "projections", updated: "2026-10-26", title: "Season projections", def: "Each team's expected record from here: the sum, over its remaining games, of its chance of winning each one.", build: "Every remaining game on the cached schedule is priced on the ratings and venue alone, without tonight's steps, which need tonight's inputs. Expected wins, not a simulation: no chance of finishing first or making the field is published.", formula: "projected wins = current wins + Σ P(win) over remaining games", sure: "chosen", sureNote: "A straight read of the ratings; its accuracy as a season forecast has not been measured." },
+    ] },
+  ];
+  static CHANGELOG = [
+    { date: "2026-10-26", text: "Season, Record, Game, Methods and All results pages added. The board now carries the card's own selections (a best bet is what the card selected, a pass is a priced opinion it did not select), each game's steps and both teams' ratings." },
+    { date: "2026-10-26", text: "The card prices on tonight's context: last five games, rest, who is missing and the second opinion, in that order after strength and home court. Constants chosen before any price was read; measured on outcomes in the walk-forward test." },
+    { date: "2026-10-26", text: "Home court now carries each building's measured departure from its tier, shrunk toward the tier." },
+  ];
+  componentDidMount() { const h = (location.hash || "").slice(1); if (h) setTimeout(() => { const el = document.getElementById(h); if (el) el.scrollIntoView(); }, 50); }
+  renderVals() {
+    const here = "Methods.dc.html";
+    const tabs = [["Tonight", "Board.dc.html"], ["Results", "Results.dc.html"], ["All results", "Tracker.dc.html"], ["Season", "Season.dc.html"], ["Record", "Record.dc.html"], ["Methods", "Methods.dc.html"]].map(([label, href]) => ({ label, href, current: href === here ? "page" : "false", color: href === here ? "var(--ink)" : "var(--mute)", line: href === here ? "var(--ink)" : "transparent" }));
+    const S = Component.SURE;
+    const groups = Component.GROUPS.map((g) => ({ ...g, hid: `${g.id}-h`, entries: g.entries.map((e) => { const s = S[e.sure] || S.chosen; return { ...e, hasFormula: !!e.formula, sureLabel: s[0], sureBg: s[1], sureFg: s[2], sureBorder: s[3], sure: `${e.sureNote} (${s[4]}.)` }; }) }));
+    const jumpOptions = [{ id: "", label: "Choose a section" }].concat(...Component.GROUPS.map((g) => [{ id: g.id + "-h", label: g.title.toUpperCase() }].concat(g.entries.map((e) => ({ id: e.id, label: `— ${e.title}` })))));
+    const onJump = (ev) => { const id = ev.target.value; this.setState({ jump: id }); if (id) { const el = document.getElementById(id); if (el) { el.scrollIntoView(); if (history && history.replaceState) history.replaceState(null, "", `#${id}`); } } };
+    return { tabs, updated: Component.UPDATED, groups, changelog: Component.CHANGELOG, jumpOptions, jumpValue: this.state.jump, onJump };
+  }
+}
+</script>
+</body>
+</html>

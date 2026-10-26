@@ -1,0 +1,2725 @@
+{
+ "generatedAt": "2026-11-14T14:05:00Z",
+ "season": 2026,
+ "asOf": "2026-02-21",
+ "phase": "regular",
+ "played": 5185,
+ "remaining": 1115,
+ "projected": 491,
+ "conferences": [
+  {
+   "id": 2,
+   "name": "ACC",
+   "teams": [
+    {
+     "id": 258,
+     "abbr": "UVA",
+     "name": "Virginia Cavaliers",
+     "short": "Virginia",
+     "tier": "High major",
+     "net": 5.23,
+     "logo": "./logos/UVA.png",
+     "record": {
+      "w": 17,
+      "l": 3
+     },
+     "confRecord": {
+      "w": 7,
+      "l": 2
+     },
+     "projConf": {
+      "w": 9.8,
+      "l": 4.2
+     },
+     "projOverall": {
+      "w": 20.4,
+      "l": 5.6
+     },
+     "remaining": 6,
+     "confRemaining": 5,
+     "projRank": 1
+    },
+    {
+     "id": 152,
+     "abbr": "NCSU",
+     "name": "NC State Wolfpack",
+     "short": "NC State",
+     "tier": "High major",
+     "net": 2.91,
+     "logo": "./logos/NCSU.png",
+     "record": {
+      "w": 15,
+      "l": 5
+     },
+     "confRecord": {
+      "w": 7,
+      "l": 2
+     },
+     "projConf": {
+      "w": 9.1,
+      "l": 3.9
+     },
+     "projOverall": {
+      "w": 17.1,
+      "l": 6.9
+     },
+     "remaining": 4,
+     "confRemaining": 4,
+     "projRank": 2
+    },
+    {
+     "id": 2390,
+     "abbr": "MIA",
+     "name": "Miami Hurricanes",
+     "short": "Miami",
+     "tier": "High major",
+     "net": 2.55,
+     "logo": "./logos/MIA.png",
+     "record": {
+      "w": 16,
+      "l": 4
+     },
+     "confRecord": {
+      "w": 7,
+      "l": 2
+     },
+     "projConf": {
+      "w": 8.4,
+      "l": 3.6
+     },
+     "projOverall": {
+      "w": 17.4,
+      "l": 5.6
+     },
+     "remaining": 3,
+     "confRemaining": 3,
+     "projRank": 3
+    },
+    {
+     "id": 2567,
+     "abbr": "SMU",
+     "name": "SMU Mustangs",
+     "short": "SMU",
+     "tier": "High major",
+     "net": 0.08,
+     "logo": "./logos/SMU.png",
+     "record": {
+      "w": 16,
+      "l": 4
+     },
+     "confRecord": {
+      "w": 6,
+      "l": 2
+     },
+     "projConf": {
+      "w": 6.0,
+      "l": 2.0
+     },
+     "projOverall": {
+      "w": 16.0,
+      "l": 4.0
+     },
+     "remaining": 0,
+     "confRemaining": 0,
+     "projRank": 4
+    },
+    {
+     "id": 25,
+     "abbr": "CAL",
+     "name": "California Golden Bears",
+     "short": "California",
+     "tier": "High major",
+     "net": 4.27,
+     "logo": "./logos/CAL.png",
+     "record": {
+      "w": 12,
+      "l": 4
+     },
+     "confRecord": {
+      "w": 4,
+      "l": 3
+     },
+     "projConf": {
+      "w": 6.3,
+      "l": 4.7
+     },
+     "projOverall": {
+      "w": 14.9,
+      "l": 6.1
+     },
+     "remaining": 5,
+     "confRemaining": 4,
+     "projRank": 5
+    },
+    {
+     "id": 52,
+     "abbr": "FSU",
+     "name": "Florida State Seminoles",
+     "short": "Florida State",
+     "tier": "High major",
+     "net": 2.79,
+     "logo": "./logos/FSU.png",
+     "record": {
+      "w": 10,
+      "l": 9
+     },
+     "confRecord": {
+      "w": 5,
+      "l": 5
+     },
+     "projConf": {
+      "w": 6.6,
+      "l": 6.4
+     },
+     "projOverall": {
+      "w": 11.6,
+      "l": 10.4
+     },
+     "remaining": 3,
+     "confRemaining": 3,
+     "projRank": 6
+    },
+    {
+     "id": 153,
+     "abbr": "UNC",
+     "name": "North Carolina Tar Heels",
+     "short": "North Carolina",
+     "tier": "High major",
+     "net": 0.69,
+     "logo": "./logos/UNC.png",
+     "record": {
+      "w": 15,
+      "l": 6
+     },
+     "confRecord": {
+      "w": 5,
+      "l": 5
+     },
+     "projConf": {
+      "w": 5.0,
+      "l": 5.0
+     },
+     "projOverall": {
+      "w": 15.0,
+      "l": 6.0
+     },
+     "remaining": 0,
+     "confRemaining": 0,
+     "projRank": 7
+    },
+    {
+     "id": 259,
+     "abbr": "VT",
+     "name": "Virginia Tech Hokies",
+     "short": "Virginia Tech",
+     "tier": "High major",
+     "net": -0.05,
+     "logo": "./logos/VT.png",
+     "record": {
+      "w": 11,
+      "l": 7
+     },
+     "confRecord": {
+      "w": 3,
+      "l": 6
+     },
+     "projConf": {
+      "w": 3.0,
+      "l": 6.0
+     },
+     "projOverall": {
+      "w": 11.0,
+      "l": 7.0
+     },
+     "remaining": 0,
+     "confRemaining": 0,
+     "projRank": 8
+    },
+    {
+     "id": 154,
+     "abbr": "WAKE",
+     "name": "Wake Forest Demon Deacons",
+     "short": "Wake Forest",
+     "tier": "High major",
+     "net": 0.9,
+     "logo": "./logos/WAKE.png",
+     "record": {
+      "w": 11,
+      "l": 10
+     },
+     "confRecord": {
+      "w": 3,
+      "l": 6
+     },
+     "projConf": {
+      "w": 3.9,
+      "l": 7.1
+     },
+     "projOverall": {
+      "w": 12.9,
+      "l": 12.1
+     },
+     "remaining": 4,
+     "confRemaining": 2,
+     "projRank": 9
+    },
+    {
+     "id": 24,
+     "abbr": "STAN",
+     "name": "Stanford Cardinal",
+     "short": "Stanford",
+     "tier": "High major",
+     "net": -0.28,
+     "logo": "./logos/STAN.png",
+     "record": {
+      "w": 12,
+      "l": 8
+     },
+     "confRecord": {
+      "w": 2,
+      "l": 6
+     },
+     "projConf": {
+      "w": 3.9,
+      "l": 8.1
+     },
+     "projOverall": {
+      "w": 14.4,
+      "l": 10.6
+     },
+     "remaining": 5,
+     "confRemaining": 4,
+     "projRank": 10
+    },
+    {
+     "id": 221,
+     "abbr": "PITT",
+     "name": "Pittsburgh Panthers",
+     "short": "Pittsburgh",
+     "tier": "High major",
+     "net": -2.05,
+     "logo": "./logos/PITT.png",
+     "record": {
+      "w": 6,
+      "l": 11
+     },
+     "confRecord": {
+      "w": 1,
+      "l": 5
+     },
+     "projConf": {
+      "w": 3.1,
+      "l": 7.9
+     },
+     "projOverall": {
+      "w": 8.1,
+      "l": 13.9
+     },
+     "remaining": 5,
+     "confRemaining": 5,
+     "projRank": 11
+    },
+    {
+     "id": 87,
+     "abbr": "ND",
+     "name": "Notre Dame Fighting Irish",
+     "short": "Notre Dame",
+     "tier": "High major",
+     "net": 0.26,
+     "logo": "./logos/ND.png",
+     "record": {
+      "w": 9,
+      "l": 9
+     },
+     "confRecord": {
+      "w": 1,
+      "l": 7
+     },
+     "projConf": {
+      "w": 1.0,
+      "l": 7.0
+     },
+     "projOverall": {
+      "w": 9.0,
+      "l": 9.0
+     },
+     "remaining": 0,
+     "confRemaining": 0,
+     "projRank": 12
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "name": "Big Ten",
+   "teams": [
+    {
+     "id": 130,
+     "abbr": "MICH",
+     "name": "Michigan Wolverines",
+     "short": "Michigan",
+     "tier": "High major",
+     "net": 4.39,
+     "logo": "./logos/MICH.png",
+     "record": {
+      "w": 21,
+      "l": 0
+     },
+     "confRecord": {
+      "w": 12,
+      "l": 0
+     },
+     "projConf": {
+      "w": 13.1,
+      "l": 0.9
+     },
+     "projOverall": {
+      "w": 23.7,
+      "l": 2.3
+     },
+     "remaining": 5,
+     "confRemaining": 2,
+     "projRank": 1
+    },
+    {
+     "id": 356,
+     "abbr": "ILL",
+     "name": "Illinois Fighting Illini",
+     "short": "Illinois",
+     "tier": "High major",
+     "net": 1.36,
+     "logo": "./logos/ILL.png",
+     "record": {
+      "w": 18,
+      "l": 4
+     },
+     "confRecord": {
+      "w": 11,
+      "l": 2
+     },
+     "projConf": {
+      "w": 11.5,
+      "l": 2.5
+     },
+     "projOverall": {
+      "w": 18.5,
+      "l": 4.5
+     },
+     "remaining": 1,
+     "confRemaining": 1,
+     "projRank": 2
+    },
+    {
+     "id": 127,
+     "abbr": "MSU",
+     "name": "Michigan State Spartans",
+     "short": "Michigan State",
+     "tier": "High major",
+     "net": 0.6,
+     "logo": "./logos/MSU.png",
+     "record": {
+      "w": 19,
+      "l": 3
+     },
+     "confRecord": {
+      "w": 11,
+      "l": 3
+     },
+     "projConf": {
+      "w": 13.0,
+      "l": 5.0
+     },
+     "projOverall": {
+      "w": 21.5,
+      "l": 5.5
+     },
+     "remaining": 5,
+     "confRemaining": 4,
+     "projRank": 3
+    },
+    {
+     "id": 158,
+     "abbr": "NEB",
+     "name": "Nebraska Cornhuskers",
+     "short": "Nebraska",
+     "tier": "High major",
+     "net": -0.53,
+     "logo": "./logos/NEB.png",
+     "record": {
+      "w": 20,
+      "l": 3
+     },
+     "confRecord": {
+      "w": 9,
+      "l": 3
+     },
+     "projConf": {
+      "w": 10.0,
+      "l": 4.0
+     },
+     "projOverall": {
+      "w": 21.0,
+      "l": 4.0
+     },
+     "remaining": 2,
+     "confRemaining": 2,
+     "projRank": 4
+    },
+    {
+     "id": 2294,
+     "abbr": "IOWA",
+     "name": "Iowa Hawkeyes",
+     "short": "Iowa",
+     "tier": "High major",
+     "net": 0.24,
+     "logo": "./logos/IOWA.png",
+     "record": {
+      "w": 19,
+      "l": 5
+     },
+     "confRecord": {
+      "w": 9,
+      "l": 4
+     },
+     "projConf": {
+      "w": 10.0,
+      "l": 5.0
+     },
+     "projOverall": {
+      "w": 20.0,
+      "l": 6.0
+     },
+     "remaining": 2,
+     "confRemaining": 2,
+     "projRank": 5
+    },
+    {
+     "id": 26,
+     "abbr": "UCLA",
+     "name": "UCLA Bruins",
+     "short": "UCLA",
+     "tier": "High major",
+     "net": 2.41,
+     "logo": "./logos/UCLA.png",
+     "record": {
+      "w": 15,
+      "l": 6
+     },
+     "confRecord": {
+      "w": 8,
+      "l": 4
+     },
+     "projConf": {
+      "w": 10.7,
+      "l": 6.3
+     },
+     "projOverall": {
+      "w": 18.7,
+      "l": 9.3
+     },
+     "remaining": 7,
+     "confRemaining": 5,
+     "projRank": 6
+    },
+    {
+     "id": 30,
+     "abbr": "USC",
+     "name": "USC Trojans",
+     "short": "USC",
+     "tier": "High major",
+     "net": 1.86,
+     "logo": "./logos/USC.png",
+     "record": {
+      "w": 16,
+      "l": 6
+     },
+     "confRecord": {
+      "w": 6,
+      "l": 6
+     },
+     "projConf": {
+      "w": 8.6,
+      "l": 8.4
+     },
+     "projOverall": {
+      "w": 18.6,
+      "l": 8.4
+     },
+     "remaining": 5,
+     "confRemaining": 5,
+     "projRank": 7
+    },
+    {
+     "id": 135,
+     "abbr": "MINN",
+     "name": "Minnesota Golden Gophers",
+     "short": "Minnesota",
+     "tier": "High major",
+     "net": 2.54,
+     "logo": "./logos/MINN.png",
+     "record": {
+      "w": 12,
+      "l": 10
+     },
+     "confRecord": {
+      "w": 5,
+      "l": 6
+     },
+     "projConf": {
+      "w": 8.3,
+      "l": 8.7
+     },
+     "projOverall": {
+      "w": 15.3,
+      "l": 12.7
+     },
+     "remaining": 6,
+     "confRemaining": 6,
+     "projRank": 8
+    },
+    {
+     "id": 84,
+     "abbr": "IU",
+     "name": "Indiana Hoosiers",
+     "short": "Indiana",
+     "tier": "High major",
+     "net": 1.83,
+     "logo": "./logos/IU.png",
+     "record": {
+      "w": 13,
+      "l": 8
+     },
+     "confRecord": {
+      "w": 6,
+      "l": 7
+     },
+     "projConf": {
+      "w": 8.1,
+      "l": 8.9
+     },
+     "projOverall": {
+      "w": 15.1,
+      "l": 9.9
+     },
+     "remaining": 4,
+     "confRemaining": 4,
+     "projRank": 9
+    },
+    {
+     "id": 264,
+     "abbr": "WASH",
+     "name": "Washington Huskies",
+     "short": "Washington",
+     "tier": "High major",
+     "net": 0.46,
+     "logo": "./logos/WASH.png",
+     "record": {
+      "w": 10,
+      "l": 12
+     },
+     "confRecord": {
+      "w": 4,
+      "l": 9
+     },
+     "projConf": {
+      "w": 6.0,
+      "l": 11.0
+     },
+     "projOverall": {
+      "w": 12.0,
+      "l": 14.0
+     },
+     "remaining": 4,
+     "confRemaining": 4,
+     "projRank": 10
+    },
+    {
+     "id": 164,
+     "abbr": "RUTG",
+     "name": "Rutgers Scarlet Knights",
+     "short": "Rutgers",
+     "tier": "High major",
+     "net": -4.49,
+     "logo": "./logos/RUTG.png",
+     "record": {
+      "w": 11,
+      "l": 11
+     },
+     "confRecord": {
+      "w": 4,
+      "l": 8
+     },
+     "projConf": {
+      "w": 5.9,
+      "l": 11.1
+     },
+     "projOverall": {
+      "w": 12.9,
+      "l": 14.1
+     },
+     "remaining": 5,
+     "confRemaining": 5,
+     "projRank": 11
+    },
+    {
+     "id": 120,
+     "abbr": "MD",
+     "name": "Maryland Terrapins",
+     "short": "Maryland",
+     "tier": "High major",
+     "net": -1.23,
+     "logo": "./logos/MD.png",
+     "record": {
+      "w": 10,
+      "l": 14
+     },
+     "confRecord": {
+      "w": 3,
+      "l": 10
+     },
+     "projConf": {
+      "w": 3.5,
+      "l": 10.5
+     },
+     "projOverall": {
+      "w": 10.5,
+      "l": 14.5
+     },
+     "remaining": 1,
+     "confRemaining": 1,
+     "projRank": 12
+    },
+    {
+     "id": 77,
+     "abbr": "NU",
+     "name": "Northwestern Wildcats",
+     "short": "Northwestern",
+     "tier": "High major",
+     "net": 0.57,
+     "logo": "./logos/NU.png",
+     "record": {
+      "w": 10,
+      "l": 14
+     },
+     "confRecord": {
+      "w": 3,
+      "l": 11
+     },
+     "projConf": {
+      "w": 4.9,
+      "l": 13.1
+     },
+     "projOverall": {
+      "w": 11.9,
+      "l": 16.1
+     },
+     "remaining": 4,
+     "confRemaining": 4,
+     "projRank": 13
+    },
+    {
+     "id": 2483,
+     "abbr": "ORE",
+     "name": "Oregon Ducks",
+     "short": "Oregon",
+     "tier": "High major",
+     "net": 0.54,
+     "logo": "./logos/ORE.png",
+     "record": {
+      "w": 8,
+      "l": 14
+     },
+     "confRecord": {
+      "w": 2,
+      "l": 11
+     },
+     "projConf": {
+      "w": 3.5,
+      "l": 12.5
+     },
+     "projOverall": {
+      "w": 9.5,
+      "l": 15.5
+     },
+     "remaining": 3,
+     "confRemaining": 3,
+     "projRank": 14
+    },
+    {
+     "id": 213,
+     "abbr": "PSU",
+     "name": "Penn State Nittany Lions",
+     "short": "Penn State",
+     "tier": "High major",
+     "net": -0.87,
+     "logo": "./logos/PSU.png",
+     "record": {
+      "w": 11,
+      "l": 13
+     },
+     "confRecord": {
+      "w": 2,
+      "l": 11
+     },
+     "projConf": {
+      "w": 2.0,
+      "l": 11.0
+     },
+     "projOverall": {
+      "w": 11.0,
+      "l": 13.0
+     },
+     "remaining": 0,
+     "confRemaining": 0,
+     "projRank": 15
+    }
+   ]
+  },
+  {
+   "id": 29,
+   "name": "West Coast",
+   "teams": [
+    {
+     "id": 2250,
+     "abbr": "GONZ",
+     "name": "Gonzaga Bulldogs",
+     "short": "Gonzaga",
+     "tier": "Mid major",
+     "net": 2.16,
+     "logo": "./logos/GONZ.png",
+     "record": {
+      "w": 25,
+      "l": 2
+     },
+     "confRecord": {
+      "w": 13,
+      "l": 1
+     },
+     "projConf": {
+      "w": 15.0,
+      "l": 3.0
+     },
+     "projOverall": {
+      "w": 27.6,
+      "l": 4.4
+     },
+     "remaining": 5,
+     "confRemaining": 4,
+     "projRank": 1
+    },
+    {
+     "id": 2541,
+     "abbr": "SCU",
+     "name": "Santa Clara Broncos",
+     "short": "Santa Clara",
+     "tier": "Mid major",
+     "net": 4.0,
+     "logo": "./logos/SCU.png",
+     "record": {
+      "w": 20,
+      "l": 6
+     },
+     "confRecord": {
+      "w": 12,
+      "l": 2
+     },
+     "projConf": {
+      "w": 14.1,
+      "l": 3.9
+     },
+     "projOverall": {
+      "w": 22.7,
+      "l": 8.3
+     },
+     "remaining": 5,
+     "confRemaining": 4,
+     "projRank": 2
+    },
+    {
+     "id": 2608,
+     "abbr": "SMC",
+     "name": "Saint Mary's Gaels",
+     "short": "Saint Mary's",
+     "tier": "Mid major",
+     "net": 2.1,
+     "logo": "./logos/SMC.png",
+     "record": {
+      "w": 22,
+      "l": 4
+     },
+     "confRecord": {
+      "w": 12,
+      "l": 2
+     },
+     "projConf": {
+      "w": 14.0,
+      "l": 4.0
+     },
+     "projOverall": {
+      "w": 24.0,
+      "l": 6.0
+     },
+     "remaining": 4,
+     "confRemaining": 4,
+     "projRank": 3
+    },
+    {
+     "id": 2539,
+     "abbr": "SF",
+     "name": "San Francisco Dons",
+     "short": "San Francisco",
+     "tier": "Mid major",
+     "net": 0.37,
+     "logo": "./logos/SF.png",
+     "record": {
+      "w": 13,
+      "l": 11
+     },
+     "confRecord": {
+      "w": 7,
+      "l": 7
+     },
+     "projConf": {
+      "w": 7.0,
+      "l": 7.0
+     },
+     "projOverall": {
+      "w": 13.0,
+      "l": 11.0
+     },
+     "remaining": 0,
+     "confRemaining": 0,
+     "projRank": 4
+    },
+    {
+     "id": 265,
+     "abbr": "WSU",
+     "name": "Washington State Cougars",
+     "short": "Washington State",
+     "tier": "Mid major",
+     "net": -1.09,
+     "logo": "./logos/WSU.png",
+     "record": {
+      "w": 9,
+      "l": 15
+     },
+     "confRecord": {
+      "w": 6,
+      "l": 7
+     },
+     "projConf": {
+      "w": 8.0,
+      "l": 9.0
+     },
+     "projOverall": {
+      "w": 11.0,
+      "l": 17.0
+     },
+     "remaining": 4,
+     "confRemaining": 4,
+     "projRank": 5
+    },
+    {
+     "id": 279,
+     "abbr": "PAC",
+     "name": "Pacific Tigers",
+     "short": "Pacific",
+     "tier": "Mid major",
+     "net": 2.51,
+     "logo": "./logos/PAC.png",
+     "record": {
+      "w": 11,
+      "l": 12
+     },
+     "confRecord": {
+      "w": 6,
+      "l": 8
+     },
+     "projConf": {
+      "w": 7.0,
+      "l": 9.0
+     },
+     "projOverall": {
+      "w": 12.0,
+      "l": 13.0
+     },
+     "remaining": 2,
+     "confRemaining": 2,
+     "projRank": 6
+    },
+    {
+     "id": 301,
+     "abbr": "USD",
+     "name": "San Diego Toreros",
+     "short": "San Diego",
+     "tier": "Mid major",
+     "net": -0.7,
+     "logo": "./logos/USD.png",
+     "record": {
+      "w": 9,
+      "l": 16
+     },
+     "confRecord": {
+      "w": 5,
+      "l": 9
+     },
+     "projConf": {
+      "w": 6.6,
+      "l": 10.4
+     },
+     "projOverall": {
+      "w": 10.6,
+      "l": 17.4
+     },
+     "remaining": 3,
+     "confRemaining": 3,
+     "projRank": 7
+    },
+    {
+     "id": 2547,
+     "abbr": "SEA",
+     "name": "Seattle U Redhawks",
+     "short": "Seattle U",
+     "tier": "Mid major",
+     "net": -0.68,
+     "logo": "./logos/SEA.png",
+     "record": {
+      "w": 11,
+      "l": 11
+     },
+     "confRecord": {
+      "w": 4,
+      "l": 9
+     },
+     "projConf": {
+      "w": 4.0,
+      "l": 9.0
+     },
+     "projOverall": {
+      "w": 11.0,
+      "l": 11.0
+     },
+     "remaining": 0,
+     "confRemaining": 0,
+     "projRank": 8
+    },
+    {
+     "id": 2351,
+     "abbr": "LMU",
+     "name": "Loyola Marymount Lions",
+     "short": "Loyola Marymount",
+     "tier": "Mid major",
+     "net": -4.05,
+     "logo": "./logos/LMU.png",
+     "record": {
+      "w": 10,
+      "l": 13
+     },
+     "confRecord": {
+      "w": 4,
+      "l": 9
+     },
+     "projConf": {
+      "w": 5.3,
+      "l": 10.7
+     },
+     "projOverall": {
+      "w": 11.3,
+      "l": 14.7
+     },
+     "remaining": 3,
+     "confRemaining": 3,
+     "projRank": 9
+    },
+    {
+     "id": 2501,
+     "abbr": "PORT",
+     "name": "Portland Pilots",
+     "short": "Portland",
+     "tier": "Mid major",
+     "net": -0.69,
+     "logo": "./logos/PORT.png",
+     "record": {
+      "w": 9,
+      "l": 15
+     },
+     "confRecord": {
+      "w": 4,
+      "l": 10
+     },
+     "projConf": {
+      "w": 6.0,
+      "l": 12.0
+     },
+     "projOverall": {
+      "w": 11.0,
+      "l": 17.0
+     },
+     "remaining": 4,
+     "confRemaining": 4,
+     "projRank": 10
+    },
+    {
+     "id": 2492,
+     "abbr": "PEPP",
+     "name": "Pepperdine Waves",
+     "short": "Pepperdine",
+     "tier": "Mid major",
+     "net": -1.85,
+     "logo": "./logos/PEPP.png",
+     "record": {
+      "w": 6,
+      "l": 19
+     },
+     "confRecord": {
+      "w": 3,
+      "l": 12
+     },
+     "projConf": {
+      "w": 4.0,
+      "l": 13.0
+     },
+     "projOverall": {
+      "w": 7.0,
+      "l": 20.0
+     },
+     "remaining": 2,
+     "confRemaining": 2,
+     "projRank": 11
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "name": "Big East",
+   "teams": [
+    {
+     "id": 2599,
+     "abbr": "SJU",
+     "name": "St. John's Red Storm",
+     "short": "St. John's",
+     "tier": "High major",
+     "net": -0.58,
+     "logo": "./logos/SJU.png",
+     "record": {
+      "w": 18,
+      "l": 5
+     },
+     "confRecord": {
+      "w": 12,
+      "l": 1
+     },
+     "projConf": {
+      "w": 13.5,
+      "l": 2.5
+     },
+     "projOverall": {
+      "w": 19.9,
+      "l": 7.1
+     },
+     "remaining": 4,
+     "confRemaining": 3,
+     "projRank": 1
+    },
+    {
+     "id": 41,
+     "abbr": "CONN",
+     "name": "UConn Huskies",
+     "short": "UConn",
+     "tier": "High major",
+     "net": 0.3,
+     "logo": "./logos/CONN.png",
+     "record": {
+      "w": 21,
+      "l": 2
+     },
+     "confRecord": {
+      "w": 12,
+      "l": 2
+     },
+     "projConf": {
+      "w": 14.0,
+      "l": 4.0
+     },
+     "projOverall": {
+      "w": 24.9,
+      "l": 6.1
+     },
+     "remaining": 8,
+     "confRemaining": 4,
+     "projRank": 2
+    },
+    {
+     "id": 222,
+     "abbr": "VILL",
+     "name": "Villanova Wildcats",
+     "short": "Villanova",
+     "tier": "High major",
+     "net": -1.63,
+     "logo": "./logos/VILL.png",
+     "record": {
+      "w": 18,
+      "l": 5
+     },
+     "confRecord": {
+      "w": 11,
+      "l": 3
+     },
+     "projConf": {
+      "w": 11.9,
+      "l": 4.1
+     },
+     "projOverall": {
+      "w": 19.4,
+      "l": 6.6
+     },
+     "remaining": 3,
+     "confRemaining": 2,
+     "projRank": 3
+    },
+    {
+     "id": 2550,
+     "abbr": "HALL",
+     "name": "Seton Hall Pirates",
+     "short": "Seton Hall",
+     "tier": "High major",
+     "net": 1.5,
+     "logo": "./logos/HALL.png",
+     "record": {
+      "w": 18,
+      "l": 7
+     },
+     "confRecord": {
+      "w": 8,
+      "l": 6
+     },
+     "projConf": {
+      "w": 9.0,
+      "l": 7.0
+     },
+     "projOverall": {
+      "w": 19.0,
+      "l": 8.0
+     },
+     "remaining": 2,
+     "confRemaining": 2,
+     "projRank": 4
+    },
+    {
+     "id": 156,
+     "abbr": "CREI",
+     "name": "Creighton Bluejays",
+     "short": "Creighton",
+     "tier": "High major",
+     "net": 3.57,
+     "logo": "./logos/CREI.png",
+     "record": {
+      "w": 13,
+      "l": 12
+     },
+     "confRecord": {
+      "w": 8,
+      "l": 7
+     },
+     "projConf": {
+      "w": 9.1,
+      "l": 7.9
+     },
+     "projOverall": {
+      "w": 14.1,
+      "l": 12.9
+     },
+     "remaining": 2,
+     "confRemaining": 2,
+     "projRank": 5
+    },
+    {
+     "id": 46,
+     "abbr": "GTWN",
+     "name": "Georgetown Hoyas",
+     "short": "Georgetown",
+     "tier": "High major",
+     "net": 0.37,
+     "logo": "./logos/GTWN.png",
+     "record": {
+      "w": 11,
+      "l": 12
+     },
+     "confRecord": {
+      "w": 4,
+      "l": 9
+     },
+     "projConf": {
+      "w": 4.5,
+      "l": 9.5
+     },
+     "projOverall": {
+      "w": 11.5,
+      "l": 12.5
+     },
+     "remaining": 1,
+     "confRemaining": 1,
+     "projRank": 6
+    },
+    {
+     "id": 2752,
+     "abbr": "XAV",
+     "name": "Xavier Musketeers",
+     "short": "Xavier",
+     "tier": "High major",
+     "net": -1.58,
+     "logo": "./logos/XAV.png",
+     "record": {
+      "w": 11,
+      "l": 11
+     },
+     "confRecord": {
+      "w": 4,
+      "l": 9
+     },
+     "projConf": {
+      "w": 4.9,
+      "l": 10.1
+     },
+     "projOverall": {
+      "w": 11.9,
+      "l": 12.1
+     },
+     "remaining": 2,
+     "confRemaining": 2,
+     "projRank": 7
+    },
+    {
+     "id": 269,
+     "abbr": "MARQ",
+     "name": "Marquette Golden Eagles",
+     "short": "Marquette",
+     "tier": "High major",
+     "net": 2.67,
+     "logo": "./logos/MARQ.png",
+     "record": {
+      "w": 7,
+      "l": 15
+     },
+     "confRecord": {
+      "w": 4,
+      "l": 11
+     },
+     "projConf": {
+      "w": 4.5,
+      "l": 11.5
+     },
+     "projOverall": {
+      "w": 7.5,
+      "l": 15.5
+     },
+     "remaining": 1,
+     "confRemaining": 1,
+     "projRank": 8
+    },
+    {
+     "id": 2086,
+     "abbr": "BUT",
+     "name": "Butler Bulldogs",
+     "short": "Butler",
+     "tier": "High major",
+     "net": -1.48,
+     "logo": null,
+     "record": {
+      "w": 13,
+      "l": 13
+     },
+     "confRecord": {
+      "w": 4,
+      "l": 11
+     },
+     "projConf": {
+      "w": 4.9,
+      "l": 12.1
+     },
+     "projOverall": {
+      "w": 13.9,
+      "l": 14.1
+     },
+     "remaining": 2,
+     "confRemaining": 2,
+     "projRank": 9
+    },
+    {
+     "id": 2507,
+     "abbr": "PROV",
+     "name": "Providence Friars",
+     "short": "Providence",
+     "tier": "High major",
+     "net": 0.6,
+     "logo": "./logos/PROV.png",
+     "record": {
+      "w": 9,
+      "l": 14
+     },
+     "confRecord": {
+      "w": 3,
+      "l": 11
+     },
+     "projConf": {
+      "w": 3.5,
+      "l": 11.5
+     },
+     "projOverall": {
+      "w": 9.5,
+      "l": 14.5
+     },
+     "remaining": 1,
+     "confRemaining": 1,
+     "projRank": 10
+    }
+   ]
+  },
+  {
+   "id": 23,
+   "name": "SEC",
+   "teams": [
+    {
+     "id": 333,
+     "abbr": "ALA",
+     "name": "Alabama Crimson Tide",
+     "short": "Alabama",
+     "tier": "High major",
+     "net": 2.15,
+     "logo": "./logos/ALA.png",
+     "record": {
+      "w": 17,
+      "l": 3
+     },
+     "confRecord": {
+      "w": 8,
+      "l": 2
+     },
+     "projConf": {
+      "w": 10.1,
+      "l": 3.9
+     },
+     "projOverall": {
+      "w": 20.6,
+      "l": 6.4
+     },
+     "remaining": 7,
+     "confRemaining": 4,
+     "projRank": 1
+    },
+    {
+     "id": 57,
+     "abbr": "FLA",
+     "name": "Florida Gators",
+     "short": "Florida",
+     "tier": "High major",
+     "net": 0.2,
+     "logo": "./logos/FLA.png",
+     "record": {
+      "w": 17,
+      "l": 4
+     },
+     "confRecord": {
+      "w": 8,
+      "l": 2
+     },
+     "projConf": {
+      "w": 10.5,
+      "l": 4.5
+     },
+     "projOverall": {
+      "w": 20.1,
+      "l": 6.9
+     },
+     "remaining": 6,
+     "confRemaining": 5,
+     "projRank": 2
+    },
+    {
+     "id": 238,
+     "abbr": "VAN",
+     "name": "Vanderbilt Commodores",
+     "short": "Vanderbilt",
+     "tier": "High major",
+     "net": 0.68,
+     "logo": "./logos/VAN.png",
+     "record": {
+      "w": 20,
+      "l": 3
+     },
+     "confRecord": {
+      "w": 8,
+      "l": 3
+     },
+     "projConf": {
+      "w": 9.6,
+      "l": 4.4
+     },
+     "projOverall": {
+      "w": 22.1,
+      "l": 4.9
+     },
+     "remaining": 4,
+     "confRemaining": 3,
+     "projRank": 3
+    },
+    {
+     "id": 142,
+     "abbr": "MIZ",
+     "name": "Missouri Tigers",
+     "short": "Missouri",
+     "tier": "High major",
+     "net": -1.7,
+     "logo": "./logos/MIZ.png",
+     "record": {
+      "w": 18,
+      "l": 6
+     },
+     "confRecord": {
+      "w": 8,
+      "l": 3
+     },
+     "projConf": {
+      "w": 8.0,
+      "l": 3.0
+     },
+     "projOverall": {
+      "w": 18.0,
+      "l": 6.0
+     },
+     "remaining": 0,
+     "confRemaining": 0,
+     "projRank": 4
+    },
+    {
+     "id": 245,
+     "abbr": "TA&M",
+     "name": "Texas A&M Aggies",
+     "short": "Texas A&M",
+     "tier": "High major",
+     "net": 1.58,
+     "logo": "./logos/TA&M.png",
+     "record": {
+      "w": 13,
+      "l": 7
+     },
+     "confRecord": {
+      "w": 6,
+      "l": 4
+     },
+     "projConf": {
+      "w": 6.0,
+      "l": 4.0
+     },
+     "projOverall": {
+      "w": 13.0,
+      "l": 7.0
+     },
+     "remaining": 0,
+     "confRemaining": 0,
+     "projRank": 5
+    },
+    {
+     "id": 96,
+     "abbr": "UK",
+     "name": "Kentucky Wildcats",
+     "short": "Kentucky",
+     "tier": "High major",
+     "net": -0.88,
+     "logo": "./logos/UK.png",
+     "record": {
+      "w": 10,
+      "l": 7
+     },
+     "confRecord": {
+      "w": 4,
+      "l": 4
+     },
+     "projConf": {
+      "w": 6.3,
+      "l": 6.7
+     },
+     "projOverall": {
+      "w": 13.2,
+      "l": 10.8
+     },
+     "remaining": 7,
+     "confRemaining": 5,
+     "projRank": 6
+    },
+    {
+     "id": 2,
+     "abbr": "AUB",
+     "name": "Auburn Tigers",
+     "short": "Auburn",
+     "tier": "High major",
+     "net": 3.02,
+     "logo": "./logos/AUB.png",
+     "record": {
+      "w": 12,
+      "l": 7
+     },
+     "confRecord": {
+      "w": 3,
+      "l": 5
+     },
+     "projConf": {
+      "w": 6.2,
+      "l": 7.8
+     },
+     "projOverall": {
+      "w": 16.3,
+      "l": 10.7
+     },
+     "remaining": 8,
+     "confRemaining": 6,
+     "projRank": 7
+    },
+    {
+     "id": 344,
+     "abbr": "MSST",
+     "name": "Mississippi State Bulldogs",
+     "short": "Mississippi State",
+     "tier": "High major",
+     "net": 0.74,
+     "logo": "./logos/MSST.png",
+     "record": {
+      "w": 9,
+      "l": 11
+     },
+     "confRecord": {
+      "w": 4,
+      "l": 6
+     },
+     "projConf": {
+      "w": 5.4,
+      "l": 7.6
+     },
+     "projOverall": {
+      "w": 10.4,
+      "l": 12.6
+     },
+     "remaining": 3,
+     "confRemaining": 3,
+     "projRank": 8
+    },
+    {
+     "id": 99,
+     "abbr": "LSU",
+     "name": "LSU Tigers",
+     "short": "LSU",
+     "tier": "High major",
+     "net": 0.81,
+     "logo": "./logos/LSU.png",
+     "record": {
+      "w": 12,
+      "l": 7
+     },
+     "confRecord": {
+      "w": 2,
+      "l": 6
+     },
+     "projConf": {
+      "w": 4.4,
+      "l": 8.6
+     },
+     "projOverall": {
+      "w": 14.4,
+      "l": 9.6
+     },
+     "remaining": 5,
+     "confRemaining": 5,
+     "projRank": 9
+    },
+    {
+     "id": 201,
+     "abbr": "OU",
+     "name": "Oklahoma Sooners",
+     "short": "Oklahoma",
+     "tier": "High major",
+     "net": 3.46,
+     "logo": "./logos/OU.png",
+     "record": {
+      "w": 11,
+      "l": 10
+     },
+     "confRecord": {
+      "w": 2,
+      "l": 7
+     },
+     "projConf": {
+      "w": 3.1,
+      "l": 7.9
+     },
+     "projOverall": {
+      "w": 13.2,
+      "l": 11.8
+     },
+     "remaining": 4,
+     "confRemaining": 2,
+     "projRank": 10
+    },
+    {
+     "id": 145,
+     "abbr": "MISS",
+     "name": "Ole Miss Rebels",
+     "short": "Ole Miss",
+     "tier": "High major",
+     "net": -0.7,
+     "logo": "./logos/MISS.png",
+     "record": {
+      "w": 9,
+      "l": 11
+     },
+     "confRecord": {
+      "w": 2,
+      "l": 7
+     },
+     "projConf": {
+      "w": 4.3,
+      "l": 9.7
+     },
+     "projOverall": {
+      "w": 11.3,
+      "l": 13.7
+     },
+     "remaining": 5,
+     "confRemaining": 5,
+     "projRank": 11
+    },
+    {
+     "id": 2579,
+     "abbr": "SC",
+     "name": "South Carolina Gamecocks",
+     "short": "South Carolina",
+     "tier": "High major",
+     "net": -1.48,
+     "logo": "./logos/SC.png",
+     "record": {
+      "w": 6,
+      "l": 11
+     },
+     "confRecord": {
+      "w": 2,
+      "l": 8
+     },
+     "projConf": {
+      "w": 2.0,
+      "l": 8.0
+     },
+     "projOverall": {
+      "w": 6.0,
+      "l": 11.0
+     },
+     "remaining": 0,
+     "confRemaining": 0,
+     "projRank": 12
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "name": "Big 12",
+   "teams": [
+    {
+     "id": 248,
+     "abbr": "HOU",
+     "name": "Houston Cougars",
+     "short": "Houston",
+     "tier": "High major",
+     "net": 1.72,
+     "logo": "./logos/HOU.png",
+     "record": {
+      "w": 20,
+      "l": 2
+     },
+     "confRecord": {
+      "w": 10,
+      "l": 2
+     },
+     "projConf": {
+      "w": 11.6,
+      "l": 3.4
+     },
+     "projOverall": {
+      "w": 22.1,
+      "l": 3.9
+     },
+     "remaining": 4,
+     "confRemaining": 3,
+     "projRank": 1
+    },
+    {
+     "id": 66,
+     "abbr": "ISU",
+     "name": "Iowa State Cyclones",
+     "short": "Iowa State",
+     "tier": "High major",
+     "net": 2.1,
+     "logo": "./logos/ISU.png",
+     "record": {
+      "w": 21,
+      "l": 3
+     },
+     "confRecord": {
+      "w": 10,
+      "l": 3
+     },
+     "projConf": {
+      "w": 12.7,
+      "l": 5.3
+     },
+     "projOverall": {
+      "w": 24.8,
+      "l": 6.2
+     },
+     "remaining": 7,
+     "confRemaining": 5,
+     "projRank": 2
+    },
+    {
+     "id": 2305,
+     "abbr": "KU",
+     "name": "Kansas Jayhawks",
+     "short": "Kansas",
+     "tier": "High major",
+     "net": 1.38,
+     "logo": "./logos/KU.png",
+     "record": {
+      "w": 14,
+      "l": 5
+     },
+     "confRecord": {
+      "w": 8,
+      "l": 3
+     },
+     "projConf": {
+      "w": 8.0,
+      "l": 3.0
+     },
+     "projOverall": {
+      "w": 14.0,
+      "l": 5.0
+     },
+     "remaining": 0,
+     "confRemaining": 0,
+     "projRank": 3
+    },
+    {
+     "id": 2641,
+     "abbr": "TTU",
+     "name": "Texas Tech Red Raiders",
+     "short": "Texas Tech",
+     "tier": "High major",
+     "net": 1.18,
+     "logo": "./logos/TTU.png",
+     "record": {
+      "w": 15,
+      "l": 5
+     },
+     "confRecord": {
+      "w": 7,
+      "l": 4
+     },
+     "projConf": {
+      "w": 10.0,
+      "l": 7.0
+     },
+     "projOverall": {
+      "w": 19.0,
+      "l": 9.0
+     },
+     "remaining": 8,
+     "confRemaining": 6,
+     "projRank": 4
+    },
+    {
+     "id": 277,
+     "abbr": "WVU",
+     "name": "West Virginia Mountaineers",
+     "short": "West Virginia",
+     "tier": "High major",
+     "net": 0.39,
+     "logo": "./logos/WVU.png",
+     "record": {
+      "w": 16,
+      "l": 6
+     },
+     "confRecord": {
+      "w": 7,
+      "l": 4
+     },
+     "projConf": {
+      "w": 10.0,
+      "l": 7.0
+     },
+     "projOverall": {
+      "w": 19.9,
+      "l": 10.1
+     },
+     "remaining": 8,
+     "confRemaining": 6,
+     "projRank": 5
+    },
+    {
+     "id": 2116,
+     "abbr": "UCF",
+     "name": "UCF Knights",
+     "short": "UCF",
+     "tier": "High major",
+     "net": 0.97,
+     "logo": "./logos/UCF.png",
+     "record": {
+      "w": 17,
+      "l": 6
+     },
+     "confRecord": {
+      "w": 7,
+      "l": 5
+     },
+     "projConf": {
+      "w": 9.0,
+      "l": 7.0
+     },
+     "projOverall": {
+      "w": 19.5,
+      "l": 8.5
+     },
+     "remaining": 5,
+     "confRemaining": 4,
+     "projRank": 6
+    },
+    {
+     "id": 252,
+     "abbr": "BYU",
+     "name": "BYU Cougars",
+     "short": "BYU",
+     "tier": "High major",
+     "net": 0.99,
+     "logo": "./logos/BYU.png",
+     "record": {
+      "w": 13,
+      "l": 5
+     },
+     "confRecord": {
+      "w": 5,
+      "l": 4
+     },
+     "projConf": {
+      "w": 9.0,
+      "l": 8.0
+     },
+     "projOverall": {
+      "w": 17.0,
+      "l": 9.0
+     },
+     "remaining": 8,
+     "confRemaining": 8,
+     "projRank": 7
+    },
+    {
+     "id": 2628,
+     "abbr": "TCU",
+     "name": "TCU Horned Frogs",
+     "short": "TCU",
+     "tier": "High major",
+     "net": 0.72,
+     "logo": "./logos/TCU.png",
+     "record": {
+      "w": 14,
+      "l": 8
+     },
+     "confRecord": {
+      "w": 6,
+      "l": 5
+     },
+     "projConf": {
+      "w": 9.0,
+      "l": 8.0
+     },
+     "projOverall": {
+      "w": 17.0,
+      "l": 11.0
+     },
+     "remaining": 6,
+     "confRemaining": 6,
+     "projRank": 8
+    },
+    {
+     "id": 2132,
+     "abbr": "CIN",
+     "name": "Cincinnati Bearcats",
+     "short": "Cincinnati",
+     "tier": "High major",
+     "net": 1.4,
+     "logo": "./logos/CIN.png",
+     "record": {
+      "w": 13,
+      "l": 8
+     },
+     "confRecord": {
+      "w": 5,
+      "l": 6
+     },
+     "projConf": {
+      "w": 7.5,
+      "l": 8.5
+     },
+     "projOverall": {
+      "w": 15.5,
+      "l": 10.5
+     },
+     "remaining": 5,
+     "confRemaining": 5,
+     "projRank": 9
+    },
+    {
+     "id": 9,
+     "abbr": "ASU",
+     "name": "Arizona State Sun Devils",
+     "short": "Arizona State",
+     "tier": "High major",
+     "net": -0.91,
+     "logo": "./logos/ASU.png",
+     "record": {
+      "w": 12,
+      "l": 9
+     },
+     "confRecord": {
+      "w": 4,
+      "l": 6
+     },
+     "projConf": {
+      "w": 5.4,
+      "l": 7.6
+     },
+     "projOverall": {
+      "w": 13.4,
+      "l": 10.6
+     },
+     "remaining": 3,
+     "confRemaining": 3,
+     "projRank": 10
+    },
+    {
+     "id": 197,
+     "abbr": "OKST",
+     "name": "Oklahoma State Cowboys",
+     "short": "Oklahoma State",
+     "tier": "High major",
+     "net": 1.55,
+     "logo": "./logos/OKST.png",
+     "record": {
+      "w": 13,
+      "l": 9
+     },
+     "confRecord": {
+      "w": 3,
+      "l": 8
+     },
+     "projConf": {
+      "w": 6.7,
+      "l": 11.3
+     },
+     "projOverall": {
+      "w": 17.7,
+      "l": 13.3
+     },
+     "remaining": 9,
+     "confRemaining": 7,
+     "projRank": 11
+    },
+    {
+     "id": 38,
+     "abbr": "COLO",
+     "name": "Colorado Buffaloes",
+     "short": "Colorado",
+     "tier": "High major",
+     "net": -2.57,
+     "logo": "./logos/COLO.png",
+     "record": {
+      "w": 13,
+      "l": 12
+     },
+     "confRecord": {
+      "w": 3,
+      "l": 9
+     },
+     "projConf": {
+      "w": 4.7,
+      "l": 11.3
+     },
+     "projOverall": {
+      "w": 15.1,
+      "l": 14.9
+     },
+     "remaining": 5,
+     "confRemaining": 4,
+     "projRank": 12
+    },
+    {
+     "id": 239,
+     "abbr": "BAY",
+     "name": "Baylor Bears",
+     "short": "Baylor",
+     "tier": "High major",
+     "net": 3.33,
+     "logo": "./logos/BAY.png",
+     "record": {
+      "w": 10,
+      "l": 12
+     },
+     "confRecord": {
+      "w": 3,
+      "l": 10
+     },
+     "projConf": {
+      "w": 3.0,
+      "l": 10.0
+     },
+     "projOverall": {
+      "w": 10.0,
+      "l": 12.0
+     },
+     "remaining": 0,
+     "confRemaining": 0,
+     "projRank": 13
+    },
+    {
+     "id": 2306,
+     "abbr": "KSU",
+     "name": "Kansas State Wildcats",
+     "short": "Kansas State",
+     "tier": "High major",
+     "net": -0.94,
+     "logo": "./logos/KSU.png",
+     "record": {
+      "w": 9,
+      "l": 14
+     },
+     "confRecord": {
+      "w": 1,
+      "l": 10
+     },
+     "projConf": {
+      "w": 3.4,
+      "l": 12.6
+     },
+     "projOverall": {
+      "w": 11.4,
+      "l": 16.6
+     },
+     "remaining": 5,
+     "confRemaining": 5,
+     "projRank": 14
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "name": "Big West",
+   "teams": [
+    {
+     "id": 300,
+     "abbr": "UCI",
+     "name": "UC Irvine Anteaters",
+     "short": "UC Irvine",
+     "tier": "Low major",
+     "net": 0.1,
+     "logo": "./logos/UCI.png",
+     "record": {
+      "w": 15,
+      "l": 9
+     },
+     "confRecord": {
+      "w": 11,
+      "l": 4
+     },
+     "projConf": {
+      "w": 12.0,
+      "l": 5.0
+     },
+     "projOverall": {
+      "w": 16.0,
+      "l": 10.0
+     },
+     "remaining": 2,
+     "confRemaining": 2,
+     "projRank": 1
+    },
+    {
+     "id": 2463,
+     "abbr": "CSUN",
+     "name": "Cal State Northridge Matadors",
+     "short": "Cal State Northridge",
+     "tier": "Low major",
+     "net": 0.73,
+     "logo": "./logos/CSUN.png",
+     "record": {
+      "w": 14,
+      "l": 9
+     },
+     "confRecord": {
+      "w": 10,
+      "l": 5
+     },
+     "projConf": {
+      "w": 13.1,
+      "l": 7.9
+     },
+     "projOverall": {
+      "w": 17.1,
+      "l": 11.9
+     },
+     "remaining": 6,
+     "confRemaining": 6,
+     "projRank": 2
+    },
+    {
+     "id": 62,
+     "abbr": "HAW",
+     "name": "Hawai'i Rainbow Warriors",
+     "short": "Hawai'i",
+     "tier": "Low major",
+     "net": -0.78,
+     "logo": "./logos/HAW.png",
+     "record": {
+      "w": 15,
+      "l": 7
+     },
+     "confRecord": {
+      "w": 10,
+      "l": 5
+     },
+     "projConf": {
+      "w": 10.9,
+      "l": 6.1
+     },
+     "projOverall": {
+      "w": 15.9,
+      "l": 8.1
+     },
+     "remaining": 2,
+     "confRemaining": 2,
+     "projRank": 3
+    },
+    {
+     "id": 2540,
+     "abbr": "UCSB",
+     "name": "UC Santa Barbara Gauchos",
+     "short": "UC Santa Barbara",
+     "tier": "Low major",
+     "net": 2.92,
+     "logo": "./logos/UCSB.png",
+     "record": {
+      "w": 15,
+      "l": 10
+     },
+     "confRecord": {
+      "w": 10,
+      "l": 6
+     },
+     "projConf": {
+      "w": 11.7,
+      "l": 7.3
+     },
+     "projOverall": {
+      "w": 16.7,
+      "l": 11.3
+     },
+     "remaining": 3,
+     "confRemaining": 3,
+     "projRank": 4
+    },
+    {
+     "id": 2239,
+     "abbr": "CSUF",
+     "name": "Cal State Fullerton Titans",
+     "short": "Cal State Fullerton",
+     "tier": "Low major",
+     "net": 0.59,
+     "logo": "./logos/CSUF.png",
+     "record": {
+      "w": 12,
+      "l": 13
+     },
+     "confRecord": {
+      "w": 9,
+      "l": 7
+     },
+     "projConf": {
+      "w": 10.0,
+      "l": 8.0
+     },
+     "projOverall": {
+      "w": 13.0,
+      "l": 14.0
+     },
+     "remaining": 2,
+     "confRemaining": 2,
+     "projRank": 5
+    },
+    {
+     "id": 302,
+     "abbr": "UCD",
+     "name": "UC Davis Aggies",
+     "short": "UC Davis",
+     "tier": "Low major",
+     "net": -0.5,
+     "logo": "./logos/UCD.png",
+     "record": {
+      "w": 13,
+      "l": 11
+     },
+     "confRecord": {
+      "w": 9,
+      "l": 7
+     },
+     "projConf": {
+      "w": 9.9,
+      "l": 8.1
+     },
+     "projOverall": {
+      "w": 13.9,
+      "l": 12.1
+     },
+     "remaining": 2,
+     "confRemaining": 2,
+     "projRank": 6
+    },
+    {
+     "id": 28,
+     "abbr": "UCSD",
+     "name": "UC San Diego Tritons",
+     "short": "UC San Diego",
+     "tier": "Low major",
+     "net": -0.48,
+     "logo": "./logos/UCSD.png",
+     "record": {
+      "w": 15,
+      "l": 9
+     },
+     "confRecord": {
+      "w": 8,
+      "l": 7
+     },
+     "projConf": {
+      "w": 9.5,
+      "l": 8.5
+     },
+     "projOverall": {
+      "w": 16.5,
+      "l": 10.5
+     },
+     "remaining": 3,
+     "confRemaining": 3,
+     "projRank": 7
+    },
+    {
+     "id": 13,
+     "abbr": "CP",
+     "name": "Cal Poly Mustangs",
+     "short": "Cal Poly",
+     "tier": "Low major",
+     "net": -2.13,
+     "logo": "./logos/CP.png",
+     "record": {
+      "w": 9,
+      "l": 15
+     },
+     "confRecord": {
+      "w": 8,
+      "l": 8
+     },
+     "projConf": {
+      "w": 8.9,
+      "l": 9.1
+     },
+     "projOverall": {
+      "w": 9.9,
+      "l": 16.1
+     },
+     "remaining": 2,
+     "confRemaining": 2,
+     "projRank": 8
+    },
+    {
+     "id": 299,
+     "abbr": "LBSU",
+     "name": "Long Beach State Beach",
+     "short": "Long Beach State",
+     "tier": "Low major",
+     "net": -1.19,
+     "logo": "./logos/LBSU.png",
+     "record": {
+      "w": 6,
+      "l": 18
+     },
+     "confRecord": {
+      "w": 4,
+      "l": 11
+     },
+     "projConf": {
+      "w": 5.0,
+      "l": 12.0
+     },
+     "projOverall": {
+      "w": 7.0,
+      "l": 19.0
+     },
+     "remaining": 2,
+     "confRemaining": 2,
+     "projRank": 9
+    },
+    {
+     "id": 27,
+     "abbr": "UCR",
+     "name": "UC Riverside Highlanders",
+     "short": "UC Riverside",
+     "tier": "Low major",
+     "net": -1.19,
+     "logo": "./logos/UCR.png",
+     "record": {
+      "w": 7,
+      "l": 19
+     },
+     "confRecord": {
+      "w": 4,
+      "l": 12
+     },
+     "projConf": {
+      "w": 4.5,
+      "l": 12.5
+     },
+     "projOverall": {
+      "w": 7.5,
+      "l": 19.5
+     },
+     "remaining": 1,
+     "confRemaining": 1,
+     "projRank": 10
+    },
+    {
+     "id": 2934,
+     "abbr": "CSUB",
+     "name": "Cal State Bakersfield Roadrunners",
+     "short": "Cal State Bakersfield",
+     "tier": "Low major",
+     "net": -1.39,
+     "logo": "./logos/CSUB.png",
+     "record": {
+      "w": 6,
+      "l": 18
+     },
+     "confRecord": {
+      "w": 2,
+      "l": 13
+     },
+     "projConf": {
+      "w": 3.4,
+      "l": 14.6
+     },
+     "projOverall": {
+      "w": 7.4,
+      "l": 19.6
+     },
+     "remaining": 3,
+     "confRemaining": 3,
+     "projRank": 11
+    }
+   ]
+  },
+  {
+   "id": 44,
+   "name": "Mountain West",
+   "teams": [
+    {
+     "id": 328,
+     "abbr": "USU",
+     "name": "Utah State Aggies",
+     "short": "Utah State",
+     "tier": "Mid major",
+     "net": 0.4,
+     "logo": "./logos/USU.png",
+     "record": {
+      "w": 16,
+      "l": 3
+     },
+     "confRecord": {
+      "w": 10,
+      "l": 2
+     },
+     "projConf": {
+      "w": 11.0,
+      "l": 3.0
+     },
+     "projOverall": {
+      "w": 17.5,
+      "l": 4.5
+     },
+     "remaining": 3,
+     "confRemaining": 2,
+     "projRank": 1
+    },
+    {
+     "id": 167,
+     "abbr": "UNM",
+     "name": "New Mexico Lobos",
+     "short": "New Mexico",
+     "tier": "Mid major",
+     "net": 2.69,
+     "logo": "./logos/UNM.png",
+     "record": {
+      "w": 17,
+      "l": 5
+     },
+     "confRecord": {
+      "w": 10,
+      "l": 3
+     },
+     "projConf": {
+      "w": 11.7,
+      "l": 4.3
+     },
+     "projOverall": {
+      "w": 20.3,
+      "l": 7.7
+     },
+     "remaining": 6,
+     "confRemaining": 3,
+     "projRank": 2
+    },
+    {
+     "id": 2440,
+     "abbr": "NEV",
+     "name": "Nevada Wolf Pack",
+     "short": "Nevada",
+     "tier": "Mid major",
+     "net": 1.02,
+     "logo": "./logos/NEV.png",
+     "record": {
+      "w": 15,
+      "l": 7
+     },
+     "confRecord": {
+      "w": 8,
+      "l": 4
+     },
+     "projConf": {
+      "w": 8.0,
+      "l": 4.0
+     },
+     "projOverall": {
+      "w": 15.0,
+      "l": 7.0
+     },
+     "remaining": 0,
+     "confRemaining": 0,
+     "projRank": 3
+    },
+    {
+     "id": 2439,
+     "abbr": "UNLV",
+     "name": "UNLV Rebels",
+     "short": "UNLV",
+     "tier": "Mid major",
+     "net": -0.63,
+     "logo": "./logos/UNLV.png",
+     "record": {
+      "w": 11,
+      "l": 9
+     },
+     "confRecord": {
+      "w": 8,
+      "l": 5
+     },
+     "projConf": {
+      "w": 8.0,
+      "l": 5.0
+     },
+     "projOverall": {
+      "w": 11.0,
+      "l": 9.0
+     },
+     "remaining": 0,
+     "confRemaining": 0,
+     "projRank": 4
+    },
+    {
+     "id": 2253,
+     "abbr": "GCU",
+     "name": "Grand Canyon Lopes",
+     "short": "Grand Canyon",
+     "tier": "Mid major",
+     "net": -0.38,
+     "logo": "./logos/GCU.png",
+     "record": {
+      "w": 10,
+      "l": 8
+     },
+     "confRecord": {
+      "w": 7,
+      "l": 5
+     },
+     "projConf": {
+      "w": 8.5,
+      "l": 6.5
+     },
+     "projOverall": {
+      "w": 11.5,
+      "l": 9.5
+     },
+     "remaining": 3,
+     "confRemaining": 3,
+     "projRank": 5
+    },
+    {
+     "id": 36,
+     "abbr": "CSU",
+     "name": "Colorado State Rams",
+     "short": "Colorado State",
+     "tier": "Mid major",
+     "net": 0.53,
+     "logo": "./logos/CSU.png",
+     "record": {
+      "w": 14,
+      "l": 8
+     },
+     "confRecord": {
+      "w": 6,
+      "l": 6
+     },
+     "projConf": {
+      "w": 6.0,
+      "l": 6.0
+     },
+     "projOverall": {
+      "w": 14.0,
+      "l": 8.0
+     },
+     "remaining": 0,
+     "confRemaining": 0,
+     "projRank": 6
+    },
+    {
+     "id": 68,
+     "abbr": "BOIS",
+     "name": "Boise State Broncos",
+     "short": "Boise State",
+     "tier": "Mid major",
+     "net": 0.23,
+     "logo": "./logos/BOIS.png",
+     "record": {
+      "w": 13,
+      "l": 9
+     },
+     "confRecord": {
+      "w": 6,
+      "l": 7
+     },
+     "projConf": {
+      "w": 7.6,
+      "l": 8.4
+     },
+     "projOverall": {
+      "w": 14.6,
+      "l": 10.4
+     },
+     "remaining": 3,
+     "confRemaining": 3,
+     "projRank": 7
+    },
+    {
+     "id": 278,
+     "abbr": "FRES",
+     "name": "Fresno State Bulldogs",
+     "short": "Fresno State",
+     "tier": "Mid major",
+     "net": -0.41,
+     "logo": "./logos/FRES.png",
+     "record": {
+      "w": 10,
+      "l": 11
+     },
+     "confRecord": {
+      "w": 5,
+      "l": 7
+     },
+     "projConf": {
+      "w": 6.9,
+      "l": 9.1
+     },
+     "projOverall": {
+      "w": 11.9,
+      "l": 13.1
+     },
+     "remaining": 4,
+     "confRemaining": 4,
+     "projRank": 8
+    },
+    {
+     "id": 23,
+     "abbr": "SJSU",
+     "name": "San Jos\u00e9 State Spartans",
+     "short": "San Jos\u00e9 State",
+     "tier": "Mid major",
+     "net": -0.85,
+     "logo": "./logos/SJSU.png",
+     "record": {
+      "w": 5,
+      "l": 16
+     },
+     "confRecord": {
+      "w": 2,
+      "l": 11
+     },
+     "projConf": {
+      "w": 4.4,
+      "l": 13.6
+     },
+     "projOverall": {
+      "w": 7.4,
+      "l": 18.6
+     },
+     "remaining": 5,
+     "confRemaining": 5,
+     "projRank": 9
+    },
+    {
+     "id": 2005,
+     "abbr": "AF",
+     "name": "Air Force Falcons",
+     "short": "Air Force",
+     "tier": "Mid major",
+     "net": -0.69,
+     "logo": "./logos/AF.png",
+     "record": {
+      "w": 3,
+      "l": 20
+     },
+     "confRecord": {
+      "w": 0,
+      "l": 12
+     },
+     "projConf": {
+      "w": 1.0,
+      "l": 13.0
+     },
+     "projOverall": {
+      "w": 4.0,
+      "l": 21.0
+     },
+     "remaining": 2,
+     "confRemaining": 2,
+     "projRank": 10
+    }
+   ]
+  }
+ ],
+ "method": [
+  "Current records count every completed game on the cached schedule; a conference game is one between two members of the same conference.",
+  "Projected records add, for each game still to play, the team's chance of winning it: the lab's ratings on strength and venue, read through a normal margin at the fit's own spread. They are expected wins, not a simulation, so no chance to finish first is published.",
+  "Tonight's layers (last five, rest, who is missing, the second opinion) need tonight's inputs and are not applied to games weeks away.",
+  "Rank is by projected conference wins minus losses, then net rating."
+ ]
+}

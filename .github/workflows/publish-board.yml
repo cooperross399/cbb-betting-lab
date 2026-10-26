@@ -206,7 +206,8 @@ jobs:
           python web/build_board_json.py --lab . --out dist/data
           python web/site_history.py --data dist/data
           python web/settle_results.py --data dist/data --sport cbb
-          printf '{"sport":"cbb"}' > dist/site.json
+          python web/build_site_pages.py --data dist/data
+          printf '{"sport":"cbb","pages":["season","record","tracker","methods","game"]}' > dist/site.json
 
       - name: Keep the history
         uses: actions/upload-artifact@v4

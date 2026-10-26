@@ -238,8 +238,14 @@ PATIENCE_DAYS = 14
 
 
 def night_record(results: dict) -> dict:
-    """What the season keeps of one settled day: its settled games and summary."""
-    return {"games": len(results.get("games") or []), "summary": results.get("summary") or {}}
+    """What the season keeps of one settled day: its settled games and summary.
+
+    `graded` keeps the games themselves, finals included, so the Record and
+    All results pages (`site_pages.py`) read a settled day off disk rather
+    than asking the scoreboard for it again.
+    """
+    games = results.get("games") or []
+    return {"games": len(games), "summary": results.get("summary") or {}, "graded": list(games)}
 
 
 def _kept_night(path: Path) -> dict | None:

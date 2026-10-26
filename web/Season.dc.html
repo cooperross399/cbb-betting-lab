@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <title>Season — Maverick Hightower</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Every Division I conference: current standings, projected records from our ratings, and the full ratings table, offence, defence and tempo per 100 possessions.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Maverick Hightower">
+  <meta property="og:title" content="Season — Maverick Hightower">
+  <meta property="og:image" content="https://maverickhightower.com/share.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@mavhightower">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root, html[data-sport="cbb"], html[data-sport="cbb"] [data-theme="light"] { color-scheme: light; --paper:#ffffff; --ink:#14151a; --ink-2:#2a2d3a; --mute:#62656f; --mute-2:#9a9ca6; --rule:#dddbd6; --rule-2:#ecebe7; --on-ink:#d6d3cc; --alert:#b0341f; --on-alert:#ffffff; --win:#2c7a5a; --on-win:#ffffff; --desk:#eeede9; }
+    @media (prefers-color-scheme: dark) { html[data-sport="cbb"] { color-scheme: dark; --paper:#0f1a2b; --ink:#eef1f6; --ink-2:#cdd4e0; --mute:#9ba6b8; --mute-2:#7a869a; --rule:#2b3a52; --rule-2:#1c2a3f; --on-ink:#2b3a52; --alert:#f08a72; --on-alert:#0f1a2b; --win:#5cc196; --on-win:#0f1a2b; --desk:#0a1220; } }
+    html[data-sport="cbb"] [data-theme="dark"] { color-scheme: dark; --paper:#0f1a2b; --ink:#eef1f6; --ink-2:#cdd4e0; --mute:#9ba6b8; --mute-2:#7a869a; --rule:#2b3a52; --rule-2:#1c2a3f; --on-ink:#2b3a52; --alert:#f08a72; --on-alert:#0f1a2b; --win:#5cc196; --on-win:#0f1a2b; --desk:#0a1220; }
+    html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: "IBM Plex Sans", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    * { box-sizing: border-box; }
+    a { color: var(--ink); text-decoration: none; }
+    a:hover { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
+    a:focus-visible, button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+    .mono { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+    .cond { font-family: "Barlow Condensed", sans-serif; }
+    .chip { min-height: 36px; padding: 0 12px; border: 1px solid var(--ink); background: transparent; color: var(--ink); font-family: "IBM Plex Mono", monospace; font-size: 12px; cursor: pointer; white-space: nowrap; }
+    .th { background: transparent; border: 0; padding: 0; color: var(--mute); font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; min-height: 32px; text-align: inherit; }
+    .skip { position: absolute; left: 12px; top: -60px; background: var(--ink); color: var(--paper); padding: 10px 14px; z-index: 10; font-size: 14px; }
+    .skip:focus { top: 12px; }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+  </style>
+  <meta name="theme-color" content="#ffffff">
+  <script>(function(){if(typeof document!=="undefined"){document.documentElement.setAttribute("data-sport","cbb");}})();</script>
+</helmet>
+<div data-screen-label="Season" style="min-height:100vh;background:var(--paper);color:var(--ink);">
+  <a href="#main" class="skip">Skip to the standings</a>
+  <div style="max-width:1240px;margin:0 auto;padding:0 clamp(16px,3vw,24px) 80px;">
+
+    <header style="border-top:4px solid var(--ink);padding:10px 0 4px;display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;">
+      <a href="https://maverickhightower.com/" aria-label="Maverick Hightower home" style="display:flex;align-items:center;gap:12px;min-height:44px;">
+        <span aria-hidden="true" style="width:36px;height:36px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;letter-spacing:.04em;">MH</span>
+        <span style="display:flex;flex-direction:column;line-height:1.1;">
+          <span style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">Maverick Hightower</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;letter-spacing:.02em;text-transform:uppercase;">College Basketball</span>
+        </span>
+      </a>
+      <nav aria-label="Site" style="display:flex;gap:0 18px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;font-weight:500;flex-wrap:wrap;">
+        <a href="Methods.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Methods</a>
+        <a href="https://maverickhightower.com/about.html" style="display:inline-flex;align-items:center;min-height:44px;">About</a>
+        <a href="https://nhl.maverickhightower.com/" style="display:inline-flex;align-items:center;min-height:44px;">NHL</a>
+        <a href="https://epl.maverickhightower.com/" style="display:inline-flex;align-items:center;min-height:44px;">EPL</a>
+      </nav>
+    </header>
+
+    <nav aria-label="Board sections" style="position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--ink);display:flex;overflow-x:auto;scrollbar-width:none;">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
+        <a href="{{ t.href }}" aria-current="{{ t.current }}" style="flex:1 1 0;max-width:150px;min-width:64px;display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;white-space:nowrap;text-decoration:none;color:{{ t.color }};border-bottom:3px solid {{ t.line }};">{{ t.label }}</a>
+      </sc-for>
+    </nav>
+
+    <sc-if value="{{ isSample }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:start;padding:14px 0;border-bottom:1px solid var(--ink);">
+        <span class="cond" style="font-weight:700;font-size:14px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--ink);padding:4px 9px;">Sample</span>
+        <p style="margin:0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:760px;text-wrap:pretty;">Sample standings from a past season. On the live site this page is rebuilt with every board from the cached schedule and the ratings the card priced on.</p>
+      </div>
+    </sc-if>
+
+    <section id="main" style="padding:30px 0 22px;border-bottom:1px solid var(--ink);">
+      <div style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">Season · {{ seasonLabel }}</div>
+      <h1 class="cond" style="margin:8px 0 0;font-weight:800;font-size:clamp(34px,6vw,60px);line-height:.95;text-transform:uppercase;letter-spacing:.01em;max-width:14ch;">{{ title }}</h1>
+      <p style="margin:14px 0 0;font-size:16px;line-height:1.55;color:var(--ink-2);max-width:720px;text-wrap:pretty;">{{ intro }}</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:0 20px;margin-top:18px;border-top:2px solid var(--ink);max-width:760px;">
+        <sc-for list="{{ headline }}" as="c" hint-placeholder-count="4">
+          <div style="padding:12px 0;"><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ c.label }}</div><div class="cond" style="font-weight:700;font-size:34px;line-height:1;margin-top:6px;">{{ c.value }}</div><div class="mono" style="font-size:12px;color:var(--ink-2);margin-top:4px;">{{ c.sub }}</div></div>
+        </sc-for>
+      </div>
+    </section>
+
+    <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+      <section style="padding:40px 0;">
+        <div style="border:1px dashed var(--mute);padding:16px 18px;max-width:760px;">
+          <div class="cond" style="font-weight:700;font-size:22px;line-height:1;text-transform:uppercase;color:var(--mute);">{{ emptyTitle }}</div>
+          <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);">{{ emptyNote }}</p>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+
+      <div role="tablist" aria-label="View" style="display:flex;gap:2px;margin-top:22px;border-bottom:1px solid var(--ink);">
+        <sc-for list="{{ views }}" as="v" hint-placeholder-count="2">
+          <button role="tab" aria-selected="{{ v.selected }}" onClick="{{ v.onClick }}" class="cond" style="min-height:44px;padding:0 18px;border:0;border-bottom:3px solid {{ v.line }};background:transparent;color:{{ v.color }};font-weight:700;font-size:16px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">{{ v.label }}</button>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ standings }}" hint-placeholder-val="{{ true }}">
+        <section aria-labelledby="st-h" style="padding:22px 0 0;">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px 16px;flex-wrap:wrap;">
+            <div>
+              <h2 id="st-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">{{ confTitle }}</h2>
+              <p class="mono" style="margin:6px 0 0;font-size:12px;color:var(--mute);">{{ confStamp }}</p>
+            </div>
+            <input type="search" value="{{ query }}" onInput="{{ onSearch }}" placeholder="Find a team" aria-label="Find a team" style="width:100%;max-width:300px;min-height:44px;padding:0 12px;background:var(--paper);color:var(--ink);border:1px solid var(--ink);font-family:inherit;font-size:14px;">
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;" role="group" aria-label="Conference">
+            <sc-for list="{{ confChips }}" as="c" hint-placeholder-count="12">
+              <button class="chip" onClick="{{ c.onClick }}" aria-pressed="{{ c.pressed }}" style="background:{{ c.bg }};color:{{ c.fg }};">{{ c.label }}</button>
+            </sc-for>
+          </div>
+          <div style="margin-top:14px;overflow-x:auto;scrollbar-width:thin;margin-left:calc(-1 * clamp(16px,3vw,24px));margin-right:calc(-1 * clamp(16px,3vw,24px));padding:0 clamp(16px,3vw,24px);">
+            <div role="table" aria-label="Standings" style="min-width:760px;border-top:2px solid var(--ink);">
+              <div role="row" style="display:grid;grid-template-columns:36px minmax(200px,2fr) 90px 70px 90px 100px 90px 100px 60px;gap:0 10px;padding:6px 0;align-items:center;">
+                <sc-for list="{{ stHead }}" as="h" hint-placeholder-count="9">
+                  <button class="th" onClick="{{ h.onClick }}" aria-sort="{{ h.sort }}" style="text-align:{{ h.align }};color:{{ h.color }};">{{ h.label }}</button>
+                </sc-for>
+              </div>
+              <sc-for list="{{ stRows }}" as="r" hint-placeholder-count="12">
+                <div role="row" style="display:grid;grid-template-columns:36px minmax(200px,2fr) 90px 70px 90px 100px 90px 100px 60px;gap:0 10px;padding:8px 0;border-top:1px solid var(--rule-2);align-items:center;font-size:13px;">
+                  <span class="mono" style="color:var(--mute);">{{ r.rank }}</span>
+                  <span style="display:flex;align-items:center;gap:10px;min-width:0;">
+                    <span aria-hidden="true" style="position:relative;width:26px;height:26px;border-radius:50%;flex:none;overflow:hidden;background:var(--rule-2);"><img src="{{ r.logo }}" alt="" loading="lazy" decoding="async" onError="{{ r.onLogoError }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:2px;"></span>
+                    <span style="min-width:0;"><span style="display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.name }}</span><span class="mono" style="display:block;font-size:11px;color:var(--mute);">{{ r.sub }}</span></span>
+                  </span>
+                  <span class="mono" style="font-size:12px;color:var(--mute);">{{ r.tier }}</span>
+                  <span class="mono" style="text-align:right;color:{{ r.netColor }};">{{ r.net }}</span>
+                  <span class="mono" style="text-align:right;">{{ r.conf }}</span>
+                  <span class="mono" style="text-align:right;font-weight:600;">{{ r.projConf }}</span>
+                  <span class="mono" style="text-align:right;">{{ r.overall }}</span>
+                  <span class="mono" style="text-align:right;font-weight:600;">{{ r.projOverall }}</span>
+                  <span class="mono" style="text-align:right;color:var(--mute);">{{ r.left }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}"><p style="margin:12px 0 0;font-size:14px;color:var(--ink-2);">{{ noRowsText }}</p></sc-if>
+          <p class="mono" style="margin:10px 0 0;font-size:11px;color:var(--mute);">Proj = expected record: each remaining game adds our chance of winning it. Net is points per 100 possessions against the Division I average. Left is games still to play.</p>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{ ratingsView }}" hint-placeholder-val="{{ false }}">
+        <section aria-labelledby="rt-h" style="padding:22px 0 0;">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px 16px;flex-wrap:wrap;">
+            <div>
+              <h2 id="rt-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">Ratings</h2>
+              <p class="mono" style="margin:6px 0 0;font-size:12px;color:var(--mute);">{{ ratingsStamp }}</p>
+            </div>
+            <input type="search" value="{{ query }}" onInput="{{ onSearch }}" placeholder="Find a team" aria-label="Find a team" style="width:100%;max-width:300px;min-height:44px;padding:0 12px;background:var(--paper);color:var(--ink);border:1px solid var(--ink);font-family:inherit;font-size:14px;">
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;" role="group" aria-label="Filter">
+            <sc-for list="{{ ratingChips }}" as="c" hint-placeholder-count="5">
+              <button class="chip" onClick="{{ c.onClick }}" aria-pressed="{{ c.pressed }}" style="background:{{ c.bg }};color:{{ c.fg }};">{{ c.label }}</button>
+            </sc-for>
+          </div>
+          <div style="margin-top:14px;overflow-x:auto;scrollbar-width:thin;margin-left:calc(-1 * clamp(16px,3vw,24px));margin-right:calc(-1 * clamp(16px,3vw,24px));padding:0 clamp(16px,3vw,24px);">
+            <div role="table" aria-label="Ratings" style="min-width:820px;border-top:2px solid var(--ink);">
+              <div role="row" style="display:grid;grid-template-columns:40px minmax(200px,2fr) minmax(110px,1fr) 90px 70px 70px 70px 70px 70px minmax(100px,1fr);gap:0 10px;padding:6px 0;align-items:center;">
+                <sc-for list="{{ rtHead }}" as="h" hint-placeholder-count="10">
+                  <button class="th" onClick="{{ h.onClick }}" aria-sort="{{ h.sort }}" style="text-align:{{ h.align }};color:{{ h.color }};">{{ h.label }}</button>
+                </sc-for>
+              </div>
+              <sc-for list="{{ rtRows }}" as="r" hint-placeholder-count="25">
+                <div role="row" style="display:grid;grid-template-columns:40px minmax(200px,2fr) minmax(110px,1fr) 90px 70px 70px 70px 70px 70px minmax(100px,1fr);gap:0 10px;padding:8px 0;border-top:1px solid var(--rule-2);align-items:center;font-size:13px;">
+                  <span class="mono" style="color:var(--mute);">{{ r.rank }}</span>
+                  <span style="display:flex;align-items:center;gap:10px;min-width:0;">
+                    <span aria-hidden="true" style="position:relative;width:26px;height:26px;border-radius:50%;flex:none;overflow:hidden;background:var(--rule-2);"><img src="{{ r.logo }}" alt="" loading="lazy" decoding="async" onError="{{ r.onLogoError }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:2px;"></span>
+                    <span style="min-width:0;"><span style="display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.name }}</span><span class="mono" style="display:block;font-size:11px;color:var(--mute);">{{ r.abbr }}</span></span>
+                  </span>
+                  <span style="font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.conference }}</span>
+                  <span class="mono" style="font-size:12px;color:var(--mute);">{{ r.tier }}</span>
+                  <span class="mono" style="text-align:right;font-weight:600;color:{{ r.netColor }};">{{ r.net }}</span>
+                  <span class="mono" style="text-align:right;">{{ r.offence }}</span>
+                  <span class="mono" style="text-align:right;">{{ r.defence }}</span>
+                  <span class="mono" style="text-align:right;">{{ r.tempo }}</span>
+                  <span class="mono" style="text-align:right;color:{{ r.formColor }};">{{ r.form }}</span>
+                  <span class="mono" style="font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.tonight }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <sc-if value="{{ noRatingRows }}" hint-placeholder-val="{{ false }}"><p style="margin:12px 0 0;font-size:14px;color:var(--ink-2);">{{ noRatingRowsText }}</p></sc-if>
+          <p class="mono" style="margin:10px 0 0;font-size:11px;color:var(--mute);">Off and Def: points scored and allowed per 100 possessions against the average, after who was played and where; a negative Def is good. Tempo: possessions per game against the average. Last five: net against what the ratings expected, shrunk. {{ ratingsNote }}</p>
+        </section>
+      </sc-if>
+
+      <section style="padding:30px 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px 40px;align-items:start;">
+        <div style="border:1px solid var(--ink);padding:16px 18px;">
+          <h2 class="cond" style="margin:0;font-weight:700;font-size:16px;letter-spacing:.14em;text-transform:uppercase;">How to read this</h2>
+          <ul style="margin:10px 0 0;padding-left:18px;font-size:14px;line-height:1.55;color:var(--ink-2);display:flex;flex-direction:column;gap:6px;text-wrap:pretty;">
+            <sc-for list="{{ method }}" as="m" hint-placeholder-count="4"><li>{{ m }}</li></sc-for>
+          </ul>
+        </div>
+        <div style="font-size:14px;line-height:1.55;color:var(--ink-2);display:flex;flex-direction:column;gap:10px;text-wrap:pretty;">
+          <p style="margin:0;">Projections carry no chance of finishing first, winning a tournament or making the field: those need a simulation of tiebreakers and brackets this page does not run.</p>
+          <p style="margin:0;"><a href="Methods.dc.html" style="text-decoration:underline;text-underline-offset:3px;">Methods</a> explains how a rating is built and when it is refused. <a href="Record.dc.html" style="text-decoration:underline;text-underline-offset:3px;">Record</a> shows whether the win chances have been honest.</p>
+          <p style="margin:0;color:var(--mute);">The site recommends; it never places bets.</p>
+        </div>
+      </section>
+
+    </sc-if>
+
+    <footer style="border-top:1px solid var(--ink);margin-top:40px;padding:18px 0 0;display:flex;flex-wrap:wrap;gap:6px 24px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--mute);">
+      <span>© 2026 Maverick Hightower</span>
+      <a href="Board.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Board</a>
+      <a href="Record.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Record</a>
+      <a href="Methods.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Methods</a>
+      <a href="https://maverickhightower.com/about.html" style="display:inline-flex;align-items:center;min-height:44px;">About</a>
+      <a href="https://x.com/mavhightower" style="display:inline-flex;align-items:center;min-height:44px;">@mavhightower</a>
+    </footer>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;scenario&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Sample&quot;,&quot;Before the first game&quot;],&quot;default&quot;:&quot;Sample&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Preview&quot;}}">
+class Component extends DCLogic {
+  state = { season: null, ratings: null, loadedFor: null, isSample: false, err: "", view: "standings", conf: null, query: "", sort: { k: "projRank", dir: 1 }, rsort: { k: "rank", dir: 1 }, rfilter: "all" };
+  onSite() { return /(^|\.)maverickhightower\.com$/.test(location.hostname); }
+  async load() {
+    const want = this.props.scenario || "";
+    if (this.state.loadedFor === want) return;
+    this.setState({ loadedFor: want });
+    const S = await import("./lib/sports.js");
+    const { deployed } = await S.detectSport("cbb"); void deployed;
+    const scenario = this.onSite() ? "Normal" : this.props.scenario || "Sample";
+    const live = this.onSite() || scenario === "Normal";
+    const get = async (u) => { try { const r = await fetch(u, { cache: "no-store" }); return r.ok ? await r.json() : null; } catch (_) { return null; } };
+    const dir = live ? "./data" : "./data/sample";
+    let [season, ratings] = await Promise.all([get(`${dir}/season.json`), get(`${dir}/ratings.json`)]);
+    if (scenario === "Before the first game" && season) season = { ...season, phase: "preseason", played: 0, remaining: season.remaining + season.played, conferences: season.conferences.map((c) => ({ ...c, teams: c.teams.map((t) => ({ ...t, record: { w: 0, l: 0 }, confRecord: { w: 0, l: 0 } })) })) };
+    const q = new URLSearchParams(location.search);
+    const view = q.get("view") === "ratings" ? "ratings" : this.state.view;
+    this.setState({ season, ratings, view, isSample: !live, err: season ? "" : "unreachable" });
+  }
+  componentDidMount() { this.load(); }
+  componentDidUpdate() { this.load(); }
+  renderVals() {
+    const s = this.state.season, R = this.state.ratings;
+    const here = "Season.dc.html";
+    const tabs = [["Tonight", "Board.dc.html"], ["Results", "Results.dc.html"], ["All results", "Tracker.dc.html"], ["Season", "Season.dc.html"], ["Record", "Record.dc.html"], ["Methods", "Methods.dc.html"]].map(([label, href]) => ({ label, href, current: href === here ? "page" : "false", color: href === here ? "var(--ink)" : "var(--mute)", line: href === here ? "var(--ink)" : "transparent" }));
+    const base = { tabs, isSample: !!this.state.isSample };
+    const signed = (v, dp) => (typeof v === "number" ? `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(dp == null ? 1 : dp)}` : "—");
+    const hideLogo = (e) => { e.currentTarget.style.display = "none"; };
+    if (!s) return { ...base, ready: false, empty: true, seasonLabel: "", title: "Season", intro: "", headline: [], emptyTitle: this.state.err ? "The season file is unreachable" : "Loading", emptyNote: this.state.err ? "The standings data did not load." : "" };
+    const pre = s.phase === "preseason";
+    const seasonLabel = s.season ? `${s.season - 1}–${String(s.season).slice(2)}` : "";
+    const headline = [
+      { label: "Games played", value: String(s.played || 0), sub: s.asOf ? `through ${s.asOf}` : "" },
+      { label: "Still to play", value: String(s.remaining || 0), sub: "on the cached schedule" },
+      { label: "Projected", value: String(s.projected || 0), sub: s.remaining ? `${Math.round(100 * (s.projected || 0) / s.remaining)}% of what is left` : "games with a rating on both sides" },
+      { label: "Conferences", value: String((s.conferences || []).length), sub: `${(s.conferences || []).reduce((n, c) => n + (c.teams || []).length, 0)} teams` },
+    ];
+    const allTeams = [];
+    for (const c of s.conferences || []) for (const t of c.teams || []) allTeams.push({ ...t, conference: c.name, conferenceId: c.id });
+    const q = (this.state.query || "").trim().toLowerCase();
+    const confs = (s.conferences || []).slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    const score = (c) => (c.teams || []).reduce((n, t) => n + (t.tier === "High major" ? 1 : 0), 0) * 1000 + (c.teams || []).reduce((n, t) => n + (typeof t.net === "number" ? t.net : 0), 0);
+    const defaultConf = confs.slice().sort((a, b) => score(b) - score(a))[0];
+    const chosen = this.state.conf != null ? confs.find((c) => String(c.id) === String(this.state.conf)) || defaultConf : defaultConf;
+    const views = [["standings", "Standings"], ["ratings", "Ratings"]].map(([k, label]) => ({ label, selected: this.state.view === k ? "true" : "false", line: this.state.view === k ? "var(--ink)" : "transparent", color: this.state.view === k ? "var(--ink)" : "var(--mute)", onClick: () => this.setState({ view: k }) }));
+    const confChips = confs.map((c) => { const on = !q && chosen && c.id === chosen.id; return { label: c.name, pressed: on ? "true" : "false", bg: on ? "var(--ink)" : "transparent", fg: on ? "var(--paper)" : "var(--ink)", onClick: () => this.setState({ conf: c.id, query: "" }) }; });
+    // Standings
+    const wl = (r) => (r ? `${r.w}–${r.l}` : "—");
+    const pwl = (r) => (r ? `${Number(r.w).toFixed(1)}–${Number(r.l).toFixed(1)}` : "—");
+    const sortKeys = { projRank: (t) => t.projRank, net: (t) => -(t.net ?? -99), conf: (t) => -((t.confRecord || {}).w - (t.confRecord || {}).l), projConf: (t) => -((t.projConf || {}).w ?? -99), overall: (t) => -((t.record || {}).w - (t.record || {}).l), projOverall: (t) => -((t.projOverall || {}).w ?? -99), left: (t) => -(t.remaining ?? 0), name: (t) => t.name, tier: (t) => t.tier };
+    const sort = this.state.sort;
+    const pool = q ? allTeams.filter((t) => `${t.name} ${t.abbr} ${t.short} ${t.conference}`.toLowerCase().includes(q)) : (chosen ? (chosen.teams || []).map((t) => ({ ...t, conference: chosen.name })) : []);
+    const sorted = pool.slice().sort((a, b) => { const ka = sortKeys[sort.k](a), kb = sortKeys[sort.k](b); const c = typeof ka === "string" ? ka.localeCompare(kb) : (ka ?? 0) - (kb ?? 0); return (c || a.projRank - b.projRank) * sort.dir; });
+    const stRows = sorted.map((t, i) => ({ rank: String(q ? t.projRank : i + 1), name: t.name, sub: q ? t.conference : t.abbr, logo: t.logo || `./logos/${encodeURIComponent(t.abbr)}.png`, onLogoError: hideLogo, tier: t.tier || "", net: signed(t.net), netColor: typeof t.net === "number" ? (t.net > 0 ? "var(--win)" : t.net < 0 ? "var(--alert)" : "var(--mute)") : "var(--mute)", conf: wl(t.confRecord), projConf: pwl(t.projConf), overall: wl(t.record), projOverall: pwl(t.projOverall), left: String(t.remaining ?? 0) }));
+    const th = (keys, cur, set) => keys.map(([k, label, align]) => ({ label, align: align || "left", sort: cur.k === k ? (cur.dir === 1 ? "ascending" : "descending") : "none", color: cur.k === k ? "var(--ink)" : "var(--mute)", onClick: () => set(k) }));
+    const setSort = (k) => this.setState((st) => ({ sort: { k, dir: st.sort.k === k ? -st.sort.dir : 1 } }));
+    const stHead = th([["projRank", "#"], ["name", "Team"], ["tier", "Tier"], ["net", "Net", "right"], ["conf", "Conf", "right"], ["projConf", "Proj conf", "right"], ["overall", "Overall", "right"], ["projOverall", "Proj overall", "right"], ["left", "Left", "right"]], sort, setSort);
+    // Ratings
+    const rteams = (R && R.teams) || [];
+    const rf = this.state.rfilter;
+    const ratingChips = [["all", "Everyone"], ["tonight", "Playing tonight"], ["High major", "High major"], ["Mid major", "Mid major"], ["Low major", "Low major"]].map(([k, label]) => ({ label, pressed: rf === k ? "true" : "false", bg: rf === k ? "var(--ink)" : "transparent", fg: rf === k ? "var(--paper)" : "var(--ink)", onClick: () => this.setState({ rfilter: k }) }));
+    const rkeys = { rank: (t) => t.rank, name: (t) => t.name, conference: (t) => t.conference || "", tier: (t) => t.tier || "", net: (t) => -(t.net ?? -99), offence: (t) => -(t.offence ?? -99), defence: (t) => t.defence ?? 99, tempo: (t) => -(t.tempo ?? -99), form: (t) => -(t.form ?? -99), tonight: (t) => (t.tonight ? 0 : 1) };
+    const rs = this.state.rsort;
+    const rpool = rteams.filter((t) => (rf === "all" ? true : rf === "tonight" ? !!t.tonight : t.tier === rf)).filter((t) => !q || `${t.name} ${t.abbr} ${t.short} ${t.conference}`.toLowerCase().includes(q));
+    const rsorted = rpool.slice().sort((a, b) => { const ka = rkeys[rs.k](a), kb = rkeys[rs.k](b); const c = typeof ka === "string" ? ka.localeCompare(kb) : (ka ?? 0) - (kb ?? 0); return (c || a.rank - b.rank) * rs.dir; });
+    const rtRows = rsorted.map((t) => ({ rank: String(t.rank), name: t.name, abbr: t.abbr, logo: t.logo || `./logos/${encodeURIComponent(t.abbr)}.png`, onLogoError: hideLogo, conference: t.conference || "", tier: t.tier || "", net: signed(t.net), netColor: typeof t.net === "number" ? (t.net > 0 ? "var(--win)" : t.net < 0 ? "var(--alert)" : "var(--mute)") : "var(--mute)", offence: signed(t.offence), defence: signed(t.defence), tempo: signed(t.tempo), form: typeof t.form === "number" ? signed(t.form) : "—", formColor: typeof t.form === "number" ? (t.form > 0 ? "var(--win)" : t.form < 0 ? "var(--alert)" : "var(--mute)") : "var(--mute)", tonight: t.tonight ? t.tonight.vs || t.tonight.label : "" }));
+    const setRsort = (k) => this.setState((st) => ({ rsort: { k, dir: st.rsort.k === k ? -st.rsort.dir : 1 } }));
+    const rtHead = th([["rank", "#"], ["name", "Team"], ["conference", "Conference"], ["tier", "Tier"], ["net", "Net", "right"], ["offence", "Off", "right"], ["defence", "Def", "right"], ["tempo", "Tempo", "right"], ["form", "Last 5", "right"], ["tonight", "Tonight"]], rs, setRsort);
+    const standings = this.state.view !== "ratings";
+    return { ...base, ready: true, empty: false, seasonLabel,
+      title: pre ? "Before the first game" : "Standings and projections",
+      intro: pre ? "No game has been played. The ratings below open on last season's finish and each team's returning production; the standings fill in from the first night." : "Every conference, with the record so far and the record our ratings expect by the end. The ratings view is the whole of Division I in one table.",
+      headline, views, standings, ratingsView: !standings,
+      confTitle: q ? `Teams matching “${this.state.query}”` : chosen ? chosen.name : "Standings", confStamp: q ? `${stRows.length} teams across Division I` : chosen ? `${(chosen.teams || []).length} teams · sorted by ${sort.k === "projRank" ? "projected finish" : sort.k}` : "",
+      query: this.state.query, onSearch: (e) => this.setState({ query: e.target.value }), confChips, stHead, stRows, noRows: stRows.length === 0, noRowsText: q ? `No team matches “${this.state.query}”.` : "No team in this conference has a rating yet.",
+      ratingsStamp: R ? `${R.rated || rteams.length} teams rated${R.asOf ? ` · as of ${R.asOf}` : ""}${R.league && typeof R.league.efficiency === "number" ? ` · average ${R.league.efficiency.toFixed(1)} per 100 at ${Number(R.league.tempo).toFixed(1)} possessions` : ""}` : "ratings not published with this board",
+      ratingChips, rtHead, rtRows, noRatingRows: rtRows.length === 0, noRatingRowsText: R ? (q ? `No team matches “${this.state.query}”.` : "No team fits this filter.") : "The ratings file was not published with this board.", ratingsNote: R && R.note ? R.note : "",
+      method: s.method && s.method.length ? s.method : ["Projected records are expected wins, not a simulation."] };
+  }
+}
+</script>
+</body>
+</html>

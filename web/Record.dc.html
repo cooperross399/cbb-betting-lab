@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <title>Record — Maverick Hightower</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Does the win chance mean what it says? Our published college basketball numbers against what happened: by chance, by tier, against the market, and after our picks.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Maverick Hightower">
+  <meta property="og:title" content="Record — Maverick Hightower">
+  <meta property="og:image" content="https://maverickhightower.com/share.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@mavhightower">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root, html[data-sport="cbb"], html[data-sport="cbb"] [data-theme="light"] { color-scheme: light; --paper:#ffffff; --ink:#14151a; --ink-2:#2a2d3a; --mute:#62656f; --mute-2:#9a9ca6; --rule:#dddbd6; --rule-2:#ecebe7; --on-ink:#d6d3cc; --alert:#b0341f; --on-alert:#ffffff; --win:#2c7a5a; --on-win:#ffffff; --desk:#eeede9; }
+    @media (prefers-color-scheme: dark) { html[data-sport="cbb"] { color-scheme: dark; --paper:#0f1a2b; --ink:#eef1f6; --ink-2:#cdd4e0; --mute:#9ba6b8; --mute-2:#7a869a; --rule:#2b3a52; --rule-2:#1c2a3f; --on-ink:#2b3a52; --alert:#f08a72; --on-alert:#0f1a2b; --win:#5cc196; --on-win:#0f1a2b; --desk:#0a1220; } }
+    html[data-sport="cbb"] [data-theme="dark"] { color-scheme: dark; --paper:#0f1a2b; --ink:#eef1f6; --ink-2:#cdd4e0; --mute:#9ba6b8; --mute-2:#7a869a; --rule:#2b3a52; --rule-2:#1c2a3f; --on-ink:#2b3a52; --alert:#f08a72; --on-alert:#0f1a2b; --win:#5cc196; --on-win:#0f1a2b; --desk:#0a1220; }
+    html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: "IBM Plex Sans", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    * { box-sizing: border-box; }
+    a { color: var(--ink); text-decoration: none; }
+    a:hover { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
+    a:focus-visible, button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+    .mono { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+    .cond { font-family: "Barlow Condensed", sans-serif; }
+    .skip { position: absolute; left: 12px; top: -60px; background: var(--ink); color: var(--paper); padding: 10px 14px; z-index: 10; font-size: 14px; }
+    .skip:focus { top: 12px; }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+  </style>
+  <meta name="theme-color" content="#ffffff">
+  <script>(function(){if(typeof document!=="undefined"){document.documentElement.setAttribute("data-sport","cbb");}})();</script>
+</helmet>
+<div data-screen-label="Record" style="min-height:100vh;background:var(--paper);color:var(--ink);">
+  <a href="#main" class="skip">Skip to the record</a>
+  <div style="max-width:1240px;margin:0 auto;padding:0 clamp(16px,3vw,24px) 80px;">
+
+    <header style="border-top:4px solid var(--ink);padding:10px 0 4px;display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;">
+      <a href="https://maverickhightower.com/" aria-label="Maverick Hightower home" style="display:flex;align-items:center;gap:12px;min-height:44px;">
+        <span aria-hidden="true" style="width:36px;height:36px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;letter-spacing:.04em;">MH</span>
+        <span style="display:flex;flex-direction:column;line-height:1.1;">
+          <span style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">Maverick Hightower</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;letter-spacing:.02em;text-transform:uppercase;">College Basketball</span>
+        </span>
+      </a>
+      <nav aria-label="Site" style="display:flex;gap:0 18px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;font-weight:500;flex-wrap:wrap;">
+        <a href="Methods.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Methods</a>
+        <a href="https://maverickhightower.com/about.html" style="display:inline-flex;align-items:center;min-height:44px;">About</a>
+        <a href="https://nhl.maverickhightower.com/" style="display:inline-flex;align-items:center;min-height:44px;">NHL</a>
+        <a href="https://epl.maverickhightower.com/" style="display:inline-flex;align-items:center;min-height:44px;">EPL</a>
+      </nav>
+    </header>
+
+    <nav aria-label="Board sections" style="position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--ink);display:flex;overflow-x:auto;scrollbar-width:none;">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
+        <a href="{{ t.href }}" aria-current="{{ t.current }}" style="flex:1 1 0;max-width:150px;min-width:64px;display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;white-space:nowrap;text-decoration:none;color:{{ t.color }};border-bottom:3px solid {{ t.line }};">{{ t.label }}</a>
+      </sc-for>
+    </nav>
+
+    <sc-if value="{{ isSample }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:start;padding:14px 0;border-bottom:1px solid var(--ink);">
+        <span class="cond" style="font-weight:700;font-size:14px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--ink);padding:4px 9px;">Sample</span>
+        <p style="margin:0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:760px;text-wrap:pretty;">Sample figures. On the live site this page is rebuilt from every published board and its final scores.</p>
+      </div>
+    </sc-if>
+
+    <section id="main" style="padding:30px 0 22px;border-bottom:1px solid var(--ink);">
+      <div style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">Record · {{ throughLine }}</div>
+      <h1 class="cond" style="margin:8px 0 0;font-weight:800;font-size:clamp(34px,6vw,60px);line-height:.95;text-transform:uppercase;letter-spacing:.01em;max-width:14ch;">Does the win chance mean what it says?</h1>
+      <p style="margin:14px 0 0;font-size:16px;line-height:1.55;color:var(--ink-2);max-width:720px;text-wrap:pretty;">Every number we publish is checked against what happened. This page is about whether the numbers are honest, not whether they made money; the money is on <a href="Tracker.dc.html" style="text-decoration:underline;text-underline-offset:3px;">All results</a>.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:0 20px;margin-top:18px;border-top:2px solid var(--ink);max-width:760px;">
+        <sc-for list="{{ headline }}" as="c" hint-placeholder-count="4">
+          <div style="padding:12px 0;"><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ c.label }}</div><div class="cond" style="font-weight:700;font-size:34px;line-height:1;margin-top:6px;">{{ c.value }}</div><div class="mono" style="font-size:12px;color:var(--ink-2);margin-top:4px;">{{ c.sub }}</div></div>
+        </sc-for>
+      </div>
+    </section>
+
+    <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+      <section style="padding:40px 0;">
+        <div style="border:1px dashed var(--mute);padding:16px 18px;max-width:760px;">
+          <div class="cond" style="font-weight:700;font-size:22px;line-height:1;text-transform:uppercase;color:var(--mute);">{{ emptyTitle }}</div>
+          <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);">{{ emptyNote }}</p>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+
+      <section aria-labelledby="cal-h" style="padding:26px 0 24px;border-bottom:1px solid var(--ink);">
+        <h2 id="cal-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">By the chance we gave the favourite</h2>
+        <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:720px;text-wrap:pretty;">Games are grouped by the win chance we published for the side we favoured. In each band, the favourite should win about as often as we said. The bar is the share that did; the thin line is the range the sample can support.</p>
+        <div style="margin-top:14px;border-top:2px solid var(--ink);max-width:960px;">
+          <div class="mono" style="display:grid;grid-template-columns:110px 70px minmax(120px,1fr) 80px 80px;gap:0 12px;padding:6px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);"><span>Published</span><span style="text-align:right;">Games</span><span>Favourite won</span><span style="text-align:right;">We said</span><span style="text-align:right;">Gap</span></div>
+          <sc-for list="{{ buckets }}" as="b" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:110px 70px minmax(120px,1fr) 80px 80px;gap:0 12px;padding:9px 0;border-top:1px solid var(--rule-2);align-items:center;">
+              <span class="mono" style="font-size:13px;">{{ b.band }}</span>
+              <span class="mono" style="font-size:13px;text-align:right;color:var(--mute);">{{ b.games }}</span>
+              <span style="position:relative;height:16px;background:var(--rule-2);" aria-hidden="true">
+                <span style="position:absolute;top:0;bottom:0;left:0;width:{{ b.actualWidth }}%;background:{{ b.barColor }};opacity:.75;"></span>
+                <span style="position:absolute;top:7px;height:2px;left:{{ b.loWidth }}%;width:{{ b.spanWidth }}%;background:var(--ink);"></span>
+                <span style="position:absolute;top:-3px;bottom:-3px;left:{{ b.predictedWidth }}%;width:2px;background:var(--alert);"></span>
+              </span>
+              <span class="mono" style="font-size:13px;text-align:right;">{{ b.predicted }}</span>
+              <span class="mono" style="font-size:13px;text-align:right;color:{{ b.gapColor }};">{{ b.gap }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <p class="mono" style="margin:8px 0 0;font-size:11px;color:var(--mute);">Bar: share the favourite won. Red tick: the average chance we published in that band. Black line: 95% interval on the share.</p>
+      </section>
+
+      <section aria-labelledby="tier-h" style="padding:26px 0 24px;border-bottom:1px solid var(--ink);">
+        <h2 id="tier-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">By tier</h2>
+        <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:720px;text-wrap:pretty;">High-major, mid-major and low-major games are measured apart, because a number that holds in one can fail in another and a pooled figure would hide it. A game is filed under the higher of its two teams' tiers.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:16px 32px;margin-top:14px;">
+          <sc-for list="{{ tiers }}" as="t" hint-placeholder-count="3">
+            <div style="border-top:2px solid var(--ink);">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0 4px;"><span class="cond" style="font-weight:700;font-size:18px;text-transform:uppercase;">{{ t.label }}</span><span class="mono" style="font-size:12px;color:var(--mute);">{{ t.stamp }}</span></div>
+              <sc-for list="{{ t.rows }}" as="b" hint-placeholder-count="4">
+                <div style="display:grid;grid-template-columns:72px 40px minmax(60px,1fr) 56px;gap:0 8px;padding:6px 0;border-top:1px solid var(--rule-2);align-items:center;font-size:12px;" class="mono">
+                  <span>{{ b.band }}</span><span style="text-align:right;color:var(--mute);">{{ b.games }}</span>
+                  <span style="position:relative;height:10px;background:var(--rule-2);" aria-hidden="true"><span style="position:absolute;top:0;bottom:0;left:0;width:{{ b.actualWidth }}%;background:{{ b.barColor }};opacity:.75;"></span><span style="position:absolute;top:-2px;bottom:-2px;left:{{ b.predictedWidth }}%;width:2px;background:var(--alert);"></span></span>
+                  <span style="text-align:right;color:{{ b.gapColor }};">{{ b.gap }}</span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ t.thin }}" hint-placeholder-val="{{ false }}"><p style="margin:8px 0 0;font-size:12px;color:var(--mute);">Too few games to read yet.</p></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section aria-labelledby="mkt-h" style="padding:26px 0 24px;border-bottom:1px solid var(--ink);">
+        <h2 id="mkt-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">Against the market</h2>
+        <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:720px;text-wrap:pretty;">The Brier score is the average squared miss: 0 is perfect, 0.25 is a coin flip, lower is better. The market's number is the moneyline with the book's margin removed, frozen at the same moment as ours. The honest expectation is that the market is at least as good.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:0 20px;margin-top:14px;border-top:2px solid var(--ink);max-width:760px;">
+          <sc-for list="{{ brier }}" as="c" hint-placeholder-count="3">
+            <div style="padding:12px 0;"><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ c.label }}</div><div class="cond" style="font-weight:700;font-size:34px;line-height:1;margin-top:6px;">{{ c.value }}</div><div class="mono" style="font-size:12px;color:var(--ink-2);margin-top:4px;">{{ c.sub }}</div></div>
+          </sc-for>
+        </div>
+        <p style="margin:10px 0 0;font-size:13px;line-height:1.5;color:var(--ink-2);max-width:720px;">{{ brierVerdict }}</p>
+      </section>
+
+      <section aria-labelledby="lines-h" style="padding:26px 0 24px;border-bottom:1px solid var(--ink);">
+        <h2 id="lines-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">Spread and total</h2>
+        <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:720px;text-wrap:pretty;">The same check on the two numbers that are not a winner: how often the favourite covered the spread we published against, grouped by the cover chance we gave it, and how often the game went over the posted total, grouped by our over chance. Bands are merged until each holds at least {{ marketMin }} games.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px 40px;margin-top:14px;">
+          <sc-for list="{{ lineMarkets }}" as="m" hint-placeholder-count="2">
+            <div style="border-top:2px solid var(--ink);">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0 4px;"><span class="cond" style="font-weight:700;font-size:18px;text-transform:uppercase;">{{ m.label }}</span><span class="mono" style="font-size:12px;color:var(--mute);">{{ m.stamp }}</span></div>
+              <div class="mono" style="display:grid;grid-template-columns:90px 44px minmax(60px,1fr) 60px 56px;gap:0 8px;padding:4px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);"><span>Our chance</span><span style="text-align:right;">Games</span><span>{{ m.happened }}</span><span style="text-align:right;">Said</span><span style="text-align:right;">Gap</span></div>
+              <sc-for list="{{ m.rows }}" as="b" hint-placeholder-count="4">
+                <div style="display:grid;grid-template-columns:90px 44px minmax(60px,1fr) 60px 56px;gap:0 8px;padding:6px 0;border-top:1px solid var(--rule-2);align-items:center;font-size:12px;" class="mono">
+                  <span>{{ b.band }}</span><span style="text-align:right;color:var(--mute);">{{ b.games }}</span>
+                  <span style="position:relative;height:10px;background:var(--rule-2);" aria-hidden="true"><span style="position:absolute;top:0;bottom:0;left:0;width:{{ b.actualWidth }}%;background:{{ b.barColor }};opacity:.75;"></span><span style="position:absolute;top:4px;height:2px;left:{{ b.loWidth }}%;width:{{ b.spanWidth }}%;background:var(--ink);"></span><span style="position:absolute;top:-2px;bottom:-2px;left:{{ b.predictedWidth }}%;width:2px;background:var(--alert);"></span></span>
+                  <span style="text-align:right;">{{ b.predicted }}</span><span style="text-align:right;color:{{ b.gapColor }};">{{ b.gap }}</span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ m.thin }}" hint-placeholder-val="{{ false }}"><p style="margin:8px 0 0;font-size:12px;color:var(--mute);">Not enough priced games yet.</p></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section aria-labelledby="move-h" style="padding:26px 0 24px;border-bottom:1px solid var(--ink);">
+        <h2 id="move-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">After our moneyline picks</h2>
+        <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:720px;text-wrap:pretty;">Where the board recorded the line before and after a moneyline pick: did the price move toward our side, against it, or not at all? Toward is a sign the number is seeing something the market later agreed with. It is not a return.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:0 20px;margin-top:14px;border-top:2px solid var(--ink);max-width:760px;">
+          <sc-for list="{{ movement }}" as="c" hint-placeholder-count="4">
+            <div style="padding:12px 0;"><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ c.label }}</div><div class="cond" style="font-weight:700;font-size:34px;line-height:1;margin-top:6px;">{{ c.value }}</div><div class="mono" style="font-size:12px;color:var(--ink-2);margin-top:4px;">{{ c.sub }}</div></div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="padding:26px 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px 40px;align-items:start;">
+        <div style="border:1px solid var(--ink);padding:16px 18px;">
+          <h2 class="cond" style="margin:0;font-weight:700;font-size:16px;letter-spacing:.14em;text-transform:uppercase;">How to read this</h2>
+          <ul style="margin:10px 0 0;padding-left:18px;font-size:14px;line-height:1.55;color:var(--ink-2);display:flex;flex-direction:column;gap:6px;text-wrap:pretty;">
+            <sc-for list="{{ notes }}" as="n" hint-placeholder-count="3"><li>{{ n }}</li></sc-for>
+          </ul>
+        </div>
+        <div style="font-size:14px;line-height:1.55;color:var(--ink-2);display:flex;flex-direction:column;gap:10px;text-wrap:pretty;">
+          <p style="margin:0;">Only games whose board was published before tip-off count; a number is never checked against a game it was built after.</p>
+          <p style="margin:0;"><a href="Methods.dc.html" style="text-decoration:underline;text-underline-offset:3px;">Methods</a> explains where each number comes from. <a href="Archive.dc.html" style="text-decoration:underline;text-underline-offset:3px;">The archive</a> holds every board as it was published.</p>
+          <p style="margin:0;color:var(--mute);">The site recommends; it never places bets.</p>
+        </div>
+      </section>
+
+    </sc-if>
+
+    <footer style="border-top:1px solid var(--ink);margin-top:40px;padding:18px 0 0;display:flex;flex-wrap:wrap;gap:6px 24px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--mute);">
+      <span>© 2026 Maverick Hightower</span>
+      <a href="Board.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Board</a>
+      <a href="Tracker.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">All results</a>
+      <a href="Methods.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Methods</a>
+      <a href="https://maverickhightower.com/about.html" style="display:inline-flex;align-items:center;min-height:44px;">About</a>
+      <a href="https://x.com/mavhightower" style="display:inline-flex;align-items:center;min-height:44px;">@mavhightower</a>
+    </footer>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;scenario&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Sample&quot;,&quot;Nothing settled yet&quot;],&quot;default&quot;:&quot;Sample&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Preview&quot;}}">
+class Component extends DCLogic {
+  state = { data: null, loadedFor: null, isSample: false, err: "" };
+  onSite() { return /(^|\.)maverickhightower\.com$/.test(location.hostname); }
+  async load() {
+    const want = this.props.scenario || "";
+    if (this.state.loadedFor === want) return;
+    this.setState({ loadedFor: want });
+    const S = await import("./lib/sports.js");
+    const { deployed } = await S.detectSport("cbb"); void deployed;
+    const scenario = this.onSite() ? "Normal" : this.props.scenario || "Sample";
+    const live = this.onSite() || scenario === "Normal";
+    const get = async (u) => { try { const r = await fetch(u, { cache: "no-store" }); return r.ok ? await r.json() : null; } catch (_) { return null; } };
+    let data = null;
+    if (scenario === "Nothing settled yet") data = { through: null, nights: 0, games: 0, buckets: [], byTier: {}, brier: { games: 0 }, markets: {}, movement: { picks: 0 }, notes: [] };
+    else data = (await get(live ? "./data/record.json" : "./data/sample/record.json")) || (live ? null : await get("./data/record.json"));
+    this.setState({ data, isSample: !live, err: data ? "" : "unreachable" });
+  }
+  componentDidMount() { this.load(); }
+  componentDidUpdate() { this.load(); }
+  renderVals() {
+    const d = this.state.data;
+    const here = "Record.dc.html";
+    const tabs = [["Tonight", "Board.dc.html"], ["Results", "Results.dc.html"], ["All results", "Tracker.dc.html"], ["Season", "Season.dc.html"], ["Record", "Record.dc.html"], ["Methods", "Methods.dc.html"]].map(([label, href]) => ({ label, href, current: href === here ? "page" : "false", color: href === here ? "var(--ink)" : "var(--mute)", line: href === here ? "var(--ink)" : "transparent" }));
+    const pct = (p, dp) => (typeof p === "number" ? `${(p * 100).toFixed(dp == null ? 0 : dp)}%` : "—");
+    const gapText = (b) => (typeof b.actual === "number" && typeof b.predicted === "number" ? `${b.actual - b.predicted >= 0 ? "+" : "−"}${Math.abs((b.actual - b.predicted) * 100).toFixed(1)}` : "—");
+    const inside = (b) => !(Array.isArray(b.interval) && typeof b.predicted === "number") || (b.predicted >= b.interval[0] - 1e-9 && b.predicted <= b.interval[1] + 1e-9);
+    const row = (b) => { const lo = Array.isArray(b.interval) ? b.interval[0] : null, hi = Array.isArray(b.interval) ? b.interval[1] : null; return {
+      band: `${Math.round(b.low * 100)}–${Math.round(Math.min(b.high, 1) * 100)}%`, games: b.games || 0, predicted: pct(b.predicted),
+      actualWidth: (typeof b.actual === "number" ? b.actual * 100 : 0).toFixed(1), predictedWidth: (typeof b.predicted === "number" ? b.predicted * 100 : 0).toFixed(1),
+      loWidth: (lo == null ? 0 : lo * 100).toFixed(1), spanWidth: (lo == null || hi == null ? 0 : (hi - lo) * 100).toFixed(1),
+      barColor: b.games ? (inside(b) ? "var(--ink)" : "var(--alert)") : "transparent", gap: b.games ? gapText(b) : "—", gapColor: b.games ? (inside(b) ? "var(--mute)" : "var(--alert)") : "var(--mute)" }; };
+    const base = { tabs, isSample: !!this.state.isSample, marketMin: 10 };
+    if (!d) return { ...base, ready: false, empty: true, throughLine: "", headline: [], emptyTitle: this.state.err ? "The record is unreachable" : "Loading", emptyNote: this.state.err ? "The record's data file did not load." : "" };
+    const games = d.games || 0;
+    const headline = [
+      { label: "Nights", value: String(d.nights || 0), sub: d.through ? `through ${d.through}` : "none settled" },
+      { label: "Games checked", value: String(games), sub: "published before tip-off" },
+      { label: "Favourite won", value: games ? pct(d.buckets.reduce((s, b) => s + (b.games || 0) * (b.actual || 0), 0) / Math.max(1, d.buckets.reduce((s, b) => s + (b.games || 0), 0))) : "—", sub: games ? `we said ${pct(d.buckets.reduce((s, b) => s + (b.games || 0) * (b.predicted || 0), 0) / Math.max(1, d.buckets.reduce((s, b) => s + (b.games || 0), 0)))}` : "" },
+      { label: "Brier, us vs market", value: d.brier && typeof d.brier.model === "number" ? `${d.brier.model.toFixed(3)} / ${typeof d.brier.market === "number" ? d.brier.market.toFixed(3) : "—"}` : "—", sub: d.brier && d.brier.games ? `${d.brier.games} games with a market price` : "lower is better" },
+    ];
+    if (!games) return { ...base, ready: false, empty: true, throughLine: "nothing settled yet", headline, emptyTitle: "No game has settled yet", emptyNote: "The first board that is followed by a final score starts this page. Until then there is nothing to check." };
+    const TIER_ORDER = ["High major", "Mid major", "Low major", "Unplaced"];
+    const tiers = TIER_ORDER.filter((k) => d.byTier && d.byTier[k]).map((k) => { const t = d.byTier[k]; const rows = (t.buckets || []).filter((b) => b.games).map(row); return { label: k, stamp: `${t.games || 0} games`, rows, thin: (t.games || 0) < 10 }; });
+    const b = d.brier || {};
+    const brier = [
+      { label: "Our number", value: typeof b.model === "number" ? b.model.toFixed(4) : "—", sub: b.games ? `${b.games} games` : "" },
+      { label: "The market", value: typeof b.market === "number" ? b.market.toFixed(4) : "—", sub: "no-vig moneyline, same moment" },
+      { label: "Our number, every game", value: typeof b.modelAll === "number" ? b.modelAll.toFixed(4) : "—", sub: `${games} games, priced or not` },
+    ];
+    const brierVerdict = typeof b.model === "number" && typeof b.market === "number" ? (b.model < b.market - 0.0005 ? `On these ${b.games} games our number has been the closer of the two, by ${(b.market - b.model).toFixed(4)}. That is a small sample's verdict and it will move.` : b.model > b.market + 0.0005 ? `On these ${b.games} games the market has been the closer of the two, by ${(b.model - b.market).toFixed(4)}, which is the expected result.` : "On these games the two are level.") : "The comparison needs games with a moneyline on the board.";
+    const mk = (key, label, happened) => { const m = (d.markets || {})[key]; const rows = m && m.buckets ? m.buckets.filter((x) => x.games).map(row) : []; return { label, happened, stamp: m ? `${m.games || 0} games` : "0 games", rows, thin: !m || (m.games || 0) < 10 }; };
+    const lineMarkets = [mk("spread", "Spread: favourite covered", "Covered"), mk("total", "Total: game went over", "Over")];
+    const mv = d.movement || {};
+    const picks = mv.picks || 0;
+    const share = (n) => (picks ? `${Math.round(100 * (n || 0) / picks)}% of picks` : "");
+    const movement = [
+      { label: "Picks with a line series", value: String(picks), sub: "moneyline best bets" },
+      { label: "Moved toward us", value: String(mv.toward || 0), sub: share(mv.toward) },
+      { label: "Moved against us", value: String(mv.against || 0), sub: share(mv.against) },
+      { label: "Did not move", value: String(mv.flat || 0), sub: share(mv.flat) },
+    ];
+    const notes = (d.notes && d.notes.length ? d.notes : [
+      "A band whose bar is red is one where the share we saw sits outside the range the sample can support for the chance we published.",
+      "Overtime counts as the game's result. A tie after regulation cannot happen, so pushes arise only on spreads and totals.",
+      "Nothing on this page is a return. Returns, by market and tier, are on All results.",
+    ]);
+    return { ...base, ready: true, empty: false, throughLine: d.through ? `through ${d.through}` : "", headline, buckets: (d.buckets || []).map(row), tiers, brier, brierVerdict, lineMarkets, movement, notes };
+  }
+}
+</script>
+</body>
+</html>

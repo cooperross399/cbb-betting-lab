@@ -55,6 +55,11 @@ MARKETS = {"moneyline": "Moneyline", "spread": "Spread", "total": "Total"}
 #: `web/logos/<ABBR>.png`, filled by `fetch_logos.py`; `teams[abbr].logo` is written only for a file that exists.
 LOGOS = Path(__file__).resolve().parent / "logos"
 
+#: The fit `build()` priced on, for `main()` to hand the ratings and season
+#: pages. A module table rather than a return value so `build()`'s contract,
+#: which the tests and the history freeze read, stays one dict.
+_SIDE: dict = {}
+
 #: The board's three market slots, and the key `markets.py` gives each one.
 #: The staged and frozen rows carry the **lab's** market key in their `market`
 #: column (`providers.staging.stage_event` writes `market.key`), so these three
@@ -507,12 +512,109 @@ def load_model(lab: Path, day: date, slate: list[dict]):
                 "total_triple": lambda line, d=dist: d.total(float(line), OVER),
                 "venueState": str(getattr(game, "venue_state", "")),
                 "priorWeight": getattr(game, "prior_weight", None),
+                # The matchup itself, for the game page's layer-by-layer
+                # breakdown and the two sides' ratings.
+                "game": game,
             }
         return cache[key]
 
     price.state = state  # type: ignore[attr-defined]
     price.summary_line = built.summary_line  # type: ignore[attr-defined]
+    # What `matchups_for` fitted on the way: the ratings and the day's
+    # context, read once here for the ratings and season pages rather than
+    # fitted a second time.
+    price.fit = ratings.last_fit()  # type: ignore[attr-defined]
     return price
+
+
+def _tier_name(value) -> str | None:
+    text = str(getattr(value, "value", value) or "").strip()
+    return text or None
+
+
+def factor_steps(game) -> list[dict] | None:
+    """The home win chance after each layer the card applied, in the card's
+    own order: `Matchup.layers`, each repriced through the lab's own
+    `to_distribution`, so a step on the page is the number the card would
+    have published had it stopped there. `delta` is the move from the step
+    before; the first step's is its distance from a coin flip. None when the
+    matchup carries no layers (a model older than the layers, or a refused
+    game).
+    """
+    layers = list(getattr(game, "layers", None) or ())
+    if not layers:
+        return None
+    try:
+        from dataclasses import replace
+
+        from cbb_betting_lab.models import ratings  # type: ignore
+        from cbb_betting_lab.selection import HOME  # type: ignore
+    except ImportError:
+        return None
+    out, previous = [], None
+    for layer in layers:
+        stepped = replace(
+            game,
+            home_points_per_possession=float(layer["home"]) / 100.0,
+            away_points_per_possession=float(layer["away"]) / 100.0,
+            possessions=float(layer["possessions"]),
+        )
+        dist = ratings.to_distribution(stepped)
+        home_win = float(dist.moneyline(HOME))
+        margin, total = float(dist.expected_margin), float(dist.expected_total)
+        out.append({
+            "key": layer["key"], "label": layer["label"],
+            "homeWin": round(home_win, 4),
+            "delta": round(home_win - (0.5 if previous is None else previous), 4),
+            "homePts": round((total + margin) / 2.0, 1), "awayPts": round((total - margin) / 2.0, 1),
+            "possessions": round(float(layer["possessions"]), 1),
+            "note": layer.get("note") or "",
+        })
+        previous = home_win
+    return out
+
+
+def side_ratings(fit: dict, game, which: str) -> dict | None:
+    """One side's ratings and what tonight's layers read for it, from the
+    fit the board priced on and the matchup's own `context`. Offence and
+    defence are points per 100 possessions against the league average
+    (defence positive allows more), net is offence minus defence, tempo is
+    possessions per game against the average.
+    """
+    rated = (fit or {}).get("ratings")
+    team = getattr(game, f"{which}_team_id", None)
+    if rated is None or team is None:
+        return None
+    off = finite(getattr(rated, "offence", {}).get(team))
+    de = finite(getattr(rated, "defence", {}).get(team))
+    tempo = finite(getattr(rated, "tempo", {}).get(team))
+    context = getattr(game, "context", None) or {}
+    form = context.get("form") or {}
+    rest = context.get("rest") or {}
+    lineup = context.get("lineup") or {}
+    second = context.get("second_opinion") or {}
+    view = second.get(which) if isinstance(second, dict) else None
+    try:
+        tier = _tier_name(rated.tier_of(team))
+    except Exception:  # noqa: BLE001 - a tier the table cannot place
+        tier = None
+    out = {
+        "offence": None if off is None else round(off, 2),
+        "defence": None if de is None else round(de, 2),
+        "net": None if off is None or de is None else round(off - de, 2),
+        "tempo": None if tempo is None else round(tempo, 2),
+        "tier": tier,
+        "form": finite(form.get(which)), "formGames": form.get(f"{which}_games"),
+        "restDays": rest.get(f"{which}_days"), "restBucket": rest.get(f"{which}_bucket"),
+        "restEffect": finite(rest.get(which)),
+        "missing": list(lineup.get(f"{which}_missing") or []),
+        "lineupFactor": finite(lineup.get(f"{which}_factor")),
+        "secondOpinion": None if not view else {"offence": view[0], "defence": view[1], "tempo": view[2]},
+    }
+    for key in ("form", "restEffect", "lineupFactor"):
+        if out[key] is not None:
+            out[key] = round(out[key], 3)
+    return out
 
 
 def fair_two_way(win: float, loss: float):
@@ -535,18 +637,21 @@ def load_frozen(lab: Path, day: date) -> list[dict]:
     return read_csvs(str(lab / "data" / "archive" / "priced_snapshots" / f"{day.isoformat()}.csv"))
 
 
-def pick_from_frozen(frozen_rows: list[dict], home_abbr: str, away_abbr: str) -> dict | None:
-    """The highest-edge frozen opinion on this game, and what it is.
+def pick_from_frozen(frozen_rows: list[dict], home_abbr: str, away_abbr: str, selected=()) -> dict | None:
+    """The card's pick on this game, and what it is.
 
-    **`kind` is never `bet` here.** A frozen row is an opinion the card priced
-    and froze; a *selection* is a row that cleared every bar in
-    `reports/card_pricing.select`, and the first of those bars is that the
-    market is allowlisted by a reviewed policy — no market is. The snapshot
-    carries no column saying "selected", so this file cannot invent one: every
-    pick is published as `pass`, which is the site's word for a model opinion
-    that is not a recommendation, and the notice says why.
+    `selected` is the card's own selections for the game, as
+    `scripts/run_gameday_card._write_state` records them from
+    `reports/card_pricing.select`: the rows that cleared every bar, the
+    first of which is that the market is allowlisted by a reviewed policy
+    with a human receipt behind it. One of those is published as `bet`, with
+    the price, book and tier the card took. The snapshot itself carries no
+    column saying "selected", so without that record this file cannot
+    invent one: the highest-edge frozen opinion is published as `pass`, the
+    site's word for a model opinion that is not a recommendation.
     """
-    team = [r for r in frozen_rows if norm_market(r) in MARKETS]
+    chosen = [r for r in selected if norm_market(r) in MARKETS]
+    team = chosen or [r for r in frozen_rows if norm_market(r) in MARKETS]
     if not team:
         return None
 
@@ -559,19 +664,19 @@ def pick_from_frozen(frozen_rows: list[dict], home_abbr: str, away_abbr: str) ->
         return 0.0 if number is None else number
 
     top = max(team, key=edge_of)
-    m, s = norm_market(top), (top.get("selection") or "").lower()
-    side = home_abbr if s == "home" else away_abbr if s == "away" else s.capitalize()
+    m, sel = norm_market(top), (top.get("selection") or "").lower()
+    side = home_abbr if sel == "home" else away_abbr if sel == "away" else sel.capitalize()
     try:
         price = int(float(top["american_odds"]))
     except (KeyError, TypeError, ValueError):
         return None
-    line = top.get("line")
-    label = {"moneyline": f"{side} ML", "spread": f"{side} {float(line):+.1f}".replace("-", "−") if line else side, "total": f"{s.capitalize()} {float(line):g}" if line else s}[m]
+    line = finite(top.get("line"))
+    label = {"moneyline": f"{side} ML", "spread": f"{side} {line:+.1f}".replace("-", "\u2212") if line is not None else side, "total": f"{sel.capitalize()} {line:g}" if line is not None else sel}[m]
     model_probability = finite(top.get("model_probability"))
-    return {"kind": "pass", "market": MARKETS[m], "label": label, "price": price, "book": top.get("book"), "tier": top.get("tier") or None,
-            "units": None, "edgePct": percent(top.get("edge")),
+    return {"kind": "bet" if chosen else "pass", "market": MARKETS[m], "label": label, "price": price, "book": top.get("book"), "tier": top.get("tier") or None,
+            "units": 1.0 if chosen else None, "edgePct": percent(top.get("edge")),
             "modelProb": None if model_probability is None else round(model_probability, 4),
-            **pick_side_and_line(m, s, line)}
+            **pick_side_and_line(m, sel, line)}
 
 
 def pick_side_and_line(market: str, selection: str, line: object) -> dict:
@@ -741,8 +846,16 @@ def build(lab: Path, day: date) -> dict:
     # before the evening read keeps the morning's prices as its last.
     captures = staged_captures(lab, day, by_name)
     frozen_rows = group_rows(load_frozen(lab, day), by_name)
+    # The card's own selections for this day, from its state file. A state
+    # file from another day was already refused by `load_status`; a
+    # rehearsal's is refused here, as `_read_previous_fingerprint` refuses it.
+    recorded = status.get("selections") if status.get("decision") != "rehearsal" else None
+    selected = group_rows([r for r in (recorded or []) if isinstance(r, dict)], by_name)
     slate = slate_for(day)
     model = load_model(lab, day, slate)
+    fit = dict(getattr(model, "fit", None) or {}) if model else {}
+    _SIDE.clear()
+    _SIDE.update(fit)
     teams, games, history = {}, [], {}
     for g in slate:
         h, a = g["home"], g["away"]
@@ -766,7 +879,7 @@ def build(lab: Path, day: date) -> dict:
         # would be a column that does not exist reading as "morning" forever.
         row = {"id": g["id"], "tip": g["tip"], "venue": g["venue"], "city": g["city"], "tv": g["tv"], "neutral": g["neutral"], "started": g["state"] != "pre",
                "cardSlot": slot,
-               "home": {"abbr": ha, "record": h["record"]}, "away": {"abbr": aa, "record": a["record"]}, "pick": pick_from_frozen(my_frozen, ha, aa)}
+               "home": {"abbr": ha, "record": h["record"]}, "away": {"abbr": aa, "record": a["record"]}, "pick": pick_from_frozen(my_frozen, ha, aa, selected.get((hk, ak), []))}
         spread_line = total_line = None
         if mine:
             spread_line = consensus_line(mine, "spread", "home")
@@ -805,6 +918,21 @@ def build(lab: Path, day: date) -> dict:
                 over, _push, under = pr["total_triple"](total_line)
                 row["total"]["overProb"] = round(over, 4)
                 row["total"]["fairOverPrice"] = fair_two_way(over, under)
+            # The game page: the price after each layer the card applied,
+            # and both sides' ratings with what tonight's layers read.
+            game = pr.get("game")
+            if game is not None:
+                steps = factor_steps(game)
+                if steps:
+                    row["factors"] = steps
+                sides = {w: side_ratings(fit, game, w) for w in ("home", "away")}
+                if sides["home"] and sides["away"]:
+                    row["ratings"] = sides
+                    row["tiers"] = {"home": sides["home"]["tier"], "away": sides["away"]["tier"]}
+                    context = getattr(game, "context", None) or {}
+                    court = context.get("home_court") or {}
+                    if court:
+                        row["homeCourt"] = {"tierMargin": finite(court.get("tier_margin")), "departure": finite(court.get("departure")), "appliedBy": court.get("applied_by")}
         games.append(row)
     # "No market is allowlisted" was written into both sentences as a
     # constant. It is a fact about a file that Cooper can change in one pull
@@ -865,6 +993,13 @@ def build(lab: Path, day: date) -> dict:
     out = {"generatedAt": now.isoformat(timespec="seconds").replace("+00:00", "Z"), "season": SEASON, "slateDate": day.isoformat(), "cardSlot": slot,
            "decision": status.get("decision"), "notice": notice, "unitDollars": 25, "record": load_record(lab),
            "model": census, "teams": teams, "games": games}
+    # The league averages the ratings are measured against, so the game page
+    # can say "+N% vs average" instead of points per 100 possessions.
+    rated = fit.get("ratings") if fit else None
+    if rated is not None:
+        league = {"efficiency": finite(getattr(rated, "league_efficiency", None)), "tempo": finite(getattr(rated, "league_tempo", None))}
+        if any(v is not None for v in league.values()):
+            out["league"] = {k: (None if v is None else round(v, 2)) for k, v in league.items()}
     # Absent, not empty, when no game was held by two captures: one read of
     # the board is a price, not a movement.
     if history:
@@ -892,6 +1027,19 @@ def main(argv=None) -> int:
     if not frozen.exists():
         frozen.write_text(text, encoding="utf-8")
     print(f"board {day} ({board['cardSlot']}): {len(board['games'])} games. No odds were fetched, no credit was spent, and no bet was placed.")
+    # The ratings and season pages read the fit the board priced on. They
+    # are pages beside the board, not the board: a failure here is a warning
+    # and the board stands.
+    try:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("site_pages", Path(__file__).with_name("site_pages.py"))
+        site_pages = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(site_pages)
+        written = site_pages.write_model_pages(Path(args.lab), out, day, dict(_SIDE), board)
+        print("model pages: " + (", ".join(written) if written else "none (no fit this run)"))
+    except Exception as exc:  # noqa: BLE001 - the board is the product; these pages are beside it
+        print(f"::warning::ratings/season pages were not written: {type(exc).__name__}: {exc}")
     return 0
 
 

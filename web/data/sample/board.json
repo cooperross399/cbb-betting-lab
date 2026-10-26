@@ -201,13 +201,17 @@
     "open": -3.5,
     "current": -4,
     "proj": -4.4,
-    "homePrice": -110
+    "homePrice": -110,
+    "coverProb": 0.5145,
+    "fairHomePrice": -106
    },
    "total": {
     "open": 144.5,
     "current": 145,
     "proj": 145.2,
-    "overPrice": -110
+    "overPrice": -110,
+    "overProb": 0.505,
+    "fairOverPrice": -102
    },
    "pick": {
     "kind": "bet",
@@ -215,11 +219,123 @@
     "label": "Notre Dame −4",
     "price": -110,
     "book": "DraftKings",
-    "tier": "B",
-    "units": 0.25,
+    "tier": "high_major",
+    "units": 1.0,
     "edgePct": 3.8,
     "side": "home",
-    "line": -4
+    "line": -4,
+    "modelProb": 0.5145
+   },
+   "factors": [
+    {
+     "key": "strength",
+     "label": "Team strength",
+     "homeWin": 0.5836,
+     "delta": 0.0836,
+     "possessions": 70.3,
+     "note": "",
+     "homePts": 74.2,
+     "awayPts": 71.0
+    },
+    {
+     "key": "home_court",
+     "label": "Home court",
+     "homeWin": 0.6322,
+     "delta": 0.0487,
+     "possessions": 70.3,
+     "note": "",
+     "homePts": 74.7,
+     "awayPts": 70.5
+    },
+    {
+     "key": "form",
+     "label": "Last five games",
+     "homeWin": 0.6671,
+     "delta": 0.0349,
+     "possessions": 70.3,
+     "note": "",
+     "homePts": 75.1,
+     "awayPts": 70.1
+    },
+    {
+     "key": "rest",
+     "label": "Rest",
+     "homeWin": 0.6671,
+     "delta": 0.0,
+     "possessions": 70.3,
+     "note": "",
+     "homePts": 75.1,
+     "awayPts": 70.1
+    },
+    {
+     "key": "lineup",
+     "label": "Who is missing",
+     "homeWin": 0.6671,
+     "delta": 0.0,
+     "possessions": 70.3,
+     "note": "",
+     "homePts": 75.1,
+     "awayPts": 70.1
+    },
+    {
+     "key": "second_opinion",
+     "label": "Second opinion",
+     "homeWin": 0.64,
+     "delta": -0.0271,
+     "possessions": 70.3,
+     "note": "",
+     "homePts": 74.8,
+     "awayPts": 70.4
+    }
+   ],
+   "ratings": {
+    "home": {
+     "offence": 10.71,
+     "defence": -2.92,
+     "net": 13.63,
+     "tempo": 2.06,
+     "tier": "high_major",
+     "form": 2.291,
+     "formGames": 5,
+     "restDays": 4,
+     "restBucket": "four or five days off",
+     "restEffect": 0.207,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 9.9,
+      "defence": -5.5,
+      "tempo": 2.2
+     }
+    },
+    "away": {
+     "offence": 13.88,
+     "defence": -3.16,
+     "net": 17.04,
+     "tempo": 0.14,
+     "tier": "high_major",
+     "form": -1.743,
+     "formGames": 5,
+     "restDays": 7,
+     "restBucket": "six or more days off",
+     "restEffect": 0.207,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 7.5,
+      "defence": -10.0,
+      "tempo": 1.1
+     }
+    }
+   },
+   "tiers": {
+    "home": "high_major",
+    "away": "high_major"
+   },
+   "homeCourt": {
+    "tierMargin": 3.4,
+    "departure": -0.39,
+    "appliedBy": "the card"
    }
   },
   {
@@ -260,13 +376,17 @@
     "open": -5.5,
     "current": -6,
     "proj": -5.8,
-    "homePrice": -110
+    "homePrice": -110,
+    "coverProb": 0.4927,
+    "fairHomePrice": 103
    },
    "total": {
     "open": 147.5,
     "current": 148,
     "proj": 148,
-    "overPrice": -110
+    "overPrice": -110,
+    "overProb": 0.5,
+    "fairOverPrice": -100
    },
    "pick": {
     "kind": "pass",
@@ -276,7 +396,121 @@
     "book": "FanDuel",
     "edgePct": 0.4,
     "side": "under",
-    "line": 148
+    "line": 148,
+    "tier": "high_major",
+    "units": null,
+    "modelProb": 0.48
+   },
+   "factors": [
+    {
+     "key": "strength",
+     "label": "Team strength",
+     "homeWin": 0.6272,
+     "delta": 0.1272,
+     "possessions": 69.7,
+     "note": "",
+     "homePts": 76.2,
+     "awayPts": 71.8
+    },
+    {
+     "key": "home_court",
+     "label": "Home court",
+     "homeWin": 0.6915,
+     "delta": 0.0642,
+     "possessions": 69.7,
+     "note": "",
+     "homePts": 76.9,
+     "awayPts": 71.1
+    },
+    {
+     "key": "form",
+     "label": "Last five games",
+     "homeWin": 0.6617,
+     "delta": -0.0298,
+     "possessions": 69.7,
+     "note": "",
+     "homePts": 76.6,
+     "awayPts": 71.4
+    },
+    {
+     "key": "rest",
+     "label": "Rest",
+     "homeWin": 0.6497,
+     "delta": -0.012,
+     "possessions": 69.7,
+     "note": "",
+     "homePts": 76.5,
+     "awayPts": 71.5
+    },
+    {
+     "key": "lineup",
+     "label": "Who is missing",
+     "homeWin": 0.6497,
+     "delta": 0.0,
+     "possessions": 69.7,
+     "note": "",
+     "homePts": 76.5,
+     "awayPts": 71.5
+    },
+    {
+     "key": "second_opinion",
+     "label": "Second opinion",
+     "homeWin": 0.69,
+     "delta": 0.0403,
+     "possessions": 69.7,
+     "note": "",
+     "homePts": 76.9,
+     "awayPts": 71.1
+    }
+   ],
+   "ratings": {
+    "home": {
+     "offence": 13.25,
+     "defence": -5.16,
+     "net": 18.41,
+     "tempo": 3.16,
+     "tier": "high_major",
+     "form": -2.152,
+     "formGames": 5,
+     "restDays": 2,
+     "restBucket": "one day off",
+     "restEffect": -1.013,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 8.4,
+      "defence": -3.2,
+      "tempo": 2.1
+     }
+    },
+    "away": {
+     "offence": 8.9,
+     "defence": -4.84,
+     "net": 13.74,
+     "tempo": 0.5,
+     "tier": "high_major",
+     "form": -1.131,
+     "formGames": 5,
+     "restDays": 3,
+     "restBucket": "two or three days off",
+     "restEffect": -0.708,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 7.4,
+      "defence": -3.2,
+      "tempo": -2.1
+     }
+    }
+   },
+   "tiers": {
+    "home": "high_major",
+    "away": "high_major"
+   },
+   "homeCourt": {
+    "tierMargin": 3.4,
+    "departure": -0.03,
+    "appliedBy": "the card"
    }
   },
   {
@@ -317,15 +551,130 @@
     "open": -7.5,
     "current": -7.5,
     "proj": -7.3,
-    "homePrice": -110
+    "homePrice": -110,
+    "coverProb": 0.4927,
+    "fairHomePrice": 103
    },
    "total": {
     "open": 151.5,
     "current": 152,
     "proj": 151.9,
-    "overPrice": -110
+    "overPrice": -110,
+    "overProb": 0.4975,
+    "fairOverPrice": 101
    },
-   "pick": null
+   "pick": null,
+   "factors": [
+    {
+     "key": "strength",
+     "label": "Team strength",
+     "homeWin": 0.669,
+     "delta": 0.169,
+     "possessions": 70.0,
+     "note": "",
+     "homePts": 79.0,
+     "awayPts": 72.9
+    },
+    {
+     "key": "home_court",
+     "label": "Home court",
+     "homeWin": 0.7166,
+     "delta": 0.0476,
+     "possessions": 70.0,
+     "note": "",
+     "homePts": 79.6,
+     "awayPts": 72.3
+    },
+    {
+     "key": "form",
+     "label": "Last five games",
+     "homeWin": 0.717,
+     "delta": 0.0004,
+     "possessions": 70.0,
+     "note": "",
+     "homePts": 79.6,
+     "awayPts": 72.3
+    },
+    {
+     "key": "rest",
+     "label": "Rest",
+     "homeWin": 0.717,
+     "delta": 0.0,
+     "possessions": 70.0,
+     "note": "",
+     "homePts": 79.6,
+     "awayPts": 72.3
+    },
+    {
+     "key": "lineup",
+     "label": "Who is missing",
+     "homeWin": 0.717,
+     "delta": 0.0,
+     "possessions": 70.0,
+     "note": "",
+     "homePts": 79.6,
+     "awayPts": 72.3
+    },
+    {
+     "key": "second_opinion",
+     "label": "Second opinion",
+     "homeWin": 0.72,
+     "delta": 0.003,
+     "possessions": 70.0,
+     "note": "",
+     "homePts": 79.6,
+     "awayPts": 72.3
+    }
+   ],
+   "ratings": {
+    "home": {
+     "offence": 4.85,
+     "defence": -3.37,
+     "net": 8.22,
+     "tempo": -1.49,
+     "tier": "high_major",
+     "form": 0.291,
+     "formGames": 5,
+     "restDays": 3,
+     "restBucket": "two or three days off",
+     "restEffect": -0.467,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 11.0,
+      "defence": -9.2,
+      "tempo": -2.8
+     }
+    },
+    "away": {
+     "offence": 12.32,
+     "defence": -4.51,
+     "net": 16.83,
+     "tempo": -2.52,
+     "tier": "high_major",
+     "form": 0.291,
+     "formGames": 5,
+     "restDays": 7,
+     "restBucket": "six or more days off",
+     "restEffect": -0.467,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 10.2,
+      "defence": -5.2,
+      "tempo": -0.2
+     }
+    }
+   },
+   "tiers": {
+    "home": "high_major",
+    "away": "high_major"
+   },
+   "homeCourt": {
+    "tierMargin": 3.4,
+    "departure": 0.59,
+    "appliedBy": "the card"
+   }
   },
   {
    "id": "4",
@@ -365,13 +714,17 @@
     "open": -8.5,
     "current": -9,
     "proj": -8.4,
-    "homePrice": -110
+    "homePrice": -110,
+    "coverProb": 0.4783,
+    "fairHomePrice": 109
    },
    "total": {
     "open": 141.5,
     "current": 142,
     "proj": 142,
-    "overPrice": -110
+    "overPrice": -110,
+    "overProb": 0.5,
+    "fairOverPrice": -100
    },
    "pick": {
     "kind": "lean",
@@ -381,7 +734,121 @@
     "book": "DraftKings",
     "edgePct": 2.6,
     "side": "away",
-    "line": 9
+    "line": 9,
+    "tier": "high_major",
+    "units": null,
+    "modelProb": 0.5017
+   },
+   "factors": [
+    {
+     "key": "strength",
+     "label": "Team strength",
+     "homeWin": 0.6776,
+     "delta": 0.1776,
+     "possessions": 70.2,
+     "note": "",
+     "homePts": 74.4,
+     "awayPts": 67.6
+    },
+    {
+     "key": "home_court",
+     "label": "Home court",
+     "homeWin": 0.7383,
+     "delta": 0.0607,
+     "possessions": 70.2,
+     "note": "",
+     "homePts": 75.1,
+     "awayPts": 66.9
+    },
+    {
+     "key": "form",
+     "label": "Last five games",
+     "homeWin": 0.7096,
+     "delta": -0.0287,
+     "possessions": 70.2,
+     "note": "",
+     "homePts": 74.8,
+     "awayPts": 67.2
+    },
+    {
+     "key": "rest",
+     "label": "Rest",
+     "homeWin": 0.7096,
+     "delta": 0.0,
+     "possessions": 70.2,
+     "note": "",
+     "homePts": 74.8,
+     "awayPts": 67.2
+    },
+    {
+     "key": "lineup",
+     "label": "Who is missing",
+     "homeWin": 0.7096,
+     "delta": 0.0,
+     "possessions": 70.2,
+     "note": "",
+     "homePts": 74.8,
+     "awayPts": 67.2
+    },
+    {
+     "key": "second_opinion",
+     "label": "Second opinion",
+     "homeWin": 0.75,
+     "delta": 0.0404,
+     "possessions": 70.2,
+     "note": "",
+     "homePts": 75.2,
+     "awayPts": 66.8
+    }
+   ],
+   "ratings": {
+    "home": {
+     "offence": 11.11,
+     "defence": -10.11,
+     "net": 21.22,
+     "tempo": 0.31,
+     "tier": "high_major",
+     "form": 0.382,
+     "formGames": 5,
+     "restDays": 7,
+     "restBucket": "six or more days off",
+     "restEffect": 0.561,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 10.5,
+      "defence": -4.3,
+      "tempo": -0.8
+     }
+    },
+    "away": {
+     "offence": 5.46,
+     "defence": -9.45,
+     "net": 14.91,
+     "tempo": -3.49,
+     "tier": "high_major",
+     "form": 0.394,
+     "formGames": 5,
+     "restDays": 2,
+     "restBucket": "one day off",
+     "restEffect": 0.561,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 11.3,
+      "defence": -2.1,
+      "tempo": 0.9
+     }
+    }
+   },
+   "tiers": {
+    "home": "high_major",
+    "away": "high_major"
+   },
+   "homeCourt": {
+    "tierMargin": 3.4,
+    "departure": -0.16,
+    "appliedBy": "the card"
    }
   },
   {
@@ -422,13 +889,17 @@
     "open": -1.5,
     "current": -1,
     "proj": -1.2,
-    "homePrice": -110
+    "homePrice": -110,
+    "coverProb": 0.5073,
+    "fairHomePrice": -103
    },
    "total": {
     "open": 152.5,
     "current": 153,
     "proj": 153,
-    "overPrice": -110
+    "overPrice": -110,
+    "overProb": 0.5,
+    "fairOverPrice": -100
    },
    "pick": {
     "kind": "bet",
@@ -436,10 +907,122 @@
     "label": "Kansas ML",
     "price": 100,
     "book": "FanDuel",
-    "tier": "C",
-    "units": 0.1,
+    "tier": "high_major",
+    "units": 1.0,
     "edgePct": 3.2,
-    "side": "away"
+    "side": "away",
+    "modelProb": 0.46
+   },
+   "factors": [
+    {
+     "key": "strength",
+     "label": "Team strength",
+     "homeWin": 0.4616,
+     "delta": -0.0384,
+     "possessions": 68.4,
+     "note": "",
+     "homePts": 76.2,
+     "awayPts": 76.8
+    },
+    {
+     "key": "home_court",
+     "label": "Home court",
+     "homeWin": 0.5157,
+     "delta": 0.054,
+     "possessions": 68.4,
+     "note": "",
+     "homePts": 76.8,
+     "awayPts": 76.2
+    },
+    {
+     "key": "form",
+     "label": "Last five games",
+     "homeWin": 0.5281,
+     "delta": 0.0124,
+     "possessions": 68.4,
+     "note": "",
+     "homePts": 77.0,
+     "awayPts": 76.0
+    },
+    {
+     "key": "rest",
+     "label": "Rest",
+     "homeWin": 0.5161,
+     "delta": -0.012,
+     "possessions": 68.4,
+     "note": "",
+     "homePts": 76.8,
+     "awayPts": 76.2
+    },
+    {
+     "key": "lineup",
+     "label": "Who is missing",
+     "homeWin": 0.5161,
+     "delta": 0.0,
+     "possessions": 68.4,
+     "note": "",
+     "homePts": 76.8,
+     "awayPts": 76.2
+    },
+    {
+     "key": "second_opinion",
+     "label": "Second opinion",
+     "homeWin": 0.54,
+     "delta": 0.0239,
+     "possessions": 68.4,
+     "note": "",
+     "homePts": 77.1,
+     "awayPts": 75.9
+    }
+   ],
+   "ratings": {
+    "home": {
+     "offence": 12.71,
+     "defence": -2.09,
+     "net": 14.8,
+     "tempo": 3.27,
+     "tier": "high_major",
+     "form": 1.627,
+     "formGames": 5,
+     "restDays": 1,
+     "restBucket": "one day off",
+     "restEffect": -0.863,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 3.5,
+      "defence": -9.5,
+      "tempo": 0.3
+     }
+    },
+    "away": {
+     "offence": 9.89,
+     "defence": -11.45,
+     "net": 21.34,
+     "tempo": -2.93,
+     "tier": "high_major",
+     "form": -0.093,
+     "formGames": 5,
+     "restDays": 2,
+     "restBucket": "one day off",
+     "restEffect": 0.449,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 5.1,
+      "defence": -3.0,
+      "tempo": 0.9
+     }
+    }
+   },
+   "tiers": {
+    "home": "high_major",
+    "away": "high_major"
+   },
+   "homeCourt": {
+    "tierMargin": 3.4,
+    "departure": 0.32,
+    "appliedBy": "the card"
    }
   },
   {
@@ -480,13 +1063,17 @@
     "open": -4.5,
     "current": -5,
     "proj": -5.3,
-    "homePrice": -110
+    "homePrice": -110,
+    "coverProb": 0.5109,
+    "fairHomePrice": -104
    },
    "total": {
     "open": 157.5,
     "current": 158,
     "proj": 157.7,
-    "overPrice": -110
+    "overPrice": -110,
+    "overProb": 0.4925,
+    "fairOverPrice": 103
    },
    "pick": {
     "kind": "pass",
@@ -496,7 +1083,121 @@
     "book": "DraftKings",
     "edgePct": 1.3,
     "side": "home",
-    "line": -5
+    "line": -5,
+    "tier": "high_major",
+    "units": null,
+    "modelProb": 0.5109
+   },
+   "factors": [
+    {
+     "key": "strength",
+     "label": "Team strength",
+     "homeWin": 0.6063,
+     "delta": 0.1063,
+     "possessions": 66.3,
+     "note": "",
+     "homePts": 80.9,
+     "awayPts": 76.8
+    },
+    {
+     "key": "home_court",
+     "label": "Home court",
+     "homeWin": 0.6672,
+     "delta": 0.0609,
+     "possessions": 66.3,
+     "note": "",
+     "homePts": 81.6,
+     "awayPts": 76.1
+    },
+    {
+     "key": "form",
+     "label": "Last five games",
+     "homeWin": 0.6394,
+     "delta": -0.0277,
+     "possessions": 66.3,
+     "note": "",
+     "homePts": 81.3,
+     "awayPts": 76.4
+    },
+    {
+     "key": "rest",
+     "label": "Rest",
+     "homeWin": 0.6394,
+     "delta": 0.0,
+     "possessions": 66.3,
+     "note": "",
+     "homePts": 81.3,
+     "awayPts": 76.4
+    },
+    {
+     "key": "lineup",
+     "label": "Who is missing",
+     "homeWin": 0.6394,
+     "delta": 0.0,
+     "possessions": 66.3,
+     "note": "",
+     "homePts": 81.3,
+     "awayPts": 76.4
+    },
+    {
+     "key": "second_opinion",
+     "label": "Second opinion",
+     "homeWin": 0.66,
+     "delta": 0.0206,
+     "possessions": 66.3,
+     "note": "",
+     "homePts": 81.5,
+     "awayPts": 76.2
+    }
+   ],
+   "ratings": {
+    "home": {
+     "offence": 5.41,
+     "defence": -7.04,
+     "net": 12.45,
+     "tempo": -3.37,
+     "tier": "high_major",
+     "form": 0.798,
+     "formGames": 5,
+     "restDays": 7,
+     "restBucket": "six or more days off",
+     "restEffect": -0.337,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 5.8,
+      "defence": -7.5,
+      "tempo": 2.5
+     }
+    },
+    "away": {
+     "offence": 8.61,
+     "defence": -5.78,
+     "net": 14.39,
+     "tempo": 3.34,
+     "tier": "high_major",
+     "form": 1.492,
+     "formGames": 5,
+     "restDays": 3,
+     "restBucket": "two or three days off",
+     "restEffect": -0.337,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 4.7,
+      "defence": -3.2,
+      "tempo": -2.2
+     }
+    }
+   },
+   "tiers": {
+    "home": "high_major",
+    "away": "high_major"
+   },
+   "homeCourt": {
+    "tierMargin": 3.4,
+    "departure": 0.75,
+    "appliedBy": "the card"
    }
   },
   {
@@ -537,13 +1238,17 @@
     "open": -4.5,
     "current": -5,
     "proj": -4.2,
-    "homePrice": -110
+    "homePrice": -110,
+    "coverProb": 0.471,
+    "fairHomePrice": 112
    },
    "total": {
     "open": 133.5,
     "current": 134,
     "proj": 133.6,
-    "overPrice": -110
+    "overPrice": -110,
+    "overProb": 0.49,
+    "fairOverPrice": 104
    },
    "pick": {
     "kind": "lean",
@@ -553,7 +1258,121 @@
     "book": "FanDuel",
     "edgePct": 2.2,
     "side": "under",
-    "line": 134
+    "line": 134,
+    "tier": "high_major",
+    "units": null,
+    "modelProb": 0.49
+   },
+   "factors": [
+    {
+     "key": "strength",
+     "label": "Team strength",
+     "homeWin": 0.6048,
+     "delta": 0.1048,
+     "possessions": 67.7,
+     "note": "",
+     "homePts": 68.3,
+     "awayPts": 65.3
+    },
+    {
+     "key": "home_court",
+     "label": "Home court",
+     "homeWin": 0.6545,
+     "delta": 0.0496,
+     "possessions": 67.7,
+     "note": "",
+     "homePts": 68.8,
+     "awayPts": 64.8
+    },
+    {
+     "key": "form",
+     "label": "Last five games",
+     "homeWin": 0.6628,
+     "delta": 0.0084,
+     "possessions": 67.7,
+     "note": "",
+     "homePts": 68.9,
+     "awayPts": 64.7
+    },
+    {
+     "key": "rest",
+     "label": "Rest",
+     "homeWin": 0.6628,
+     "delta": 0.0,
+     "possessions": 67.7,
+     "note": "",
+     "homePts": 68.9,
+     "awayPts": 64.7
+    },
+    {
+     "key": "lineup",
+     "label": "Who is missing",
+     "homeWin": 0.6628,
+     "delta": 0.0,
+     "possessions": 67.7,
+     "note": "",
+     "homePts": 68.9,
+     "awayPts": 64.7
+    },
+    {
+     "key": "second_opinion",
+     "label": "Second opinion",
+     "homeWin": 0.66,
+     "delta": -0.0028,
+     "possessions": 67.7,
+     "note": "",
+     "homePts": 68.9,
+     "awayPts": 64.7
+    }
+   ],
+   "ratings": {
+    "home": {
+     "offence": 7.07,
+     "defence": -9.48,
+     "net": 16.55,
+     "tempo": 0.87,
+     "tier": "high_major",
+     "form": 2.46,
+     "formGames": 5,
+     "restDays": 3,
+     "restBucket": "two or three days off",
+     "restEffect": 0.408,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 4.4,
+      "defence": -2.4,
+      "tempo": -2.0
+     }
+    },
+    "away": {
+     "offence": 10.24,
+     "defence": -10.06,
+     "net": 20.3,
+     "tempo": 0.69,
+     "tier": "high_major",
+     "form": 2.229,
+     "formGames": 5,
+     "restDays": 7,
+     "restBucket": "six or more days off",
+     "restEffect": 0.408,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 7.2,
+      "defence": -3.5,
+      "tempo": -0.7
+     }
+    }
+   },
+   "tiers": {
+    "home": "high_major",
+    "away": "high_major"
+   },
+   "homeCourt": {
+    "tierMargin": 3.4,
+    "departure": 0.51,
+    "appliedBy": "the card"
    }
   },
   {
@@ -594,15 +1413,130 @@
     "open": -7.5,
     "current": -8,
     "proj": -7.8,
-    "homePrice": -110
+    "homePrice": -110,
+    "coverProb": 0.4927,
+    "fairHomePrice": 103
    },
    "total": {
     "open": 147.5,
     "current": 148,
     "proj": 147.8,
-    "overPrice": -110
+    "overPrice": -110,
+    "overProb": 0.495,
+    "fairOverPrice": 102
    },
-   "pick": null
+   "pick": null,
+   "factors": [
+    {
+     "key": "strength",
+     "label": "Team strength",
+     "homeWin": 0.6591,
+     "delta": 0.1591,
+     "possessions": 70.4,
+     "note": "",
+     "homePts": 76.9,
+     "awayPts": 70.9
+    },
+    {
+     "key": "home_court",
+     "label": "Home court",
+     "homeWin": 0.7087,
+     "delta": 0.0497,
+     "possessions": 70.4,
+     "note": "",
+     "homePts": 77.5,
+     "awayPts": 70.3
+    },
+    {
+     "key": "form",
+     "label": "Last five games",
+     "homeWin": 0.6952,
+     "delta": -0.0135,
+     "possessions": 70.4,
+     "note": "",
+     "homePts": 77.3,
+     "awayPts": 70.5
+    },
+    {
+     "key": "rest",
+     "label": "Rest",
+     "homeWin": 0.6952,
+     "delta": 0.0,
+     "possessions": 70.4,
+     "note": "",
+     "homePts": 77.3,
+     "awayPts": 70.5
+    },
+    {
+     "key": "lineup",
+     "label": "Who is missing",
+     "homeWin": 0.6952,
+     "delta": 0.0,
+     "possessions": 70.4,
+     "note": "",
+     "homePts": 77.3,
+     "awayPts": 70.5
+    },
+    {
+     "key": "second_opinion",
+     "label": "Second opinion",
+     "homeWin": 0.74,
+     "delta": 0.0448,
+     "possessions": 70.4,
+     "note": "",
+     "homePts": 77.8,
+     "awayPts": 70.0
+    }
+   ],
+   "ratings": {
+    "home": {
+     "offence": 6.64,
+     "defence": -4.93,
+     "net": 11.57,
+     "tempo": -0.21,
+     "tier": "high_major",
+     "form": -1.086,
+     "formGames": 5,
+     "restDays": 2,
+     "restBucket": "one day off",
+     "restEffect": -0.625,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 8.7,
+      "defence": -6.6,
+      "tempo": 2.6
+     }
+    },
+    "away": {
+     "offence": 7.64,
+     "defence": -4.29,
+     "net": 11.93,
+     "tempo": 2.54,
+     "tier": "high_major",
+     "form": 2.264,
+     "formGames": 5,
+     "restDays": 7,
+     "restBucket": "six or more days off",
+     "restEffect": -0.625,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 3.8,
+      "defence": -5.6,
+      "tempo": 2.6
+     }
+    }
+   },
+   "tiers": {
+    "home": "high_major",
+    "away": "high_major"
+   },
+   "homeCourt": {
+    "tierMargin": 3.4,
+    "departure": -0.23,
+    "appliedBy": "the card"
+   }
   },
   {
    "id": "9",
@@ -642,13 +1576,17 @@
     "open": -2.5,
     "current": -2,
     "proj": -1.8,
-    "homePrice": -110
+    "homePrice": -110,
+    "coverProb": 0.4927,
+    "fairHomePrice": 103
    },
    "total": {
     "open": 138.5,
     "current": 139,
     "proj": 138.6,
-    "overPrice": -110
+    "overPrice": -110,
+    "overProb": 0.49,
+    "fairOverPrice": 104
    },
    "pick": {
     "kind": "pass",
@@ -657,7 +1595,121 @@
     "price": 105,
     "book": "DraftKings",
     "edgePct": 0.8,
-    "side": "away"
+    "side": "away",
+    "tier": "high_major",
+    "units": null,
+    "modelProb": 0.45
+   },
+   "factors": [
+    {
+     "key": "strength",
+     "label": "Team strength",
+     "homeWin": 0.4826,
+     "delta": -0.0174,
+     "possessions": 68.7,
+     "note": "",
+     "homePts": 69.5,
+     "awayPts": 69.1
+    },
+    {
+     "key": "home_court",
+     "label": "Home court",
+     "homeWin": 0.5323,
+     "delta": 0.0498,
+     "possessions": 68.7,
+     "note": "",
+     "homePts": 70.0,
+     "awayPts": 68.6
+    },
+    {
+     "key": "form",
+     "label": "Last five games",
+     "homeWin": 0.5049,
+     "delta": -0.0274,
+     "possessions": 68.7,
+     "note": "",
+     "homePts": 69.7,
+     "awayPts": 68.9
+    },
+    {
+     "key": "rest",
+     "label": "Rest",
+     "homeWin": 0.5049,
+     "delta": 0.0,
+     "possessions": 68.7,
+     "note": "",
+     "homePts": 69.7,
+     "awayPts": 68.9
+    },
+    {
+     "key": "lineup",
+     "label": "Who is missing",
+     "homeWin": 0.5049,
+     "delta": 0.0,
+     "possessions": 68.7,
+     "note": "",
+     "homePts": 69.7,
+     "awayPts": 68.9
+    },
+    {
+     "key": "second_opinion",
+     "label": "Second opinion",
+     "homeWin": 0.55,
+     "delta": 0.0451,
+     "possessions": 68.7,
+     "note": "",
+     "homePts": 70.2,
+     "awayPts": 68.4
+    }
+   ],
+   "ratings": {
+    "home": {
+     "offence": 10.34,
+     "defence": -7.41,
+     "net": 17.75,
+     "tempo": -3.44,
+     "tier": "high_major",
+     "form": -1.432,
+     "formGames": 5,
+     "restDays": 3,
+     "restBucket": "two or three days off",
+     "restEffect": 0.322,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 9.9,
+      "defence": -6.9,
+      "tempo": -0.9
+     }
+    },
+    "away": {
+     "offence": 13.48,
+     "defence": -8.45,
+     "net": 21.93,
+     "tempo": 0.16,
+     "tier": "high_major",
+     "form": 0.794,
+     "formGames": 5,
+     "restDays": 4,
+     "restBucket": "four or five days off",
+     "restEffect": 0.322,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 9.4,
+      "defence": -3.3,
+      "tempo": 0.1
+     }
+    }
+   },
+   "tiers": {
+    "home": "high_major",
+    "away": "high_major"
+   },
+   "homeCourt": {
+    "tierMargin": 3.4,
+    "departure": -0.08,
+    "appliedBy": "the card"
    }
   },
   {
@@ -698,13 +1750,17 @@
     "open": -2.5,
     "current": -3,
     "proj": -1.8,
-    "homePrice": -110
+    "homePrice": -110,
+    "coverProb": 0.4566,
+    "fairHomePrice": 119
    },
    "total": {
     "open": 156.5,
     "current": 157,
     "proj": 156.8,
-    "overPrice": -110
+    "overPrice": -110,
+    "overProb": 0.495,
+    "fairOverPrice": 102
    },
    "pick": {
     "kind": "bet",
@@ -712,10 +1768,122 @@
     "label": "Auburn ML",
     "price": 120,
     "book": "FanDuel",
-    "tier": "B",
-    "units": 0.25,
+    "tier": "high_major",
+    "units": 1.0,
     "edgePct": 4.1,
-    "side": "away"
+    "side": "away",
+    "modelProb": 0.44
+   },
+   "factors": [
+    {
+     "key": "strength",
+     "label": "Team strength",
+     "homeWin": 0.4766,
+     "delta": -0.0234,
+     "possessions": 71.2,
+     "note": "",
+     "homePts": 78.4,
+     "awayPts": 78.4
+    },
+    {
+     "key": "home_court",
+     "label": "Home court",
+     "homeWin": 0.5385,
+     "delta": 0.0619,
+     "possessions": 71.2,
+     "note": "",
+     "homePts": 79.1,
+     "awayPts": 77.7
+    },
+    {
+     "key": "form",
+     "label": "Last five games",
+     "homeWin": 0.5135,
+     "delta": -0.025,
+     "possessions": 71.2,
+     "note": "",
+     "homePts": 78.8,
+     "awayPts": 78.0
+    },
+    {
+     "key": "rest",
+     "label": "Rest",
+     "homeWin": 0.5135,
+     "delta": 0.0,
+     "possessions": 71.2,
+     "note": "",
+     "homePts": 78.8,
+     "awayPts": 78.0
+    },
+    {
+     "key": "lineup",
+     "label": "Who is missing",
+     "homeWin": 0.5135,
+     "delta": 0.0,
+     "possessions": 71.2,
+     "note": "",
+     "homePts": 78.8,
+     "awayPts": 78.0
+    },
+    {
+     "key": "second_opinion",
+     "label": "Second opinion",
+     "homeWin": 0.56,
+     "delta": 0.0465,
+     "possessions": 71.2,
+     "note": "",
+     "homePts": 79.3,
+     "awayPts": 77.5
+    }
+   ],
+   "ratings": {
+    "home": {
+     "offence": 6.41,
+     "defence": -11.15,
+     "net": 17.56,
+     "tempo": -2.02,
+     "tier": "high_major",
+     "form": -0.783,
+     "formGames": 5,
+     "restDays": 7,
+     "restBucket": "six or more days off",
+     "restEffect": -0.399,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 11.9,
+      "defence": -3.8,
+      "tempo": 0.5
+     }
+    },
+    "away": {
+     "offence": 13.48,
+     "defence": -8.05,
+     "net": 21.53,
+     "tempo": 1.2,
+     "tier": "high_major",
+     "form": 1.359,
+     "formGames": 5,
+     "restDays": 3,
+     "restBucket": "two or three days off",
+     "restEffect": -0.399,
+     "missing": [],
+     "lineupFactor": 1.0,
+     "secondOpinion": {
+      "offence": 7.8,
+      "defence": -3.8,
+      "tempo": 0.6
+     }
+    }
+   },
+   "tiers": {
+    "home": "high_major",
+    "away": "high_major"
+   },
+   "homeCourt": {
+    "tierMargin": 3.4,
+    "departure": -0.25,
+    "appliedBy": "the card"
    }
   }
  ],
@@ -1400,5 +2568,9 @@
     }
    ]
   }
+ },
+ "league": {
+  "efficiency": 108.76,
+  "tempo": 69.1
  }
 }
