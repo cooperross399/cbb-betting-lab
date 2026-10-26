@@ -15,8 +15,8 @@
   },
   "claims": [
     {
-      "adjusted_high": 0.4020454263498543,
-      "adjusted_low": -0.4921894552231212,
+      "adjusted_high": 0.4030236400598274,
+      "adjusted_low": -0.49316766893309427,
       "bets": 2213,
       "cluster_unit": "game",
       "clusters": 58,
@@ -26,7 +26,7 @@
       "family": "team",
       "high": 0.20133689030231666,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.2914809191755835,
       "market": "alternate_spread",
       "measured": true,
@@ -42,8 +42,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.5476156060545421,
-      "adjusted_low": -0.5420449311054096,
+      "adjusted_high": 0.5488075981123688,
+      "adjusted_low": -0.5432369231632364,
       "bets": 2136,
       "cluster_unit": "game",
       "clusters": 63,
@@ -53,7 +53,7 @@
       "family": "team",
       "high": 0.3030443242706748,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.29747364932154235,
       "market": "alternate_total_points",
       "measured": true,
@@ -69,8 +69,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.007489938213960157,
-      "adjusted_low": -0.2139704261490627,
+      "adjusted_high": -0.007264066859238721,
+      "adjusted_low": -0.21419629750378413,
       "bets": 4393,
       "cluster_unit": "day",
       "clusters": 609,
@@ -80,7 +80,7 @@
       "family": "team",
       "high": -0.05383391037364349,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.16762645398937936,
       "market": "moneyline",
       "measured": true,
@@ -96,8 +96,8 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": 0.05527660418528846,
-      "adjusted_low": -0.8675756773317708,
+      "adjusted_high": 0.056286122794618476,
+      "adjusted_low": -0.8685851959411008,
       "bets": 47,
       "cluster_unit": "day",
       "clusters": 37,
@@ -107,7 +107,7 @@
       "family": "team",
       "high": -0.1518550278145795,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.6604440453319028,
       "market": "moneyline_h1",
       "measured": true,
@@ -123,8 +123,8 @@
       "verdict": "not enough evidence (47 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 0.0236945273719068,
-      "adjusted_low": -0.08100057102755583,
+      "adjusted_high": 0.023809054531081345,
+      "adjusted_low": -0.08111509818673038,
       "bets": 10908,
       "cluster_unit": "game",
       "clusters": 4711,
@@ -134,7 +134,7 @@
       "family": "team",
       "high": 0.0001960032546788476,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.05750204691032788,
       "market": "spread",
       "measured": true,
@@ -150,8 +150,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.2028813825607299,
-      "adjusted_low": -0.7201969950481217,
+      "adjusted_high": 0.20389114849914686,
+      "adjusted_low": -0.7212067609865387,
       "bets": 189,
       "cluster_unit": "game",
       "clusters": 57,
@@ -161,7 +161,7 @@
       "family": "team",
       "high": -0.004300996079114661,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.5130146164082772,
       "market": "spread_h1",
       "measured": true,
@@ -177,8 +177,8 @@
       "verdict": "not enough evidence (189 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 0.016882501708672802,
-      "adjusted_low": -0.0907565531141602,
+      "adjusted_high": 0.01700024929526999,
+      "adjusted_low": -0.09087430070075739,
       "bets": 5570,
       "cluster_unit": "game",
       "clusters": 2312,
@@ -188,7 +188,7 @@
       "family": "team",
       "high": -0.007276785252969188,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.06659726615251821,
       "market": "team_total",
       "measured": true,
@@ -204,8 +204,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.021196597657854525,
-      "adjusted_low": -0.08668825981671302,
+      "adjusted_high": 0.021314614130768753,
+      "adjusted_low": -0.08680627628962725,
       "bets": 12302,
       "cluster_unit": "day",
       "clusters": 688,
@@ -215,7 +215,7 @@
       "family": "team",
       "high": -0.0030178590264217098,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.06247380313243679,
       "market": "total_points",
       "measured": true,
@@ -231,8 +231,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.46610523150691346,
-      "adjusted_low": -0.5502865383436708,
+      "adjusted_high": 0.4672170740266581,
+      "adjusted_low": -0.5513983808634154,
       "bets": 181,
       "cluster_unit": "game",
       "clusters": 57,
@@ -242,7 +242,7 @@
       "family": "team",
       "high": 0.2379789210920933,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.3221602279288506,
       "market": "total_points_h1",
       "measured": true,
@@ -258,8 +258,8 @@
       "verdict": "not enough evidence (181 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 0.11632037775324203,
-      "adjusted_low": -0.2520610357192751,
+      "adjusted_high": 0.11672335437223078,
+      "adjusted_low": -0.2524640123382639,
       "bets": 8349,
       "cluster_unit": "day",
       "clusters": 89,
@@ -269,7 +269,7 @@
       "family": "team",
       "high": 0.03363819242500418,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.16937885039103726,
       "market": "alternate_spread",
       "measured": true,
@@ -285,8 +285,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.15569771068636784,
-      "adjusted_low": -1.2110093890041664,
+      "adjusted_high": -0.15454329323598914,
+      "adjusted_low": -1.2121638064545452,
       "bets": 13,
       "cluster_unit": "day",
       "clusters": 3,
@@ -296,7 +296,7 @@
       "family": "team",
       "high": -0.39255948648341304,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.9741476132071214,
       "market": "alternate_team_total",
       "measured": true,
@@ -312,8 +312,8 @@
       "verdict": "not enough evidence (13 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 0.07451179293860075,
-      "adjusted_low": -0.38737170252860165,
+      "adjusted_high": 0.07501705254878455,
+      "adjusted_low": -0.3878769621387854,
       "bets": 7598,
       "cluster_unit": "game",
       "clusters": 231,
@@ -323,7 +323,7 @@
       "family": "team",
       "high": -0.0291566750557071,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.2837032345342938,
       "market": "alternate_total_points",
       "measured": true,
@@ -339,8 +339,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.014004579496140798,
-      "adjusted_low": -0.1467370525341199,
+      "adjusted_high": -0.013859381933889595,
+      "adjusted_low": -0.14688225009637107,
       "bets": 8873,
       "cluster_unit": "day",
       "clusters": 648,
@@ -350,7 +350,7 @@
       "family": "team",
       "high": -0.04379601449648528,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.1169456175337754,
       "market": "moneyline",
       "measured": true,
@@ -366,8 +366,8 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": 0.5798163025995591,
-      "adjusted_low": -0.43455425110746204,
+      "adjusted_high": 0.5809259340879706,
+      "adjusted_low": -0.4356638825958735,
       "bets": 168,
       "cluster_unit": "game",
       "clusters": 168,
@@ -377,7 +377,7 @@
       "family": "team",
       "high": 0.3521436485356258,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.20688159704352876,
       "market": "moneyline_h1",
       "measured": true,
@@ -393,8 +393,8 @@
       "verdict": "not enough evidence (168 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 0.01070023701146158,
-      "adjusted_low": -0.06888707145633635,
+      "adjusted_high": 0.010787298473597915,
+      "adjusted_low": -0.0689741329184727,
       "bets": 19968,
       "cluster_unit": "day",
       "clusters": 650,
@@ -404,7 +404,7 @@
       "family": "team",
       "high": -0.00716291337519883,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.051023921069675945,
       "market": "spread",
       "measured": true,
@@ -420,8 +420,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.1035172735931719,
-      "adjusted_low": -0.406677384489603,
+      "adjusted_high": 0.1040753813337397,
+      "adjusted_low": -0.40723549223017075,
       "bets": 693,
       "cluster_unit": "game",
       "clusters": 216,
@@ -431,7 +431,7 @@
       "family": "team",
       "high": -0.01099450069921934,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.29216561019721177,
       "market": "spread_h1",
       "measured": true,
@@ -447,8 +447,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.02477091147630834,
-      "adjusted_low": -0.10064065931546945,
+      "adjusted_high": -0.02468791669603549,
+      "adjusted_low": -0.1007236540957423,
       "bets": 11618,
       "cluster_unit": "day",
       "clusters": 345,
@@ -458,7 +458,7 @@
       "family": "team",
       "high": -0.04179966570283554,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.08361190508894224,
       "market": "team_total",
       "measured": true,
@@ -474,8 +474,8 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": 0.01496365426951467,
-      "adjusted_low": -0.06329533059374179,
+      "adjusted_high": 0.015049262663348686,
+      "adjusted_low": -0.0633809389875758,
       "bets": 23517,
       "cluster_unit": "day",
       "clusters": 728,
@@ -485,7 +485,7 @@
       "family": "team",
       "high": -0.0026013575726103882,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.045730318751616726,
       "market": "total_points",
       "measured": true,
@@ -501,8 +501,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.2512446733783952,
-      "adjusted_low": -0.29329936472104534,
+      "adjusted_high": 0.2518403562965296,
+      "adjusted_low": -0.2938950476391798,
       "bets": 607,
       "cluster_unit": "game",
       "clusters": 207,
@@ -512,7 +512,7 @@
       "family": "team",
       "high": 0.12902327612300962,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.17107796746565979,
       "market": "total_points_h1",
       "measured": true,
@@ -528,8 +528,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.27965563734920407,
-      "adjusted_low": -0.3668058041652912,
+      "adjusted_high": 0.28036280887436993,
+      "adjusted_low": -0.36751297569045704,
       "bets": 3214,
       "cluster_unit": "game",
       "clusters": 120,
@@ -539,7 +539,7 @@
       "family": "team",
       "high": 0.13455916190270611,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.22170932871879329,
       "market": "alternate_spread",
       "measured": true,
@@ -566,7 +566,7 @@
       "family": "team",
       "high": 0.0,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": 0.0,
       "market": "alternate_team_total",
       "measured": true,
@@ -582,8 +582,8 @@
       "verdict": "not enough evidence (10 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 0.26379575012441786,
-      "adjusted_low": -0.46464109018713523,
+      "adjusted_high": 0.2645925954708987,
+      "adjusted_low": -0.46543793553361607,
       "bets": 3763,
       "cluster_unit": "game",
       "clusters": 117,
@@ -593,7 +593,7 @@
       "family": "team",
       "high": 0.10030012404813332,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.3011454641108507,
       "market": "alternate_total_points",
       "measured": true,
@@ -609,8 +609,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.02826196991836509,
-      "adjusted_low": -0.1674099308202246,
+      "adjusted_high": -0.02810975438095553,
+      "adjusted_low": -0.16756214635763417,
       "bets": 6967,
       "cluster_unit": "day",
       "clusters": 590,
@@ -620,7 +620,7 @@
       "family": "team",
       "high": -0.05949334335515839,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.13617855738343132,
       "market": "moneyline",
       "measured": true,
@@ -636,8 +636,8 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": 0.8122693766494959,
-      "adjusted_low": -0.5211301361431668,
+      "adjusted_high": 0.8137279975455974,
+      "adjusted_low": -0.5225887570392683,
       "bets": 79,
       "cluster_unit": "game",
       "clusters": 79,
@@ -647,7 +647,7 @@
       "family": "team",
       "high": 0.5129915586020064,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.22185231809567726,
       "market": "moneyline_h1",
       "measured": true,
@@ -663,8 +663,8 @@
       "verdict": "not enough evidence (79 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 0.03724182148449065,
-      "adjusted_low": -0.05156351999521459,
+      "adjusted_high": 0.03733896665780516,
+      "adjusted_low": -0.0516606651685291,
       "bets": 14596,
       "cluster_unit": "day",
       "clusters": 589,
@@ -674,7 +674,7 @@
       "family": "team",
       "high": 0.0173097091850458,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.03163140769576975,
       "market": "spread",
       "measured": true,
@@ -690,8 +690,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.42480273880560054,
-      "adjusted_low": -0.3200350490149341,
+      "adjusted_high": 0.42561752533514235,
+      "adjusted_low": -0.32084983554447594,
       "bets": 370,
       "cluster_unit": "game",
       "clusters": 117,
@@ -701,7 +701,7 @@
       "family": "team",
       "high": 0.2576259656032613,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.15285827581259492,
       "market": "spread_h1",
       "measured": true,
@@ -717,8 +717,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.012998153611756366,
-      "adjusted_low": -0.08907375316716253,
+      "adjusted_high": 0.013109811231775167,
+      "adjusted_low": -0.08918541078718133,
       "bets": 9042,
       "cluster_unit": "day",
       "clusters": 313,
@@ -728,7 +728,7 @@
       "family": "team",
       "high": -0.009911602430348661,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.0661639971250575,
       "market": "team_total",
       "measured": true,
@@ -744,8 +744,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.008967566360772138,
-      "adjusted_low": -0.09518138794821732,
+      "adjusted_high": -0.008873256080549494,
+      "adjusted_low": -0.09527569822843995,
       "bets": 17978,
       "cluster_unit": "game",
       "clusters": 7137,
@@ -755,7 +755,7 @@
       "family": "team",
       "high": -0.028318019216560915,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.07583093509242853,
       "market": "total_points",
       "measured": true,
@@ -771,8 +771,8 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": 0.26643375009703196,
-      "adjusted_low": -0.4910692053671336,
+      "adjusted_high": 0.26726239119754097,
+      "adjusted_low": -0.4918978464676426,
       "bets": 321,
       "cluster_unit": "game",
       "clusters": 106,
@@ -782,7 +782,7 @@
       "family": "team",
       "high": 0.09641431518586034,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -0.32104977045596195,
       "market": "total_points_h1",
       "measured": true,
@@ -809,7 +809,7 @@
       "family": "team",
       "high": 0.0,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": 0.0,
       "market": "moneyline",
       "measured": true,
@@ -825,8 +825,8 @@
       "verdict": "not enough evidence (1 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 2.6861555644481667,
-      "adjusted_low": -3.4022049471642157,
+      "adjusted_high": 2.6928156912744003,
+      "adjusted_low": -3.4088650739904494,
       "bets": 3,
       "cluster_unit": "game",
       "clusters": 2,
@@ -836,7 +836,7 @@
       "family": "team",
       "high": 1.3196399538449846,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": -2.035689336561034,
       "market": "spread",
       "measured": true,
@@ -863,7 +863,7 @@
       "family": "team",
       "high": 0.0,
       "is_futures": false,
-      "looks": 133,
+      "looks": 137,
       "low": 0.0,
       "market": "total_points",
       "measured": true,
@@ -884,12 +884,12 @@
     "applied": true,
     "budget_declared_on": "2026-09-01",
     "budget_per_week": 6,
-    "discovery": 92,
+    "discovery": 96,
     "error": "",
-    "factor": 1.8145344270742643,
+    "factor": 1.8185043067789342,
     "holdout": 41,
-    "hypotheses": 133,
-    "looks": 133,
+    "hypotheses": 137,
+    "looks": 137,
     "reversals": 0,
     "source": "data/outputs/experiment_ledger.json"
   },
@@ -951,23 +951,23 @@
   ],
   "detection": [
     {
-      "bets": 7738,
+      "bets": 7765,
       "edge": 0.05
     },
     {
-      "bets": 3023,
+      "bets": 3034,
       "edge": 0.08
     },
     {
-      "bets": 1935,
+      "bets": 1942,
       "edge": 0.1
     },
     {
-      "bets": 860,
+      "bets": 863,
       "edge": 0.15
     }
   ],
-  "detection_looks": 133,
+  "detection_looks": 137,
   "detection_power": 0.8,
   "evidence_inputs": [
     {
@@ -1096,7 +1096,7 @@
       "title": "First team basket scorer"
     }
   ],
-  "generated_at": "2026-09-23T18:52:06+00:00",
+  "generated_at": "2026-10-26T22:15:22+00:00",
   "headline": "**The only result that survives is a loss.** 32 market-and-tier cell(s) across 10 market(s) are measured against real prices. None excludes zero on the winning side; 5 exclude(s) it on the **losing** side after correcting for everything this lab has ever tested, which is a **demonstrated deficit**: `moneyline` / high_major (historical price backtest, bets) at -11.1% over 4,393 bets across 609 days; `moneyline` / mid_major (historical price backtest, bets) at -8.0% over 8,873 bets across 648 days; `team_total` / mid_major (historical price backtest, bets) at -6.3% over 11,618 bets across 345 days; `moneyline` / low_major (historical price backtest, bets) at -9.8% over 6,967 bets across 590 days; `total_points` / low_major (historical price backtest, bets) at -5.2% over 17,978 bets across 7,137 games. A demonstrated deficit is a finding, not a null result, and it is the finding this lab has.",
   "minimum_bets": 200,
   "no_demonstrated_edge_phrase": "no demonstrated edge",
@@ -1105,24 +1105,49 @@
       "alternate_spread",
       "alternate_team_total",
       "alternate_total_points",
+      "championship_winner",
       "moneyline",
       "moneyline_h1",
+      "moneyline_h2",
+      "player_assists",
+      "player_blocks",
+      "player_blocks_steals",
+      "player_double_double",
+      "player_field_goals",
+      "player_first_basket",
+      "player_first_team_basket",
+      "player_frees_attempts",
+      "player_frees_made",
+      "player_points",
+      "player_points_assists",
+      "player_points_rebounds",
+      "player_pra",
+      "player_rebounds",
+      "player_rebounds_assists",
+      "player_steals",
+      "player_threes",
+      "player_triple_double",
+      "player_turnovers",
       "spread",
       "spread_h1",
+      "spread_h2",
       "team_total",
+      "team_total_h1",
+      "team_total_h2",
       "total_points",
-      "total_points_h1"
+      "total_points_h1",
+      "total_points_h2"
     ],
-    "manual_only": false,
-    "mode": "allowlisted",
+    "manual_only": true,
+    "mode": "manual_only",
     "provider": "the_odds_api",
-    "summary": "`the_odds_api:cbb` allowlists 10 market(s): alternate_spread, alternate_team_total, alternate_total_points, moneyline, moneyline_h1, spread, spread_h1, team_total, total_points, total_points_h1, each behind a verified human acceptance receipt.",
+    "summary": "`the_odds_api:cbb` is **manual-only, forced**: the policy file declares mode `allowlisted` and allowlists 35 market(s), but `alternate_spread` lacks an evidence record hashing to its cited sha256 (alternate_spread-20260923-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `alternate_team_total` lacks an evidence record hashing to its cited sha256 (alternate_team_total-20260923-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `alternate_total_points` lacks an evidence record hashing to its cited sha256 (alternate_total_points-20260923-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `championship_winner` lacks an evidence record hashing to its cited sha256 (championship_winner-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `moneyline` lacks an evidence record hashing to its cited sha256 (moneyline-20260923-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `moneyline_h1` lacks an evidence record hashing to its cited sha256 (moneyline_h1-20260923-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `moneyline_h2` lacks an evidence record hashing to its cited sha256 (moneyline_h2-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_assists` lacks an evidence record hashing to its cited sha256 (player_assists-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_blocks` lacks an evidence record hashing to its cited sha256 (player_blocks-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_blocks_steals` lacks an evidence record hashing to its cited sha256 (player_blocks_steals-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_double_double` lacks an evidence record hashing to its cited sha256 (player_double_double-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_field_goals` lacks an evidence record hashing to its cited sha256 (player_field_goals-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_first_basket` lacks an evidence record hashing to its cited sha256 (player_first_basket-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_first_team_basket` lacks an evidence record hashing to its cited sha256 (player_first_team_basket-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_frees_attempts` lacks an evidence record hashing to its cited sha256 (player_frees_attempts-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_frees_made` lacks an evidence record hashing to its cited sha256 (player_frees_made-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_points` lacks an evidence record hashing to its cited sha256 (player_points-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_points_assists` lacks an evidence record hashing to its cited sha256 (player_points_assists-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_points_rebounds` lacks an evidence record hashing to its cited sha256 (player_points_rebounds-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_pra` lacks an evidence record hashing to its cited sha256 (player_pra-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_rebounds` lacks an evidence record hashing to its cited sha256 (player_rebounds-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_rebounds_assists` lacks an evidence record hashing to its cited sha256 (player_rebounds_assists-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_steals` lacks an evidence record hashing to its cited sha256 (player_steals-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_threes` lacks an evidence record hashing to its cited sha256 (player_threes-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_triple_double` lacks an evidence record hashing to its cited sha256 (player_triple_double-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `player_turnovers` lacks an evidence record hashing to its cited sha256 (player_turnovers-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `spread` lacks an evidence record hashing to its cited sha256 (spread-20260923-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `spread_h1` lacks an evidence record hashing to its cited sha256 (spread_h1-20260923-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `spread_h2` lacks an evidence record hashing to its cited sha256 (spread_h2-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `team_total` lacks an evidence record hashing to its cited sha256 (team_total-20260923-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `team_total_h1` lacks an evidence record hashing to its cited sha256 (team_total_h1-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `team_total_h2` lacks an evidence record hashing to its cited sha256 (team_total_h2-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `total_points` lacks an evidence record hashing to its cited sha256 (total_points-20260923-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `total_points_h1` lacks an evidence record hashing to its cited sha256 (total_points_h1-20260923-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026); `total_points_h2` lacks an evidence record hashing to its cited sha256 (total_points_h2-20260928-delegated-cooperross399.json cites 3989a26da06a\u2026 for `data/outputs/cbb_price_backtest.md`, which hashes to f678ac4d51a7\u2026). No market is read from staging and the card produces no selection until a valid human acceptance receipt stands behind every allowlisted market.",
     "withdrawn": 0
   },
   "pooled": [
     {
-      "adjusted_high": 0.09292946604655854,
-      "adjusted_low": -0.21000903380220992,
+      "adjusted_high": 0.09326085391784074,
+      "adjusted_low": -0.21034042167349215,
       "bets": 13776,
       "cluster_unit": "game",
       "clusters": 425,
@@ -1134,8 +1159,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 2.2992901108625596,
-      "adjusted_low": -2.049678210723646,
+      "adjusted_high": 2.3040474967844005,
+      "adjusted_low": -2.054435596645487,
       "bets": 23,
       "cluster_unit": "game",
       "clusters": 4,
@@ -1147,8 +1172,8 @@
       "verdict": "not enough evidence (23 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 0.0707013452889923,
-      "adjusted_low": -0.3019372974286889,
+      "adjusted_high": 0.07110897893948356,
+      "adjusted_low": -0.30234493107918015,
       "bets": 13497,
       "cluster_unit": "game",
       "clusters": 411,
@@ -1160,8 +1185,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.047761887193937785,
-      "adjusted_low": -0.13828051737742805,
+      "adjusted_high": -0.04766286783461944,
+      "adjusted_low": -0.1383795367367464,
       "bets": 20234,
       "cluster_unit": "day",
       "clusters": 694,
@@ -1173,8 +1198,8 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": 0.36522532048303274,
-      "adjusted_low": -0.3338444762218504,
+      "adjusted_high": 0.365990040886426,
+      "adjusted_low": -0.33460919662524363,
       "bets": 294,
       "cluster_unit": "game",
       "clusters": 294,
@@ -1186,8 +1211,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.0032857836363470554,
-      "adjusted_low": -0.04722545805089909,
+      "adjusted_high": 0.0033410384582561667,
+      "adjusted_low": -0.0472807128728082,
       "bets": 45475,
       "cluster_unit": "game",
       "clusters": 20550,
@@ -1199,8 +1224,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.08643842287083191,
-      "adjusted_low": -0.30137337685549426,
+      "adjusted_high": 0.08686265461038821,
+      "adjusted_low": -0.30179760859505056,
       "bets": 1252,
       "cluster_unit": "game",
       "clusters": 390,
@@ -1212,8 +1237,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.021062794281500034,
-      "adjusted_low": -0.07639758188957971,
+      "adjusted_high": -0.021002262927834362,
+      "adjusted_low": -0.07645811324324538,
       "bets": 26230,
       "cluster_unit": "day",
       "clusters": 365,
@@ -1225,8 +1250,8 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": -0.010450231488067032,
-      "adjusted_low": -0.06056620644059725,
+      "adjusted_high": -0.010395409052935671,
+      "adjusted_low": -0.060621028875728615,
       "bets": 53800,
       "cluster_unit": "game",
       "clusters": 21189,
@@ -1238,8 +1263,8 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": 0.15160559449155053,
-      "adjusted_low": -0.25338376881449404,
+      "adjusted_high": 0.15204861696332259,
+      "adjusted_low": -0.2538267912862661,
       "bets": 1109,
       "cluster_unit": "game",
       "clusters": 370,
@@ -1251,8 +1276,8 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.023004928452961117,
-      "adjusted_low": -0.07512525552368314,
+      "adjusted_high": -0.0229479134342457,
+      "adjusted_low": -0.07518227054239857,
       "bets": 175690,
       "cluster_unit": "game",
       "clusters": 26086,

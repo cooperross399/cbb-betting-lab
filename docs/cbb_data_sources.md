@@ -249,6 +249,52 @@ words.
 
 ---
 
+## Tonight's context on the card — 2026-10-26
+
+Four layers go onto the card's price after the season ratings
+(`models/card_factors.py`, read through `ratings.matchups_for`, so the
+backtest and the board see the same price): last-five-games form, rest, who
+is missing, and a second opinion. The first three are derived from the
+hoopR tables above and need no new source. The fourth is a fetched table.
+
+### The second opinion — Bart Torvik's T-Rank, free
+
+`scripts/fetch_second_opinion.py` fetches
+`https://barttorvik.com/<season>_team_results.csv` (a header row; the ranking
+export `trank.php?year=<season>&csv=1`, headerless, is the fallback) and keeps
+adjusted offence, defence and tempo per team, resolved to this lab's team ids
+through `providers.team_names` and written to
+`data/raw/cbb/second_opinion/<season>.csv` with the day it was fetched. The
+card blends it at `card_factors.BLEND_WEIGHT` (0.5) as deviations from the
+table's own mean, so the sign convention is the ratings' own. **Named here and
+nowhere a reader sees**: the page calls it the second opinion, as the hockey
+lab's page calls its reference, and `card_factors.load_second_opinion` reads
+only a table dated on or before the day and no older than two days, so no
+walk-forward day is priced with a table published after it.
+
+What it cannot tell us: it has no archive, so it cannot be measured on bought
+history and its entry in the experiment ledger is the forward ledger's. Its
+team spellings differ from ESPN's (`Michigan St.`, `N.C. State`); the fetcher
+tries the index's aliases and the obvious expansions, lists what it could not
+place in `<season>.unresolved.json`, and the card refuses a table resolving
+fewer than `SECOND_OPINION_MIN_TEAMS` (300) teams. The container this lab is
+developed in cannot reach the site; the Actions runner can, and the fetch is
+soft in both workflows that run it.
+
+### Who is missing — a box-score inference, not an availability report
+
+The availability section above still stands: no feed reports who is out.
+The card's "who is missing" layer reads the box scores instead: a player
+who averaged `ROTATION_MINUTES` over the club's last `ROTATION_WINDOW` games
+and did not play in its most recent one is treated as out tonight, and half
+his share of the club's points comes off its attack, floored at
+`AVAILABILITY_FLOOR`. A player rested in one blowout looks the same, and
+that is the cost of inferring rather than reading. `gates.Availability` is
+untouched: nothing reaches `CONFIRMED`, and no prop can produce a selection
+on this.
+
+---
+
 ## Officials — post-game only, so they are not modelled
 
 Referee assignment affects foul rate and therefore totals, so this was worth

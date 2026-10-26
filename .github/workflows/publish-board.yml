@@ -149,6 +149,20 @@ jobs:
             echo "No previous publish; the history starts today."
           fi
 
+      - name: Fetch the card's second opinion for the board
+        # The board prices tonight's games through the card's own seam, which
+        # reads the day's second opinion off disk; the inputs artifact carries
+        # the card's copy, and this refreshes it so a board built hours after
+        # the card is not read from a table the card never saw dated for a
+        # day it is not. Soft: a board without it says so in the model census.
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          PYTHONPATH: src
+        run: |
+          set -eu
+          python scripts/fetch_second_opinion.py
+
       - name: Copy in the shared pages at the pinned tag
         # Board, Results, Archive, Graphic, lib/live.js, lib/format.js,
         # lib/sports.js and the logos come from cooperross399/betting-lab-shared

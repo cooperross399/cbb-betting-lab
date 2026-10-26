@@ -12,7 +12,9 @@ Generated 2026-09-18T00:22:10Z.
 
 **The discovery record does not name the model that priced it.** The agreement between the two runs on that one point is asserted by the operator who passed `--model`, not verified by this report, and it is said here rather than left implicit.
 
-**Family correction: 133 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.81. That is the ledger's **cumulative** count and never the day's — a search that runs every week is not twelve tests, it is twelve tests a week, forever. 32 of them are this run's own holdout looks: putting a discovery finding to the holdout **is** a second look and is counted as one.
+**Family correction: 137 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.82. That is the ledger's **cumulative** count and never the day's — a search that runs every week is not twelve tests, it is twelve tests a week, forever. 32 of them are this run's own holdout looks: putting a discovery finding to the holdout **is** a second look and is counted as one.
+
+**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 133 cumulative hypotheses (x1.8145), and `cbb_replication.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 137 hypotheses (x1.8185), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
 
 **Below 2,000 held-out bets there is no number**, only the words *not enough evidence*. That floor is `promotion.Criteria.minimum_bets`, declared 2026-09-01 in `/Users/cooperross/Projects/cbb-betting-lab/data/manual/promotion_criteria.json`. This module reads that bar rather than inventing a second one — a bar written here would be a bar chosen after the first one existed.
 
@@ -38,7 +40,7 @@ The **Discovery** column quotes the backtest's own figure at the backtest's own 
 | mid_major | alternate_total_points | -15.6% over 7,598 (no claim) | 0 | 0 | — | — | — | — | **untestable** |
 | mid_major | moneyline | -7.8% over 5,854 (no claim) | 3,019 | 229 | -8.6% | -15.0% to -2.1% | -20.3% to +3.2% | no demonstrated edge | **not enough evidence** |
 | mid_major | moneyline_h1 | — | 0 | 0 | — | — | — | — | **untestable** |
-| mid_major | spread | -2.5% over 12,821 (no claim) | 7,147 | 3,053 | -3.6% | -7.2% to +0.0% | -10.1% to +2.9% | no demonstrated edge | **nothing to replicate** |
+| mid_major | spread | -2.5% over 12,821 (no claim) | 7,147 | 3,053 | -3.6% | -7.2% to +0.0% | -10.2% to +3.0% | no demonstrated edge | **nothing to replicate** |
 | mid_major | spread_h1 | -15.2% over 693 (no claim) | 0 | 0 | — | — | — | — | **untestable** |
 | mid_major | team_total | -5.2% over 3,768 (no claim) | 7,850 | 229 | -6.8% | -9.5% to -4.1% | -11.6% to -2.0% | demonstrated deficit | **nothing to replicate** |
 | mid_major | total_points | -0.2% over 15,250 (no claim) | 8,267 | 253 | -6.5% | -10.2% to -2.9% | -13.1% to +0.0% | no demonstrated edge | **nothing to replicate** |
@@ -147,7 +149,7 @@ Every state below carries its sample size, and every cell whose held-out interva
 | mid_major | team_total | 2025 | 3,421 | 115 | -6.6% | -10.6% to -2.7% | -13.8% to +0.5% | nothing to replicate |
 | mid_major | team_total | 2026 | 4,429 | 1,659 | -6.9% | -10.6% to -3.2% | -13.6% to -0.2% | nothing to replicate |
 | mid_major | total_points | 2025 | 4,220 | 129 | -8.5% | -13.8% to -3.2% | -18.1% to +1.1% | nothing to replicate |
-| mid_major | total_points | 2026 | 4,047 | 1,592 | -4.5% | -9.5% to +0.5% | -13.6% to +4.5% | nothing to replicate |
+| mid_major | total_points | 2026 | 4,047 | 1,592 | -4.5% | -9.5% to +0.5% | -13.6% to +4.6% | nothing to replicate |
 | mid_major | total_points_h1 | 2025 | 0 | 0 | — | — | — | untestable |
 | mid_major | total_points_h1 | 2026 | 0 | 0 | — | — | — | untestable |
 | low_major | alternate_spread | 2025 | 0 | 0 | — | — | — | untestable |
@@ -198,7 +200,7 @@ The held-out season's own return per tier. It carries no replication state: a st
 | moneyline | 7,326 | 242 days | -11.6% | -15.7% to -7.5% | -19.0% to -4.2% | demonstrated deficit |
 | spread | 17,551 | 7,513 games | -2.5% | -4.8% to -0.2% | -6.7% to +1.6% | no demonstrated edge |
 | team_total | 19,618 | 244 days | -4.8% | -6.7% to -3.0% | -8.2% to -1.5% | demonstrated deficit |
-| total_points | 20,513 | 8,043 games | -5.3% | -7.5% to -3.1% | -9.3% to -1.3% | demonstrated deficit |
+| total_points | 20,513 | 8,043 games | -5.3% | -7.5% to -3.1% | -9.3% to -1.2% | demonstrated deficit |
 | every market | 65,008 | 9,641 games | -5.1% | -6.6% to -3.7% | -7.8% to -2.5% | demonstrated deficit |
 
 ## What this report cannot say

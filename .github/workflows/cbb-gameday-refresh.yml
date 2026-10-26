@@ -491,6 +491,23 @@ jobs:
           python scripts/fetch_cbb_data.py --seasons $SEASONS
           python scripts/build_datasets.py --seasons $SEASONS
 
+      - name: Fetch the card's second opinion
+        # A published adjusted-efficiency table, free, blended into tonight's
+        # context at `card_factors.BLEND_WEIGHT` (CLAUDE.md, 2026-10-26). SOFT:
+        # a card without it prices on the lab's own ratings and says so, and
+        # the health step records the miss as a warning rather than a
+        # degraded run, because the backup slot would ask the same source.
+        # Exit 2 is "fetched but too few names resolved", which the card also
+        # refuses to read; the log lists the names.
+        id: second_opinion
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          PYTHONPATH: src
+        run: |
+          set -eu
+          python scripts/fetch_second_opinion.py --as-of "${{ steps.identity.outputs.day }}"
+
       - name: Settle whatever finished, then append to the forward ledger
         # POST-SLATE SETTLEMENT, and it lives here rather than in a workflow of
         # its own for one structural reason: the ledger comes back from
@@ -703,6 +720,14 @@ jobs:
           # completeness rule to exactly that scope and says so.
           if [ "${{ steps.claims.outcome }}" != "success" ]; then
             echo "The claims report was not rebuilt (outcome: ${{ steps.claims.outcome }}), so the claims document on the feed is whatever the checkout carried rather than what this run measured." >> run_degraded.txt
+          fi
+          # A SECOND OPINION THAT WAS NOT FETCHED IS NOT A DEGRADED RUN. The
+          # card prices on the lab's own ratings and names the absence in its
+          # context line; the backup slot would ask the same source and get
+          # the same answer, so re-buying the board for it would spend credit
+          # on nothing. It is still read here, so that it is never silent.
+          if [ "${{ steps.second_opinion.outcome }}" != "success" ]; then
+            echo "::warning::The card's second opinion was not fetched (outcome: ${{ steps.second_opinion.outcome }}); the card priced on the lab's own ratings alone."
           fi
           if [ -s run_degraded.txt ]; then
             echo "degraded=true" >> "$GITHUB_OUTPUT"
@@ -1061,6 +1086,7 @@ jobs:
             data/processed/cbb_team_games.csv
             data/processed/cbb_player_games.csv
             data/raw/cbb/schedules/
+            data/raw/cbb/second_opinion/
           if-no-files-found: warn
           retention-days: 3
 

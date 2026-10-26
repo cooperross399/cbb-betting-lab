@@ -80,7 +80,7 @@ the block is the measurement and never the search.
 
 <!-- BEGIN GENERATED: retraction_history -->
 
-**What each reading this table has ever named actually did.** Every row below is read from the records with `git show`, at the ledger's 133 cumulative hypotheses held FIXED across every state, so what moves here is the measurement and never the family. **That is why this block cannot be read as evidence about what the family did** — it is built to exclude exactly that, and the `Scored at` column is the only place the family appears. Three of the readings below moved because the count they were scored at grew; the prose beneath names them and shows the arithmetic. The roster is the table's own history: a reading this file has ever listed as retracted is a reading this block accounts for. `|est|/se` is the estimate over its own standard error — a reading that SHARPENED across a restatement has a larger one after than before, and one that BLUNTED has a smaller one. Nothing in the prose of this file states a direction; this is where a direction may be read.
+**What each reading this table has ever named actually did.** Every row below is read from the records with `git show`, at the ledger's 137 cumulative hypotheses held FIXED across every state, so what moves here is the measurement and never the family. **That is why this block cannot be read as evidence about what the family did** — it is built to exclude exactly that, and the `Scored at` column is the only place the family appears. Three of the readings below moved because the count they were scored at grew; the prose beneath names them and shows the arithmetic. The roster is the table's own history: a reading this file has ever listed as retracted is a reading this block accounts for. `|est|/se` is the estimate over its own standard error — a reading that SHARPENED across a restatement has a larger one after than before, and one that BLUNTED has a smaller one. Nothing in the prose of this file states a direction; this is where a direction may be read.
 
 | Stage | State | Reading | Estimate | Standard error | Bets | \|est\|/se | Scored at | Crossed at | Verdict | Retracted at today's count |
 |:---|:---|:---|---:|---:|---:|---:|---:|---:|:---|:---|
@@ -375,7 +375,8 @@ completeness claims corrected above it.
 | `raw_market_fit / disagreement` | +0.09387, [+0.00268, +0.18505], *demonstrated edge* | +0.03160, [-0.06707, +0.13028], **no demonstrated edge** | 293,661 [superseded: 293,661 on 2026-09-17] → 270,504 |
 
 The "published" intervals above are each cell's old measurement **already
-widened to today's family of 133** — which is how they were being published,
+widened to the family of 133 that stood on 2026-09-17** (the census block
+above has today's) — which is how they were being published,
 because `scripts/splice_headline_table.py` re-corrects a record's stored
 standard error at the current count every time it renders. Only the first row
 reached the two hand-written documents; the other four were published in

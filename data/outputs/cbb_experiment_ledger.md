@@ -4,11 +4,11 @@
 
 College basketball's large sample makes this **more** urgent, not less. A bigger n narrows every interval, including the intervals of the hypotheses that are wrong. Sample size buys power, never innocence.
 
-**133 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.81** before it means what it says.
+**137 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.82** before it means what it says.
 
 **Alpha budget: 6 new hypotheses a week**, declared 2026-09-01. Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state — re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise.
 
-**92 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
+**96 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
 
 | Search | Hypotheses |
 |:---|---:|
@@ -20,6 +20,7 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | conference_tier | 4 |
 | model_structure | 4 |
 | schedule_states | 4 |
+| card_context_2026_10_26 | 4 |
 | player_props_vs_role_prior | 3 |
 | forward_2027 | 3 |
 | rebound_differential_vs_spread | 3 |
@@ -163,6 +164,10 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | 131 | replication | team_total / mid_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-17 | pending |
 | 132 | replication | moneyline / low_major: the discovery result holds on a season it was not selected on | holdout | lower | — | 2025, 2026 | 2026-09-17 | pending |
 | 133 | replication | total_points / low_major: the held-out return differs from zero in a cell the discovery window claimed nothing in (two-sided) | holdout | either | — | 2025, 2026 | 2026-09-17 | pending |
+| 134 | card_context_2026_10_26 | last-five-games form (shrunk residual net efficiency, card_factors.FORM_*) raises the return of the card's team selections against the card-time price over the season ratings alone | discovery | higher | — | 2024, 2025, 2026 | 2026-10-26 | pending |
+| 135 | card_context_2026_10_26 | days-since-last-game rest buckets (card_factors.REST_*) raise the return of the card's team selections against the card-time price over the season ratings alone | discovery | higher | — | 2024, 2025, 2026 | 2026-10-26 | pending |
+| 136 | card_context_2026_10_26 | a rotation player who sat the club's last game treated as out (card_factors.ROTATION_*, AVAILABILITY_*) raises the return of the card's team selections against the card-time price | discovery | higher | — | 2024, 2025, 2026 | 2026-10-26 | pending |
+| 137 | card_context_2026_10_26 | blending a published adjusted-efficiency table at card_factors.BLEND_WEIGHT raises the return of the card's team selections against the card-time price (forward ledger only; the table has no archive) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-26 | pending |
 
 ## 7 quantities declared descriptive-only
 
