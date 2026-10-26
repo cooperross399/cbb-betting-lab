@@ -512,3 +512,57 @@ def evidence_checksum(*paths: Path) -> str:
             digest.update(b"<absent>")
         digest.update(b"\0")
     return digest.hexdigest()
+
+
+def pinned_evidence(manual_dir: Path | None = None) -> dict[str, list[str]]:
+    """Evidence files a receipt pins by checksum, as they stand on disk.
+
+    Repository-relative evidence path -> the receipts (file names) whose cited
+    sha256 matches the file's bytes right now. Read from the receipts, never
+    listed: a pin is a human's signature over a specific render, and nothing
+    in this module can lift it. `superseded/` is not read, as `load` does not
+    read it — a withdrawn receipt is a record, not a pin.
+
+    **Why a reader needs this.** `tests/test_no_report_states_a_stale_correction.py`
+    re-renders every generated report at the experiment ledger's cumulative
+    count, and the receipts of 2026-09-23 and 2026-09-28 cite
+    `data/outputs/cbb_price_backtest.md` by checksum. The first hypothesis
+    registered after those signatures (2026-10-26) put the two gates in
+    conflict: re-render the report and every receipt fails, so the allowlist
+    collapses to nothing; leave it and it states the correction it was signed
+    under. The receipt wins, because it is the human's decision and this lab
+    may not re-sign it — and the stale-correction gate then holds the pinned
+    report to two conditions instead of one: it is byte for byte the render
+    at its record's own count, and no verdict in it differs from the render
+    at the ledger's count. The day a verdict would move, the pin is stale
+    evidence and the suite is red until Cooper re-reads and re-signs.
+    """
+    root = repository_root(manual_dir)
+    pins: dict[str, list[str]] = {}
+    directory = receipts_dir(manual_dir)
+    if not directory.is_dir():
+        return pins
+    for path in sorted(directory.glob("*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        evidence_path, cited = _evidence_of(payload)
+        if not evidence_path or not cited:
+            continue
+        record = Path(evidence_path)
+        if not record.is_absolute():
+            record = root / record
+        if not record.is_file():
+            continue
+        actual = hashlib.sha256(record.read_bytes()).hexdigest()
+        if actual.casefold() != cited.strip().casefold():
+            continue
+        try:
+            relative = record.resolve().relative_to(root.resolve()).as_posix()
+        except ValueError:
+            relative = str(record)
+        pins.setdefault(relative, []).append(path.name)
+    return pins

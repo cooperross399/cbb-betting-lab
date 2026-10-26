@@ -47,6 +47,7 @@ from pathlib import Path
 import pytest
 
 from cbb_betting_lab import restatement as RESTATEMENT
+from cbb_betting_lab import staging_provider_policy as SPP
 from cbb_betting_lab import stats as S
 from cbb_betting_lab.competitions import CBB
 from cbb_betting_lab.experiment_ledger import load as load_ledger
@@ -450,6 +451,82 @@ def _generated_documents() -> list[Path]:
 #:
 #: A document that legitimately stops carrying a correction is removed from
 #: here in the same commit, which is a line in a diff somebody has to justify.
+#: The generated reports and the record each renders, as the byte-equality
+#: check below walks them. Named once here, because the receipt-pin handling
+#: needs the same mapping and two copies of one list is the shape that drifts.
+RENDERED_REPORTS: tuple[tuple[str, str, str], ...] = (
+    ("cbb_price_backtest.json", "cbb_price_backtest.md", "price_backtest"),
+    (
+        "core_team_only/cbb_price_backtest.json",
+        "core_team_only/cbb_price_backtest.md",
+        "price_backtest",
+    ),
+    (
+        "holdout/cbb_price_backtest.json",
+        "holdout/cbb_price_backtest.md",
+        "price_backtest",
+    ),
+    (
+        "holdout/cbb_replication.json",
+        "holdout/cbb_replication.md",
+        "replication",
+    ),
+    ("cbb_forecast_skill.json", "cbb_forecast_skill.md", "forecast_skill"),
+    # Added 2026-09-07 with the grading commit. Its record carries a second
+    # derived layer the others do not — the headline comparison and the
+    # answered-hypothesis table are functions of several cells at once — so
+    # a re-render that moved only the stored intervals would leave both
+    # stale on the page beside fresh bounds. `prop_grading.restated`
+    # re-derives them, and this is the gate that says so.
+    ("cbb_prop_grading.json", "cbb_prop_grading.md", "prop_grading"),
+)
+
+#: The fields of an interval cell that carry a judgement rather than a bound.
+#: A receipt-pinned report may lag the ledger in its bounds; it may not lag in
+#: any of these.
+VERDICT_FIELDS = ("verdict", "survives_correction", "enough_evidence", "claims")
+
+
+def receipt_pins() -> dict[str, list[str]]:
+    """Repository-relative report path -> the receipts whose cited sha256
+    matches its bytes on disk. Read through the policy module, which is the
+    one reader of the receipts, so this guard and the card agree on what a
+    receipt pins."""
+    return SPP.pinned_evidence(REPO / "data" / "manual")
+
+
+def _pinned_render(relative: str):
+    """`(record_name, module, pinned_looks)` for a receipt-pinned report on
+    the roster, or None when no receipt pins it.
+
+    **A receipt pins a report at the render the human read, and this lab may
+    not re-sign it.** The receipts of 2026-09-23 and 2026-09-28 cite
+    `data/outputs/cbb_price_backtest.md` by checksum, and the first hypothesis
+    registered after them (2026-10-26) put this module's gates and the policy
+    gate in direct conflict: re-render the report and all 35 receipts fail,
+    which collapses the allowlist to nothing; leave it and it states the
+    correction it was signed under. The receipt wins, because it is Cooper's
+    decision. So a pinned report is held to two conditions instead of one:
+    it is byte for byte the render at its own record's count, and no
+    judgement in it differs from the render at the ledger's count — see
+    `test_the_committed_report_is_the_record_rendered_at_todays_count`. The
+    day a verdict would move, the pin is stale evidence and the suite is red
+    until Cooper re-reads and re-signs.
+    """
+    pins = receipt_pins().get(relative)
+    if not pins:
+        return None
+    for record_name, report_name, module in RENDERED_REPORTS:
+        if f"data/outputs/{report_name}" == relative:
+            record = json.loads((OUTPUTS / record_name).read_text(encoding="utf-8"))
+            return record_name, module, int(record.get("looks", 1) or 1)
+    raise AssertionError(
+        f"{relative} is pinned by receipts {pins} and is not a report this "
+        "module can re-render at its record's count, so nothing can check that "
+        "its verdicts still hold. A receipt may cite a generated report only."
+    )
+
+
 DOCUMENTS_THAT_STATE_A_CORRECTION: tuple[str, ...] = (
     "data/outputs/cbb_experiment_ledger.md",
     "data/outputs/cbb_forecast_skill.md",
@@ -503,12 +580,23 @@ def test_each_document_on_the_roster_states_the_ledgers_current_count(relative):
         "ledger it cannot read. Re-render it beside the ledger, or add the new "
         "phrasing to CORRECTION_SENTENCES if the wording changed."
     )
+    pinned = _pinned_render(relative)
+    if pinned is not None:
+        # Held at the render the receipts cite. The byte-equality and
+        # verdict-stability checks on it are in
+        # test_the_committed_report_is_the_record_rendered_at_todays_count.
+        _record, _module, looks = pinned
     for value in stated:
         assert int(value.replace(",", "")) == looks, (
-            f"{relative} states its correction over {value} hypotheses and the "
-            f"experiment ledger holds {looks:,}. Re-render it: a verdict stated "
-            "at a narrower correction than the search that produced it is the "
-            "defect decision 46 closed."
+            f"{relative} states its correction over {value} hypotheses and "
+            + (
+                f"the receipts that pin it were signed at {looks:,}. The pinned "
+                "report must be exactly the render Cooper's receipts cite."
+                if pinned is not None
+                else f"the experiment ledger holds {looks:,}. Re-render it: a "
+                "verdict stated at a narrower correction than the search that "
+                "produced it is the defect decision 46 closed."
+            )
         )
 
 
@@ -537,40 +625,23 @@ def test_the_roster_names_every_document_that_states_a_correction():
     )
 
 
-@pytest.mark.parametrize(
-    "record_name,report_name,module",
-    [
-        ("cbb_price_backtest.json", "cbb_price_backtest.md", "price_backtest"),
-        (
-            "core_team_only/cbb_price_backtest.json",
-            "core_team_only/cbb_price_backtest.md",
-            "price_backtest",
-        ),
-        (
-            "holdout/cbb_price_backtest.json",
-            "holdout/cbb_price_backtest.md",
-            "price_backtest",
-        ),
-        (
-            "holdout/cbb_replication.json",
-            "holdout/cbb_replication.md",
-            "replication",
-        ),
-        ("cbb_forecast_skill.json", "cbb_forecast_skill.md", "forecast_skill"),
-        # Added 2026-09-07 with the grading commit. Its record carries a second
-        # derived layer the others do not — the headline comparison and the
-        # answered-hypothesis table are functions of several cells at once — so
-        # a re-render that moved only the stored intervals would leave both
-        # stale on the page beside fresh bounds. `prop_grading.restated`
-        # re-derives them, and this is the gate that says so.
-        ("cbb_prop_grading.json", "cbb_prop_grading.md", "prop_grading"),
-    ],
-)
+@pytest.mark.parametrize("record_name,report_name,module", RENDERED_REPORTS)
 def test_the_committed_report_is_the_record_rendered_at_todays_count(
     record_name, report_name, module
 ):
     """The gate that fails the day a hypothesis is registered and nothing is
-    re-rendered — which is the day the reports used to quietly go stale."""
+    re-rendered — which is the day the reports used to quietly go stale.
+
+    **A report a receipt pins is the one exception, and it is held to more,
+    not less.** It must be byte for byte the render at its own record's count
+    (the render Cooper's receipts cite), AND every judgement in it — verdict,
+    survives-correction, enough-evidence, claims — must be what the render at
+    the ledger's count would say. A wider correction can only retract, so the
+    second condition can only ever fail by a verdict disappearing: the moment
+    that happens the signed evidence no longer supports its own verdicts, the
+    receipts are stale, and nothing here may edit them. `_pinned_render` has
+    the history.
+    """
     renderer = {
         "price_backtest": PB,
         "replication": REPL,
@@ -587,18 +658,82 @@ def test_the_committed_report_is_the_record_rendered_at_todays_count(
             source=str(LEDGER),
         ),
     )
-    expected = renderer.render(
-        renderer.restated(
-            record,
-            looks=looks,
-            record_name=Path(record_name).name,
+    today = renderer.restated(
+        copy.deepcopy(record), looks=looks, record_name=Path(record_name).name
+    )
+    committed = (OUTPUTS / report_name).read_text(encoding="utf-8")
+    pinned = _pinned_render(f"data/outputs/{report_name}")
+    if pinned is None:
+        assert committed == renderer.render(today), (
+            f"data/outputs/{report_name} is not what data/outputs/{record_name} "
+            f"renders to at the ledger's {ledger_looks():,} hypotheses. Re-render "
+            "it with --rebuild-report-only; it costs no store and no credit."
         )
+        return
+    _record, _module, pinned_looks = pinned
+    pins = receipt_pins()[f"data/outputs/{report_name}"]
+    at_pin = renderer.restated(
+        copy.deepcopy(record), looks=pinned_looks, record_name=Path(record_name).name
     )
-    assert (OUTPUTS / report_name).read_text(encoding="utf-8") == expected, (
-        f"data/outputs/{report_name} is not what data/outputs/{record_name} "
-        f"renders to at the ledger's {ledger_looks():,} hypotheses. Re-render "
-        "it with --rebuild-report-only; it costs no store and no credit."
+    assert committed == renderer.render(at_pin), (
+        f"data/outputs/{report_name} is pinned by {len(pins)} receipt(s) and is "
+        f"not the render of data/outputs/{record_name} at the {pinned_looks:,} "
+        "hypotheses the record was scored under. A pinned report is exactly "
+        "the render the receipts cite, or the receipts are not a pin."
     )
+    moved = []
+    for (where, was), (_where, now) in zip(_cells(at_pin), _cells(today)):
+        for key in VERDICT_FIELDS:
+            if was.get(key) != now.get(key):
+                moved.append(f"{where}.{key}: {was.get(key)!r} -> {now.get(key)!r}")
+    assert not moved, (
+        f"data/outputs/{report_name} is pinned by {len(pins)} receipt(s) at "
+        f"{pinned_looks:,} hypotheses, and at the ledger's {ledger_looks():,} "
+        f"these judgements would differ: {moved[:6]}. The signed evidence no "
+        "longer supports its own verdicts. Nothing in this repository may "
+        "re-sign a receipt: Cooper re-reads the current render and signs "
+        "again, or withdraws the markets. Until then this stays red."
+    )
+
+
+CENSUS_BEGIN = "<!-- BEGIN GENERATED: record_census -->"
+CENSUS_END = "<!-- END GENERATED -->"
+
+
+@pytest.mark.parametrize("name", ["CLAUDE.md", "docs/project_status.md"])
+def test_every_receipt_pin_is_named_in_the_census(name):
+    """A report held behind the ledger is held in the open.
+
+    The record census is the generated block that says what each record was
+    scored under. A report a receipt pins lags the ledger by design, so the
+    census must name it, say which count it is held at, and say whether its
+    judgements still hold — in both documents that carry the block. Both
+    directions: a census naming a pin no receipt makes is as wrong as one that
+    hides a pin.
+    """
+    text = (REPO / name).read_text(encoding="utf-8")
+    start = text.index(CENSUS_BEGIN)
+    fence = text[start : text.index(CENSUS_END, start)]
+    pins = {
+        relative for relative in receipt_pins() if relative.startswith("data/outputs/")
+    }
+    named = set(re.findall(r"\*\*`([^`]+)` is held at the render", fence))
+    assert named == pins, (
+        f"{name}'s record census names {sorted(named)} as receipt-pinned and the "
+        f"receipts on disk pin {sorted(pins)}. Re-run "
+        "scripts/splice_headline_table.py."
+    )
+    for relative in pins:
+        _record, _module, pinned_looks = _pinned_render(relative)
+        assert f"scored under {pinned_looks} looks" in fence, (
+            f"{name}'s census names {relative} as pinned but not at the "
+            f"{pinned_looks} looks its record holds"
+        )
+        assert "judgements are what the ledger's count gives" in fence, (
+            f"{name}'s census says a judgement in {relative} would differ at the "
+            "ledger's count. The byte-equality test above is the one that fails "
+            "for it; this is the page saying the same thing."
+        )
 
 
 def test_the_ratings_fit_report_is_current_too():

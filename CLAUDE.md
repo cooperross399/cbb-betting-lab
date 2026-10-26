@@ -61,7 +61,13 @@ read it.
 
 ## Current operating state
 
-**No market is allowlisted, nothing is bet, and that is the correct state.**
+**Thirty-five markets are allowlisted under receipts Cooper signed (2026-09-23)
+or had executed on his written instruction (2026-09-28); nothing is bet; no
+market has a demonstrated edge.** Each receipt records an owner's decision to
+run the market forward and accumulate a live record, not a finding, and each
+cites `data/outputs/cbb_price_backtest.md` by checksum (the census block below
+says what that pins). This heading said *"No market is allowlisted"* between
+2026-09-18 and 2026-10-26, a month after it stopped being true.
 The history HAS been measured, and the measurement is the finding: this heading
 said *"As of 2026-09-01. Nothing has been measured yet"* until 2026-09-18,
 against this file's own generated headline a hundred lines below it and against
@@ -279,10 +285,12 @@ done, and names the file and the number it is waiting for.
 | `cbb_price_backtest.json` | 133 | x1.8145 |
 | `cbb_prop_grading.json` | 133 | x1.8145 |
 | `cbb_ratings_fit.json` | 130 | x1.8115 |
-| `cbb_reachability.json` | 133 | x1.8145 |
+| `cbb_reachability.json` | 137 | x1.8185 |
 | `core_team_only/cbb_price_backtest.json` | 130 | x1.8115 |
 | `holdout/cbb_price_backtest.json` | 130 | x1.8115 |
 | `holdout/cbb_replication.json` | 133 | x1.8145 |
+
+**`data/outputs/cbb_price_backtest.md` is held at the render 35 human acceptance receipt(s) cite** (scored under 133 looks, x1.8145): the receipts pin it by checksum, this lab may not re-sign them, and so it is the one generated report not re-rendered when the ledger grows. Restated at the ledger's count, all 208 of its judgements are what the ledger's count gives; the gap is interval width only. Lifting the pin is Cooper's: re-read the current render and sign again.
 
 **The populations those verdicts are measured on.**
 
@@ -766,9 +774,10 @@ reproduction of the NHL lab's 9-12 pp in a different sport.
   referee identity never enters a pre-game model. Post-game coverage is
   excellent (97.7% of games, stable ids, back to 2016) and is a *descriptive*
   instrument only.
-- **No market is allowlisted.** `withdraw()` exists in
-  `staging_provider_policy.py` and `grant()` does not — Claude may take a market
-  away from the card and may never give it one.
+- **Allowlisting is a receipt, never a finding.** Thirty-five markets are
+  allowlisted under Cooper's receipts of 2026-09-23 and 2026-09-28;
+  `withdraw()` exists in `staging_provider_policy.py` and `grant()` does not —
+  Claude may take a market away from the card and may never give it one.
 
 ### Defects found by disbelieving a number
 
@@ -842,11 +851,34 @@ none of it has been measured against prices: the four layers are registered
 in the experiment ledger (`card_context_2026_10_26`; the ledger's count
 and every record's own factor are in the census block above), and the
 measurement lands where every other hypothesis's does, judged at the
-ledger's count on the day it is read. The hard rules stand — nothing is
-allowlisted, the card still produces no selection, and these layers change
-only what the frozen opinions say. The first Actions run after this merges
-verifies the fetch, which the development container cannot reach;
-"Second opinion: N team(s) read" in the Gameday Refresh log is the check.
+ledger's count on the day it is read. The hard rules stand: nothing here
+grants or withdraws a market (the thirty-five allowlisted under Cooper's
+receipts stay allowlisted, and the card may select from them as before),
+and these layers change what the card prices, not what it may pick from.
+The first Actions run after this merges verifies the fetch, which the
+development container cannot reach; "Second opinion: N team(s) read" in
+the Gameday Refresh log is the check.
+
+**Registering the four hypotheses put two of this lab's own gates in
+conflict, and the receipt won (decision 64).** The stale-correction gate
+re-renders every generated report at the ledger's count; every one of
+Cooper's thirty-five receipts cites `data/outputs/cbb_price_backtest.md` by
+sha256. Re-rendering that one file broke all thirty-five, the loader
+collapsed the allowlist to nothing, and the claims documents regenerated
+saying no market was allowlisted — which is how it was found. The report is
+held at the render the receipts cite, because the signature is Cooper's and
+this lab may not re-sign it; the census block above names it, with the
+count it is held at, and `tests/test_no_report_states_a_stale_correction.py`
+holds a pinned report to a stricter pair of conditions than the rest: byte
+for byte the render at its record's own count, and not one judgement in it
+differs from the render at the ledger's count (today: none of 208 does;
+the gap is interval width only). The day a verdict would move, the pin is
+stale evidence and the suite is red until Cooper re-reads and re-signs, or
+withdraws. Every other generated report was re-rendered at the new count.
+`staging_provider_policy.pinned_evidence` is the one reader of what a
+receipt pins. Still owner items: `cbb_reachability.md`'s "What this report
+cannot say" still says no market is allowlisted, a sentence typed into
+`reachability.py` rather than read from the policy.
 
 ## Contract strings — never change these
 

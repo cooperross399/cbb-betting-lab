@@ -1,6 +1,6 @@
 # NCAA Division I men's basketball — reachability
 
-Generated 2026-09-17T16:49:17+00:00.
+Generated 2026-10-26T22:35:41+00:00.
 
 **A soft number you cannot bet is not an edge.** This report does not ask whether a price would have won; `price_backtest.py` asks that. It asks whether the price was still on the board when a human reached for it, and it reports the return of the prices that survived apart from the return of the prices that did not.
 
