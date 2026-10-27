@@ -270,6 +270,7 @@ class Component extends DCLogic {
       "A band whose bar is red is one where the share we saw sits outside the range the sample can support for the chance we published.",
       "Overtime counts as the game's result. A tie after regulation cannot happen, so pushes arise only on spreads and totals.",
       "Nothing on this page is a return. Returns, by market and tier, are on All results.",
+      "Measured against real prices, per tier, no market shows a demonstrated edge. This page checks whether the chances are honest, not whether they pay.",
     ]);
     return { ...base, ready: true, empty: false, throughLine: d.through ? `through ${d.through}` : "", headline, buckets: (d.buckets || []).map(row), tiers, brier, brierVerdict, lineMarkets, movement, notes };
   }
