@@ -1,0 +1,66 @@
+name: Design Drop Intake
+
+# Claude Design hands a drop over as a zip at a public URL that the cloud
+# sandbox cannot reach. Dispatched with that URL, this downloads it on a
+# GitHub runner and prints the lab's own page files from it, and nothing
+# else, into its log for a Claude Code session to open as a pull request
+# and merge on green. It writes nothing to the repository. Only the five CBB-owned pages are
+# taken; every shared page is pinned by web/shared.lock.json and is never in
+# a drop. It fetches no odds, spends no credit, edits no policy and places no
+# bet.
+
+on:
+  workflow_dispatch:
+    inputs:
+      zip_url:
+        description: Public URL of the Claude Design drop (a zip)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: design-drop-intake
+  cancel-in-progress: false
+
+jobs:
+  intake:
+    name: Print a drop's pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ZIP_URL: ${{ inputs.zip_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Unpack the drop's pages
+        run: |
+          zip="$RUNNER_TEMP/drop.zip"
+          curl -fsSL --max-filesize 52428800 --retry 3 -o "$zip" "$ZIP_URL"
+          sha256sum "$zip"
+          python3 -I - "$zip" <<'PY'
+          import sys, zipfile, pathlib
+          PAGES = {"Season.dc.html", "Record.dc.html", "Tracker.dc.html",
+                   "Methods.dc.html", "Game.dc.html"}
+          with zipfile.ZipFile(sys.argv[1]) as z:
+              for info in z.infolist():
+                  name = pathlib.PurePosixPath(info.filename).name
+                  if info.is_dir():
+                      continue
+                  if name in PAGES:
+                      pathlib.Path("web", name).write_bytes(z.read(info))
+                      print("took", info.filename)
+                  else:
+                      print("skipped", info.filename)
+          PY
+          git status --short web
+          # The pages reach the Claude Code session through this log, because
+          # this workflow may not push: each changed page is printed between
+          # markers, base64 encoded, and the session rebuilds it from them.
+          for f in $(git status --porcelain web | awk '{print $2}'); do
+            echo "=== BEGIN $f $(sha256sum "$f" | cut -c1-64)"
+            base64 -w 0 "$f"; echo
+            echo "=== END $f"
+          done
