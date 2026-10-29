@@ -6327,3 +6327,389 @@ captured_at,slate_date,event_id,commence_time,home_team,away_team,market,segment
 2026-10-29T18:13:35+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,away,4.5,fanduel,-110.0
 2026-10-29T18:13:35+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,over,150.5,fanduel,-110.0
 2026-10-29T18:13:35+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,under,150.5,fanduel,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,home,,draftkings,245.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,away,,draftkings,-305.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,home,7.5,draftkings,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,away,-7.5,draftkings,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,over,148.5,draftkings,-112.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,under,148.5,draftkings,-108.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,home,,williamhill_us,260.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,away,,williamhill_us,-335.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,home,7.5,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,away,-7.5,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,over,147.0,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,under,147.0,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,home,7.5,betonlineag,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,away,-7.5,betonlineag,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,over,147.0,betonlineag,-105.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,under,147.0,betonlineag,-115.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,home,7.5,lowvig,-106.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,away,-7.5,lowvig,-106.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,over,147.0,lowvig,-103.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,under,147.0,lowvig,-113.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,home,,fanatics,250.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,away,,fanatics,-320.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,home,7.5,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,away,-7.5,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,over,148.0,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,under,148.0,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,home,,betparx,245.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,away,,betparx,-335.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,home,7.5,betparx,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,away,-7.5,betparx,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,over,148.5,betparx,-112.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,under,148.5,betparx,-109.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,home,,betrivers,245.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,away,,betrivers,-335.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,home,7.5,betrivers,-112.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,away,-7.5,betrivers,-112.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,over,148.5,betrivers,-113.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,under,148.5,betrivers,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,home,,ballybet,245.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,away,,ballybet,-335.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,home,7.5,ballybet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,away,-7.5,ballybet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,over,148.5,ballybet,-112.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,under,148.5,ballybet,-109.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,home,,hardrockbet,250.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,away,,hardrockbet,-325.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,home,7.5,hardrockbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,away,-7.5,hardrockbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,over,148.5,hardrockbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,under,148.5,hardrockbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,home,,espnbet,250.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,away,,espnbet,-300.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,home,7.5,espnbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,away,-7.5,espnbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,over,148.5,espnbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,under,148.5,espnbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,home,,fanduel,250.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,moneyline,game,,away,,fanduel,-315.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,home,7.5,fanduel,-115.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,spread,game,,away,-7.5,fanduel,-105.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,over,147.5,fanduel,-115.0
+2026-10-29T22:42:04+00:00,2026-11-01,5bee3fb00be225402b2d2d7842398207,2026-11-01T14:30:00Z,Notre Dame Fighting Irish,Villanova Wildcats,total_points,game,,under,147.5,fanduel,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,away,,draftkings,-325.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,home,,draftkings,260.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,away,-7.5,draftkings,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,home,7.5,draftkings,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,over,154.5,draftkings,-112.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,under,154.5,draftkings,-108.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,away,,williamhill_us,-355.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,home,,williamhill_us,278.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,away,-8.0,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,home,8.0,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,over,153.5,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,under,153.5,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,away,,fanatics,-350.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,home,,fanatics,275.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,away,-7.5,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,home,7.5,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,over,154.5,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,under,154.5,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,away,,betparx,-335.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,home,,betparx,250.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,away,-7.5,betparx,-107.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,home,7.5,betparx,-114.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,over,154.5,betparx,-114.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,under,154.5,betparx,-107.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,away,,betrivers,-335.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,home,,betrivers,250.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,away,-7.5,betrivers,-108.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,home,7.5,betrivers,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,over,154.5,betrivers,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,under,154.5,betrivers,-108.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,away,,ballybet,-335.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,home,,ballybet,250.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,away,-7.5,ballybet,-107.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,home,7.5,ballybet,-114.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,over,154.5,ballybet,-114.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,under,154.5,ballybet,-107.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,away,,hardrockbet,-325.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,home,,hardrockbet,250.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,away,-7.5,hardrockbet,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,home,7.5,hardrockbet,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,over,154.5,hardrockbet,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,under,154.5,hardrockbet,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,away,,espnbet,-340.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,home,,espnbet,270.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,away,-7.5,espnbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,home,7.5,espnbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,over,154.5,espnbet,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,under,154.5,espnbet,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,away,,fanduel,-360.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,moneyline,game,,home,,fanduel,280.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,away,-8.5,fanduel,-102.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,spread,game,,home,8.5,fanduel,-120.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,over,155.5,fanduel,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,d961840cf470389306fa79cf82f5d46c,2026-11-02T07:00:00Z,Liberty Flames,High Point Panthers,total_points,game,,under,155.5,fanduel,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,away,,draftkings,-218.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,home,,draftkings,180.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,away,-5.5,draftkings,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,home,5.5,draftkings,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,over,160.5,draftkings,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,under,160.5,draftkings,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,away,,williamhill_us,-225.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,home,,williamhill_us,185.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,away,-5.0,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,home,5.0,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,over,160.0,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,under,160.0,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,away,,fanatics,-235.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,home,,fanatics,190.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,away,-6.0,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,home,6.0,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,over,159.5,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,under,159.5,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,away,,betparx,-230.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,home,,betparx,185.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,away,-5.5,betparx,-117.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,home,5.5,betparx,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,over,159.5,betparx,-108.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,under,159.5,betparx,-113.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,away,,betrivers,-235.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,home,,betrivers,185.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,away,-5.5,betrivers,-118.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,home,5.5,betrivers,-106.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,over,159.5,betrivers,-109.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,under,159.5,betrivers,-114.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,away,,ballybet,-230.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,home,,ballybet,185.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,away,-5.5,ballybet,-117.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,home,5.5,ballybet,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,over,159.5,ballybet,-108.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,under,159.5,ballybet,-113.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,away,,hardrockbet,-225.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,home,,hardrockbet,185.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,away,-5.5,hardrockbet,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,home,5.5,hardrockbet,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,over,159.5,hardrockbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,under,159.5,hardrockbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,away,,espnbet,-215.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,home,,espnbet,180.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,away,-5.5,espnbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,home,5.5,espnbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,over,159.5,espnbet,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,under,159.5,espnbet,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,away,,fanduel,-220.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,moneyline,game,,home,,fanduel,180.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,away,-5.5,fanduel,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,spread,game,,home,5.5,fanduel,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,over,159.5,fanduel,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,112a0b847e8a6f5f1cd2664986697d60,2026-11-02T23:00:00Z,Miami Hurricanes,Florida Gators,total_points,game,,under,159.5,fanduel,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,home,,draftkings,-850.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,away,,draftkings,575.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,home,-13.5,draftkings,-102.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,away,13.5,draftkings,-118.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,over,155.5,draftkings,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,under,155.5,draftkings,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,home,,williamhill_us,-1000.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,away,,williamhill_us,650.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,home,-13.0,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,away,13.0,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,over,154.0,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,under,154.0,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,home,,fanatics,-1000.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,away,,fanatics,650.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,home,-13.5,fanatics,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,away,13.5,fanatics,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,over,155.0,fanatics,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,under,155.0,fanatics,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,home,,betparx,-910.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,away,,betparx,575.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,home,-13.5,betparx,-107.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,away,13.5,betparx,-114.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,over,154.5,betparx,-108.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,under,154.5,betparx,-113.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,home,,betrivers,-910.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,away,,betrivers,480.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,home,-13.5,betrivers,-108.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,away,13.5,betrivers,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,over,154.5,betrivers,-109.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,under,154.5,betrivers,-114.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,home,,ballybet,-910.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,away,,ballybet,575.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,home,-13.5,ballybet,-107.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,away,13.5,ballybet,-114.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,over,154.5,ballybet,-108.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,under,154.5,ballybet,-113.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,home,,hardrockbet,-900.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,away,,hardrockbet,575.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,home,-13.5,hardrockbet,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,away,13.5,hardrockbet,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,over,154.5,hardrockbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,under,154.5,hardrockbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,home,,espnbet,-1200.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,away,,espnbet,700.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,home,-13.5,espnbet,100.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,away,13.5,espnbet,-120.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,over,155.5,espnbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,under,155.5,espnbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,home,,fanduel,-1200.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,moneyline,game,,away,,fanduel,720.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,home,-13.5,fanduel,-106.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,spread,game,,away,13.5,fanduel,-114.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,over,156.5,fanduel,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,509ce59dbf5e07bb4acf73cd8ecc4d3b,2026-11-02T23:00:00Z,Iowa State Cyclones,Memphis Tigers,total_points,game,,under,156.5,fanduel,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,home,,draftkings,-205.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,away,,draftkings,170.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,home,-4.5,draftkings,-108.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,away,4.5,draftkings,-112.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,over,155.5,draftkings,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,under,155.5,draftkings,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,home,,williamhill_us,-225.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,away,,williamhill_us,185.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,home,-5.0,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,away,5.0,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,over,154.5,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,under,154.5,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,home,,fanatics,-200.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,away,,fanatics,165.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,home,-4.0,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,away,4.0,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,over,155.5,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,under,155.5,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,home,,betparx,-200.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,away,,betparx,163.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,home,-4.5,betparx,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,away,4.5,betparx,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,over,155.5,betparx,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,under,155.5,betparx,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,home,,betrivers,-200.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,away,,betrivers,160.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,home,-4.5,betrivers,-112.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,away,4.5,betrivers,-112.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,over,155.5,betrivers,-112.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,under,155.5,betrivers,-112.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,home,,ballybet,-200.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,away,,ballybet,163.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,home,-4.5,ballybet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,away,4.5,ballybet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,over,155.5,ballybet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,under,155.5,ballybet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,home,,hardrockbet,-200.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,away,,hardrockbet,165.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,home,-4.5,hardrockbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,away,4.5,hardrockbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,over,155.5,hardrockbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,under,155.5,hardrockbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,home,,espnbet,-190.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,away,,espnbet,160.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,home,-4.5,espnbet,100.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,away,4.5,espnbet,-120.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,over,155.5,espnbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,under,155.5,espnbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,home,,fanduel,-210.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,moneyline,game,,away,,fanduel,172.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,home,-4.5,fanduel,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,spread,game,,away,4.5,fanduel,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,over,155.5,fanduel,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,104fd9502f231c9207ee53d73289d028,2026-11-03T00:30:00Z,Gonzaga Bulldogs,Purdue Boilermakers,total_points,game,,under,155.5,fanduel,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,home,,draftkings,-142.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,away,,draftkings,120.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,home,-2.5,draftkings,-102.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,away,2.5,draftkings,-118.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,over,159.5,draftkings,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,under,159.5,draftkings,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,home,,williamhill_us,-145.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,away,,williamhill_us,122.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,home,-2.5,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,away,2.5,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,over,160.0,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,under,160.0,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,home,,fanatics,-140.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,away,,fanatics,115.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,home,-2.0,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,away,2.0,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,over,160.0,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,under,160.0,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,home,,betparx,-137.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,away,,betparx,114.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,home,-2.5,betparx,-103.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,away,2.5,betparx,-120.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,over,160.5,betparx,-107.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,under,160.5,betparx,-114.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,home,,betrivers,-139.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,away,,betrivers,112.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,home,-2.5,betrivers,-104.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,away,2.5,betrivers,-121.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,over,160.5,betrivers,-108.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,under,160.5,betrivers,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,home,,ballybet,-137.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,away,,ballybet,114.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,home,-2.5,ballybet,-103.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,away,2.5,ballybet,-120.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,over,160.5,ballybet,-107.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,under,160.5,ballybet,-114.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,home,,hardrockbet,-135.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,away,,hardrockbet,115.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,home,-2.5,hardrockbet,100.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,away,2.5,hardrockbet,-120.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,over,160.5,hardrockbet,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,under,160.5,hardrockbet,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,home,,espnbet,-135.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,away,,espnbet,115.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,home,-2.5,espnbet,100.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,away,2.5,espnbet,-120.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,over,160.5,espnbet,-105.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,under,160.5,espnbet,-115.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,home,,fanduel,-146.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,moneyline,game,,away,,fanduel,122.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,home,-2.5,fanduel,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,spread,game,,away,2.5,fanduel,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,over,160.5,fanduel,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,cf863e45a3252d509e366d465e7be8c9,2026-11-03T01:00:00Z,BYU Cougars,Ohio State Buckeyes,total_points,game,,under,160.5,fanduel,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,home,,draftkings,-218.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,away,,draftkings,180.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,home,-4.5,draftkings,-118.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,away,4.5,draftkings,-102.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,over,150.5,draftkings,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,under,150.5,draftkings,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,home,,williamhill_us,-205.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,away,,williamhill_us,170.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,home,-4.5,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,away,4.5,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,over,150.5,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,under,150.5,williamhill_us,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,home,,fanatics,-220.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,away,,fanatics,180.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,home,-5.0,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,away,5.0,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,over,150.5,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,under,150.5,fanatics,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,home,,betparx,-220.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,away,,betparx,175.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,home,-4.5,betparx,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,away,4.5,betparx,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,over,150.5,betparx,-112.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,under,150.5,betparx,-108.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,home,,betrivers,-220.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,away,,betrivers,175.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,home,-4.5,betrivers,-112.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,away,4.5,betrivers,-112.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,over,150.5,betrivers,-113.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,under,150.5,betrivers,-109.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,home,,ballybet,-220.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,away,,ballybet,175.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,home,-4.5,ballybet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,away,4.5,ballybet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,over,150.5,ballybet,-112.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,under,150.5,ballybet,-108.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,home,,hardrockbet,-220.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,away,,hardrockbet,175.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,home,-4.5,hardrockbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,away,4.5,hardrockbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,over,150.5,hardrockbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,under,150.5,hardrockbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,home,,espnbet,-215.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,away,,espnbet,180.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,home,-4.5,espnbet,-120.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,away,4.5,espnbet,100.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,over,150.5,espnbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,under,150.5,espnbet,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,home,,fanduel,-196.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,moneyline,game,,away,,fanduel,162.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,home,-4.5,fanduel,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,spread,game,,away,4.5,fanduel,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,over,150.5,fanduel,-110.0
+2026-10-29T22:42:04+00:00,2026-11-02,0f97cebc3f20e441be9633bb8ecccc4f,2026-11-03T03:00:00Z,Arizona Wildcats,UCLA Bruins,total_points,game,,under,150.5,fanduel,-110.0
