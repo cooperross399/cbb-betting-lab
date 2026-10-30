@@ -188,3 +188,27 @@ def test_the_script_writes_an_audit_the_card_reads(lab, frames, monkeypatch):
     assert all(day < "2026-03-14" for day in record["window"]["days"])
     switches, _, _ = CF.load_layer_audit(lab / "data" / "raw", day="2026-03-14")
     assert switches == record["switches"]
+
+
+def test_the_strict_lineup_reading_replaces_the_single_game_one_rather_than_stacking(lab, frames):
+    _write_audit(lab, DAY, {"lineup": True, "lineup_strict": True})
+    for game in (m for m in _priced(lab, frames).values() if m.priceable):
+        strict = game.context["lineup_strict"]
+        single = game.context["lineup"]
+        keys = [layer["key"] for layer in game.layers]
+        assert keys[-1] == "lineup_strict"
+        before = game.layers[keys.index("second_opinion")]
+        after = game.layers[-1]
+        # The single-game factor is undone and the strict one applied in its place.
+        assert after["home"] == pytest.approx(before["home"] * strict["home_factor"] / single["home_factor"])
+        assert after["away"] == pytest.approx(before["away"] * strict["away_factor"] / single["away_factor"])
+
+
+def test_the_audit_reprices_against_the_declared_card_not_its_own_earlier_verdict(lab, frames):
+    _write_audit(lab, DAY, {"form": False})
+    CF.READ_LAYER_AUDIT = False
+    try:
+        for game in (m for m in _priced(lab, frames).values() if m.priceable):
+            assert game.context["switches"] == CF.default_switches()
+    finally:
+        CF.READ_LAYER_AUDIT = True

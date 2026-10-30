@@ -7,9 +7,9 @@
 - Store: `/Users/cooperross/Projects/cbb-betting-lab/data/processed/cbb_historical_prices__card.csv`, 977,613,435 bytes, sha256 `143d7d307d9bc3b21989d7857aac6a52f8abd010da2c1e0ea2df8c0f0b82b78b`
 - Season: 2024; snapshot window `card`
 - Subject fold for the athlete clustering: `stores.normalise_subject (casefold)`
-- Family correction: 139 cumulative hypotheses (x1.8204), read from the experiment ledger at render time
+- Family correction: 140 cumulative hypotheses (x1.8214), read from the experiment ledger at render time
 
-**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 133 cumulative hypotheses (x1.8145), and `cbb_prop_grading.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 139 hypotheses (x1.8204), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
+**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 133 cumulative hypotheses (x1.8145), and `cbb_prop_grading.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 140 hypotheses (x1.8214), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
 
 ## What is compared against what
 
@@ -84,12 +84,12 @@ Probabilities are clipped into [1e-06, 0.999999] before any log is taken, becaus
 
 | Comparison | Advantage (baseline − model log loss) | 95% interval | Family-corrected | Wagers | Clusters | Could detect | Reading |
 |:---|---:|:---|:---|---:|---:|---:|:---|
-| de-vig proportional / conditional | -0.0057 | -0.0103 to -0.0012 | -0.0141 to +0.0026 | 46,370 | 106 days | ±0.0083 | no demonstrated edge |
-| **de-vig proportional / unconditional — HEADLINE, least favourable to the model** | -0.0057 | -0.0103 to -0.0012 | -0.0141 to +0.0026 | 46,370 | 106 days | ±0.0083 | no demonstrated edge |
+| de-vig proportional / conditional | -0.0057 | -0.0103 to -0.0012 | -0.0141 to +0.0026 | 46,370 | 106 days | ±0.0084 | no demonstrated edge |
+| **de-vig proportional / unconditional — HEADLINE, least favourable to the model** | -0.0057 | -0.0103 to -0.0012 | -0.0141 to +0.0026 | 46,370 | 106 days | ±0.0084 | no demonstrated edge |
 | de-vig power / conditional | -0.0055 | -0.0102 to -0.0007 | -0.0141 to +0.0031 | 46,370 | 106 days | ±0.0086 | no demonstrated edge |
 | de-vig power / unconditional | -0.0055 | -0.0102 to -0.0007 | -0.0141 to +0.0031 | 46,370 | 106 days | ±0.0086 | no demonstrated edge |
-| control / conditional | +0.1130 | +0.0863 to +0.1396 | +0.0645 to +0.1614 | 46,370 | 541 athletes | ±0.0485 | demonstrated edge |
-| control / unconditional | +0.1130 | +0.0863 to +0.1396 | +0.0645 to +0.1614 | 46,370 | 541 athletes | ±0.0485 | demonstrated edge |
+| control / conditional | +0.1130 | +0.0863 to +0.1396 | +0.0645 to +0.1615 | 46,370 | 541 athletes | ±0.0485 | demonstrated edge |
+| control / unconditional | +0.1130 | +0.0863 to +0.1396 | +0.0645 to +0.1615 | 46,370 | 541 athletes | ±0.0485 | demonstrated edge |
 
 **high_major: no demonstrated edge.**
 
@@ -238,8 +238,8 @@ Mean push mass on the scored rows: model 0.0000, control 0.0000. That is how muc
 | de-vig proportional / unconditional | -0.0058 | -0.0238 to +0.0123 | -0.0386 to +0.0271 | 2,060 | 101 athletes | ±0.0328 | no demonstrated edge |
 | **de-vig power / conditional — HEADLINE, least favourable to the model** | -0.0065 | -0.0246 to +0.0116 | -0.0395 to +0.0265 | 2,060 | 101 athletes | ±0.0330 | no demonstrated edge |
 | de-vig power / unconditional | -0.0065 | -0.0246 to +0.0116 | -0.0395 to +0.0265 | 2,060 | 101 athletes | ±0.0330 | no demonstrated edge |
-| control / conditional | +0.0449 | -0.0010 to +0.0908 | -0.0387 to +0.1285 | 2,060 | 101 athletes | ±0.0836 | no demonstrated edge |
-| control / unconditional | +0.0449 | -0.0010 to +0.0908 | -0.0387 to +0.1285 | 2,060 | 101 athletes | ±0.0836 | no demonstrated edge |
+| control / conditional | +0.0449 | -0.0010 to +0.0908 | -0.0388 to +0.1286 | 2,060 | 101 athletes | ±0.0837 | no demonstrated edge |
+| control / unconditional | +0.0449 | -0.0010 to +0.0908 | -0.0388 to +0.1286 | 2,060 | 101 athletes | ±0.0837 | no demonstrated edge |
 
 **low_major: no demonstrated edge.**
 
@@ -297,7 +297,7 @@ Mean push mass on the scored rows: model 0.0000, control 0.0000. That is how muc
 | player_threes / mid_major | 7,230 | de-vig power / conditional | -0.0082 | -0.0192 to +0.0029 | 667 games | 50.4% | no demonstrated edge |
 | player_steals / mid_major | 6,364 | de-vig proportional / conditional | +0.0022 | -0.0080 to +0.0123 | 103 days | 95.5% | no demonstrated edge |
 | player_turnovers / mid_major | 6,442 | de-vig power / conditional | -0.0089 | -0.0205 to +0.0027 | 103 days | 100.0% | no demonstrated edge |
-| player_pra / mid_major | 7,252 | de-vig proportional / conditional | -0.0089 | -0.0207 to +0.0028 | 124 days | 50.6% | no demonstrated edge |
+| player_pra / mid_major | 7,252 | de-vig proportional / conditional | -0.0089 | -0.0207 to +0.0029 | 124 days | 50.6% | no demonstrated edge |
 | player_points_rebounds / mid_major | 4,846 | de-vig proportional / conditional | -0.0061 | -0.0208 to +0.0086 | 60 days | 99.8% | no demonstrated edge |
 | player_points_assists / mid_major | 4,370 | de-vig proportional / conditional | -0.0072 | -0.0212 to +0.0068 | 60 days | 99.9% | no demonstrated edge |
 | player_rebounds_assists / mid_major | 4,012 | de-vig proportional / conditional | -0.0032 | -0.0186 to +0.0121 | 356 games | 100.0% | no demonstrated edge |
@@ -333,7 +333,7 @@ The reading below is the cell's own verdict, not a second judgment of the same i
 | player_props_vs_devig | player_threes / mid_major | lower | 7,230 | -0.0082 | -0.0192 to +0.0029 | no demonstrated edge |
 | player_props_vs_devig | player_threes / low_major | lower | 190 | — | — | not enough evidence (190 wagers, below the 200 declared in advance) |
 | player_props_vs_devig | player_pra / high_major | lower | 4,308 | -0.0167 | -0.0316 to -0.0019 | demonstrated deficit |
-| player_props_vs_devig | player_pra / mid_major | lower | 7,252 | -0.0089 | -0.0207 to +0.0028 | no demonstrated edge |
+| player_props_vs_devig | player_pra / mid_major | lower | 7,252 | -0.0089 | -0.0207 to +0.0029 | no demonstrated edge |
 | player_props_vs_devig | player_pra / low_major | lower | 164 | — | — | not enough evidence (164 wagers, below the 200 declared in advance) |
 | player_props_vs_devig | player_steals / high_major | lower | 3,720 | +0.0020 | -0.0121 to +0.0161 | no demonstrated edge |
 | player_props_vs_devig | player_steals / mid_major | lower | 6,364 | +0.0022 | -0.0080 to +0.0123 | no demonstrated edge |
@@ -350,9 +350,9 @@ The reading below is the cell's own verdict, not a second judgment of the same i
 | player_props_vs_devig | player_rebounds_assists / high_major | lower | 2,134 | -0.0015 | -0.0258 to +0.0229 | no demonstrated edge |
 | player_props_vs_devig | player_rebounds_assists / mid_major | lower | 4,012 | -0.0032 | -0.0186 to +0.0121 | no demonstrated edge |
 | player_props_vs_devig | player_rebounds_assists / low_major | lower | 160 | — | — | not enough evidence (160 wagers, below the 200 declared in advance) |
-| player_props_vs_role_prior | high_major | lower | 46,370 | +0.1130 | +0.0645 to +0.1614 | demonstrated edge |
+| player_props_vs_role_prior | high_major | lower | 46,370 | +0.1130 | +0.0645 to +0.1615 | demonstrated edge |
 | player_props_vs_role_prior | mid_major | lower | 74,174 | +0.1154 | +0.0906 to +0.1401 | demonstrated edge |
-| player_props_vs_role_prior | low_major | lower | 2,060 | +0.0449 | -0.0387 to +0.1285 | no demonstrated edge |
+| player_props_vs_role_prior | low_major | lower | 2,060 | +0.0449 | -0.0388 to +0.1286 | no demonstrated edge |
 
 ## Two-sided coverage against distance from the money
 
@@ -386,8 +386,8 @@ The ladder, measured. A rung with no opposite side at the same book gets no fair
 | high_major | unconditional | -0.0025 | -0.0111 to +0.0060 | no demonstrated edge |
 | mid_major | conditional | -0.0013 | -0.0072 to +0.0045 | no demonstrated edge |
 | mid_major | unconditional | -0.0013 | -0.0072 to +0.0045 | no demonstrated edge |
-| low_major | conditional | -0.0032 | -0.0361 to +0.0297 | no demonstrated edge |
-| low_major | unconditional | -0.0032 | -0.0361 to +0.0297 | no demonstrated edge |
+| low_major | conditional | -0.0032 | -0.0361 to +0.0298 | no demonstrated edge |
+| low_major | unconditional | -0.0032 | -0.0361 to +0.0298 | no demonstrated edge |
 
 ## What this is not
 

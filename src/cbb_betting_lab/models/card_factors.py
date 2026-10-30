@@ -137,7 +137,12 @@ LAYERS: tuple[tuple[str, str], ...] = (
 CANDIDATE_LAYERS: tuple[tuple[str, str], ...] = (
     ("pace_form", "Pace, last five games"),
     ("three_point_luck", "Three-point defence luck"),
+    ("lineup_strict", "Who is missing, two games running"),
 )
+#: `lineup_strict`: a rotation player counts as out only after missing this
+#: many of the club's games in a row. When on, it replaces the single-game
+#: rule's factor rather than stacking on it.
+LINEUP_STRICT_GAMES = 2
 LABELS = dict(LAYERS + CANDIDATE_LAYERS)
 #: The layers the audit may switch. Team strength is the model, not a layer
 #: on it, and is never switched off.
@@ -162,6 +167,10 @@ THREE_LUCK_CLAMP = 3.0
 LAYER_AUDIT_DIR = "layer_audit"
 LAYER_AUDIT_FILE = "latest.json"
 LAYER_AUDIT_MAX_AGE_DAYS = 3
+#: False while the audit itself re-prices past days, so its measurement is
+#: always taken against the declared card and never against its own earlier
+#: verdicts (`scripts/run_layer_audit.py` sets it).
+READ_LAYER_AUDIT = True
 
 
 def default_switches() -> dict:
@@ -207,6 +216,9 @@ class DayContext:
     #: team_id -> the rotation players treated as out, and the attack factor.
     missing: dict = field(default_factory=dict)
     attack_factor: dict = field(default_factory=dict)
+    #: The same under `LINEUP_STRICT_GAMES` games missed in a row (candidate).
+    missing_strict: dict = field(default_factory=dict)
+    attack_factor_strict: dict = field(default_factory=dict)
     second_opinion: SecondOpinion | None = None
     #: team_id -> shrunk possessions residual over the last games (candidate).
     pace_form: dict = field(default_factory=dict)
@@ -434,7 +446,7 @@ def rest_effects(history: pd.DataFrame, ratings) -> dict:
 
 
 def missing_rotation(
-    player_rows: pd.DataFrame, team_rows: pd.DataFrame, *, teams
+    player_rows: pd.DataFrame, team_rows: pd.DataFrame, *, teams, games_missed: int = 1
 ) -> tuple[dict, dict]:
     """Who is treated as out tonight, per team, and the attack factor it costs.
 
@@ -444,6 +456,10 @@ def missing_rotation(
     did-not-play row, or no row at all — is treated as out tonight. A player
     rested in one blowout looks the same, and this is read as a cost of having
     no lineup feed rather than a reason to guess.
+
+    `games_missed` asks for that many of the club's most recent games missed in
+    a row; the candidate layer `lineup_strict` reads two, so a single rest day
+    no longer reads as an absence.
     """
     missing: dict = {}
     factor: dict = {}
@@ -471,11 +487,14 @@ def missing_rotation(
     played = (~dnp) & (minutes > 0)
     rows = rows.assign(_played=played, _minutes=minutes.where(played, 0.0),
                        _points=pd.to_numeric(rows["points"], errors="coerce").where(played, 0.0))
-    last_game = recent.groupby("team_id")["game_id"].last().to_dict()
+    last_games = {
+        team: list(group["game_id"])[-max(1, int(games_missed)):]
+        for team, group in recent.groupby("team_id")
+    }
     for team, group in rows.groupby("team_id"):
         team_key = int(team)
-        last = last_game.get(team)
-        if last is None:
+        lasts = last_games.get(team)
+        if not lasts or len(lasts) < max(1, int(games_missed)):
             continue
         window_games = int(group["game_id"].nunique())
         if window_games == 0:
@@ -493,7 +512,7 @@ def missing_rotation(
         rotation = by_player[by_player["minutes_per_game"] >= ROTATION_MINUTES]
         if rotation.empty:
             continue
-        latest = group[group["game_id"] == last]
+        latest = group[group["game_id"].isin(lasts)]
         played_last = set(latest[latest["_played"]]["athlete_display_name"])
         out = []
         share = 0.0
@@ -663,6 +682,8 @@ def load_layer_audit(raw_dir: Path | str | None, *, day: str) -> tuple[dict | No
     A key the audit does not name keeps its default, and a key it names that
     this module does not know is ignored.
     """
+    if not READ_LAYER_AUDIT:
+        return None, "", "the layer audit is re-pricing, so it reads no earlier verdict"
     path = layer_audit_path(raw_dir)
     if not path.is_file():
         return None, "", f"no layer audit on disk at {path}"
@@ -725,6 +746,9 @@ def build_context(
             rows = rows[pd.to_numeric(rows["season"], errors="coerce") == int(season)]
         context.missing, context.attack_factor = missing_rotation(
             rows, season_rows, teams=teams
+        )
+        context.missing_strict, context.attack_factor_strict = missing_rotation(
+            rows, season_rows, teams=teams, games_missed=LINEUP_STRICT_GAMES
         )
     season = getattr(ratings, "season", None)
     if season is None:
@@ -909,6 +933,21 @@ def apply(
     luck_away = float(context.three_luck.get(away_id, 0.0))
     detail["three_point_luck"] = {"home": luck_home, "away": luck_away}
     take("three_point_luck", (-luck_away, -luck_home, 0.0))
+
+    # The strict reading REPLACES the single-game one: with "Who is missing" on,
+    # its move swaps that layer's factor for the strict factor; with it off, it
+    # applies the strict factor alone. Either way one absence is counted once.
+    lineup_on = context.is_on("lineup")
+    strict_home = float(context.attack_factor_strict.get(home_id, 1.0))
+    strict_away = float(context.attack_factor_strict.get(away_id, 1.0))
+    ratio_home = strict_home / (factor_home if lineup_on else 1.0)
+    ratio_away = strict_away / (factor_away if lineup_on else 1.0)
+    detail["lineup_strict"] = {
+        "home_missing": list(context.missing_strict.get(home_id, [])),
+        "away_missing": list(context.missing_strict.get(away_id, [])),
+        "home_factor": strict_home, "away_factor": strict_away,
+    }
+    take("lineup_strict", (home * (ratio_home - 1.0), away * (ratio_away - 1.0), 0.0))
 
     detail["switches"] = {key: context.is_on(key) for key in SWITCHABLE}
     detail["audit_as_of"] = context.audit_as_of

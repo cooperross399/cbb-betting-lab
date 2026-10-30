@@ -30,7 +30,7 @@ import pandas as pd
 
 from cbb_betting_lab.competitions import CBB
 from cbb_betting_lab.config import PROCESSED_DIR, RAW_DIR
-from cbb_betting_lab.models import layer_audit, ratings
+from cbb_betting_lab.models import card_factors, layer_audit, ratings
 from cbb_betting_lab.reports import price_backtest as PB
 from cbb_betting_lab.reports.card_matchups import InputsAbsent, load_player_games, load_team_games
 
@@ -69,6 +69,10 @@ def audit(as_of: str, *, days: int, budget_minutes: float, processed_dir, raw_di
     if not window:
         return None, f"no finished game before {as_of} in the results table"
     results = results_by_game(team_games)
+    # Measured against the declared card every time: an earlier verdict on
+    # disk would otherwise price the newest days of the window and make the
+    # audit depend on its own history.
+    card_factors.READ_LAYER_AUDIT = False
     started = time.monotonic()
     records: list[dict] = []
     priced: list[str] = []
@@ -102,6 +106,7 @@ def audit(as_of: str, *, days: int, budget_minutes: float, processed_dir, raw_di
             )
             if record is not None:
                 records.append(record)
+    card_factors.READ_LAYER_AUDIT = True
     frame = pd.DataFrame(records)
     if frame.empty:
         return None, f"no priceable finished game in the {len(priced)} day(s) re-priced"

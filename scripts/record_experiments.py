@@ -946,6 +946,20 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    E.Hypothesis(
+        search="layer_audit_2026_10_30",
+        name=(
+            "counting a rotation player out only after two straight missed games "
+            "(card_factors.LINEUP_STRICT_GAMES), when the layer audit puts it in "
+            "place of the single-game rule, raises the return of the card's team "
+            "selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-10-30",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 
