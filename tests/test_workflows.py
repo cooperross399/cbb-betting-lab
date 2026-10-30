@@ -2281,6 +2281,7 @@ GAMEDAY_CONTEXT: dict[str, str] = {
     "steps.identity.outputs.trigger": "schedule",
     "steps.card.outputs.decision || 'degraded'": "blocked",
     "steps.second_opinion.outcome": "success",
+    "steps.layer_audit.outcome": "success",
 }
 
 

@@ -27,6 +27,18 @@ price and by how much:
    than `SECOND_OPINION_MAX_AGE_DAYS` is read, so a walk-forward over past days
    prices without it rather than with tomorrow's.
 
+**The layer audit switches layers on and off (Cooper, 2026-10-30).** Every
+layer above but team strength, and the `CANDIDATE_LAYERS` after it, is
+computed on every game whether it is on the card or not; a layer that is off
+moves nothing and leaves what it *would* have moved in `context["shadow"]`.
+Which are on is read from the audit `scripts/run_layer_audit.py` writes each
+gameday run (`models/layer_audit.py`), under the second opinion's rule: only
+an audit dated on or before the day and no older than
+`LAYER_AUDIT_MAX_AGE_DAYS` is read, so a walk-forward over past days prices
+with the declared defaults (`default_switches`) and never with a verdict
+reached later. The audit judges results, never prices: a layer is kept when
+it makes the predicted margin and total closer to what happened.
+
 Every constant here is this lab's choice, made before any price was read.
 None of it was measured against prices before it went on the card; the price
 backtest prices through the same seam and is where that measurement lives.
@@ -118,7 +130,44 @@ LAYERS: tuple[tuple[str, str], ...] = (
     ("lineup", "Who is missing"),
     ("second_opinion", "Second opinion"),
 )
-LABELS = dict(LAYERS)
+#: Layers the audit may ADD: computed on every game, kept in the shadow, and
+#: put on the card only when the audit has measured that they predict results
+#: better (`layer_audit.ADD_Z`). Off by default. Applied after the six above,
+#: in this order, when on.
+CANDIDATE_LAYERS: tuple[tuple[str, str], ...] = (
+    ("pace_form", "Pace, last five games"),
+    ("three_point_luck", "Three-point defence luck"),
+)
+LABELS = dict(LAYERS + CANDIDATE_LAYERS)
+#: The layers the audit may switch. Team strength is the model, not a layer
+#: on it, and is never switched off.
+SWITCHABLE: tuple[str, ...] = tuple(
+    key for key, _ in LAYERS + CANDIDATE_LAYERS if key != "strength"
+)
+
+#: Pace form: each side's possessions over its last `FORM_GAMES` against the
+#: tempo the ratings expected, shrunk like net form and clamped per side.
+PACE_FORM_SHRINKAGE_GAMES = 15
+PACE_FORM_CLAMP = 3.0
+#: Three-point defence luck: the points per 100 possessions a side's opponents
+#: scored from three above what their attempts at the season's league-wide
+#: rate would have made. Opponents' three-point accuracy is the least repeatable
+#: part of a defence's record, so `THREE_LUCK_SHARE` of it is taken back off,
+#: once a side has `THREE_LUCK_MIN_GAMES`, clamped to `THREE_LUCK_CLAMP`.
+THREE_LUCK_SHARE = 0.5
+THREE_LUCK_MIN_GAMES = 5
+THREE_LUCK_CLAMP = 3.0
+
+#: Where the audit's switches are read from, and how stale they may be.
+LAYER_AUDIT_DIR = "layer_audit"
+LAYER_AUDIT_FILE = "latest.json"
+LAYER_AUDIT_MAX_AGE_DAYS = 3
+
+
+def default_switches() -> dict:
+    """The declared card: the six layers on, the candidates off."""
+    core = {key for key, _ in LAYERS}
+    return {key: key in core for key in SWITCHABLE}
 
 
 class WalkForwardViolation(ValueError):
@@ -159,8 +208,20 @@ class DayContext:
     missing: dict = field(default_factory=dict)
     attack_factor: dict = field(default_factory=dict)
     second_opinion: SecondOpinion | None = None
+    #: team_id -> shrunk possessions residual over the last games (candidate).
+    pace_form: dict = field(default_factory=dict)
+    #: team_id -> points per 100 the defence's opponents made from three above
+    #: expectation, times the share taken back (candidate).
+    three_luck: dict = field(default_factory=dict)
+    #: layer key -> on the card or not; `default_switches` unless an audit
+    #: dated within `LAYER_AUDIT_MAX_AGE_DAYS` of the day said otherwise.
+    switches: dict = field(default_factory=default_switches)
+    audit_as_of: str | None = None
     #: Why a layer is absent, in sentences a log can print.
     notes: list = field(default_factory=list)
+
+    def is_on(self, key: str) -> bool:
+        return bool(self.switches.get(key, default_switches().get(key, False)))
 
     def rest_bucket(self, team_id) -> str | None:
         days = self.rest_days.get(team_id)
@@ -519,6 +580,118 @@ def load_second_opinion(
     return SecondOpinion(as_of=as_of, source=source, teams=teams), ""
 
 
+def pace_form(rows: pd.DataFrame, ratings, *, teams=None) -> dict:
+    """Each team's shrunk possessions residual over its last `FORM_GAMES`.
+
+    The residual is the game's possessions minus the tempo the ratings expect
+    of that pairing, so a side whose recent games have run faster than its
+    season says carries some of that into tonight's total.
+    """
+    if rows is None or len(rows) == 0 or "game_possessions" not in rows.columns:
+        return {}
+    frame = rows
+    if teams is not None:
+        frame = frame[frame["team_id"].isin({t for t in teams})]
+    frame = frame.sort_values(["team_id", "slate_date", "game_id"])
+    out: dict = {}
+    for team, group in frame.groupby("team_id", sort=False):
+        residuals = []
+        for row in group.tail(FORM_GAMES).to_dict("records"):
+            actual = pd.to_numeric(row.get("game_possessions"), errors="coerce")
+            if not np.isfinite(actual):
+                continue
+            residuals.append(float(actual) - ratings.expected_tempo(team, row.get("opponent_id")))
+        n = len(residuals)
+        if n == 0:
+            continue
+        shrunk = float(np.mean(residuals)) * n / (n + PACE_FORM_SHRINKAGE_GAMES)
+        out[team] = float(np.clip(shrunk, -PACE_FORM_CLAMP, PACE_FORM_CLAMP))
+    return out
+
+
+def three_point_luck(rows: pd.DataFrame, *, teams=None) -> dict:
+    """team_id -> the share of its opponents' three-point over-performance
+    taken back, per 100 of its defensive possessions.
+
+    Positive when opponents have made more threes than their attempts were
+    worth at the league's rate this season: the defence's record looks worse
+    than it is, so tonight's opponent is expected to score that much less.
+    """
+    made_col, tried_col = "three_point_field_goals_made", "three_point_field_goals_attempted"
+    needed = {"game_id", "team_id", "opponent_id", "game_possessions", made_col, tried_col}
+    if rows is None or len(rows) == 0 or not needed <= set(rows.columns):
+        return {}
+    frame = rows[list(needed)].copy()
+    for column in (made_col, tried_col, "game_possessions"):
+        frame[column] = pd.to_numeric(frame[column], errors="coerce")
+    frame = frame.dropna()
+    tried = float(frame[tried_col].sum())
+    if tried <= 0:
+        return {}
+    league = float(frame[made_col].sum()) / tried
+    shooting = frame[["game_id", "team_id", made_col, tried_col]].rename(
+        columns={"team_id": "opponent_id", made_col: "opp_made", tried_col: "opp_tried"}
+    )
+    joined = frame[["game_id", "team_id", "opponent_id", "game_possessions"]].merge(
+        shooting, on=["game_id", "opponent_id"], how="inner"
+    )
+    if teams is not None:
+        joined = joined[joined["team_id"].isin({t for t in teams})]
+    joined = joined.assign(excess=3.0 * (joined["opp_made"] - league * joined["opp_tried"]))
+    out: dict = {}
+    for team, group in joined.groupby("team_id"):
+        if len(group) < THREE_LUCK_MIN_GAMES:
+            continue
+        possessions = float(group["game_possessions"].sum())
+        if possessions <= 0:
+            continue
+        per_100 = 100.0 * float(group["excess"].sum()) / possessions
+        out[team] = float(np.clip(THREE_LUCK_SHARE * per_100, -THREE_LUCK_CLAMP, THREE_LUCK_CLAMP))
+    return out
+
+
+def layer_audit_path(raw_dir: Path | str | None) -> Path:
+    base = Path(raw_dir) if raw_dir else Path("data/raw")
+    return base / CBB.data_dir_segment / LAYER_AUDIT_DIR / LAYER_AUDIT_FILE
+
+
+def load_layer_audit(raw_dir: Path | str | None, *, day: str) -> tuple[dict | None, str, str]:
+    """The audit's switches for `day`, its date, and why it was not read.
+
+    Refused when absent, unreadable, dated after the day, or older than
+    `LAYER_AUDIT_MAX_AGE_DAYS`; the card then prices on `default_switches`.
+    A key the audit does not name keeps its default, and a key it names that
+    this module does not know is ignored.
+    """
+    path = layer_audit_path(raw_dir)
+    if not path.is_file():
+        return None, "", f"no layer audit on disk at {path}"
+    try:
+        import json
+
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return None, "", f"the layer audit at {path} could not be read ({exc})"
+    as_of = str((payload or {}).get("as_of") or "")[:10]
+    try:
+        stamp = pd.Timestamp(as_of)
+        target = pd.Timestamp(str(day)[:10])
+    except (TypeError, ValueError):
+        return None, "", f"the layer audit's date {as_of!r} could not be read"
+    if stamp > target:
+        return None, as_of, f"the layer audit on disk is dated {as_of}, after {day}"
+    if (target - stamp).days > LAYER_AUDIT_MAX_AGE_DAYS:
+        return None, as_of, (
+            f"the layer audit on disk is dated {as_of}, more than "
+            f"{LAYER_AUDIT_MAX_AGE_DAYS} days before {day}"
+        )
+    switches = default_switches()
+    for key, value in ((payload or {}).get("switches") or {}).items():
+        if key in switches and isinstance(value, bool):
+            switches[key] = value
+    return switches, as_of, ""
+
+
 def build_context(
     *,
     day: str,
@@ -560,6 +733,12 @@ def build_context(
         context.second_opinion, reason = load_second_opinion(raw_dir, season=int(season), day=day)
         if context.second_opinion is None:
             context.notes.append(reason)
+    context.pace_form = pace_form(season_rows, ratings, teams=teams)
+    context.three_luck = three_point_luck(season_rows, teams=teams)
+    switches, as_of, reason = load_layer_audit(raw_dir, day=day)
+    if switches is not None:
+        context.switches = switches
+        context.audit_as_of = as_of
     return context
 
 
@@ -608,6 +787,25 @@ def apply(
     away_add = float(getattr(base, "venue_away_add", 0.0))
     layers.append(_layer("strength", home - home_add, away - away_add, possessions))
 
+    # Each layer below is computed as a move — (home, away, possessions) per
+    # 100 — from the price as it stands. A layer that is on takes the move; one
+    # the audit has switched off still appears in `layers`, unmoved, so the
+    # page's order never changes, and its move goes to the shadow, which is
+    # what the next audit judges it on.
+    shadow: dict = {}
+
+    def take(key: str, move: tuple[float, float, float]) -> None:
+        nonlocal home, away, possessions
+        if context.is_on(key):
+            home += move[0]
+            away += move[1]
+            possessions += move[2]
+            layers.append(_layer(key, home, away, possessions))
+        else:
+            shadow[key] = {"home": move[0], "away": move[1], "possessions": move[2]}
+            if key in LABELS and key in dict(LAYERS):
+                layers.append(_layer(key, home, away, possessions, "switched off by the layer audit"))
+
     # 2. Home court: the tier effect the base already carries, plus the
     #    building's own departure where the fit did not apply it.
     departure = 0.0
@@ -624,32 +822,26 @@ def apply(
             departure = own
         elif local_team_id == away_id:
             departure = -own
-        home += departure / 2.0
-        away -= departure / 2.0
     detail["home_court"] = {
         "tier_margin": float(home_add - away_add),
-        "departure": float(departure),
+        "departure": float(departure) if context.is_on("home_court") else 0.0,
         "applied_by": "the fit" if ratings.venue_level_home_effect else "the card",
     }
-    layers.append(_layer("home_court", home, away, possessions))
+    take("home_court", (departure / 2.0, -departure / 2.0, 0.0))
 
     # 3. Form.
     form_home = float(context.form.get(home_id, 0.0))
     form_away = float(context.form.get(away_id, 0.0))
-    home += form_home / 2.0 - form_away / 2.0
-    away += form_away / 2.0 - form_home / 2.0
     detail["form"] = {
         "home": form_home, "away": form_away,
         "home_games": int(context.form_games.get(home_id, 0)),
         "away_games": int(context.form_games.get(away_id, 0)),
     }
-    layers.append(_layer("form", home, away, possessions))
+    take("form", (form_home / 2.0 - form_away / 2.0, form_away / 2.0 - form_home / 2.0, 0.0))
 
     # 4. Rest.
     rest_home = context.rest_effect(home_id, _tier_of(ratings, home_id))
     rest_away = context.rest_effect(away_id, _tier_of(ratings, away_id))
-    home += rest_home / 2.0 - rest_away / 2.0
-    away += rest_away / 2.0 - rest_home / 2.0
     detail["rest"] = {
         "home_days": context.rest_days.get(home_id),
         "away_days": context.rest_days.get(away_id),
@@ -657,23 +849,22 @@ def apply(
         "away_bucket": context.rest_bucket(away_id),
         "home": rest_home, "away": rest_away,
     }
-    layers.append(_layer("rest", home, away, possessions))
+    take("rest", (rest_home / 2.0 - rest_away / 2.0, rest_away / 2.0 - rest_home / 2.0, 0.0))
 
     # 5. Who is missing.
     factor_home = float(context.attack_factor.get(home_id, 1.0))
     factor_away = float(context.attack_factor.get(away_id, 1.0))
-    home *= factor_home
-    away *= factor_away
     detail["lineup"] = {
         "home_missing": list(context.missing.get(home_id, [])),
         "away_missing": list(context.missing.get(away_id, [])),
         "home_factor": factor_home, "away_factor": factor_away,
     }
-    layers.append(_layer("lineup", home, away, possessions))
+    take("lineup", (home * (factor_home - 1.0), away * (factor_away - 1.0), 0.0))
 
     # 6. Second opinion.
     opinion = context.second_opinion
     blended = False
+    move = [0.0, 0.0, 0.0]
     if opinion is not None:
         home_view = opinion.teams.get(_int_or_none(home_id))
         away_view = opinion.teams.get(_int_or_none(away_id))
@@ -684,14 +875,14 @@ def apply(
         own_t_h = float(ratings.tempo.get(home_id, 0.0))
         own_t_a = float(ratings.tempo.get(away_id, 0.0))
         if home_view is not None:
-            home += BLEND_WEIGHT * (home_view[0] - own_off_h)
-            away += BLEND_WEIGHT * (home_view[1] - own_def_h)
-            possessions += BLEND_WEIGHT * (home_view[2] - own_t_h)
+            move[0] += BLEND_WEIGHT * (home_view[0] - own_off_h)
+            move[1] += BLEND_WEIGHT * (home_view[1] - own_def_h)
+            move[2] += BLEND_WEIGHT * (home_view[2] - own_t_h)
             blended = True
         if away_view is not None:
-            away += BLEND_WEIGHT * (away_view[0] - own_off_a)
-            home += BLEND_WEIGHT * (away_view[1] - own_def_a)
-            possessions += BLEND_WEIGHT * (away_view[2] - own_t_a)
+            move[1] += BLEND_WEIGHT * (away_view[0] - own_off_a)
+            move[0] += BLEND_WEIGHT * (away_view[1] - own_def_a)
+            move[2] += BLEND_WEIGHT * (away_view[2] - own_t_a)
             blended = True
         detail["second_opinion"] = {
             "as_of": opinion.as_of,
@@ -705,8 +896,23 @@ def apply(
         }
     else:
         detail["second_opinion"] = {"absent": "; ".join(context.notes) or "not read"}
-    detail["second_opinion"]["blended"] = blended
-    layers.append(_layer("second_opinion", home, away, possessions))
+    detail["second_opinion"]["blended"] = blended and context.is_on("second_opinion")
+    take("second_opinion", (move[0], move[1], move[2]))
+
+    # Candidates: on the card only when the audit has added them.
+    pace_home = float(context.pace_form.get(home_id, 0.0))
+    pace_away = float(context.pace_form.get(away_id, 0.0))
+    detail["pace_form"] = {"home": pace_home, "away": pace_away}
+    take("pace_form", (0.0, 0.0, (pace_home + pace_away) / 2.0))
+
+    luck_home = float(context.three_luck.get(home_id, 0.0))
+    luck_away = float(context.three_luck.get(away_id, 0.0))
+    detail["three_point_luck"] = {"home": luck_home, "away": luck_away}
+    take("three_point_luck", (-luck_away, -luck_home, 0.0))
+
+    detail["switches"] = {key: context.is_on(key) for key in SWITCHABLE}
+    detail["audit_as_of"] = context.audit_as_of
+    detail["shadow"] = shadow
 
     if not (np.isfinite(home) and np.isfinite(away) and np.isfinite(possessions)) or possessions <= 0:
         return base

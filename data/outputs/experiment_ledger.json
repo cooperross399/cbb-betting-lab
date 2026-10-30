@@ -2002,6 +2002,34 @@
       "predicted_direction": "higher",
       "stage": "discovery",
       "realised_direction": ""
+    },
+    {
+      "search": "layer_audit_2026_10_30",
+      "name": "last-five-games pace form (shrunk possessions residual, card_factors.PACE_FORM_*), when the layer audit adds it, raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-10-30",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "layer_audit_2026_10_30",
+      "name": "taking back half of opponents' three-point over-performance (card_factors.THREE_LUCK_*), when the layer audit adds it, raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-10-30",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
     }
   ]
 }
