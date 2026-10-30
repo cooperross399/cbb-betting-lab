@@ -2559,7 +2559,7 @@ def clear_caches() -> None:
     """Drop every memo. Tests that change the cached feeds call this."""
     for cache in (
         _SEASON_CACHE, _TIER_CACHE, _SCHEDULE_CACHE, _CLASSIFIED_CACHE,
-        _LOCAL_TEAMS_CACHE, _VENUE_IDS_CACHE, _FIXTURES_CACHE,
+        _LOCAL_TEAMS_CACHE, _VENUE_IDS_CACHE, _FIXTURES_CACHE, _HOME_STATES_CACHE,
     ):
         cache.clear()
 

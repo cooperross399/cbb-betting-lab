@@ -778,6 +778,9 @@ jobs:
           if [ "${{ steps.layer_audit.outcome }}" != "success" ]; then
             echo "::warning::The layer audit did not run to a verdict (outcome: ${{ steps.layer_audit.outcome }}); the card priced on its declared layers."
           fi
+          if [ "${{ steps.line_moves.outcome }}" != "success" ]; then
+            echo "::warning::The line-movement captures were not read (outcome: ${{ steps.line_moves.outcome }}); the card halved no lean for the market's move."
+          fi
           if [ -s run_degraded.txt ]; then
             echo "degraded=true" >> "$GITHUB_OUTPUT"
             cat run_degraded.txt
