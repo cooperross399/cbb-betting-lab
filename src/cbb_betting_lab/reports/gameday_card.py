@@ -133,7 +133,7 @@ from typing import Protocol
 
 import pandas as pd
 
-from cbb_betting_lab import forward_evidence, stores, verdicts
+from cbb_betting_lab import forward_evidence, ladder_coherence, stores, verdicts
 from cbb_betting_lab.data import hoopr
 from cbb_betting_lab.competitions import Competition
 from cbb_betting_lab.conferences import Tier, TierTable, tier_table
@@ -2213,6 +2213,8 @@ class CardRun:
     matchup_census: str = ""
     #: How far the edge bar trusted the model against the price, per tier.
     trust_line: str = ""
+    #: Dominated rungs on each book's own ladder (`ladder_coherence`).
+    ladder_lines: list[str] = field(default_factory=list)
     degraded: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
@@ -2455,6 +2457,10 @@ def run_card(
         rows_off_this_slate=off_slate,
         matchup_census=str(matchup_census or ""),
         trust_line=trust.line() if trust is not None else "",
+        ladder_lines=ladder_coherence.summary_lines(
+            ladder_coherence.dominated_quotes(wagers),
+            ladders_read=any(w.line is not None for w in wagers),
+        ),
         degraded=list(board.degraded),
         notes=list(board.notes),
     )
@@ -2639,6 +2645,8 @@ def render_card(run: CardRun) -> str:
     lines += _identity_section(run)
     lines += _gates_section(run)
     lines += _board_section(run)
+    if run.ladder_lines:
+        lines += ["## Each book's ladder against itself", "", *run.ladder_lines, ""]
     lines += _model_section(run)
     lines += _what_this_is_not_section(run)
     return "\n".join(lines).rstrip() + "\n"
