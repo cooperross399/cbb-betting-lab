@@ -385,3 +385,45 @@ def test_the_sample_board_matches_the_builders_pick_shape():
             continue
         assert pick["units"] == (1.0 if pick["kind"] == "bet" else None), (g["home"]["abbr"], pick)
         assert pick["tier"] in ("high_major", "mid_major", "low_major") and 0 < pick["modelProb"] < 1
+
+
+def test_closing_line_value_is_the_pick_against_the_last_line_before_tip(tmp_path):
+    """A spread or total pick against the last line the board recorded before
+    tip, from the bettor's side; a moneyline pick is left out, and a point
+    after tip is not the close."""
+    site_pages = _load(WEB / "site_pages.py", "test_site_pages_clv")
+    teams = {"ND": {"name": "Notre Dame", "short": "Notre Dame"}, "NOVA": {"name": "Villanova", "short": "Villanova"}, "KU": {"name": "Kansas", "short": "Kansas"}, "DUKE": {"name": "Duke", "short": "Duke"}}
+    day = date(2026, 11, 14)
+    hist = tmp_path / "history"
+    (hist / "finals").mkdir(parents=True)
+    (hist / "lines").mkdir(parents=True)
+    (hist / f"{day.isoformat()}_morning.json").write_text(json.dumps(_frozen_board(day, teams)), encoding="utf-8")
+    (hist / "finals" / f"{day.isoformat()}.json").write_text(json.dumps({"9001": {"home": 78, "away": 70, "finish": "REG"}, "9002": {"home": 66, "away": 71, "finish": "OT"}}), encoding="utf-8")
+    # Kansas +3.5 was taken; the home line closed at +2.0 before tip and
+    # moved to +6.0 after it, which is not the close.
+    (hist / "lines" / f"{day.isoformat()}.json").write_text(json.dumps({
+        "9002": {"spread": [{"t": f"{day.isoformat()}T14:05:00Z", "v": 3.5}, {"t": f"{day.isoformat()}T22:00:00Z", "v": 2.0}, {"t": f"{day.isoformat()}T23:45:00Z", "v": 6.0}]},
+        "9001": {"spread": [{"t": f"{day.isoformat()}T14:05:00Z", "v": -3.5}, {"t": f"{day.isoformat()}T22:00:00Z", "v": -5.0}]},
+    }), encoding="utf-8")
+    (tmp_path / "board.json").write_text(json.dumps({"record": {"clvPoints": None, "beatClosePct": None}}), encoding="utf-8")
+    site_pages.write_record_pages(tmp_path, day + timedelta(days=1), fetch=False)
+
+    record = json.loads((tmp_path / "record.json").read_text(encoding="utf-8"))
+    assert record["clv"]["picks"] == 1, "the Notre Dame moneyline bet carries no closing line"
+    assert record["clv"]["meanPoints"] == 1.5 and record["clv"]["beatClosePct"] == 100.0
+    assert record["clv"]["bets"]["picks"] == 0
+    rows = {r["kind"]: r for r in json.loads((tmp_path / "tracker.json").read_text(encoding="utf-8"))["rows"]}
+    assert rows["pass"]["closeLine"] == 2.0 and rows["pass"]["clvPoints"] == 1.5
+    assert rows["bet"]["clvPoints"] is None
+    board = json.loads((tmp_path / "board.json").read_text(encoding="utf-8"))
+    assert board["record"]["clvPoints"] == 1.5 and board["record"]["beatClosePct"] == 100.0
+
+
+def test_closing_value_reads_totals_from_the_bettors_side():
+    site_pages = _load(WEB / "site_pages.py", "test_site_pages_clv_total")
+    lines = {"total": [{"t": "2026-11-14T20:00:00Z", "v": 146.0}]}
+    game = {"tip": "2026-11-14T23:00:00Z"}
+    assert site_pages.closing_value({"market": "Total", "side": "over", "line": 144.5}, game, lines)["points"] == 1.5
+    assert site_pages.closing_value({"market": "Total", "side": "under", "line": 144.5}, game, lines)["points"] == -1.5
+    assert site_pages.closing_value({"market": "Spread", "side": "away", "line": 3.0}, game, {"spread": [{"t": "2026-11-14T20:00:00Z", "v": -2.0}]})["points"] == 1.0
+    assert site_pages.closing_value({"market": "Moneyline", "side": "home", "line": None}, game, lines) is None

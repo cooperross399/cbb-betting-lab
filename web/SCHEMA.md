@@ -60,8 +60,17 @@ Accuracy only, never a return.
  brier: {games, model, market, modelAll},
  markets: {spread: {games, buckets}, total: {games, buckets}},
  movement: {toward, against, flat, picks},
+ clv: {picks, meanPoints, beatClosePct, bets: {picks, meanPoints, beatClosePct}},
  notes: [..]}
 ```
+
+`clv` is closing-line value on spread and total picks: the picked line against
+the last line `history/lines/<day>.json` recorded before tip, in points from
+the bettor's side, so positive is the better number. A tie does not beat the
+close. Moneyline picks are left out because the series keeps only the home
+price. `build_site_pages.py` also writes `meanPoints`, `beatClosePct` and
+`picks` onto `board.json` as `record.clvPoints`, `record.beatClosePct` and
+`record.clvPicks`.
 
 Each game is counted once under the side the board favoured; `predicted` is
 the mean published chance in the band and `actual` the share that won.
@@ -75,7 +84,8 @@ until each holds at least 10 games.
  overall, byMarket, byTeam, byTier, byPrice, byMonth,
  opinions: {overall, byMarket, byKind},
  rows: [{date, id, kind, group, market, label, price, book, tier, team,
-         teams: [away, home], line, result, staked, units, final}],
+         teams: [away, home], line, result, staked, units, final,
+         closeLine, clvPoints}],
  notes: [..]}
 ```
 

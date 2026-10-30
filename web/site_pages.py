@@ -562,7 +562,66 @@ def _side_abbr(pick: dict, g: dict) -> str | None:
     return None
 
 
-def record_page(graded: list[dict], today: date) -> dict:
+def _closing_point(series, tip):
+    """The last point of a line series at or before tip, or None."""
+    if not isinstance(series, list):
+        return None
+    best = None
+    for point in series:
+        if not isinstance(point, dict):
+            continue
+        value = _num(point.get("v"))
+        stamp = str(point.get("t") or "")
+        if value is None or (tip and stamp and stamp > str(tip)):
+            continue
+        best = value
+    return best
+
+
+def closing_value(pick: dict, game: dict, lines: dict | None) -> dict | None:
+    """How a spread or total pick's line compares with the last line the board
+    recorded for the game before tip, in points, from the bettor's side.
+
+    Positive means the pick got a better number than the close. Moneyline picks
+    are left out: the line history keeps only the home price, and grading one
+    side of a market and not the other would bias the share."""
+    market = str(pick.get("market") or "").lower()
+    side, line = pick.get("side"), _num(pick.get("line"))
+    if line is None or not isinstance(lines, dict):
+        return None
+    tip = game.get("tip")
+    if market == "spread" and side in ("home", "away"):
+        close_home = _closing_point(lines.get("spread"), tip)
+        if close_home is None:
+            return None
+        close = close_home if side == "home" else -close_home
+        return {"close": close, "points": round(line - close, 2)}
+    if market == "total" and side in ("over", "under"):
+        close = _closing_point(lines.get("total"), tip)
+        if close is None:
+            return None
+        return {"close": close, "points": round((close - line) if side == "over" else (line - close), 2)}
+    return None
+
+
+def load_lines(hist: Path):
+    """`history/lines/<day>.json` per day, read once: the per-build line
+    series `site_history.py` keeps. A day with no file is an empty mapping."""
+    cache: dict[str, dict] = {}
+
+    def lines_for(day: str) -> dict:
+        if day not in cache:
+            try:
+                payload = json.loads((Path(hist) / "lines" / f"{day}.json").read_text(encoding="utf-8"))
+            except (OSError, UnicodeError, json.JSONDecodeError):
+                payload = {}
+            cache[day] = payload if isinstance(payload, dict) else {}
+        return cache[day]
+
+    return lines_for
+
+
+def record_page(graded: list[dict], today: date, lines_for=None) -> dict:
     """Calibration of the published win chances against finals, Brier against
     the frozen no-vig market, the spread and total chances by band, and
     which way the moneyline moved after a pick. Accuracy only, never a
@@ -574,6 +633,7 @@ def record_page(graded: list[dict], today: date) -> dict:
     spread: list[tuple[float, bool]] = []
     total: list[tuple[float, bool]] = []
     movement = {"toward": 0, "against": 0, "flat": 0, "picks": 0}
+    clv: list[tuple[str, float]] = []
     nights: set[str] = set()
     for row in graded:
         g, hf, af = row["game"], row["home"], row["away"]
@@ -618,6 +678,10 @@ def record_page(graded: list[dict], today: date) -> dict:
                 movement["picks"] += 1
                 key = "toward" if now > opened + 1e-9 else "against" if now < opened - 1e-9 else "flat"
                 movement[key] += 1
+        if isinstance(pick, dict) and lines_for is not None:
+            closing = closing_value(pick, g, lines_for(row["date"]).get(str(g.get("id"))))
+            if closing is not None:
+                clv.append((str(pick.get("kind", "bet")), closing["points"]))
     paired = [(m, k) for m, k in zip(brier_model, brier_market) if math.isfinite(k)]
     return {
         "generatedAt": _now(),
@@ -637,13 +701,27 @@ def record_page(graded: list[dict], today: date) -> dict:
             "total": {"games": len(total), "buckets": _market_buckets(total)},
         },
         "movement": movement,
+        "clv": clv_summary(clv),
         "notes": [
             "Each game is counted once, under the side the board favoured, so a 40% home chance is a 60% away favourite.",
             "Brier is the mean squared error of the home win chance; lower is better, 0.25 is a coin flip. The market column is the frozen board's best moneyline pair with the margin removed, on the games that carried both prices.",
             "Spread and total bands use the chance the board published for the favoured side at the board's own line; pushes are left out.",
             "Movement compares the picked side's price at the first and last reads of the board; no closing line is fetched.",
+            "Closing-line value is the picked spread or total line against the last line the board recorded before tip, in points from the bettor's side; positive means the pick got the better number. Moneyline picks are left out because the line history keeps only the home price.",
         ],
     }
+
+
+def clv_summary(values: list[tuple[str, float]]) -> dict:
+    """Mean closing-line value and the share that beat the close, over every
+    pick and over bets alone. A tie with the close does not beat it."""
+    def summarise(points: list[float]) -> dict:
+        if not points:
+            return {"picks": 0, "meanPoints": None, "beatClosePct": None}
+        return {"picks": len(points), "meanPoints": round(sum(points) / len(points), 2),
+                "beatClosePct": round(100.0 * sum(1 for p in points if p > 0) / len(points), 1)}
+
+    return {**summarise([p for _, p in values]), "bets": summarise([p for k, p in values if k == "bet"])}
 
 
 def _grade(settle, pick: dict, g: dict, hf: int, af: int, teams: dict) -> str | None:
@@ -654,7 +732,7 @@ def _grade(settle, pick: dict, g: dict, hf: int, af: int, teams: dict) -> str | 
         return None
 
 
-def tracker_rows(graded: list[dict], settle=None) -> list[dict]:
+def tracker_rows(graded: list[dict], settle=None, lines_for=None) -> list[dict]:
     """One row per graded pick: a bet at a flat unit, an opinion (lean or
     pass) graded for the record and staked nothing."""
     settle = settle or _module("settle_results")
@@ -681,8 +759,15 @@ def tracker_rows(graded: list[dict], settle=None) -> list[dict]:
             "market": str(pick.get("market") or ""), "label": pick.get("label"), "price": price, "book": pick.get("book"),
             "tier": pick.get("tier"), "team": _side_abbr(pick, g), "teams": [away, home], "line": _num(pick.get("line")),
             "result": result, "staked": stake, "units": units, "final": f"{away} {af}, {home} {hf}",
+            **_closing_fields(pick, g, lines_for, row["date"]),
         })
     return rows
+
+
+def _closing_fields(pick: dict, g: dict, lines_for, day: str) -> dict:
+    closing = closing_value(pick, g, lines_for(day).get(str(g.get("id")))) if lines_for else None
+    return {"closeLine": None if closing is None else closing["close"],
+            "clvPoints": None if closing is None else closing["points"]}
 
 
 def _tally(rows: list[dict]) -> dict:
@@ -750,13 +835,31 @@ def tracker_page(rows: list[dict], nights: int) -> dict:
     }
 
 
+def _publish_clv_on_the_board(path: Path, clv: dict) -> None:
+    """The board's record strip reads `record.clvPoints` and `beatClosePct`;
+    `build_board_json.py` leaves them null because it holds no history. A
+    board that cannot be read is left alone."""
+    try:
+        board = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return
+    if not isinstance(board, dict) or not isinstance(board.get("record"), dict):
+        return
+    board["record"]["clvPoints"] = clv.get("meanPoints")
+    board["record"]["beatClosePct"] = clv.get("beatClosePct")
+    board["record"]["clvPicks"] = clv.get("picks", 0)
+    _dump(path, board)
+
+
 def write_record_pages(data: Path, today: date, fetch: bool = True) -> dict:
     hist = Path(data) / "history"
     settle = _module("settle_results")
     graded = graded_games(hist, today, settle, fetch=fetch) if hist.is_dir() else []
-    record = record_page(graded, today)
-    rows = tracker_rows(graded, settle)
+    lines_for = load_lines(hist)
+    record = record_page(graded, today, lines_for)
+    rows = tracker_rows(graded, settle, lines_for)
     tracker = tracker_page(rows, record["nights"])
     _dump(Path(data) / "record.json", record)
     _dump(Path(data) / "tracker.json", tracker)
+    _publish_clv_on_the_board(Path(data) / "board.json", record["clv"])
     return {"games": len(graded), "nights": record["nights"], "bets": tracker["overall"]["bets"], "opinions": tracker["opinions"]["overall"]["bets"]}
