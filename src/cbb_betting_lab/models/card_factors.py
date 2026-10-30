@@ -138,6 +138,8 @@ CANDIDATE_LAYERS: tuple[tuple[str, str], ...] = (
     ("pace_form", "Pace, last five games"),
     ("three_point_luck", "Three-point defence luck"),
     ("lineup_strict", "Who is missing, two games running"),
+    ("travel", "Travel and time zones"),
+    ("shooting_luck", "Shooting luck"),
 )
 #: `lineup_strict`: a rotation player counts as out only after missing this
 #: many of the club's games in a row. When on, it replaces the single-game
@@ -162,6 +164,41 @@ PACE_FORM_CLAMP = 3.0
 THREE_LUCK_SHARE = 0.5
 THREE_LUCK_MIN_GAMES = 5
 THREE_LUCK_CLAMP = 3.0
+
+#: Travel: a side playing away from its own time zone gives up
+#: `TRAVEL_PER_ZONE` per 100 possessions, net, for each hour between the
+#: venue's zone and its home arena's, clamped to `TRAVEL_CLAMP`. Zones are
+#: standard time by venue state (`STATE_UTC_OFFSET`); a state or territory not
+#: in the table moves nothing rather than being guessed. A side at home, or
+#: whose home state is not known, moves nothing.
+TRAVEL_PER_ZONE = 0.75
+TRAVEL_CLAMP = 2.25
+STATE_UTC_OFFSET: dict[str, int] = {
+    **{s: -5 for s in (
+        "CT", "DE", "DC", "FL", "GA", "IN", "KY", "ME", "MD", "MA", "MI", "NH",
+        "NJ", "NY", "NC", "OH", "PA", "RI", "SC", "VT", "VA", "WV", "PQ",
+        "Bahamas", "Cayman Islands",
+    )},
+    **{s: -6 for s in (
+        "AL", "AR", "IL", "IA", "KS", "LA", "MN", "MS", "MO", "NE", "ND", "OK",
+        "SD", "TN", "TX", "WI",
+    )},
+    **{s: -7 for s in ("AZ", "CO", "ID", "MT", "NM", "UT", "WY")},
+    **{s: -8 for s in ("CA", "NV", "OR", "WA")},
+    "AK": -9,
+    "HI": -10,
+    "Virgin Islands": -4,
+}
+#: Shooting luck: a side's own three-point and free-throw accuracy is the least
+#: repeatable part of its attack, so `SHOOTING_LUCK_SHARE` of the points per 100
+#: it has scored above what its attempts were worth at the season's league-wide
+#: rates is taken back off, once it has `SHOOTING_LUCK_MIN_GAMES`, clamped to
+#: `SHOOTING_LUCK_CLAMP`. The attack-side twin of `three_point_luck`. This is a
+#: box-score proxy for shot quality: the zone split in `models/shot_zones.py`
+#: needs the play-by-play, which this seam is not handed.
+SHOOTING_LUCK_SHARE = 0.5
+SHOOTING_LUCK_MIN_GAMES = 5
+SHOOTING_LUCK_CLAMP = 3.0
 
 #: Where the audit's switches are read from, and how stale they may be.
 LAYER_AUDIT_DIR = "layer_audit"
@@ -225,6 +262,11 @@ class DayContext:
     #: team_id -> points per 100 the defence's opponents made from three above
     #: expectation, times the share taken back (candidate).
     three_luck: dict = field(default_factory=dict)
+    #: team_id -> its home arena's state (candidate: travel).
+    home_state: dict = field(default_factory=dict)
+    #: team_id -> the share of its own shooting over-performance taken back,
+    #: per 100 of its possessions (candidate).
+    shooting_luck: dict = field(default_factory=dict)
     #: layer key -> on the card or not; `default_switches` unless an audit
     #: dated within `LAYER_AUDIT_MAX_AGE_DAYS` of the day said otherwise.
     switches: dict = field(default_factory=default_switches)
@@ -669,6 +711,61 @@ def three_point_luck(rows: pd.DataFrame, *, teams=None) -> dict:
     return out
 
 
+def shooting_luck(rows: pd.DataFrame, *, teams=None) -> dict:
+    """team_id -> the share of its own three-point and free-throw
+    over-performance taken back, per 100 of its possessions.
+
+    Positive when the side has made more than its attempts were worth at the
+    league's rates this season: its attack looks better than it is, so tonight
+    it is expected to score that much less.
+    """
+    three_made, three_tried = "three_point_field_goals_made", "three_point_field_goals_attempted"
+    free_made, free_tried = "free_throws_made", "free_throws_attempted"
+    needed = {"team_id", "game_possessions", three_made, three_tried, free_made, free_tried}
+    if rows is None or len(rows) == 0 or not needed <= set(rows.columns):
+        return {}
+    frame = rows[list(needed)].copy()
+    for column in needed - {"team_id"}:
+        frame[column] = pd.to_numeric(frame[column], errors="coerce")
+    frame = frame.dropna()
+    if float(frame[three_tried].sum()) <= 0 or float(frame[free_tried].sum()) <= 0:
+        return {}
+    three_rate = float(frame[three_made].sum()) / float(frame[three_tried].sum())
+    free_rate = float(frame[free_made].sum()) / float(frame[free_tried].sum())
+    if teams is not None:
+        frame = frame[frame["team_id"].isin({t for t in teams})]
+    frame = frame.assign(
+        excess=3.0 * (frame[three_made] - three_rate * frame[three_tried])
+        + (frame[free_made] - free_rate * frame[free_tried])
+    )
+    out: dict = {}
+    for team, group in frame.groupby("team_id"):
+        if len(group) < SHOOTING_LUCK_MIN_GAMES:
+            continue
+        possessions = float(group["game_possessions"].sum())
+        if possessions <= 0:
+            continue
+        per_100 = 100.0 * float(group["excess"].sum()) / possessions
+        out[team] = float(np.clip(SHOOTING_LUCK_SHARE * per_100, -SHOOTING_LUCK_CLAMP, SHOOTING_LUCK_CLAMP))
+    return out
+
+
+def zones_from_home(home_state, venue_state) -> int | None:
+    """Hours between a side's home arena and tonight's venue, or None."""
+    home = STATE_UTC_OFFSET.get(clean_text(home_state) or "")
+    venue = STATE_UTC_OFFSET.get(clean_text(venue_state) or "")
+    if home is None or venue is None:
+        return None
+    return abs(int(home) - int(venue))
+
+
+def travel_cost(zones) -> float:
+    """Points per 100, net, a side gives up for `zones` hours of travel."""
+    if not zones:
+        return 0.0
+    return float(min(TRAVEL_PER_ZONE * float(zones), TRAVEL_CLAMP))
+
+
 def layer_audit_path(raw_dir: Path | str | None) -> Path:
     base = Path(raw_dir) if raw_dir else Path("data/raw")
     return base / CBB.data_dir_segment / LAYER_AUDIT_DIR / LAYER_AUDIT_FILE
@@ -722,6 +819,7 @@ def build_context(
     player_history: pd.DataFrame | None,
     raw_dir: Path | str | None,
     teams=None,
+    home_states: Mapping | None = None,
 ) -> DayContext:
     """Everything tonight's layers read, from frames cut before `day`."""
     day = str(day)[:10]
@@ -759,6 +857,12 @@ def build_context(
             context.notes.append(reason)
     context.pace_form = pace_form(season_rows, ratings, teams=teams)
     context.three_luck = three_point_luck(season_rows, teams=teams)
+    context.shooting_luck = shooting_luck(season_rows, teams=teams)
+    if home_states:
+        context.home_state = {
+            team: state for team, state in home_states.items()
+            if teams is None or team in teams
+        }
     switches, as_of, reason = load_layer_audit(raw_dir, day=day)
     if switches is not None:
         context.switches = switches
@@ -787,6 +891,7 @@ def apply(
     context: DayContext,
     venue_id=None,
     local_team_id=None,
+    venue_address_state=None,
 ):
     """`base` with tonight's layers applied, and each layer recorded on it.
 
@@ -948,6 +1053,25 @@ def apply(
         "home_factor": strict_home, "away_factor": strict_away,
     }
     take("lineup_strict", (home * (ratio_home - 1.0), away * (ratio_away - 1.0), 0.0))
+
+    # Travel: only the side away from its own arena can be tired by the trip.
+    at_home = {local_team_id} if local_team_id is not None else set()
+    zones_home = None if home_id in at_home else zones_from_home(
+        context.home_state.get(home_id), venue_address_state)
+    zones_away = None if away_id in at_home else zones_from_home(
+        context.home_state.get(away_id), venue_address_state)
+    travel_home, travel_away = travel_cost(zones_home), travel_cost(zones_away)
+    detail["travel"] = {
+        "venue_state": clean_text(venue_address_state) or None,
+        "home_zones": zones_home, "away_zones": zones_away,
+        "home": -travel_home, "away": -travel_away,
+    }
+    take("travel", (travel_away / 2.0 - travel_home / 2.0, travel_home / 2.0 - travel_away / 2.0, 0.0))
+
+    luck_off_home = float(context.shooting_luck.get(home_id, 0.0))
+    luck_off_away = float(context.shooting_luck.get(away_id, 0.0))
+    detail["shooting_luck"] = {"home": luck_off_home, "away": luck_off_away}
+    take("shooting_luck", (-luck_off_home, -luck_off_away, 0.0))
 
     detail["switches"] = {key: context.is_on(key) for key in SWITCHABLE}
     detail["audit_as_of"] = context.audit_as_of

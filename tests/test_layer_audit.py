@@ -212,3 +212,33 @@ def test_the_audit_reprices_against_the_declared_card_not_its_own_earlier_verdic
             assert game.context["switches"] == CF.default_switches()
     finally:
         CF.READ_LAYER_AUDIT = True
+
+
+def test_travel_costs_the_side_away_from_its_own_time_zone(lab, frames):
+    assert CF.zones_from_home("CA", "NY") == 3
+    assert CF.zones_from_home("NY", "NY") == 0
+    assert CF.zones_from_home("NY", "Mexico") is None, "an unknown zone moves nothing"
+    assert CF.travel_cost(3) == pytest.approx(min(3 * CF.TRAVEL_PER_ZONE, CF.TRAVEL_CLAMP))
+    assert CF.travel_cost(None) == 0.0
+    priced = [m for m in _priced(lab, frames).values() if m.priceable]
+    read = [game.context["travel"] for game in priced]
+    assert any(t["venue_state"] for t in read), "the venue's state reaches the layer"
+    for t in read:
+        for side in ("home", "away"):
+            assert t[side] <= 0.0, "travel only ever costs"
+
+
+def test_shooting_luck_takes_back_half_of_a_hot_attack():
+    rows = []
+    for game in range(6):
+        # Team 1 makes every three and free throw; team 2 makes none.
+        rows.append({"team_id": 1, "game_possessions": 70, "three_point_field_goals_made": 10,
+                     "three_point_field_goals_attempted": 10, "free_throws_made": 10,
+                     "free_throws_attempted": 10})
+        rows.append({"team_id": 2, "game_possessions": 70, "three_point_field_goals_made": 0,
+                     "three_point_field_goals_attempted": 10, "free_throws_made": 0,
+                     "free_throws_attempted": 10})
+    luck = CF.shooting_luck(pd.DataFrame(rows))
+    assert luck[1] == pytest.approx(CF.SHOOTING_LUCK_CLAMP)
+    assert luck[2] == pytest.approx(-CF.SHOOTING_LUCK_CLAMP)
+    assert CF.shooting_luck(pd.DataFrame(rows[:4])) == {}, "too few games carry no reading"

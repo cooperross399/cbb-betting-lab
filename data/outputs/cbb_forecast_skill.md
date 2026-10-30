@@ -75,7 +75,7 @@ The hold this de-vig removed, measured over 270,504 two-sided pairs: median **1.
 |:---|---:|---:|:---|:---|---:|---:|:---|
 | intercept | 0 | -0.007 | -0.029 to +0.014 | -0.047 to +0.032 | 53,844 | 717 days | contains zero |
 | market_implied | 1 | +1.031 | +0.987 to +1.075 | +0.951 to +1.111 | 53,844 | 717 days | contains 1.0 — the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable |
-| disagreement | 0 | +0.046 | -0.036 to +0.129 | -0.105 to +0.197 | 53,844 | 6,152 games | no demonstrated edge |
+| disagreement | 0 | +0.046 | -0.036 to +0.129 | -0.105 to +0.198 | 53,844 | 6,152 games | no demonstrated edge |
 
 **The model knows nothing the price does not.** The interval on the disagreement includes zero, so none of the claimed edge is demonstrably realised.
 
@@ -90,8 +90,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23377 | 53,844 |
 | the base rate (50.0% of these wagers won) | 0.25000 | 53,844 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.01801 over 53,844 wagers across 6,152 games, 95% interval -0.02129 to -0.01472, family-corrected -0.02400 to -0.01202 — demonstrated deficit.
-- **against the raw, handicapped market:** the model's Brier advantage is -0.01783 over 53,844 wagers across 6,152 games, 95% interval -0.02112 to -0.01454, family-corrected -0.02383 to -0.01183 — demonstrated deficit.
+- **against the de-vigged market:** the model's Brier advantage is -0.01801 over 53,844 wagers across 6,152 games, 95% interval -0.02129 to -0.01472, family-corrected -0.02401 to -0.01200 — demonstrated deficit.
+- **against the raw, handicapped market:** the model's Brier advantage is -0.01783 over 53,844 wagers across 6,152 games, 95% interval -0.02112 to -0.01454, family-corrected -0.02384 to -0.01181 — demonstrated deficit.
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -101,21 +101,21 @@ Positive is the model being **more** accurate. A Brier score is better when it i
 
 | Claimed edge | Wagers | Games | Model said | De-vigged price said | Actually won | Realised − model | Realised return | 95% interval | Family-corrected | Verdict |
 |:---|---:|---:|---:|---:|:---|---:|---:|:---|:---|:---|
-| below -10% | 21,290 | 5,802 | 35.6% | 48.3% | 48.9% [48.2%, 49.6%] | +13.3 pp | -3.5% over 21,290 settled, 5,802 games | [-6.5%, -0.4%] | [-9.0%, +2.1%] across 143 looks | no demonstrated edge |
-| -10% to -5% | 4,642 | 2,588 | 51.4% | 52.9% | 55.2% [53.8%, 56.6%] | +3.8 pp | -0.8% over 4,642 settled, 606 days | [-5.0%, +3.4%] | [-8.5%, +6.8%] across 143 looks | no demonstrated edge |
-| -5% to +0% | 4,847 | 2,173 | 55.7% | 54.4% | 54.5% [53.1%, 55.9%] | -1.1 pp | -5.2% over 4,847 settled, 573 days | [-8.9%, -1.4%] | [-11.9%, +1.6%] across 143 looks | no demonstrated edge |
-| +0% to +2% | 1,769 | 1,288 | 56.7% | 53.4% | 52.3% [50.0%, 54.7%] | -4.3 pp | -6.4% over 1,769 settled, 488 days | [-13.7%, +0.8%] | [-19.7%, +6.8%] across 143 looks | no demonstrated edge |
-| +2% to +5% | 2,474 | 1,716 | 56.9% | 52.4% | 50.3% [48.3%, 52.3%] | -6.7 pp | -9.5% over 2,474 settled, 534 days | [-14.8%, -4.2%] | [-19.2%, +0.1%] across 143 looks | no demonstrated edge |
-| +5% to +10% | 3,654 | 2,205 | 58.4% | 51.8% | 52.0% [50.4%, 53.6%] | -6.4 pp | -4.7% over 3,654 settled, 570 days | [-10.6%, +1.2%] | [-15.5%, +6.0%] across 143 looks | no demonstrated edge |
-| +10% to +20% | 5,609 | 2,927 | 60.4% | 50.3% | 51.0% [49.7%, 52.3%] | -9.4 pp | -3.8% over 5,609 settled, 2,927 games | [-8.6%, +0.9%] | [-12.5%, +4.8%] across 143 looks | no demonstrated edge |
-| +20% and above | 9,559 | 3,662 | 64.3% | 43.6% | 45.7% [44.7%, 46.7%] | -18.5 pp | -2.9% over 9,559 settled, 634 days | [-7.3%, +1.6%] | [-11.0%, +5.3%] across 143 looks | no demonstrated edge |
+| below -10% | 21,290 | 5,802 | 35.6% | 48.3% | 48.9% [48.2%, 49.6%] | +13.3 pp | -3.5% over 21,290 settled, 5,802 games | [-6.5%, -0.4%] | [-9.1%, +2.1%] across 148 looks | no demonstrated edge |
+| -10% to -5% | 4,642 | 2,588 | 51.4% | 52.9% | 55.2% [53.8%, 56.6%] | +3.8 pp | -0.8% over 4,642 settled, 606 days | [-5.0%, +3.4%] | [-8.5%, +6.9%] across 148 looks | no demonstrated edge |
+| -5% to +0% | 4,847 | 2,173 | 55.7% | 54.4% | 54.5% [53.1%, 55.9%] | -1.1 pp | -5.2% over 4,847 settled, 573 days | [-8.9%, -1.4%] | [-11.9%, +1.6%] across 148 looks | no demonstrated edge |
+| +0% to +2% | 1,769 | 1,288 | 56.7% | 53.4% | 52.3% [50.0%, 54.7%] | -4.3 pp | -6.4% over 1,769 settled, 488 days | [-13.7%, +0.8%] | [-19.7%, +6.9%] across 148 looks | no demonstrated edge |
+| +2% to +5% | 2,474 | 1,716 | 56.9% | 52.4% | 50.3% [48.3%, 52.3%] | -6.7 pp | -9.5% over 2,474 settled, 534 days | [-14.8%, -4.2%] | [-19.2%, +0.2%] across 148 looks | no demonstrated edge |
+| +5% to +10% | 3,654 | 2,205 | 58.4% | 51.8% | 52.0% [50.4%, 53.6%] | -6.4 pp | -4.7% over 3,654 settled, 570 days | [-10.6%, +1.2%] | [-15.5%, +6.0%] across 148 looks | no demonstrated edge |
+| +10% to +20% | 5,609 | 2,927 | 60.4% | 50.3% | 51.0% [49.7%, 52.3%] | -9.4 pp | -3.8% over 5,609 settled, 2,927 games | [-8.6%, +0.9%] | [-12.5%, +4.8%] across 148 looks | no demonstrated edge |
+| +20% and above | 9,559 | 3,662 | 64.3% | 43.6% | 45.7% [44.7%, 46.7%] | -18.5 pp | -2.9% over 9,559 settled, 634 days | [-7.3%, +1.6%] | [-11.0%, +5.3%] across 148 looks | no demonstrated edge |
 
 A bucket below 30 wagers prints its count and no frequency — the point estimate of nine observations invites a reader to follow the shape of the line rather than the intervals around it.
 
 **The model over-estimates more where it claims more.** The shortfall against model-implied is +13.3 pp in the below -10% bucket (21,290 wagers) and -18.5 pp in the +20% and above bucket (9,559 wagers) — it widens by 31.9 pp across the range. That is **overconfidence**, which is what this column measures, and it is the winner's curse: the biggest claimed edges are the biggest over-estimates by construction. It is not by itself anti-predictiveness — that is a claim about realised return, and it is measured in its own right below.
 
-**Realised return by claimed edge — the anti-predictive statistic.** The below -10% bucket returned -3.5% over 21,290 settled wagers across 5,802 games, 95% interval [-6.5%, -0.4%], family-corrected [-9.0%, +2.1%] across 143 looks — no demonstrated edge; the +20% and above bucket returned -2.9% over 9,559 settled wagers across 634 days, 95% interval [-7.3%, +1.6%], family-corrected [-11.0%, +5.3%] across 143 looks — no demonstrated edge. The return does not fall across the range, so this run shows no anti-predictiveness in realised return. That is not evidence of skill — the disagreement coefficient is the test — and it does not contradict the overconfidence column above, which measures a different quantity.
-The +2% to +5% bucket returned -9.5% over 2,474 settled wagers across 534 days, 95% interval [-14.8%, -4.2%], family-corrected [-19.2%, +0.1%] across 143 looks — no demonstrated edge.
+**Realised return by claimed edge — the anti-predictive statistic.** The below -10% bucket returned -3.5% over 21,290 settled wagers across 5,802 games, 95% interval [-6.5%, -0.4%], family-corrected [-9.1%, +2.1%] across 148 looks — no demonstrated edge; the +20% and above bucket returned -2.9% over 9,559 settled wagers across 634 days, 95% interval [-7.3%, +1.6%], family-corrected [-11.0%, +5.3%] across 148 looks — no demonstrated edge. The return does not fall across the range, so this run shows no anti-predictiveness in realised return. That is not evidence of skill — the disagreement coefficient is the test — and it does not contradict the overconfidence column above, which measures a different quantity.
+The +2% to +5% bucket returned -9.5% over 2,474 settled wagers across 534 days, 95% interval [-14.8%, -4.2%], family-corrected [-19.2%, +0.2%] across 148 looks — no demonstrated edge.
 **The +2% to +5% claimed-edge bucket's return is below zero at the point estimate.** Both things are true and both are said: the point estimate sits on the losing side, and the family-corrected interval printed above includes zero, so the verdict beside it is the one that stands. A negative number under an interval that spans zero is not evidence of a loss; it is also not evidence of anything else.
 
 ### mid_major
@@ -128,7 +128,7 @@ The +2% to +5% bucket returned -9.5% over 2,474 settled wagers across 534 days, 
 |:---|---:|---:|:---|:---|---:|---:|:---|
 | intercept | 0 | -0.045 | -0.064 to -0.026 | -0.080 to -0.010 | 127,094 | 735 days | excludes zero, below it — a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model |
 | market_implied | 1 | +1.108 | +1.069 to +1.147 | +1.037 to +1.179 | 127,094 | 735 days | excludes 1.0 (over-responsive) — the de-vigged price is not calibrated on this population, so read the disagreement coefficient only after understanding why |
-| disagreement | 0 | +0.032 | -0.057 to +0.121 | -0.131 to +0.195 | 127,094 | 11,621 games | no demonstrated edge |
+| disagreement | 0 | +0.032 | -0.057 to +0.121 | -0.132 to +0.196 | 127,094 | 11,621 games | no demonstrated edge |
 
 **The model knows nothing the price does not.** The interval on the disagreement includes zero, so none of the claimed edge is demonstrably realised.
 
@@ -143,8 +143,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23229 | 127,094 |
 | the base rate (50.0% of these wagers won) | 0.25000 | 127,094 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.01074 over 127,094 wagers across 11,621 games, 95% interval -0.01273 to -0.00875, family-corrected -0.01437 to -0.00711 — demonstrated deficit.
-- **against the raw, handicapped market:** the model's Brier advantage is -0.01066 over 127,094 wagers across 11,621 games, 95% interval -0.01266 to -0.00867, family-corrected -0.01431 to -0.00702 — demonstrated deficit.
+- **against the de-vigged market:** the model's Brier advantage is -0.01074 over 127,094 wagers across 11,621 games, 95% interval -0.01273 to -0.00875, family-corrected -0.01438 to -0.00710 — demonstrated deficit.
+- **against the raw, handicapped market:** the model's Brier advantage is -0.01066 over 127,094 wagers across 11,621 games, 95% interval -0.01266 to -0.00867, family-corrected -0.01431 to -0.00701 — demonstrated deficit.
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -154,21 +154,21 @@ Positive is the model being **more** accurate. A Brier score is better when it i
 
 | Claimed edge | Wagers | Games | Model said | De-vigged price said | Actually won | Realised − model | Realised return | 95% interval | Family-corrected | Verdict |
 |:---|---:|---:|---:|---:|:---|---:|---:|:---|:---|:---|
-| below -10% | 46,974 | 10,888 | 39.7% | 49.6% | 50.2% [49.8%, 50.7%] | +10.6 pp | -4.3% over 46,974 settled, 10,888 games | [-6.8%, -1.9%] | [-8.8%, +0.2%] across 143 looks | no demonstrated edge |
-| -10% to -5% | 13,774 | 6,170 | 51.3% | 52.7% | 54.8% [53.9%, 55.6%] | +3.4 pp | -1.4% over 13,774 settled, 6,170 games | [-3.6%, +0.9%] | [-5.5%, +2.8%] across 143 looks | no demonstrated edge |
-| -5% to +0% | 14,264 | 5,068 | 54.3% | 52.9% | 53.8% [53.0%, 54.7%] | -0.4 pp | -4.0% over 14,264 settled, 5,068 games | [-6.5%, -1.6%] | [-8.6%, +0.5%] across 143 looks | no demonstrated edge |
-| +0% to +2% | 5,177 | 3,166 | 54.9% | 51.7% | 51.9% [50.5%, 53.3%] | -3.0 pp | -4.8% over 5,177 settled, 585 days | [-9.0%, -0.7%] | [-12.4%, +2.7%] across 143 looks | no demonstrated edge |
-| +2% to +5% | 7,278 | 4,095 | 55.2% | 50.7% | 50.9% [49.8%, 52.1%] | -4.2 pp | -5.1% over 7,278 settled, 4,095 games | [-8.9%, -1.2%] | [-12.1%, +2.0%] across 143 looks | no demonstrated edge |
-| +5% to +10% | 10,038 | 5,124 | 56.3% | 49.9% | 49.8% [48.8%, 50.8%] | -6.5 pp | -6.2% over 10,038 settled, 644 days | [-9.8%, -2.5%] | [-12.9%, +0.5%] across 143 looks | no demonstrated edge |
-| +10% to +20% | 13,457 | 6,054 | 58.0% | 48.2% | 49.6% [48.8%, 50.5%] | -8.3 pp | -2.7% over 13,457 settled, 6,054 games | [-6.3%, +0.9%] | [-9.2%, +3.8%] across 143 looks | no demonstrated edge |
-| +20% and above | 16,132 | 5,987 | 57.9% | 40.6% | 41.2% [40.4%, 42.0%] | -16.7 pp | -5.7% over 16,132 settled, 5,987 games | [-9.6%, -1.8%] | [-12.9%, +1.4%] across 143 looks | no demonstrated edge |
+| below -10% | 46,974 | 10,888 | 39.7% | 49.6% | 50.2% [49.8%, 50.7%] | +10.6 pp | -4.3% over 46,974 settled, 10,888 games | [-6.8%, -1.9%] | [-8.8%, +0.2%] across 148 looks | no demonstrated edge |
+| -10% to -5% | 13,774 | 6,170 | 51.3% | 52.7% | 54.8% [53.9%, 55.6%] | +3.4 pp | -1.4% over 13,774 settled, 6,170 games | [-3.6%, +0.9%] | [-5.5%, +2.8%] across 148 looks | no demonstrated edge |
+| -5% to +0% | 14,264 | 5,068 | 54.3% | 52.9% | 53.8% [53.0%, 54.7%] | -0.4 pp | -4.0% over 14,264 settled, 5,068 games | [-6.5%, -1.6%] | [-8.6%, +0.5%] across 148 looks | no demonstrated edge |
+| +0% to +2% | 5,177 | 3,166 | 54.9% | 51.7% | 51.9% [50.5%, 53.3%] | -3.0 pp | -4.8% over 5,177 settled, 585 days | [-9.0%, -0.7%] | [-12.4%, +2.7%] across 148 looks | no demonstrated edge |
+| +2% to +5% | 7,278 | 4,095 | 55.2% | 50.7% | 50.9% [49.8%, 52.1%] | -4.2 pp | -5.1% over 7,278 settled, 4,095 games | [-8.9%, -1.2%] | [-12.1%, +2.0%] across 148 looks | no demonstrated edge |
+| +5% to +10% | 10,038 | 5,124 | 56.3% | 49.9% | 49.8% [48.8%, 50.8%] | -6.5 pp | -6.2% over 10,038 settled, 644 days | [-9.8%, -2.5%] | [-12.9%, +0.5%] across 148 looks | no demonstrated edge |
+| +10% to +20% | 13,457 | 6,054 | 58.0% | 48.2% | 49.6% [48.8%, 50.5%] | -8.3 pp | -2.7% over 13,457 settled, 6,054 games | [-6.3%, +0.9%] | [-9.3%, +3.8%] across 148 looks | no demonstrated edge |
+| +20% and above | 16,132 | 5,987 | 57.9% | 40.6% | 41.2% [40.4%, 42.0%] | -16.7 pp | -5.7% over 16,132 settled, 5,987 games | [-9.6%, -1.8%] | [-12.9%, +1.4%] across 148 looks | no demonstrated edge |
 
 A bucket below 30 wagers prints its count and no frequency — the point estimate of nine observations invites a reader to follow the shape of the line rather than the intervals around it.
 
 **The model over-estimates more where it claims more.** The shortfall against model-implied is +10.6 pp in the below -10% bucket (46,974 wagers) and -16.7 pp in the +20% and above bucket (16,132 wagers) — it widens by 27.2 pp across the range. That is **overconfidence**, which is what this column measures, and it is the winner's curse: the biggest claimed edges are the biggest over-estimates by construction. It is not by itself anti-predictiveness — that is a claim about realised return, and it is measured in its own right below.
 
-**Realised return by claimed edge — the anti-predictive statistic.** The below -10% bucket returned -4.3% over 46,974 settled wagers across 10,888 games, 95% interval [-6.8%, -1.9%], family-corrected [-8.8%, +0.2%] across 143 looks — no demonstrated edge; the +20% and above bucket returned -5.7% over 16,132 settled wagers across 5,987 games, 95% interval [-9.6%, -1.8%], family-corrected [-12.9%, +1.4%] across 143 looks — no demonstrated edge. The point estimate falls by 1.4 pp across the range, but the two family-corrected intervals overlap across 143 looks, so **the fall is not demonstrated** and the raw intervals overlap too. No sentence here says raising the threshold makes it worse; the disagreement coefficient is the test that can say so, and the overconfidence column above measures a different quantity.
-The +5% to +10% bucket returned -6.2% over 10,038 settled wagers across 644 days, 95% interval [-9.8%, -2.5%], family-corrected [-12.9%, +0.5%] across 143 looks — no demonstrated edge.
+**Realised return by claimed edge — the anti-predictive statistic.** The below -10% bucket returned -4.3% over 46,974 settled wagers across 10,888 games, 95% interval [-6.8%, -1.9%], family-corrected [-8.8%, +0.2%] across 148 looks — no demonstrated edge; the +20% and above bucket returned -5.7% over 16,132 settled wagers across 5,987 games, 95% interval [-9.6%, -1.8%], family-corrected [-12.9%, +1.4%] across 148 looks — no demonstrated edge. The point estimate falls by 1.4 pp across the range, but the two family-corrected intervals overlap across 148 looks, so **the fall is not demonstrated** and the raw intervals overlap too. No sentence here says raising the threshold makes it worse; the disagreement coefficient is the test that can say so, and the overconfidence column above measures a different quantity.
+The +5% to +10% bucket returned -6.2% over 10,038 settled wagers across 644 days, 95% interval [-9.8%, -2.5%], family-corrected [-12.9%, +0.5%] across 148 looks — no demonstrated edge.
 **The +5% to +10% claimed-edge bucket's return is below zero at the point estimate.** Both things are true and both are said: the point estimate sits on the losing side, and the family-corrected interval printed above includes zero, so the verdict beside it is the one that stands. A negative number under an interval that spans zero is not evidence of a loss; it is also not evidence of anything else.
 
 ### low_major
@@ -181,7 +181,7 @@ The +5% to +10% bucket returned -6.2% over 10,038 settled wagers across 644 days
 |:---|---:|---:|:---|:---|---:|---:|:---|
 | intercept | 0 | -0.024 | -0.049 to +0.001 | -0.070 to +0.022 | 89,546 | 9,020 games | contains zero |
 | market_implied | 1 | +1.065 | +1.013 to +1.116 | +0.971 to +1.158 | 89,546 | 9,020 games | contains 1.0 — the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable |
-| disagreement | 0 | +0.011 | -0.105 to +0.127 | -0.200 to +0.223 | 89,546 | 642 days | no demonstrated edge |
+| disagreement | 0 | +0.011 | -0.105 to +0.127 | -0.201 to +0.223 | 89,546 | 642 days | no demonstrated edge |
 
 **The model knows nothing the price does not.** The interval on the disagreement includes zero, so none of the claimed edge is demonstrably realised.
 
@@ -196,8 +196,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23777 | 89,546 |
 | the base rate (50.0% of these wagers won) | 0.25000 | 89,546 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.00806 over 89,546 wagers across 642 days, 95% interval -0.00991 to -0.00621, family-corrected -0.01144 to -0.00468 — demonstrated deficit.
-- **against the raw, handicapped market:** the model's Brier advantage is -0.00782 over 89,546 wagers across 642 days, 95% interval -0.00968 to -0.00596, family-corrected -0.01122 to -0.00443 — demonstrated deficit.
+- **against the de-vigged market:** the model's Brier advantage is -0.00806 over 89,546 wagers across 642 days, 95% interval -0.00991 to -0.00621, family-corrected -0.01145 to -0.00467 — demonstrated deficit.
+- **against the raw, handicapped market:** the model's Brier advantage is -0.00782 over 89,546 wagers across 642 days, 95% interval -0.00968 to -0.00596, family-corrected -0.01123 to -0.00442 — demonstrated deficit.
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -207,21 +207,21 @@ Positive is the model being **more** accurate. A Brier score is better when it i
 
 | Claimed edge | Wagers | Games | Model said | De-vigged price said | Actually won | Realised − model | Realised return | 95% interval | Family-corrected | Verdict |
 |:---|---:|---:|---:|---:|:---|---:|---:|:---|:---|:---|
-| below -10% | 31,462 | 8,321 | 41.9% | 50.7% | 51.7% [51.1%, 52.2%] | +9.8 pp | -3.1% over 31,462 settled, 639 days | [-5.6%, -0.5%] | [-7.7%, +1.6%] across 143 looks | no demonstrated edge |
-| -10% to -5% | 10,863 | 5,381 | 51.3% | 52.9% | 55.0% [54.1%, 56.0%] | +3.7 pp | -0.6% over 10,863 settled, 576 days | [-2.9%, +1.7%] | [-4.9%, +3.6%] across 143 looks | no demonstrated edge |
-| -5% to +0% | 10,587 | 4,181 | 52.3% | 51.2% | 51.0% [50.0%, 51.9%] | -1.4 pp | -5.3% over 10,587 settled, 4,181 games | [-7.7%, -2.8%] | [-9.7%, -0.8%] across 143 looks | demonstrated deficit |
-| +0% to +2% | 3,985 | 2,652 | 53.2% | 50.1% | 51.8% [50.3%, 53.4%] | -1.3 pp | -1.4% over 3,985 settled, 2,652 games | [-5.7%, +2.9%] | [-9.3%, +6.5%] across 143 looks | no demonstrated edge |
-| +2% to +5% | 5,418 | 3,383 | 53.9% | 49.6% | 50.1% [48.8%, 51.5%] | -3.7 pp | -4.1% over 5,418 settled, 531 days | [-8.2%, +0.0%] | [-11.6%, +3.4%] across 143 looks | no demonstrated edge |
-| +5% to +10% | 7,820 | 4,312 | 55.2% | 48.9% | 49.4% [48.3%, 50.5%] | -5.8 pp | -3.9% over 7,820 settled, 4,312 games | [-7.4%, -0.3%] | [-10.3%, +2.6%] across 143 looks | no demonstrated edge |
-| +10% to +20% | 10,186 | 4,921 | 56.9% | 47.4% | 47.2% [46.3%, 48.2%] | -9.7 pp | -5.5% over 10,186 settled, 596 days | [-9.4%, -1.6%] | [-12.7%, +1.6%] across 143 looks | no demonstrated edge |
-| +20% and above | 9,225 | 4,109 | 54.5% | 39.2% | 39.9% [38.9%, 40.9%] | -14.6 pp | -5.8% over 9,225 settled, 586 days | [-10.3%, -1.3%] | [-14.0%, +2.4%] across 143 looks | no demonstrated edge |
+| below -10% | 31,462 | 8,321 | 41.9% | 50.7% | 51.7% [51.1%, 52.2%] | +9.8 pp | -3.1% over 31,462 settled, 639 days | [-5.6%, -0.5%] | [-7.8%, +1.6%] across 148 looks | no demonstrated edge |
+| -10% to -5% | 10,863 | 5,381 | 51.3% | 52.9% | 55.0% [54.1%, 56.0%] | +3.7 pp | -0.6% over 10,863 settled, 576 days | [-2.9%, +1.7%] | [-4.9%, +3.6%] across 148 looks | no demonstrated edge |
+| -5% to +0% | 10,587 | 4,181 | 52.3% | 51.2% | 51.0% [50.0%, 51.9%] | -1.4 pp | -5.3% over 10,587 settled, 4,181 games | [-7.7%, -2.8%] | [-9.7%, -0.8%] across 148 looks | demonstrated deficit |
+| +0% to +2% | 3,985 | 2,652 | 53.2% | 50.1% | 51.8% [50.3%, 53.4%] | -1.3 pp | -1.4% over 3,985 settled, 2,652 games | [-5.7%, +2.9%] | [-9.3%, +6.5%] across 148 looks | no demonstrated edge |
+| +2% to +5% | 5,418 | 3,383 | 53.9% | 49.6% | 50.1% [48.8%, 51.5%] | -3.7 pp | -4.1% over 5,418 settled, 531 days | [-8.2%, +0.0%] | [-11.6%, +3.4%] across 148 looks | no demonstrated edge |
+| +5% to +10% | 7,820 | 4,312 | 55.2% | 48.9% | 49.4% [48.3%, 50.5%] | -5.8 pp | -3.9% over 7,820 settled, 4,312 games | [-7.4%, -0.3%] | [-10.3%, +2.6%] across 148 looks | no demonstrated edge |
+| +10% to +20% | 10,186 | 4,921 | 56.9% | 47.4% | 47.2% [46.3%, 48.2%] | -9.7 pp | -5.5% over 10,186 settled, 596 days | [-9.4%, -1.6%] | [-12.7%, +1.6%] across 148 looks | no demonstrated edge |
+| +20% and above | 9,225 | 4,109 | 54.5% | 39.2% | 39.9% [38.9%, 40.9%] | -14.6 pp | -5.8% over 9,225 settled, 586 days | [-10.3%, -1.3%] | [-14.0%, +2.4%] across 148 looks | no demonstrated edge |
 
 A bucket below 30 wagers prints its count and no frequency — the point estimate of nine observations invites a reader to follow the shape of the line rather than the intervals around it.
 
 **The model over-estimates more where it claims more.** The shortfall against model-implied is +9.8 pp in the below -10% bucket (31,462 wagers) and -14.6 pp in the +20% and above bucket (9,225 wagers) — it widens by 24.3 pp across the range. That is **overconfidence**, which is what this column measures, and it is the winner's curse: the biggest claimed edges are the biggest over-estimates by construction. It is not by itself anti-predictiveness — that is a claim about realised return, and it is measured in its own right below.
 
-**Realised return by claimed edge — the anti-predictive statistic.** The below -10% bucket returned -3.1% over 31,462 settled wagers across 639 days, 95% interval [-5.6%, -0.5%], family-corrected [-7.7%, +1.6%] across 143 looks — no demonstrated edge; the +20% and above bucket returned -5.8% over 9,225 settled wagers across 586 days, 95% interval [-10.3%, -1.3%], family-corrected [-14.0%, +2.4%] across 143 looks — no demonstrated edge. The point estimate falls by 2.7 pp across the range, but the two family-corrected intervals overlap across 143 looks, so **the fall is not demonstrated** and the raw intervals overlap too. No sentence here says raising the threshold makes it worse; the disagreement coefficient is the test that can say so, and the overconfidence column above measures a different quantity.
-The -5% to +0% bucket returned -5.3% over 10,587 settled wagers across 4,181 games, 95% interval [-7.7%, -2.8%], family-corrected [-9.7%, -0.8%] across 143 looks — demonstrated deficit.
+**Realised return by claimed edge — the anti-predictive statistic.** The below -10% bucket returned -3.1% over 31,462 settled wagers across 639 days, 95% interval [-5.6%, -0.5%], family-corrected [-7.8%, +1.6%] across 148 looks — no demonstrated edge; the +20% and above bucket returned -5.8% over 9,225 settled wagers across 586 days, 95% interval [-10.3%, -1.3%], family-corrected [-14.0%, +2.4%] across 148 looks — no demonstrated edge. The point estimate falls by 2.7 pp across the range, but the two family-corrected intervals overlap across 148 looks, so **the fall is not demonstrated** and the raw intervals overlap too. No sentence here says raising the threshold makes it worse; the disagreement coefficient is the test that can say so, and the overconfidence column above measures a different quantity.
+The -5% to +0% bucket returned -5.3% over 10,587 settled wagers across 4,181 games, 95% interval [-7.7%, -2.8%], family-corrected [-9.7%, -0.8%] across 148 looks — demonstrated deficit.
 **The wagers in the -5% to +0% claimed-edge bucket lost money, and the loss survives the correction.** The family-corrected interval printed above lies entirely below zero, so that bucket is a **demonstrated deficit**: the model did worse than no edge in it, which is a stronger statement than failing to demonstrate one, and it is a statement about the money rather than about the size of the sample.
 
 ### unplaced
@@ -249,8 +249,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.21818 | 20 |
 | the base rate (50.0% of these wagers won) | 0.25000 | 20 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.08590 over 20 wagers across 2 games, 95% interval -0.27827 to +0.10646, family-corrected -0.43682 to +0.26501 — not enough evidence (20 bets, below the 200 declared in advance).
-- **against the raw, handicapped market:** the model's Brier advantage is -0.08743 over 20 wagers across 2 games, 95% interval -0.28093 to +0.10606, family-corrected -0.44041 to +0.26555 — not enough evidence (20 bets, below the 200 declared in advance).
+- **against the de-vigged market:** the model's Brier advantage is -0.08590 over 20 wagers across 2 games, 95% interval -0.27827 to +0.10646, family-corrected -0.43770 to +0.26590 — not enough evidence (20 bets, below the 200 declared in advance).
+- **against the raw, handicapped market:** the model's Brier advantage is -0.08743 over 20 wagers across 2 games, 95% interval -0.28093 to +0.10606, family-corrected -0.44130 to +0.26643 — not enough evidence (20 bets, below the 200 declared in advance).
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -289,7 +289,7 @@ The overconfidence column above is a different quantity and cannot stand in for 
 |:---|---:|---:|:---|:---|---:|---:|:---|
 | intercept | 0 | -0.031 | -0.044 to -0.019 | -0.054 to -0.008 | 270,504 | 26,795 games | excludes zero, below it — a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model |
 | market_implied | 1 | +1.080 | +1.054 to +1.105 | +1.033 to +1.126 | 270,504 | 26,795 games | excludes 1.0 (over-responsive) — the de-vigged price is not calibrated on this population, so read the disagreement coefficient only after understanding why |
-| disagreement | 0 | +0.032 | -0.022 to +0.086 | -0.067 to +0.131 | 270,504 | 26,795 games | no demonstrated edge |
+| disagreement | 0 | +0.032 | -0.022 to +0.086 | -0.068 to +0.131 | 270,504 | 26,795 games | no demonstrated edge |
 
 **The model knows nothing the price does not.** The interval on the disagreement includes zero, so none of the claimed edge is demonstrably realised.
 
@@ -304,8 +304,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23440 | 270,504 |
 | the base rate (50.0% of these wagers won) | 0.25000 | 270,504 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.01130 over 270,504 wagers across 26,795 games, 95% interval -0.01259 to -0.01002, family-corrected -0.01364 to -0.00896 — demonstrated deficit.
-- **against the raw, handicapped market:** the model's Brier advantage is -0.01115 over 270,504 wagers across 26,795 games, 95% interval -0.01244 to -0.00987, family-corrected -0.01350 to -0.00881 — demonstrated deficit.
+- **against the de-vigged market:** the model's Brier advantage is -0.01130 over 270,504 wagers across 26,795 games, 95% interval -0.01259 to -0.01002, family-corrected -0.01365 to -0.00896 — demonstrated deficit.
+- **against the raw, handicapped market:** the model's Brier advantage is -0.01115 over 270,504 wagers across 26,795 games, 95% interval -0.01244 to -0.00987, family-corrected -0.01351 to -0.00880 — demonstrated deficit.
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -315,23 +315,23 @@ Positive is the model being **more** accurate. A Brier score is better when it i
 
 | Claimed edge | Wagers | Games | Model said | De-vigged price said | Actually won | Realised − model | Realised return | 95% interval | Family-corrected | Verdict |
 |:---|---:|---:|---:|---:|:---|---:|---:|:---|:---|:---|
-| below -10% | 99,733 | 25,013 | 39.5% | 49.7% | 50.4% [50.1%, 50.7%] | +10.9 pp | -3.7% over 99,733 settled, 25,013 games | [-5.3%, -2.2%] | [-6.5%, -0.9%] across 143 looks | demonstrated deficit |
-| -10% to -5% | 29,281 | 14,141 | 51.3% | 52.8% | 54.9% [54.4%, 55.5%] | +3.6 pp | -1.0% over 29,281 settled, 14,141 games | [-2.5%, +0.5%] | [-3.7%, +1.8%] across 143 looks | no demonstrated edge |
-| -5% to +0% | 29,702 | 11,424 | 53.8% | 52.5% | 52.9% [52.4%, 53.5%] | -0.9 pp | -4.7% over 29,702 settled, 11,424 games | [-6.2%, -3.1%] | [-7.6%, -1.7%] across 143 looks | demonstrated deficit |
-| +0% to +2% | 10,932 | 7,107 | 54.6% | 51.4% | 52.0% [51.0%, 52.9%] | -2.6 pp | -3.8% over 10,932 settled, 7,107 games | [-6.5%, -1.1%] | [-8.8%, +1.1%] across 143 looks | no demonstrated edge |
-| +2% to +5% | 15,172 | 9,195 | 55.0% | 50.6% | 50.6% [49.8%, 51.3%] | -4.4 pp | -5.4% over 15,172 settled, 9,195 games | [-7.9%, -2.9%] | [-10.0%, -0.9%] across 143 looks | demonstrated deficit |
-| +5% to +10% | 21,513 | 11,642 | 56.3% | 49.9% | 50.0% [49.4%, 50.7%] | -6.2 pp | -5.1% over 21,513 settled, 723 days | [-7.5%, -2.7%] | [-9.4%, -0.7%] across 143 looks | demonstrated deficit |
-| +10% to +20% | 29,252 | 13,902 | 58.1% | 48.3% | 49.1% [48.5%, 49.6%] | -9.0 pp | -3.9% over 29,252 settled, 13,902 games | [-6.2%, -1.6%] | [-8.1%, +0.3%] across 143 looks | no demonstrated edge |
-| +20% and above | 34,919 | 13,759 | 58.7% | 41.1% | 42.1% [41.6%, 42.6%] | -16.6 pp | -5.0% over 34,919 settled, 13,759 games | [-7.5%, -2.5%] | [-9.5%, -0.5%] across 143 looks | demonstrated deficit |
+| below -10% | 99,733 | 25,013 | 39.5% | 49.7% | 50.4% [50.1%, 50.7%] | +10.9 pp | -3.7% over 99,733 settled, 25,013 games | [-5.3%, -2.2%] | [-6.6%, -0.9%] across 148 looks | demonstrated deficit |
+| -10% to -5% | 29,281 | 14,141 | 51.3% | 52.8% | 54.9% [54.4%, 55.5%] | +3.6 pp | -1.0% over 29,281 settled, 14,141 games | [-2.5%, +0.5%] | [-3.8%, +1.8%] across 148 looks | no demonstrated edge |
+| -5% to +0% | 29,702 | 11,424 | 53.8% | 52.5% | 52.9% [52.4%, 53.5%] | -0.9 pp | -4.7% over 29,702 settled, 11,424 games | [-6.2%, -3.1%] | [-7.6%, -1.7%] across 148 looks | demonstrated deficit |
+| +0% to +2% | 10,932 | 7,107 | 54.6% | 51.4% | 52.0% [51.0%, 52.9%] | -2.6 pp | -3.8% over 10,932 settled, 7,107 games | [-6.5%, -1.1%] | [-8.8%, +1.1%] across 148 looks | no demonstrated edge |
+| +2% to +5% | 15,172 | 9,195 | 55.0% | 50.6% | 50.6% [49.8%, 51.3%] | -4.4 pp | -5.4% over 15,172 settled, 9,195 games | [-7.9%, -2.9%] | [-10.0%, -0.9%] across 148 looks | demonstrated deficit |
+| +5% to +10% | 21,513 | 11,642 | 56.3% | 49.9% | 50.0% [49.4%, 50.7%] | -6.2 pp | -5.1% over 21,513 settled, 723 days | [-7.5%, -2.7%] | [-9.4%, -0.7%] across 148 looks | demonstrated deficit |
+| +10% to +20% | 29,252 | 13,902 | 58.1% | 48.3% | 49.1% [48.5%, 49.6%] | -9.0 pp | -3.9% over 29,252 settled, 13,902 games | [-6.2%, -1.6%] | [-8.1%, +0.3%] across 148 looks | no demonstrated edge |
+| +20% and above | 34,919 | 13,759 | 58.7% | 41.1% | 42.1% [41.6%, 42.6%] | -16.6 pp | -5.0% over 34,919 settled, 13,759 games | [-7.5%, -2.5%] | [-9.5%, -0.4%] across 148 looks | demonstrated deficit |
 
 A bucket below 30 wagers prints its count and no frequency — the point estimate of nine observations invites a reader to follow the shape of the line rather than the intervals around it.
 
 **The model over-estimates more where it claims more.** The shortfall against model-implied is +10.9 pp in the below -10% bucket (99,733 wagers) and -16.6 pp in the +20% and above bucket (34,919 wagers) — it widens by 27.5 pp across the range. That is **overconfidence**, which is what this column measures, and it is the winner's curse: the biggest claimed edges are the biggest over-estimates by construction. It is not by itself anti-predictiveness — that is a claim about realised return, and it is measured in its own right below.
 
-**Realised return by claimed edge — the anti-predictive statistic.** The below -10% bucket returned -3.7% over 99,733 settled wagers across 25,013 games, 95% interval [-5.3%, -2.2%], family-corrected [-6.5%, -0.9%] across 143 looks — demonstrated deficit; the +20% and above bucket returned -5.0% over 34,919 settled wagers across 13,759 games, 95% interval [-7.5%, -2.5%], family-corrected [-9.5%, -0.5%] across 143 looks — demonstrated deficit. The point estimate falls by 1.2 pp across the range, but the two family-corrected intervals overlap across 143 looks, so **the fall is not demonstrated** and the raw intervals overlap too. No sentence here says raising the threshold makes it worse; the disagreement coefficient is the test that can say so, and the overconfidence column above measures a different quantity.
-The -5% to +0% bucket returned -4.7% over 29,702 settled wagers across 11,424 games, 95% interval [-6.2%, -3.1%], family-corrected [-7.6%, -1.7%] across 143 looks — demonstrated deficit.
-The +2% to +5% bucket returned -5.4% over 15,172 settled wagers across 9,195 games, 95% interval [-7.9%, -2.9%], family-corrected [-10.0%, -0.9%] across 143 looks — demonstrated deficit.
-The +5% to +10% bucket returned -5.1% over 21,513 settled wagers across 723 days, 95% interval [-7.5%, -2.7%], family-corrected [-9.4%, -0.7%] across 143 looks — demonstrated deficit.
+**Realised return by claimed edge — the anti-predictive statistic.** The below -10% bucket returned -3.7% over 99,733 settled wagers across 25,013 games, 95% interval [-5.3%, -2.2%], family-corrected [-6.6%, -0.9%] across 148 looks — demonstrated deficit; the +20% and above bucket returned -5.0% over 34,919 settled wagers across 13,759 games, 95% interval [-7.5%, -2.5%], family-corrected [-9.5%, -0.4%] across 148 looks — demonstrated deficit. The point estimate falls by 1.2 pp across the range, but the two family-corrected intervals overlap across 148 looks, so **the fall is not demonstrated** and the raw intervals overlap too. No sentence here says raising the threshold makes it worse; the disagreement coefficient is the test that can say so, and the overconfidence column above measures a different quantity.
+The -5% to +0% bucket returned -4.7% over 29,702 settled wagers across 11,424 games, 95% interval [-6.2%, -3.1%], family-corrected [-7.6%, -1.7%] across 148 looks — demonstrated deficit.
+The +2% to +5% bucket returned -5.4% over 15,172 settled wagers across 9,195 games, 95% interval [-7.9%, -2.9%], family-corrected [-10.0%, -0.9%] across 148 looks — demonstrated deficit.
+The +5% to +10% bucket returned -5.1% over 21,513 settled wagers across 723 days, 95% interval [-7.5%, -2.7%], family-corrected [-9.4%, -0.7%] across 148 looks — demonstrated deficit.
 **The wagers in the below -10%, -5% to +0%, +2% to +5%, +5% to +10%, +20% and above claimed-edge buckets lost money, and the loss survives the correction.** The family-corrected intervals printed above lie entirely below zero, so each of those buckets is a **demonstrated deficit**: the model did worse than no edge in them, which is a stronger statement than failing to demonstrate one, and it is a statement about the money rather than about the size of the sample.
 
 ## The threshold-selected bets, beside it — the winner's-curse comparison
@@ -346,7 +346,7 @@ The +5% to +10% bucket returned -5.1% over 21,513 settled wagers across 723 days
 
 | Term | Null | Coefficient | 95% interval | Family-corrected | Rows | Clusters | Reading |
 |:---|---:|---:|:---|:---|---:|---:|:---|
-| intercept | 0 | -0.028 | -0.056 to -0.001 | -0.078 to +0.021 | 21,296 | 703 days | contains zero |
+| intercept | 0 | -0.028 | -0.056 to -0.001 | -0.078 to +0.022 | 21,296 | 703 days | contains zero |
 | market_implied | 1 | +1.042 | +0.994 to +1.090 | +0.954 to +1.129 | 21,296 | 703 days | contains 1.0 — the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable |
 | disagreement | 0 | +0.130 | -0.008 to +0.269 | -0.122 to +0.383 | 21,296 | 703 days | no demonstrated edge |
 
@@ -363,8 +363,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23336 | 21,296 |
 | the base rate (48.7% of these wagers won) | 0.24984 | 21,296 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.02172 over 21,296 wagers across 5,792 games, 95% interval -0.02597 to -0.01747, family-corrected -0.02948 to -0.01396 — demonstrated deficit.
-- **against the raw, handicapped market:** the model's Brier advantage is -0.02165 over 21,296 wagers across 5,792 games, 95% interval -0.02528 to -0.01802, family-corrected -0.02827 to -0.01503 — demonstrated deficit.
+- **against the de-vigged market:** the model's Brier advantage is -0.02172 over 21,296 wagers across 5,792 games, 95% interval -0.02597 to -0.01747, family-corrected -0.02950 to -0.01394 — demonstrated deficit.
+- **against the raw, handicapped market:** the model's Brier advantage is -0.02165 over 21,296 wagers across 5,792 games, 95% interval -0.02528 to -0.01802, family-corrected -0.02829 to -0.01502 — demonstrated deficit.
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -378,16 +378,16 @@ Positive is the model being **more** accurate. A Brier score is better when it i
 | -10% to -5% | 0 | 0 | — | — | — | — | — | — | — | — |
 | -5% to +0% | 0 | 0 | — | — | — | — | — | — | — | — |
 | +0% to +2% | 0 | 0 | — | — | — | — | — | — | — | — |
-| +2% to +5% | 2,474 | 1,716 | 56.9% | 52.4% | 50.3% [48.3%, 52.3%] | -6.7 pp | -9.5% over 2,474 settled, 534 days | [-14.8%, -4.2%] | [-19.2%, +0.1%] across 143 looks | no demonstrated edge |
-| +5% to +10% | 3,654 | 2,205 | 58.4% | 51.8% | 52.0% [50.4%, 53.6%] | -6.4 pp | -4.7% over 3,654 settled, 570 days | [-10.6%, +1.2%] | [-15.5%, +6.0%] across 143 looks | no demonstrated edge |
-| +10% to +20% | 5,609 | 2,927 | 60.4% | 50.3% | 51.0% [49.7%, 52.3%] | -9.4 pp | -3.8% over 5,609 settled, 2,927 games | [-8.6%, +0.9%] | [-12.5%, +4.8%] across 143 looks | no demonstrated edge |
-| +20% and above | 9,559 | 3,662 | 64.3% | 43.6% | 45.7% [44.7%, 46.7%] | -18.5 pp | -2.9% over 9,559 settled, 634 days | [-7.3%, +1.6%] | [-11.0%, +5.3%] across 143 looks | no demonstrated edge |
+| +2% to +5% | 2,474 | 1,716 | 56.9% | 52.4% | 50.3% [48.3%, 52.3%] | -6.7 pp | -9.5% over 2,474 settled, 534 days | [-14.8%, -4.2%] | [-19.2%, +0.2%] across 148 looks | no demonstrated edge |
+| +5% to +10% | 3,654 | 2,205 | 58.4% | 51.8% | 52.0% [50.4%, 53.6%] | -6.4 pp | -4.7% over 3,654 settled, 570 days | [-10.6%, +1.2%] | [-15.5%, +6.0%] across 148 looks | no demonstrated edge |
+| +10% to +20% | 5,609 | 2,927 | 60.4% | 50.3% | 51.0% [49.7%, 52.3%] | -9.4 pp | -3.8% over 5,609 settled, 2,927 games | [-8.6%, +0.9%] | [-12.5%, +4.8%] across 148 looks | no demonstrated edge |
+| +20% and above | 9,559 | 3,662 | 64.3% | 43.6% | 45.7% [44.7%, 46.7%] | -18.5 pp | -2.9% over 9,559 settled, 634 days | [-7.3%, +1.6%] | [-11.0%, +5.3%] across 148 looks | no demonstrated edge |
 
 A bucket below 30 wagers prints its count and no frequency — the point estimate of nine observations invites a reader to follow the shape of the line rather than the intervals around it.
 
 **The model over-estimates more where it claims more.** The shortfall against model-implied is -6.7 pp in the +2% to +5% bucket (2,474 wagers) and -18.5 pp in the +20% and above bucket (9,559 wagers) — it widens by 11.9 pp across the range. That is **overconfidence**, which is what this column measures, and it is the winner's curse: the biggest claimed edges are the biggest over-estimates by construction. It is not by itself anti-predictiveness — that is a claim about realised return, and it is measured in its own right below.
 
-**Realised return by claimed edge — the anti-predictive statistic.** The +2% to +5% bucket returned -9.5% over 2,474 settled wagers across 534 days, 95% interval [-14.8%, -4.2%], family-corrected [-19.2%, +0.1%] across 143 looks — no demonstrated edge; the +20% and above bucket returned -2.9% over 9,559 settled wagers across 634 days, 95% interval [-7.3%, +1.6%], family-corrected [-11.0%, +5.3%] across 143 looks — no demonstrated edge. The return does not fall across the range, so this run shows no anti-predictiveness in realised return. That is not evidence of skill — the disagreement coefficient is the test — and it does not contradict the overconfidence column above, which measures a different quantity.
+**Realised return by claimed edge — the anti-predictive statistic.** The +2% to +5% bucket returned -9.5% over 2,474 settled wagers across 534 days, 95% interval [-14.8%, -4.2%], family-corrected [-19.2%, +0.2%] across 148 looks — no demonstrated edge; the +20% and above bucket returned -2.9% over 9,559 settled wagers across 634 days, 95% interval [-7.3%, +1.6%], family-corrected [-11.0%, +5.3%] across 148 looks — no demonstrated edge. The return does not fall across the range, so this run shows no anti-predictiveness in realised return. That is not evidence of skill — the disagreement coefficient is the test — and it does not contradict the overconfidence column above, which measures a different quantity.
 **The +2% to +5% claimed-edge bucket's return is below zero at the point estimate.** Both things are true and both are said: the point estimate sits on the losing side, and the family-corrected interval printed above includes zero, so the verdict beside it is the one that stands. A negative number under an interval that spans zero is not evidence of a loss; it is also not evidence of anything else.
 
 ### mid_major — the threshold-selected bets only
@@ -398,9 +398,9 @@ A bucket below 30 wagers prints its count and no frequency — the point estimat
 
 | Term | Null | Coefficient | 95% interval | Family-corrected | Rows | Clusters | Reading |
 |:---|---:|---:|:---|:---|---:|---:|:---|
-| intercept | 0 | -0.053 | -0.077 to -0.028 | -0.098 to -0.008 | 46,905 | 11,005 games | excludes zero, below it — a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model |
+| intercept | 0 | -0.053 | -0.077 to -0.028 | -0.098 to -0.007 | 46,905 | 11,005 games | excludes zero, below it — a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model |
 | market_implied | 1 | +1.107 | +1.065 to +1.150 | +1.030 to +1.185 | 46,905 | 11,005 games | excludes 1.0 (over-responsive) — the de-vigged price is not calibrated on this population, so read the disagreement coefficient only after understanding why |
-| disagreement | 0 | +0.083 | -0.060 to +0.227 | -0.179 to +0.345 | 46,905 | 11,005 games | no demonstrated edge |
+| disagreement | 0 | +0.083 | -0.060 to +0.227 | -0.179 to +0.346 | 46,905 | 11,005 games | no demonstrated edge |
 
 **The model knows nothing the price does not.** The interval on the disagreement includes zero, so none of the claimed edge is demonstrably realised.
 
@@ -415,8 +415,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23126 | 46,905 |
 | the base rate (47.0% of these wagers won) | 0.24908 | 46,905 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.01383 over 46,905 wagers across 11,005 games, 95% interval -0.01657 to -0.01108, family-corrected -0.01884 to -0.00882 — demonstrated deficit.
-- **against the raw, handicapped market:** the model's Brier advantage is -0.01367 over 46,905 wagers across 11,005 games, 95% interval -0.01589 to -0.01144, family-corrected -0.01772 to -0.00961 — demonstrated deficit.
+- **against the de-vigged market:** the model's Brier advantage is -0.01383 over 46,905 wagers across 11,005 games, 95% interval -0.01657 to -0.01108, family-corrected -0.01885 to -0.00880 — demonstrated deficit.
+- **against the raw, handicapped market:** the model's Brier advantage is -0.01367 over 46,905 wagers across 11,005 games, 95% interval -0.01589 to -0.01144, family-corrected -0.01773 to -0.00960 — demonstrated deficit.
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -430,17 +430,17 @@ Positive is the model being **more** accurate. A Brier score is better when it i
 | -10% to -5% | 0 | 0 | — | — | — | — | — | — | — | — |
 | -5% to +0% | 0 | 0 | — | — | — | — | — | — | — | — |
 | +0% to +2% | 0 | 0 | — | — | — | — | — | — | — | — |
-| +2% to +5% | 7,278 | 4,095 | 55.2% | 50.7% | 50.9% [49.8%, 52.1%] | -4.2 pp | -5.1% over 7,278 settled, 4,095 games | [-8.9%, -1.2%] | [-12.1%, +2.0%] across 143 looks | no demonstrated edge |
-| +5% to +10% | 10,038 | 5,124 | 56.3% | 49.9% | 49.8% [48.8%, 50.8%] | -6.5 pp | -6.2% over 10,038 settled, 644 days | [-9.8%, -2.5%] | [-12.9%, +0.5%] across 143 looks | no demonstrated edge |
-| +10% to +20% | 13,457 | 6,054 | 58.0% | 48.2% | 49.6% [48.8%, 50.5%] | -8.3 pp | -2.7% over 13,457 settled, 6,054 games | [-6.3%, +0.9%] | [-9.2%, +3.8%] across 143 looks | no demonstrated edge |
-| +20% and above | 16,132 | 5,987 | 57.9% | 40.6% | 41.2% [40.4%, 42.0%] | -16.7 pp | -5.7% over 16,132 settled, 5,987 games | [-9.6%, -1.8%] | [-12.9%, +1.4%] across 143 looks | no demonstrated edge |
+| +2% to +5% | 7,278 | 4,095 | 55.2% | 50.7% | 50.9% [49.8%, 52.1%] | -4.2 pp | -5.1% over 7,278 settled, 4,095 games | [-8.9%, -1.2%] | [-12.1%, +2.0%] across 148 looks | no demonstrated edge |
+| +5% to +10% | 10,038 | 5,124 | 56.3% | 49.9% | 49.8% [48.8%, 50.8%] | -6.5 pp | -6.2% over 10,038 settled, 644 days | [-9.8%, -2.5%] | [-12.9%, +0.5%] across 148 looks | no demonstrated edge |
+| +10% to +20% | 13,457 | 6,054 | 58.0% | 48.2% | 49.6% [48.8%, 50.5%] | -8.3 pp | -2.7% over 13,457 settled, 6,054 games | [-6.3%, +0.9%] | [-9.3%, +3.8%] across 148 looks | no demonstrated edge |
+| +20% and above | 16,132 | 5,987 | 57.9% | 40.6% | 41.2% [40.4%, 42.0%] | -16.7 pp | -5.7% over 16,132 settled, 5,987 games | [-9.6%, -1.8%] | [-12.9%, +1.4%] across 148 looks | no demonstrated edge |
 
 A bucket below 30 wagers prints its count and no frequency — the point estimate of nine observations invites a reader to follow the shape of the line rather than the intervals around it.
 
 **The model over-estimates more where it claims more.** The shortfall against model-implied is -4.2 pp in the +2% to +5% bucket (7,278 wagers) and -16.7 pp in the +20% and above bucket (16,132 wagers) — it widens by 12.5 pp across the range. That is **overconfidence**, which is what this column measures, and it is the winner's curse: the biggest claimed edges are the biggest over-estimates by construction. It is not by itself anti-predictiveness — that is a claim about realised return, and it is measured in its own right below.
 
-**Realised return by claimed edge — the anti-predictive statistic.** The +2% to +5% bucket returned -5.1% over 7,278 settled wagers across 4,095 games, 95% interval [-8.9%, -1.2%], family-corrected [-12.1%, +2.0%] across 143 looks — no demonstrated edge; the +20% and above bucket returned -5.7% over 16,132 settled wagers across 5,987 games, 95% interval [-9.6%, -1.8%], family-corrected [-12.9%, +1.4%] across 143 looks — no demonstrated edge. The point estimate falls by 0.7 pp across the range, but the two family-corrected intervals overlap across 143 looks, so **the fall is not demonstrated** and the raw intervals overlap too. No sentence here says raising the threshold makes it worse; the disagreement coefficient is the test that can say so, and the overconfidence column above measures a different quantity.
-The +5% to +10% bucket returned -6.2% over 10,038 settled wagers across 644 days, 95% interval [-9.8%, -2.5%], family-corrected [-12.9%, +0.5%] across 143 looks — no demonstrated edge.
+**Realised return by claimed edge — the anti-predictive statistic.** The +2% to +5% bucket returned -5.1% over 7,278 settled wagers across 4,095 games, 95% interval [-8.9%, -1.2%], family-corrected [-12.1%, +2.0%] across 148 looks — no demonstrated edge; the +20% and above bucket returned -5.7% over 16,132 settled wagers across 5,987 games, 95% interval [-9.6%, -1.8%], family-corrected [-12.9%, +1.4%] across 148 looks — no demonstrated edge. The point estimate falls by 0.7 pp across the range, but the two family-corrected intervals overlap across 148 looks, so **the fall is not demonstrated** and the raw intervals overlap too. No sentence here says raising the threshold makes it worse; the disagreement coefficient is the test that can say so, and the overconfidence column above measures a different quantity.
+The +5% to +10% bucket returned -6.2% over 10,038 settled wagers across 644 days, 95% interval [-9.8%, -2.5%], family-corrected [-12.9%, +0.5%] across 148 looks — no demonstrated edge.
 **The +5% to +10% claimed-edge bucket's return is below zero at the point estimate.** Both things are true and both are said: the point estimate sits on the losing side, and the family-corrected interval printed above includes zero, so the verdict beside it is the one that stands. A negative number under an interval that spans zero is not evidence of a loss; it is also not evidence of anything else.
 
 ### low_major — the threshold-selected bets only
@@ -451,9 +451,9 @@ The +5% to +10% bucket returned -6.2% over 10,038 settled wagers across 644 days
 
 | Term | Null | Coefficient | 95% interval | Family-corrected | Rows | Clusters | Reading |
 |:---|---:|---:|:---|:---|---:|---:|:---|
-| intercept | 0 | -0.039 | -0.068 to -0.011 | -0.091 to +0.012 | 32,649 | 8,516 games | contains zero |
+| intercept | 0 | -0.039 | -0.068 to -0.011 | -0.091 to +0.013 | 32,649 | 8,516 games | contains zero |
 | market_implied | 1 | +1.072 | +1.014 to +1.131 | +0.965 to +1.180 | 32,649 | 8,516 games | contains 1.0 — the de-vigged price is calibrated at this sample size, which is what makes the disagreement coefficient readable |
-| disagreement | 0 | +0.104 | -0.093 to +0.300 | -0.255 to +0.463 | 32,649 | 8,516 games | no demonstrated edge |
+| disagreement | 0 | +0.104 | -0.093 to +0.300 | -0.256 to +0.463 | 32,649 | 8,516 games | no demonstrated edge |
 
 **The model knows nothing the price does not.** The interval on the disagreement includes zero, so none of the claimed edge is demonstrably realised.
 
@@ -468,8 +468,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23532 | 32,649 |
 | the base rate (46.2% of these wagers won) | 0.24853 | 32,649 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.01044 over 32,649 wagers across 639 days, 95% interval -0.01297 to -0.00790, family-corrected -0.01505 to -0.00582 — demonstrated deficit.
-- **against the raw, handicapped market:** the model's Brier advantage is -0.01007 over 32,649 wagers across 639 days, 95% interval -0.01207 to -0.00807, family-corrected -0.01372 to -0.00642 — demonstrated deficit.
+- **against the de-vigged market:** the model's Brier advantage is -0.01044 over 32,649 wagers across 639 days, 95% interval -0.01297 to -0.00790, family-corrected -0.01507 to -0.00581 — demonstrated deficit.
+- **against the raw, handicapped market:** the model's Brier advantage is -0.01007 over 32,649 wagers across 639 days, 95% interval -0.01207 to -0.00807, family-corrected -0.01373 to -0.00641 — demonstrated deficit.
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -483,16 +483,16 @@ Positive is the model being **more** accurate. A Brier score is better when it i
 | -10% to -5% | 0 | 0 | — | — | — | — | — | — | — | — |
 | -5% to +0% | 0 | 0 | — | — | — | — | — | — | — | — |
 | +0% to +2% | 0 | 0 | — | — | — | — | — | — | — | — |
-| +2% to +5% | 5,418 | 3,383 | 53.9% | 49.6% | 50.1% [48.8%, 51.5%] | -3.7 pp | -4.1% over 5,418 settled, 531 days | [-8.2%, +0.0%] | [-11.6%, +3.4%] across 143 looks | no demonstrated edge |
-| +5% to +10% | 7,820 | 4,312 | 55.2% | 48.9% | 49.4% [48.3%, 50.5%] | -5.8 pp | -3.9% over 7,820 settled, 4,312 games | [-7.4%, -0.3%] | [-10.3%, +2.6%] across 143 looks | no demonstrated edge |
-| +10% to +20% | 10,186 | 4,921 | 56.9% | 47.4% | 47.2% [46.3%, 48.2%] | -9.7 pp | -5.5% over 10,186 settled, 596 days | [-9.4%, -1.6%] | [-12.7%, +1.6%] across 143 looks | no demonstrated edge |
-| +20% and above | 9,225 | 4,109 | 54.5% | 39.2% | 39.9% [38.9%, 40.9%] | -14.6 pp | -5.8% over 9,225 settled, 586 days | [-10.3%, -1.3%] | [-14.0%, +2.4%] across 143 looks | no demonstrated edge |
+| +2% to +5% | 5,418 | 3,383 | 53.9% | 49.6% | 50.1% [48.8%, 51.5%] | -3.7 pp | -4.1% over 5,418 settled, 531 days | [-8.2%, +0.0%] | [-11.6%, +3.4%] across 148 looks | no demonstrated edge |
+| +5% to +10% | 7,820 | 4,312 | 55.2% | 48.9% | 49.4% [48.3%, 50.5%] | -5.8 pp | -3.9% over 7,820 settled, 4,312 games | [-7.4%, -0.3%] | [-10.3%, +2.6%] across 148 looks | no demonstrated edge |
+| +10% to +20% | 10,186 | 4,921 | 56.9% | 47.4% | 47.2% [46.3%, 48.2%] | -9.7 pp | -5.5% over 10,186 settled, 596 days | [-9.4%, -1.6%] | [-12.7%, +1.6%] across 148 looks | no demonstrated edge |
+| +20% and above | 9,225 | 4,109 | 54.5% | 39.2% | 39.9% [38.9%, 40.9%] | -14.6 pp | -5.8% over 9,225 settled, 586 days | [-10.3%, -1.3%] | [-14.0%, +2.4%] across 148 looks | no demonstrated edge |
 
 A bucket below 30 wagers prints its count and no frequency — the point estimate of nine observations invites a reader to follow the shape of the line rather than the intervals around it.
 
 **The model over-estimates more where it claims more.** The shortfall against model-implied is -3.7 pp in the +2% to +5% bucket (5,418 wagers) and -14.6 pp in the +20% and above bucket (9,225 wagers) — it widens by 10.8 pp across the range. That is **overconfidence**, which is what this column measures, and it is the winner's curse: the biggest claimed edges are the biggest over-estimates by construction. It is not by itself anti-predictiveness — that is a claim about realised return, and it is measured in its own right below.
 
-**Realised return by claimed edge — the anti-predictive statistic.** The +2% to +5% bucket returned -4.1% over 5,418 settled wagers across 531 days, 95% interval [-8.2%, +0.0%], family-corrected [-11.6%, +3.4%] across 143 looks — no demonstrated edge; the +20% and above bucket returned -5.8% over 9,225 settled wagers across 586 days, 95% interval [-10.3%, -1.3%], family-corrected [-14.0%, +2.4%] across 143 looks — no demonstrated edge. The point estimate falls by 1.7 pp across the range, but the two family-corrected intervals overlap across 143 looks, so **the fall is not demonstrated** and the raw intervals overlap too. No sentence here says raising the threshold makes it worse; the disagreement coefficient is the test that can say so, and the overconfidence column above measures a different quantity.
+**Realised return by claimed edge — the anti-predictive statistic.** The +2% to +5% bucket returned -4.1% over 5,418 settled wagers across 531 days, 95% interval [-8.2%, +0.0%], family-corrected [-11.6%, +3.4%] across 148 looks — no demonstrated edge; the +20% and above bucket returned -5.8% over 9,225 settled wagers across 586 days, 95% interval [-10.3%, -1.3%], family-corrected [-14.0%, +2.4%] across 148 looks — no demonstrated edge. The point estimate falls by 1.7 pp across the range, but the two family-corrected intervals overlap across 148 looks, so **the fall is not demonstrated** and the raw intervals overlap too. No sentence here says raising the threshold makes it worse; the disagreement coefficient is the test that can say so, and the overconfidence column above measures a different quantity.
 **The +20% and above claimed-edge bucket's return is below zero at the point estimate.** Both things are true and both are said: the point estimate sits on the losing side, and the family-corrected interval printed above includes zero, so the verdict beside it is the one that stands. A negative number under an interval that spans zero is not evidence of a loss; it is also not evidence of anything else.
 
 ### unplaced — the threshold-selected bets only
@@ -520,8 +520,8 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23900 | 6 |
 | the base rate (16.7% of these wagers won) | 0.13889 | 6 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.14481 over 6 wagers across 2 games, 95% interval -0.39075 to +0.10112, family-corrected -0.59346 to +0.30383 — not enough evidence (6 bets, below the 200 declared in advance).
-- **against the raw, handicapped market:** the model's Brier advantage is -0.13280 over 6 wagers across 2 games, 95% interval -0.37083 to +0.10524, family-corrected -0.56703 to +0.30144 — not enough evidence (6 bets, below the 200 declared in advance).
+- **against the de-vigged market:** the model's Brier advantage is -0.14481 over 6 wagers across 2 games, 95% interval -0.39075 to +0.10112, family-corrected -0.59458 to +0.30495 — not enough evidence (6 bets, below the 200 declared in advance).
+- **against the raw, handicapped market:** the model's Brier advantage is -0.13280 over 6 wagers across 2 games, 95% interval -0.37083 to +0.10524, family-corrected -0.56812 to +0.30253 — not enough evidence (6 bets, below the 200 declared in advance).
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
 
@@ -558,7 +558,7 @@ The overconfidence column above is a different quantity and cannot stand in for 
 |:---|---:|---:|:---|:---|---:|---:|:---|
 | intercept | 0 | -0.044 | -0.059 to -0.028 | -0.071 to -0.016 | 100,856 | 25,315 games | excludes zero, below it — a level the de-vigged price does not account for, which is a fact about the fit rather than a claim about the model |
 | market_implied | 1 | +1.082 | +1.054 to +1.111 | +1.030 to +1.134 | 100,856 | 25,315 games | excludes 1.0 (over-responsive) — the de-vigged price is not calibrated on this population, so read the disagreement coefficient only after understanding why |
-| disagreement | 0 | +0.104 | +0.019 to +0.190 | -0.052 to +0.261 | 100,856 | 25,315 games | no demonstrated edge |
+| disagreement | 0 | +0.104 | +0.019 to +0.190 | -0.053 to +0.261 | 100,856 | 25,315 games | no demonstrated edge |
 
 **The model knows nothing the price does not.** The interval on the disagreement includes zero, so none of the claimed edge is demonstrably realised.
 
@@ -573,7 +573,7 @@ The market coefficient is a diagnostic, not a headline. Its null is 1.0 rather t
 | the market, **raw** (vig left in) | 0.23302 | 100,856 |
 | the base rate (47.1% of these wagers won) | 0.24915 | 100,856 |
 
-- **against the de-vigged market:** the model's Brier advantage is -0.01440 over 100,856 wagers across 25,315 games, 95% interval -0.01616 to -0.01265, family-corrected -0.01760 to -0.01121 — demonstrated deficit.
+- **against the de-vigged market:** the model's Brier advantage is -0.01440 over 100,856 wagers across 25,315 games, 95% interval -0.01616 to -0.01265, family-corrected -0.01761 to -0.01120 — demonstrated deficit.
 - **against the raw, handicapped market:** the model's Brier advantage is -0.01420 over 100,856 wagers across 25,315 games, 95% interval -0.01563 to -0.01276, family-corrected -0.01681 to -0.01158 — demonstrated deficit.
 
 Positive is the model being **more** accurate. A Brier score is better when it is lower, so the quantity clustered is `brier_market − brier_model` — the sign is chosen that way so the shared verdict function reads it correctly rather than announcing an edge on a model that is measurably worse than the price.
@@ -588,17 +588,17 @@ Positive is the model being **more** accurate. A Brier score is better when it i
 | -10% to -5% | 0 | 0 | — | — | — | — | — | — | — | — |
 | -5% to +0% | 0 | 0 | — | — | — | — | — | — | — | — |
 | +0% to +2% | 0 | 0 | — | — | — | — | — | — | — | — |
-| +2% to +5% | 15,172 | 9,195 | 55.0% | 50.6% | 50.6% [49.8%, 51.3%] | -4.4 pp | -5.4% over 15,172 settled, 9,195 games | [-7.9%, -2.9%] | [-10.0%, -0.9%] across 143 looks | demonstrated deficit |
-| +5% to +10% | 21,513 | 11,642 | 56.3% | 49.9% | 50.0% [49.4%, 50.7%] | -6.2 pp | -5.1% over 21,513 settled, 723 days | [-7.5%, -2.7%] | [-9.4%, -0.7%] across 143 looks | demonstrated deficit |
-| +10% to +20% | 29,252 | 13,902 | 58.1% | 48.3% | 49.1% [48.5%, 49.6%] | -9.0 pp | -3.9% over 29,252 settled, 13,902 games | [-6.2%, -1.6%] | [-8.1%, +0.3%] across 143 looks | no demonstrated edge |
-| +20% and above | 34,919 | 13,759 | 58.7% | 41.1% | 42.1% [41.6%, 42.6%] | -16.6 pp | -5.0% over 34,919 settled, 13,759 games | [-7.5%, -2.5%] | [-9.5%, -0.5%] across 143 looks | demonstrated deficit |
+| +2% to +5% | 15,172 | 9,195 | 55.0% | 50.6% | 50.6% [49.8%, 51.3%] | -4.4 pp | -5.4% over 15,172 settled, 9,195 games | [-7.9%, -2.9%] | [-10.0%, -0.9%] across 148 looks | demonstrated deficit |
+| +5% to +10% | 21,513 | 11,642 | 56.3% | 49.9% | 50.0% [49.4%, 50.7%] | -6.2 pp | -5.1% over 21,513 settled, 723 days | [-7.5%, -2.7%] | [-9.4%, -0.7%] across 148 looks | demonstrated deficit |
+| +10% to +20% | 29,252 | 13,902 | 58.1% | 48.3% | 49.1% [48.5%, 49.6%] | -9.0 pp | -3.9% over 29,252 settled, 13,902 games | [-6.2%, -1.6%] | [-8.1%, +0.3%] across 148 looks | no demonstrated edge |
+| +20% and above | 34,919 | 13,759 | 58.7% | 41.1% | 42.1% [41.6%, 42.6%] | -16.6 pp | -5.0% over 34,919 settled, 13,759 games | [-7.5%, -2.5%] | [-9.5%, -0.4%] across 148 looks | demonstrated deficit |
 
 A bucket below 30 wagers prints its count and no frequency — the point estimate of nine observations invites a reader to follow the shape of the line rather than the intervals around it.
 
 **The model over-estimates more where it claims more.** The shortfall against model-implied is -4.4 pp in the +2% to +5% bucket (15,172 wagers) and -16.6 pp in the +20% and above bucket (34,919 wagers) — it widens by 12.2 pp across the range. That is **overconfidence**, which is what this column measures, and it is the winner's curse: the biggest claimed edges are the biggest over-estimates by construction. It is not by itself anti-predictiveness — that is a claim about realised return, and it is measured in its own right below.
 
-**Realised return by claimed edge — the anti-predictive statistic.** The +2% to +5% bucket returned -5.4% over 15,172 settled wagers across 9,195 games, 95% interval [-7.9%, -2.9%], family-corrected [-10.0%, -0.9%] across 143 looks — demonstrated deficit; the +20% and above bucket returned -5.0% over 34,919 settled wagers across 13,759 games, 95% interval [-7.5%, -2.5%], family-corrected [-9.5%, -0.5%] across 143 looks — demonstrated deficit. The return does not fall across the range, so this run shows no anti-predictiveness in realised return. That is not evidence of skill — the disagreement coefficient is the test — and it does not contradict the overconfidence column above, which measures a different quantity.
-The +5% to +10% bucket returned -5.1% over 21,513 settled wagers across 723 days, 95% interval [-7.5%, -2.7%], family-corrected [-9.4%, -0.7%] across 143 looks — demonstrated deficit.
+**Realised return by claimed edge — the anti-predictive statistic.** The +2% to +5% bucket returned -5.4% over 15,172 settled wagers across 9,195 games, 95% interval [-7.9%, -2.9%], family-corrected [-10.0%, -0.9%] across 148 looks — demonstrated deficit; the +20% and above bucket returned -5.0% over 34,919 settled wagers across 13,759 games, 95% interval [-7.5%, -2.5%], family-corrected [-9.5%, -0.4%] across 148 looks — demonstrated deficit. The return does not fall across the range, so this run shows no anti-predictiveness in realised return. That is not evidence of skill — the disagreement coefficient is the test — and it does not contradict the overconfidence column above, which measures a different quantity.
+The +5% to +10% bucket returned -5.1% over 21,513 settled wagers across 723 days, 95% interval [-7.5%, -2.7%], family-corrected [-9.4%, -0.7%] across 148 looks — demonstrated deficit.
 **The wagers in the +2% to +5%, +5% to +10%, +20% and above claimed-edge buckets lost money, and the loss survives the correction.** The family-corrected intervals printed above lie entirely below zero, so each of those buckets is a **demonstrated deficit**: the model did worse than no edge in them, which is a stronger statement than failing to demonstrate one, and it is a statement about the money rather than about the size of the sample.
 
 ## The same fit without the de-vig
@@ -631,9 +631,9 @@ The threshold `price_backtest.BET_EDGE_THRESHOLD` declares in advance is 2%, and
 
 ## How this report is corrected, and what it cannot say
 
-**Family correction: 143 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.82. That is the ledger's cumulative count and never the day's — correcting today's findings across today's tests is a lie if more were tested last week.
+**Family correction: 148 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.83. That is the ledger's cumulative count and never the day's — correcting today's findings across today's tests is a lie if more were tested last week.
 
-**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 133 cumulative hypotheses (x1.8145), and `cbb_forecast_skill.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 143 hypotheses (x1.8242), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
+**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 133 cumulative hypotheses (x1.8145), and `cbb_forecast_skill.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 148 hypotheses (x1.8288), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
 
 **Below 200 scored wagers or 30 clusters there is no number**, only the words *not enough evidence*. Both floors were declared in advance. The cluster floor is there because a cluster-robust sandwich is downward biased with few clusters, and this repository's standing failure mode is an interval that is too narrow.
 

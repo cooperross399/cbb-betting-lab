@@ -526,6 +526,34 @@ jobs:
           set -eu
           python scripts/run_layer_audit.py --as-of "${{ steps.identity.outputs.day }}" --budget-minutes 18 --summary "$GITHUB_STEP_SUMMARY"
 
+      - name: Read the line-movement captures
+        # The edge bar halves a lean that the market has moved against since
+        # the day's first capture (`models/line_move.py`, decision 67). READ
+        # ONLY: the captures are fetched from `line-movement` into the working
+        # tree and nothing is ever pushed back from here. SOFT, like the second
+        # opinion: a card without them prices with no movement read and says
+        # so. `git show > file` creates the file even when the show fails, so
+        # the store is written to a scratch path and moved only when non-empty.
+        id: line_moves
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          mkdir -p data/processed
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}"
+          git fetch --depth=1 "$REMOTE" +refs/heads/line-movement:refs/lm-read 2>/dev/null || { echo "The line-movement branch could not be fetched; the card reads no movement."; exit 1; }
+          TMP="$(mktemp)"
+          if git show refs/lm-read:cbb_line_movement.csv > "$TMP" 2>/dev/null && [ -s "$TMP" ]; then
+            mv "$TMP" data/processed/cbb_line_movement.csv
+            echo "Line movement: $(wc -l < data/processed/cbb_line_movement.csv) capture line(s) read."
+          else
+            rm -f "$TMP"
+            echo "The line-movement branch holds no store yet; the card reads no movement."
+            exit 1
+          fi
+
       - name: Settle whatever finished, then append to the forward ledger
         # POST-SLATE SETTLEMENT, and it lives here rather than in a workflow of
         # its own for one structural reason: the ledger comes back from

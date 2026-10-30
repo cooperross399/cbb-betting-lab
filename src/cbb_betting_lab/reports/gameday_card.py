@@ -149,6 +149,7 @@ from cbb_betting_lab.gates import (
 )
 from cbb_betting_lab.markets import FUTURES, MARKETS_BY_KEY, PLAYER, per_event_provider_keys
 from cbb_betting_lab.models import distributions, player_census, player_rates, slate
+from cbb_betting_lab.models import line_move
 from cbb_betting_lab.models import trust as trust_model
 from cbb_betting_lab.population import VenueState
 from cbb_betting_lab.providers import staging, team_names
@@ -2213,6 +2214,7 @@ class CardRun:
     matchup_census: str = ""
     #: How far the edge bar trusted the model against the price, per tier.
     trust_line: str = ""
+    movement_line: str = ""
     #: Dominated rungs on each book's own ladder (`ladder_coherence`).
     ladder_lines: list[str] = field(default_factory=list)
     degraded: list[str] = field(default_factory=list)
@@ -2321,6 +2323,7 @@ def run_card(
     output_dir: Path | str | None = None,
     matchup_census: str = "",
     trust: "trust_model.TrustTable | None" = None,
+    moves: "line_move.Moves | None" = None,
 ) -> CardRun:
     """Gate, price, freeze, and account for every row. In that order.
 
@@ -2361,6 +2364,11 @@ def run_card(
     # model's own probability, so the forward test still measures the model.
     trusted = trust_model.apply(probabilities, wagers, trust)
     market = trust_model.market_probabilities(wagers) if trust is not None and trust.active else {}
+    # A lean the market has moved against since its first capture is halved
+    # (`models/line_move.py`). It needs the de-vigged price, so it acts only
+    # where trust does.
+    restraint = line_move.apply(trusted, market, wagers, moves if market else None)
+    trusted = restraint.probabilities
 
     # The tip guard is read for **every** wager on the board, not only for the
     # ones that reach it inside `select`. `select` applies its bars in order and
@@ -2457,6 +2465,7 @@ def run_card(
         rows_off_this_slate=off_slate,
         matchup_census=str(matchup_census or ""),
         trust_line=trust.line() if trust is not None else "",
+        movement_line=restraint.line,
         ladder_lines=ladder_coherence.summary_lines(
             ladder_coherence.dominated_quotes(wagers),
             ladders_read=any(w.line is not None for w in wagers),
@@ -3054,6 +3063,8 @@ def _model_section(run: CardRun) -> list[str]:
     ]
     if run.trust_line:
         lines += [run.trust_line, ""]
+    if run.movement_line:
+        lines += [run.movement_line, ""]
     if _month_of(run.slate_date) in PRIOR_REGIME_MONTHS:
         lines += [
             "**This is a November-regime slate.** Roster turnover in this sport "

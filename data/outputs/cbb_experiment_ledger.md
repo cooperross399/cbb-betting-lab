@@ -4,11 +4,11 @@
 
 College basketball's large sample makes this **more** urgent, not less. A bigger n narrows every interval, including the intervals of the hypotheses that are wrong. Sample size buys power, never innocence.
 
-**143 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.82** before it means what it says.
+**148 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.83** before it means what it says.
 
 **Alpha budget: 6 new hypotheses a week**, declared 2026-09-01. Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state — re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise.
 
-**102 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
+**107 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
 
 | Search | Hypotheses |
 |:---|---:|
@@ -16,6 +16,7 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | player_props_vs_devig | 30 |
 | residual_regression_2026_09_15 | 27 |
 | ladders_and_halves | 11 |
+| layer_audit_2026_10_30 | 5 |
 | core_team_markets | 4 |
 | conference_tier | 4 |
 | model_structure | 4 |
@@ -24,8 +25,8 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | player_props_vs_role_prior | 3 |
 | forward_2027 | 3 |
 | rebound_differential_vs_spread | 3 |
-| layer_audit_2026_10_30 | 3 |
 | trust_learning_2026_10_30 | 3 |
+| line_movement_2026_10_30 | 3 |
 | november_prior | 2 |
 | reachability | 1 |
 | champion_challenger | 1 |
@@ -176,6 +177,11 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | 141 | trust_learning_2026_10_30 | high-major: pulling the model's probability toward the de-vigged price by the tier's learned trust (models/trust.py) before the edge bar raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-30 | pending |
 | 142 | trust_learning_2026_10_30 | mid-major: pulling the model's probability toward the de-vigged price by the tier's learned trust (models/trust.py) before the edge bar raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-30 | pending |
 | 143 | trust_learning_2026_10_30 | low-major: pulling the model's probability toward the de-vigged price by the tier's learned trust (models/trust.py) before the edge bar raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-30 | pending |
+| 144 | layer_audit_2026_10_30 | taking card_factors.TRAVEL_PER_ZONE per 100 possessions off a side for each time zone between its home arena and the venue (card_factors.STATE_UTC_OFFSET), when the layer audit adds it, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-30 | pending |
+| 145 | layer_audit_2026_10_30 | taking back half of a side's own three-point and free-throw over-performance (card_factors.SHOOTING_LUCK_*), when the layer audit adds it, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-30 | pending |
+| 146 | line_movement_2026_10_30 | high-major: halving the model's lean when the market has moved against it since the day's first line-movement capture (models/line_move.py) raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-30 | pending |
+| 147 | line_movement_2026_10_30 | mid-major: halving the model's lean when the market has moved against it since the day's first line-movement capture (models/line_move.py) raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-30 | pending |
+| 148 | line_movement_2026_10_30 | low-major: halving the model's lean when the market has moved against it since the day's first line-movement capture (models/line_move.py) raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-30 | pending |
 
 ## 7 quantities declared descriptive-only
 

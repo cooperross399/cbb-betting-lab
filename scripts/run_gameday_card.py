@@ -93,7 +93,8 @@ from cbb_betting_lab.competitions import DEFAULT_COMPETITION_KEY, competition_fo
 from cbb_betting_lab.config import OUTPUTS_DIR, PROCESSED_DIR, RAW_DIR, STAGING_DIR
 from cbb_betting_lab import forward_evidence
 from cbb_betting_lab.forward_evidence import ARCHIVE_DIR, SnapshotKeyError
-from cbb_betting_lab.models import trust
+from cbb_betting_lab import line_movement
+from cbb_betting_lab.models import line_move, trust
 from cbb_betting_lab.providers import staging
 from cbb_betting_lab.providers.env_file import load_provider_env, redact
 from cbb_betting_lab.providers.odds_api import (
@@ -225,6 +226,20 @@ def _trust_table(day: str, outputs: Path):
     table = trust.build(day, outputs_dir=outputs, ledger=ledger)
     print(table.line())
     return table
+
+
+def _line_moves(competition):
+    """Each event's move since its first capture (`models/line_move.py`), read
+    off the capture store the workflow fetched from `line-movement`. Absent
+    captures are no movement read, never no card."""
+    path = line_movement.store_path(competition, PROCESSED_DIR)
+    captures = line_move.read_captures(path) if path.is_file() else None
+    moves = line_move.build(captures, as_of=datetime.now(timezone.utc).isoformat())
+    print(
+        f"Line movement: {len(moves.by_event):,} event(s) with a move read from {path}."
+        if moves.by_event else f"Line movement: not read ({moves.reason})."
+    )
+    return moves
 
 
 def _write_state(path: Path, run: GC.CardRun) -> None:
@@ -457,6 +472,7 @@ def main(argv: list[str] | None = None) -> int:
             ),
             output_dir=outputs,
             trust=_trust_table(day, outputs),
+            moves=_line_moves(competition),
         )
     except (ValueError, GC.CardError, SnapshotKeyError) as exc:
         # Refusal three, and its two neighbours. `AccountingIdentity` raises a
