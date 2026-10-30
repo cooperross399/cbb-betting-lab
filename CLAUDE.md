@@ -195,7 +195,7 @@ Fixed with `variants()`: an ambiguous token expands into **every** reading and
 `resolve()` refuses when the readings name different schools. **0 of 365
 unresolved**, pinned by `test_every_provider_team_name_resolves.py`, which runs
 all 365 observed spellings every time. The vocabulary is committed at
-`data/manual/provider_team_names_observed.json` — read off 140 cached
+`data/manual/provider_team_names_observed.json` — read off one hundred and forty cached
 historical slate listings, not guessed. *Off-season is a reason not to know
 what a market costs, not a reason not to know what a school is called.*
 
@@ -733,7 +733,7 @@ reproduction of the NHL lab's 9-12 pp in a different sport.
   keeping.** This file used to say the map was seeded by hand and knowingly
   incomplete *because* there was no live board. That was the wrong inference
   from a true premise: the archive's historical slate listings are a board, and
-  the probe's cache holds 140 of them carrying the complete 365-name D-I
+  the probe's cache holds one hundred and forty of them carrying the complete 365-name D-I
   vocabulary. Off-season is a reason not to know what a market **costs**, not a
   reason not to know what a school is **called**.
 - **Women's basketball is a separate sport key** (`basketball_wncaab`), so
@@ -890,7 +890,7 @@ walk-forward and switches each `card_factors` layer on or off by whether it
 moved the predicted margin and total toward the final score. Results only:
 it reads no price and spends no credit, and it never touches the allowlist.
 Three candidate layers (pace form, three-point defence luck, and who is
-missing read as two straight missed games) are computed on every game and reach the card only when the audit adds them; both are
+missing read as two straight missed games) are computed on every game and reach the card only when the audit adds them; all three are
 registered (`layer_audit_2026_10_30`). The audit re-prices against the
 declared card, never its own earlier verdict. The switches live in
 `data/raw/cbb/layer_audit/latest.json`, ride to the board in the inputs
