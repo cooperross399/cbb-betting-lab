@@ -2792,3 +2792,28 @@ def test_the_card_says_when_its_balance_was_never_watched(now, day, tmp_path):
     # must NOT carry the notice, or the sentence is decoration rather than a
     # statement about this run.
     assert "had nothing to watch" not in watched_text
+
+
+def test_a_trust_table_pulls_the_edge_bar_to_the_market_and_says_so(
+    board, day, tmp_path, now
+):
+    """`models/trust.py` on the card: at zero trust the edge bar reads the
+    de-vigged market, which carries no edge, so nothing the model alone would
+    have selected survives; the freeze still holds the model's own number, and
+    the card prints the weights it used."""
+    from cbb_betting_lab.models import trust
+
+    kwargs = dict(
+        competition=CBB, day=day, card_slot="morning",
+        policy=a_policy("moneyline", "spread", "total_points", "team_total"),
+        matchups={"evt-cardable": a_matchup()}, now=lambda: now,
+    )
+    untrusted = GC.run_card(board, archive_dir=tmp_path / "a", **kwargs)
+    table = trust.TrustTable(day=day, by_tier={})
+    trusted = GC.run_card(board, archive_dir=tmp_path / "b", trust=table, **kwargs)
+
+    assert untrusted.selections, "the fixture must select something for this test to mean anything"
+    assert trusted.selections == []
+    assert trusted.snapshot_rows_offered == untrusted.snapshot_rows_offered
+    assert "Trust in the model against the price" in GC.render_card(trusted)
+    assert "Trust in the model against the price" not in GC.render_card(untrusted)

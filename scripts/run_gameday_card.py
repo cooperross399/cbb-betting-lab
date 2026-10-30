@@ -91,7 +91,9 @@ from pathlib import Path
 
 from cbb_betting_lab.competitions import DEFAULT_COMPETITION_KEY, competition_for
 from cbb_betting_lab.config import OUTPUTS_DIR, PROCESSED_DIR, RAW_DIR, STAGING_DIR
+from cbb_betting_lab import forward_evidence
 from cbb_betting_lab.forward_evidence import ARCHIVE_DIR, SnapshotKeyError
+from cbb_betting_lab.models import trust
 from cbb_betting_lab.providers import staging
 from cbb_betting_lab.providers.env_file import load_provider_env, redact
 from cbb_betting_lab.providers.odds_api import (
@@ -207,6 +209,22 @@ def _read_previous_fingerprint(path: Path, *, day: str, card_slot: str) -> str:
     if str(payload.get("decision", "")) == GC.Decision.REHEARSAL.value:
         return ""
     return str(payload.get("fingerprint", ""))
+
+
+def _trust_table(day: str, outputs: Path):
+    """How far tonight's edge bar trusts the model, per tier (`models/trust.py`).
+
+    Seeded from the forecast-skill record and updated from the settled forward
+    ledger. A ledger that cannot be read is no live update, never no card.
+    """
+    try:
+        ledger = forward_evidence.read_ledger(PROCESSED_DIR / forward_evidence.LEDGER_FILENAME)
+    except Exception as exc:  # noqa: BLE001 - the seed alone still applies
+        print(f"Trust: the forward ledger could not be read ({type(exc).__name__}); seed only.")
+        ledger = None
+    table = trust.build(day, outputs_dir=outputs, ledger=ledger)
+    print(table.line())
+    return table
 
 
 def _write_state(path: Path, run: GC.CardRun) -> None:
@@ -438,6 +456,7 @@ def main(argv: list[str] | None = None) -> int:
                 state, day=day, card_slot=slot.name
             ),
             output_dir=outputs,
+            trust=_trust_table(day, outputs),
         )
     except (ValueError, GC.CardError, SnapshotKeyError) as exc:
         # Refusal three, and its two neighbours. `AccountingIdentity` raises a

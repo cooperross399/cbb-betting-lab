@@ -960,6 +960,55 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    # ---------------------------------------------------------------------
+    # 2026-10-30: the edge bar trusts the model only as far as it has earned
+    # (models/trust.py), seeded per tier from the forecast-skill disagreement
+    # coefficient and updated from the settled forward ledger. Per tier and
+    # never pooled. Forward only: applied from trust.TRUST_FROM, after every
+    # season the seed was fitted on.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="trust_learning_2026_10_30",
+        name=(
+            "high-major: pulling the model's probability toward the de-vigged price "
+            "by the tier's learned trust (models/trust.py) before the edge bar "
+            "raises the return of the card's team selections against the "
+            "card-time price (forward ledger only)"
+        ),
+        tested_on="2026-10-30",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="trust_learning_2026_10_30",
+        name=(
+            "mid-major: pulling the model's probability toward the de-vigged price "
+            "by the tier's learned trust (models/trust.py) before the edge bar "
+            "raises the return of the card's team selections against the "
+            "card-time price (forward ledger only)"
+        ),
+        tested_on="2026-10-30",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="trust_learning_2026_10_30",
+        name=(
+            "low-major: pulling the model's probability toward the de-vigged price "
+            "by the tier's learned trust (models/trust.py) before the edge bar "
+            "raises the return of the card's team selections against the "
+            "card-time price (forward ledger only)"
+        ),
+        tested_on="2026-10-30",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 

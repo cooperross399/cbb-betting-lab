@@ -149,6 +149,7 @@ from cbb_betting_lab.gates import (
 )
 from cbb_betting_lab.markets import FUTURES, MARKETS_BY_KEY, PLAYER, per_event_provider_keys
 from cbb_betting_lab.models import distributions, player_census, player_rates, slate
+from cbb_betting_lab.models import trust as trust_model
 from cbb_betting_lab.population import VenueState
 from cbb_betting_lab.providers import staging, team_names
 from cbb_betting_lab.providers.odds_api import (
@@ -2210,6 +2211,8 @@ class CardRun:
     #: say why it is quiet is the failure this lab keeps finding in other
     #: shapes: silence that looks identical whatever caused it.
     matchup_census: str = ""
+    #: How far the edge bar trusted the model against the price, per tier.
+    trust_line: str = ""
     degraded: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
@@ -2315,6 +2318,7 @@ def run_card(
     previous_fingerprint: str = "",
     output_dir: Path | str | None = None,
     matchup_census: str = "",
+    trust: "trust_model.TrustTable | None" = None,
 ) -> CardRun:
     """Gate, price, freeze, and account for every row. In that order.
 
@@ -2350,6 +2354,11 @@ def run_card(
         rows, competition=competition, key_for=key_for, tiers=placement.tiers
     )
     probabilities, opinions = opinions_for(wagers, matchups, day=day)
+    # The edge bar reads the model pulled toward the market by how far it has
+    # earned trust in its tier (`models/trust.py`); the freeze below keeps the
+    # model's own probability, so the forward test still measures the model.
+    trusted = trust_model.apply(probabilities, wagers, trust)
+    market = trust_model.market_probabilities(wagers) if trust is not None and trust.active else {}
 
     # The tip guard is read for **every** wager on the board, not only for the
     # ones that reach it inside `select`. `select` applies its bars in order and
@@ -2363,7 +2372,7 @@ def run_card(
 
     result = select(
         wagers,
-        probabilities,
+        trusted,
         approved=policy.allows,
         availability_for=availability_for or (lambda _w: Availability.NO_REPORT),
         tip_state_for=guard.state_for,
@@ -2414,7 +2423,10 @@ def run_card(
         ],
     )
 
-    enriched = [_enrich(row, opinions, competition=competition) for row in kept]
+    enriched = [
+        _enrich(row, opinions, competition=competition, raw=probabilities, market=market)
+        for row in kept
+    ]
     return CardRun(
         competition=competition,
         slate_date=day,
@@ -2442,6 +2454,7 @@ def run_card(
         ),
         rows_off_this_slate=off_slate,
         matchup_census=str(matchup_census or ""),
+        trust_line=trust.line() if trust is not None else "",
         degraded=list(board.degraded),
         notes=list(board.notes),
     )
@@ -2535,7 +2548,12 @@ def _verdicts_in_force(
 
 
 def _enrich(
-    row: Mapping, opinions: OpinionCensus, *, competition: Competition
+    row: Mapping,
+    opinions: OpinionCensus,
+    *,
+    competition: Competition,
+    raw: Mapping | None = None,
+    market: Mapping | None = None,
 ) -> dict:
     """Attach the push mass and the prior's weight to a selection.
 
@@ -2559,6 +2577,11 @@ def _enrich(
     )
     out["push_mass"] = opinions.push_mass.get(key)
     out["prior_weight"] = opinions.prior_weight.get(key)
+    # `probability` is what the edge bar read; when a trust table was applied
+    # these are the model's own number and the market's, beside it.
+    if market:
+        out["model_probability"] = (raw or {}).get(key)
+        out["market_probability"] = market.get(key)
     return out
 
 
@@ -3021,6 +3044,8 @@ def _model_section(run: CardRun) -> list[str]:
         f"Recorded verdicts in force: {run.verdicts_line}.",
         "",
     ]
+    if run.trust_line:
+        lines += [run.trust_line, ""]
     if _month_of(run.slate_date) in PRIOR_REGIME_MONTHS:
         lines += [
             "**This is a November-regime slate.** Roster turnover in this sport "

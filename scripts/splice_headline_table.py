@@ -450,7 +450,12 @@ def _receipt_pins(scored: dict) -> list[str]:
                 "price-backtest report with a record in the census; this block "
                 "cannot say whether its verdicts still hold."
             )
-        looks = int(payload["looks"])
+        looks = RESTATEMENT.signed_render_looks(
+            lambda n: PB.render(PB.restated(dict(payload), looks=n, record_name=record_name)),
+            (REPO / relative).read_text(encoding="utf-8"),
+            record_looks=int(payload["looks"]),
+            ledger_looks=RESTATEMENT.widened(int(payload["looks"]), ledger),
+        )
         at_pin = PB.restated(dict(payload), looks=looks, record_name=record_name)
         today = PB.restated(
             dict(payload),
@@ -476,7 +481,7 @@ def _receipt_pins(scored: dict) -> list[str]:
         out.append(
             f"**`{relative}` is held at the render {len(receipts)} human acceptance "
             f"receipt(s) cite** (scored under {looks} looks, "
-            f"x{payload['correction_factor']:.4f}): the receipts pin it by checksum, "
+            f"x{S.bonferroni_factor(looks):.4f}): the receipts pin it by checksum, "
             "this lab may not re-sign them, and so it is the one generated report "
             f"not re-rendered when the ledger grows. Restated at the ledger's count, "
             f"{holds}. Lifting the pin is Cooper's: re-read the current render and "

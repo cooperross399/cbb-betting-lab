@@ -50,8 +50,10 @@ lives in `CLAUDE.md`. This file is the ledger of the fact.
 
 | record | block | leaf | season | tier | label | market | band | rule | ROI | demonstrated at | crossed at |
 |:---|:---|:---|:---|:---|:---|:---|:---|:---|---:|---:|---:|
+| `cbb_price_backtest.json` | `null_baseline` | `—` | `—` | mid_major | `—` | spread | `—` | always away | -3.33% | 133 | 143 |
+| `core_team_only/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | mid_major | `—` | spread | `—` | always away | -3.33% | 130 | 143 |
 
-**The table is empty, and that is a state rather than a clean bill of health.**
+**Two rows, both the same blind side, retracted by the trust-learning registration of 2026-10-30 (140 -> 143, decision 66).** Before that the table was empty, and an empty table is a state rather than a clean bill of health.
 Every row it has ever carried is accounted for in the generated block below,
 which is read from the records at the revisions that changed them. A row was
 never a claim that was wrong: each was a correctly measured deficit at the
@@ -80,7 +82,7 @@ the block is the measurement and never the search.
 
 <!-- BEGIN GENERATED: retraction_history -->
 
-**What each reading this table has ever named actually did.** Every row below is read from the records with `git show`, at the ledger's 140 cumulative hypotheses held FIXED across every state, so what moves here is the measurement and never the family. **That is why this block cannot be read as evidence about what the family did** — it is built to exclude exactly that, and the `Scored at` column is the only place the family appears. Three of the readings below moved because the count they were scored at grew; the prose beneath names them and shows the arithmetic. The roster is the table's own history: a reading this file has ever listed as retracted is a reading this block accounts for. `|est|/se` is the estimate over its own standard error — a reading that SHARPENED across a restatement has a larger one after than before, and one that BLUNTED has a smaller one. Nothing in the prose of this file states a direction; this is where a direction may be read.
+**What each reading this table has ever named actually did.** Every row below is read from the records with `git show`, at the ledger's 143 cumulative hypotheses held FIXED across every state, so what moves here is the measurement and never the family. **That is why this block cannot be read as evidence about what the family did** — it is built to exclude exactly that, and the `Scored at` column is the only place the family appears. Three of the readings below moved because the count they were scored at grew; the prose beneath names them and shows the arithmetic. The roster is the table's own history: a reading this file has ever listed as retracted is a reading this block accounts for. `|est|/se` is the estimate over its own standard error — a reading that SHARPENED across a restatement has a larger one after than before, and one that BLUNTED has a smaller one. Nothing in the prose of this file states a direction; this is where a direction may be read.
 
 | Stage | State | Reading | Estimate | Standard error | Bets | \|est\|/se | Scored at | Crossed at | Verdict | Retracted at today's count |
 |:---|:---|:---|---:|---:|---:|---:|---:|---:|:---|:---|
@@ -99,6 +101,7 @@ the block is the measurement and never the search.
 | before | 524aae8 | `cbb_price_backtest.json` / null_baseline / mid_major / player_threes / always the underdog | -0.07297 | 0.02099 | 3,758 | 3.48 | 95 | 99 | demonstrated deficit | yes |
 | after | a2850ff — Restate the backtest with the neutral-court rows excluded (#83) | `cbb_price_backtest.json` / null_baseline / mid_major / player_threes / always the underdog | — | — | — | — | — | — | not in the record | no |
 | today | on disk | `cbb_price_backtest.json` / null_baseline / mid_major / player_threes / always the underdog | — | — | — | — | — | — | not in the record | no |
+| today | on disk | `cbb_price_backtest.json` / null_baseline / mid_major / spread / always away | -0.03334 | 0.00933 | 30,048 | 3.58 | 133 | 143 | demonstrated deficit | yes |
 | before | 129ce0f | `core_team_only/cbb_price_backtest.json` / null_baseline / high_major / spread / always away | -0.04024 | 0.01137 | 18,780 | 3.54 | 30 | 125 | demonstrated deficit | yes |
 | after | 72d0f0b — Restate the held-out and core-team cuts the same way (#84) | `core_team_only/cbb_price_backtest.json` / null_baseline / high_major / spread / always away | -0.03310 | 0.01262 | 15,267 | 2.62 | 130 | 6 | no demonstrated edge | no |
 | today | on disk | `core_team_only/cbb_price_backtest.json` / null_baseline / high_major / spread / always away | -0.03310 | 0.01262 | 15,267 | 2.62 | 130 | 6 | no demonstrated edge | no |
@@ -114,6 +117,7 @@ the block is the measurement and never the search.
 | before | 129ce0f | `core_team_only/cbb_price_backtest.json` / null_baseline / low_major / team_total / always over | -0.03753 | 0.01169 | 15,715 | 3.21 | 30 | 38 | demonstrated deficit | yes |
 | after | 72d0f0b — Restate the held-out and core-team cuts the same way (#84) | `core_team_only/cbb_price_backtest.json` / null_baseline / low_major / team_total / always over | -0.03335 | 0.01238 | 14,552 | 2.69 | 130 | 8 | no demonstrated edge | no |
 | today | on disk | `core_team_only/cbb_price_backtest.json` / null_baseline / low_major / team_total / always over | -0.03335 | 0.01238 | 14,552 | 2.69 | 130 | 8 | no demonstrated edge | no |
+| today | on disk | `core_team_only/cbb_price_backtest.json` / null_baseline / mid_major / spread / always away | -0.03334 | 0.00933 | 30,048 | 3.58 | 130 | 143 | demonstrated deficit | yes |
 | before | 524aae8 | `holdout/cbb_price_backtest.json` / null_baseline / high_major / player_assists / always the underdog | -0.07997 | 0.02281 | 3,200 | 3.51 | 95 | 111 | demonstrated deficit | yes |
 | after | 72d0f0b — Restate the held-out and core-team cuts the same way (#84) | `holdout/cbb_price_backtest.json` / null_baseline / high_major / player_assists / always the underdog | — | — | — | — | — | — | not in the record | no |
 | today | on disk | `holdout/cbb_price_backtest.json` / null_baseline / high_major / player_assists / always the underdog | — | — | — | — | — | — | not in the record | no |
@@ -141,7 +145,7 @@ the block is the measurement and never the search.
 | `core_team_only/cbb_price_backtest.json` / null_baseline / low_major / spread / always the favourite | -0.07419 ± 0.02285 | 30: high **-0.00235** | 130: high **+0.00694** |
 | `holdout/cbb_replication.json` / markets / holdout / mid_major / total_points | -0.06364 ± 0.01836 | 62: high **-0.00212** | 133: high **+0.00166** |
 
-*16 reading(s) this table has named; 16 of them stopped being retracted at a state this block can name, 0 did not.*
+*18 reading(s) this table has named; 16 of them stopped being retracted at a state this block can name, 2 did not.*
 
 **How many demonstrated deficits each walked record holds today.** A tier or a cell whose corrected interval lies entirely below zero is a demonstrated deficit — a different statement from *no demonstrated edge*, and one this file has published as ZERO about a record that held dozens. Counted here from the `verdict` each record stores, per block, so neither the tally nor the population can be typed.
 
@@ -330,10 +334,10 @@ deficits each cut holds after the rebuilds is counted in the generated block
 above, per record and per block; it used to be typed here and it went stale the
 next time a record was rendered.
 
-## The table is empty, and the narration is what survives
+## The table was empty, and the narration is what survives
 
-**Every row this file ever held has now left it.** That is not a clean bill of
-health and should not be read as one: the table is empty because the records
+**Every row this file held before 2026-10-30 has left it.** That is not a clean bill of
+health and should not be read as one: the table emptied because the records
 underneath it were rebuilt three times in two days — the neutral-court
 exclusion, the scope declaration and the roster seam — and a retraction is a
 statement about a specific reading in a specific record. What each of those

@@ -519,7 +519,25 @@ def _pinned_render(relative: str):
     for record_name, report_name, module in RENDERED_REPORTS:
         if f"data/outputs/{report_name}" == relative:
             record = json.loads((OUTPUTS / record_name).read_text(encoding="utf-8"))
-            return record_name, module, int(record.get("looks", 1) or 1)
+            renderer = {
+                "price_backtest": PB,
+                "replication": REPL,
+                "forecast_skill": FS,
+                "prop_grading": PG,
+            }[module]
+            # The count the signed render was made at: the record's own, or a
+            # later one Cooper re-signed against (decision 66). Found by
+            # rendering, never read off the page, so a report that is no
+            # render at all still fails the byte-equality check.
+            looks = RESTATEMENT.signed_render_looks(
+                lambda n: renderer.render(
+                    renderer.restated(copy.deepcopy(record), looks=n, record_name=Path(record_name).name)
+                ),
+                (REPO / relative).read_text(encoding="utf-8"),
+                record_looks=int(record.get("looks", 1) or 1),
+                ledger_looks=ledger_looks(),
+            )
+            return record_name, module, looks
     raise AssertionError(
         f"{relative} is pinned by receipts {pins} and is not a report this "
         "module can re-render at its record's count, so nothing can check that "
@@ -677,8 +695,8 @@ def test_the_committed_report_is_the_record_rendered_at_todays_count(
     )
     assert committed == renderer.render(at_pin), (
         f"data/outputs/{report_name} is pinned by {len(pins)} receipt(s) and is "
-        f"not the render of data/outputs/{record_name} at the {pinned_looks:,} "
-        "hypotheses the record was scored under. A pinned report is exactly "
+        f"not the render of data/outputs/{record_name} at any count from the "
+        f"record's own to the ledger's (fell back to {pinned_looks:,}). A pinned report is exactly "
         "the render the receipts cite, or the receipts are not a pin."
     )
     moved = []
@@ -727,7 +745,7 @@ def test_every_receipt_pin_is_named_in_the_census(name):
         _record, _module, pinned_looks = _pinned_render(relative)
         assert f"scored under {pinned_looks} looks" in fence, (
             f"{name}'s census names {relative} as pinned but not at the "
-            f"{pinned_looks} looks its record holds"
+            f"{pinned_looks} looks its signed render was made at"
         )
         assert "judgements are what the ledger's count gives" in fence, (
             f"{name}'s census says a judgement in {relative} would differ at the "

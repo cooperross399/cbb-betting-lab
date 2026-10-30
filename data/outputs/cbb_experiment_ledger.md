@@ -4,11 +4,11 @@
 
 College basketball's large sample makes this **more** urgent, not less. A bigger n narrows every interval, including the intervals of the hypotheses that are wrong. Sample size buys power, never innocence.
 
-**140 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.82** before it means what it says.
+**143 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.82** before it means what it says.
 
 **Alpha budget: 6 new hypotheses a week**, declared 2026-09-01. Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state — re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise.
 
-**99 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
+**102 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
 
 | Search | Hypotheses |
 |:---|---:|
@@ -25,6 +25,7 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | forward_2027 | 3 |
 | rebound_differential_vs_spread | 3 |
 | layer_audit_2026_10_30 | 3 |
+| trust_learning_2026_10_30 | 3 |
 | november_prior | 2 |
 | reachability | 1 |
 | champion_challenger | 1 |
@@ -172,6 +173,9 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | 138 | layer_audit_2026_10_30 | last-five-games pace form (shrunk possessions residual, card_factors.PACE_FORM_*), when the layer audit adds it, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-30 | pending |
 | 139 | layer_audit_2026_10_30 | taking back half of opponents' three-point over-performance (card_factors.THREE_LUCK_*), when the layer audit adds it, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-30 | pending |
 | 140 | layer_audit_2026_10_30 | counting a rotation player out only after two straight missed games (card_factors.LINEUP_STRICT_GAMES), when the layer audit puts it in place of the single-game rule, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-30 | pending |
+| 141 | trust_learning_2026_10_30 | high-major: pulling the model's probability toward the de-vigged price by the tier's learned trust (models/trust.py) before the edge bar raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-30 | pending |
+| 142 | trust_learning_2026_10_30 | mid-major: pulling the model's probability toward the de-vigged price by the tier's learned trust (models/trust.py) before the edge bar raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-30 | pending |
+| 143 | trust_learning_2026_10_30 | low-major: pulling the model's probability toward the de-vigged price by the tier's learned trust (models/trust.py) before the edge bar raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-30 | pending |
 
 ## 7 quantities declared descriptive-only
 
