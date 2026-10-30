@@ -2559,7 +2559,7 @@ def clear_caches() -> None:
     """Drop every memo. Tests that change the cached feeds call this."""
     for cache in (
         _SEASON_CACHE, _TIER_CACHE, _SCHEDULE_CACHE, _CLASSIFIED_CACHE,
-        _LOCAL_TEAMS_CACHE, _VENUE_IDS_CACHE, _FIXTURES_CACHE,
+        _LOCAL_TEAMS_CACHE, _VENUE_IDS_CACHE, _FIXTURES_CACHE, _HOME_STATES_CACHE,
     ):
         cache.clear()
 
@@ -2612,6 +2612,26 @@ def local_teams(schedules: Mapping[int, "pd.DataFrame"]) -> dict:
         hit = (tuple(schedules.values()), _local_teams_uncached(schedules))
         _LOCAL_TEAMS_CACHE[key] = hit
     return hit[1]
+
+
+#: season -> (the schedule it was derived from, team_id -> home arena state).
+_HOME_STATES_CACHE: dict = {}
+
+
+def _home_states(season: int, schedule: "pd.DataFrame") -> dict:
+    """team_id -> the state of its usual home arena (`population.home_venues`),
+    for the travel layer. A property of the schedule, so cached per season."""
+    hit = _HOME_STATES_CACHE.get(season)
+    if hit is not None and hit[0] is schedule:
+        return hit[1]
+    venues = home_venues(schedule) if schedule is not None and not schedule.empty else None
+    states: dict = {}
+    if venues is not None and "venue_address_state" in venues.columns:
+        for team, state in venues["venue_address_state"].items():
+            if state is not None and state == state:
+                states[team] = state
+    _HOME_STATES_CACHE[season] = (schedule, states)
+    return states
 
 
 def venue_ids(schedules: Mapping[int, "pd.DataFrame"]) -> dict:
@@ -2838,6 +2858,7 @@ def matchups_for(
         player_history=player_games,
         raw_dir=raw_dir,
         teams={t for _, _, h, a in asked for t in (h, a)},
+        home_states=_home_states(int(season), schedule),
     )
 
     for event_id, game_id, home_team_id, away_team_id in asked:
@@ -2861,6 +2882,7 @@ def matchups_for(
             context=context,
             venue_id=venues.get(game_id),
             local_team_id=local_side,
+            venue_address_state=fixture.get("venue_address_state"),
         )
     _record_fit(day, season, ratings, context, out)
     return out

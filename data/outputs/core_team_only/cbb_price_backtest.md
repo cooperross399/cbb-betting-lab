@@ -8,9 +8,9 @@ Generated 2026-09-17T16:22:16Z.
 
 **145,739 graded bets** from 465,378 graded wagers offered, seasons 2021-2026, across 26,615 games and 791 slate days, at an edge threshold of 2% declared in advance.
 
-**Family correction: 143 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.82. That is the ledger's cumulative count and never the day's — correcting today's findings across today's tests is a lie if more were tested last week.
+**Family correction: 148 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.83. That is the ledger's cumulative count and never the day's — correcting today's findings across today's tests is a lie if more were tested last week.
 
-**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 130 cumulative hypotheses (x1.8115), and `cbb_price_backtest.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 143 hypotheses (x1.8242), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
+**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 130 cumulative hypotheses (x1.8115), and `cbb_price_backtest.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 148 hypotheses (x1.8288), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
 
 **Below 200 bets there is no number**, only the words *not enough evidence*. That floor was declared before any price was bought.
 
@@ -21,31 +21,31 @@ Generated 2026-09-17T16:22:16Z.
 | Tier | Market | Blind side | Bets | Clusters | ROI | 95% interval | Family-corrected | Could detect | Verdict |
 |:---|:---|:---|---:|---:|---:|:---|:---|---:|:---|
 | high_major | moneyline | always home | 6,213 | 6,213 games | -0.1% | -2.2% to +2.0% | -4.0% to +3.8% | ±3.9% | no demonstrated edge |
-| high_major | moneyline | always away | 6,213 | 695 days | -19.5% | -24.8% to -14.1% | -29.3% to -9.7% | ±9.8% | demonstrated deficit |
+| high_major | moneyline | always away | 6,213 | 695 days | -19.5% | -24.8% to -14.1% | -29.3% to -9.6% | ±9.8% | demonstrated deficit |
 | high_major | moneyline | always the favourite | 6,219 | 695 days | +0.2% | -1.3% to +1.8% | -2.5% to +3.0% | ±2.8% | no demonstrated edge |
 | high_major | moneyline | always the underdog | 6,207 | 695 days | -19.8% | -25.6% to -14.1% | -30.3% to -9.3% | ±10.5% | demonstrated deficit |
 | high_major | spread | always home | 15,267 | 6,299 games | -3.6% | -6.0% to -1.1% | -8.1% to +0.9% | ±4.5% | no demonstrated edge |
 | high_major | spread | always away | 15,267 | 6,299 games | -3.3% | -5.8% to -0.8% | -7.8% to +1.2% | ±4.5% | no demonstrated edge |
-| high_major | spread | always the favourite | 430 | 135 games | +0.2% | -8.2% to +8.7% | -15.2% to +15.7% | ±15.5% | no demonstrated edge |
-| high_major | spread | always the underdog | 236 | 104 games | -13.4% | -29.2% to +2.4% | -42.2% to +15.4% | ±28.8% | no demonstrated edge |
+| high_major | spread | always the favourite | 430 | 135 games | +0.2% | -8.2% to +8.7% | -15.3% to +15.7% | ±15.5% | no demonstrated edge |
+| high_major | spread | always the underdog | 236 | 104 games | -13.4% | -29.2% to +2.4% | -42.3% to +15.5% | ±28.9% | no demonstrated edge |
 | high_major | team_total | always over | 8,526 | 353 days | -3.4% | -6.6% to -0.2% | -9.3% to +2.4% | ±5.8% | no demonstrated edge |
-| high_major | team_total | always under | 8,526 | 353 days | -7.3% | -10.5% to -4.1% | -13.1% to -1.5% | ±5.8% | demonstrated deficit |
+| high_major | team_total | always under | 8,526 | 353 days | -7.3% | -10.5% to -4.1% | -13.1% to -1.4% | ±5.8% | demonstrated deficit |
 | high_major | team_total | always the favourite | 9,091 | 351 days | -4.8% | -6.2% to -3.4% | -7.4% to -2.2% | ±2.6% | demonstrated deficit |
 | high_major | team_total | always the underdog | 7,177 | 2,841 games | -6.1% | -7.9% to -4.2% | -9.5% to -2.7% | ±3.4% | demonstrated deficit |
 | high_major | total_points | always over | 23,252 | 797 days | -2.7% | -5.0% to -0.4% | -6.9% to +1.5% | ±4.2% | no demonstrated edge |
 | high_major | total_points | always under | 23,252 | 797 days | -5.0% | -7.3% to -2.7% | -9.2% to -0.8% | ±4.2% | demonstrated deficit |
 | high_major | total_points | always the favourite | 32,227 | 7,773 games | -3.8% | -4.4% to -3.2% | -5.0% to -2.6% | ±1.2% | demonstrated deficit |
 | high_major | total_points | always the underdog | 14,277 | 7,270 games | -3.9% | -5.4% to -2.4% | -6.6% to -1.2% | ±2.7% | demonstrated deficit |
-| mid_major | moneyline | always home | 12,309 | 734 days | -1.2% | -3.1% to +0.6% | -4.6% to +2.1% | ±3.4% | no demonstrated edge |
-| mid_major | moneyline | always away | 12,309 | 734 days | -8.9% | -12.1% to -5.7% | -14.7% to -3.1% | ±5.8% | demonstrated deficit |
+| mid_major | moneyline | always home | 12,309 | 734 days | -1.2% | -3.1% to +0.6% | -4.6% to +2.2% | ±3.4% | no demonstrated edge |
+| mid_major | moneyline | always away | 12,309 | 734 days | -8.9% | -12.1% to -5.7% | -14.8% to -3.1% | ±5.8% | demonstrated deficit |
 | mid_major | moneyline | always the favourite | 12,334 | 734 days | -0.7% | -1.8% to +0.4% | -2.8% to +1.4% | ±2.1% | no demonstrated edge |
 | mid_major | moneyline | always the underdog | 12,284 | 734 days | -9.4% | -13.0% to -5.9% | -15.9% to -3.0% | ±6.5% | demonstrated deficit |
 | mid_major | spread | always home | 30,048 | 734 days | -3.4% | -5.3% to -1.6% | -6.8% to -0.1% | ±3.3% | demonstrated deficit |
 | mid_major | spread | always away | 30,048 | 734 days | -3.3% | -5.2% to -1.5% | -6.7% to +0.0% | ±3.3% | no demonstrated edge |
 | mid_major | spread | always the favourite | 1,322 | 392 games | -6.9% | -11.2% to -2.6% | -14.8% to +1.0% | ±7.9% | no demonstrated edge |
-| mid_major | spread | always the underdog | 728 | 309 games | +1.0% | -7.1% to +9.0% | -13.8% to +15.7% | ±14.7% | no demonstrated edge |
-| mid_major | team_total | always over | 19,741 | 6,748 games | -2.9% | -4.8% to -1.0% | -6.3% to +0.5% | ±3.4% | no demonstrated edge |
-| mid_major | team_total | always under | 19,741 | 6,748 games | -8.1% | -10.0% to -6.2% | -11.5% to -4.6% | ±3.4% | demonstrated deficit |
+| mid_major | spread | always the underdog | 728 | 309 games | +1.0% | -7.1% to +9.0% | -13.8% to +15.7% | ±14.8% | no demonstrated edge |
+| mid_major | team_total | always over | 19,741 | 6,748 games | -2.9% | -4.8% to -1.0% | -6.4% to +0.5% | ±3.4% | no demonstrated edge |
+| mid_major | team_total | always under | 19,741 | 6,748 games | -8.1% | -10.0% to -6.2% | -11.6% to -4.6% | ±3.5% | demonstrated deficit |
 | mid_major | team_total | always the favourite | 20,855 | 380 days | -3.9% | -4.8% to -2.9% | -5.6% to -2.1% | ±1.7% | demonstrated deficit |
 | mid_major | team_total | always the underdog | 16,263 | 379 days | -7.6% | -8.9% to -6.3% | -10.0% to -5.3% | ±2.4% | demonstrated deficit |
 | mid_major | total_points | always over | 43,265 | 815 days | -3.1% | -4.7% to -1.4% | -6.1% to -0.1% | ±3.0% | demonstrated deficit |
@@ -53,16 +53,16 @@ Generated 2026-09-17T16:22:16Z.
 | mid_major | total_points | always the favourite | 60,258 | 14,110 games | -3.8% | -4.3% to -3.3% | -4.6% to -3.0% | ±0.8% | demonstrated deficit |
 | mid_major | total_points | always the underdog | 26,272 | 13,256 games | -3.9% | -5.0% to -2.9% | -5.9% to -2.0% | ±2.0% | demonstrated deficit |
 | low_major | moneyline | always home | 8,952 | 676 days | -2.2% | -4.3% to -0.0% | -6.1% to +1.7% | ±3.9% | no demonstrated edge |
-| low_major | moneyline | always away | 8,952 | 676 days | -6.5% | -9.5% to -3.5% | -11.9% to -1.0% | ±5.4% | demonstrated deficit |
-| low_major | moneyline | always the favourite | 8,985 | 8,952 games | -1.5% | -2.9% to -0.0% | -4.0% to +1.1% | ±2.6% | no demonstrated edge |
-| low_major | moneyline | always the underdog | 8,919 | 676 days | -7.2% | -10.6% to -3.9% | -13.4% to -1.1% | ±6.1% | demonstrated deficit |
+| low_major | moneyline | always away | 8,952 | 676 days | -6.5% | -9.5% to -3.5% | -11.9% to -1.0% | ±5.5% | demonstrated deficit |
+| low_major | moneyline | always the favourite | 8,985 | 8,952 games | -1.5% | -2.9% to -0.0% | -4.1% to +1.2% | ±2.6% | no demonstrated edge |
+| low_major | moneyline | always the underdog | 8,919 | 676 days | -7.2% | -10.6% to -3.9% | -13.4% to -1.1% | ±6.2% | demonstrated deficit |
 | low_major | spread | always home | 21,393 | 676 days | -3.0% | -5.1% to -0.9% | -6.8% to +0.8% | ±3.8% | no demonstrated edge |
 | low_major | spread | always away | 21,393 | 676 days | -3.8% | -5.9% to -1.7% | -7.6% to +0.0% | ±3.8% | no demonstrated edge |
 | low_major | spread | always the favourite | 1,220 | 374 games | -7.4% | -11.9% to -2.9% | -15.6% to +0.8% | ±8.2% | no demonstrated edge |
-| low_major | spread | always the underdog | 660 | 293 games | +3.1% | -5.4% to +11.6% | -12.4% to +18.6% | ±15.5% | no demonstrated edge |
+| low_major | spread | always the underdog | 660 | 293 games | +3.1% | -5.4% to +11.6% | -12.5% to +18.6% | ±15.5% | no demonstrated edge |
 | low_major | team_total | always over | 14,552 | 346 days | -3.3% | -5.8% to -0.9% | -7.8% to +1.1% | ±4.4% | no demonstrated edge |
 | low_major | team_total | always under | 14,552 | 346 days | -7.8% | -10.2% to -5.4% | -12.2% to -3.4% | ±4.4% | demonstrated deficit |
-| low_major | team_total | always the favourite | 14,639 | 346 days | -4.9% | -6.0% to -3.8% | -6.9% to -3.0% | ±2.0% | demonstrated deficit |
+| low_major | team_total | always the favourite | 14,639 | 346 days | -4.9% | -6.0% to -3.8% | -6.9% to -2.9% | ±2.0% | demonstrated deficit |
 | low_major | team_total | always the underdog | 11,921 | 4,527 games | -6.3% | -7.7% to -4.9% | -8.9% to -3.8% | ±2.5% | demonstrated deficit |
 | low_major | total_points | always over | 29,157 | 718 days | -2.4% | -4.4% to -0.3% | -6.1% to +1.4% | ±3.8% | no demonstrated edge |
 | low_major | total_points | always under | 29,157 | 718 days | -5.3% | -7.4% to -3.2% | -9.1% to -1.5% | ±3.8% | demonstrated deficit |
@@ -90,15 +90,15 @@ The tier of a team is **measured, not assigned by conference**: `conferences.tie
 | high_major | moneyline | 4,393 | 609 days | -11.1% | -16.8% to -5.4% | -21.5% to -0.7% | ±10.4% | demonstrated deficit |
 | high_major | spread | 10,908 | 4,711 games | -2.9% | -5.8% to +0.0% | -8.1% to +2.4% | ±5.3% | no demonstrated edge |
 | high_major | team_total | 5,570 | 2,312 games | -3.7% | -6.7% to -0.7% | -9.1% to +1.7% | ±5.4% | no demonstrated edge |
-| high_major | total_points | 12,302 | 688 days | -3.3% | -6.2% to -0.3% | -8.7% to +2.1% | ±5.4% | no demonstrated edge |
-| mid_major | moneyline | 8,873 | 648 days | -8.0% | -11.7% to -4.4% | -14.7% to -1.4% | ±6.7% | demonstrated deficit |
+| high_major | total_points | 12,302 | 688 days | -3.3% | -6.2% to -0.3% | -8.7% to +2.2% | ±5.4% | no demonstrated edge |
+| mid_major | moneyline | 8,873 | 648 days | -8.0% | -11.7% to -4.4% | -14.7% to -1.3% | ±6.7% | demonstrated deficit |
 | mid_major | spread | 19,968 | 650 days | -2.9% | -5.1% to -0.7% | -6.9% to +1.1% | ±4.0% | no demonstrated edge |
-| mid_major | team_total | 11,618 | 345 days | -6.3% | -8.4% to -4.2% | -10.1% to -2.5% | ±3.8% | demonstrated deficit |
+| mid_major | team_total | 11,618 | 345 days | -6.3% | -8.4% to -4.2% | -10.1% to -2.4% | ±3.8% | demonstrated deficit |
 | mid_major | total_points | 23,517 | 728 days | -2.4% | -4.6% to -0.3% | -6.4% to +1.5% | ±3.9% | no demonstrated edge |
 | low_major | moneyline | 6,967 | 590 days | -9.8% | -13.6% to -5.9% | -16.8% to -2.8% | ±7.0% | demonstrated deficit |
-| low_major | spread | 14,596 | 589 days | -0.7% | -3.2% to +1.7% | -5.2% to +3.7% | ±4.5% | no demonstrated edge |
+| low_major | spread | 14,596 | 589 days | -0.7% | -3.2% to +1.7% | -5.2% to +3.8% | ±4.5% | no demonstrated edge |
 | low_major | team_total | 9,042 | 313 days | -3.8% | -6.6% to -1.0% | -8.9% to +1.3% | ±5.1% | no demonstrated edge |
-| low_major | total_points | 17,978 | 7,137 games | -5.2% | -7.6% to -2.8% | -9.5% to -0.9% | ±4.3% | demonstrated deficit |
+| low_major | total_points | 17,978 | 7,137 games | -5.2% | -7.6% to -2.8% | -9.6% to -0.9% | ±4.3% | demonstrated deficit |
 | unplaced | moneyline | 1 | 1 games | — | — | — | — | not enough evidence (1 bets, below the 200 declared in advance) |
 | unplaced | spread | 3 | 2 games | — | — | — | — | not enough evidence (3 bets, below the 200 declared in advance) |
 | unplaced | total_points | 3 | 1 games | — | — | — | — | not enough evidence (3 bets, below the 200 declared in advance) |
@@ -114,7 +114,7 @@ The tier of a team is **measured, not assigned by conference**: `conferences.tie
 | Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Verdict |
 |:---|---:|---:|---:|:---|:---|:---|
 | high_major | 33,173 | 5,982 games | -4.2% | -6.2% to -2.3% | -7.8% to -0.7% | demonstrated deficit |
-| mid_major | 63,976 | 735 days | -4.0% | -5.6% to -2.5% | -6.8% to -1.3% | demonstrated deficit |
+| mid_major | 63,976 | 735 days | -4.0% | -5.6% to -2.5% | -6.9% to -1.2% | demonstrated deficit |
 | low_major | 48,583 | 645 days | -4.3% | -6.0% to -2.5% | -7.5% to -1.0% | demonstrated deficit |
 | unplaced | 7 | 2 games | — | — | — | not enough evidence (7 bets, below the 200 declared in advance) |
 
@@ -124,7 +124,7 @@ The tier of a team is **measured, not assigned by conference**: `conferences.tie
 
 | Market | Bets | Clusters | ROI | 95% interval | Family-corrected | Verdict |
 |:---|---:|---:|---:|:---|:---|:---|
-| moneyline | 20,234 | 694 days | -9.3% | -11.8% to -6.8% | -13.9% to -4.8% | demonstrated deficit |
+| moneyline | 20,234 | 694 days | -9.3% | -11.8% to -6.8% | -13.9% to -4.7% | demonstrated deficit |
 | spread | 45,475 | 20,550 games | -2.2% | -3.6% to -0.8% | -4.7% to +0.3% | no demonstrated edge |
 | team_total | 26,230 | 365 days | -4.9% | -6.4% to -3.3% | -7.7% to -2.1% | demonstrated deficit |
 | total_points | 53,800 | 21,189 games | -3.6% | -4.9% to -2.2% | -6.1% to -1.0% | demonstrated deficit |

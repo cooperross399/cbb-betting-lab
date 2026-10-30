@@ -1009,6 +1009,88 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    # ---------------------------------------------------------------------
+    # 2026-10-30, two more candidates for the layer audit (decision 67): travel
+    # across time zones and the attack-side twin of three-point luck. Computed
+    # on every game and on the card only when the audit adds them.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="layer_audit_2026_10_30",
+        name=(
+            "taking card_factors.TRAVEL_PER_ZONE per 100 possessions off a side for "
+            "each time zone between its home arena and the venue "
+            "(card_factors.STATE_UTC_OFFSET), when the layer audit adds it, raises "
+            "the return of the card's team selections against the card-time price "
+            "(forward ledger only)"
+        ),
+        tested_on="2026-10-30",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="layer_audit_2026_10_30",
+        name=(
+            "taking back half of a side's own three-point and free-throw over-"
+            "performance (card_factors.SHOOTING_LUCK_*), when the layer audit adds "
+            "it, raises the return of the card's team selections against the card-"
+            "time price (forward ledger only)"
+        ),
+        tested_on="2026-10-30",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    # ---------------------------------------------------------------------
+    # 2026-10-30: the edge bar halves a lean the market has moved against
+    # since the day's first line-movement capture (models/line_move.py). Per
+    # tier and never pooled. Forward only: the capture store has no history
+    # before 2026-10-24.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="line_movement_2026_10_30",
+        name=(
+            "high-major: halving the model's lean when the market has moved against "
+            "it since the day's first line-movement capture (models/line_move.py) "
+            "raises the return of the card's team selections against the card-time "
+            "price (forward ledger only)"
+        ),
+        tested_on="2026-10-30",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="line_movement_2026_10_30",
+        name=(
+            "mid-major: halving the model's lean when the market has moved against "
+            "it since the day's first line-movement capture (models/line_move.py) "
+            "raises the return of the card's team selections against the card-time "
+            "price (forward ledger only)"
+        ),
+        tested_on="2026-10-30",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="line_movement_2026_10_30",
+        name=(
+            "low-major: halving the model's lean when the market has moved against "
+            "it since the day's first line-movement capture (models/line_move.py) "
+            "raises the return of the card's team selections against the card-time "
+            "price (forward ledger only)"
+        ),
+        tested_on="2026-10-30",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 
