@@ -1,0 +1,19 @@
+{
+  "market": "player_steals",
+  "receipt_id": "player_steals-20261030-delegated-cooperross399",
+  "evidence": {
+    "path": "data/outputs/cbb_price_backtest.md",
+    "sha256": "400406044f4efebe6c730e46760a637db21bdf0a9d546b106b7edc040fd1c1c3"
+  },
+  "signed_by": "Cooper Ross (delegated: executed by his AI assistant on his written instruction)",
+  "executed_by": "Claude",
+  "signed_on": "2026-10-30",
+  "supersedes": "player_steals-20260928-delegated-cooperross399",
+  "authorisation": {
+    "instruction": "Chose \"Re-sign all 35 now\" on the decision card asking \"Re-sign the 35 market receipts against today's backtest report so the upgrades can ship?\" (2026-10-30T15:36:19Z)",
+    "option_consequence": "I execute the 35 receipts as your delegate against the current report, as on 28 Sept; allowlist unchanged, and all four price-changing upgrades can merge.",
+    "context": "Registering the trust-learning hypotheses took the experiment ledger to 143, at which one blind null-baseline cell in the signed report (mid_major / spread / always away, -3.3% over 30,048 bets) moves from demonstrated deficit to no demonstrated edge. The earlier receipts cited the render at 133 looks.",
+    "session": "https://claude.ai/code/session_01PSdZ6hM2BpfuBXtYZnNHNG"
+  },
+  "statement": "Executed by Claude on Cooper Ross's explicit written instruction, as his delegate; Cooper did not personally review this evidence first. It re-cites the same market against the price-backtest report re-rendered at the ledger's current count, and changes nothing about which markets are allowlisted. This receipt records an owner's decision to run the market forward and accumulate a live record, not a finding that an edge exists."
+}

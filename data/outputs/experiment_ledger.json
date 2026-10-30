@@ -2044,6 +2044,48 @@
       "predicted_direction": "higher",
       "stage": "discovery",
       "realised_direction": ""
+    },
+    {
+      "search": "trust_learning_2026_10_30",
+      "name": "high-major: pulling the model's probability toward the de-vigged price by the tier's learned trust (models/trust.py) before the edge bar raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-10-30",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "trust_learning_2026_10_30",
+      "name": "mid-major: pulling the model's probability toward the de-vigged price by the tier's learned trust (models/trust.py) before the edge bar raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-10-30",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "trust_learning_2026_10_30",
+      "name": "low-major: pulling the model's probability toward the de-vigged price by the tier's learned trust (models/trust.py) before the edge bar raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-10-30",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
     }
   ]
 }

@@ -338,3 +338,35 @@ def restated(
     """
     moved = restate_tree(record, looks=looks, rebuild=rebuild)
     return stamp(moved, looks=looks, record_name=record_name)
+
+
+def signed_render_looks(
+    render: Callable[[Mapping, int], str],
+    committed: str,
+    *,
+    record_looks: int,
+    ledger_looks: int,
+) -> int:
+    """The count a receipt-pinned report was rendered at.
+
+    A pinned report is the render a receipt cites, and that render is made at
+    one family count: the record's own when the receipts were signed against
+    the report as the run wrote it, or a later one when they were signed
+    again against a re-render (decision 66). This finds which, as the count
+    in `[record_looks, ledger_looks]` whose render is the committed bytes,
+    trying the ledger's count and the record's first. When none matches the
+    record's own count is returned, so the byte-equality check that follows
+    fails exactly as it did before a re-signing was possible.
+    """
+    low, high = int(record_looks), max(int(record_looks), int(ledger_looks))
+    for looks in (high, low, *range(high - 1, low, -1)):
+        if render_matches(render, committed, looks):
+            return looks
+    return low
+
+
+def render_matches(render: Callable[[Mapping, int], str], committed: str, looks: int) -> bool:
+    try:
+        return render(looks) == committed
+    except Exception:  # noqa: BLE001 - a count that cannot render is not the signed one
+        return False
