@@ -908,6 +908,58 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+
+    # ---------------------------------------------------------------------
+    # The layer audit, 2026-10-30 (`models/layer_audit.py`, decision 65).
+    # Cooper asked for the model to add and remove its own layers. The audit
+    # judges layers on RESULTS, not prices, and switches them for the next
+    # card; two candidate layers can reach the card only through it. Each is
+    # registered here before it can price a card, so the measurement against
+    # prices pays for the look. Forward only: the audit is refused on any day
+    # it is dated after, so the price backtest prices history without them.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="layer_audit_2026_10_30",
+        name=(
+            "last-five-games pace form (shrunk possessions residual, "
+            "card_factors.PACE_FORM_*), when the layer audit adds it, raises the "
+            "return of the card's team selections against the card-time price "
+            "(forward ledger only)"
+        ),
+        tested_on="2026-10-30",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="layer_audit_2026_10_30",
+        name=(
+            "taking back half of opponents' three-point over-performance "
+            "(card_factors.THREE_LUCK_*), when the layer audit adds it, raises "
+            "the return of the card's team selections against the card-time "
+            "price (forward ledger only)"
+        ),
+        tested_on="2026-10-30",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="layer_audit_2026_10_30",
+        name=(
+            "counting a rotation player out only after two straight missed games "
+            "(card_factors.LINEUP_STRICT_GAMES), when the layer audit puts it in "
+            "place of the single-game rule, raises the return of the card's team "
+            "selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-10-30",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 

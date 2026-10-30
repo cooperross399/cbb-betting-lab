@@ -508,6 +508,24 @@ jobs:
           set -eu
           python scripts/fetch_second_opinion.py --as-of "${{ steps.identity.outputs.day }}"
 
+      - name: Audit the card's layers against what happened
+        # The model checking itself (Cooper, 2026-10-30; decision 65). Re-prices
+        # the last fortnight of slate days walk-forward and switches each layer
+        # in `card_factors` on or off by whether it moved the predicted margin
+        # and total toward the final score (`models/layer_audit.py`). Results
+        # only: no price is read and no credit spent. SOFT, like the second
+        # opinion: a run that cannot audit leaves the card on its declared
+        # layers, and the health step says so as a warning. Exit 2 is "nothing
+        # to audit yet", which writes nothing.
+        id: layer_audit
+        continue-on-error: true
+        timeout-minutes: 25
+        env:
+          PYTHONPATH: src
+        run: |
+          set -eu
+          python scripts/run_layer_audit.py --as-of "${{ steps.identity.outputs.day }}" --budget-minutes 18 --summary "$GITHUB_STEP_SUMMARY"
+
       - name: Settle whatever finished, then append to the forward ledger
         # POST-SLATE SETTLEMENT, and it lives here rather than in a workflow of
         # its own for one structural reason: the ledger comes back from
@@ -728,6 +746,9 @@ jobs:
           # on nothing. It is still read here, so that it is never silent.
           if [ "${{ steps.second_opinion.outcome }}" != "success" ]; then
             echo "::warning::The card's second opinion was not fetched (outcome: ${{ steps.second_opinion.outcome }}); the card priced on the lab's own ratings alone."
+          fi
+          if [ "${{ steps.layer_audit.outcome }}" != "success" ]; then
+            echo "::warning::The layer audit did not run to a verdict (outcome: ${{ steps.layer_audit.outcome }}); the card priced on its declared layers."
           fi
           if [ -s run_degraded.txt ]; then
             echo "degraded=true" >> "$GITHUB_OUTPUT"
@@ -1087,6 +1108,7 @@ jobs:
             data/processed/cbb_player_games.csv
             data/raw/cbb/schedules/
             data/raw/cbb/second_opinion/
+            data/raw/cbb/layer_audit/
           if-no-files-found: warn
           retention-days: 3
 

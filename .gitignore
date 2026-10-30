@@ -18,6 +18,9 @@ data/raw/cbb/pbp/
 data/raw/cbb/team_box/
 data/raw/cbb/player_box/
 data/raw/cbb/schedules/
+# The layer audit's switches: rebuilt every gameday run from the tables above
+# and carried to the board in the inputs artifact, never committed.
+data/raw/cbb/layer_audit/
 data/processed/*.csv
 # The frame-builder's unpairable census, written beside the frame it describes.
 # It is a count OF an ignored file and is regenerated with it, so committing it
