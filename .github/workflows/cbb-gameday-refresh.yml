@@ -593,6 +593,10 @@ jobs:
           set -eu
           python scripts/run_closing_alarm.py
           cat data/outputs/cbb_closing_alarm.md >> "$GITHUB_STEP_SUMMARY"
+          # The April rule's dry run (`reports/decision_rule.py`) reads the
+          # same ledger, so it rides in this step and on the feed beside it.
+          python scripts/run_decision_rule.py
+          cat data/outputs/cbb_decision_rule.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Fetch the board, freeze the opinions, render the card
         id: card
@@ -986,6 +990,12 @@ jobs:
           add latest_card_comment.md card_comment.md "$ROOT_INPUT"
           add latest_forward_evidence.md data/outputs/cbb_forward_evidence.md "$ROOT_INPUT"
           add latest_what_we_can_claim.md data/outputs/cbb_what_we_can_claim.md "$ROOT_INPUT"
+          # Read by the Monday digest: the closing-line alarm, the April
+          # rule's dry run and the step audit's switches. Each is skipped by
+          # `add` when its step did not write it.
+          add latest_closing_alarm.md data/outputs/cbb_closing_alarm.md "$ROOT_INPUT"
+          add latest_decision_rule.md data/outputs/cbb_decision_rule.md "$ROOT_INPUT"
+          add latest_layer_audit.json data/raw/cbb/layer_audit/latest.json "$ROOT_INPUT"
 
           # NEVER PUBLISH THE ABSENCE OF EVIDENCE. This tree is rebuilt from
           # local files under `if: always()`, so a run that died at or before
