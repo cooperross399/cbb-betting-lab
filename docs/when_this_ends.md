@@ -85,6 +85,16 @@ into a finding, and there is no honest reason to move one after seeing a return.
 **If a mid-season result looks strong, the correct action is nothing.** Write it
 down and wait for the date.
 
+**Cooper confirmed the freeze on 2026-10-31, the day before the season opened**
+(decision 69). The model as merged that day is the subject: the six steps on the
+card, the six candidates, the weekly step audit, the trust table, the
+line-movement halving and the closing-line alarm. The audit switching a step on
+or off is not a change to the model, because its rule and its bars were fixed
+and registered before the season; retuning those bars would be. Two things may
+still land: a defect fix under the rule above, and display on the site that
+changes no price, no selection and no hypothesis. Anything else waits for the
+date, and a session asked to add one says so rather than building it.
+
 ## What ends it earlier
 
 Three things, and all three are failures of the instrument rather than of the
