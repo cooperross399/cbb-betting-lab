@@ -242,3 +242,24 @@ def test_shooting_luck_takes_back_half_of_a_hot_attack():
     assert luck[1] == pytest.approx(CF.SHOOTING_LUCK_CLAMP)
     assert luck[2] == pytest.approx(-CF.SHOOTING_LUCK_CLAMP)
     assert CF.shooting_luck(pd.DataFrame(rows[:4])) == {}, "too few games carry no reading"
+
+
+def test_shot_quality_takes_back_two_point_over_performance_and_reads_only_games_handed_over():
+    rows, zones = [], []
+    for game in range(6):
+        rows.append({"game_id": game, "team_id": 1, "opponent_id": 2, "game_possessions": 70})
+        rows.append({"game_id": game, "team_id": 2, "opponent_id": 1, "game_possessions": 70})
+        # Team 1 makes every two it takes; team 2 makes none.
+        zones.append({"game_id": game, "team_id": 1, "attempts_rim": 10, "makes_rim": 10,
+                      "attempts_mid": 10, "makes_mid": 10})
+        zones.append({"game_id": game, "team_id": 2, "attempts_rim": 10, "makes_rim": 0,
+                      "attempts_mid": 10, "makes_mid": 0})
+    # A later game the rows do not carry must not count.
+    zones.append({"game_id": 99, "team_id": 1, "attempts_rim": 10, "makes_rim": 0,
+                  "attempts_mid": 10, "makes_mid": 0})
+    sq = CF.shot_quality(pd.DataFrame(rows), pd.DataFrame(zones))
+    assert sq[1][0] == pytest.approx(CF.SHOT_QUALITY_CLAMP), "a hot attack is taken back"
+    assert sq[1][1] == pytest.approx(-CF.SHOT_QUALITY_CLAMP), "a defence that allowed nothing gives some back"
+    assert sq[2] == (pytest.approx(-CF.SHOT_QUALITY_CLAMP), pytest.approx(CF.SHOT_QUALITY_CLAMP))
+    assert CF.shot_quality(pd.DataFrame(rows[:8]), pd.DataFrame(zones)) == {}, "too few games"
+    assert CF.shot_quality(pd.DataFrame(rows), None) == {}

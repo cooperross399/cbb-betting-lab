@@ -52,8 +52,11 @@ lives in `CLAUDE.md`. This file is the ledger of the fact.
 |:---|:---|:---|:---|:---|:---|:---|:---|:---|---:|---:|---:|
 | `cbb_price_backtest.json` | `null_baseline` | `—` | `—` | mid_major | `—` | spread | `—` | always away | -3.33% | 133 | 143 |
 | `core_team_only/cbb_price_backtest.json` | `null_baseline` | `—` | `—` | mid_major | `—` | spread | `—` | always away | -3.33% | 130 | 143 |
+| `holdout/cbb_price_backtest.json` | `by_market_and_tier` | `—` | `—` | low_major | `—` | moneyline | `—` | `—` | -9.63% | 130 | 151 |
+| `holdout/cbb_replication.json` | `markets` | `discovery` | `—` | low_major | `—` | moneyline | `—` | `—` | -9.63% | 133 | 151 |
+| `holdout/cbb_replication.json` | `by_tier` | `—` | `—` | high_major | `—` | `—` | `—` | high_major | -5.30% | 133 | 150 |
 
-**Two rows, both the same blind side, retracted by the trust-learning registration of 2026-10-30 (140 -> 143, decision 66).** Before that the table was empty, and an empty table is a state rather than a clean bill of health.
+**The first two rows, both the same blind side, were retracted by the trust-learning registration of 2026-10-30 (140 -> 143, decision 66). The last three were retracted by the shot-quality and closing-line-alarm registration of 2026-10-31 (148 -> 152, decision 68): the discovery-season `low_major / moneyline` cell, which the held-out backtest and the replication's discovery block both carry, and the replication's high-major discovery tier.** Before 2026-10-30 the table was empty, and an empty table is a state rather than a clean bill of health.
 Every row it has ever carried is accounted for in the generated block below,
 which is read from the records at the revisions that changed them. A row was
 never a claim that was wrong: each was a correctly measured deficit at the
@@ -82,7 +85,7 @@ the block is the measurement and never the search.
 
 <!-- BEGIN GENERATED: retraction_history -->
 
-**What each reading this table has ever named actually did.** Every row below is read from the records with `git show`, at the ledger's 148 cumulative hypotheses held FIXED across every state, so what moves here is the measurement and never the family. **That is why this block cannot be read as evidence about what the family did** — it is built to exclude exactly that, and the `Scored at` column is the only place the family appears. Three of the readings below moved because the count they were scored at grew; the prose beneath names them and shows the arithmetic. The roster is the table's own history: a reading this file has ever listed as retracted is a reading this block accounts for. `|est|/se` is the estimate over its own standard error — a reading that SHARPENED across a restatement has a larger one after than before, and one that BLUNTED has a smaller one. Nothing in the prose of this file states a direction; this is where a direction may be read.
+**What each reading this table has ever named actually did.** Every row below is read from the records with `git show`, at the ledger's 152 cumulative hypotheses held FIXED across every state, so what moves here is the measurement and never the family. **That is why this block cannot be read as evidence about what the family did** — it is built to exclude exactly that, and the `Scored at` column is the only place the family appears. Three of the readings below moved because the count they were scored at grew; the prose beneath names them and shows the arithmetic. The roster is the table's own history: a reading this file has ever listed as retracted is a reading this block accounts for. `|est|/se` is the estimate over its own standard error — a reading that SHARPENED across a restatement has a larger one after than before, and one that BLUNTED has a smaller one. Nothing in the prose of this file states a direction; this is where a direction may be read.
 
 | Stage | State | Reading | Estimate | Standard error | Bets | \|est\|/se | Scored at | Crossed at | Verdict | Retracted at today's count |
 |:---|:---|:---|---:|---:|---:|---:|---:|---:|:---|:---|
@@ -118,6 +121,7 @@ the block is the measurement and never the search.
 | after | 72d0f0b — Restate the held-out and core-team cuts the same way (#84) | `core_team_only/cbb_price_backtest.json` / null_baseline / low_major / team_total / always over | -0.03335 | 0.01238 | 14,552 | 2.69 | 130 | 8 | no demonstrated edge | no |
 | today | on disk | `core_team_only/cbb_price_backtest.json` / null_baseline / low_major / team_total / always over | -0.03335 | 0.01238 | 14,552 | 2.69 | 130 | 8 | no demonstrated edge | no |
 | today | on disk | `core_team_only/cbb_price_backtest.json` / null_baseline / mid_major / spread / always away | -0.03334 | 0.00933 | 30,048 | 3.58 | 130 | 143 | demonstrated deficit | yes |
+| today | on disk | `holdout/cbb_price_backtest.json` / by_market_and_tier / low_major / moneyline | -0.09634 | 0.02684 | 4,226 | 3.59 | 130 | 151 | demonstrated deficit | yes |
 | before | 524aae8 | `holdout/cbb_price_backtest.json` / null_baseline / high_major / player_assists / always the underdog | -0.07997 | 0.02281 | 3,200 | 3.51 | 95 | 111 | demonstrated deficit | yes |
 | after | 72d0f0b — Restate the held-out and core-team cuts the same way (#84) | `holdout/cbb_price_backtest.json` / null_baseline / high_major / player_assists / always the underdog | — | — | — | — | — | — | not in the record | no |
 | today | on disk | `holdout/cbb_price_backtest.json` / null_baseline / high_major / player_assists / always the underdog | — | — | — | — | — | — | not in the record | no |
@@ -133,6 +137,8 @@ the block is the measurement and never the search.
 | before | 524aae8 | `holdout/cbb_price_backtest.json` / null_baseline / mid_major / player_threes / always the underdog | -0.07297 | 0.02099 | 3,758 | 3.48 | 95 | 99 | demonstrated deficit | yes |
 | after | 72d0f0b — Restate the held-out and core-team cuts the same way (#84) | `holdout/cbb_price_backtest.json` / null_baseline / mid_major / player_threes / always the underdog | — | — | — | — | — | — | not in the record | no |
 | today | on disk | `holdout/cbb_price_backtest.json` / null_baseline / mid_major / player_threes / always the underdog | — | — | — | — | — | — | not in the record | no |
+| today | on disk | `holdout/cbb_replication.json` / by_tier / high_major / high_major | -0.05304 | 0.01479 | 15,607 | 3.59 | 133 | 150 | demonstrated deficit | yes |
+| today | on disk | `holdout/cbb_replication.json` / markets / discovery / low_major / moneyline | -0.09634 | 0.02684 | 4,226 | 3.59 | 133 | 151 | demonstrated deficit | yes |
 | before | 129ce0f | `holdout/cbb_replication.json` / markets / holdout / mid_major / total_points | -0.06364 | 0.01836 | 8,214 | 3.47 | 62 | 95 | demonstrated deficit | yes |
 | after | c8f902d — Hand the model the roster frame it declares, and re-measure everything (#87) | `holdout/cbb_replication.json` / markets / holdout / mid_major / total_points | -0.06364 | 0.01836 | 8,214 | 3.47 | 133 | 95 | no demonstrated edge | no |
 | today | on disk | `holdout/cbb_replication.json` / markets / holdout / mid_major / total_points | -0.06538 | 0.01847 | 8,267 | 3.54 | 133 | 125 | no demonstrated edge | no |
@@ -145,7 +151,7 @@ the block is the measurement and never the search.
 | `core_team_only/cbb_price_backtest.json` / null_baseline / low_major / spread / always the favourite | -0.07419 ± 0.02285 | 30: high **-0.00235** | 130: high **+0.00694** |
 | `holdout/cbb_replication.json` / markets / holdout / mid_major / total_points | -0.06364 ± 0.01836 | 62: high **-0.00212** | 133: high **+0.00166** |
 
-*18 reading(s) this table has named; 16 of them stopped being retracted at a state this block can name, 2 did not.*
+*21 reading(s) this table has named; 16 of them stopped being retracted at a state this block can name, 5 did not.*
 
 **How many demonstrated deficits each walked record holds today.** A tier or a cell whose corrected interval lies entirely below zero is a demonstrated deficit — a different statement from *no demonstrated edge*, and one this file has published as ZERO about a record that held dozens. Counted here from the `verdict` each record stores, per block, so neither the tally nor the population can be typed.
 

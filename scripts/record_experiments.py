@@ -1091,6 +1091,75 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    # ---------------------------------------------------------------------
+    # 2026-10-31: shot quality inside the arc, from the play-by-play zone
+    # split, as a candidate for the layer audit (decision 68).
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="layer_audit_2026_10_31",
+        name=(
+            "taking back half of a side's two-point over-performance against its "
+            "rim and mid-range attempts at the league's zone rates, attack and "
+            "defence (card_factors.SHOT_QUALITY_*), when the layer audit adds it, "
+            "raises the return of the card's team selections against the card-time "
+            "price (forward ledger only)"
+        ),
+        tested_on="2026-10-31",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    # ---------------------------------------------------------------------
+    # 2026-10-31: the closing-line alarm (reports/closing_alarm.py). Per tier
+    # and never pooled. Forward only: it reads the settled forward ledger
+    # against the line-movement captures.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="closing_line_alarm_2026_10_31",
+        name=(
+            "high-major: the model's settled full-game team leans (edge at least "
+            "forward_evidence.BET_EDGE_THRESHOLD) finish on the right side of the "
+            "closing line, measured as mean closing-line value per lean against the "
+            "last capture before tip (reports/closing_alarm.py, forward ledger "
+            "only)"
+        ),
+        tested_on="2026-10-31",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="closing_line_alarm_2026_10_31",
+        name=(
+            "mid-major: the model's settled full-game team leans (edge at least "
+            "forward_evidence.BET_EDGE_THRESHOLD) finish on the right side of the "
+            "closing line, measured as mean closing-line value per lean against the "
+            "last capture before tip (reports/closing_alarm.py, forward ledger "
+            "only)"
+        ),
+        tested_on="2026-10-31",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="closing_line_alarm_2026_10_31",
+        name=(
+            "low-major: the model's settled full-game team leans (edge at least "
+            "forward_evidence.BET_EDGE_THRESHOLD) finish on the right side of the "
+            "closing line, measured as mean closing-line value per lean against the "
+            "last capture before tip (reports/closing_alarm.py, forward ledger "
+            "only)"
+        ),
+        tested_on="2026-10-31",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 
