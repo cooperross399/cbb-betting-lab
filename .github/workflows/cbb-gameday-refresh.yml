@@ -576,6 +576,24 @@ jobs:
           set -eu
           python scripts/run_forward_evidence.py --settle --competition cbb
 
+      - name: Read the settled leans against the closing line
+        # The early alarm (Cooper, 2026-10-31; decision 68): whether the
+        # model's settled leans beat the close, per tier and market, and
+        # whether their prices survived to the next capture
+        # (`reports/closing_alarm.py`). Reads the ledger the settle step just
+        # wrote and the captures the line-movement step fetched. Withdraws
+        # nothing. SOFT, like the layer audit: a run that cannot read it still
+        # cards, and the health step says so as a warning.
+        id: closing_alarm
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          PYTHONPATH: src
+        run: |
+          set -eu
+          python scripts/run_closing_alarm.py
+          cat data/outputs/cbb_closing_alarm.md >> "$GITHUB_STEP_SUMMARY"
+
       - name: Fetch the board, freeze the opinions, render the card
         id: card
         env:
@@ -780,6 +798,9 @@ jobs:
           fi
           if [ "${{ steps.line_moves.outcome }}" != "success" ]; then
             echo "::warning::The line-movement captures were not read (outcome: ${{ steps.line_moves.outcome }}); the card halved no lean for the market's move."
+          fi
+          if [ "${{ steps.closing_alarm.outcome }}" != "success" ]; then
+            echo "::warning::The closing-line alarm did not run (outcome: ${{ steps.closing_alarm.outcome }}); the card is unaffected."
           fi
           if [ -s run_degraded.txt ]; then
             echo "degraded=true" >> "$GITHUB_OUTPUT"

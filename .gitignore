@@ -39,3 +39,8 @@ data/processed/*__weekly_drift*
 # only from the replication run; a partial set of season files sitting beside
 # it is the football lab's filename collision in a different shape.
 data/outputs/*_backtest_bets_[0-9]*.csv
+# The closing-line alarm: rebuilt every gameday run from the forward ledger and
+# the captures, both of which live off main, and written to the run summary.
+# Committing one would freeze a reading of data main does not hold.
+data/outputs/cbb_closing_alarm.json
+data/outputs/cbb_closing_alarm.md

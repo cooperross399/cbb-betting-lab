@@ -2562,6 +2562,7 @@ def clear_caches() -> None:
         _LOCAL_TEAMS_CACHE, _VENUE_IDS_CACHE, _FIXTURES_CACHE, _HOME_STATES_CACHE,
     ):
         cache.clear()
+    card_factors._ZONE_CACHE.clear()
 
 
 def _cached_schedule(season: int, raw_dir: Path | str | None = None) -> "pd.DataFrame":

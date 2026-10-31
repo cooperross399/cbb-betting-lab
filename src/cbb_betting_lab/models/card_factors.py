@@ -140,6 +140,7 @@ CANDIDATE_LAYERS: tuple[tuple[str, str], ...] = (
     ("lineup_strict", "Who is missing, two games running"),
     ("travel", "Travel and time zones"),
     ("shooting_luck", "Shooting luck"),
+    ("shot_quality", "Shot quality inside the arc"),
 )
 #: `lineup_strict`: a rotation player counts as out only after missing this
 #: many of the club's games in a row. When on, it replaces the single-game
@@ -199,6 +200,21 @@ STATE_UTC_OFFSET: dict[str, int] = {
 SHOOTING_LUCK_SHARE = 0.5
 SHOOTING_LUCK_MIN_GAMES = 5
 SHOOTING_LUCK_CLAMP = 3.0
+#: Shot quality inside the arc: from the play-by-play zone split
+#: (`models/shot_zones.py`), the two-point points a side scored above what its
+#: rim and mid-range attempts were worth at the season's league-wide rate per
+#: zone, and the same for what its defence allowed. `SHOT_QUALITY_SHARE` of
+#: each is taken back, per 100 possessions, once a side has
+#: `SHOT_QUALITY_MIN_GAMES` charted games, clamped to `SHOT_QUALITY_CLAMP`.
+#: Threes and free throws are left to the two luck layers, so the three never
+#: count the same shot twice. Measured before it was built, walk-forward over
+#: 2025 and 2026: blending the zone-expected and the actual points per shot
+#: halfway cut the next game's squared error by 3.6% against the actual alone
+#: (decision 68).
+SHOT_QUALITY_SHARE = 0.5
+SHOT_QUALITY_MIN_GAMES = 5
+SHOT_QUALITY_CLAMP = 3.0
+SHOT_QUALITY_ZONES = ("rim", "mid")
 
 #: Where the audit's switches are read from, and how stale they may be.
 LAYER_AUDIT_DIR = "layer_audit"
@@ -267,6 +283,9 @@ class DayContext:
     #: team_id -> the share of its own shooting over-performance taken back,
     #: per 100 of its possessions (candidate).
     shooting_luck: dict = field(default_factory=dict)
+    #: team_id -> (attack, defence) two-point over-performance taken back, per
+    #: 100 possessions (candidate).
+    shot_quality: dict = field(default_factory=dict)
     #: layer key -> on the card or not; `default_switches` unless an audit
     #: dated within `LAYER_AUDIT_MAX_AGE_DAYS` of the day said otherwise.
     switches: dict = field(default_factory=default_switches)
@@ -750,6 +769,95 @@ def shooting_luck(rows: pd.DataFrame, *, teams=None) -> dict:
     return out
 
 
+#: (season, path) -> (file mtime, the zone table), so a walk-forward over a
+#: season reads its play-by-play once.
+_ZONE_CACHE: dict = {}
+
+
+def season_zones(raw_dir: Path | str | None, season) -> pd.DataFrame | None:
+    """Per team-game rim and mid-range attempts and makes for one season, from
+    the cached play-by-play, or None when the file is absent or unreadable."""
+    if season is None:
+        return None
+    base = Path(raw_dir) if raw_dir else Path("data/raw")
+    path = base / CBB.data_dir_segment / "pbp" / f"play_by_play_{int(season)}.parquet"
+    try:
+        stamp = path.stat().st_mtime
+    except OSError:
+        return None
+    hit = _ZONE_CACHE.get((int(season), str(path)))
+    if hit is not None and hit[0] == stamp:
+        return hit[1]
+    from cbb_betting_lab.models import shot_zones
+
+    try:
+        pbp = pd.read_parquet(
+            path,
+            columns=["game_id", "team_id", "shooting_play", "score_value", "type_text", "scoring_play"],
+        )
+        zones = shot_zones.team_game_zones(pbp)
+    except (OSError, ValueError, KeyError):  # a candidate never costs a card
+        _ZONE_CACHE[(int(season), str(path))] = (stamp, None)
+        return None
+    keep = ["game_id", "team_id"] + [
+        f"{stem}_{zone}" for zone in SHOT_QUALITY_ZONES for stem in ("attempts", "makes")
+    ]
+    table = zones[keep].copy()
+    table["game_id"] = pd.to_numeric(table["game_id"], errors="coerce")
+    table["team_id"] = pd.to_numeric(table["team_id"], errors="coerce")
+    table = table.dropna(subset=["game_id", "team_id"]).astype({"game_id": "int64", "team_id": "int64"})
+    _ZONE_CACHE[(int(season), str(path))] = (stamp, table)
+    return table
+
+
+def shot_quality(rows: pd.DataFrame, zones: pd.DataFrame | None, *, teams=None) -> dict:
+    """team_id -> (attack, defence): the share of two-point over-performance
+    taken back, per 100 possessions.
+
+    `rows` are the season's team-games already cut before the day, so joining
+    the zone table to them is what keeps this walk-forward: a game not in
+    `rows` contributes nothing whatever the play-by-play holds.
+    """
+    needed = {"game_id", "team_id", "opponent_id", "game_possessions"}
+    if zones is None or zones.empty or rows is None or len(rows) == 0 or not needed <= set(rows.columns):
+        return {}
+    frame = rows[list(needed)].copy()
+    for column in needed:
+        frame[column] = pd.to_numeric(frame[column], errors="coerce")
+    frame = frame.dropna().astype({"game_id": "int64", "team_id": "int64", "opponent_id": "int64"})
+    joined = frame.merge(zones, on=["game_id", "team_id"], how="inner")
+    if joined.empty:
+        return {}
+    excess = pd.Series(0.0, index=joined.index)
+    for zone in SHOT_QUALITY_ZONES:
+        tried = float(joined[f"attempts_{zone}"].sum())
+        if tried <= 0:
+            return {}
+        rate = 2.0 * float(joined[f"makes_{zone}"].sum()) / tried
+        excess += 2.0 * joined[f"makes_{zone}"] - rate * joined[f"attempts_{zone}"]
+    joined = joined.assign(excess=excess)
+    allowed = joined[["game_id", "team_id", "excess"]].rename(
+        columns={"team_id": "opponent_id", "excess": "allowed"}
+    )
+    joined = joined.merge(allowed, on=["game_id", "opponent_id"], how="left")
+    if teams is not None:
+        joined = joined[joined["team_id"].isin({t for t in teams})]
+    out: dict = {}
+    for team, group in joined.groupby("team_id"):
+        if len(group) < SHOT_QUALITY_MIN_GAMES:
+            continue
+        possessions = float(group["game_possessions"].sum())
+        if possessions <= 0:
+            continue
+        attack = 100.0 * float(group["excess"].sum()) / possessions
+        defence = 100.0 * float(group["allowed"].fillna(0.0).sum()) / possessions
+        out[team] = (
+            float(np.clip(SHOT_QUALITY_SHARE * attack, -SHOT_QUALITY_CLAMP, SHOT_QUALITY_CLAMP)),
+            float(np.clip(SHOT_QUALITY_SHARE * defence, -SHOT_QUALITY_CLAMP, SHOT_QUALITY_CLAMP)),
+        )
+    return out
+
+
 def zones_from_home(home_state, venue_state) -> int | None:
     """Hours between a side's home arena and tonight's venue, or None."""
     home = STATE_UTC_OFFSET.get(clean_text(home_state) or "")
@@ -858,6 +966,11 @@ def build_context(
     context.pace_form = pace_form(season_rows, ratings, teams=teams)
     context.three_luck = three_point_luck(season_rows, teams=teams)
     context.shooting_luck = shooting_luck(season_rows, teams=teams)
+    zones = season_zones(raw_dir, getattr(ratings, "season", None))
+    if zones is None:
+        context.notes.append("no play-by-play zone table was read, so shot quality moves nothing")
+    else:
+        context.shot_quality = shot_quality(season_rows, zones, teams=teams)
     if home_states:
         context.home_state = {
             team: state for team, state in home_states.items()
@@ -1072,6 +1185,14 @@ def apply(
     luck_off_away = float(context.shooting_luck.get(away_id, 0.0))
     detail["shooting_luck"] = {"home": luck_off_home, "away": luck_off_away}
     take("shooting_luck", (-luck_off_home, -luck_off_away, 0.0))
+
+    sq_home = context.shot_quality.get(home_id, (0.0, 0.0))
+    sq_away = context.shot_quality.get(away_id, (0.0, 0.0))
+    detail["shot_quality"] = {
+        "home_attack": sq_home[0], "home_defence": sq_home[1],
+        "away_attack": sq_away[0], "away_defence": sq_away[1],
+    }
+    take("shot_quality", (-sq_home[0] - sq_away[1], -sq_away[0] - sq_home[1], 0.0))
 
     detail["switches"] = {key: context.is_on(key) for key in SWITCHABLE}
     detail["audit_as_of"] = context.audit_as_of
