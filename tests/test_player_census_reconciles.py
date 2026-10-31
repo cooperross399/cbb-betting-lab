@@ -1124,6 +1124,11 @@ READS_A_BUILT_RECORD_OR_CALLS_ONE_THAT_GRADES = {
         "reads cbb_forecast_skill.json for its seed, and de-vigs settled TEAM "
         "rows of the forward ledger (player rows dropped by name) to fit one "
         "trust weight per tier; it builds no interval and states no verdict",
+    "src/cbb_betting_lab/reports/closing_alarm.py":
+        "grades the closing-line value of settled full-game TEAM leans in the "
+        "forward ledger (player rows dropped by name) against the line-movement "
+        "captures; it scores no prop wager and its interval is over points or "
+        "probability, never a return",
     "src/cbb_betting_lab/restatement.py": "the vocabulary of derived words",
     "scripts/build_skill_frame.py": "builds the frame; grades nothing",
     "scripts/run_forecast_skill.py": "calls forecast_skill.build_record",

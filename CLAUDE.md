@@ -469,10 +469,14 @@ that file said until 2026-09-18. This file states no crossing point of its own.
 A crossing point is a figure about a cell, and it is stated once, in the
 retraction ledger, where a test compares every row against the records.
 
-**The retraction table holds one blind side today**, on two cuts of the same
-store: `mid_major / spread / always away`, retracted by the trust-learning
-registration of 2026-10-30 (decision 66). Its figures are stated once, in the
-table at the top of `docs/retracted_readings.md`, and nowhere here.
+**The retraction table holds five rows today.** Two are one blind side on two
+cuts of the same store, `mid_major / spread / always away`, retracted by the
+trust-learning registration of 2026-10-30 (decision 66). Three were retracted
+by the registration of 2026-10-31 (decision 68): the discovery-season
+`low_major / moneyline` cell, carried by both the held-out backtest and the
+replication's discovery block, and the replication's high-major discovery tier.
+Their figures are stated once, in the table at the top of
+`docs/retracted_readings.md`, and nowhere here.
 `tests/test_the_forward_window_is_pre_registered.py` checks that table in both
 directions, so it can be neither pre-filled to buy silence nor emptied to buy
 quiet. **"Every published record" is what this bullet said until 2026-09-18 and
