@@ -40,7 +40,7 @@ No staked bet reached this report, so nothing could be split by when its price w
 
 ## What this report cannot say
 
-- It cannot say a market is a play. **No market is allowlisted**, `staging_provider_policy` ships manual-only, and that is the correct state. An excluded market is never a pass, an avoid, or a no-value call.
+- It cannot say a market is a play. **Allowlisting is a receipt Cooper signs, never a finding of this report**, and whether a market is allowlisted today is read from `staging_provider_policy`, not stated here. An excluded market is never a pass, an avoid, or a no-value call.
 - It cannot say a surviving price would have been **filled**. **Limits are not observable from this instrument.** The provider serves a price and a book; it does not serve the maximum stake that book would accept on a Thursday low-major total. A quote that survived to the next capture is evidence that the *number* was still there, and it is not evidence that a stake of any size would have been taken. The brief names trivial limits and vanishing prices together; this report measures only the second, and a surviving price at a trivial limit is still not a bet.
 - It cannot judge a bet the capture store never saw. A quote this instrument never held is unjudgeable, never vanished, and the third column carries that all the way through.
 - It cannot make an opening number into a bet. **Beating an opening number is not a bet.** The first capture of a slate day is the earliest number this lab holds, and a return measured against it describes how the market moved rather than a wager anybody placed. No figure in this report is evidence about a price that had already gone by the time a card was produced.

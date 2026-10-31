@@ -3745,8 +3745,9 @@ def render(record: Mapping) -> str:
         "test exists the priced test decides."
     )
     add(
-        "- It cannot say a market is a play. **No market is allowlisted**, and "
-        "an excluded market is never a pass, an avoid, or a no-value call."
+        "- It cannot say a market is a play. **Allowlisting is a receipt Cooper "
+        "signs, never a finding of this report**, and an excluded market is "
+        "never a pass, an avoid, or a no-value call."
     )
     return "\n".join(lines).rstrip() + "\n"
 

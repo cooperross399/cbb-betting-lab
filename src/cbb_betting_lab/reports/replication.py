@@ -1305,8 +1305,9 @@ def render(record: Mapping) -> str:
         "significance."
     )
     add(
-        "- It cannot say a market is a play. **No market is allowlisted**, and "
-        "a replicated result is a candidate for a receipt Cooper signs and "
+        "- It cannot say a market is a play. **Allowlisting is a receipt Cooper "
+        "signs, never a finding of this report**, and a replicated result is "
+        "a candidate for such a receipt and "
         "nothing more. Claude may withdraw an allowlist and may never grant one."
     )
     return "\n".join(lines).rstrip() + "\n"

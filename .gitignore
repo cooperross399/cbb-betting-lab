@@ -44,3 +44,5 @@ data/outputs/*_backtest_bets_[0-9]*.csv
 # Committing one would freeze a reading of data main does not hold.
 data/outputs/cbb_closing_alarm.json
 data/outputs/cbb_closing_alarm.md
+data/outputs/cbb_decision_rule.json
+data/outputs/cbb_decision_rule.md
