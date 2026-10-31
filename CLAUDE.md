@@ -935,13 +935,13 @@ the capture store starts 2026-10-24. Decision 67, which also says why shot
 quality reaches the card as a box-score proxy (shooting luck) and not as the
 play-by-play zone split.
 
-### 2026-10-31: the model is frozen until the decision date, by Cooper's call
+### 2026-10-31: a freeze was agreed and withdrawn the same day
 
-Decision 69. From the season's first game to 2027-04-19 the model as merged
-on 2026-10-31 is the subject of the forward test: defect fixes and display-only
-site changes may land, nothing else does. What the freeze covers is in
-`docs/when_this_ends.md`. A session asked for a new step says so rather than
-building it.
+Decision 69. Cooper does not want the model frozen for the season: it may keep
+improving by his call. Each change is registered on the experiment ledger
+before it is built, dated here and in the decision log, and never re-cuts an
+opinion the forward ledger already froze. `docs/when_this_ends.md` says how
+April reads a model that changed.
 
 ### 2026-10-31: the closing-line alarm, and two upgrades declined on measurement
 

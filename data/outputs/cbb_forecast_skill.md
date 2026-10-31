@@ -640,4 +640,4 @@ The threshold `price_backtest.BET_EDGE_THRESHOLD` declares in advance is 2%, and
 - It cannot say a model **would have made money**. That is `price_backtest.py`'s question, and a disagreement coefficient above zero is a necessary condition for an edge and not a sufficient one.
 - It cannot say an edge is **reachable**. An edge living entirely in prices that vanished is reported as not reachable regardless of its size or its significance.
 - It cannot rule a model **in**. It is a calibration-family instrument and shares the family's asymmetry: it can kill, and where a priced test exists the priced test decides.
-- It cannot say a market is a play. **No market is allowlisted**, and an excluded market is never a pass, an avoid, or a no-value call.
+- It cannot say a market is a play. **Allowlisting is a receipt Cooper signs, never a finding of this report**, and an excluded market is never a pass, an avoid, or a no-value call.

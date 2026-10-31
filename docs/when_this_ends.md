@@ -85,15 +85,15 @@ into a finding, and there is no honest reason to move one after seeing a return.
 **If a mid-season result looks strong, the correct action is nothing.** Write it
 down and wait for the date.
 
-**Cooper confirmed the freeze on 2026-10-31, the day before the season opened**
-(decision 69). The model as merged that day is the subject: the six steps on the
-card, the six candidates, the weekly step audit, the trust table, the
-line-movement halving and the closing-line alarm. The audit switching a step on
-or off is not a change to the model, because its rule and its bars were fixed
-and registered before the season; retuning those bars would be. Two things may
-still land: a defect fix under the rule above, and display on the site that
-changes no price, no selection and no hypothesis. Anything else waits for the
-date, and a session asked to add one says so rather than building it.
+**A freeze was agreed on 2026-10-31 and withdrawn by Cooper the same day**
+(decision 69): he wants the model to keep improving through the season. So
+the rule above stands as the default and Cooper overrides it case by case, as
+he did on 2026-10-26 and 2026-10-30. Every such change is registered on the
+experiment ledger before it is built, recorded in `CLAUDE.md` and the decision
+log with its date, and never re-cuts an opinion the forward ledger has already
+frozen, so in April the test can be read as a sequence of named models rather
+than one model that moved silently. Picks are unaffected either way: the card
+runs every slate.
 
 ## What ends it earlier
 

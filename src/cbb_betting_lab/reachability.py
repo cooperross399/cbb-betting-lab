@@ -1328,9 +1328,10 @@ def _cannot_say_section() -> list[str]:
     return [
         "## What this report cannot say",
         "",
-        "- It cannot say a market is a play. **No market is allowlisted**, "
-        "`staging_provider_policy` ships manual-only, and that is the correct "
-        "state. An excluded market is never a pass, an avoid, or a no-value "
+        "- It cannot say a market is a play. **Allowlisting is a receipt Cooper "
+        "signs, never a finding of this report**, and whether a market is "
+        "allowlisted today is read from `staging_provider_policy`, not stated "
+        "here. An excluded market is never a pass, an avoid, or a no-value "
         "call.",
         "- It cannot say a surviving price would have been **filled**. "
         + LIMITS_ARE_NOT_OBSERVABLE,
