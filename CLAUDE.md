@@ -955,6 +955,18 @@ model and a recalibration step were measured or reasoned out rather than
 built, and the roster-continuity prior Cooper approved already existed
 (decision 68).
 
+### 2026-11-01: a matchup the results cannot identify is priced on the prior
+
+Decision 70. On opening day the model priced no wager at all: `ratings.matchup`
+refused every pair the games-played graph does not join, which in early
+November is every pair. Such a pair is now priced from the preseason posterior
+and labelled (`Matchup.identified_by == "prior"`, with its prior weight); a team
+the prior does not know is still refused, and
+`ratings.PRICE_UNIDENTIFIED_ON_PRIOR` turns it off. No hypothesis was added:
+the two `november_prior` entries registered on 2026-09-01 are the test of this
+regime. Frozen opinions are not re-cut, so opening day's single game stays
+frozen without one.
+
 ## Contract strings — never change these
 
 Cooper's scheduled routines hard-code these. Renaming any of them silently
