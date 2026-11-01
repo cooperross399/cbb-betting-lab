@@ -4,7 +4,7 @@
 
 **0 frozen opinions in the ledger.** 0 are resolved wagers carrying a readable price and are measured below. 0 are **unsettleable**, 0 are **void** — a bet that never existed rather than one that returned its stake — and 0 settled at a price this lab cannot read. None of those three is a zero, and none of them enters any interval.
 
-Every interval is corrected across **30 hypotheses ever tested**, from the experiment ledger's cumulative count rather than this table's row count.
+Every interval is corrected across **152 hypotheses ever tested**, from the experiment ledger's cumulative count rather than this table's row count.
 
 Intervals are clustered by game **and** by day, and the wider of the two is reported. One game supplies a moneyline, a spread, a total, two team totals and a dozen props: a 100-game Tuesday is not 1,500 independent observations.
 
@@ -16,29 +16,29 @@ Intervals are clustered by game **and** by day, and the wider of the two is repo
 
 No figure pooled across the whole of Division I appears here. High-major, mid-major and low-major are different distributions and are measured as such; `unplaced` is a team with too little prior non-conference evidence to place and is reported apart rather than folded into a tier.
 
-| Market | Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Verdict |
-|:---|:---|---:|---:|---:|:---|:---|:---|
-| — | — | 0 | 0 | — | — | — | **not enough evidence** — 0 bets, below 200 |
+| Market | Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Could detect | Verdict |
+|:---|:---|---:|---:|---:|:---|:---|---:|:---|
+| — | — | 0 | 0 | — | — | — | — | **not enough evidence** — 0 bets, below 200 |
 
 ### Opinions by tier
 
-| Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Verdict |
-|:---|---:|---:|---:|:---|:---|:---|
-| — | 0 | 0 | — | — | — | **not enough evidence** — 0 bets, below 200 |
+| Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Could detect | Verdict |
+|:---|---:|---:|---:|:---|:---|---:|:---|
+| — | 0 | 0 | — | — | — | — | **not enough evidence** — 0 bets, below 200 |
 
 ## Bets, per market and per tier
 
 No figure pooled across the whole of Division I appears here. High-major, mid-major and low-major are different distributions and are measured as such; `unplaced` is a team with too little prior non-conference evidence to place and is reported apart rather than folded into a tier.
 
-| Market | Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Verdict |
-|:---|:---|---:|---:|---:|:---|:---|:---|
-| — | — | 0 | 0 | — | — | — | **not enough evidence** — 0 bets, below 200 |
+| Market | Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Could detect | Verdict |
+|:---|:---|---:|---:|---:|:---|:---|---:|:---|
+| — | — | 0 | 0 | — | — | — | — | **not enough evidence** — 0 bets, below 200 |
 
 ### Bets by tier
 
-| Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Verdict |
-|:---|---:|---:|---:|:---|:---|:---|
-| — | 0 | 0 | — | — | — | **not enough evidence** — 0 bets, below 200 |
+| Tier | Bets | Clusters | ROI | 95% interval | Family-corrected | Could detect | Verdict |
+|:---|---:|---:|---:|:---|:---|---:|:---|
+| — | 0 | 0 | — | — | — | — | **not enough evidence** — 0 bets, below 200 |
 
 ## Reachability
 
