@@ -553,8 +553,19 @@ class SlateModel:
     #: :data:`NO_ENGINE_CONSTANTS` rather than being priced off constants
     #: nobody checked.
     shapes: PlayerShapes | None = None
+    #: Events whose PROVIDER home is the schedule's AWAY side (decision 72).
+    #: `matchups` is oriented to the schedule, and a wager's `home` selection
+    #: names the provider's home, so on these events the two words name
+    #: different teams. Measured on opening day: both games on the 2026-11-01
+    #: board were filed the other way round by the provider. A reader that
+    #: prices a side off a matchup asks :meth:`is_flipped` first.
+    flipped_events: frozenset = frozenset()
 
     # -- the team half ----------------------------------------------------
+
+    def is_flipped(self, event_id: object) -> bool:
+        """Whether the provider names this event's sides the other way round."""
+        return clean_text(event_id) in self.flipped_events
 
     def matchup_for(self, event_id: object) -> object | None:
         """The `Matchup` for one event, or `None`. A missing one is not a zero."""

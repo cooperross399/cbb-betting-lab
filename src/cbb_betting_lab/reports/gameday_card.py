@@ -1965,14 +1965,20 @@ def opinions_for(
         segment = market.segment if market is not None else FULL_GAME
         cached = joints.get((wager.event_id, segment))
         if cached is None:
+            # The joint is built in the PROVIDER's orientation, because the
+            # wager's `home` names the provider's home. Where the provider
+            # files the game the other way round from the schedule the matchup
+            # is oriented to, the two sides' scoring rates trade places;
+            # without this a neutral-floor game's every side was priced as its
+            # opponent (decision 72).
+            home_ppp = float(_matchup_field(matchup, "home_points_per_possession", 0.0))
+            away_ppp = float(_matchup_field(matchup, "away_points_per_possession", 0.0))
+            if model.is_flipped(wager.event_id):
+                home_ppp, away_ppp = away_ppp, home_ppp
             try:
                 cached = distributions.build(
-                    home_points_per_possession=float(
-                        _matchup_field(matchup, "home_points_per_possession", 0.0)
-                    ),
-                    away_points_per_possession=float(
-                        _matchup_field(matchup, "away_points_per_possession", 0.0)
-                    ),
+                    home_points_per_possession=home_ppp,
+                    away_points_per_possession=away_ppp,
                     possessions=float(_matchup_field(matchup, "possessions", 0.0)),
                     segment=segment,
                     prior_weight=prior,

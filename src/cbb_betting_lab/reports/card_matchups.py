@@ -105,7 +105,7 @@ rather than being dropped or silently renamed.
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import pandas as pd
@@ -412,7 +412,7 @@ def attach_game_ids(
     but whose fixture record carries no readable pair leaves both `None`, which
     reaches the estimator as "no team filter" rather than as a wrong one.
     """
-    columns = ["event_id", "game_id", "home_team", "away_team"]
+    columns = ["event_id", "game_id", "home_team", "away_team", "flipped"]
     if rows is None or rows.empty or "event_id" not in rows.columns:
         return pd.DataFrame(columns=columns), {}, 0
     wanted = ["event_id", "home_team", "away_team"]
@@ -434,16 +434,25 @@ def attach_game_ids(
                 no_fixture += 1
             out.append(
                 {"event_id": event_id, "game_id": None,
-                 "home_team": None, "away_team": None}
+                 "home_team": None, "away_team": None, "flipped": False}
             )
             continue
         fixture = fixtures.game.get(int(game_id), {})
+        home_id, away_id = fixture.get("home_team_id"), fixture.get("away_team_id")
+        # Which way round the PROVIDER files the game. On a neutral floor the
+        # provider and ESPN disagree about the home designation often (both
+        # games on opening day), and a `home` selection names the provider's
+        # home. Resolved among the fixture's own two ids, so a name can only
+        # ever land on one of them (decision 72).
+        provider_home = index.resolve(home, among={home_id, away_id} - {None})
         out.append(
             {
                 "event_id": event_id,
                 "game_id": int(game_id),
-                "home_team": fixture.get("home_team_id"),
-                "away_team": fixture.get("away_team_id"),
+                "home_team": home_id,
+                "away_team": away_id,
+                "flipped": provider_home is not None and provider_home == away_id
+                and home_id != away_id,
             }
         )
     frame = pd.DataFrame(out, columns=columns)
@@ -609,6 +618,12 @@ def matchups_for_card(
         # precisely the stamp defect `_stamp_series` exists to prevent.
         player_priced_through="",
     )
+    if not joined.empty and "flipped" in joined.columns:
+        flipped = frozenset(
+            clean_text(e) for e, f in zip(joined["event_id"], joined["flipped"]) if bool(f)
+        )
+        if flipped:
+            built = replace(built, flipped_events=flipped)
     return CardMatchups(
         matchups=dict(built.matchups),
         day=str(day),
