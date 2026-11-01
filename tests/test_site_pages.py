@@ -92,7 +92,12 @@ def _slate() -> list[dict]:
 def built(lab):
     """The board, the builder module and the fit, priced once for the module."""
     before = R.MAX_EFFECTIVE_RESISTANCE
+    prior_before = R.PRICE_UNIDENTIFIED_ON_PRIOR
     R.MAX_EFFECTIVE_RESISTANCE = 1e9  # the fixture cannot connect the graph; the refusal is tested elsewhere
+    # Keep a team with no game refused, so the page's refused-game path is
+    # still exercised; pricing such a pair on the prior (decision 70) is
+    # tested in `tests/test_fit_ratings.py`.
+    R.PRICE_UNIDENTIFIED_ON_PRIOR = False
     try:
         builder = _load(WEB / "build_board_json.py", "test_site_pages_builder")
         slate = _slate()
@@ -100,6 +105,7 @@ def built(lab):
         board = builder.build(lab, DAY)
     finally:
         R.MAX_EFFECTIVE_RESISTANCE = before
+        R.PRICE_UNIDENTIFIED_ON_PRIOR = prior_before
     return builder, board, dict(builder._SIDE)
 
 

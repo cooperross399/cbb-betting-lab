@@ -257,7 +257,24 @@ backtest and the board see the same price): last-five-games form, rest, who
 is missing, and a second opinion. The first three are derived from the
 hoopR tables above and need no new source. The fourth is a fetched table.
 
-### The second opinion — Bart Torvik's T-Rank, free
+### The second opinion — ESPN's Basketball Power Index, free (since 2026-11-01)
+
+**Decision 71.** The T-Rank table described below answered HTTP 403 to every
+Actions request, so no card ever read a second opinion; and the "Deliberately
+not used" section of this file already records that its `robots.txt` closes
+it to this agent. It is no longer fetched. `scripts/fetch_second_opinion.py`
+now reads ESPN's power index
+(`site.api.espn.com/apis/fitt/v3/sports/basketball/mens-college-basketball/powerindex?limit=500`):
+365 teams keyed by ESPN team id, the id this lab already uses, so nothing is
+resolved by name. BPI publishes offence and defence as points per 70
+possessions against an average team, defence positive when good;
+`second_opinion.parse_bpi` rescales to per 100 and flips defence to this lab's
+sign. BPI publishes no tempo, so the layer blends offence and defence and
+leaves tempo to the lab's own rating. ESPN recomputes BPI as the season runs
+and keeps no dated archive, so like T-Rank it is read forward only, under
+the same freshness rule.
+
+### Superseded: Bart Torvik's T-Rank
 
 `scripts/fetch_second_opinion.py` fetches
 `https://barttorvik.com/<season>_team_results.csv` (a header row; the ranking
@@ -394,6 +411,20 @@ whose ratings are someone else's ratings is a wrapper, its history is revised
 under it, and it cannot answer why it is right.
 
 ---
+
+## Same-day box scores from ESPN — the supplement (since 2026-11-01)
+
+**Decision 71.** On opening day hoopR had published the 2027 schedule and no
+box score, so every in-season input this lab reads waited on another project's
+nightly build. `scripts/fetch_espn_box.py` (`data/espn_box.py`) reads ESPN's
+scoreboard and per-game summary for every completed game since hoopR's last
+published date that hoopR does not hold, and writes it in hoopR's own column
+names to `data/raw/cbb/espn_box/`. `build_datasets` takes hoopR's row
+wherever both exist. Checked against hoopR on the 205 games of 3-4 November
+2025: every team-box column identical, and the line scores supplied periods
+and first-half scores for 16 games whose play-by-play hoopR never published.
+What it cannot give: the first basket, which only the play-by-play holds, so
+those columns stay empty and settlement refuses those markets on them.
 
 ## Settlement: which source settles what
 

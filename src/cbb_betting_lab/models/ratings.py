@@ -288,6 +288,26 @@ POSSESSION_SCALE = 100.0
 #: nothing after 25 November — see the module docstring's table.
 MAX_EFFECTIVE_RESISTANCE = 1.0
 
+#: **What happens to a matchup the games-played graph cannot identify.** Until
+#: 2026-11-01 it was refused, which on the season's opening day refused every
+#: game on the board and would have kept refusing essentially all of them until
+#: about 20 November. Cooper's call that day was that the card and the site
+#: carry the model's number from the first game (decision 70), so a pair the
+#: graph does not join is now priced on the preseason prior instead -- the
+#: posterior with no games in it, which `fit` already computes for every team
+#: the prior knows -- and the matchup says so: `identified_by` is "prior",
+#: `prior_weight` is that posterior's own share, and `unidentified_reason` keeps
+#: the sentence the refusal used to print. A team the prior does not know is
+#: still refused, because its rating is the league mean and nothing else.
+#:
+#: This is the regime the experiment ledger already registered on 2026-09-01
+#: under `november_prior` (*"returning-production prior: ROI before December
+#: exceeds a flat prior"* and *"November ROI is below the rest of the
+#: season's"*), so it is measured where those two are. Nothing here makes a
+#: prior-only price an edge, and the trust table still pulls every opinion to
+#: within a few percent of the market. False restores the refusal.
+PRICE_UNIDENTIFIED_ON_PRIOR = True
+
 #: Eigenvalues of a graph Laplacian below this times the largest are the null
 #: space — one dimension per connected component — and are dropped when the
 #: pseudo-inverse is formed.
@@ -2137,6 +2157,12 @@ class Matchup:
     #: view alone, and for every refusal.
     layers: tuple = ()
     context: dict = field(default_factory=dict)
+    #: "results" when the games-played graph joins the two teams, "prior" when
+    #: it does not and the price is the preseason prior's
+    #: (`PRICE_UNIDENTIFIED_ON_PRIOR`); empty on a refusal.
+    identified_by: str = ""
+    #: Why the graph could not identify the pair, kept on a prior-only price.
+    unidentified_reason: str = ""
 
     @property
     def expected_margin(self) -> float:
@@ -2162,6 +2188,8 @@ class Matchup:
             f"{self.expected_margin:+.1f}, total {self.expected_total:.1f}, "
             f"{self.prior_weight:.0%} prior, resistance "
             f"{self.effective_resistance:.2f}."
+            + (" Priced on the preseason prior: the games played so far do "
+               "not join these two teams." if self.identified_by == "prior" else "")
         )
 
 
@@ -2239,8 +2267,15 @@ def matchup(
 
     connected, reason = ratings.graph.connects(home_team_id, away_team_id)
     resistance = ratings.graph.resistance_between(home_team_id, away_team_id)
+    identified_by = "results"
     if not connected:
-        return refuse(reason, effective_resistance=resistance)
+        known_to_prior = (
+            home_team_id in ratings.offence and away_team_id in ratings.offence
+            and home_team_id != away_team_id
+        )
+        if not (PRICE_UNIDENTIFIED_ON_PRIOR and known_to_prior):
+            return refuse(reason, effective_resistance=resistance)
+        identified_by = "prior"
 
     weights = [
         ratings.prior_weight_for(home_team_id, OFFENCE),
@@ -2300,6 +2335,8 @@ def matchup(
         venue_home_effect=float(applied),
         venue_home_add=float(home_effect),
         venue_away_add=float(away_effect),
+        identified_by=identified_by,
+        unidentified_reason="" if identified_by == "results" else reason,
         **common,
     )
 

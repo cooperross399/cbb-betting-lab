@@ -177,6 +177,7 @@ jobs:
         run: |
           set -eu
           python scripts/fetch_cbb_data.py --seasons $WEEKLY_SEASONS
+          python scripts/fetch_espn_box.py || echo "::warning::The ESPN results supplement did not run."
           python scripts/build_datasets.py --seasons $WEEKLY_SEASONS
 
       # THE STORE THIS LOOP MEASURES HAS TO BE THE ONE THE LAST PURCHASE BOUGHT.

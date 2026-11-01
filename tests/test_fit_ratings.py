@@ -1262,3 +1262,33 @@ def test_a_walk_forward_violation_ends_the_run_and_writes_no_report(tmp_path, mo
     assert code == FR.EXIT_WALK_FORWARD_LEAK
     assert not FR.record_path(CBB, world["outputs"]).exists()
     assert not FR.report_path(CBB, world["outputs"]).exists()
+
+
+def test_a_pair_the_results_cannot_join_is_priced_on_the_prior_and_says_so(tmp_path, monkeypatch):
+    """Decision 70. On opening day no game has been played, the games-played
+    graph joins nobody, and the old refusal priced nothing on the board."""
+    world = build_universe(tmp_path)
+    team_games = pd.read_csv(world["processed"] / CBB.output_name("team_games", ".csv"))
+    schedules = FR.load_schedules([2024, 2025, 2026], world["raw"])
+    prepared = R.prepare(team_games, schedules=schedules)
+    prior = R.prepare_prior(prepared, season=2026, schedules=schedules)
+    rows = prepared.rows[prepared.rows["season"] == 2026]
+    opening = sorted(rows["slate_date"].astype(str).unique())[0]
+    ratings = R.fit(rows.iloc[0:0], prior=prior, as_of=opening, season=2026,
+                    output_dir=world["outputs"])
+    home, away = sorted(prior.team, key=repr)[:2]
+
+    priced = R.matchup(ratings, home_team_id=home, away_team_id=away, venue_state="home")
+    assert priced.priceable
+    assert priced.identified_by == "prior"
+    assert "preseason prior" in priced.unidentified_reason
+    assert priced.prior_weight == pytest.approx(1.0)
+    assert "Priced on the preseason prior" in priced.summary_line()
+
+    unknown = R.matchup(ratings, home_team_id=home, away_team_id="not-a-team", venue_state="home")
+    assert not unknown.priceable
+
+    monkeypatch.setattr(R, "PRICE_UNIDENTIFIED_ON_PRIOR", False)
+    refused = R.matchup(ratings, home_team_id=home, away_team_id=away, venue_state="home")
+    assert not refused.priceable
+    assert "preseason prior and nothing else" in refused.unpriceable_reason
