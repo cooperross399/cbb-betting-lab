@@ -2,7 +2,7 @@
 
 Generated from the measurement records on disk, so it cannot drift from them. The hand-written rules — written before the first measurement, which is the whole point of them — live in `docs/what_we_can_and_cannot_claim.md`. **This file is re-rendered from its own run record and is never edited by hand.**
 
-- Generated: 2026-11-01T12:03:52+00:00
+- Generated: 2026-11-01T20:02:25+00:00
 - Sample floor: **200 bets**, declared in advance. Below it this document prints a phrase and not a number.
 
 **The only result that survives is a loss.** 32 market-and-tier cell(s) across 10 market(s) are measured against real prices. None excludes zero on the winning side; 5 exclude(s) it on the **losing** side after correcting for everything this lab has ever tested, which is a **demonstrated deficit**: `moneyline` / high_major (historical price backtest, bets) at -11.1% over 4,393 bets across 609 days; `moneyline` / mid_major (historical price backtest, bets) at -8.0% over 8,873 bets across 648 days; `team_total` / mid_major (historical price backtest, bets) at -6.3% over 11,618 bets across 345 days; `moneyline` / low_major (historical price backtest, bets) at -9.8% over 6,967 bets across 590 days; `total_points` / low_major (historical price backtest, bets) at -5.2% over 17,978 bets across 7,137 games. A demonstrated deficit is a finding, not a null result, and it is the finding this lab has.
