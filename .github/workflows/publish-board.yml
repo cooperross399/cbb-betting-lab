@@ -79,11 +79,26 @@ jobs:
           # the season and "the API could not be asked" is a fact about this
           # run, and a board that prints the first while the second happened
           # is a board lying quietly.
-          if ! previous=$(gh run list --workflow cbb-gameday-refresh.yml --status success \
-            --limit 1 --json databaseId --jq '.[0].databaseId // empty'); then
+          # The latest successful run that HOLDS a card artifact, not the
+          # latest successful run. A run whose slot was already published, or
+          # that ended after waiting, succeeds without uploading anything, and
+          # on 2026-11-01 one such run blanked the board for every publish
+          # after it (decision 73).
+          if ! candidates=$(gh run list --workflow cbb-gameday-refresh.yml --status success \
+            --limit 10 --json databaseId --jq '.[].databaseId'); then
             echo "::warning::The last CBB Gameday Refresh could not be looked up; this board is schedule-only because the question failed, not because there is no card."
-            previous=""
+            candidates=""
           fi
+          previous=""
+          for run in $candidates; do
+            held=$(gh api "repos/${{ github.repository }}/actions/runs/$run/artifacts" \
+              --jq '[.artifacts[] | select(.expired | not) | select(.name | startswith("cbb-gameday-"))] | length' || echo 0)
+            if [ "${held:-0}" -gt 0 ]; then
+              previous="$run"
+              break
+            fi
+            echo "Run $run succeeded without a card artifact; looking further back."
+          done
           if [ -n "$previous" ]; then
             artifact=$(gh api "repos/${{ github.repository }}/actions/runs/$previous/artifacts" \
               --jq '[.artifacts[] | select(.expired | not) | select(.name | startswith("cbb-gameday-"))] | last | .name // empty')
