@@ -1107,8 +1107,6 @@ def build(lab: Path, day: date) -> dict:
     leans = [g for g in games if g["pick"] and g["pick"]["kind"] == "lean"]
     if leans and not bets:
         notice = (f"The card selected nothing: {gate} and the model has no demonstrated edge. "
-                  f"{len(leans)} lean(s) are shown: a lean is the model's own opinion clearing the "
-                  f"{LEAN_EDGE:.0%} edge bar before the card's trust in the model pulls it toward the market. "
                   "Leans are tracked and graded, stake nothing, and are not recommendations.")
     elif not any(g["pick"] for g in games):
         notice = (f"No selection is published: {gate} and the model has no demonstrated edge. "
