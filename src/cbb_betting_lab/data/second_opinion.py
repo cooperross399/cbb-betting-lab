@@ -62,6 +62,20 @@ EFFICIENCY_RANGE = (80.0, 135.0)
 TEMPO_RANGE = (55.0, 82.0)
 
 
+#: The fallback when the primary table refuses this runner (it answered HTTP
+#: 403 to every Actions request on 2026-11-01): ESPN's Basketball Power Index,
+#: free and keyless, keyed by ESPN team id -- the same id this lab uses -- so it
+#: needs no name resolution at all. It publishes offence and defence as points
+#: per 70 possessions against an average team, defence positive when GOOD, and
+#: no tempo, so a BPI table blends offence and defence and leaves tempo alone.
+BPI_SOURCE = "espn_bpi"
+BPI_URL = (
+    "https://site.api.espn.com/apis/fitt/v3/sports/basketball/"
+    "mens-college-basketball/powerindex?limit=500"
+)
+BPI_POSSESSIONS = 70.0
+
+
 class SecondOpinionError(RuntimeError):
     """The table could not be fetched or could not be read as one."""
 
@@ -272,3 +286,61 @@ def write(
         encoding="utf-8",
     )
     return path
+
+
+def fetch_bpi(*, timeout: float = 60.0) -> bytes:
+    request = urllib.request.Request(BPI_URL, headers={"User-Agent": USER_AGENT})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.read()
+    except urllib.error.HTTPError as exc:
+        raise SecondOpinionError(f"{BPI_URL}: HTTP {exc.code}") from exc
+    except (urllib.error.URLError, OSError, TimeoutError) as exc:
+        raise SecondOpinionError(f"{BPI_URL}: {type(exc).__name__}") from exc
+
+
+def parse_bpi(payload: bytes, *, season: int | None = None) -> pd.DataFrame:
+    """`team, team_id, adj_off, adj_def, adj_tempo` from ESPN's power index.
+
+    Offence and defence are put on this lab's scale -- per 100 possessions,
+    defence positive when BAD, as points allowed are -- around a nominal 100;
+    the card reads deviations from the table's own mean, so the level is
+    irrelevant and only the scale and the sign matter. Tempo is empty: BPI
+    publishes none, and the card leaves tempo to the lab's own rating.
+    """
+    try:
+        data = json.loads(payload)
+    except ValueError as exc:
+        raise SecondOpinionError(f"the power index is not JSON: {exc}") from exc
+    year = (data.get("requestedSeason") or data.get("currentSeason") or {}).get("year")
+    if season is not None and year is not None and int(year) != int(season):
+        raise SecondOpinionError(f"the power index is for {year}, not {season}")
+    scale = 100.0 / BPI_POSSESSIONS
+    out = []
+    for entry in data.get("teams", []):
+        team = entry.get("team") or {}
+        values = {}
+        for category in entry.get("categories", []):
+            if category.get("name") != "bpi":
+                continue
+            names = next((c.get("names") for c in data.get("categories", [])
+                          if c.get("name") == "bpi"), None) or []
+            values = dict(zip(names, category.get("values", [])))
+        off, de = values.get("bpioffense"), values.get("bpidefense")
+        try:
+            off, de = float(off), float(de)
+            team_id = int(team.get("id"))
+        except (TypeError, ValueError):
+            continue
+        out.append({
+            "team": team.get("displayName") or team.get("shortDisplayName") or str(team_id),
+            "team_id": team_id,
+            "adj_off": 100.0 + off * scale,
+            "adj_def": 100.0 - de * scale,
+            "adj_tempo": float("nan"),
+        })
+    frame = pd.DataFrame(out, columns=["team", "team_id", "adj_off", "adj_def", "adj_tempo"])
+    if frame.empty:
+        raise SecondOpinionError("the power index carried no team with offence and defence")
+    frame["team_id"] = frame["team_id"].astype("Int64")
+    return frame

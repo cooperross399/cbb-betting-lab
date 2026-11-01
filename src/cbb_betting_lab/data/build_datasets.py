@@ -56,7 +56,7 @@ import pandas as pd
 
 from cbb_betting_lab.competitions import CBB, Competition
 from cbb_betting_lab.config import PROCESSED_DIR
-from cbb_betting_lab.data import hoopr
+from cbb_betting_lab.data import espn_box, hoopr
 from cbb_betting_lab.population import classify
 from cbb_betting_lab.season import slate_date
 
@@ -217,12 +217,50 @@ def build_game_segments(season: int, *, raw_dir: Path | None = None) -> pd.DataF
     return out
 
 
+def _with_supplement(kind: str, season: int, raw_dir: Path | None) -> pd.DataFrame:
+    """hoopR's box for a season, with ESPN's rows for the games it lacks.
+
+    hoopR's row wins wherever both exist (`data/espn_box.py`). Raises
+    `hoopr.FeedError` only when neither source holds anything for the season.
+    """
+    try:
+        box = hoopr.load(kind, season, raw_dir=raw_dir)
+    except hoopr.FeedError:
+        box = pd.DataFrame()
+    extra = espn_box.load(kind, season, raw_dir)
+    if not extra.empty and not box.empty:
+        extra = extra[~extra["game_id"].astype(int).isin(set(box["game_id"].astype(int)))]
+    frames = [f for f in (box, extra) if not f.empty]
+    if not frames:
+        raise hoopr.FeedError(
+            f"{kind} {season}: neither hoopR nor the ESPN supplement holds a row"
+        )
+    return pd.concat(frames, ignore_index=True) if len(frames) > 1 else frames[0].copy()
+
+
+def game_segments_with_supplement(season: int, *, raw_dir: Path | None = None) -> pd.DataFrame:
+    """Segments from play-by-play, plus ESPN's line-score segments for games
+    the play-by-play does not hold yet."""
+    try:
+        frame = build_game_segments(season, raw_dir=raw_dir)
+    except hoopr.FeedError:
+        frame = pd.DataFrame()
+    extra = espn_box.load("segments", season, raw_dir)
+    if extra.empty:
+        return frame
+    extra = extra.drop(columns=["source"], errors="ignore")
+    if not frame.empty:
+        extra = extra[~extra["game_id"].astype(int).isin(set(frame["game_id"].astype(int)))]
+        return pd.concat([frame, extra], ignore_index=True)
+    return extra.reset_index(drop=True)
+
+
 def build_team_games(
     season: int, *, raw_dir: Path | None = None, competition: Competition = CBB
 ) -> pd.DataFrame:
-    box = hoopr.load("team_box", season, raw_dir=raw_dir)
+    box = _with_supplement("team_box", season, raw_dir)
     schedule = hoopr.load("schedules", season, raw_dir=raw_dir)
-    segments = build_game_segments(season, raw_dir=raw_dir)
+    segments = game_segments_with_supplement(season, raw_dir=raw_dir)
 
     classified = classify(schedule).set_index("id")
     box = box.copy()
@@ -285,7 +323,7 @@ def build_team_games(
 def build_player_games(
     season: int, *, raw_dir: Path | None = None, competition: Competition = CBB
 ) -> pd.DataFrame:
-    box = hoopr.load("player_box", season, raw_dir=raw_dir).copy()
+    box = _with_supplement("player_box", season, raw_dir).copy()
     box["slate_date"] = _slate(box, competition)
     box["opponent_id"] = box["opponent_team_id"]
 
@@ -463,7 +501,7 @@ def build(seasons: tuple[int, ...], *, raw_dir: Path | None = None,
     segments = []
     for season in seasons:
         try:
-            frame = build_game_segments(season, raw_dir=raw_dir)
+            frame = game_segments_with_supplement(season, raw_dir=raw_dir)
         except hoopr.FeedError:
             _skip("game_segments", season, "feed not cached")
             continue

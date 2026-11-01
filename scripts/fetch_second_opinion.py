@@ -54,11 +54,11 @@ def main(argv: list[str] | None = None) -> int:
         payload = Path(args.payload).read_bytes()
         url = str(args.payload)
     else:
-        try:
-            payload, url = second_opinion.fetch(season)
-        except second_opinion.SecondOpinionError as exc:
-            print(f"::warning::The second opinion could not be fetched: {exc}", file=sys.stderr)
-            return 1
+        # ESPN's power index, keyed by team id (decision 71). The T-Rank
+        # table this used to fetch answered HTTP 403 to every Actions run, and
+        # its robots.txt closes it to this agent (`docs/cbb_data_sources.md`,
+        # "Deliberately not used"), so it is no longer asked.
+        return _from_bpi(season, as_of, raw_dir)
     try:
         table = second_opinion.parse(payload)
     except second_opinion.SecondOpinionError as exc:
@@ -94,6 +94,27 @@ def main(argv: list[str] | None = None) -> int:
             "without a second opinion.",
             file=sys.stderr,
         )
+        return 2
+    return 0
+
+
+def _from_bpi(season: int, as_of: str, raw_dir: Path) -> int:
+    """ESPN's power index, keyed by the ids this lab already uses."""
+    try:
+        table = second_opinion.parse_bpi(second_opinion.fetch_bpi(), season=season)
+    except second_opinion.SecondOpinionError as exc:
+        print(f"::warning::The fallback second opinion could not be read either: {exc}", file=sys.stderr)
+        return 1
+    path = second_opinion.write(
+        table, raw_dir=raw_dir, season=season, as_of=as_of, source=second_opinion.BPI_SOURCE
+    )
+    count = int(table["team_id"].notna().sum())
+    print(
+        f"Second opinion: {count} team(s) read from ESPN's power index by team id "
+        f"(offence and defence; no tempo). Wrote {path} dated {as_of}."
+    )
+    if count < card_factors.SECOND_OPINION_MIN_TEAMS:
+        print(f"::warning::{count} teams is under the {card_factors.SECOND_OPINION_MIN_TEAMS} the card needs.", file=sys.stderr)
         return 2
     return 0
 

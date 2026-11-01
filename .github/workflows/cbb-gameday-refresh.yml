@@ -471,6 +471,16 @@ jobs:
           done
           echo "Snapshots restored: $(ls data/archive/priced_snapshots 2>/dev/null | wc -l)."
 
+      - name: Restore the ESPN results supplement
+        # The same-day box scores `scripts/fetch_espn_box.py` read on earlier
+        # runs, so each run fetches only the games finished since. A miss
+        # costs time, never correctness: the script refetches the window.
+        uses: actions/cache@v4
+        with:
+          path: data/raw/cbb/espn_box
+          key: cbb-espn-box-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: cbb-espn-box-v1-
+
       - name: Refetch the free feeds and rebuild the tables
         # hoopR release assets and the derived tables. Costs no credits, so it
         # runs before any quota is spent and an outage here is free.
@@ -489,6 +499,10 @@ jobs:
           # mbb_schedule_2027.parquet is the 2026-27 season.
           SEASONS="2024 2025 2026 2027"
           python scripts/fetch_cbb_data.py --seasons $SEASONS
+          # The current season's finished games hoopR has not published yet,
+          # read from ESPN in hoopR's own columns (`data/espn_box.py`), so the
+          # ratings see last night's results whatever hoopR's nightly build did.
+          python scripts/fetch_espn_box.py || echo "::warning::The ESPN results supplement did not run; the tables hold what hoopR published."
           python scripts/build_datasets.py --seasons $SEASONS
 
       - name: Fetch the card's second opinion

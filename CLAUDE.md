@@ -967,6 +967,13 @@ the two `november_prior` entries registered on 2026-09-01 are the test of this
 regime. Frozen opinions are not re-cut, so opening day's single game stays
 frozen without one.
 
+Decision 71, the same day: the current season's finished games are read
+straight from ESPN wherever hoopR has not published them yet
+(`scripts/fetch_espn_box.py`, run between the feed fetch and the table
+build), and the second opinion is ESPN's power index, read by team id. The
+T-Rank table answered 403 to every run and its `robots.txt` closes it to this
+agent, so it is no longer asked.
+
 ## Contract strings — never change these
 
 Cooper's scheduled routines hard-code these. Renaming any of them silently

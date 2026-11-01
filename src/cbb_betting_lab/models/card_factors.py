@@ -643,7 +643,10 @@ def load_second_opinion(
     resolved = frame.dropna(subset=["team_id"]).copy()
     for column in ("adj_off", "adj_def", "adj_tempo"):
         resolved[column] = pd.to_numeric(resolved[column], errors="coerce")
-    resolved = resolved.dropna(subset=["adj_off", "adj_def", "adj_tempo"])
+    # Tempo may be absent: ESPN's power index publishes none
+    # (`second_opinion.parse_bpi`). A table without it blends offence and
+    # defence and leaves tempo to the lab's own rating.
+    resolved = resolved.dropna(subset=["adj_off", "adj_def"])
     resolved = resolved.drop_duplicates(subset=["team_id"])
     if len(resolved) < SECOND_OPINION_MIN_TEAMS:
         return None, (
@@ -652,7 +655,11 @@ def load_second_opinion(
         )
     off = resolved["adj_off"] - resolved["adj_off"].mean()
     de = resolved["adj_def"] - resolved["adj_def"].mean()
-    tempo = resolved["adj_tempo"] - resolved["adj_tempo"].mean()
+    tempo = (
+        resolved["adj_tempo"] - resolved["adj_tempo"].mean()
+        if resolved["adj_tempo"].notna().any()
+        else resolved["adj_tempo"]
+    )
     teams = {
         int(t): (float(o), float(d), float(p))
         for t, o, d, p in zip(resolved["team_id"], off, de, tempo)
@@ -1119,18 +1126,20 @@ def apply(
         if home_view is not None:
             move[0] += BLEND_WEIGHT * (home_view[0] - own_off_h)
             move[1] += BLEND_WEIGHT * (home_view[1] - own_def_h)
-            move[2] += BLEND_WEIGHT * (home_view[2] - own_t_h)
+            if np.isfinite(home_view[2]):
+                move[2] += BLEND_WEIGHT * (home_view[2] - own_t_h)
             blended = True
         if away_view is not None:
             move[1] += BLEND_WEIGHT * (away_view[0] - own_off_a)
             move[0] += BLEND_WEIGHT * (away_view[1] - own_def_a)
-            move[2] += BLEND_WEIGHT * (away_view[2] - own_t_a)
+            if np.isfinite(away_view[2]):
+                move[2] += BLEND_WEIGHT * (away_view[2] - own_t_a)
             blended = True
         detail["second_opinion"] = {
             "as_of": opinion.as_of,
             "weight": BLEND_WEIGHT,
-            "home": None if home_view is None else [round(v, 2) for v in home_view],
-            "away": None if away_view is None else [round(v, 2) for v in away_view],
+            "home": None if home_view is None else [round(v, 2) if np.isfinite(v) else None for v in home_view],
+            "away": None if away_view is None else [round(v, 2) if np.isfinite(v) else None for v in away_view],
             "own": {
                 "home_offence": own_off_h, "home_defence": own_def_h, "home_tempo": own_t_h,
                 "away_offence": own_off_a, "away_defence": own_def_a, "away_tempo": own_t_a,
