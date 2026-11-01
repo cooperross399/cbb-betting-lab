@@ -325,6 +325,39 @@ def group_rows(rows, key):
     return out
 
 
+_SIDE_SWAP = {"home": "away", "away": "home"}
+
+
+def flip_row(r: dict) -> dict:
+    """One provider row restated from the other side of the game.
+
+    The provider and ESPN disagree about which side is home on a neutral floor
+    (both games on 2026-11-01's board), and the board is drawn in ESPN's
+    orientation. Restating a row is exact: the two team names trade places and
+    a side selection names the other word (`home_over` included). The line is
+    left alone, because it already belongs to the team the selection names:
+    "Villanova -7" is the same ticket whichever word calls Villanova
+    (decision 72).
+    """
+    out = dict(r)
+    out["home_team"], out["away_team"] = r.get("away_team", ""), r.get("home_team", "")
+    sel = (r.get("selection") or "")
+    head, _, tail = sel.partition("_")
+    if sel.lower() in _SIDE_SWAP:
+        out["selection"] = _SIDE_SWAP[sel.lower()]
+    elif head.lower() in _SIDE_SWAP and tail:
+        out["selection"] = f"{_SIDE_SWAP[head.lower()]}_{tail}"
+    return out
+
+
+def orient(groups: dict, key: tuple[str, str]) -> None:
+    """Make `groups[key]` exist when only the reversed pair does, by restating
+    every row of the reversed pair from the board's side. Never overwrites."""
+    if key in groups or (key[1], key[0]) not in groups:
+        return
+    groups[key] = [flip_row(r) for r in groups[(key[1], key[0])]]
+
+
 def best(rows, market, selection, line=None):
     out = None
     for r in rows:
@@ -866,6 +899,8 @@ def build(lab: Path, day: date) -> dict:
             if (LOGOS / f"{abbr}.png").is_file():
                 teams[abbr]["logo"] = f"./logos/{abbr}.png"
         hk, ak = resolve(names, h["name"]), resolve(names, a["name"])
+        for groups in [c["games"] for c in captures] + [frozen_rows, selected]:
+            orient(groups, (hk, ak))
         holding = [c for c in captures if c["games"].get((hk, ak))]
         mine = holding[-1]["games"][(hk, ak)] if holding else []
         opens = opening_prices(holding[0]["games"][(hk, ak)] if len(holding) >= 2 else None)

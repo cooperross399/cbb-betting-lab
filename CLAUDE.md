@@ -974,6 +974,14 @@ build), and the second opinion is ESPN's power index, read by team id. The
 T-Rank table answered 403 to every run and its `robots.txt` closes it to this
 agent, so it is no longer asked.
 
+Decision 72, the same day: **the provider and ESPN disagree about which side is
+home on a neutral floor, and both of opening day's games were filed the other
+way round.** The board joined odds on the ordered pair and showed no market
+line; the card priced every side of such a game as its opponent. Sides are now
+oriented by team: `SlateModel.flipped_events` names the reversed events and the
+card builds their joint in the provider's orientation, and the board restates a
+reversed capture from its own side. Settlement already resolved sides by team.
+
 ## Contract strings — never change these
 
 Cooper's scheduled routines hard-code these. Renaming any of them silently

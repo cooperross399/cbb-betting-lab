@@ -2817,3 +2817,55 @@ def test_a_trust_table_pulls_the_edge_bar_to_the_market_and_says_so(
     assert trusted.snapshot_rows_offered == untrusted.snapshot_rows_offered
     assert "Trust in the model against the price" in GC.render_card(trusted)
     assert "Trust in the model against the price" not in GC.render_card(untrusted)
+
+
+def test_a_game_the_provider_files_the_other_way_round_is_priced_from_the_providers_side(board, day):
+    """Decision 72. The matchup is oriented to the schedule and a wager's
+    `home` names the PROVIDER's home; on opening day the two disagreed on both
+    games. Unflipped, the card handed each side the opponent's probability.
+
+    A strong home side (1.15 against 0.95 points a possession): on a flipped
+    event the provider's `home` is the schedule's weak AWAY side, so the
+    provider-home moneyline must come back as the schedule-away probability.
+    """
+    wagers, _, _ = _wagers_for(board, day)
+    cardable = [w for w in wagers if w.event_id == "evt-cardable"]
+    home_ml = [w for w in cardable if w.market == "moneyline" and w.selection == "home"]
+    away_ml = [w for w in cardable if w.market == "moneyline" and w.selection == "away"]
+    assert home_ml and away_ml, "the fixture board must quote both moneyline sides"
+
+    strong_home = {"evt-cardable": a_matchup(home_points_per_possession=1.15, away_points_per_possession=0.95)}
+    straight, _ = GC.opinions_for(wagers, slate.SlateModel(day=day, matchups=strong_home), day=day)
+    flipped, _ = GC.opinions_for(
+        wagers,
+        slate.SlateModel(day=day, matchups=strong_home, flipped_events=frozenset({"evt-cardable"})),
+        day=day,
+    )
+
+    assert straight[home_ml[0].key] > 0.5 > straight[away_ml[0].key]
+    assert flipped[home_ml[0].key] == pytest.approx(straight[away_ml[0].key])
+    assert flipped[away_ml[0].key] == pytest.approx(straight[home_ml[0].key])
+
+
+def test_attach_game_ids_says_which_events_the_provider_files_reversed():
+    """The flag is read off the fixture's own two ids: a provider home that
+    resolves to the schedule's away team is flipped, and nothing else is."""
+    from cbb_betting_lab.reports import card_matchups
+
+    schedule = pd.DataFrame([{
+        "game_id": 401920982, "game_date": "2026-11-01", "season": 2027,
+        "home_id": 222, "home_display_name": "Villanova Wildcats", "home_location": "Villanova",
+        "home_name": "Wildcats", "home_abbreviation": "VILL", "home_short_display_name": "Villanova",
+        "away_id": 87, "away_display_name": "Notre Dame Fighting Irish", "away_location": "Notre Dame",
+        "away_name": "Fighting Irish", "away_abbreviation": "ND", "away_short_display_name": "Notre Dame",
+        "neutral_site": True, "home_conference_id": 4, "away_conference_id": 4,
+    }])
+    rows = pd.DataFrame([
+        {"event_id": "reversed", "home_team": "Notre Dame Fighting Irish", "away_team": "Villanova Wildcats"},
+        {"event_id": "straight", "home_team": "Villanova Wildcats", "away_team": "Notre Dame Fighting Irish"},
+    ])
+    frame, _, _ = card_matchups.attach_game_ids(rows, day="2026-11-01", schedule=schedule)
+    by_event = {r["event_id"]: r for r in frame.to_dict("records")}
+    assert by_event["reversed"]["game_id"] == 401920982
+    assert bool(by_event["reversed"]["flipped"]) is True
+    assert bool(by_event["straight"]["flipped"]) is False
