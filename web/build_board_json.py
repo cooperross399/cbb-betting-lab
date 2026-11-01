@@ -670,7 +670,35 @@ def load_frozen(lab: Path, day: date) -> list[dict]:
     return read_csvs(str(lab / "data" / "archive" / "priced_snapshots" / f"{day.isoformat()}.csv"))
 
 
-def pick_from_frozen(frozen_rows: list[dict], home_abbr: str, away_abbr: str, selected=()) -> dict | None:
+#: The edge a lean must clear: the card's own bar,
+#: `reports.card_pricing.EDGE_THRESHOLD`, read on the model's OWN probability
+#: rather than the trust-weighted one the card selects on. A lean is an opinion
+#: that clears the bar before the trust table pulls it toward the market and not
+#: after — the "cleared part of it" in the Methods page's definition — so it is
+#: graded and kept in its own record, and stakes nothing. Pinned equal to the
+#: card's constant by `tests/test_the_board_publishes_leans.py` (decision 74).
+LEAN_EDGE = 0.02
+#: `reports.card_pricing.PRICE_BAND`: a lean is never shown at a price the card
+#: would refuse, because the largest apparent edges live out there and are the
+#: rows that are wrong. Pinned by the same test.
+LEAN_PRICE_BAND = (-400.0, 600.0)
+#: Lab market keys a lean may be published on, before the allowlist is read.
+LEAN_MARKET_KEYS = {"moneyline": "moneyline", "spread": "spread", "total": "total_points"}
+
+
+def lean_allowed(market: str, allowlist) -> bool:
+    """Whether a board market may carry a lean: it must be allowlisted under a
+    receipt. No readable policy is no allowlist, so no lean."""
+    key = LEAN_MARKET_KEYS.get(market)
+    return bool(allowlist) and key is not None and key in allowlist
+
+
+def in_lean_band(price) -> bool:
+    number = finite(price)
+    return number is not None and LEAN_PRICE_BAND[0] <= number <= LEAN_PRICE_BAND[1]
+
+
+def pick_from_frozen(frozen_rows: list[dict], home_abbr: str, away_abbr: str, selected=(), allowlist=()) -> dict | None:
     """The card's pick on this game, and what it is.
 
     `selected` is the card's own selections for the game, as
@@ -706,7 +734,10 @@ def pick_from_frozen(frozen_rows: list[dict], home_abbr: str, away_abbr: str, se
     line = finite(top.get("line"))
     label = {"moneyline": f"{side} ML", "spread": f"{side} {line:+.1f}".replace("-", "\u2212") if line is not None else side, "total": f"{sel.capitalize()} {line:g}" if line is not None else sel}[m]
     model_probability = finite(top.get("model_probability"))
-    return {"kind": "bet" if chosen else "pass", "market": MARKETS[m], "label": label, "price": price, "book": top.get("book"), "tier": top.get("tier") or None,
+    edge = finite(top.get("edge"))
+    leaning = (not chosen and edge is not None and edge >= LEAN_EDGE
+               and lean_allowed(m, allowlist) and in_lean_band(price))
+    return {"kind": "bet" if chosen else "lean" if leaning else "pass", "basis": "frozen", "market": MARKETS[m], "label": label, "price": price, "book": top.get("book"), "tier": top.get("tier") or None,
             "units": 1.0 if chosen else None, "edgePct": percent(top.get("edge")),
             "modelProb": None if model_probability is None else round(model_probability, 4),
             **pick_side_and_line(m, sel, line)}
@@ -727,6 +758,76 @@ def pick_side_and_line(market: str, selection: str, line: object) -> dict:
     if market == "total" and selection in ("over", "under") and number is not None:
         return {"side": selection, "line": number}
     return {"side": None, "line": None}
+
+
+def best_quote(rows, market, selection, line=None):
+    """The best price on one side, with the book that quotes it, or None."""
+    out = None
+    for r in rows:
+        if norm_market(r) != market or (r.get("selection") or "").lower() != selection:
+            continue
+        if line is not None:
+            number = finite(r.get("line"))
+            if number is None or abs(number - line) > 1e-6:
+                continue
+        price = finite(r.get("american_odds"))
+        if price is None:
+            continue
+        if out is None or price > out[0]:
+            out = (price, r.get("book"))
+    return None if out is None else (int(out[0]), out[1])
+
+
+def profit_per_unit(american: float) -> float:
+    return american / 100.0 if american > 0 else 100.0 / -american
+
+
+def frozen_has_opinion(frozen_rows: list[dict]) -> bool:
+    """Whether the freeze recorded a model opinion on any main market."""
+    return any(norm_market(r) in MARKETS and finite(r.get("edge")) is not None for r in frozen_rows)
+
+
+def pick_from_model(mine: list[dict], pr: dict, home_abbr: str, away_abbr: str, spread_line, total_line, allowlist=()) -> dict | None:
+    """The model's own opinion on a game the freeze holds no opinion on.
+
+    Read off the same projection the board prints, against the best current
+    price on each side of the three main markets, with a push counted as a
+    push: edge is `win * profit - loss` per unit. The best side is a `lean`
+    when it clears :data:`LEAN_EDGE` on an allowlisted market inside the price
+    band, and a `pass` otherwise. Only ever called before tip: `site_history`
+    freezes the first build of the day and grades that, so an opinion first
+    formed after tip would be graded on a game already under way.
+    """
+    sides = []
+
+    def add(market, selection, line, win, loss, quote):
+        if quote is None or win is None:
+            return
+        price, book = quote
+        sides.append((win * profit_per_unit(price) - loss, market, selection, line, win, price, book))
+
+    hw = finite(pr.get("home_win"))
+    if hw is not None:
+        add("moneyline", "home", None, hw, 1 - hw, best_quote(mine, "moneyline", "home"))
+        add("moneyline", "away", None, 1 - hw, hw, best_quote(mine, "moneyline", "away"))
+    if spread_line is not None and pr.get("margin_triple"):
+        covered, _push, missed = pr["margin_triple"](spread_line)
+        add("spread", "home", spread_line, covered, missed, best_quote(mine, "spread", "home", spread_line))
+        add("spread", "away", -spread_line, missed, covered, best_quote(mine, "spread", "away", -spread_line))
+    if total_line is not None and pr.get("total_triple"):
+        over, _push, under = pr["total_triple"](total_line)
+        add("total", "over", total_line, over, under, best_quote(mine, "total", "over", total_line))
+        add("total", "under", total_line, under, over, best_quote(mine, "total", "under", total_line))
+    sides = [s for s in sides if in_lean_band(s[5])]
+    if not sides:
+        return None
+    edge, m, sel, line, win, price, book = max(sides, key=lambda s: s[0])
+    side = home_abbr if sel == "home" else away_abbr if sel == "away" else sel.capitalize()
+    label = {"moneyline": f"{side} ML", "spread": f"{side} {line:+.1f}".replace("-", "\u2212") if line is not None else side,
+             "total": f"{sel.capitalize()} {line:g}" if line is not None else sel}[m]
+    leaning = edge >= LEAN_EDGE and lean_allowed(m, allowlist)
+    return {"kind": "lean" if leaning else "pass", "basis": "model", "market": MARKETS[m], "label": label, "price": price, "book": book,
+            "tier": None, "units": None, "edgePct": percent(edge), "modelProb": round(win, 4), **pick_side_and_line(m, sel, line)}
 
 
 def load_status(lab: Path, day: date) -> dict:
@@ -889,6 +990,9 @@ def build(lab: Path, day: date) -> dict:
     fit = dict(getattr(model, "fit", None) or {}) if model else {}
     _SIDE.clear()
     _SIDE.update(fit)
+    policy = load_policy(lab)
+    # Leans read the allowlist only when every receipt behind it verifies.
+    lean_markets = set(policy.allowlist) if policy and not policy.receipt_failures else set()
     teams, games, history = {}, [], {}
     for g in slate:
         h, a = g["home"], g["away"]
@@ -914,7 +1018,7 @@ def build(lab: Path, day: date) -> dict:
         # would be a column that does not exist reading as "morning" forever.
         row = {"id": g["id"], "tip": g["tip"], "venue": g["venue"], "city": g["city"], "tv": g["tv"], "neutral": g["neutral"], "started": g["state"] != "pre",
                "cardSlot": slot,
-               "home": {"abbr": ha, "record": h["record"]}, "away": {"abbr": aa, "record": a["record"]}, "pick": pick_from_frozen(my_frozen, ha, aa, selected.get((hk, ak), []))}
+               "home": {"abbr": ha, "record": h["record"]}, "away": {"abbr": aa, "record": a["record"]}, "pick": pick_from_frozen(my_frozen, ha, aa, selected.get((hk, ak), []), lean_markets)}
         spread_line = total_line = None
         if mine:
             spread_line = consensus_line(mine, "spread", "home")
@@ -953,6 +1057,13 @@ def build(lab: Path, day: date) -> dict:
                 over, _push, under = pr["total_triple"](total_line)
                 row["total"]["overProb"] = round(over, 4)
                 row["total"]["fairOverPrice"] = fair_two_way(over, under)
+            # A game the freeze holds no opinion on -- formed before the card
+            # ran, or added to the slate after it -- takes the model's own
+            # opinion from the projection above, before tip only.
+            if mine and not row["started"] and not selected.get((hk, ak)) and not frozen_has_opinion(my_frozen):
+                live = pick_from_model(mine, pr, ha, aa, spread_line, total_line, lean_markets)
+                if live is not None:
+                    row["pick"] = live
             # The game page: the price after each layer the card applied,
             # and both sides' ratings with what tonight's layers read.
             game = pr.get("game")
@@ -979,7 +1090,6 @@ def build(lab: Path, day: date) -> dict:
     # model beats them. All 32 measured market-and-tier cells come back no
     # demonstrated edge, not enough evidence, or a demonstrated deficit, and
     # none of the three is an edge.
-    policy = load_policy(lab)
     allowlisted = sorted(policy.allowlist) if policy else []
     forced_manual = bool(policy and policy.receipt_failures)
     if forced_manual:
@@ -993,7 +1103,14 @@ def build(lab: Path, day: date) -> dict:
     else:
         gate = "no market is allowlisted"
 
-    if not any(g["pick"] for g in games):
+    bets = [g for g in games if g["pick"] and g["pick"]["kind"] == "bet"]
+    leans = [g for g in games if g["pick"] and g["pick"]["kind"] == "lean"]
+    if leans and not bets:
+        notice = (f"The card selected nothing: {gate} and the model has no demonstrated edge. "
+                  f"{len(leans)} lean(s) are shown: a lean is the model's own opinion clearing the "
+                  f"{LEAN_EDGE:.0%} edge bar before the card's trust in the model pulls it toward the market. "
+                  "Leans are tracked and graded, stake nothing, and are not recommendations.")
+    elif not any(g["pick"] for g in games):
         notice = (f"No selection is published: {gate} and the model has no demonstrated edge. "
                   "The slate, the board's prices and the model's numbers are shown; nothing here is a recommendation.")
     elif allowlisted and not forced_manual:

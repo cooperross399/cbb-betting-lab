@@ -982,6 +982,13 @@ oriented by team: `SlateModel.flipped_events` names the reversed events and the
 card builds their joint in the provider's orientation, and the board restates a
 reversed capture from its own side. Settlement already resolved sides by team.
 
+Decision 74, the same day: **the board publishes leans.** An opinion the card
+did not select is shown as a lean when the model's own probability clears the
+card's 2% edge bar on an allowlisted main market inside the price band, before
+the trust table pulls it toward the market. A lean stakes nothing, is graded
+into its own record, and is never a bet; the card, the trust table and the
+allowlist are untouched.
+
 ## Contract strings — never change these
 
 Cooper's scheduled routines hard-code these. Renaming any of them silently
