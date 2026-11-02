@@ -885,9 +885,9 @@ def test_the_report_stage_refuses_a_prop_when_no_census_has_run(tmp_path, capsys
     # So the run still refuses to GRADE the prop and still exits non-zero, and
     # it now also writes a truthful report of the markets it is allowed to
     # grade, with the excluded ones named in the document itself.
-    assert lab.run("--settle") == 1, (
-        "a night whose props went ungraded must be red; a green run is how it "
-        "goes unlooked-at forever"
+    assert lab.run("--settle") == 3, (
+        "a night whose props went ungraded must not exit clean, and must exit "
+        "with its own code so the workflow does not read it as a failed settle"
     )
 
     out = capsys.readouterr().out

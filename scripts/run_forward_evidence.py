@@ -159,6 +159,12 @@ class Inputs:
         ]
 
 
+
+# The settle pass ran and reconciled, and the player markets went ungraded
+# because no wager census can reconcile in this process. Distinct from 1 (the
+# pass failed) so the workflow can tell the two apart.
+PROPS_EXCLUDED = 3
+
 def load_tables(processed_dir: Path, *, competition: Competition) -> dict[str, pd.DataFrame]:
     """The three processed tables, or an `InputError` naming what is missing.
 
@@ -888,10 +894,14 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
     if census_refused:
-        # The report that was written is truthful and the run is still red: a
-        # night whose props went ungraded is a night somebody has to look at,
-        # and a green run is how it would go unlooked-at forever.
-        return 1
+        # The report that was written is truthful and the run is still not
+        # clean: a night whose props went ungraded is a night somebody has to
+        # look at. It exits PROPS_EXCLUDED, not 1, because this is the state of
+        # every runner (the census inputs are gitignored), and a 1 here was
+        # read by the workflow as "settlement did not run": every card was
+        # stamped degraded and the backup slot re-bought the board to hit the
+        # same refusal. The workflow names this exit as a warning instead.
+        return PROPS_EXCLUDED
     return 0
 
 
