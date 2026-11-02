@@ -6,7 +6,7 @@ name: Publish Board
 #
 # Runs after every CBB Gameday Refresh and on its own clock, so a dark day still
 # refreshes the slate. Read-only on repository contents (see permissions),
-# pushes to no branch, fetches no odds, spends no credit, edits no policy,
+# pushes to no branch, buys no odds (the free scoreboard's posted line fills games the card did not capture), spends no credit, edits no policy,
 # and places no bet.
 on:
   schedule:
@@ -84,8 +84,16 @@ jobs:
           # that ended after waiting, succeeds without uploading anything, and
           # on 2026-11-01 one such run blanked the board for every publish
           # after it (decision 73).
-          if ! candidates=$(gh run list --workflow cbb-gameday-refresh.yml --status success \
-            --limit 10 --json databaseId --jq '.[].databaseId'); then
+          # SUCCESS OR FAILURE, NOT SUCCESS ALONE. A gameday run that froze and
+          # published its card and then went red on a later, unrelated step
+          # (the settle pass exits 1 every night props go ungraded) still
+          # holds today's prices. Reading successes only, the board skipped
+          # every such run and published 2026-11-02 with no line on any game.
+          # Cancelled and skipped runs stay out; the artifact check below is
+          # what decides whether a run holds a card.
+          if ! candidates=$(gh run list --workflow cbb-gameday-refresh.yml --status completed \
+            --limit 10 --json databaseId,conclusion \
+            --jq '.[] | select(.conclusion == "success" or .conclusion == "failure") | .databaseId'); then
             echo "::warning::The last CBB Gameday Refresh could not be looked up; this board is schedule-only because the question failed, not because there is no card."
             candidates=""
           fi
@@ -97,7 +105,7 @@ jobs:
               previous="$run"
               break
             fi
-            echo "Run $run succeeded without a card artifact; looking further back."
+            echo "Run $run finished without a card artifact; looking further back."
           done
           if [ -n "$previous" ]; then
             artifact=$(gh api "repos/${{ github.repository }}/actions/runs/$previous/artifacts" \
@@ -251,5 +259,5 @@ jobs:
         if: always()
         run: |
           echo "This job built the public CBB board from the schedule and the lab's outputs."
-          echo "It fetched no odds, spent no credit, pushed no branch, edited no policy,"
+          echo "It bought no odds (it reads only the free scoreboard's posted line), spent no credit, pushed no branch, edited no policy,"
           echo "and placed no bet."

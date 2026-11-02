@@ -43,6 +43,10 @@ Each game may carry, beside the keys the shared Board reads:
   (`secondOpinion` is `{offence, defence, tempo}` or `null`).
 - `tiers`: `{home, away}` as `high_major` / `mid_major` / `low_major` / `null`.
 - `homeCourt`: `{tierMargin, departure, appliedBy}`.
+- `moneyline.current`, `spread.current`, `total.current` and their opens come
+  from the card's latest capture of the provider's board where it holds the
+  market, and otherwise from the main line ESPN's scoreboard posts beside the
+  game (`posted_lines`, decision 76). A game no book quotes carries none.
 - `spread.coverProb`, `spread.fairHomePrice`, `total.overProb`,
   `total.fairOverPrice`: the model's chances and fair prices on the posted
   lines.
