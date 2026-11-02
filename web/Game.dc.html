@@ -109,6 +109,74 @@
         <p class="mono" style="margin:12px 0 0;font-size:12px;color:var(--mute);">{{ whereLine }}</p>
       </section>
 
+      <sc-if value="{{ bx.show }}" hint-placeholder-val="{{ false }}">
+      <section aria-labelledby="box-h" style="padding:28px 0 26px;border-bottom:1px solid var(--ink);">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:4px 16px;flex-wrap:wrap;">
+          <h2 id="box-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">{{ bx.title }}</h2>
+          <span role="status" class="mono" style="font-size:12px;color:var(--mute);">{{ bx.stamp }}</span>
+        </div>
+        <sc-if value="{{ bx.waiting }}" hint-placeholder-val="{{ false }}">
+          <div class="mono" style="margin-top:14px;border:1px dashed var(--mute);padding:14px 16px;max-width:760px;font-size:13px;line-height:1.5;color:var(--mute);">{{ bx.waitNote }}</div>
+        </sc-if>
+        <sc-if value="{{ bx.scored }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;">
+            <span class="cond" style="font-weight:700;font-size:14px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;background:{{ bx.stateBg }};color:{{ bx.stateFg }};">{{ bx.state }}</span>
+          </div>
+          <div class="mono" style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:12px;max-width:560px;">
+            <span style="font-size:clamp(30px,6vw,48px);font-weight:600;line-height:1;color:{{ bx.awayScoreColor }};">{{ bx.awayAbbr }} {{ bx.awayScore }}</span>
+            <span style="font-size:clamp(30px,6vw,48px);font-weight:600;line-height:1;color:{{ bx.homeScoreColor }};">{{ bx.homeScore }} {{ bx.homeAbbr }}</span>
+          </div>
+          <sc-if value="{{ bx.hasLines }}" hint-placeholder-val="{{ true }}">
+          <div style="margin-top:16px;border-top:2px solid var(--ink);max-width:560px;overflow-x:auto;">
+            <div class="mono" style="display:grid;grid-template-columns:{{ bx.lineCols }};gap:0 10px;padding:6px 0;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);">
+              <sc-for list="{{ bx.lineHead }}" as="h" hint-placeholder-count="4"><span style="text-align:{{ h.align }};">{{ h.text }}</span></sc-for>
+            </div>
+            <sc-for list="{{ bx.lineRows }}" as="lr" hint-placeholder-count="2">
+              <div class="mono" style="display:grid;grid-template-columns:{{ bx.lineCols }};gap:0 10px;padding:8px 0;border-top:1px solid var(--rule-2);font-size:15px;">
+                <sc-for list="{{ lr.cells }}" as="c" hint-placeholder-count="4"><span style="text-align:{{ c.align }};font-weight:{{ c.weight }};">{{ c.text }}</span></sc-for>
+              </div>
+            </sc-for>
+          </div>
+          </sc-if>
+          <sc-if value="{{ bx.hasTeam }}" hint-placeholder-val="{{ true }}">
+          <h3 class="cond" style="margin:24px 0 0;font-weight:700;font-size:20px;line-height:1;text-transform:uppercase;">Team stats</h3>
+          <div style="margin-top:10px;border-top:2px solid var(--ink);max-width:560px;">
+            <div class="mono" style="display:grid;grid-template-columns:minmax(0,1fr) 96px 96px;gap:0 10px;padding:6px 0;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);">
+              <span></span><span style="text-align:right;">{{ bx.awayAbbr }}</span><span style="text-align:right;">{{ bx.homeAbbr }}</span>
+            </div>
+            <sc-for list="{{ bx.team }}" as="r" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) 96px 96px;gap:0 10px;padding:8px 0;border-top:1px solid var(--rule-2);align-items:baseline;">
+                <span style="font-size:14px;font-weight:500;">{{ r.label }}</span>
+                <span class="mono" style="text-align:right;font-size:14px;font-weight:{{ r.awayWeight }};">{{ r.away }}</span>
+                <span class="mono" style="text-align:right;font-size:14px;font-weight:{{ r.homeWeight }};">{{ r.home }}</span>
+              </div>
+            </sc-for>
+          </div>
+          </sc-if>
+          <sc-for list="{{ bx.players }}" as="t" hint-placeholder-count="2">
+            <div style="margin-top:26px;">
+              <h3 class="cond" style="margin:0;font-weight:700;font-size:20px;line-height:1;text-transform:uppercase;border-left:6px solid {{ t.color }};padding-left:10px;">{{ t.name }}</h3>
+              <div style="margin-top:10px;overflow-x:auto;border-top:2px solid var(--ink);-webkit-overflow-scrolling:touch;">
+                <table class="mono" style="border-collapse:collapse;width:100%;min-width:640px;font-size:13px;">
+                  <thead><tr>
+                    <sc-for list="{{ t.head }}" as="h" hint-placeholder-count="10"><th scope="col" style="text-align:{{ h.align }};padding:6px 6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);font-weight:500;white-space:nowrap;">{{ h.text }}</th></sc-for>
+                  </tr></thead>
+                  <tbody>
+                    <sc-for list="{{ t.rows }}" as="r" hint-placeholder-count="8">
+                      <tr style="border-top:1px solid {{ r.rule }};color:{{ r.color }};font-weight:{{ r.weight }};">
+                        <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="10"><td style="text-align:{{ c.align }};padding:7px 6px;white-space:nowrap;">{{ c.text }}</td></sc-for>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </sc-for>
+        </sc-if>
+        <p style="margin:14px 0 0;font-size:12px;color:var(--mute);">Scores and box score from ESPN's public scoreboard, read by your browser.</p>
+      </section>
+      </sc-if>
+
       <section aria-labelledby="call-h" style="padding:28px 0 26px;border-bottom:1px solid var(--ink);">
         <h2 id="call-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">Our call</h2>
 
@@ -270,7 +338,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;scenario&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Sample game&quot;,&quot;Game not found&quot;],&quot;default&quot;:&quot;Sample game&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Preview&quot;},&quot;game&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;NOVA @ ND · best bet&quot;,&quot;CREI @ UCONN · no bet&quot;,&quot;MICH @ DUKE · no pick&quot;,&quot;SDSU @ ARIZ · lean&quot;],&quot;default&quot;:&quot;NOVA @ ND · best bet&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Preview&quot;},&quot;afterGame&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Preview&quot;}}">
 class Component extends DCLogic {
-  state = { board: null, game: null, final: null, loadedFor: null, isSample: false, err: "" };
+  state = { board: null, game: null, final: null, loadedFor: null, isSample: false, err: "", box: null, boxAt: null, boxErr: "", now: Date.now() };
   // Preview games on the sample board, by id.
   static PREVIEW = { "NOVA @ ND · best bet": "1", "CREI @ UCONN · no bet": "2", "MICH @ DUKE · no pick": "3", "SDSU @ ARIZ · lean": "4" };
   onSite() { return /(^|\.)maverickhightower\.com$/.test(location.hostname); }
@@ -304,10 +372,65 @@ class Component extends DCLogic {
     const games = (board && board.games) || [];
     const previewId = this.constructor.PREVIEW[this.props.game] || "1";
     const game = scenario === "Game not found" ? null : (games.find((g) => String(g.id) === id) || (!live ? games.find((g) => String(g.id) === previewId) || games[0] : null));
-    this.setState({ board, game, final, isSample: !live, err: board ? "" : "unreachable" });
+    this.setState({ board, game, final, isSample: !live, err: board ? "" : "unreachable", box: null, boxAt: null, boxErr: "" }, () => this.startBox(live ? game : null));
   }
-  componentDidMount() { this.load(); }
+  // Live score and box score, straight from ESPN's summary for this event: the
+  // board's game id is the ESPN event id (build_board_json reads the same
+  // scoreboard). Every 20 s while the game is on, near tip-off once a minute,
+  // once for a final; paused while the tab is hidden. Nothing here is a pick.
+  static SUMMARY = (id) => `https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary?event=${encodeURIComponent(id)}`;
+  startBox(game) {
+    this.stopBox();
+    if (!game || !/^\d+$/.test(String(game.id))) return;
+    this.boxGame = game; this.boxFails = 0;
+    this.onVis = () => { if (document.hidden) clearTimeout(this.boxTimer); else if (this.boxNext !== null) this.boxTick(); };
+    document.addEventListener("visibilitychange", this.onVis);
+    this.boxTick();
+  }
+  stopBox() { clearTimeout(this.boxTimer); this.boxTimer = null; this.boxGame = null; if (this.onVis) document.removeEventListener("visibilitychange", this.onVis); this.onVis = null; }
+  async boxTick() {
+    const g = this.boxGame; if (!g || this.boxBusy || document.hidden) return;
+    clearTimeout(this.boxTimer); this.boxBusy = true;
+    let box = null, err = "";
+    try {
+      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 12e3);
+      const r = await fetch(this.constructor.SUMMARY(g.id), { cache: "no-store", signal: ctl.signal }).finally(() => clearTimeout(t));
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      box = this.constructor.parseBox(await r.json());
+    } catch (e) { err = e && e.message ? e.message : String(e); }
+    this.boxBusy = false;
+    if (this.boxGame !== g) return;
+    if (box) { this.boxFails = 0; this.setState({ box, boxAt: Date.now(), boxErr: "", now: Date.now() }); }
+    else { this.boxFails += 1; this.setState({ boxErr: err, now: Date.now() }); }
+    const cur = box || this.state.box;
+    let d;
+    if (!box) d = Math.min(300e3, 20e3 * 2 ** (this.boxFails - 1));
+    else if (cur.state === "in") d = 20e3;
+    else if (cur.state === "post") d = null;
+    else { const until = Date.parse(g.tip || "") - Date.now(); d = !Number.isFinite(until) || until < 15 * 60e3 ? 60e3 : Math.min(15 * 60e3, until - 10 * 60e3); }
+    this.boxNext = d;
+    if (d != null && !document.hidden) this.boxTimer = setTimeout(() => this.boxTick(), d);
+  }
+  static parseBox(json) {
+    const comp = (((json || {}).header || {}).competitions || [])[0] || {}, st = comp.status || {}, type = st.type || {};
+    const bx = (json || {}).boxscore || {};
+    const side = (ha) => {
+      const c = (comp.competitors || []).find((x) => x.homeAway === ha) || {}, t = c.team || {};
+      const tm = (bx.teams || []).find((x) => (x.team || {}).id === t.id || x.homeAway === ha) || {};
+      const stats = {};
+      for (const x of tm.statistics || []) stats[x.name] = x.displayValue;
+      const pl = (bx.players || []).find((x) => (x.team || {}).id === t.id) || {}, grp = (pl.statistics || [])[0] || {};
+      return { abbr: t.abbreviation || "", name: t.displayName || t.location || t.abbreviation || "", color: t.color ? `#${t.color}` : "",
+        score: c.score != null && c.score !== "" ? Number(c.score) : null, lines: (c.linescores || []).map((l) => l.displayValue ?? l.value ?? ""),
+        stats, labels: grp.labels || [], totals: grp.totals || [],
+        athletes: (grp.athletes || []).map((a) => ({ name: ((a.athlete || {}).shortName) || ((a.athlete || {}).displayName) || "", pos: (((a.athlete || {}).position) || {}).abbreviation || "",
+          starter: !!a.starter, dnp: !!a.didNotPlay || !(a.stats || []).length, reason: a.reason || "", stats: a.stats || [] })) };
+    };
+    return { state: type.state || "pre", detail: type.shortDetail || type.detail || "", period: st.period || 0, clock: st.displayClock || "", away: side("away"), home: side("home") };
+  }
+  componentDidMount() { this.load(); this.tick = setInterval(() => { if (!document.hidden && this.state.boxAt) this.setState({ now: Date.now() }); }, 5000); }
   componentDidUpdate() { this.load(); }
+  componentWillUnmount() { this.stopBox(); clearInterval(this.tick); }
   renderVals() {
     const F = this.F || {}, b = this.state.board, g = this.state.game, T = (b && b.teams) || {};
     const tabs = [["Tonight", "Board.dc.html"], ["Results", "Results.dc.html"], ["All results", "Tracker.dc.html"], ["Season", "Season.dc.html"], ["Record", "Record.dc.html"], ["Methods", "Methods.dc.html"]].map(([label, href]) => ({ label, href }));
@@ -447,6 +570,10 @@ class Component extends DCLogic {
       after = { pending: true, done: false, note: started ? "In progress or awaiting the final. The score and the pick's grade land here the morning after, with the Results page." : `Tip-off ${tipLine || "to come"}. The final score and whether the pick won land here the morning after, with the Results page.` };
     }
 
+    // Live score and box score.
+    const bx = this.boxView(g, away, home, aColor, hColor);
+    if (bx.final && after.pending) after.note = "Final. Whether the pick won is graded the morning after, with the Results page.";
+
     // Prev / next by tip on the same board.
     const ordered = ((b && b.games) || []).slice().sort((x, y) => String(x.tip || "").localeCompare(String(y.tip || "")) || String(x.id).localeCompare(String(y.id)));
     const at = ordered.findIndex((x) => String(x.id) === String(g.id));
@@ -461,7 +588,68 @@ class Component extends DCLogic {
       barAria: `${awayName} ${pct0(aw)}, ${homeName} ${pct0(hw)}`,
       unpriced, unpricedNote, pick, priced,
       hasWhy: why.length > 0, why,
-      hasRatings, cmp, cmpNote, paceLine, lineups, markets, after };
+      hasRatings, cmp, cmpNote, paceLine, lineups, markets, after, bx };
+  }
+  boxView(g, away, home, aColor, hColor) {
+    const B = this.state.box, F = this.F || {}, at = this.state.boxAt, err = this.state.boxErr, now = this.state.now || Date.now();
+    const ago = (ms) => (F.fmtAgo ? F.fmtAgo(ms) : `${Math.max(0, Math.round(ms / 1000))}s ago`);
+    const off = { show: false, title: "", stamp: "", waiting: false, waitNote: "", scored: false, final: false, hasLines: false, hasTeam: false, lineHead: [], lineRows: [], lineCols: "", team: [], players: [] };
+    if (this.state.isSample || !/^\d+$/.test(String(g.id))) return off;
+    if (!B) return { ...off, show: true, title: "Box score", waiting: true, waitNote: err ? `ESPN's live feed did not answer (${err}). Retrying.` : "Connecting to the live feed…" };
+    const stamp = `${err ? "Feed not answering · last " : "Updated "}${ago(now - at)}`;
+    if (B.state === "pre" || B.away.score == null || B.home.score == null) {
+      const tip = Date.parse(g.tip || "");
+      return { ...off, show: true, title: "Box score", stamp, waiting: true, waitNote: `The live score and box score appear here at tip-off${Number.isFinite(tip) ? `, ${new Date(tip).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}` : ""}. This page updates itself.` };
+    }
+    const fin = B.state === "post";
+    const per = (p) => (p === 1 ? "1st" : p === 2 ? "2nd" : p === 3 ? "OT" : `${p - 2}OT`);
+    const state = fin ? (B.detail && /OT/i.test(B.detail) ? B.detail.replace(/\s+/g, " ") : "Final") : /half/i.test(B.detail) ? "Halftime" : B.clock && B.clock !== "0:00" ? `${per(B.period)} ${B.clock}` : `End of ${per(B.period)}`;
+    const a = B.away, h = B.home, lead = a.score === h.score ? null : a.score > h.score ? "away" : "home";
+    // ESPN's sides should be the board's; where they differ the box says ESPN's codes, never a guess.
+    const ab = (s, fb) => s.abbr || fb;
+    const n = Math.max(a.lines.length, h.lines.length, 2);
+    const heads = Array.from({ length: n }, (_, i) => per(i + 1));
+    const lineRow = (s) => ({ cells: [{ text: ab(s, ""), align: "left", weight: 600 }, ...heads.map((_, i) => ({ text: s.lines[i] ?? "–", align: "right", weight: 400 })), { text: String(s.score), align: "right", weight: 700 }] });
+    const num = (v) => { const x = parseFloat(v); return Number.isFinite(x) ? x : null; };
+    const made = (v) => { const m = /^(\d+)-(\d+)$/.exec(String(v || "")); return m ? [Number(m[1]), Number(m[2])] : null; };
+    const pctOf = (v) => { const m = made(v); return m && m[1] ? ` · ${Math.round((m[0] / m[1]) * 100)}%` : ""; };
+    const TEAM = [["Field goals", "fieldGoalsMade-fieldGoalsAttempted", "shot"], ["Three pointers", "threePointFieldGoalsMade-threePointFieldGoalsAttempted", "shot"], ["Free throws", "freeThrowsMade-freeThrowsAttempted", "shot"],
+      ["Rebounds", "totalRebounds", "hi"], ["Offensive rebounds", "offensiveRebounds", "hi"], ["Assists", "assists", "hi"], ["Turnovers", "totalTurnovers", "lo"], ["Steals", "steals", "hi"], ["Blocks", "blocks", "hi"],
+      ["Fouls", "fouls", "lo"], ["Points in the paint", "pointsInPaint", "hi"], ["Fast break points", "fastBreakPoints", "hi"], ["Points off turnovers", "turnoverPoints", "hi"], ["Largest lead", "largestLead", "hi"]];
+    const team = TEAM.map(([label, key, kind]) => {
+      let av = a.stats[key], hv = h.stats[key];
+      if (key === "totalTurnovers") { av = av ?? a.stats.turnovers; hv = hv ?? h.stats.turnovers; }
+      if (av == null && hv == null) return null;
+      let x = kind === "shot" ? (made(av) || [])[0] : num(av), y = kind === "shot" ? (made(hv) || [])[0] : num(hv);
+      if (kind === "lo") { x = x == null ? null : -x; y = y == null ? null : -y; }
+      const win = x == null || y == null || x === y ? null : x > y ? "away" : "home";
+      return { label, away: `${av ?? "–"}${kind === "shot" ? pctOf(av) : ""}`, home: `${hv ?? "–"}${kind === "shot" ? pctOf(hv) : ""}`, awayWeight: win === "away" ? 700 : 400, homeWeight: win === "home" ? 700 : 400 };
+    }).filter(Boolean);
+    const playerTable = (s, fallbackColor) => {
+      const labels = s.labels.length ? s.labels : ["MIN", "PTS", "FG", "3PT", "FT", "REB", "AST", "TO", "STL", "BLK", "OREB", "DREB", "PF"];
+      const keep = ["MIN", "PTS", "FG", "3PT", "FT", "REB", "OREB", "AST", "TO", "STL", "BLK", "PF"].filter((l) => labels.includes(l));
+      const idx = keep.map((l) => labels.indexOf(l));
+      const head = [{ text: "Player", align: "left" }, ...keep.map((l) => ({ text: l, align: "right" }))];
+      const ordered = s.athletes.filter((x) => x.starter).concat(s.athletes.filter((x) => !x.starter && !x.dnp), s.athletes.filter((x) => !x.starter && x.dnp));
+      let firstBench = true;
+      const rows = ordered.map((x) => {
+        const benchStart = !x.starter && firstBench; if (!x.starter) firstBench = false;
+        const nameCell = { text: `${x.name}${x.pos ? ` ${x.pos}` : ""}${x.starter ? "" : ""}`, align: "left" };
+        const cells = x.dnp ? [nameCell, { text: x.reason ? `DNP · ${String(x.reason).toLowerCase()}` : "Did not play", align: "left" }, ...keep.slice(1).map(() => ({ text: "", align: "right" }))]
+          : [nameCell, ...idx.map((i) => ({ text: x.stats[i] ?? "–", align: "right" }))];
+        return { cells, rule: benchStart && ordered.some((y) => y.starter) ? "var(--ink)" : "var(--rule-2)", color: x.dnp ? "var(--mute)" : "var(--ink)", weight: 400 };
+      });
+      if (s.totals.length) rows.push({ cells: [{ text: "Team", align: "left" }, ...idx.map((i) => ({ text: i === labels.indexOf("MIN") ? "" : s.totals[i] ?? "", align: "right" }))], rule: "var(--ink)", color: "var(--ink)", weight: 700 });
+      return { name: `${s.name || s.abbr}${s.score != null ? ` · ${s.score}` : ""}`, color: s.color || fallbackColor, head, rows };
+    };
+    const players = [playerTable(a, aColor), playerTable(h, hColor)].filter((t) => t.rows.length);
+    return { ...off, show: true, title: fin ? "Final score" : "Live score", stamp: fin ? `${err ? "" : "From ESPN · "}${stamp.replace(/^Updated /, "updated ")}` : stamp, scored: true, final: fin,
+      state, stateBg: fin ? "var(--ink)" : "var(--alert)", stateFg: fin ? "var(--paper)" : "var(--on-alert)",
+      awayAbbr: ab(a, away.abbr), homeAbbr: ab(h, home.abbr), awayScore: String(a.score), homeScore: String(h.score),
+      awayScoreColor: lead === "home" ? "var(--mute)" : "var(--ink)", homeScoreColor: lead === "away" ? "var(--mute)" : "var(--ink)",
+      hasLines: a.lines.length > 0 || h.lines.length > 0, lineCols: `minmax(56px,1fr) repeat(${n + 1}, 48px)`,
+      lineHead: [{ text: "", align: "left" }, ...heads.map((t) => ({ text: t, align: "right" })), { text: "T", align: "right" }], lineRows: [lineRow(a), lineRow(h)],
+      hasTeam: team.length > 0, team, players };
   }
 }
 </script>
