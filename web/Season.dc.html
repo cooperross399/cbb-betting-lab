@@ -61,7 +61,7 @@
     </header>
 
     <nav aria-label="Board sections" style="position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--ink);display:flex;overflow-x:auto;scrollbar-width:none;">
-      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
         <a href="{{ t.href }}" aria-current="{{ t.current }}" style="flex:1 1 0;max-width:150px;min-width:64px;display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;white-space:nowrap;text-decoration:none;color:{{ t.color }};border-bottom:3px solid {{ t.line }};">{{ t.label }}</a>
       </sc-for>
     </nav>
@@ -242,7 +242,7 @@ class Component extends DCLogic {
   renderVals() {
     const s = this.state.season, R = this.state.ratings;
     const here = "Season.dc.html";
-    const tabs = [["Tonight", "Board.dc.html"], ["Results", "Results.dc.html"], ["All results", "Tracker.dc.html"], ["Season", "Season.dc.html"], ["Record", "Record.dc.html"], ["Methods", "Methods.dc.html"]].map(([label, href]) => ({ label, href, current: href === here ? "page" : "false", color: href === here ? "var(--ink)" : "var(--mute)", line: href === here ? "var(--ink)" : "transparent" }));
+    const tabs = [["Tonight", "Board.dc.html"], ["Results", "Results.dc.html"], ["Season", "Season.dc.html"], ["Record", "Record.dc.html"], ["Tracker", "Tracker.dc.html"]].map(([label, href]) => ({ label, href, current: href === here ? "page" : "false", color: href === here ? "var(--ink)" : "var(--mute)", line: href === here ? "var(--ink)" : "transparent" }));
     const base = { tabs, isSample: !!this.state.isSample };
     const signed = (v, dp) => (typeof v === "number" ? `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(dp == null ? 1 : dp)}` : "—");
     const hideLogo = (e) => { e.currentTarget.style.display = "none"; };

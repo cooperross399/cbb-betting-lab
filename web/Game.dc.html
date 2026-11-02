@@ -59,7 +59,7 @@
     </header>
 
     <nav aria-label="Board sections" style="position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--ink);display:flex;overflow-x:auto;scrollbar-width:none;">
-      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
         <a href="{{ t.href }}" style="flex:1 1 0;max-width:150px;min-width:64px;display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;white-space:nowrap;text-decoration:none;color:var(--mute);">{{ t.label }}</a>
       </sc-for>
     </nav>
@@ -433,7 +433,7 @@ class Component extends DCLogic {
   componentWillUnmount() { this.stopBox(); clearInterval(this.tick); }
   renderVals() {
     const F = this.F || {}, b = this.state.board, g = this.state.game, T = (b && b.teams) || {};
-    const tabs = [["Tonight", "Board.dc.html"], ["Results", "Results.dc.html"], ["All results", "Tracker.dc.html"], ["Season", "Season.dc.html"], ["Record", "Record.dc.html"], ["Methods", "Methods.dc.html"]].map(([label, href]) => ({ label, href }));
+    const tabs = [["Tonight", "Board.dc.html"], ["Results", "Results.dc.html"], ["Season", "Season.dc.html"], ["Record", "Record.dc.html"], ["Tracker", "Tracker.dc.html"]].map(([label, href]) => ({ label, href }));
     const base = { tabs, isSample: !!this.state.isSample };
     if (!g) return { ...base, ready: false, missing: true, missingTitle: this.state.err ? "The board is unreachable" : "No game by that id", missingNote: this.state.err ? "The board's data file did not load." : "The link names a game that is not on this board. A game page lives as long as its board does." };
     const num = (v) => typeof v === "number" && Number.isFinite(v);
