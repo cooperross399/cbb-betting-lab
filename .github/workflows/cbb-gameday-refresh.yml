@@ -588,7 +588,20 @@ jobs:
           PYTHONPATH: src
         run: |
           set -eu
-          python scripts/run_forward_evidence.py --settle --competition cbb
+          # Exit 3 is PROPS_EXCLUDED: the pass settled and reconciled, and the
+          # player markets went ungraded because no wager census can reconcile
+          # on a runner. That is the state of every runner, so it is not a
+          # failed settle: the step succeeds, says so in `props_excluded`, and
+          # the health step names it as a warning. Reading it as a failure
+          # stamped every card degraded and sent the backup slot to re-buy the
+          # board for the same refusal.
+          STATUS=0
+          python scripts/run_forward_evidence.py --settle --competition cbb || STATUS=$?
+          if [ "$STATUS" -eq 3 ]; then
+            echo "props_excluded=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          exit "$STATUS"
 
       - name: Read the settled leans against the closing line
         # The early alarm (Cooper, 2026-10-31; decision 68): whether the
@@ -816,6 +829,11 @@ jobs:
           fi
           if [ "${{ steps.line_moves.outcome }}" != "success" ]; then
             echo "::warning::The line-movement captures were not read (outcome: ${{ steps.line_moves.outcome }}); the card halved no lean for the market's move."
+          fi
+          # PROPS UNGRADED IS NOT A DEGRADED RUN, for the second opinion's
+          # reason: the backup slot would hit the same refusal. Named every run.
+          if [ "${{ steps.settle.outputs.props_excluded }}" = "true" ]; then
+            echo "::warning::Settlement ran, but the player markets went ungraded: no wager census can reconcile on a runner, so every prop row stays in the ledger ungraded. The team markets settled."
           fi
           if [ "${{ steps.closing_alarm.outcome }}" != "success" ]; then
             echo "::warning::The closing-line alarm did not run (outcome: ${{ steps.closing_alarm.outcome }}); the card is unaffected."

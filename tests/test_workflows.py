@@ -2284,6 +2284,7 @@ GAMEDAY_CONTEXT: dict[str, str] = {
     "steps.layer_audit.outcome": "success",
     "steps.line_moves.outcome": "success",
     "steps.closing_alarm.outcome": "success",
+    "steps.settle.outputs.props_excluded": "",
 }
 
 
@@ -2489,6 +2490,35 @@ def run_health(
         },
     )
     return run_block_under_stubs(block, set(), tmp_path)
+
+
+def test_ungraded_props_are_a_warning_and_never_a_degraded_run(tmp_path: Path) -> None:
+    """Every runner refuses to grade a prop (the census inputs are gitignored),
+    so the settle pass exits 3 and the step records `props_excluded`. That
+    used to be read as "Settlement did not run": every card was stamped
+    degraded and the backup slot re-bought the board for the same refusal.
+    It is named as a warning on every run instead, and the run stays clean."""
+    outputs = tmp_path / "data/outputs"
+    outputs.mkdir(parents=True, exist_ok=True)
+    (outputs / "cbb_gameday_card.md").write_text("# CBB card\n", encoding="utf-8")
+    block = rendered(
+        gameday_step("health"),
+        {
+            "steps.feeds.outcome": "success",
+            "steps.settle.outcome": "success",
+            "steps.settle.outputs.props_excluded": "true",
+            "steps.card.outcome": "success",
+            "steps.restore.outcome": "success",
+            "steps.card.outputs.card_degraded": "false",
+            "steps.claims.outcome": "success",
+        },
+    )
+    result = run_block_under_stubs(block, set(), tmp_path)
+    assert result.exit_code == 0 and result.unmodelled == [], result
+    assert "degraded=false\n" in runner_file(tmp_path, "GITHUB_OUTPUT"), (
+        "ungraded props made the run degraded again"
+    )
+    assert "player markets went ungraded" in gameday_step("health")
 
 
 def test_a_card_that_reported_itself_degraded_makes_the_run_degraded(tmp_path: Path) -> None:
