@@ -32,7 +32,10 @@ copied out of it:
     `forward_evidence.report_payload`: per **market and tier**, never pooled
     across Division I.
 
-Nothing here fetches odds, spends a credit, or places a bet.
+Nothing here buys odds from the provider, spends a credit, or places a bet. The
+one price it reads itself is the main line ESPN's free scoreboard posts beside
+each game (`posted_lines`), which fills any game the card's capture does not
+hold.
 """
 
 from __future__ import annotations
@@ -136,6 +139,7 @@ def slate_for(day: date) -> list[dict]:
         tv = " / ".join(sorted({b.get("names", [""])[0] for b in comp.get("broadcasts", []) if b.get("names")})) or "—"
         rec = lambda c: next((r.get("summary", "") for r in c.get("records", []) if r.get("type") == "total"), "")  # noqa: E731
         out.append({
+            "posted": posted_lines(comp, (h.get("team") or {}).get("displayName", ""), (a.get("team") or {}).get("displayName", "")),
             "id": str(ev.get("id")), "tip": ev.get("date"), "neutral": bool(comp.get("neutralSite")),
             "venue": (comp.get("venue") or {}).get("fullName", ""), "city": ((comp.get("venue") or {}).get("address") or {}).get("city", ""), "tv": tv,
             "state": ((ev.get("status") or {}).get("type") or {}).get("state", "pre"),
@@ -143,6 +147,91 @@ def slate_for(day: date) -> list[dict]:
             "away": {"name": (a.get("team") or {}).get("displayName", ""), "abbr": (a.get("team") or {}).get("abbreviation", ""), "color": (a.get("team") or {}).get("color"), "record": rec(a), "score": a.get("score")},
         })
     return out
+
+
+def _american(text) -> int | None:
+    """"-112" / "+400" / "EVEN" -> an American price, or None."""
+    raw = str(text or "").strip().upper()
+    if raw in ("EVEN", "EV", "PK"):
+        return 100
+    try:
+        value = int(float(raw.replace("+", "")))
+    except ValueError:
+        return None
+    return value if abs(value) >= 100 else None
+
+
+def _posted_line(text) -> float | None:
+    """"+10.5" / "-2.5" / "o165.5" / "u165.5" / "PK" -> a line, or None."""
+    raw = str(text or "").strip().lower().lstrip("ou")
+    if raw in ("pk", "pick", "even"):
+        return 0.0
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def posted_lines(comp: dict, home_name: str, away_name: str) -> dict:
+    """The line the scoreboard itself posts for a game, as staged-shape rows.
+
+    ESPN's scoreboard carries one book's main line on every game a book has
+    hung one on (DraftKings, today): the moneyline, the home spread and the
+    total, each with its open and its current price. The card's own capture
+    of the provider's board is a better source — every book, the best price
+    on each side — but it is taken twice a day for the games the card can
+    stake, so a game added after the card ran, a game that tipped before it,
+    and the whole slate on a morning before the first card were drawn with
+    no line at all. This is the fallback that closes that gap: a real price a
+    real book posted, never a model number. A game no book has hung a line on
+    (in practice a Division I side hosting a non-Division I school) has no
+    rows here and stays without a market line.
+
+    Returns `{"rows": [...], "open": {...}}`. `rows` are in the staged
+    columns `best`/`consensus_line`/`best_quote` read (`market` in the lab's
+    keys, `selection`, `line`, `american_odds`, `book`), in ESPN's
+    orientation, which is the board's. `open` is in `opening_prices`' shape.
+    """
+    empty = {"rows": [], "open": {"moneyline": None, "spread": None, "total": None}}
+    odds = next((o for o in (comp.get("odds") or []) if isinstance(o, dict)), None)
+    if not odds:
+        return empty
+    book = ((odds.get("provider") or {}).get("displayName") or (odds.get("provider") or {}).get("name") or "").strip() or None
+    base = {"home_team": home_name, "away_team": away_name, "segment": FULL_GAME, "player": "", "book": book}
+    rows: list[dict] = []
+    opened: dict = {"moneyline": None, "spread": None, "total": None}
+
+    def add(market: str, selection: str, line, price) -> None:
+        if price is None:
+            return
+        rows.append({**base, "market": BOARD_MARKETS[market], "selection": selection,
+                     "line": "" if line is None else line, "american_odds": price})
+
+    ml = odds.get("moneyline") or {}
+    for side in ("home", "away"):
+        add("moneyline", side, None, _american(((ml.get(side) or {}).get("close") or {}).get("odds")))
+    ml_open = {side: _american(((ml.get(side) or {}).get("open") or {}).get("odds")) for side in ("home", "away")}
+    if None not in ml_open.values():
+        opened["moneyline"] = ml_open
+
+    spread = odds.get("pointSpread") or {}
+    home_line = _posted_line(((spread.get("home") or {}).get("close") or {}).get("line"))
+    if home_line is None and finite(odds.get("spread")) is not None:
+        home_line = float(odds["spread"])
+    if home_line is not None:
+        add("spread", "home", home_line, _american(((spread.get("home") or {}).get("close") or {}).get("odds")) or -110)
+        add("spread", "away", -home_line, _american(((spread.get("away") or {}).get("close") or {}).get("odds")) or -110)
+    opened["spread"] = _posted_line(((spread.get("home") or {}).get("open") or {}).get("line"))
+
+    total = odds.get("total") or {}
+    total_line = _posted_line(((total.get("over") or {}).get("close") or {}).get("line"))
+    if total_line is None and finite(odds.get("overUnder")) is not None:
+        total_line = float(odds["overUnder"])
+    if total_line is not None:
+        add("total", "over", total_line, _american(((total.get("over") or {}).get("close") or {}).get("odds")) or -110)
+        add("total", "under", total_line, _american(((total.get("under") or {}).get("close") or {}).get("odds")) or -110)
+    opened["total"] = _posted_line(((total.get("over") or {}).get("open") or {}).get("line"))
+    return {"rows": rows, "open": opened}
 
 
 def ink_for(hex_color: str) -> str:
@@ -1095,8 +1184,17 @@ def build(lab: Path, day: date) -> dict:
         for groups in [c["games"] for c in captures] + [frozen_rows, selected]:
             orient(groups, (hk, ak))
         holding = [c for c in captures if c["games"].get((hk, ak))]
-        mine = holding[-1]["games"][(hk, ak)] if holding else []
+        mine = list(holding[-1]["games"][(hk, ak)]) if holding else []
         opens = opening_prices(holding[0]["games"][(hk, ak)] if len(holding) >= 2 else None)
+        # The scoreboard's posted line fills whatever the card's capture does
+        # not hold, market by market: the capture wins wherever it has a
+        # number, because it is every book's best price rather than one's.
+        posted = g.get("posted") or {}
+        held = {norm_market(r) for r in mine}
+        mine += [r for r in posted.get("rows") or [] if norm_market(r) not in held]
+        for slot_name, value in (posted.get("open") or {}).items():
+            if opens.get(slot_name) is None and slot_name not in held and value is not None:
+                opens[slot_name] = value
         if len(holding) >= 2:
             moved = line_history(holding, (hk, ak))
             if moved:
@@ -1265,7 +1363,7 @@ def main(argv=None) -> int:
     frozen = hist / f"{day.isoformat()}_{board['cardSlot']}.json"
     if not frozen.exists():
         frozen.write_text(text, encoding="utf-8")
-    print(f"board {day} ({board['cardSlot']}): {len(board['games'])} games. No odds were fetched, no credit was spent, and no bet was placed.")
+    print(f"board {day} ({board['cardSlot']}): {len(board['games'])} games, {sum(1 for g in board['games'] if (g.get('spread') or {}).get('current') is not None or (g.get('moneyline') or {}).get('current'))} with a market line. No odds were bought, no credit was spent, and no bet was placed.")
     # The ratings and season pages read the fit the board priced on. They
     # are pages beside the board, not the board: a failure here is a warning
     # and the board stands.
