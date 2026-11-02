@@ -319,6 +319,12 @@ SEED_ALIASES: dict[str, tuple[str, ...]] = {
     # 2026-27, so this alias matters for the historical seasons only.
     "Saint Francis": ("St. Francis (PA) Red Flash", "St Francis PA Red Flash"),
     "St. Thomas-Minnesota": ("St. Thomas (MN) Tommies",),
+    # ESPN's 2026-27 schedule renames two `location`s, and a seed keyed on the
+    # old one stops applying: measured on the first two days of the season,
+    # where the provider's spelling resolved to nothing. Both keys stay, the
+    # old one for the historical seasons.
+    "St. Thomas": ("St. Thomas (MN) Tommies",),
+    "LSU New Orleans": ("New Orleans Privateers",),
     "UT Martin": ("Tenn-Martin Skyhawks",),
     "Texas A&M-Corpus Christi": ("Texas A&M-CC Islanders",),
 }
