@@ -89,7 +89,7 @@ until each holds at least 10 games.
 {generatedAt, nights, firstDate, lastDate, teamPickDefaultUnits: 1,
  overall, byMarket, byTeam, byTier, byPrice, byMonth,
  opinions: {overall, byMarket, byKind},
- rows: [{date, id, kind, group, market, label, price, book, tier, team,
+ rows: [{date, id, kind, group, market, label, price, betDownTo, book, tier, team,
          teams: [away, home], line, result, staked, units, final,
          closeLine, clvPoints}],
  notes: [..]}
@@ -122,3 +122,15 @@ cached schedule, priced on the ratings and venue alone.
           defence, net, tempo, games, form, logo, rank, tonight?: {id, label, vs}}],
  note}
 ```
+
+## Bet down to (2026-11-01)
+
+Every `pick` of kind `bet` or `lean` carries `betDownTo`: the worst American
+price at which it still clears the card's 2% edge bar, floored at the price
+band's −400 (null when no price in the band clears). A card selection carries
+the number `reports.card_pricing.bet_down_to` computed on the probability the
+bar read; a frozen opinion recovers that probability from its own edge and
+price; a model-basis lean reads it off the push-aware win and loss chances.
+The same pick carries `sub` and `extra`, the two lines the shared Board prints
+under its label, with the bet-down-to number in `sub`. `tracker.json` rows
+carry `betDownTo` too.

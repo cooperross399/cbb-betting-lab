@@ -350,9 +350,11 @@ class Component extends DCLogic {
     const p = g.pick || null, kind = p ? (p.kind || "bet") : "none";
     const unpriced = !hasWin || !priced;
     const unpricedNote = !hasWin ? "The model had no number for this game when the board was built, so there is no pick." : "No betting line reached the board for this game, so there is no pick.";
+    // Cooper, 2026-11-01: every pick carries the worst price that still clears the edge bar.
+    const downText = p && num(p.betDownTo) ? ` · bet down to ${odds(p.betDownTo)}` : "";
     const unitsText = p && num(p.units) ? ` · ${p.units} ${p.units === 1 ? "unit" : "units"}` : "";
     const pick = { isBet: !unpriced && kind === "bet", isLean: !unpriced && kind === "lean", isNone: !unpriced && kind !== "bet" && kind !== "lean", label: p ? p.label || "" : "",
-      sub: !p ? "" : kind === "bet" ? `${p.market || ""} at ${odds(p.price)}${p.book ? ` · ${p.book}` : ""}${unitsText}` : kind === "lean" ? `${p.market || ""} at ${odds(p.price)} · a small edge, not enough to bet` : "" };
+      sub: !p ? "" : kind === "bet" ? `${p.market || ""} at ${odds(p.price)}${downText}${p.book ? ` · ${p.book}` : ""}${unitsText}` : kind === "lean" ? `${p.market || ""} at ${odds(p.price)}${downText} · a small edge, not enough to bet` : "" };
 
     // Why: the three biggest reasons behind the number, as sentences.
     const facts = Array.isArray(g.factors) ? g.factors : [];

@@ -167,6 +167,7 @@ from cbb_betting_lab.reports.card_pricing import (
     Bar,
     SelectionResult,
     Wager,
+    bet_down_to_from_edge,
     build_wagers,
     default_key_for,
     select,
@@ -2752,8 +2753,8 @@ def _selections_section(run: CardRun) -> list[str]:
             ]
     else:
         lines += [
-            "| Game | Market | Selection | Price | Book | Model | Edge | Push mass | Prior weight | Tier |",
-            "|:---|:---|:---|---:|:---|---:|---:|---:|---:|:---|",
+            "| Game | Market | Selection | Price | Bet down to | Book | Model | Edge | Push mass | Prior weight | Tier |",
+            "|:---|:---|:---|---:|---:|:---|---:|---:|---:|---:|:---|",
         ]
         for row in run.selections:
             push = row.get("push_mass")
@@ -2764,6 +2765,7 @@ def _selections_section(run: CardRun) -> list[str]:
                 f"| {row['market']} ({row['segment']}) "
                 f"| {row['selection']}{line} "
                 f"| {float(row['american_odds']):+g} "
+                f"| {_bet_down_to_cell(row)} "
                 f"| {row['book']} "
                 f"| {float(row['model_probability']):.1%} "
                 f"| {float(row['edge']):+.2%} "
@@ -2772,6 +2774,12 @@ def _selections_section(run: CardRun) -> list[str]:
                 f"| {row['tier']} |"
             )
         lines += [
+            "",
+            f"**Bet down to** is the worst price at which the wager still "
+            f"clears the card's {EDGE_THRESHOLD:.0%} edge bar on the "
+            "probability the bar read, floored at the price band's "
+            f"{PRICE_BAND[0]:+g}. Below it the same wager would not be a "
+            "selection.",
             "",
             "Each edge is stated **per wager** and none of them is added to "
             "another. A game's spread, its moneyline, both team totals, the "
@@ -2800,6 +2808,15 @@ def _selections_section(run: CardRun) -> list[str]:
         lines += [f"* {note}" for note in run.tip.withdrawn_after_pricing]
         lines.append("")
     return lines
+
+
+def _bet_down_to_cell(row: Mapping) -> str:
+    """The selection's bet-down-to price, as `card_pricing.select` computed it,
+    or recovered from its edge and price for a row that predates the column."""
+    number = row.get("bet_down_to")
+    if number is None:
+        number = bet_down_to_from_edge(row.get("edge"), row.get("american_odds"))
+    return "—" if number is None else f"{int(number):+d}"
 
 
 def _exposure_section(run: CardRun) -> list[str]:

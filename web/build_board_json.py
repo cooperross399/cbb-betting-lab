@@ -41,6 +41,7 @@ import argparse
 import csv
 import glob
 import json
+import math
 import sys
 import urllib.request
 from datetime import date, datetime, timezone
@@ -176,6 +177,12 @@ def percent(value: object):
     """A share as a percentage to one decimal, or None. See :func:`finite`."""
     number = finite(value)
     return None if number is None else round(100 * number, 1)
+
+
+def finite_int(value: object):
+    """A whole number, or None. See :func:`finite`."""
+    number = finite(value)
+    return None if number is None else int(number)
 
 
 def to_american(p: float) -> int:
@@ -698,6 +705,58 @@ def in_lean_band(price) -> bool:
     return number is not None and LEAN_PRICE_BAND[0] <= number <= LEAN_PRICE_BAND[1]
 
 
+def american_at_least(profit: float):
+    """The worst whole American price paying at least `profit` per unit, or
+    None. Up for a plus price, toward zero for a minus price, so the price
+    returned always pays the profit asked for."""
+    if profit is None or profit != profit or profit <= 0:
+        return None
+    if profit >= 1.0:
+        american = math.ceil(round(100.0 * profit, 9))
+        while american / 100.0 < profit:
+            american += 1
+        return int(american)
+    american = math.floor(round(100.0 / profit, 9))
+    while 100.0 / american < profit:
+        american -= 1
+    return 100 if american <= 100 else -int(american)
+
+
+def bet_down_to(win, loss=None):
+    """The worst price at which this side still clears :data:`LEAN_EDGE` —
+    Cooper's "bet down to" number (2026-11-01), the same cut the card applies
+    in `reports.card_pricing.bet_down_to`.
+
+    `win` and `loss` are the side's chances; with no push, `loss = 1 - win`.
+    Edge at a payout `x` is `win * x - loss`, so the bar clears from
+    `x = (LEAN_EDGE + loss) / win`. Floored at the band's low end, because no
+    price below it is ever shown; None when even the band's best price cannot
+    clear, or there is no chance to read."""
+    w = finite(win)
+    if w is None or w <= 0:
+        return None
+    lose = 1.0 - w if loss is None else finite(loss)
+    if lose is None:
+        return None
+    american = american_at_least((LEAN_EDGE + lose) / w)
+    if american is None:
+        return int(LEAN_PRICE_BAND[0])
+    if american > LEAN_PRICE_BAND[1]:
+        return None
+    return int(max(american, LEAN_PRICE_BAND[0]))
+
+
+def bet_down_to_from_edge(edge, price):
+    """:func:`bet_down_to` for a frozen or selected row, recovering the
+    probability the edge was read on from the edge and the price — a
+    selection's `model_probability` holds the model's own number while its
+    edge was read on the trust-weighted one."""
+    e, number = finite(edge), finite(price)
+    if e is None or number is None or number == 0:
+        return None
+    return bet_down_to((1.0 + e) / (1.0 + profit_per_unit(number)))
+
+
 def pick_from_frozen(frozen_rows: list[dict], home_abbr: str, away_abbr: str, selected=(), allowlist=()) -> dict | None:
     """The card's pick on this game, and what it is.
 
@@ -735,12 +794,42 @@ def pick_from_frozen(frozen_rows: list[dict], home_abbr: str, away_abbr: str, se
     label = {"moneyline": f"{side} ML", "spread": f"{side} {line:+.1f}".replace("-", "\u2212") if line is not None else side, "total": f"{sel.capitalize()} {line:g}" if line is not None else sel}[m]
     model_probability = finite(top.get("model_probability"))
     edge = finite(top.get("edge"))
+    # The card records its own bet-down-to on a selection; a frozen opinion
+    # carries none, so it is recovered from the row's edge and price.
+    recorded_floor = finite_int(top.get("bet_down_to"))
     leaning = (not chosen and edge is not None and edge >= LEAN_EDGE
                and lean_allowed(m, allowlist) and in_lean_band(price))
-    return {"kind": "bet" if chosen else "lean" if leaning else "pass", "basis": "frozen", "market": MARKETS[m], "label": label, "price": price, "book": top.get("book"), "tier": top.get("tier") or None,
+    return with_display({"kind": "bet" if chosen else "lean" if leaning else "pass", "basis": "frozen", "market": MARKETS[m], "label": label, "price": price, "book": top.get("book"), "tier": top.get("tier") or None,
             "units": 1.0 if chosen else None, "edgePct": percent(top.get("edge")),
+            "betDownTo": recorded_floor if recorded_floor is not None else bet_down_to_from_edge(top.get("edge"), price),
             "modelProb": None if model_probability is None else round(model_probability, 4),
-            **pick_side_and_line(m, sel, line)}
+            **pick_side_and_line(m, sel, line)})
+
+
+def fmt_odds(number) -> str:
+    """`web/lib/format.js::fmtOdds`: +225, or −110 with a true minus sign."""
+    n = int(number)
+    return f"+{n}" if n > 0 else f"\u2212{abs(n)}"
+
+
+def with_display(pick: dict | None) -> dict | None:
+    """The two lines the shared Board prints under a pick's label, `sub` and
+    `extra`, with the bet-down-to number on every bet and lean (Cooper,
+    2026-11-01: "always include a bet down to number"). The Board hides
+    `extra` on a lean, so the number rides in `sub`, which it shows on both."""
+    if not pick or pick.get("kind") not in ("bet", "lean"):
+        return pick
+    floor = pick.get("betDownTo")
+    sub = f"{pick.get('market') or ''} at {fmt_odds(pick['price'])}"
+    sub += f" \u00b7 bet down to {fmt_odds(floor)}" if floor is not None else ""
+    if pick["kind"] == "bet":
+        units = pick.get("units")
+        extra = " \u00b7 ".join(
+            part for part in (pick.get("book") or "", f"{units:g} unit{'' if units == 1 else 's'}" if units else "") if part
+        )
+    else:
+        extra = ""
+    return {**pick, "sub": sub, "extra": extra}
 
 
 def pick_side_and_line(market: str, selection: str, line: object) -> dict:
@@ -804,7 +893,7 @@ def pick_from_model(mine: list[dict], pr: dict, home_abbr: str, away_abbr: str, 
         if quote is None or win is None:
             return
         price, book = quote
-        sides.append((win * profit_per_unit(price) - loss, market, selection, line, win, price, book))
+        sides.append((win * profit_per_unit(price) - loss, market, selection, line, win, price, book, loss))
 
     hw = finite(pr.get("home_win"))
     if hw is not None:
@@ -821,13 +910,13 @@ def pick_from_model(mine: list[dict], pr: dict, home_abbr: str, away_abbr: str, 
     sides = [s for s in sides if in_lean_band(s[5])]
     if not sides:
         return None
-    edge, m, sel, line, win, price, book = max(sides, key=lambda s: s[0])
+    edge, m, sel, line, win, price, book, loss = max(sides, key=lambda s: s[0])
     side = home_abbr if sel == "home" else away_abbr if sel == "away" else sel.capitalize()
     label = {"moneyline": f"{side} ML", "spread": f"{side} {line:+.1f}".replace("-", "\u2212") if line is not None else side,
              "total": f"{sel.capitalize()} {line:g}" if line is not None else sel}[m]
     leaning = edge >= LEAN_EDGE and lean_allowed(m, allowlist)
-    return {"kind": "lean" if leaning else "pass", "basis": "model", "market": MARKETS[m], "label": label, "price": price, "book": book,
-            "tier": None, "units": None, "edgePct": percent(edge), "modelProb": round(win, 4), **pick_side_and_line(m, sel, line)}
+    return with_display({"kind": "lean" if leaning else "pass", "basis": "model", "market": MARKETS[m], "label": label, "price": price, "book": book,
+            "tier": None, "units": None, "edgePct": percent(edge), "betDownTo": bet_down_to(win, loss), "modelProb": round(win, 4), **pick_side_and_line(m, sel, line)})
 
 
 def load_status(lab: Path, day: date) -> dict:
