@@ -144,3 +144,24 @@ def test_loyola_chicago_and_loyola_maryland_are_not_the_same_school(index):
     a = index.resolve("Loyola (Chi) Ramblers")
     b = index.resolve("Loyola (MD) Greyhounds")
     assert a is not None and b is not None and a != b
+
+
+def test_the_2026_27_renames_still_resolve() -> None:
+    """ESPN's 2026-27 schedule calls St. Thomas (MN) `St. Thomas` and New
+    Orleans `LSU New Orleans`. The provider kept its spellings, and on the
+    season's second day the forward settle reported St. Thomas unresolved."""
+    import pandas as pd
+
+    rows = [
+        {"home_id": 2900, "home_location": "St. Thomas", "home_display_name": "St. Thomas Tommies",
+         "home_short_display_name": "St Thomas", "home_name": "Tommies", "home_conference_id": 49,
+         "away_id": 2443, "away_location": "LSU New Orleans", "away_display_name": "LSU New Orleans Privateers",
+         "away_short_display_name": "LSU New Orleans", "away_name": "Privateers", "away_conference_id": 25},
+        {"home_id": 606, "home_location": "St. Thomas (FL)", "home_display_name": "St. Thomas (FL) Bobcats",
+         "home_short_display_name": "St Thomas FL", "home_name": "Bobcats", "home_conference_id": None,
+         "away_id": 2900, "away_location": "St. Thomas", "away_display_name": "St. Thomas Tommies",
+         "away_short_display_name": "St Thomas", "away_name": "Tommies", "away_conference_id": 49},
+    ]
+    index = T.build_index(pd.DataFrame(rows))
+    assert index.resolve("St. Thomas (MN) Tommies") == 2900
+    assert index.resolve("New Orleans Privateers") == 2443
