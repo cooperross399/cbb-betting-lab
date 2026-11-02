@@ -2,7 +2,7 @@
 
 Generated from the measurement records on disk, so it cannot drift from them. The hand-written rules — written before the first measurement, which is the whole point of them — live in `docs/what_we_can_and_cannot_claim.md`. **This file is re-rendered from its own run record and is never edited by hand.**
 
-- Generated: 2026-11-01T20:02:25+00:00
+- Generated: 2026-11-02T12:03:51+00:00
 - Sample floor: **200 bets**, declared in advance. Below it this document prints a phrase and not a number.
 
 **The only result that survives is a loss.** 32 market-and-tier cell(s) across 10 market(s) are measured against real prices. None excludes zero on the winning side; 5 exclude(s) it on the **losing** side after correcting for everything this lab has ever tested, which is a **demonstrated deficit**: `moneyline` / high_major (historical price backtest, bets) at -11.1% over 4,393 bets across 609 days; `moneyline` / mid_major (historical price backtest, bets) at -8.0% over 8,873 bets across 648 days; `team_total` / mid_major (historical price backtest, bets) at -6.3% over 11,618 bets across 345 days; `moneyline` / low_major (historical price backtest, bets) at -9.8% over 6,967 bets across 590 days; `total_points` / low_major (historical price backtest, bets) at -5.2% over 17,978 bets across 7,137 games. A demonstrated deficit is a finding, not a null result, and it is the finding this lab has.
@@ -164,7 +164,7 @@ Sized to **demonstrate** the edge, not merely to observe it: at 80% power and at
 
 - Experiment ledger: `data/outputs/experiment_ledger.json` — read
 - Price backtest: `data/outputs/cbb_price_backtest.json` — read
-- Forward-evidence ledger: `data/processed/cbb_forward_evidence.csv` — **not found**, so this document says nothing about it
+- Forward-evidence ledger: `data/processed/cbb_forward_evidence.csv` — **present and unreadable** — WagerCountMismatch: forward_evidence.report_payload was handed 8 player market(s) ['player_assists', 'player_points', 'player_points_assists', 'player_points_rebounds', 'player_pra', 'player_rebounds', 'player_rebounds_assists', 'player_threes'] and no wager census has reconciled in this process. Design section 10 gates grading on reconciling the store's wager count (261,870 under the book's own spelling, 257,474 under a casefold, a difference of 4,396 that must be named wager by wager) and the run stops until it does. Call `cbb_betting_lab.models.player_census.assert_reconciles()` first, or grade nothing.
 - Replication record: `data/outputs/holdout/cbb_replication.json` — read
 
 A file that is missing and a file that is unreadable are reported differently and deliberately. An unreadable measurement is a broken instrument, and reporting a broken instrument as *nothing measured* turns a fault into a null result.
