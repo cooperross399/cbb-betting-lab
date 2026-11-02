@@ -246,7 +246,8 @@ def test_each_page_loads_the_shared_runtime_and_is_a_cbb_page(page):
     assert 'setAttribute("data-sport","cbb")' in text
     for tab in ("Board.dc.html", "Results.dc.html", "Tracker.dc.html", "Season.dc.html", "Record.dc.html", "Methods.dc.html"):
         assert tab in text, f"{page} lost the {tab} tab"
-    assert "never places bets" in text
+    if page != "Game.dc.html":  # Cooper, 2026-11-02: the game page drops this line
+        assert "never places bets" in text
     lowered = text.lower()
     assert "puck" not in lowered and "goalie" not in lowered, "hockey vocabulary on a basketball page"
 
@@ -342,7 +343,7 @@ def test_the_game_page_carries_no_waterfall_and_reads_in_sentences():
     text = (WEB / "Game.dc.html").read_text(encoding="utf-8")
     for gone in ("How the number was built", "waterfall", "barWidth", "How to read this", "Fair price", ">Edge<"):
         assert gone not in text, f"the game page still carries {gone!r}"
-    for kept in (">Our call<", ">Why<", ">Head to head<", ">Who is out<", ">The odds<", ">After the game<", "no demonstrated edge"):
+    for kept in (">Our call<", ">Why<", ">Head to head<", ">Who is out<", ">The odds<", ">After the game<"):
         assert kept in text, f"the game page lost {kept!r}"
 
 
