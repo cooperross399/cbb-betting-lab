@@ -756,7 +756,7 @@ def tracker_rows(graded: list[dict], settle=None, lines_for=None) -> list[dict]:
         home, away = (g.get("home") or {}).get("abbr"), (g.get("away") or {}).get("abbr")
         rows.append({
             "date": row["date"], "id": str(g.get("id")), "kind": kind, "group": "team",
-            "market": str(pick.get("market") or ""), "label": pick.get("label"), "price": price, "book": pick.get("book"),
+            "market": str(pick.get("market") or ""), "label": pick.get("label"), "price": price, "betDownTo": _int(pick.get("betDownTo")), "book": pick.get("book"),
             "tier": pick.get("tier"), "team": _side_abbr(pick, g), "teams": [away, home], "line": _num(pick.get("line")),
             "result": result, "staked": stake, "units": units, "final": f"{away} {af}, {home} {hf}",
             **_closing_fields(pick, g, lines_for, row["date"]),

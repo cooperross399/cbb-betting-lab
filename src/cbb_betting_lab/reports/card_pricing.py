@@ -66,6 +66,7 @@ first written on the night it first binds is a cap chosen to fit the night.
 from __future__ import annotations
 
 import hashlib
+import math
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from enum import Enum
@@ -91,7 +92,7 @@ from cbb_betting_lab.selection import (
 # this import loudly at import time; a duplicate would drift silently, and a
 # report that disagrees with the ledger about what "edge" means is a report
 # whose every number has to be re-derived before it can be read.
-from cbb_betting_lab.forward_evidence import expected_value
+from cbb_betting_lab.forward_evidence import decimal_payout, expected_value
 
 
 #: The edge a wager must clear to be a selection rather than an opinion.
@@ -439,6 +440,82 @@ def in_price_band(odds: float, band: tuple[float, float] = PRICE_BAND) -> bool:
     return low <= float(odds) <= high
 
 
+def bet_down_to(
+    probability: object,
+    *,
+    threshold: float = EDGE_THRESHOLD,
+    price_band: tuple[float, float] = PRICE_BAND,
+) -> int | None:
+    """The worst American price at which this wager still clears the edge bar.
+
+    Cooper's "bet down to" number (2026-11-01): a selection taken at +225 whose
+    probability clears the bar down to +219 is printed "bet down to +219", so a
+    price that has moved since the card was written can be judged without
+    re-running anything. It is the same cut :func:`select` applies and nothing
+    else: `p·(1 + payout) − 1 ≥ threshold`, so the least payout per unit that
+    clears is `(1 + threshold) / p − 1`, rounded to the whole American price
+    that still clears (up for a plus price, toward zero for a minus price).
+
+    Floored at the band's low end, because the card never takes a price below
+    it whatever the edge says. `None` when there is no probability, or when even
+    the band's best price cannot clear — there is no number to bet down to.
+    This never decides anything; it restates a bar that has already been read.
+    """
+    p = _as_float(probability)
+    if p is None or not 0.0 < p < 1.0:
+        return None
+    need = (1.0 + float(threshold)) / p - 1.0  # least profit per unit staked
+    if need <= 0:
+        return int(price_band[0])
+    if need >= 1.0:
+        american = math.ceil(round(100.0 * need, 9))
+    else:
+        american = -math.floor(round(100.0 / need, 9))
+        if american == -100:
+            american = 100
+    # The bar is read by `select` in floating point; step to the next whole
+    # price until that exact arithmetic clears, so the number printed is one
+    # the card would really have taken.
+    for _ in range(3):
+        value = expected_value(p, american)
+        if value is not None and value >= threshold:
+            break
+        american = american + 1 if american > 0 else (101 if american == -101 else american + 1)
+    low, high = price_band
+    if american > high:
+        return None
+    if american < low:
+        return int(low)
+    return int(american)
+
+
+def bet_down_to_from_edge(
+    edge: object,
+    american_odds: object,
+    *,
+    threshold: float = EDGE_THRESHOLD,
+    price_band: tuple[float, float] = PRICE_BAND,
+) -> int | None:
+    """:func:`bet_down_to` for a row that kept its edge and price but not the
+    probability the edge was read on.
+
+    A selection's `model_probability` is the model's own number once the trust
+    table has been applied, while its `edge` was read on the trusted one — so
+    the probability the bar actually read is recovered from the edge and the
+    price, `(1 + edge) / (1 + payout)`, rather than taken from a column that
+    holds a different number.
+    """
+    e = _as_float(edge)
+    if e is None:
+        return None
+    payout = decimal_payout(american_odds)
+    if payout is None or payout == float("-inf") or payout <= 0:
+        return None
+    return bet_down_to(
+        (1.0 + e) / (1.0 + payout), threshold=threshold, price_band=price_band
+    )
+
+
 def select(
     wagers: Iterable[Wager],
     probabilities: Mapping | None,
@@ -520,6 +597,9 @@ def select(
                 "wager": wager,
                 "edge": float(best_edge),
                 "probability": float(probability),
+                "bet_down_to": bet_down_to(
+                    probability, threshold=threshold, price_band=price_band
+                ),
                 "american_odds": float(best_quote.american_odds),
                 "book": best_quote.book,
                 "quotes": len(wager.quotes),
@@ -578,6 +658,7 @@ def _apply_exposure_caps(
                 "book": candidate["book"],
                 "model_probability": candidate["probability"],
                 "edge": candidate["edge"],
+                "bet_down_to": candidate.get("bet_down_to"),
                 "quotes_seen": candidate["quotes"],
                 "label": wager.label(),
             }
