@@ -9,12 +9,12 @@
 <body>
 <x-dc>
 <helmet>
-  <title>Record — Maverick Hightower</title>
+  <title>Our record — Maverick Hightower</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Does the win chance mean what it says? Our published college basketball numbers against what happened: by chance, by tier, against the market, and after our picks.">
+  <meta name="description" content="How the college basketball picks have done this season, in plain English: wins, losses, units won or lost, and how often our win chances came true.">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Maverick Hightower">
-  <meta property="og:title" content="Record — Maverick Hightower">
+  <meta property="og:title" content="Our record — Maverick Hightower">
   <meta property="og:image" content="https://maverickhightower.com/share.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@mavhightower">
@@ -31,6 +31,8 @@
     a:focus-visible, button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
     .mono { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
     .cond { font-family: "Barlow Condensed", sans-serif; }
+    .chip { min-height: 36px; padding: 0 12px; border: 1px solid var(--ink); background: transparent; color: var(--ink); font-family: "IBM Plex Mono", monospace; font-size: 12px; cursor: pointer; white-space: nowrap; }
+    .th { background: transparent; border: 0; padding: 0; color: var(--mute); font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; min-height: 32px; text-align: inherit; }
     .skip { position: absolute; left: 12px; top: -60px; background: var(--ink); color: var(--paper); padding: 10px 14px; z-index: 10; font-size: 14px; }
     .skip:focus { top: 12px; }
     @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
@@ -67,113 +69,173 @@
     <sc-if value="{{ isSample }}" hint-placeholder-val="{{ false }}">
       <div role="status" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:start;padding:14px 0;border-bottom:1px solid var(--ink);">
         <span class="cond" style="font-weight:700;font-size:14px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--ink);padding:4px 9px;">Sample</span>
-        <p style="margin:0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:760px;text-wrap:pretty;">Sample figures. On the live site this page is rebuilt from every published board and its final scores.</p>
+        <p style="margin:0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:760px;text-wrap:pretty;">Sample results, invented for the preview. On the live site every row is a pick from a published board, graded on the final score.</p>
       </div>
     </sc-if>
 
     <section id="main" style="padding:30px 0 22px;border-bottom:1px solid var(--ink);">
-      <div style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">Record · {{ throughLine }}</div>
-      <h1 class="cond" style="margin:8px 0 0;font-weight:800;font-size:clamp(34px,6vw,60px);line-height:.95;text-transform:uppercase;letter-spacing:.01em;max-width:14ch;">Does the win chance mean what it says?</h1>
-      <p style="margin:14px 0 0;font-size:16px;line-height:1.55;color:var(--ink-2);max-width:720px;text-wrap:pretty;">Every number we publish is checked against what happened. This page is about whether the numbers are honest, not whether they made money; the money is on <a href="Tracker.dc.html" style="text-decoration:underline;text-underline-offset:3px;">All results</a>.</p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:0 20px;margin-top:18px;border-top:2px solid var(--ink);max-width:760px;">
-        <sc-for list="{{ headline }}" as="c" hint-placeholder-count="4">
-          <div style="padding:12px 0;"><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ c.label }}</div><div class="cond" style="font-weight:700;font-size:34px;line-height:1;margin-top:6px;">{{ c.value }}</div><div class="mono" style="font-size:12px;color:var(--ink-2);margin-top:4px;">{{ c.sub }}</div></div>
-        </sc-for>
-      </div>
+      <div style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ kicker }}</div>
+      <h1 class="cond" style="margin:8px 0 0;font-weight:800;font-size:clamp(34px,6vw,60px);line-height:.95;text-transform:uppercase;letter-spacing:.01em;max-width:14ch;">Our<br>record</h1>
+      <p style="margin:14px 0 0;font-size:clamp(17px,2.4vw,22px);line-height:1.35;font-weight:500;max-width:760px;text-wrap:pretty;">{{ headline }}</p>
+      <p style="margin:10px 0 0;font-size:15px;line-height:1.5;color:var(--ink-2);max-width:760px;text-wrap:pretty;">A <strong>unit</strong> (u) is one standard bet. +5u means the picks are up five standard bets; −5u means down five. Win–loss–push counts every graded pick; a push is a tie that refunds the bet.</p>
     </section>
 
     <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
       <section style="padding:40px 0;">
         <div style="border:1px dashed var(--mute);padding:16px 18px;max-width:760px;">
           <div class="cond" style="font-weight:700;font-size:22px;line-height:1;text-transform:uppercase;color:var(--mute);">{{ emptyTitle }}</div>
-          <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);">{{ emptyNote }}</p>
+          <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);">{{ emptyNote }} <sc-if value="{{ emptyLink }}" hint-placeholder-val="{{ true }}">Until then, <a href="Board.dc.html" style="text-decoration:underline;text-underline-offset:3px;">tonight's board</a> has the picks.</sc-if></p>
         </div>
       </section>
     </sc-if>
 
     <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
 
-      <section aria-labelledby="cal-h" style="padding:26px 0 24px;border-bottom:1px solid var(--ink);">
-        <h2 id="cal-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">By the chance we gave the favourite</h2>
-        <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:720px;text-wrap:pretty;">Games are grouped by the win chance we published for the side we favoured. In each band, the favourite should win about as often as we said. The bar is the share that did; the thin line is the range the sample can support.</p>
-        <div style="margin-top:14px;border-top:2px solid var(--ink);max-width:960px;">
-          <div class="mono" style="display:grid;grid-template-columns:110px 70px minmax(120px,1fr) 80px 80px;gap:0 12px;padding:6px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);"><span>Published</span><span style="text-align:right;">Games</span><span>Favourite won</span><span style="text-align:right;">We said</span><span style="text-align:right;">Gap</span></div>
-          <sc-for list="{{ buckets }}" as="b" hint-placeholder-count="6">
-            <div style="display:grid;grid-template-columns:110px 70px minmax(120px,1fr) 80px 80px;gap:0 12px;padding:9px 0;border-top:1px solid var(--rule-2);align-items:center;">
-              <span class="mono" style="font-size:13px;">{{ b.band }}</span>
-              <span class="mono" style="font-size:13px;text-align:right;color:var(--mute);">{{ b.games }}</span>
-              <span style="position:relative;height:16px;background:var(--rule-2);" aria-hidden="true">
-                <span style="position:absolute;top:0;bottom:0;left:0;width:{{ b.actualWidth }}%;background:{{ b.barColor }};opacity:.75;"></span>
-                <span style="position:absolute;top:7px;height:2px;left:{{ b.loWidth }}%;width:{{ b.spanWidth }}%;background:var(--ink);"></span>
-                <span style="position:absolute;top:-3px;bottom:-3px;left:{{ b.predictedWidth }}%;width:2px;background:var(--alert);"></span>
-              </span>
-              <span class="mono" style="font-size:13px;text-align:right;">{{ b.predicted }}</span>
-              <span class="mono" style="font-size:13px;text-align:right;color:{{ b.gapColor }};">{{ b.gap }}</span>
+      <section aria-label="Totals" style="padding:22px 0;border-bottom:1px solid var(--ink);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:16px 32px;">
+        <sc-for list="{{ cards }}" as="c" hint-placeholder-count="2">
+          <div style="border-top:2px solid var(--ink);padding-top:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><span class="cond" style="font-weight:700;font-size:18px;text-transform:uppercase;">{{ c.title }}</span><span class="mono" style="font-size:12px;color:var(--mute);">{{ c.stamp }}</span></div>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 12px;margin-top:8px;">
+              <div><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">Record</div><div class="cond" style="font-weight:700;font-size:34px;line-height:1;margin-top:6px;">{{ c.record }}</div></div>
+              <div><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ c.unitsLabel }}</div><div class="cond" style="font-weight:700;font-size:34px;line-height:1;margin-top:6px;color:{{ c.unitsColor }};">{{ c.units }}</div></div>
+              <div><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ c.rateLabel }}</div><div class="cond" style="font-weight:700;font-size:34px;line-height:1;margin-top:6px;">{{ c.rate }}</div></div>
+            </div>
+            <p style="margin:8px 0 0;font-size:12px;line-height:1.5;color:var(--mute);">{{ c.note }}</p>
+          </div>
+        </sc-for>
+      </section>
+
+      <section aria-labelledby="tiers-h" style="padding:22px 0;border-bottom:1px solid var(--ink);">
+        <h2 id="tiers-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">By level of game</h2>
+        <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:720px;text-wrap:pretty;">Best bets split by the bigger of the two schools in the game: power conferences, the middle of Division I, and the smallest leagues. A pick that works in one can fail in another, so we keep them apart.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px 24px;margin-top:14px;">
+          <sc-for list="{{ tierCards }}" as="t" hint-placeholder-count="3">
+            <div style="border:1px solid var(--rule);padding:12px 14px;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="cond" style="font-weight:700;font-size:16px;text-transform:uppercase;">{{ t.label }}</span><span class="mono" style="font-size:11px;color:var(--mute);">{{ t.bets }} bets</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px;"><span class="mono" style="font-size:15px;">{{ t.record }}</span><span class="cond" style="font-weight:700;font-size:24px;line-height:1;color:{{ t.color }};">{{ t.units }}</span></div>
+              <div class="mono" style="font-size:11px;color:var(--mute);margin-top:4px;">{{ t.sub }}</div>
             </div>
           </sc-for>
         </div>
-        <p class="mono" style="margin:8px 0 0;font-size:11px;color:var(--mute);">Bar: share the favourite won. Red tick: the average chance we published in that band. Black line: 95% interval on the share.</p>
       </section>
 
-      <section aria-labelledby="tier-h" style="padding:26px 0 24px;border-bottom:1px solid var(--ink);">
-        <h2 id="tier-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">By tier</h2>
-        <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:720px;text-wrap:pretty;">High-major, mid-major and low-major games are measured apart, because a number that holds in one can fail in another and a pooled figure would hide it. A game is filed under the higher of its two teams' tiers.</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:16px 32px;margin-top:14px;">
-          <sc-for list="{{ tiers }}" as="t" hint-placeholder-count="3">
-            <div style="border-top:2px solid var(--ink);">
-              <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0 4px;"><span class="cond" style="font-weight:700;font-size:18px;text-transform:uppercase;">{{ t.label }}</span><span class="mono" style="font-size:12px;color:var(--mute);">{{ t.stamp }}</span></div>
-              <sc-for list="{{ t.rows }}" as="b" hint-placeholder-count="4">
-                <div style="display:grid;grid-template-columns:72px 40px minmax(60px,1fr) 56px;gap:0 8px;padding:6px 0;border-top:1px solid var(--rule-2);align-items:center;font-size:12px;" class="mono">
-                  <span>{{ b.band }}</span><span style="text-align:right;color:var(--mute);">{{ b.games }}</span>
-                  <span style="position:relative;height:10px;background:var(--rule-2);" aria-hidden="true"><span style="position:absolute;top:0;bottom:0;left:0;width:{{ b.actualWidth }}%;background:{{ b.barColor }};opacity:.75;"></span><span style="position:absolute;top:-2px;bottom:-2px;left:{{ b.predictedWidth }}%;width:2px;background:var(--alert);"></span></span>
-                  <span style="text-align:right;color:{{ b.gapColor }};">{{ b.gap }}</span>
+      <sc-if value="{{ hasChart }}" hint-placeholder-val="{{ true }}">
+        <section aria-labelledby="chart-h" style="padding:22px 0;border-bottom:1px solid var(--ink);">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;">
+            <h2 id="chart-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">How the season has gone</h2>
+            <span class="mono" style="font-size:12px;color:var(--mute);">{{ chart.stamp }}</span>
+          </div>
+          <svg viewBox="0 0 640 240" role="img" aria-label="{{ chart.aria }}" style="width:100%;height:auto;display:block;margin-top:14px;font-family:'IBM Plex Mono',monospace;max-width:900px;">
+            <line x1="40" x2="632" y1="{{ chart.zeroY }}" y2="{{ chart.zeroY }}" stroke="var(--mute)" stroke-width="1" stroke-dasharray="3 3"></line>
+            <polyline points="{{ chart.points }}" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"></polyline>
+            <text x="4" y="14" font-size="11" fill="var(--mute)">{{ chart.maxLabel }}</text>
+            <text x="4" y="{{ chart.zeroLabelY }}" font-size="11" fill="var(--mute)">0</text>
+            <text x="4" y="236" font-size="11" fill="var(--mute)">{{ chart.minLabel }}</text>
+            <text x="40" y="236" font-size="11" fill="var(--mute)">{{ chart.first }}</text>
+            <text x="632" y="236" font-size="11" fill="var(--mute)" text-anchor="end">{{ chart.last }}</text>
+          </svg>
+          <p class="mono" style="margin:6px 0 0;font-size:11px;color:var(--mute);">Units won or lost on our best bets, one bet after another through the season. Expect big swings: a line that is up is not proof the picks are good.</p>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{ honest.has }}" hint-placeholder-val="{{ true }}">
+      <section id="honest" aria-labelledby="honest-h" style="padding:22px 0;border-bottom:1px solid var(--ink);">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;">
+          <h2 id="honest-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">Do our win chances come true?</h2>
+          <span class="mono" style="font-size:12px;color:var(--mute);">{{ honest.stamp }}</span>
+        </div>
+        <p style="margin:12px 0 0;font-size:15px;line-height:1.5;color:var(--ink-2);max-width:760px;text-wrap:pretty;">{{ honest.summary }}</p>
+        <div style="margin-top:14px;max-width:760px;border-top:2px solid var(--ink);">
+          <sc-for list="{{ honest.rows }}" as="h" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,2fr);gap:6px 16px;padding:10px 0;border-top:1px solid var(--rule-2);align-items:center;">
+              <div style="font-size:14px;line-height:1.4;"><strong>{{ h.said }}</strong><br><span style="color:var(--mute);font-size:12px;">{{ h.games }}</span></div>
+              <div>
+                <div style="position:relative;height:14px;background:var(--rule-2);">
+                  <span aria-hidden="true" style="position:absolute;top:0;bottom:0;left:0;width:{{ h.width }};background:{{ h.color }};"></span>
+                  <span aria-hidden="true" style="position:absolute;top:-3px;bottom:-3px;left:{{ h.mark }};width:2px;background:var(--ink);"></span>
+                </div>
+                <div style="margin-top:4px;font-size:13px;color:var(--ink-2);">{{ h.won }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <p class="mono" style="margin:8px 0 0;font-size:11px;color:var(--mute);">The bar is how often the favourite won; the thin line is the chance we gave it.</p>
+      </section>
+      </sc-if>
+
+      <sc-for list="{{ tables }}" as="t" hint-placeholder-count="3">
+        <section aria-labelledby="{{ t.hid }}" style="padding:22px 0;border-bottom:1px solid var(--ink);">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;">
+            <h2 id="{{ t.hid }}" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">{{ t.title }}</h2>
+            <span class="mono" style="font-size:12px;color:var(--mute);">{{ t.stamp }}</span>
+          </div>
+          <sc-if value="{{ t.searchable }}" hint-placeholder-val="{{ false }}">
+            <input type="search" value="{{ t.query }}" onInput="{{ t.onSearch }}" placeholder="Search teams" aria-label="Search teams" style="margin-top:12px;width:100%;max-width:360px;min-height:44px;padding:0 12px;background:var(--paper);color:var(--ink);border:1px solid var(--ink);font-family:inherit;font-size:14px;">
+          </sc-if>
+          <div style="margin-top:12px;overflow-x:auto;scrollbar-width:thin;margin-left:calc(-1 * clamp(16px,3vw,24px));margin-right:calc(-1 * clamp(16px,3vw,24px));padding:0 clamp(16px,3vw,24px);">
+            <div role="table" style="min-width:560px;border-top:2px solid var(--ink);max-width:900px;">
+              <div role="row" style="display:grid;grid-template-columns:minmax(160px,2fr) 70px 110px 70px 90px 90px;gap:0 10px;padding:6px 0;align-items:center;">
+                <sc-for list="{{ t.head }}" as="h" hint-placeholder-count="6">
+                  <button class="th" onClick="{{ h.onClick }}" aria-sort="{{ h.sort }}" style="text-align:{{ h.align }};color:{{ h.color }};">{{ h.label }}</button>
+                </sc-for>
+              </div>
+              <sc-for list="{{ t.rows }}" as="r" hint-placeholder-count="6">
+                <div role="row" style="display:grid;grid-template-columns:minmax(160px,2fr) 70px 110px 70px 90px 90px;gap:0 10px;padding:8px 0;border-top:1px solid var(--rule-2);align-items:center;font-size:13px;">
+                  <span style="display:flex;align-items:center;gap:10px;min-width:0;">
+                    <sc-if value="{{ r.hasLogo }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="position:relative;width:22px;height:22px;border-radius:50%;flex:none;overflow:hidden;background:var(--rule-2);"><img src="{{ r.logo }}" alt="" loading="lazy" decoding="async" onError="{{ r.onLogoError }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:2px;"></span></sc-if>
+                    <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.name }}</span>
+                  </span>
+                  <span class="mono" style="text-align:right;color:var(--mute);">{{ r.bets }}</span>
+                  <span class="mono" style="text-align:right;">{{ r.record }}</span>
+                  <span class="mono" style="text-align:right;">{{ r.rate }}</span>
+                  <span class="mono" style="text-align:right;font-weight:600;color:{{ r.color }};">{{ r.units }}</span>
+                  <span class="mono" style="text-align:right;color:{{ r.color }};">{{ r.ret }}</span>
                 </div>
               </sc-for>
-              <sc-if value="{{ t.thin }}" hint-placeholder-val="{{ false }}"><p style="margin:8px 0 0;font-size:12px;color:var(--mute);">Too few games to read yet.</p></sc-if>
             </div>
+          </div>
+          <sc-if value="{{ t.noRows }}" hint-placeholder-val="{{ false }}"><p style="margin:10px 0 0;font-size:14px;color:var(--ink-2);">{{ t.noRowsText }}</p></sc-if>
+        </section>
+      </sc-for>
+
+      <section aria-labelledby="log-h" style="padding:22px 0;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;">
+          <h2 id="log-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">Every pick</h2>
+          <span class="mono" style="font-size:12px;color:var(--mute);">{{ log.stamp }}</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;" role="group" aria-label="Show">
+          <sc-for list="{{ filters }}" as="f" hint-placeholder-count="3">
+            <button class="chip" onClick="{{ f.onClick }}" aria-pressed="{{ f.selected }}" style="background:{{ f.bg }};color:{{ f.fg }};">{{ f.label }}</button>
           </sc-for>
         </div>
-      </section>
-
-      <section aria-labelledby="mkt-h" style="padding:26px 0 24px;border-bottom:1px solid var(--ink);">
-        <h2 id="mkt-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">Against the market</h2>
-        <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:720px;text-wrap:pretty;">The Brier score is the average squared miss: 0 is perfect, 0.25 is a coin flip, lower is better. The market's number is the moneyline with the book's margin removed, frozen at the same moment as ours. The honest expectation is that the market is at least as good.</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:0 20px;margin-top:14px;border-top:2px solid var(--ink);max-width:760px;">
-          <sc-for list="{{ brier }}" as="c" hint-placeholder-count="3">
-            <div style="padding:12px 0;"><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ c.label }}</div><div class="cond" style="font-weight:700;font-size:34px;line-height:1;margin-top:6px;">{{ c.value }}</div><div class="mono" style="font-size:12px;color:var(--ink-2);margin-top:4px;">{{ c.sub }}</div></div>
-          </sc-for>
+        <input type="search" value="{{ log.query }}" onInput="{{ log.onSearch }}" placeholder="Search a team, market or book" aria-label="Search picks" style="margin-top:12px;width:100%;max-width:420px;min-height:44px;padding:0 12px;background:var(--paper);color:var(--ink);border:1px solid var(--ink);font-family:inherit;font-size:14px;">
+        <div style="margin-top:12px;overflow-x:auto;scrollbar-width:thin;margin-left:calc(-1 * clamp(16px,3vw,24px));margin-right:calc(-1 * clamp(16px,3vw,24px));padding:0 clamp(16px,3vw,24px);">
+          <div role="table" style="min-width:940px;border-top:2px solid var(--ink);">
+            <div role="row" class="mono" style="display:grid;grid-template-columns:96px 70px minmax(150px,1.4fr) minmax(170px,1.6fr) 70px 70px 110px 50px minmax(130px,1.2fr) 60px 70px;gap:0 10px;padding:6px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);"><span>Date</span><span>Kind</span><span>Game</span><span>Pick</span><span style="text-align:right;">Price</span><span style="text-align:right;" title="The worst price at which we would still take the pick">Down to</span><span>Book</span><span>Tier</span><span>Final</span><span>Result</span><span style="text-align:right;">Units</span></div>
+            <sc-for list="{{ log.rows }}" as="r" hint-placeholder-count="10">
+              <div role="row" style="display:grid;grid-template-columns:96px 70px minmax(150px,1.4fr) minmax(170px,1.6fr) 70px 70px 110px 50px minmax(130px,1.2fr) 60px 70px;gap:0 10px;padding:8px 0;border-top:1px solid var(--rule-2);align-items:center;font-size:13px;">
+                <a href="{{ r.href }}" class="mono" style="font-size:12px;text-decoration:underline;text-underline-offset:3px;">{{ r.date }}</a>
+                <span class="cond" style="font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:{{ r.kindColor }};">{{ r.kind }}</span>
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.game }}</span>
+                <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.pick }}</span>
+                <span class="mono" style="text-align:right;">{{ r.price }}</span>
+                <span class="mono" style="text-align:right;color:var(--ink-2);">{{ r.down }}</span>
+                <span style="font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.book }}</span>
+                <span class="mono" style="font-size:12px;color:var(--mute);">{{ r.tier }}</span>
+                <span class="mono" style="font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.final }}</span>
+                <span class="cond" style="display:inline-block;padding:2px 7px;font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:{{ r.resBg }};color:{{ r.resFg }};border:1px solid {{ r.resBorder }};justify-self:start;">{{ r.result }}</span>
+                <span class="mono" style="text-align:right;font-weight:600;color:{{ r.unitsColor }};">{{ r.units }}</span>
+              </div>
+            </sc-for>
+          </div>
         </div>
-        <p style="margin:10px 0 0;font-size:13px;line-height:1.5;color:var(--ink-2);max-width:720px;">{{ brierVerdict }}</p>
-      </section>
-
-      <section aria-labelledby="lines-h" style="padding:26px 0 24px;border-bottom:1px solid var(--ink);">
-        <h2 id="lines-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">Spread and total</h2>
-        <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:720px;text-wrap:pretty;">The same check on the two numbers that are not a winner: how often the favourite covered the spread we published against, grouped by the cover chance we gave it, and how often the game went over the posted total, grouped by our over chance. Bands are merged until each holds at least {{ marketMin }} games.</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px 40px;margin-top:14px;">
-          <sc-for list="{{ lineMarkets }}" as="m" hint-placeholder-count="2">
-            <div style="border-top:2px solid var(--ink);">
-              <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0 4px;"><span class="cond" style="font-weight:700;font-size:18px;text-transform:uppercase;">{{ m.label }}</span><span class="mono" style="font-size:12px;color:var(--mute);">{{ m.stamp }}</span></div>
-              <div class="mono" style="display:grid;grid-template-columns:90px 44px minmax(60px,1fr) 60px 56px;gap:0 8px;padding:4px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);"><span>Our chance</span><span style="text-align:right;">Games</span><span>{{ m.happened }}</span><span style="text-align:right;">Said</span><span style="text-align:right;">Gap</span></div>
-              <sc-for list="{{ m.rows }}" as="b" hint-placeholder-count="4">
-                <div style="display:grid;grid-template-columns:90px 44px minmax(60px,1fr) 60px 56px;gap:0 8px;padding:6px 0;border-top:1px solid var(--rule-2);align-items:center;font-size:12px;" class="mono">
-                  <span>{{ b.band }}</span><span style="text-align:right;color:var(--mute);">{{ b.games }}</span>
-                  <span style="position:relative;height:10px;background:var(--rule-2);" aria-hidden="true"><span style="position:absolute;top:0;bottom:0;left:0;width:{{ b.actualWidth }}%;background:{{ b.barColor }};opacity:.75;"></span><span style="position:absolute;top:4px;height:2px;left:{{ b.loWidth }}%;width:{{ b.spanWidth }}%;background:var(--ink);"></span><span style="position:absolute;top:-2px;bottom:-2px;left:{{ b.predictedWidth }}%;width:2px;background:var(--alert);"></span></span>
-                  <span style="text-align:right;">{{ b.predicted }}</span><span style="text-align:right;color:{{ b.gapColor }};">{{ b.gap }}</span>
-                </div>
-              </sc-for>
-              <sc-if value="{{ m.thin }}" hint-placeholder-val="{{ false }}"><p style="margin:8px 0 0;font-size:12px;color:var(--mute);">Not enough priced games yet.</p></sc-if>
-            </div>
-          </sc-for>
-        </div>
-      </section>
-
-      <section aria-labelledby="move-h" style="padding:26px 0 24px;border-bottom:1px solid var(--ink);">
-        <h2 id="move-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">After our moneyline picks</h2>
-        <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:720px;text-wrap:pretty;">Where the board recorded the line before and after a moneyline pick: did the price move toward our side, against it, or not at all? Toward is a sign the number is seeing something the market later agreed with. It is not a return.</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:0 20px;margin-top:14px;border-top:2px solid var(--ink);max-width:760px;">
-          <sc-for list="{{ movement }}" as="c" hint-placeholder-count="4">
-            <div style="padding:12px 0;"><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ c.label }}</div><div class="cond" style="font-weight:700;font-size:34px;line-height:1;margin-top:6px;">{{ c.value }}</div><div class="mono" style="font-size:12px;color:var(--ink-2);margin-top:4px;">{{ c.sub }}</div></div>
-          </sc-for>
+        <sc-if value="{{ log.noMatch }}" hint-placeholder-val="{{ false }}"><p style="margin:10px 0 0;font-size:14px;color:var(--ink-2);">{{ log.noMatchText }}</p></sc-if>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;flex-wrap:wrap;">
+          <span class="mono" style="font-size:12px;color:var(--mute);">{{ log.pageText }}</span>
+          <div style="display:flex;gap:2px;">
+            <button onClick="{{ log.onPrev }}" class="chip" style="min-width:44px;min-height:44px;color:{{ log.prevColor }};">‹ Newer</button>
+            <button onClick="{{ log.onNext }}" class="chip" style="min-width:44px;min-height:44px;color:{{ log.nextColor }};">Older ›</button>
+          </div>
         </div>
       </section>
 
@@ -181,12 +243,12 @@
         <div style="border:1px solid var(--ink);padding:16px 18px;">
           <h2 class="cond" style="margin:0;font-weight:700;font-size:16px;letter-spacing:.14em;text-transform:uppercase;">How to read this</h2>
           <ul style="margin:10px 0 0;padding-left:18px;font-size:14px;line-height:1.55;color:var(--ink-2);display:flex;flex-direction:column;gap:6px;text-wrap:pretty;">
-            <sc-for list="{{ notes }}" as="n" hint-placeholder-count="3"><li>{{ n }}</li></sc-for>
+            <sc-for list="{{ notes }}" as="n" hint-placeholder-count="5"><li>{{ n }}</li></sc-for>
           </ul>
         </div>
         <div style="font-size:14px;line-height:1.55;color:var(--ink-2);display:flex;flex-direction:column;gap:10px;text-wrap:pretty;">
-          <p style="margin:0;">Only games whose board was published before tip-off count; a number is never checked against a game it was built after.</p>
-          <p style="margin:0;"><a href="Methods.dc.html" style="text-decoration:underline;text-underline-offset:3px;">Methods</a> explains where each number comes from. <a href="Archive.dc.html" style="text-decoration:underline;text-underline-offset:3px;">The archive</a> holds every board as it was published.</p>
+          <p style="margin:0;"><a href="Results.dc.html" style="text-decoration:underline;text-underline-offset:3px;">Last night's results</a>, graded game by game.</p>
+          <p style="margin:0;"><a href="Methods.dc.html" style="text-decoration:underline;text-underline-offset:3px;">How the picks are made</a>, step by step.</p>
           <p style="margin:0;color:var(--mute);">The site recommends; it never places bets.</p>
         </div>
       </section>
@@ -196,7 +258,6 @@
     <footer style="border-top:1px solid var(--ink);margin-top:40px;padding:18px 0 0;display:flex;flex-wrap:wrap;gap:6px 24px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--mute);">
       <span>© 2026 Maverick Hightower</span>
       <a href="Board.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Board</a>
-      <a href="Tracker.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">All results</a>
       <a href="Methods.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Methods</a>
       <a href="https://maverickhightower.com/about.html" style="display:inline-flex;align-items:center;min-height:44px;">About</a>
       <a href="https://x.com/mavhightower" style="display:inline-flex;align-items:center;min-height:44px;">@mavhightower</a>
@@ -204,9 +265,10 @@
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;scenario&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Sample&quot;,&quot;Nothing settled yet&quot;],&quot;default&quot;:&quot;Sample&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Preview&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;scenario&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Sample&quot;,&quot;Nothing graded yet&quot;],&quot;default&quot;:&quot;Sample&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Preview&quot;}}">
 class Component extends DCLogic {
-  state = { data: null, loadedFor: null, isSample: false, err: "" };
+  state = { data: null, calib: null, teams: {}, loadedFor: null, isSample: false, err: "", filter: "all", sorts: {}, queries: {}, logQuery: "", page: 0 };
+  static PAGE = 25;
   onSite() { return /(^|\.)maverickhightower\.com$/.test(location.hostname); }
   async load() {
     const want = this.props.scenario || "";
@@ -217,62 +279,100 @@ class Component extends DCLogic {
     const scenario = this.onSite() ? "Normal" : this.props.scenario || "Sample";
     const live = this.onSite() || scenario === "Normal";
     const get = async (u) => { try { const r = await fetch(u, { cache: "no-store" }); return r.ok ? await r.json() : null; } catch (_) { return null; } };
-    let data = null;
-    if (scenario === "Nothing settled yet") data = { through: null, nights: 0, games: 0, buckets: [], byTier: {}, brier: { games: 0 }, markets: {}, movement: { picks: 0 }, notes: [] };
-    else data = (await get(live ? "./data/record.json" : "./data/sample/record.json")) || (live ? null : await get("./data/record.json"));
-    this.setState({ data, isSample: !live, err: data ? "" : "unreachable" });
+    const dir = live ? "./data" : "./data/sample";
+    const [data, board, calib] = await Promise.all([get(scenario === "Nothing graded yet" ? "./data/sample/tracker_empty.json" : `${dir}/tracker.json`), get(`${dir}/board.json`), get(`${dir}/record.json`)]);
+    this.setState({ data, calib, teams: (board && board.teams) || {}, isSample: !live, err: data ? "" : "unreachable" });
   }
   componentDidMount() { this.load(); }
   componentDidUpdate() { this.load(); }
+  sort(tid, k) { this.setState((s) => { const cur = s.sorts[tid] || { k: "units", dir: -1 }; return { sorts: { ...s.sorts, [tid]: { k, dir: cur.k === k ? -cur.dir : k === "name" ? 1 : -1 } } }; }); }
   renderVals() {
-    const d = this.state.data;
+    const d = this.state.data, T = this.state.teams || {};
     const here = "Record.dc.html";
-    const tabs = [["Tonight", "Board.dc.html"], ["Results", "Results.dc.html"], ["Season", "Season.dc.html"], ["Record", "Record.dc.html"], ["Tracker", "Tracker.dc.html"]].map(([label, href]) => ({ label, href, current: href === here ? "page" : "false", color: href === here ? "var(--ink)" : "var(--mute)", line: href === here ? "var(--ink)" : "transparent" }));
-    const pct = (p, dp) => (typeof p === "number" ? `${(p * 100).toFixed(dp == null ? 0 : dp)}%` : "—");
-    const gapText = (b) => (typeof b.actual === "number" && typeof b.predicted === "number" ? `${b.actual - b.predicted >= 0 ? "+" : "−"}${Math.abs((b.actual - b.predicted) * 100).toFixed(1)}` : "—");
-    const inside = (b) => !(Array.isArray(b.interval) && typeof b.predicted === "number") || (b.predicted >= b.interval[0] - 1e-9 && b.predicted <= b.interval[1] + 1e-9);
-    const row = (b) => { const lo = Array.isArray(b.interval) ? b.interval[0] : null, hi = Array.isArray(b.interval) ? b.interval[1] : null; return {
-      band: `${Math.round(b.low * 100)}–${Math.round(Math.min(b.high, 1) * 100)}%`, games: b.games || 0, predicted: pct(b.predicted),
-      actualWidth: (typeof b.actual === "number" ? b.actual * 100 : 0).toFixed(1), predictedWidth: (typeof b.predicted === "number" ? b.predicted * 100 : 0).toFixed(1),
-      loWidth: (lo == null ? 0 : lo * 100).toFixed(1), spanWidth: (lo == null || hi == null ? 0 : (hi - lo) * 100).toFixed(1),
-      barColor: b.games ? (inside(b) ? "var(--ink)" : "var(--alert)") : "transparent", gap: b.games ? gapText(b) : "—", gapColor: b.games ? (inside(b) ? "var(--mute)" : "var(--alert)") : "var(--mute)" }; };
-    const base = { tabs, isSample: !!this.state.isSample, marketMin: 10 };
-    if (!d) return { ...base, ready: false, empty: true, throughLine: "", headline: [], emptyTitle: this.state.err ? "The record is unreachable" : "Loading", emptyNote: this.state.err ? "The record's data file did not load." : "" };
-    const games = d.games || 0;
-    const headline = [
-      { label: "Nights", value: String(d.nights || 0), sub: d.through ? `through ${d.through}` : "none settled" },
-      { label: "Games checked", value: String(games), sub: "published before tip-off" },
-      { label: "Favourite won", value: games ? pct(d.buckets.reduce((s, b) => s + (b.games || 0) * (b.actual || 0), 0) / Math.max(1, d.buckets.reduce((s, b) => s + (b.games || 0), 0))) : "—", sub: games ? `we said ${pct(d.buckets.reduce((s, b) => s + (b.games || 0) * (b.predicted || 0), 0) / Math.max(1, d.buckets.reduce((s, b) => s + (b.games || 0), 0)))}` : "" },
-      { label: "Brier, us vs market", value: d.brier && typeof d.brier.model === "number" ? `${d.brier.model.toFixed(3)} / ${typeof d.brier.market === "number" ? d.brier.market.toFixed(3) : "—"}` : "—", sub: d.brier && d.brier.games ? `${d.brier.games} games with a market price` : "lower is better" },
+    const tabs = [["Tonight", "Board.dc.html"], ["Results", "Results.dc.html"], ["Season", "Season.dc.html"], ["Record", "Record.dc.html"]].map(([label, href]) => ({ label, href, current: href === here ? "page" : "false", color: href === here ? "var(--ink)" : "var(--mute)", line: href === here ? "var(--ink)" : "transparent" }));
+    const base = { tabs, isSample: !!this.state.isSample };
+    const u = (v) => (typeof v === "number" ? `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(2)}u` : "—");
+    const uc = (v) => (typeof v === "number" ? (v > 0.005 ? "var(--win)" : v < -0.005 ? "var(--alert)" : "var(--ink)") : "var(--mute)");
+    const rec = (t) => (t ? `${t.w}–${t.l}${t.p ? `–${t.p}` : ""}` : "—");
+    const rate = (t) => (t && t.w + t.l ? `${Math.round(100 * t.w / (t.w + t.l))}%` : "—");
+    const ret = (t) => (t && typeof t.returnPct === "number" ? `${t.returnPct > 0 ? "+" : t.returnPct < 0 ? "−" : ""}${Math.abs(t.returnPct).toFixed(1)}%` : "—");
+    const odds = (v) => (typeof v === "number" ? (v > 0 ? `+${v}` : String(v)) : "—");
+    if (!d) return { ...base, ready: false, empty: true, kicker: "College basketball · our record", headline: "", emptyLink: false, emptyTitle: this.state.err ? "Results unreachable" : "Loading", emptyNote: this.state.err ? "The results did not load. Try again in a minute." : "" };
+    const rows = Array.isArray(d.rows) ? d.rows : [];
+    const bets = rows.filter((r) => r.kind === "bet");
+    const span = d.firstDate && d.lastDate ? `${d.firstDate} to ${d.lastDate} · ${d.nights || 0} nights` : "no night graded yet";
+    if (!rows.length) return { ...base, ready: false, empty: true, kicker: "College basketball · our record", headline: "No pick has been graded yet.", emptyLink: true, emptyTitle: "No pick has been graded yet", emptyNote: "This page starts once the first night of picks has final scores." };
+    const ov = d.overall || {}, op = (d.opinions || {}).overall || {};
+    const cards = [
+      { title: "Best bets", stamp: `${ov.bets || 0} bets`, record: rec(ov), unitsLabel: "Won / lost", units: u(ov.units), unitsColor: uc(ov.units), rateLabel: "Per unit bet", rate: ret(ov), note: "The picks we bet, one unit each." },
+      { title: "Other picks", stamp: `${op.bets || 0} graded, not bet`, record: rec(op), unitsLabel: "Win rate", units: rate(op), unitsColor: "var(--ink)", rateLabel: "Leans / passes", rate: `${((d.opinions || {}).byKind || []).map((k) => `${k.key === "lean" ? "L" : "P"} ${k.bets}`).join(" · ") || "—"}`, note: "Games we priced but did not bet. Graded so you can see them; never counted in units." },
     ];
-    if (!games) return { ...base, ready: false, empty: true, throughLine: "nothing settled yet", headline, emptyTitle: "No game has settled yet", emptyNote: "The first board that is followed by a final score starts this page. Until then there is nothing to check." };
-    const TIER_ORDER = ["High major", "Mid major", "Low major", "Unplaced"];
-    const tiers = TIER_ORDER.filter((k) => d.byTier && d.byTier[k]).map((k) => { const t = d.byTier[k]; const rows = (t.buckets || []).filter((b) => b.games).map(row); return { label: k, stamp: `${t.games || 0} games`, rows, thin: (t.games || 0) < 10 }; });
-    const b = d.brier || {};
-    const brier = [
-      { label: "Our number", value: typeof b.model === "number" ? b.model.toFixed(4) : "—", sub: b.games ? `${b.games} games` : "" },
-      { label: "The market", value: typeof b.market === "number" ? b.market.toFixed(4) : "—", sub: "no-vig moneyline, same moment" },
-      { label: "Our number, every game", value: typeof b.modelAll === "number" ? b.modelAll.toFixed(4) : "—", sub: `${games} games, priced or not` },
+    const TIERS = ["A", "B", "C"];
+    const byTier = Array.isArray(d.byTier) ? d.byTier : [];
+    const tierName = (k) => ({ A: "High major", B: "Mid major", C: "Low major", high_major: "High major", mid_major: "Mid major", low_major: "Low major" }[k] || k || "Unplaced");
+    const tierRank = (k) => ["A", "high_major", "B", "mid_major", "C", "low_major"].indexOf(String(k));
+    const tierCards = (byTier.length ? byTier : TIERS.map((k) => ({ key: k, w: 0, l: 0, p: 0, bets: 0, units: 0, returnPct: null }))).slice().sort((a, b) => tierRank(a.key) - tierRank(b.key)).map((t) => ({ label: tierName(t.key), bets: t.bets, record: rec(t), units: u(t.units), color: uc(t.units), sub: t.bets ? `${rate(t)} won · ${ret(t)} per unit` : "no bets yet" }));
+    // Chart
+    const seq = bets.filter((r) => typeof r.units === "number").slice().sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.id).localeCompare(String(b.id)));
+    let cum = 0; const series = seq.map((r) => (cum += r.units));
+    const hasChart = series.length >= 2;
+    let chart = {};
+    if (hasChart) {
+      const max = Math.max(0, ...series), min = Math.min(0, ...series), range = Math.max(1e-6, max - min);
+      const y = (v) => 8 + (max - v) / range * 216;
+      const x = (i) => 40 + (i / (series.length - 1)) * 592;
+      chart = { points: series.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" "), zeroY: y(0).toFixed(1), zeroLabelY: (y(0) + 4).toFixed(1), maxLabel: `+${max.toFixed(1)}`, minLabel: min.toFixed(1), first: seq[0].date, last: seq[seq.length - 1].date, stamp: `${series.length} bets · now ${u(cum)}`, aria: `Running units over ${series.length} best bets, ending at ${u(cum)}` };
+    }
+    // Tables
+    const table = (id, title, list, opts) => {
+      const sort = this.state.sorts[id] || { k: "units", dir: -1 };
+      const q = (this.state.queries[id] || "").trim().toLowerCase();
+      const keyFn = { name: (r) => String(r.key).toLowerCase(), bets: (r) => r.bets, record: (r) => r.w - r.l, rate: (r) => (r.w + r.l ? r.w / (r.w + r.l) : -1), units: (r) => r.units, ret: (r) => (typeof r.returnPct === "number" ? r.returnPct : -1e9) }[sort.k];
+      let shown = (list || []).filter((r) => !q || `${r.key} ${(T[r.key] || {}).name || ""}`.toLowerCase().includes(q));
+      shown = shown.slice().sort((a, b) => { const ka = keyFn(a), kb = keyFn(b); return (typeof ka === "string" ? ka.localeCompare(kb) : ka - kb) * sort.dir; });
+      if (opts.sortMonths) shown = shown.slice().sort((a, b) => String(b.key).localeCompare(String(a.key)));
+      const head = [["name", opts.noun || "Name", "left"], ["bets", "Bets", "right"], ["record", "W–L", "right"], ["rate", "Won", "right"], ["units", "Won / lost", "right"], ["ret", "Per unit", "right"]].map(([k, label, align]) => ({ label, align, sort: sort.k === k ? (sort.dir === 1 ? "ascending" : "descending") : "none", color: sort.k === k ? "var(--ink)" : "var(--mute)", onClick: () => this.sort(id, k) }));
+      const rowsOut = shown.map((r) => ({ name: opts.names ? opts.names(r.key) : r.key, hasLogo: !!opts.logos, logo: opts.logos ? ((T[r.key] || {}).logo || `./logos/${encodeURIComponent(r.key)}.png`) : "", onLogoError: (e) => { e.currentTarget.style.display = "none"; }, bets: String(r.bets), record: rec(r), rate: rate(r), units: u(r.units), color: uc(r.units), ret: ret(r) }));
+      return { id, hid: `${id}-h`, title, stamp: `${(list || []).length} ${opts.rowsNoun || "rows"} · ${(list || []).reduce((s, x) => s + x.bets, 0)} bets`, searchable: !!opts.search, query: this.state.queries[id] || "", onSearch: (e) => { const v = e.target.value; this.setState((s) => ({ queries: { ...s.queries, [id]: v } })); }, head, rows: rowsOut, noRows: rowsOut.length === 0, noRowsText: q ? `No team matches “${this.state.queries[id]}”.` : "Nothing here yet." };
+    };
+    const monthName = (k) => { const [y, m] = String(k).split("-"); const d2 = new Date(Number(y), Number(m) - 1, 1); return isNaN(d2) ? k : d2.toLocaleString(undefined, { month: "long", year: "numeric" }); };
+    const tables = [
+      table("market", "By type of bet", d.byMarket, { noun: "Type of bet", rowsNoun: "types" }),
+      table("team", "By team", d.byTeam, { noun: "Team", rowsNoun: "teams", logos: true, search: true, names: (k) => (T[k] || {}).name || k }),
+      table("month", "By month", d.byMonth, { noun: "Month", rowsNoun: "months", names: monthName, sortMonths: true }),
     ];
-    const brierVerdict = typeof b.model === "number" && typeof b.market === "number" ? (b.model < b.market - 0.0005 ? `On these ${b.games} games our number has been the closer of the two, by ${(b.market - b.model).toFixed(4)}. That is a small sample's verdict and it will move.` : b.model > b.market + 0.0005 ? `On these ${b.games} games the market has been the closer of the two, by ${(b.model - b.market).toFixed(4)}, which is the expected result.` : "On these games the two are level.") : "The comparison needs games with a moneyline on the board.";
-    const mk = (key, label, happened) => { const m = (d.markets || {})[key]; const rows = m && m.buckets ? m.buckets.filter((x) => x.games).map(row) : []; return { label, happened, stamp: m ? `${m.games || 0} games` : "0 games", rows, thin: !m || (m.games || 0) < 10 }; };
-    const lineMarkets = [mk("spread", "Spread: favourite covered", "Covered"), mk("total", "Total: game went over", "Over")];
-    const mv = d.movement || {};
-    const picks = mv.picks || 0;
-    const share = (n) => (picks ? `${Math.round(100 * (n || 0) / picks)}% of picks` : "");
-    const movement = [
-      { label: "Picks with a line series", value: String(picks), sub: "moneyline best bets" },
-      { label: "Moved toward us", value: String(mv.toward || 0), sub: share(mv.toward) },
-      { label: "Moved against us", value: String(mv.against || 0), sub: share(mv.against) },
-      { label: "Did not move", value: String(mv.flat || 0), sub: share(mv.flat) },
+    // Log
+    const f = this.state.filter;
+    const filters = [["all", "Everything"], ["bet", "Best bets"], ["opinion", "Other picks"]].map(([key, label]) => ({ label, selected: f === key ? "true" : "false", bg: f === key ? "var(--ink)" : "transparent", fg: f === key ? "var(--paper)" : "var(--ink)", onClick: () => this.setState({ filter: key, page: 0 }) }));
+    const lq = (this.state.logQuery || "").trim().toLowerCase();
+    const lrows = rows.filter((r) => (f === "all" ? true : f === "bet" ? r.kind === "bet" : r.kind !== "bet")).filter((r) => !lq || `${r.teams ? r.teams.join(" ") : ""} ${r.label || ""} ${r.market || ""} ${r.book || ""} ${((T[r.team] || {}).name) || ""}`.toLowerCase().includes(lq)).slice().sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(String(a.id)));
+    const pages = Math.max(1, Math.ceil(lrows.length / Component.PAGE));
+    const page = Math.min(this.state.page, pages - 1);
+    const RES = { win: ["Win", "var(--win)", "var(--on-win)", "var(--win)"], loss: ["Loss", "transparent", "var(--alert)", "var(--alert)"], push: ["Push", "transparent", "var(--mute)", "var(--rule)"] };
+    const logRows = lrows.slice(page * Component.PAGE, (page + 1) * Component.PAGE).map((r) => { const chip = RES[r.result] || ["—", "transparent", "var(--mute)", "var(--rule)"]; return {
+      date: r.date, href: `Game.dc.html?id=${encodeURIComponent(r.id)}&date=${encodeURIComponent(r.date)}`, kind: r.kind === "bet" ? "Bet" : r.kind === "lean" ? "Lean" : "Pass", kindColor: r.kind === "bet" ? "var(--ink)" : "var(--mute)",
+      game: r.teams ? `${r.teams[0]} @ ${r.teams[1]}` : "", pick: `${r.market}: ${r.label || ""}`, price: odds(r.price), down: odds(r.betDownTo), book: r.book || "", tier: r.tier || "", final: r.final || "", result: chip[0], resBg: chip[1], resFg: chip[2], resBorder: chip[3], units: r.kind === "bet" ? u(r.units) : "—", unitsColor: r.kind === "bet" ? uc(r.units) : "var(--mute)" }; });
+    const log = { stamp: `${rows.length} picks · newest first`, query: this.state.logQuery, onSearch: (e) => this.setState({ logQuery: e.target.value, page: 0 }), noMatch: lrows.length === 0, noMatchText: `No pick matches “${this.state.logQuery}”.`, rows: logRows, pageText: lrows.length ? `${page * Component.PAGE + 1}–${Math.min(lrows.length, (page + 1) * Component.PAGE)} of ${lrows.length}` : "", onPrev: () => this.setState((s) => ({ page: Math.max(0, s.page - 1) })), onNext: () => this.setState((s) => ({ page: Math.min(pages - 1, s.page + 1) })), prevColor: page > 0 ? "var(--ink)" : "var(--rule)", nextColor: page < pages - 1 ? "var(--ink)" : "var(--rule)" };
+    const notes = [
+      "Every best bet counts as one unit at the price and book the board showed.",
+      "Other picks are games we priced but did not bet: a lean was close, a pass had no value. They are graded and never counted in units.",
+      "A tie on a spread or total is a push and refunds the bet. Overtime counts.",
+      "A few bets is not much to go on. A team at +3u after a handful of bets can be back to zero after one bad night.",
+      "Measured against real prices, no market shows a demonstrated edge. A good season here is a sample, not proof.",
     ];
-    const notes = (d.notes && d.notes.length ? d.notes : [
-      "A band whose bar is red is one where the share we saw sits outside the range the sample can support for the chance we published.",
-      "Overtime counts as the game's result. A tie after regulation cannot happen, so pushes arise only on spreads and totals.",
-      "Nothing on this page is a return. Returns, by market and tier, are on All results.",
-      "Measured against real prices, per tier, no market shows a demonstrated edge. This page checks whether the chances are honest, not whether they pay.",
-    ]);
-    return { ...base, ready: true, empty: false, throughLine: d.through ? `through ${d.through}` : "", headline, buckets: (d.buckets || []).map(row), tiers, brier, brierVerdict, lineMarkets, movement, notes };
+    // Do our win chances come true? The favourite's published win chance
+    // against the finals (record.json buckets). Plain words only: no intervals.
+    const C = this.state.calib, cb = C && Array.isArray(C.buckets) ? C.buckets.filter((b) => b && b.games > 0 && typeof b.actual === "number") : [];
+    const pc = (x) => `${Math.round(100 * x)}%`;
+    const cGames = cb.reduce((n, b) => n + b.games, 0), off = cGames ? cb.reduce((n, b) => n + b.games * Math.abs((b.actual || 0) - (b.predicted || 0)), 0) / cGames : 0;
+    const honest = { has: cb.length > 0, stamp: cGames ? `${cGames} games` : "",
+      summary: !cGames ? "" : off <= 0.03 ? `Yes, closely. Across ${cGames} games, the teams we favoured won about as often as we said they would: on average we were off by ${Math.round(100 * off)} points.` : off <= 0.07 ? `Mostly. Across ${cGames} games, our chances were off by about ${Math.round(100 * off)} points on average. Close, but not perfect.` : `Not yet. Across ${cGames} games, our chances were off by about ${Math.round(100 * off)} points on average.`,
+      rows: cb.map((b) => { const said = b.predicted || (b.low + b.high) / 2; return { said: b.high >= 1 ? `We said ${pc(b.low)} or more` : `We said ${pc(b.low)}–${pc(b.high)}`, games: `${b.games} game${b.games === 1 ? "" : "s"}`, won: `They won ${pc(b.actual)} of the time`, width: `${(100 * b.actual).toFixed(1)}%`, mark: `${(100 * said).toFixed(1)}%`, color: Math.abs(b.actual - said) <= 0.05 ? "var(--win)" : "var(--mute)" }; }) };
+    const fmtDay = (k) => { const t = new Date(`${k}T12:00:00`); return isNaN(t) ? String(k || "") : t.toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
+    const upDown = typeof ov.units !== "number" ? "" : ov.units > 0.004 ? `up ${u(ov.units).slice(1)}` : ov.units < -0.004 ? `down ${u(ov.units).slice(1)}` : "dead even";
+    const headline = `Our best bets are ${rec(ov)} since ${fmtDay(d.firstDate)}${upDown ? `, and ${upDown} overall` : ""} (${ov.bets || 0} bets).`;
+    const kicker = `College basketball · ${d.nights || 0} nights graded${d.firstDate && d.lastDate ? ` · ${fmtDay(d.firstDate)} to ${fmtDay(d.lastDate)}` : ""}`;
+    return { ...base, ready: true, empty: false, kicker, headline, emptyLink: false, cards, tierCards, hasChart, chart, honest, tables, filters, log, notes };
   }
 }
 </script>

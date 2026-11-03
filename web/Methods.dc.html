@@ -68,7 +68,7 @@
     <section id="main" style="padding:30px 0 22px;border-bottom:1px solid var(--ink);">
       <div style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">Methods · updated {{ updated }}</div>
       <h1 class="cond" style="margin:8px 0 0;font-weight:800;font-size:clamp(34px,6vw,60px);line-height:.95;text-transform:uppercase;letter-spacing:.01em;max-width:14ch;">How the numbers are built</h1>
-      <p style="margin:14px 0 0;font-size:16px;line-height:1.55;color:var(--ink-2);max-width:720px;text-wrap:pretty;">Every figure on this site comes from one of the steps below, in the order the card applies them. Each entry says what the thing is, how it is built, the formula where one fits in a sentence, and how sure we are of it. Nothing here is a claim of an edge: the measured record is on <a href="Tracker.dc.html" style="text-decoration:underline;text-underline-offset:3px;">All results</a> and the honesty of the chances on <a href="Record.dc.html" style="text-decoration:underline;text-underline-offset:3px;">Record</a>.</p>
+      <p style="margin:14px 0 0;font-size:16px;line-height:1.55;color:var(--ink-2);max-width:720px;text-wrap:pretty;">Every figure on this site comes from one of the steps below, in the order the card applies them. Each entry says what the thing is, how it is built, the formula where one fits in a sentence, and how sure we are of it. Nothing here is a claim of an edge: every graded pick, and how often our win chances came true, are on <a href="Record.dc.html" style="text-decoration:underline;text-underline-offset:3px;">Our record</a>.</p>
       <label style="display:flex;align-items:center;gap:10px;margin-top:16px;max-width:460px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);">Jump to
         <select onChange="{{ onJump }}" value="{{ jumpValue }}" style="flex:1;min-height:44px;background:var(--paper);color:var(--ink);border:1px solid var(--ink);font-family:inherit;font-size:13px;padding:0 10px;">
           <sc-for list="{{ jumpOptions }}" as="o" hint-placeholder-count="16"><option value="{{ o.id }}">{{ o.label }}</option></sc-for>
@@ -131,8 +131,7 @@
     <footer style="border-top:1px solid var(--ink);margin-top:40px;padding:18px 0 0;display:flex;flex-wrap:wrap;gap:6px 24px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--mute);">
       <span>© 2026 Maverick Hightower</span>
       <a href="Board.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Board</a>
-      <a href="Record.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Record</a>
-      <a href="Tracker.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">All results</a>
+      <a href="Record.dc.html" style="display:inline-flex;align-items:center;min-height:44px;">Our record</a>
       <a href="https://maverickhightower.com/about.html" style="display:inline-flex;align-items:center;min-height:44px;">About</a>
       <a href="https://x.com/mavhightower" style="display:inline-flex;align-items:center;min-height:44px;">@mavhightower</a>
     </footer>
@@ -198,7 +197,7 @@ class Component extends DCLogic {
   componentDidMount() { const h = (location.hash || "").slice(1); if (h) setTimeout(() => { const el = document.getElementById(h); if (el) el.scrollIntoView(); }, 50); }
   renderVals() {
     const here = "Methods.dc.html";
-    const tabs = [["Tonight", "Board.dc.html"], ["Results", "Results.dc.html"], ["Season", "Season.dc.html"], ["Record", "Record.dc.html"], ["Tracker", "Tracker.dc.html"]].map(([label, href]) => ({ label, href, current: href === here ? "page" : "false", color: href === here ? "var(--ink)" : "var(--mute)", line: href === here ? "var(--ink)" : "transparent" }));
+    const tabs = [["Tonight", "Board.dc.html"], ["Results", "Results.dc.html"], ["Season", "Season.dc.html"], ["Record", "Record.dc.html"]].map(([label, href]) => ({ label, href, current: href === here ? "page" : "false", color: href === here ? "var(--ink)" : "var(--mute)", line: href === here ? "var(--ink)" : "transparent" }));
     const S = Component.SURE;
     const groups = Component.GROUPS.map((g) => ({ ...g, hid: `${g.id}-h`, entries: g.entries.map((e) => { const s = S[e.sure] || S.chosen; return { ...e, hasFormula: !!e.formula, sureLabel: s[0], sureBg: s[1], sureFg: s[2], sureBorder: s[3], sure: `${e.sureNote} (${s[4]}.)` }; }) }));
     const jumpOptions = [{ id: "", label: "Choose a section" }].concat(...Component.GROUPS.map((g) => [{ id: g.id + "-h", label: g.title.toUpperCase() }].concat(g.entries.map((e) => ({ id: e.id, label: `— ${e.title}` })))));

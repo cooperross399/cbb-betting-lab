@@ -116,6 +116,6 @@ def test_the_board_cut_is_the_cards_cut() -> None:
 
 
 def test_the_tracker_and_game_pages_show_it() -> None:
-    assert "r.betDownTo" in (WEB / "Tracker.dc.html").read_text(encoding="utf-8")
+    assert "r.betDownTo" in (WEB / "Record.dc.html").read_text(encoding="utf-8")
     assert "p.betDownTo" in (WEB / "Game.dc.html").read_text(encoding="utf-8")
     assert '"betDownTo"' in (WEB / "site_pages.py").read_text(encoding="utf-8")
