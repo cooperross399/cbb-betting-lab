@@ -1,4 +1,4 @@
-"""The site pages beside the board: Game, Season, Record, All results, Methods.
+"""The site pages beside the board: Game, Season, Record (which holds All results), Methods.
 
 What this file holds:
 
@@ -40,7 +40,9 @@ from cbb_betting_lab.models import ratings as R
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 WEB = PROJECT_ROOT / "web"
 REAL_DATA = PROJECT_ROOT / "tests" / "fixtures" / "real_data"
-PAGES = ("Game.dc.html", "Season.dc.html", "Record.dc.html", "Tracker.dc.html", "Methods.dc.html")
+PAGES = ("Game.dc.html", "Season.dc.html", "Record.dc.html", "Methods.dc.html")
+#: Since 2026-11-03 Tracker.dc.html only forwards to Record.dc.html, which
+#: holds every graded pick (tests/test_one_record_page_and_smooth_tabs.py).
 FEEDS = ("record.json", "tracker.json", "tracker_empty.json", "season.json", "ratings.json")
 #: Reference sites the pages must never name; the lab's docs name the source.
 REFERENCE_SITES = ("kenpom", "barttorvik", "torvik", "haslametrics", "evanmiya", "sagarin", "teamrankings")
@@ -244,7 +246,7 @@ def test_each_page_loads_the_shared_runtime_and_is_a_cbb_page(page):
     assert '<script src="./support.js"></script>' in text
     assert 'import("./lib/sports.js")' in text or page == "Methods.dc.html"
     assert 'setAttribute("data-sport","cbb")' in text
-    for tab in ("Board.dc.html", "Results.dc.html", "Tracker.dc.html", "Season.dc.html", "Record.dc.html", "Methods.dc.html"):
+    for tab in ("Board.dc.html", "Results.dc.html", "Season.dc.html", "Record.dc.html", "Methods.dc.html"):
         assert tab in text, f"{page} lost the {tab} tab"
     if page != "Game.dc.html":  # Cooper, 2026-11-02: the game page drops this line
         assert "never places bets" in text
