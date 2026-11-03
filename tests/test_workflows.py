@@ -2284,6 +2284,7 @@ GAMEDAY_CONTEXT: dict[str, str] = {
     "steps.layer_audit.outcome": "success",
     "steps.line_moves.outcome": "success",
     "steps.closing_alarm.outcome": "success",
+    "steps.nightly_learning.outcome": "success",
     "steps.settle.outputs.props_excluded": "",
 }
 

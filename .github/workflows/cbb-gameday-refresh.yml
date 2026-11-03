@@ -625,6 +625,38 @@ jobs:
           python scripts/run_decision_rule.py
           cat data/outputs/cbb_decision_rule.md >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Grade last night and show what the model learned
+        # Cooper, 2026-11-03: "Make sure the model learns from each night of
+        # basketball" (decision 78). The ratings already refit on every result
+        # the tables hold; this is the receipt. It prices the last slate day's
+        # finished games walk-forward through the card's own seam, grades them
+        # against the final score, refits with that night in and reports which
+        # ratings moved, beside the trust weights and the layer audit's
+        # switches (`reports/nightly_learning.py`). One row per graded night is
+        # carried on card-feed so the season's error can be watched falling.
+        # Reads no price and spends no credit. SOFT, like the layer audit:
+        # exit 2 is "nothing to grade yet" and the card is unaffected either way.
+        id: nightly_learning
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          PYTHONPATH: src
+        run: |
+          set -eu
+          HISTORY=data/processed/cbb_nightly_learning_history.csv
+          TMP=$(mktemp)
+          if git show refs/card-feed-tip:nightly_learning_history.csv > "$TMP" 2>/dev/null && [ -s "$TMP" ]; then
+            mv "$TMP" "$HISTORY"
+          else
+            rm -f "$TMP"
+          fi
+          STATUS=0
+          python scripts/run_nightly_learning.py --as-of "${{ steps.identity.outputs.day }}" --summary "$GITHUB_STEP_SUMMARY" || STATUS=$?
+          if [ "$STATUS" -eq 2 ]; then
+            exit 0
+          fi
+          exit "$STATUS"
+
       - name: Fetch the board, freeze the opinions, render the card
         id: card
         env:
@@ -838,6 +870,9 @@ jobs:
           if [ "${{ steps.closing_alarm.outcome }}" != "success" ]; then
             echo "::warning::The closing-line alarm did not run (outcome: ${{ steps.closing_alarm.outcome }}); the card is unaffected."
           fi
+          if [ "${{ steps.nightly_learning.outcome }}" != "success" ]; then
+            echo "::warning::Last night was not graded (outcome: ${{ steps.nightly_learning.outcome }}); the ratings still refit on every result in the tables, and the card is unaffected."
+          fi
           if [ -s run_degraded.txt ]; then
             echo "degraded=true" >> "$GITHUB_OUTPUT"
             cat run_degraded.txt
@@ -1028,6 +1063,16 @@ jobs:
           add latest_closing_alarm.md data/outputs/cbb_closing_alarm.md "$ROOT_INPUT"
           add latest_decision_rule.md data/outputs/cbb_decision_rule.md "$ROOT_INPUT"
           add latest_layer_audit.json data/raw/cbb/layer_audit/latest.json "$ROOT_INPUT"
+          # What the model learned from last night (decision 78), and the
+          # season's one-row-per-night history. The history is carried from
+          # the tip when this run holds none, so a run whose grading step
+          # failed never drops the season's rows from the tree.
+          add latest_nightly_learning.md data/outputs/cbb_nightly_learning.md "$ROOT_INPUT"
+          if [ -s data/processed/cbb_nightly_learning_history.csv ]; then
+            add nightly_learning_history.csv data/processed/cbb_nightly_learning_history.csv "$ROOT_INPUT"
+          elif git cat-file -e refs/card-feed-tip:nightly_learning_history.csv 2>/dev/null; then
+            printf '100644 blob %s\tnightly_learning_history.csv\n' "$(git rev-parse refs/card-feed-tip:nightly_learning_history.csv)" >> "$ROOT_INPUT"
+          fi
 
           # NEVER PUBLISH THE ABSENCE OF EVIDENCE. This tree is rebuilt from
           # local files under `if: always()`, so a run that died at or before

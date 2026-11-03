@@ -989,6 +989,22 @@ the trust table pulls it toward the market. A lean stakes nothing, is graded
 into its own record, and is never a bet; the card, the trust table and the
 allowlist are untouched.
 
+### 2026-11-03: the model learns from each night, and says what it learned
+
+Decision 78, Cooper: *"Make sure the model learns from each night of
+basketball."* **The ratings were not learning.** The morning after the
+182-game opening Monday they refitted on 3 games: hoopR's box scores arrive
+the next morning but its play-by-play lags, segments came from the
+play-by-play alone, and `ratings.prepare` drops a row with no `periods`.
+`build_datasets.schedule_segments` now reads periods and the first-half score
+from the schedule's line scores for any completed game the play-by-play and
+the ESPN supplement do not hold. Every morning `scripts/run_nightly_learning.py`
+(soft, in Gameday Refresh after settlement) grades the last night's
+projections against the finals per tier, lists the ratings that moved most,
+and publishes `latest_nightly_learning.md` and `nightly_learning_history.csv`
+on card-feed. Forecast accuracy on free data: it reads no price, claims no
+edge and registers no hypothesis.
+
 ## Contract strings — never change these
 
 Cooper's scheduled routines hard-code these. Renaming any of them silently
