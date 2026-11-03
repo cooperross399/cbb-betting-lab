@@ -201,7 +201,17 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
             if isinstance(hp, (int, float)):
                 su["w" if winner == row["projWinner"] else "l"] += 1
             sp, tt = g.get("spread") or {}, g.get("total") or {}
-            row["markets"] = {"spread": {"line": sp.get("current"), "proj": sp.get("proj")}, "total": {"line": tt.get("current"), "proj": tt.get("proj")}}
+            # A market goes in only when the board carried its line: the shared
+            # Results page formats `markets.spread.line` whenever `spread` is
+            # present, and a null line threw there, which stopped the page before
+            # it had read site.json -- so on 2026-11-03 it drew three tabs and
+            # no games. A game with no posted line now shows a dash.
+            num = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool)
+            row["markets"] = {}
+            if num(sp.get("current")):
+                row["markets"]["spread"] = {"line": sp["current"], "proj": sp.get("proj")}
+            if num(tt.get("current")):
+                row["markets"]["total"] = {"line": tt["current"], "proj": tt.get("proj")}
             if isinstance(sp.get("proj"), (int, float)) and isinstance(sp.get("current"), (int, float)):
                 model_home = sp["proj"] < sp["current"]
                 adj = (hf - af) + sp["current"]
