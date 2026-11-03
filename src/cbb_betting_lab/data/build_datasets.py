@@ -49,6 +49,7 @@ it rather than assuming the estimator."*
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import numpy as np
@@ -238,21 +239,100 @@ def _with_supplement(kind: str, season: int, raw_dir: Path | None) -> pd.DataFra
     return pd.concat(frames, ignore_index=True) if len(frames) > 1 else frames[0].copy()
 
 
+_LINESCORE_VALUE = re.compile(r"'value':\s*(-?\d+(?:\.\d+)?)")
+
+
+def _linescore_values(cell) -> list[float]:
+    """Per-period points from a schedule line-score cell, in period order.
+
+    hoopR stores the cell as the text of a list of ESPN line-score objects;
+    a parsed list of dicts is read too.
+    """
+    if cell is None or (isinstance(cell, float) and np.isnan(cell)):
+        return []
+    if isinstance(cell, (list, tuple, np.ndarray)):
+        out = []
+        for item in cell:
+            try:
+                out.append(float(item.get("value")))
+            except (AttributeError, TypeError, ValueError):
+                return []
+        return out
+    return [float(v) for v in _LINESCORE_VALUE.findall(str(cell))]
+
+
+def schedule_segments(season: int, *, raw_dir: Path | None = None) -> pd.DataFrame:
+    """Periods played and the first-half score of every COMPLETED game, from
+    the schedule's own line scores.
+
+    hoopR publishes a finished game's schedule row and box score the next
+    morning, but its play-by-play can lag by days. Segments came from the
+    play-by-play alone, so a game in the box but not yet in the play-by-play
+    had no `periods`, and `ratings.prepare` drops a row without periods. On
+    2026-11-03 that was 236 of the season's 242 countable team-games: the
+    ratings refitted on 3 games after a 182-game opening Monday (decision 78).
+    """
+    try:
+        schedule = hoopr.load(
+            "schedules", season, raw_dir=raw_dir,
+        )
+    except hoopr.FeedError:
+        return pd.DataFrame()
+    needed = {"game_id", "home_linescores", "away_linescores"}
+    if schedule.empty or not needed <= set(schedule.columns):
+        return pd.DataFrame()
+    if "status_type_completed" in schedule.columns:
+        schedule = schedule[schedule["status_type_completed"].fillna(False).astype(bool)]
+    rows = []
+    for record in schedule[list(needed)].to_dict("records"):
+        home = _linescore_values(record["home_linescores"])
+        away = _linescore_values(record["away_linescores"])
+        periods = min(len(home), len(away))
+        if periods < REGULATION_PERIODS:
+            continue
+        try:
+            game_id = int(record["game_id"])
+        except (TypeError, ValueError):
+            continue
+        rows.append({
+            "game_id": game_id,
+            "periods": periods,
+            "overtime": periods > REGULATION_PERIODS,
+            "home_score_h1": home[0],
+            "away_score_h1": away[0],
+            "first_basket_athlete_id": pd.NA,
+            "first_basket_team_id": pd.NA,
+            "home_first_basket_athlete_id": pd.NA,
+            "away_first_basket_athlete_id": pd.NA,
+        })
+    return pd.DataFrame(rows)
+
+
 def game_segments_with_supplement(season: int, *, raw_dir: Path | None = None) -> pd.DataFrame:
     """Segments from play-by-play, plus ESPN's line-score segments for games
-    the play-by-play does not hold yet."""
+    the play-by-play does not hold yet, plus the schedule's own line scores for
+    any completed game neither holds (`schedule_segments`)."""
     try:
         frame = build_game_segments(season, raw_dir=raw_dir)
     except hoopr.FeedError:
         frame = pd.DataFrame()
     extra = espn_box.load("segments", season, raw_dir)
-    if extra.empty:
+    if not extra.empty:
+        extra = extra.drop(columns=["source"], errors="ignore")
+        if not frame.empty:
+            extra = extra[~extra["game_id"].astype(int).isin(set(frame["game_id"].astype(int)))]
+            frame = pd.concat([frame, extra], ignore_index=True)
+        else:
+            frame = extra.reset_index(drop=True)
+    lines = schedule_segments(season, raw_dir=raw_dir)
+    if lines.empty:
         return frame
-    extra = extra.drop(columns=["source"], errors="ignore")
-    if not frame.empty:
-        extra = extra[~extra["game_id"].astype(int).isin(set(frame["game_id"].astype(int)))]
-        return pd.concat([frame, extra], ignore_index=True)
-    return extra.reset_index(drop=True)
+    if frame.empty:
+        return lines.reset_index(drop=True)
+    lines = lines[~lines["game_id"].astype(int).isin(set(frame["game_id"].astype(int)))]
+    if lines.empty:
+        return frame
+    return pd.concat([frame, lines], ignore_index=True)
 
 
 def build_team_games(
