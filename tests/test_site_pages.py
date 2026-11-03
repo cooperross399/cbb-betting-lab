@@ -434,3 +434,22 @@ def test_closing_value_reads_totals_from_the_bettors_side():
     assert site_pages.closing_value({"market": "Total", "side": "under", "line": 144.5}, game, lines)["points"] == -1.5
     assert site_pages.closing_value({"market": "Spread", "side": "away", "line": 3.0}, game, {"spread": [{"t": "2026-11-14T20:00:00Z", "v": -2.0}]})["points"] == 1.0
     assert site_pages.closing_value({"market": "Moneyline", "side": "home", "line": None}, game, lines) is None
+
+
+def test_a_game_with_no_posted_line_carries_no_market_for_it(monkeypatch):
+    """Cooper, 2026-11-03: the Results tab drew three tabs and no games. A game
+    settled with no posted spread was written as `{"spread": {"line": null}}`,
+    and the shared Results page formats that line whenever the key exists, so
+    it threw before reading site.json. A market goes in only with its line."""
+    settle = _load(WEB / "settle_results.py", "test_site_pages_settle_no_line")
+    board = {"teams": {}, "games": [
+        {"id": "1", "home": {"abbr": "A", "winProb": 0.6, "projPts": 70}, "away": {"abbr": "B", "projPts": 65},
+         "spread": {"current": None, "proj": -5.0}, "total": {"current": None, "proj": 135.0}},
+        {"id": "2", "home": {"abbr": "C"}, "away": {"abbr": "D"},
+         "spread": {"current": -3.5, "proj": -4.0}, "total": {"current": 140.5, "proj": 138.0}},
+    ]}
+    monkeypatch.setattr(settle, "finals", lambda sport, day: {"1": {"home": 72, "away": 60, "finish": "REG"}, "2": {"home": 70, "away": 68, "finish": "REG"}})
+    body, _ = settle.settle_day("cbb", None, board)
+    first, second = body["games"]
+    assert first["markets"] == {}
+    assert second["markets"] == {"spread": {"line": -3.5, "proj": -4.0}, "total": {"line": 140.5, "proj": 138.0}}
