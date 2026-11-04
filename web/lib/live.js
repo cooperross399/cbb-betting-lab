@@ -212,11 +212,7 @@ const ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports";
 export const LIVE_SPORTS = {
   nhl: { path: "hockey/nhl", codes: ESPN_TO_BOARD, windowHours: MATCH_WINDOW_HOURS, extra: "" },
   epl: { path: "soccer/eng.1", codes: { MNC: "MCI", MAN: "MUN", NOT: "NFO", NFF: "NFO", WHM: "WHU", SPU: "TOT" }, windowHours: 3, extra: "" },
-  // CBB: the board's game id IS the ESPN event id (build_board_json reads the same
-  // scoreboard), so a game matches on id first. ESPN answers 400 to a date RANGE
-  // together with groups=50 on this sport, so the slate is asked for as one Eastern
-  // date (`singleDay`), the date ESPN files every D-I game under.
-  cbb: { path: "basketball/mens-college-basketball", codes: { CONN: "UCONN", VILL: "NOVA", KAN: "KU", KY: "UK", GONZ: "GONZ", IAST: "ISU", MSU: "MSU", NDAME: "ND", CREIGH: "CREI" }, windowHours: 3, extra: "&groups=50&limit=500", singleDay: "America/New_York", matchById: true },
+  cbb: { path: "basketball/mens-college-basketball", codes: { CONN: "UCONN", VILL: "NOVA", KAN: "KU", KY: "UK", GONZ: "GONZ", IAST: "ISU", MSU: "MSU", NDAME: "ND", CREIGH: "CREI" }, windowHours: 3, extra: "&groups=50&limit=500" },
 };
 const ymdOf = (iso) => new Date(iso).toISOString().slice(0, 10).replace(/-/g, "");
 // One request for the board's dates: a single day, or a range for a window (EPL).
@@ -224,10 +220,6 @@ const ymdOf = (iso) => new Date(iso).toISOString().slice(0, 10).replace(/-/g, ""
 export function scoreboardUrlFor(sport, startIsos) {
   const L = LIVE_SPORTS[sport] || LIVE_SPORTS.nhl, ts = (startIsos || []).map((x) => Date.parse(x)).filter(Number.isFinite);
   if (!ts.length) return null;
-  if (L.singleDay) {
-    const day = new Date(Math.min(...ts)).toLocaleDateString("en-CA", { timeZone: L.singleDay }).replace(/-/g, "");
-    return `${ESPN_BASE}/${L.path}/scoreboard?dates=${day}${L.extra}`;
-  }
   const lo = Math.min(...ts) - 864e5, hi = Math.max(...ts);
   const a = ymdOf(lo), b = ymdOf(hi);
   return `${ESPN_BASE}/${L.path}/scoreboard?dates=${a === b ? a : `${a}-${b}`}${L.extra}`;
@@ -262,8 +254,6 @@ export function matchEventsFor(sport, events, games, teams) {
   const same = (side, abbr) => side.abbr === abbr || keys(abbr).some((k) => k && side.names.includes(k));
   for (const e of events || []) {
     const t = Date.parse(e.startUtc);
-    const byId = L.matchById ? (games || []).find((x) => !byGame[x.id] && String(x.id) === e.id) : null;
-    if (byId) { byGame[byId.id] = e; continue; }
     const g = (games || []).find((x) => !byGame[x.id] && same(e.away, x.away.abbr) && same(e.home, x.home.abbr) && Math.abs(Date.parse(x.startUtc) - t) <= L.windowHours * 36e5);
     if (g) { byGame[g.id] = e; continue; }
     const known = (side) => (games || []).some((x) => same(side, x.away.abbr) || same(side, x.home.abbr));
