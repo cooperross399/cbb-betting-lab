@@ -753,8 +753,8 @@ def quarter(price, result) -> tuple[float, float] | None:
 
 
 def tracker_rows(graded: list[dict], settle=None, lines_for=None) -> list[dict]:
-    """One row per graded pick: a bet at the tracked stake (`quarter`), an
-    opinion (lean or pass) graded for the record and staked nothing. The
+    """One row per graded pick: a bet or a lean at the tracked stake
+    (`quarter`), a pass graded for the record and staked nothing. The
     stake a frozen board recorded is never read, so a night kept at the
     card's stake is restated the same way."""
     settle = settle or _module("settle_results")
@@ -771,7 +771,7 @@ def tracker_rows(graded: list[dict], settle=None, lines_for=None) -> list[dict]:
         price = _int(pick.get("price"))
         bet = kind == "bet"
         stake, units = 0.0, None
-        if bet:
+        if kind in ("bet", "lean"):  # leans tracked at 0.25u too, kept apart from the bets
             got = quarter(price, result)
             if got is not None:  # no usable price: graded, never counted in units
                 units, stake = got
@@ -853,7 +853,7 @@ def tracker_page(rows: list[dict], nights: int) -> dict:
         "rows": rows,
         "notes": [
             "A bet is a frozen opinion the card selected: it cleared the edge bar on an allowlisted market with a human receipt behind it. Each is counted at 0.25u at the board's price, or enough to win 0.25u on a minus price, whatever the card staked it.",
-            "An opinion is a frozen price the card did not select. It is graded for the record and stakes nothing.",
+            "An opinion is a frozen price the card did not select. A lean is tracked at the same 0.25u, apart from the bets; a pass is graded for the record and stakes nothing.",
             "Ten or more bets to read a row; fewer swing with one week.",
         ],
     }

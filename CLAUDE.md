@@ -1014,7 +1014,9 @@ from its own price and result: a plus price risks 0.25u, a minus price risks
 0.25 x |price| / 100 to win 0.25u, and a push returns 0. `staked` is the
 amount risked. The tracker is rebuilt from the frozen boards each run and
 never reads the stake a board recorded, so every night already kept reads
-the same rule. Leans and passes stay graded and unstaked; the season tallies
+the same rule. Leans are tracked at the same 0.25u, tallied under
+`opinions` and on their own Record card, never in the best bets' headline;
+passes stay graded and unstaked. The season tallies
 on the board and Results carry no units. The Record page says so. The card,
 tonight's stakes, every model, the ledgers and the policy are unchanged.
 
