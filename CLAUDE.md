@@ -1020,6 +1020,13 @@ passes stay graded and unstaked. The season tallies
 on the board and Results carry no units. The Record page says so. The card,
 tonight's stakes, every model, the ledgers and the policy are unchanged.
 
+**A Pages deploy can stick on one commit.** On 2026-11-04 four Publish Board
+runs of commit 9b9ce5a failed at "Deploy to GitHub Pages" (three timeouts with
+a blank status, then "Deployment cancelled" at once) while the same files, a
+commit earlier, had deployed in 70 seconds. Pages names a deployment by the
+commit it is built from, so re-running the same commit asks for the same
+stuck deployment again. A new commit on main, then a publish, is the fix.
+
 ## Contract strings — never change these
 
 Cooper's scheduled routines hard-code these. Renaming any of them silently
