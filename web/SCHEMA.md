@@ -104,7 +104,7 @@ A tally is `{w, l, p, bets, staked, units, returnPct}`; a grouped list is
 `[{key, ...tally}]`. A best bet is counted at 0.25u on a plus price, or
 enough to win 0.25u on a minus price, at the board's price, whatever the card
 staked it (2026-11-04); `staked` is the amount risked, and a push returns 0. A
-bet with no usable price is graded with `units: null`. A lean or pass is graded and staked nothing (`units: null`). `byTier` keys are
+bet with no usable price is graded with `units: null`. A lean is tracked at the same 0.25u (2026-11-04), tallied under `opinions` and never in `overall`; a pass is graded and staked nothing (`units: null`). `byTier` keys are
 the card's tier letters (A high major, B mid major, C low major).
 
 ## season.json

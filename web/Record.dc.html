@@ -302,10 +302,10 @@ class Component extends DCLogic {
     const bets = rows.filter((r) => r.kind === "bet");
     const span = d.firstDate && d.lastDate ? `${d.firstDate} to ${d.lastDate} · ${d.nights || 0} nights` : "no night graded yet";
     if (!rows.length) return { ...base, ready: false, empty: true, kicker: "College basketball · our record", headline: "No pick has been graded yet.", emptyLink: true, emptyTitle: "No pick has been graded yet", emptyNote: "This page starts once the first night of picks has final scores." };
-    const ov = d.overall || {}, op = (d.opinions || {}).overall || {};
+    const ov = d.overall || {}, lean = (((d.opinions || {}).byKind || []).find((k) => k.key === "lean")) || {};
     const cards = [
       { title: "Best bets", stamp: `${ov.bets || 0} bets`, record: rec(ov), unitsLabel: "Won / lost", units: u(ov.units), unitsColor: uc(ov.units), rateLabel: "Per unit bet", rate: ret(ov), note: "The picks we bet, each at 0.25u, or to win 0.25u on minus odds." },
-      { title: "Other picks", stamp: `${op.bets || 0} graded, not bet`, record: rec(op), unitsLabel: "Win rate", units: rate(op), unitsColor: "var(--ink)", rateLabel: "Leans / passes", rate: `${((d.opinions || {}).byKind || []).map((k) => `${k.key === "lean" ? "L" : "P"} ${k.bets}`).join(" · ") || "—"}`, note: "Games we priced but did not bet. Graded so you can see them; never counted in units." },
+      { title: "Leans", stamp: `${lean.bets || 0} graded`, record: rec(lean), unitsLabel: "Won / lost", units: u(lean.units), unitsColor: uc(lean.units), rateLabel: "Per unit", rate: ret(lean), note: "Picks that were close but not a best bet, each tracked at 0.25u, or to win 0.25u on minus odds. Kept apart from the best bets." },
     ];
     const TIERS = ["A", "B", "C"];
     const byTier = Array.isArray(d.byTier) ? d.byTier : [];
@@ -351,11 +351,11 @@ class Component extends DCLogic {
     const RES = { win: ["Win", "var(--win)", "var(--on-win)", "var(--win)"], loss: ["Loss", "transparent", "var(--alert)", "var(--alert)"], push: ["Push", "transparent", "var(--mute)", "var(--rule)"] };
     const logRows = lrows.slice(page * Component.PAGE, (page + 1) * Component.PAGE).map((r) => { const chip = RES[r.result] || ["—", "transparent", "var(--mute)", "var(--rule)"]; return {
       date: r.date, href: `Game.dc.html?id=${encodeURIComponent(r.id)}&date=${encodeURIComponent(r.date)}`, kind: r.kind === "bet" ? "Bet" : r.kind === "lean" ? "Lean" : "Pass", kindColor: r.kind === "bet" ? "var(--ink)" : "var(--mute)",
-      game: r.teams ? `${r.teams[0]} @ ${r.teams[1]}` : "", pick: `${r.market}: ${r.label || ""}`, price: odds(r.price), down: odds(r.betDownTo), book: r.book || "", tier: r.tier || "", final: r.final || "", result: chip[0], resBg: chip[1], resFg: chip[2], resBorder: chip[3], units: r.kind === "bet" ? u(r.units) : "—", unitsColor: r.kind === "bet" ? uc(r.units) : "var(--mute)" }; });
+      game: r.teams ? `${r.teams[0]} @ ${r.teams[1]}` : "", pick: `${r.market}: ${r.label || ""}`, price: odds(r.price), down: odds(r.betDownTo), book: r.book || "", tier: r.tier || "", final: r.final || "", result: chip[0], resBg: chip[1], resFg: chip[2], resBorder: chip[3], units: typeof r.units === "number" ? u(r.units) : "—", unitsColor: typeof r.units === "number" ? uc(r.units) : "var(--mute)" }; });
     const log = { stamp: `${rows.length} picks · newest first`, query: this.state.logQuery, onSearch: (e) => this.setState({ logQuery: e.target.value, page: 0 }), noMatch: lrows.length === 0, noMatchText: `No pick matches “${this.state.logQuery}”.`, rows: logRows, pageText: lrows.length ? `${page * Component.PAGE + 1}–${Math.min(lrows.length, (page + 1) * Component.PAGE)} of ${lrows.length}` : "", onPrev: () => this.setState((s) => ({ page: Math.max(0, s.page - 1) })), onNext: () => this.setState((s) => ({ page: Math.min(pages - 1, s.page + 1) })), prevColor: page > 0 ? "var(--ink)" : "var(--rule)", nextColor: page < pages - 1 ? "var(--ink)" : "var(--rule)" };
     const notes = [
       "Every best bet is counted the same way: 0.25u on plus odds, or enough to win 0.25u on minus odds, at the price and book the board showed, however much the card staked it.",
-      "Other picks are games we priced but did not bet: a lean was close, a pass had no value. They are graded and never counted in units.",
+      "Leans are picks that were close but not a best bet. They are tracked at the same 0.25u, apart from the best bets. A pass had no value and is graded only.",
       "A tie on a spread or total is a push and refunds the bet. Overtime counts.",
       "A few bets is not much to go on. A team at +3u after a handful of bets can be back to zero after one bad night.",
       "Measured against real prices, no market shows a demonstrated edge. A good season here is a sample, not proof.",

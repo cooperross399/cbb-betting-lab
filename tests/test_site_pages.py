@@ -481,3 +481,28 @@ def test_a_game_with_no_posted_line_carries_no_market_for_it(monkeypatch):
     first, second = body["games"]
     assert first["markets"] == {}
     assert second["markets"] == {"spread": {"line": -3.5, "proj": -4.0}, "total": {"line": 140.5, "proj": 138.0}}
+
+
+def test_a_lean_is_tracked_at_a_quarter_unit_apart_from_the_bets():
+    """Leans are tracked at the same 0.25u as the bets (2026-11-04), tallied
+    under `opinions` and never in the bets' `overall`; a pass stakes nothing."""
+    site_pages = _load(WEB / "site_pages.py", "test_site_pages_lean_units")
+    lean = {"id": "9", "home": {"abbr": "UNLV"}, "away": {"abbr": "NAU"},
+            "pick": {"kind": "lean", "market": "Spread", "label": "NAU +20.5", "price": -105, "side": "away"}}
+    pas = {"id": "10", "home": {"abbr": "CBU"}, "away": {"abbr": "UNF"},
+           "pick": {"kind": "pass", "market": "Moneyline", "label": "UNF ML", "price": 500, "side": "away"}}
+
+    class Settle:
+        @staticmethod
+        def grade_pick(sport, pick, g, hf, af, teams=None):
+            return "loss"
+
+    graded = [{"date": "2026-11-03", "game": g, "home": 89, "away": 77, "teams": {}} for g in (lean, pas)]
+    rows = site_pages.tracker_rows(graded, Settle)
+    by = {r["id"]: r for r in rows}
+    assert (by["9"]["staked"], by["9"]["units"]) == (0.2625, -0.2625), "risk to win 0.25u at -105"
+    assert (by["10"]["staked"], by["10"]["units"]) == (0.0, None)
+    page = site_pages.tracker_page(rows, 1)
+    assert page["overall"]["bets"] == 0, "a lean never reaches the best bets"
+    kinds = {k["key"]: k for k in page["opinions"]["byKind"]}
+    assert kinds["lean"]["units"] == -0.26 and kinds["lean"]["staked"] == 0.26
