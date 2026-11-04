@@ -90,7 +90,8 @@ until each holds at least 10 games.
 ## tracker.json
 
 ```
-{generatedAt, nights, firstDate, lastDate, teamPickDefaultUnits: 1,
+{generatedAt, nights, firstDate, lastDate, teamPickDefaultUnits: 0.25,
+ stake: 0.25, stakeRule,
  overall, byMarket, byTeam, byTier, byPrice, byMonth,
  opinions: {overall, byMarket, byKind},
  rows: [{date, id, kind, group, market, label, price, betDownTo, book, tier, team,
@@ -100,8 +101,10 @@ until each holds at least 10 games.
 ```
 
 A tally is `{w, l, p, bets, staked, units, returnPct}`; a grouped list is
-`[{key, ...tally}]`. A best bet is staked one flat unit at the board's price;
-a lean or pass is graded and staked nothing (`units: null`). `byTier` keys are
+`[{key, ...tally}]`. A best bet is counted at 0.25u on a plus price, or
+enough to win 0.25u on a minus price, at the board's price, whatever the card
+staked it (2026-11-04); `staked` is the amount risked, and a push returns 0. A
+bet with no usable price is graded with `units: null`. A lean or pass is graded and staked nothing (`units: null`). `byTier` keys are
 the card's tier letters (A high major, B mid major, C low major).
 
 ## season.json

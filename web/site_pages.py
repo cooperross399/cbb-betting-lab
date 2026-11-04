@@ -732,9 +732,31 @@ def _grade(settle, pick: dict, g: dict, hf: int, af: int, teams: dict) -> str | 
         return None
 
 
+#: Every tracked bet is counted at 0.25u on a plus price, or enough to win
+#: 0.25u on a minus price, whatever the card staked it (Cooper, 2026-11-04:
+#: "Make it so every bet weve tracked on the website in records and stuff is
+#: all .25u or to win .25u for -odds").
+TRACKED_STAKE = 0.25
+STAKE_RULE = "0.25u, to win 0.25u on a minus price"
+
+
+def quarter(price, result) -> tuple[float, float] | None:
+    """(profit, risked) for one graded bet at the tracked stake, or None
+    without a usable price. A push risks the stake and returns 0."""
+    p = _num(price)
+    if p is None or -100 < p < 100 or result not in ("win", "loss", "push"):
+        return None
+    risk = TRACKED_STAKE * abs(p) / 100.0 if p < 0 else TRACKED_STAKE
+    win = TRACKED_STAKE if p < 0 else TRACKED_STAKE * p / 100.0
+    profit = win if result == "win" else -risk if result == "loss" else 0.0
+    return round(profit, 4), round(risk, 4)
+
+
 def tracker_rows(graded: list[dict], settle=None, lines_for=None) -> list[dict]:
-    """One row per graded pick: a bet at a flat unit, an opinion (lean or
-    pass) graded for the record and staked nothing."""
+    """One row per graded pick: a bet at the tracked stake (`quarter`), an
+    opinion (lean or pass) graded for the record and staked nothing. The
+    stake a frozen board recorded is never read, so a night kept at the
+    card's stake is restated the same way."""
     settle = settle or _module("settle_results")
     rows = []
     for row in graded:
@@ -748,11 +770,11 @@ def tracker_rows(graded: list[dict], settle=None, lines_for=None) -> list[dict]:
         kind = pick.get("kind", "bet")
         price = _int(pick.get("price"))
         bet = kind == "bet"
-        stake = 1.0 if bet else 0.0
-        units = None
+        stake, units = 0.0, None
         if bet:
-            pay = payout(price)
-            units = 0.0 if result == "push" or pay is None else (round(pay, 4) if result == "win" else -1.0)
+            got = quarter(price, result)
+            if got is not None:  # no usable price: graded, never counted in units
+                units, stake = got
         home, away = (g.get("home") or {}).get("abbr"), (g.get("away") or {}).get("abbr")
         rows.append({
             "date": row["date"], "id": str(g.get("id")), "kind": kind, "group": "team",
@@ -814,7 +836,9 @@ def tracker_page(rows: list[dict], nights: int) -> dict:
         "nights": nights,
         "firstDate": dates[0] if dates else None,
         "lastDate": dates[-1] if dates else None,
-        "teamPickDefaultUnits": 1,
+        "teamPickDefaultUnits": TRACKED_STAKE,
+        "stake": TRACKED_STAKE,
+        "stakeRule": STAKE_RULE,
         "overall": _tally(bets),
         "byMarket": _grouped(bets, lambda r: [r["market"]]),
         "byTeam": _grouped(bets, lambda r: [r["team"]] if r["team"] else list(r["teams"])),
@@ -828,7 +852,7 @@ def tracker_page(rows: list[dict], nights: int) -> dict:
         },
         "rows": rows,
         "notes": [
-            "A bet is a frozen opinion the card selected: it cleared the edge bar on an allowlisted market with a human receipt behind it. Each is counted at one flat unit at the board's price.",
+            "A bet is a frozen opinion the card selected: it cleared the edge bar on an allowlisted market with a human receipt behind it. Each is counted at 0.25u at the board's price, or enough to win 0.25u on a minus price, whatever the card staked it.",
             "An opinion is a frozen price the card did not select. It is graded for the record and stakes nothing.",
             "Ten or more bets to read a row; fewer swing with one week.",
         ],

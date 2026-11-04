@@ -1005,6 +1005,19 @@ and publishes `latest_nightly_learning.md` and `nightly_learning_history.csv`
 on card-feed. Forecast accuracy on free data: it reads no price, claims no
 edge and registers no hypothesis.
 
+### 2026-11-04: every tracked bet on the site is counted at 0.25u
+
+Cooper: *"Make it so every bet weve tracked on the website in records and
+stuff is all .25u or to win .25u for -odds"*. Site only.
+`web/site_pages.quarter` restates each graded best bet in `tracker.json`
+from its own price and result: a plus price risks 0.25u, a minus price risks
+0.25 x |price| / 100 to win 0.25u, and a push returns 0. `staked` is the
+amount risked. The tracker is rebuilt from the frozen boards each run and
+never reads the stake a board recorded, so every night already kept reads
+the same rule. Leans and passes stay graded and unstaked; the season tallies
+on the board and Results carry no units. The Record page says so. The card,
+tonight's stakes, every model, the ledgers and the policy are unchanged.
+
 ## Contract strings — never change these
 
 Cooper's scheduled routines hard-code these. Renaming any of them silently

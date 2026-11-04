@@ -222,16 +222,42 @@ def test_record_and_tracker_pages_are_built_from_frozen_boards_and_finals(tmp_pa
     assert record["markets"]["spread"]["games"] == 2 and record["markets"]["total"]["games"] == 2
     assert record["movement"] == {"toward": 1, "against": 0, "flat": 0, "picks": 1}, "ND shortened from -150 to -160: toward the pick"
     tracker = json.loads((tmp_path / "tracker.json").read_text(encoding="utf-8"))
-    assert tracker["overall"] == {"w": 1, "l": 0, "p": 0, "bets": 1, "staked": 1.0, "units": 0.62, "returnPct": 62.0}, "tallies are rounded to the cent; the row keeps 0.625"
+    # 0.25u, or to win 0.25u on a minus price (2026-11-04): -160 risks 0.4u to win 0.25u,
+    # whatever the 1u the frozen board recorded.
+    assert tracker["overall"] == {"w": 1, "l": 0, "p": 0, "bets": 1, "staked": 0.4, "units": 0.25, "returnPct": 62.5}
+    assert tracker["stake"] == 0.25 and tracker["teamPickDefaultUnits"] == 0.25
     assert tracker["opinions"]["overall"]["bets"] == 1 and tracker["opinions"]["overall"]["staked"] == 0.0
     kinds = {r["kind"]: r for r in tracker["rows"]}
-    assert kinds["bet"]["result"] == "win" and kinds["bet"]["units"] == 0.625 and kinds["bet"]["team"] == "ND"
+    assert kinds["bet"]["result"] == "win" and kinds["bet"]["units"] == 0.25 and kinds["bet"]["staked"] == 0.4 and kinds["bet"]["team"] == "ND"
     assert kinds["pass"]["result"] == "loss" and kinds["pass"]["units"] is None and kinds["pass"]["staked"] == 0.0, "Kansas +3.5 lost by 5"
     assert kinds["bet"]["final"] == "NOVA 70, ND 78"
     assert [m["key"] for m in tracker["byMarket"]] == ["Moneyline"]
     assert tracker["byTier"][0]["key"] == "high_major", "the card's own tier spelling"
     for name in ("record.json", "tracker.json"):
         assert "NaN" not in (tmp_path / name).read_text(encoding="utf-8")
+
+
+def test_a_bet_kept_at_the_cards_stake_is_restated_at_a_quarter_unit():
+    """A frozen board records the card's stake (1u, 2u); the tracker never reads it.
+    Each bet is restated from its own price and result at 0.25u, or to win 0.25u."""
+    site_pages = _load(WEB / "site_pages.py", "test_site_pages_restake")
+    game = {"id": "7", "home": {"abbr": "KU"}, "away": {"abbr": "DUKE"},
+            "pick": {"kind": "bet", "market": "Moneyline", "label": "Kansas ML", "price": -200, "units": 2.0, "side": "home"}}
+    win = {"id": "8", "home": {"abbr": "ND"}, "away": {"abbr": "NOVA"},
+           "pick": {"kind": "bet", "market": "Moneyline", "label": "Villanova ML", "price": 150, "units": 1.0, "side": "away"}}
+
+    class Settle:
+        @staticmethod
+        def grade_pick(sport, pick, g, hf, af, teams=None):
+            return "loss" if g["id"] == "7" else "win"
+
+    graded = [{"date": "2026-11-14", "game": game, "home": 60, "away": 70, "teams": {}},
+              {"date": "2026-11-14", "game": win, "home": 60, "away": 70, "teams": {}}]
+    rows = {r["id"]: r for r in site_pages.tracker_rows(graded, Settle)}
+    assert (rows["7"]["staked"], rows["7"]["units"]) == (0.5, -0.5), "to win 0.25u at -200, not the card's 2u"
+    assert (rows["8"]["staked"], rows["8"]["units"]) == (0.25, 0.375)
+    assert site_pages.quarter(-110, "push") == (0.0, 0.275)
+    assert site_pages.quarter(None, "win") is None
 
 
 def test_the_settled_night_keeps_its_graded_games():
