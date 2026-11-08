@@ -4,11 +4,11 @@
 
 College basketball's large sample makes this **more** urgent, not less. A bigger n narrows every interval, including the intervals of the hypotheses that are wrong. Sample size buys power, never innocence.
 
-**155 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.83** before it means what it says.
+**167 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.84** before it means what it says.
 
 **Alpha budget: 6 new hypotheses a week**, declared 2026-09-01. Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state — re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise.
 
-**114 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
+**126 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
 
 | Search | Hypotheses |
 |:---|---:|
@@ -29,6 +29,10 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | line_movement_2026_10_30 | 3 |
 | closing_line_alarm_2026_10_31 | 3 |
 | prior_scale_2026_11_08 | 3 |
+| min_books_2026_11_08 | 3 |
+| closing_gate_2026_11_08 | 3 |
+| november_home_2026_11_08 | 3 |
+| market_ratings_2026_11_08 | 3 |
 | november_prior | 2 |
 | reachability | 1 |
 | champion_challenger | 1 |
@@ -192,6 +196,18 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | 153 | prior_scale_2026_11_08 | high-major: fitting each completed season for the next season's prior at ratings.SEASON_FIT_STRENGTH (a ridge of one game) rather than the in-season prior strength raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
 | 154 | prior_scale_2026_11_08 | mid-major: fitting each completed season for the next season's prior at ratings.SEASON_FIT_STRENGTH (a ridge of one game) rather than the in-season prior strength raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
 | 155 | prior_scale_2026_11_08 | low-major: fitting each completed season for the next season's prior at ratings.SEASON_FIT_STRENGTH (a ridge of one game) rather than the in-season prior strength raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 156 | min_books_2026_11_08 | high-major: requiring at least trust.MIN_FAIR_BOOKS (three) books quoting both sides before a wager carries a fair price, and so a trusted opinion, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 157 | min_books_2026_11_08 | mid-major: requiring at least trust.MIN_FAIR_BOOKS (three) books quoting both sides before a wager carries a fair price, and so a trusted opinion, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 158 | min_books_2026_11_08 | low-major: requiring at least trust.MIN_FAIR_BOOKS (three) books quoting both sides before a wager carries a fair price, and so a trusted opinion, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 159 | closing_gate_2026_11_08 | high-major: closing the tier's main markets (and their alternate ladders) that the closing-line alarm has tripped raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 160 | closing_gate_2026_11_08 | mid-major: closing the tier's main markets (and their alternate ladders) that the closing-line alarm has tripped raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 161 | closing_gate_2026_11_08 | low-major: closing the tier's main markets (and their alternate ladders) that the closing-line alarm has tripped raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 162 | november_home_2026_11_08 | high-major: adding card_factors.EARLY_HOME_BONUS_POINTS (2.66) of margin to a true home side, fading linearly to zero over EARLY_HOME_BONUS_DAYS (45) from the season's first game, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 163 | november_home_2026_11_08 | mid-major: adding card_factors.EARLY_HOME_BONUS_POINTS (2.66) of margin to a true home side, fading linearly to zero over EARLY_HOME_BONUS_DAYS (45) from the season's first game, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 164 | november_home_2026_11_08 | low-major: adding card_factors.EARLY_HOME_BONUS_POINTS (2.66) of margin to a true home side, fading linearly to zero over EARLY_HOME_BONUS_DAYS (45) from the season's first game, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 165 | market_ratings_2026_11_08 | high-major: the candidate layer market_ratings (ratings fitted from closing spreads and totals of games already played, blended at card_factors.MARKET_BLEND_WEIGHT on margin and total), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 166 | market_ratings_2026_11_08 | mid-major: the candidate layer market_ratings (ratings fitted from closing spreads and totals of games already played, blended at card_factors.MARKET_BLEND_WEIGHT on margin and total), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 167 | market_ratings_2026_11_08 | low-major: the candidate layer market_ratings (ratings fitted from closing spreads and totals of games already played, blended at card_factors.MARKET_BLEND_WEIGHT on margin and total), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
 
 ## 7 quantities declared descriptive-only
 

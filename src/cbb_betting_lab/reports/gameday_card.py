@@ -149,6 +149,7 @@ from cbb_betting_lab.gates import (
 )
 from cbb_betting_lab.markets import FUTURES, MARKETS_BY_KEY, PLAYER, per_event_provider_keys
 from cbb_betting_lab.models import distributions, player_census, player_rates, slate
+from cbb_betting_lab.models import closing_gate
 from cbb_betting_lab.models import line_move
 from cbb_betting_lab.models import trust as trust_model
 from cbb_betting_lab.population import VenueState
@@ -2331,6 +2332,7 @@ def run_card(
     matchup_census: str = "",
     trust: "trust_model.TrustTable | None" = None,
     moves: "line_move.Moves | None" = None,
+    gate: "closing_gate.Gate | None" = None,
 ) -> CardRun:
     """Gate, price, freeze, and account for every row. In that order.
 
@@ -2376,6 +2378,10 @@ def run_card(
     # where trust does.
     restraint = line_move.apply(trusted, market, wagers, moves if market else None)
     trusted = restraint.probabilities
+    # A cell whose leans have lost to the closing line is closed tonight
+    # (`models/closing_gate.py`, decision 82). It only removes wagers from the
+    # edge bar's reach; the freeze below still records every one of them.
+    trusted, _gated_by_close = closing_gate.apply(trusted, wagers, gate)
 
     # The tip guard is read for **every** wager on the board, not only for the
     # ones that reach it inside `select`. `select` applies its bars in order and
@@ -2471,7 +2477,8 @@ def run_card(
         ),
         rows_off_this_slate=off_slate,
         matchup_census=str(matchup_census or ""),
-        trust_line=trust.line() if trust is not None else "",
+        trust_line=(trust.line() if trust is not None else "")
+        + (("\n\n" + gate.line()) if gate is not None and gate.closed else ""),
         movement_line=restraint.line,
         ladder_lines=ladder_coherence.summary_lines(
             ladder_coherence.dominated_quotes(wagers),

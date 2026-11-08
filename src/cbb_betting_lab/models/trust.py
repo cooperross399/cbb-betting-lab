@@ -188,10 +188,20 @@ def _record(wager) -> dict:
     }
 
 
-def market_probabilities(wagers: Iterable) -> dict[tuple, float]:
+#: The fewest books that must quote both sides before a wager has a fair price
+#: (decision 81, Cooper 2026-11-08). One or two books on a long alternate rung
+#: are a thin, stale or mispriced quote, and the first week's card bought
+#: mostly those: +200 to +430 alternate spreads whose "fair" price was one
+#: book's own two-sided quote. A wager below the floor has no fair price, so
+#: under an active trust table it has no trusted opinion and cannot be picked.
+MIN_FAIR_BOOKS = 3
+
+
+def market_probabilities(wagers: Iterable, min_books: int | None = None) -> dict[tuple, float]:
     """Wager key -> de-vigged market probability, the median over books that
-    quote both sides. A wager with no such book is absent: a missing price
-    stays missing."""
+    quote both sides, when at least `MIN_FAIR_BOOKS` do. A wager with fewer is
+    absent: a missing price stays missing, and a thin one is not a price."""
+    floor = MIN_FAIR_BOOKS if min_books is None else int(min_books)
     from cbb_betting_lab.reports import forecast_skill as FS
 
     wagers = list(wagers)
@@ -212,7 +222,7 @@ def market_probabilities(wagers: Iterable) -> dict[tuple, float]:
             total = a[book] + b[book]
             if total == total and total > FS.MINIMUM_OVERROUND:
                 fair.append(a[book] / total)
-        if fair:
+        if fair and len(fair) >= floor:
             out[first.key] = float(median(fair))
             out[second.key] = 1.0 - out[first.key]
     return out

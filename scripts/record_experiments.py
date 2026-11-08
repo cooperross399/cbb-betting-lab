@@ -1209,6 +1209,150 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    # ---------------------------------------------------------------------
+    # decisions 81-84 (Cooper, 2026-11-08): four card changes registered before they are built. First: a wager has a fair price only when at least trust.MIN_FAIR_BOOKS (3) books quote both sides. Per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="min_books_2026_11_08",
+        name=(
+            "high-major: requiring at least trust.MIN_FAIR_BOOKS (three) books quoting both sides before a wager carries a fair price, and so a trusted opinion, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="min_books_2026_11_08",
+        name=(
+            "mid-major: requiring at least trust.MIN_FAIR_BOOKS (three) books quoting both sides before a wager carries a fair price, and so a trusted opinion, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="min_books_2026_11_08",
+        name=(
+            "low-major: requiring at least trust.MIN_FAIR_BOOKS (three) books quoting both sides before a wager carries a fair price, and so a trusted opinion, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    # ---------------------------------------------------------------------
+    # Second: the card selects nothing in a tier and main market the closing-line alarm has tripped (models/closing_gate.py). Per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="closing_gate_2026_11_08",
+        name=(
+            "high-major: closing the tier's main markets (and their alternate ladders) that the closing-line alarm has tripped raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="closing_gate_2026_11_08",
+        name=(
+            "mid-major: closing the tier's main markets (and their alternate ladders) that the closing-line alarm has tripped raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="closing_gate_2026_11_08",
+        name=(
+            "low-major: closing the tier's main markets (and their alternate ladders) that the closing-line alarm has tripped raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    # ---------------------------------------------------------------------
+    # Third: a true home side gets card_factors.EARLY_HOME_BONUS_POINTS, fading to zero over EARLY_HOME_BONUS_DAYS from the season's first game. Per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="november_home_2026_11_08",
+        name=(
+            "high-major: adding card_factors.EARLY_HOME_BONUS_POINTS (2.66) of margin to a true home side, fading linearly to zero over EARLY_HOME_BONUS_DAYS (45) from the season's first game, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="november_home_2026_11_08",
+        name=(
+            "mid-major: adding card_factors.EARLY_HOME_BONUS_POINTS (2.66) of margin to a true home side, fading linearly to zero over EARLY_HOME_BONUS_DAYS (45) from the season's first game, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="november_home_2026_11_08",
+        name=(
+            "low-major: adding card_factors.EARLY_HOME_BONUS_POINTS (2.66) of margin to a true home side, fading linearly to zero over EARLY_HOME_BONUS_DAYS (45) from the season's first game, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    # ---------------------------------------------------------------------
+    # Fourth: the candidate layer market_ratings, team ratings fitted from closing lines of games already played, blended at MARKET_BLEND_WEIGHT when the layer audit adds it. Per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="market_ratings_2026_11_08",
+        name=(
+            "high-major: the candidate layer market_ratings (ratings fitted from closing spreads and totals of games already played, blended at card_factors.MARKET_BLEND_WEIGHT on margin and total), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="market_ratings_2026_11_08",
+        name=(
+            "mid-major: the candidate layer market_ratings (ratings fitted from closing spreads and totals of games already played, blended at card_factors.MARKET_BLEND_WEIGHT on margin and total), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="market_ratings_2026_11_08",
+        name=(
+            "low-major: the candidate layer market_ratings (ratings fitted from closing spreads and totals of games already played, blended at card_factors.MARKET_BLEND_WEIGHT on margin and total), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 

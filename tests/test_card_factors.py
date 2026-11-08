@@ -98,11 +98,12 @@ def test_the_strength_layer_is_the_neutral_floor(lab, frames):
         home_court = game.layers[1]
         tier = game.context["home_court"]["tier_margin"]
         departure = game.context["home_court"]["departure"]
+        early = game.context["home_court"]["early_season"]
         assert (home_court["home"] - home_court["away"]) - (strength["home"] - strength["away"]) == pytest.approx(
-            tier + departure
+            tier + departure + early
         )
         if game.venue_state == "neutral":
-            assert tier == 0.0 and departure == 0.0
+            assert tier == 0.0 and departure == 0.0 and early == 0.0
 
 
 def test_the_context_refuses_a_row_from_the_day_being_priced(frames):
@@ -311,3 +312,37 @@ def test_the_context_summary_names_what_it_carried():
     line = CF.summary(context)
     assert "form on 1 team(s)" in line and "rest on 1" in line
     assert "1 rotation player(s)" in line and "no second opinion" in line
+
+
+def test_the_early_home_bonus_fades_to_nothing_by_mid_december():
+    assert CF.early_home_bonus(0) == pytest.approx(CF.EARLY_HOME_BONUS_POINTS)
+    half = CF.EARLY_HOME_BONUS_DAYS / 2
+    assert CF.early_home_bonus(half) == pytest.approx(CF.EARLY_HOME_BONUS_POINTS / 2)
+    assert CF.early_home_bonus(CF.EARLY_HOME_BONUS_DAYS) == 0.0
+    assert CF.early_home_bonus(120) == 0.0
+    assert CF.early_home_bonus(None) == 0.0 and CF.early_home_bonus(-1) == 0.0
+
+
+def test_the_season_day_counts_from_the_first_game_and_opening_day_is_zero():
+    rows = pd.DataFrame({"slate_date": ["2026-11-01", "2026-11-03", "2026-11-03"]})
+    assert CF.season_day(rows, "2026-11-10") == 9
+    assert CF.season_day(pd.DataFrame(), "2026-11-01") == 0
+
+
+def test_the_early_bonus_reaches_a_true_home_side_in_november(lab, frames):
+    """Priced in mid-March the bonus is zero; the same seam on a November day
+    puts it on every true-home game and on no neutral one."""
+    team_games, _, schedule = frames
+    days = sorted(d for d in schedule["game_date"].astype(str).unique() if d[5:7] == "11")
+    out = {}
+    for day in days[3:12]:
+        out.update(_priced(lab, frames, day, player=False))
+        if any(m.priceable and m.venue_state == "home" for m in out.values()):
+            break
+    homes = [m for m in out.values() if m.priceable and m.venue_state == "home"]
+    assert homes, "the fixture prices no true-home game in November, so the bonus is untested"
+    for game in homes:
+        assert game.context["home_court"]["early_season"] != 0.0
+    for game in out.values():
+        if game.priceable and game.venue_state == "neutral":
+            assert game.context["home_court"]["early_season"] == 0.0

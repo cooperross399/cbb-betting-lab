@@ -2915,6 +2915,7 @@ def matchups_for(
         raw_dir=raw_dir,
         teams={t for _, _, h, a in asked for t in (h, a)},
         home_states=_home_states(int(season), schedule),
+        schedule=schedule,
     )
 
     for event_id, game_id, home_team_id, away_team_id in asked:
