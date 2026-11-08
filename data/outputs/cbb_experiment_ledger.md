@@ -4,11 +4,11 @@
 
 College basketball's large sample makes this **more** urgent, not less. A bigger n narrows every interval, including the intervals of the hypotheses that are wrong. Sample size buys power, never innocence.
 
-**152 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.83** before it means what it says.
+**155 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.83** before it means what it says.
 
 **Alpha budget: 6 new hypotheses a week**, declared 2026-09-01. Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state — re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise.
 
-**111 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
+**114 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
 
 | Search | Hypotheses |
 |:---|---:|
@@ -28,6 +28,7 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | trust_learning_2026_10_30 | 3 |
 | line_movement_2026_10_30 | 3 |
 | closing_line_alarm_2026_10_31 | 3 |
+| prior_scale_2026_11_08 | 3 |
 | november_prior | 2 |
 | reachability | 1 |
 | champion_challenger | 1 |
@@ -188,6 +189,9 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | 150 | closing_line_alarm_2026_10_31 | high-major: the model's settled full-game team leans (edge at least forward_evidence.BET_EDGE_THRESHOLD) finish on the right side of the closing line, measured as mean closing-line value per lean against the last capture before tip (reports/closing_alarm.py, forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-31 | pending |
 | 151 | closing_line_alarm_2026_10_31 | mid-major: the model's settled full-game team leans (edge at least forward_evidence.BET_EDGE_THRESHOLD) finish on the right side of the closing line, measured as mean closing-line value per lean against the last capture before tip (reports/closing_alarm.py, forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-31 | pending |
 | 152 | closing_line_alarm_2026_10_31 | low-major: the model's settled full-game team leans (edge at least forward_evidence.BET_EDGE_THRESHOLD) finish on the right side of the closing line, measured as mean closing-line value per lean against the last capture before tip (reports/closing_alarm.py, forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-10-31 | pending |
+| 153 | prior_scale_2026_11_08 | high-major: fitting each completed season for the next season's prior at ratings.SEASON_FIT_STRENGTH (a ridge of one game) rather than the in-season prior strength raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 154 | prior_scale_2026_11_08 | mid-major: fitting each completed season for the next season's prior at ratings.SEASON_FIT_STRENGTH (a ridge of one game) rather than the in-season prior strength raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 155 | prior_scale_2026_11_08 | low-major: fitting each completed season for the next season's prior at ratings.SEASON_FIT_STRENGTH (a ridge of one game) rather than the in-season prior strength raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
 
 ## 7 quantities declared descriptive-only
 

@@ -2212,6 +2212,48 @@
       "predicted_direction": "higher",
       "stage": "discovery",
       "realised_direction": ""
+    },
+    {
+      "search": "prior_scale_2026_11_08",
+      "name": "high-major: fitting each completed season for the next season's prior at ratings.SEASON_FIT_STRENGTH (a ridge of one game) rather than the in-season prior strength raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-08",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "prior_scale_2026_11_08",
+      "name": "mid-major: fitting each completed season for the next season's prior at ratings.SEASON_FIT_STRENGTH (a ridge of one game) rather than the in-season prior strength raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-08",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "prior_scale_2026_11_08",
+      "name": "low-major: fitting each completed season for the next season's prior at ratings.SEASON_FIT_STRENGTH (a ridge of one game) rather than the in-season prior strength raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-08",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
     }
   ]
 }

@@ -347,6 +347,24 @@ DECLARED_PRIOR_STRENGTH: dict[str, float] = {
     "tempo": 7.9,
 }
 
+#: The ridge, in games, on each completed season's own fit -- the fit the NEXT
+#: season's prior is built from (`_season_fit` via `prepare_prior`). Decision
+#: 80, 2026-11-08. It was `DECLARED_PRIOR_STRENGTH`, the in-season prior's
+#: strength, which shrank a 30-game season to about 0.6 of its scale; the
+#: carryover fitted on those shrunk seasons then shrank it again, and the
+#: prior's residual sd, measured in shrunk units, made the in-season fit trust
+#: November's results too little. The prior spread D-I at a net sd of 4.6
+#: points per 100 and priced every November favourite short: on the first week
+#: of 2026-27 the projected margin missed by 12.3 points against the final
+#: score and the result ran 1.84 times the projection. A ridge of one game is
+#: there for identification, not shrinkage (`_season_fit`'s own docstring calls
+#: the fit prior-free). Measured walk-forward before it was set, against the
+#: final score, on games the prior then priced (`decision_log.md`, decision 80):
+#: first week 2026-27 12.33 -> 10.46, November 2025 11.41 -> 10.75, mid-season
+#: 2025-26 9.09 -> 8.91, November 2024 11.31 -> 10.81. Registered as
+#: `prior_scale_2026_11_08`, one per tier, before it was built.
+SEASON_FIT_STRENGTH: dict[str, float] = {"offence": 1.0, "defence": 1.0, "tempo": 1.0}
+
 #: Fallback season-to-season carryover, per component, when there is no earlier
 #: pair of seasons to fit it on. Measured over 2,124 team-season pairs.
 DECLARED_CARRYOVER: dict[str, float] = {
@@ -1500,7 +1518,7 @@ def prepare_prior(
             tiers=tiers,
         )
 
-    strength = dict(DECLARED_PRIOR_STRENGTH)
+    strength = dict(SEASON_FIT_STRENGTH)
     fitted: dict[int, tuple] = {}
     for one in seasons:
         subset = rows[rows["season"] == one]

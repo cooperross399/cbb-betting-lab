@@ -12,9 +12,9 @@ Generated 2026-09-18T00:22:10Z.
 
 **The discovery record does not name the model that priced it.** The agreement between the two runs on that one point is asserted by the operator who passed `--model`, not verified by this report, and it is said here rather than left implicit.
 
-**Family correction: 152 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.83. That is the ledger's **cumulative** count and never the day's — a search that runs every week is not twelve tests, it is twelve tests a week, forever. 32 of them are this run's own holdout looks: putting a discovery finding to the holdout **is** a second look and is counted as one.
+**Family correction: 155 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.83. That is the ledger's **cumulative** count and never the day's — a search that runs every week is not twelve tests, it is twelve tests a week, forever. 32 of them are this run's own holdout looks: putting a discovery finding to the holdout **is** a second look and is counted as one.
 
-**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 133 cumulative hypotheses (x1.8145), and `cbb_replication.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 152 hypotheses (x1.8324), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
+**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 133 cumulative hypotheses (x1.8145), and `cbb_replication.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 155 hypotheses (x1.8350), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
 
 **Below 2,000 held-out bets there is no number**, only the words *not enough evidence*. That floor is `promotion.Criteria.minimum_bets`, declared 2026-09-01 in `/Users/cooperross/Projects/cbb-betting-lab/data/manual/promotion_criteria.json`. This module reads that bar rather than inventing a second one — a bar written here would be a bar chosen after the first one existed.
 
@@ -166,7 +166,7 @@ Every state below carries its sample size, and every cell whose held-out interva
 | low_major | spread | 2026 | 3,190 | 1,484 | +0.8% | -4.5% to +6.0% | -8.9% to +10.4% | nothing to replicate |
 | low_major | spread_h1 | 2025 | 0 | 0 | — | — | — | untestable |
 | low_major | spread_h1 | 2026 | 0 | 0 | — | — | — | untestable |
-| low_major | team_total | 2025 | 2,656 | 104 | -3.8% | -8.9% to +1.2% | -13.1% to +5.4% | nothing to replicate |
+| low_major | team_total | 2025 | 2,656 | 104 | -3.8% | -8.9% to +1.2% | -13.1% to +5.5% | nothing to replicate |
 | low_major | team_total | 2026 | 4,525 | 108 | -3.4% | -7.6% to +0.9% | -11.2% to +4.5% | nothing to replicate |
 | low_major | total_points | 2025 | 3,308 | 114 | -6.8% | -13.0% to -0.5% | -18.2% to +4.7% | nothing to replicate |
 | low_major | total_points | 2026 | 3,982 | 1,604 | -3.6% | -8.6% to +1.4% | -12.8% to +5.5% | nothing to replicate |
@@ -198,7 +198,7 @@ The held-out season's own return per tier. It carries no replication state: a st
 | Market | Bets | Clusters | ROI | 95% interval | Family-corrected | Verdict |
 |:---|---:|---:|---:|:---|:---|:---|
 | moneyline | 7,326 | 242 days | -11.6% | -15.7% to -7.5% | -19.1% to -4.1% | demonstrated deficit |
-| spread | 17,551 | 7,513 games | -2.5% | -4.8% to -0.2% | -6.7% to +1.7% | no demonstrated edge |
+| spread | 17,551 | 7,513 games | -2.5% | -4.8% to -0.2% | -6.8% to +1.7% | no demonstrated edge |
 | team_total | 19,618 | 244 days | -4.8% | -6.7% to -3.0% | -8.2% to -1.5% | demonstrated deficit |
 | total_points | 20,513 | 8,043 games | -5.3% | -7.5% to -3.1% | -9.4% to -1.2% | demonstrated deficit |
 | every market | 65,008 | 9,641 games | -5.1% | -6.6% to -3.7% | -7.8% to -2.4% | demonstrated deficit |

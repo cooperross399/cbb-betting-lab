@@ -1160,6 +1160,55 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    # ---------------------------------------------------------------------
+    # 2026-11-08: the preseason prior is built from completed-season fits that
+    # were ridged at the full in-season prior strength, so the prior spread
+    # teams at under half their measured scale and the card under-priced every
+    # favourite in November (decision 80). Registered before the change is
+    # built: ratings.SEASON_FIT_STRENGTH. Per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="prior_scale_2026_11_08",
+        name=(
+            "high-major: fitting each completed season for the next season's prior "
+            "at ratings.SEASON_FIT_STRENGTH (a ridge of one game) rather than the "
+            "in-season prior strength raises the return of the card's team "
+            "selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="prior_scale_2026_11_08",
+        name=(
+            "mid-major: fitting each completed season for the next season's prior "
+            "at ratings.SEASON_FIT_STRENGTH (a ridge of one game) rather than the "
+            "in-season prior strength raises the return of the card's team "
+            "selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="prior_scale_2026_11_08",
+        name=(
+            "low-major: fitting each completed season for the next season's prior "
+            "at ratings.SEASON_FIT_STRENGTH (a ridge of one game) rather than the "
+            "in-season prior strength raises the return of the card's team "
+            "selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 
