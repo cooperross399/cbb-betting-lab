@@ -4,11 +4,11 @@
 
 College basketball's large sample makes this **more** urgent, not less. A bigger n narrows every interval, including the intervals of the hypotheses that are wrong. Sample size buys power, never innocence.
 
-**173 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.85** before it means what it says.
+**182 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.86** before it means what it says.
 
 **Alpha budget: 6 new hypotheses a week**, declared 2026-09-01. Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state — re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise.
 
-**132 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
+**141 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
 
 | Search | Hypotheses |
 |:---|---:|
@@ -35,6 +35,9 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | market_ratings_2026_11_08 | 3 |
 | rung_cap_2026_11_08 | 3 |
 | trust_sizing_2026_11_08 | 3 |
+| lineup_minutes_2026_11_08 | 3 |
+| november_form_2026_11_08 | 3 |
+| bet_timing_2026_11_08 | 3 |
 | november_prior | 2 |
 | reachability | 1 |
 | champion_challenger | 1 |
@@ -216,6 +219,15 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | 171 | trust_sizing_2026_11_08 | high-major: sizing the card's selections at sizing.BASE_UNITS times (1 + the tier's trust weight), at most sizing.MAX_UNITS, raises the return per unit risked of the card's team selections against the card-time price over flat 0.25u sizing (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
 | 172 | trust_sizing_2026_11_08 | mid-major: sizing the card's selections at sizing.BASE_UNITS times (1 + the tier's trust weight), at most sizing.MAX_UNITS, raises the return per unit risked of the card's team selections against the card-time price over flat 0.25u sizing (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
 | 173 | trust_sizing_2026_11_08 | low-major: sizing the card's selections at sizing.BASE_UNITS times (1 + the tier's trust weight), at most sizing.MAX_UNITS, raises the return per unit risked of the card's team selections against the card-time price over flat 0.25u sizing (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 174 | lineup_minutes_2026_11_08 | high-major: the candidate layer lineup_minutes (the single-game absences costed by the share of the club's minutes the missing players carried, replacing the points share), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 175 | lineup_minutes_2026_11_08 | mid-major: the candidate layer lineup_minutes (the single-game absences costed by the share of the club's minutes the missing players carried, replacing the points share), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 176 | lineup_minutes_2026_11_08 | low-major: the candidate layer lineup_minutes (the single-game absences costed by the share of the club's minutes the missing players carried, replacing the points share), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 177 | november_form_2026_11_08 | high-major: the candidate layer november_form (season-to-date form shrunk at card_factors.NOVEMBER_FORM_SHRINKAGE_GAMES in the season's first card_factors.NOVEMBER_FORM_DAYS days, replacing the last-five form), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 178 | november_form_2026_11_08 | mid-major: the candidate layer november_form (season-to-date form shrunk at card_factors.NOVEMBER_FORM_SHRINKAGE_GAMES in the season's first card_factors.NOVEMBER_FORM_DAYS days, replacing the last-five form), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 179 | november_form_2026_11_08 | low-major: the candidate layer november_form (season-to-date form shrunk at card_factors.NOVEMBER_FORM_SHRINKAGE_GAMES in the season's first card_factors.NOVEMBER_FORM_DAYS days, replacing the last-five form), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 180 | bet_timing_2026_11_08 | high-major: the card's When column (models/timing.py): selections marked Now, where the market had already moved toward the selection since its first capture, beat their closing price by more than selections marked Near tip (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 181 | bet_timing_2026_11_08 | mid-major: the card's When column (models/timing.py): selections marked Now, where the market had already moved toward the selection since its first capture, beat their closing price by more than selections marked Near tip (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 182 | bet_timing_2026_11_08 | low-major: the card's When column (models/timing.py): selections marked Now, where the market had already moved toward the selection since its first capture, beat their closing price by more than selections marked Near tip (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
 
 ## 7 quantities declared descriptive-only
 

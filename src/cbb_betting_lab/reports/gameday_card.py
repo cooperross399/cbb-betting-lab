@@ -153,6 +153,7 @@ from cbb_betting_lab.models import closing_gate
 from cbb_betting_lab.models import line_move
 from cbb_betting_lab.models import rung_cap
 from cbb_betting_lab.models import sizing
+from cbb_betting_lab.models import timing
 from cbb_betting_lab.models import trust as trust_model
 from cbb_betting_lab.population import VenueState
 from cbb_betting_lab.providers import staging, team_names
@@ -2457,6 +2458,9 @@ def run_card(
         _enrich(row, opinions, competition=competition, raw=probabilities, market=market)
         for row in kept
     ]
+    # When to take the price (`models/timing.py`, decision 89): advice only.
+    for row in enriched:
+        row["timing"] = timing.advise(row, moves)
     return CardRun(
         competition=competition,
         slate_date=day,
@@ -2771,8 +2775,8 @@ def _selections_section(run: CardRun) -> list[str]:
             ]
     else:
         lines += [
-            "| Game | Market | Selection | Price | Bet down to | Size | Book | Model | Edge | Push mass | Prior weight | Tier |",
-            "|:---|:---|:---|---:|---:|---:|:---|---:|---:|---:|---:|:---|",
+            "| Game | Market | Selection | Price | Bet down to | Size | When | Book | Model | Edge | Push mass | Prior weight | Tier |",
+            "|:---|:---|:---|---:|---:|---:|:---|:---|---:|---:|---:|---:|:---|",
         ]
         for row in run.selections:
             push = row.get("push_mass")
@@ -2785,6 +2789,7 @@ def _selections_section(run: CardRun) -> list[str]:
                 f"| {float(row['american_odds']):+g} "
                 f"| {_bet_down_to_cell(row)} "
                 f"| {sizing.units(run.trust_weights.get(str(row.get('tier') or ''))):.2f}u "
+                f"| {row.get('timing') or timing.NEAR_TIP} "
                 f"| {row['book']} "
                 f"| {float(row['model_probability']):.1%} "
                 f"| {float(row['edge']):+.2%} "
@@ -2801,6 +2806,8 @@ def _selections_section(run: CardRun) -> list[str]:
             "selection.",
             "",
             sizing.EXPLANATION,
+            "",
+            timing.EXPLANATION,
             "",
             "Each edge is stated **per wager** and none of them is added to "
             "another. A game's spread, its moneyline, both team totals, the "
