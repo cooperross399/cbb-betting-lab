@@ -1425,6 +1425,105 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    E.Hypothesis(
+        search="lineup_minutes_2026_11_08",
+        name=(
+            "high-major: the candidate layer lineup_minutes (the single-game absences costed by the share of the club's minutes the missing players carried, replacing the points share), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="lineup_minutes_2026_11_08",
+        name=(
+            "mid-major: the candidate layer lineup_minutes (the single-game absences costed by the share of the club's minutes the missing players carried, replacing the points share), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="lineup_minutes_2026_11_08",
+        name=(
+            "low-major: the candidate layer lineup_minutes (the single-game absences costed by the share of the club's minutes the missing players carried, replacing the points share), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="november_form_2026_11_08",
+        name=(
+            "high-major: the candidate layer november_form (season-to-date form shrunk at card_factors.NOVEMBER_FORM_SHRINKAGE_GAMES in the season's first card_factors.NOVEMBER_FORM_DAYS days, replacing the last-five form), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="november_form_2026_11_08",
+        name=(
+            "mid-major: the candidate layer november_form (season-to-date form shrunk at card_factors.NOVEMBER_FORM_SHRINKAGE_GAMES in the season's first card_factors.NOVEMBER_FORM_DAYS days, replacing the last-five form), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="november_form_2026_11_08",
+        name=(
+            "low-major: the candidate layer november_form (season-to-date form shrunk at card_factors.NOVEMBER_FORM_SHRINKAGE_GAMES in the season's first card_factors.NOVEMBER_FORM_DAYS days, replacing the last-five form), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="bet_timing_2026_11_08",
+        name=(
+            "high-major: the card's When column (models/timing.py): selections marked Now, where the market had already moved toward the selection since its first capture, beat their closing price by more than selections marked Near tip (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="bet_timing_2026_11_08",
+        name=(
+            "mid-major: the card's When column (models/timing.py): selections marked Now, where the market had already moved toward the selection since its first capture, beat their closing price by more than selections marked Near tip (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="bet_timing_2026_11_08",
+        name=(
+            "low-major: the card's When column (models/timing.py): selections marked Now, where the market had already moved toward the selection since its first capture, beat their closing price by more than selections marked Near tip (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 

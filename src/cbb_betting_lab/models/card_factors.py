@@ -171,11 +171,32 @@ CANDIDATE_LAYERS: tuple[tuple[str, str], ...] = (
     ("shooting_luck", "Shooting luck"),
     ("shot_quality", "Shot quality inside the arc"),
     ("market_ratings", "Ratings from the betting lines"),
+    ("lineup_minutes", "Who is missing, by minutes"),
+    ("november_form", "Early-season form, learned faster"),
 )
 #: `lineup_strict`: a rotation player counts as out only after missing this
 #: many of the club's games in a row. When on, it replaces the single-game
 #: rule's factor rather than stacking on it.
 LINEUP_STRICT_GAMES = 2
+#: `lineup_minutes` (decision 89): the same absences, costed by the share of
+#: the club's MINUTES the missing players carried rather than its points. When
+#: on, it replaces the single-game rule's factor rather than stacking on it.
+#: Decision 88 measured it no better than the points share over 18,272
+#: team-games; it is built so the layer audit, and not a one-off measurement,
+#: decides whether it reaches the card.
+LINEUP_WEIGHT_POINTS = "points"
+LINEUP_WEIGHT_MINUTES = "minutes"
+#: `november_form` (decision 89): every game of the season so far, not the last
+#: five, shrunk at `NOVEMBER_FORM_SHRINKAGE_GAMES` rather than
+#: `FORM_SHRINKAGE_GAMES`, for the first `NOVEMBER_FORM_DAYS` days of the
+#: season. It is the faster November learning of *"DO all 7"* expressed as a
+#: layer the audit can switch, rather than as a weaker prior every reader would
+#: get: halving the prior's strength helped the first week of 2026-27 and hurt
+#: November of 2024 and 2025 (decision 88). When on, it replaces the form
+#: layer's move inside that window; outside it it moves nothing.
+NOVEMBER_FORM_SHRINKAGE_GAMES = 5
+NOVEMBER_FORM_DAYS = 30
+NOVEMBER_FORM_CLAMP = 5.0
 LABELS = dict(LAYERS + CANDIDATE_LAYERS)
 #: The layers the audit may switch. Team strength is the model, not a layer
 #: on it, and is never switched off.
@@ -310,6 +331,10 @@ class DayContext:
     #: The same under `LINEUP_STRICT_GAMES` games missed in a row (candidate).
     missing_strict: dict = field(default_factory=dict)
     attack_factor_strict: dict = field(default_factory=dict)
+    #: The single-game absences costed by minutes share (candidate).
+    attack_factor_minutes: dict = field(default_factory=dict)
+    #: team_id -> season-to-date net residual, shrunk fast (candidate).
+    november_form: dict = field(default_factory=dict)
     second_opinion: SecondOpinion | None = None
     #: team_id -> shrunk possessions residual over the last games (candidate).
     pace_form: dict = field(default_factory=dict)
@@ -422,7 +447,15 @@ def _net_columns(rows: pd.DataFrame) -> pd.DataFrame:
     return frame
 
 
-def team_form(rows: pd.DataFrame, ratings, *, teams=None) -> tuple[dict, dict]:
+def team_form(
+    rows: pd.DataFrame,
+    ratings,
+    *,
+    teams=None,
+    games: int | None = FORM_GAMES,
+    shrinkage: float = FORM_SHRINKAGE_GAMES,
+    clamp: float = FORM_CLAMP,
+) -> tuple[dict, dict]:
     """Each team's shrunk net residual over its last `FORM_GAMES` games.
 
     The residual is realised net minus what the ratings would have expected of
@@ -441,11 +474,11 @@ def team_form(rows: pd.DataFrame, ratings, *, teams=None) -> tuple[dict, dict]:
         frame = frame[frame["team_id"].isin(wanted)]
     frame = frame.sort_values(["team_id", "slate_date", "game_id"])
     form: dict = {}
-    games: dict = {}
+    counts: dict = {}
     offence = ratings.offence
     defence = ratings.defence
     for team, group in frame.groupby("team_id", sort=False):
-        recent = group.tail(FORM_GAMES)
+        recent = group if games is None else group.tail(int(games))
         residuals = []
         for row in recent.to_dict("records"):
             opponent = row.get("opponent_id")
@@ -461,10 +494,10 @@ def team_form(rows: pd.DataFrame, ratings, *, teams=None) -> tuple[dict, dict]:
         if n == 0:
             continue
         mean = float(np.mean(residuals))
-        shrunk = mean * n / (n + FORM_SHRINKAGE_GAMES)
-        form[team] = float(np.clip(shrunk, -FORM_CLAMP, FORM_CLAMP))
-        games[team] = n
-    return form, games
+        shrunk = mean * n / (n + float(shrinkage))
+        form[team] = float(np.clip(shrunk, -float(clamp), float(clamp)))
+        counts[team] = n
+    return form, counts
 
 
 def days_since_last_game(rows: pd.DataFrame, day: str, *, teams=None) -> dict:
@@ -558,7 +591,12 @@ def rest_effects(history: pd.DataFrame, ratings) -> dict:
 
 
 def missing_rotation(
-    player_rows: pd.DataFrame, team_rows: pd.DataFrame, *, teams, games_missed: int = 1
+    player_rows: pd.DataFrame,
+    team_rows: pd.DataFrame,
+    *,
+    teams,
+    games_missed: int = 1,
+    weight: str = LINEUP_WEIGHT_POINTS,
 ) -> tuple[dict, dict]:
     """Who is treated as out tonight, per team, and the attack factor it costs.
 
@@ -614,6 +652,10 @@ def missing_rotation(
         team_points = float(group["_points"].sum())
         if team_points <= 0:
             continue
+        team_minutes = float(group["_minutes"].sum())
+        by_minutes = weight == LINEUP_WEIGHT_MINUTES
+        if by_minutes and team_minutes <= 0:
+            continue
         by_player = group.groupby("athlete_display_name").agg(
             appearances=("_played", "sum"),
             minutes=("_minutes", "sum"),
@@ -632,7 +674,9 @@ def missing_rotation(
             if name in played_last:
                 continue
             points_share = float(row["points"]) / team_points
-            share += points_share
+            share += (
+                float(row["minutes"]) / team_minutes if by_minutes else points_share
+            )
             out.append({
                 "name": str(name),
                 "points_per_game": round(float(row["points"]) / float(row["appearances"]), 1),
@@ -1018,6 +1062,11 @@ def build_context(
     context.form, context.form_games = team_form(season_rows, ratings, teams=teams)
     context.rest_days = days_since_last_game(season_rows, day, teams=teams)
     context.season_day = season_day(season_rows, day)
+    if context.season_day is not None and 0 <= context.season_day < NOVEMBER_FORM_DAYS:
+        context.november_form, _ = team_form(
+            season_rows, ratings, teams=teams, games=None,
+            shrinkage=NOVEMBER_FORM_SHRINKAGE_GAMES, clamp=NOVEMBER_FORM_CLAMP,
+        )
     context.rest_effects = rest_effects(history_rows, ratings)
     if player_history is None or len(player_history) == 0:
         context.notes.append("no player table was handed over, so nobody is treated as missing")
@@ -1033,6 +1082,9 @@ def build_context(
         )
         context.missing_strict, context.attack_factor_strict = missing_rotation(
             rows, season_rows, teams=teams, games_missed=LINEUP_STRICT_GAMES
+        )
+        _, context.attack_factor_minutes = missing_rotation(
+            rows, season_rows, teams=teams, weight=LINEUP_WEIGHT_MINUTES
         )
     season = getattr(ratings, "season", None)
     if season is None:
@@ -1309,6 +1361,43 @@ def apply(
         "margin": m_margin, "total": m_total, "weight": MARKET_BLEND_WEIGHT,
     }
     take("market_ratings", move)
+
+    # Who is missing, by minutes: the single-game absences costed by the share
+    # of the club's minutes they carried. Like `lineup_strict` it REPLACES the
+    # single-game factor, and where the strict reading is on it yields to it,
+    # so one absence is never counted twice.
+    minutes_home = float(context.attack_factor_minutes.get(home_id, 1.0))
+    minutes_away = float(context.attack_factor_minutes.get(away_id, 1.0))
+    if context.is_on("lineup_strict"):
+        minutes_move = (0.0, 0.0, 0.0)
+    else:
+        m_ratio_home = minutes_home / (factor_home if lineup_on else 1.0)
+        m_ratio_away = minutes_away / (factor_away if lineup_on else 1.0)
+        minutes_move = (home * (m_ratio_home - 1.0), away * (m_ratio_away - 1.0), 0.0)
+    detail["lineup_minutes"] = {"home_factor": minutes_home, "away_factor": minutes_away}
+    take("lineup_minutes", minutes_move)
+
+    # Early-season form, learned faster: inside the season's first
+    # `NOVEMBER_FORM_DAYS` days, the season-to-date residual shrunk at
+    # `NOVEMBER_FORM_SHRINKAGE_GAMES` REPLACES the last-five form. A side it
+    # holds nothing for keeps its ordinary form, so outside the window it
+    # moves nothing at all.
+    form_on = context.is_on("form")
+    nov_home = float(context.november_form.get(home_id, form_home))
+    nov_away = float(context.november_form.get(away_id, form_away))
+    used_home = form_home if form_on else 0.0
+    used_away = form_away if form_on else 0.0
+    if home_id not in context.november_form and not form_on:
+        nov_home = 0.0
+    if away_id not in context.november_form and not form_on:
+        nov_away = 0.0
+    d_home = nov_home - used_home
+    d_away = nov_away - used_away
+    detail["november_form"] = {
+        "home": nov_home, "away": nov_away, "season_day": context.season_day,
+        "window_days": NOVEMBER_FORM_DAYS,
+    }
+    take("november_form", (d_home / 2.0 - d_away / 2.0, d_away / 2.0 - d_home / 2.0, 0.0))
 
     detail["switches"] = {key: context.is_on(key) for key in SWITCHABLE}
     detail["audit_as_of"] = context.audit_as_of

@@ -8,9 +8,9 @@ Generated 2026-09-17T12:11:33+00:00.
 
 **Sample floor: 200 observations.** Below it a cell prints an em dash and the words *not enough evidence*, never a figure.
 
-**Family correction: 173 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.85. That is the ledger's cumulative count and never the day's.
+**Family correction: 182 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.86. That is the ledger's cumulative count and never the day's.
 
-**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 130 cumulative hypotheses (x1.8115), and `cbb_ratings_fit.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 173 hypotheses (x1.8495), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
+**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 130 cumulative hypotheses (x1.8115), and `cbb_ratings_fit.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 182 hypotheses (x1.8562), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
 
 ## The fit population, reconciled
 
@@ -186,11 +186,11 @@ The fitted columns describe the model at the end of the season; the measured col
 
 | Tier | Teams | Games priced | Priced share | Prior weight (off/def/tempo) | Margin bias | 95% interval | Family-corrected | Reading | Margin MAE | Total bias | 95% interval | Family-corrected |
 |:---|---:|---:|---:|:---|---:|:---|:---|:---|---:|---:|:---|:---|
-| high_major | 61 | 687 | 96.5% | 16% / 37% / 8% | +3.84 | +2.70 to +4.98 | +1.73 to +5.95 | excludes zero after the family correction | 10.89 | +2.16 | +0.90 to +3.43 | -0.17 to +4.50 |
-| mid_major | 131 | 1,387 | 94.7% | 17% / 38% / 8% | +1.83 | +1.07 to +2.59 | +0.43 to +3.23 | excludes zero after the family correction | 9.40 | +1.25 | +0.35 to +2.15 | -0.41 to +2.91 |
-| low_major | 172 | 1,841 | 94.6% | 18% / 39% / 9% | -0.18 | -0.76 to +0.40 | -1.25 to +0.90 | **no demonstrated edge** | 9.24 | +2.21 | +1.46 to +2.96 | +0.83 to +3.60 |
-| mixed | — | 804 | 62.2% | — / — / — | -3.39 | -4.58 to -2.21 | -5.58 to -1.20 | excludes zero after the family correction | 11.31 | +0.76 | -0.43 to +1.95 | -1.44 to +2.97 |
-| POOLED | 365 | 4,719 | 87.1% | 18% / 38% / 8% | +0.45 | -0.13 to +1.03 | -0.62 to +1.52 | **no demonstrated edge** | 9.88 | +1.67 | +1.19 to +2.16 | +0.78 to +2.57 |
+| high_major | 61 | 687 | 96.5% | 16% / 37% / 8% | +3.84 | +2.70 to +4.98 | +1.72 to +5.96 | excludes zero after the family correction | 10.89 | +2.16 | +0.90 to +3.43 | -0.18 to +4.51 |
+| mid_major | 131 | 1,387 | 94.7% | 17% / 38% / 8% | +1.83 | +1.07 to +2.59 | +0.42 to +3.24 | excludes zero after the family correction | 9.40 | +1.25 | +0.35 to +2.15 | -0.42 to +2.92 |
+| low_major | 172 | 1,841 | 94.6% | 18% / 39% / 9% | -0.18 | -0.76 to +0.40 | -1.25 to +0.90 | **no demonstrated edge** | 9.24 | +2.21 | +1.46 to +2.96 | +0.82 to +3.60 |
+| mixed | — | 804 | 62.2% | — / — / — | -3.39 | -4.58 to -2.21 | -5.59 to -1.19 | excludes zero after the family correction | 11.31 | +0.76 | -0.43 to +1.95 | -1.45 to +2.97 |
+| POOLED | 365 | 4,719 | 87.1% | 18% / 38% / 8% | +0.45 | -0.13 to +1.03 | -0.62 to +1.52 | **no demonstrated edge** | 9.88 | +1.67 | +1.19 to +2.16 | +0.77 to +2.58 |
 
 > Pooled across every tier. **This is never the headline.** High-major, mid-major and low-major are three different distributions and this lab exists because the third is plausibly priced with less attention; a pooled row is printed only alongside its tier rows, and only so the tier rows can be read against something.
 
@@ -202,9 +202,9 @@ The tier home-court effect the model applies, beside an estimate of the same qua
 
 | Tier | Fitted (per 100) | Measured (per 100) | 95% interval | Family-corrected | Pairs | Fitted inside 95% | Fitted inside corrected | Gap |
 |:---|---:|---:|:---|:---|---:|:---|:---|---:|
-| high_major | +12.36 | +5.58 | +4.52 to +6.63 | +3.63 to +7.53 | 475 | **no** | **no** | +6.78 |
-| mid_major | +7.34 | +4.70 | +4.03 to +5.36 | +3.47 to +5.93 | 1,134 | **no** | **no** | +2.64 |
-| low_major | +3.90 | +3.69 | +3.15 to +4.23 | +2.69 to +4.69 | 1,728 | yes | yes | +0.22 |
+| high_major | +12.36 | +5.58 | +4.52 to +6.63 | +3.62 to +7.53 | 475 | **no** | **no** | +6.78 |
+| mid_major | +7.34 | +4.70 | +4.03 to +5.36 | +3.46 to +5.93 | 1,134 | **no** | **no** | +2.64 |
+| low_major | +3.90 | +3.69 | +3.15 to +4.23 | +2.68 to +4.69 | 1,728 | yes | yes | +0.22 |
 | unplaced | +7.87 | — | — | — | 0 | — | — | — |
 
 Two `inside` columns, because the corrected interval is the wider one and a fitted number can fall outside the raw interval and inside the corrected one. **The corrected column is the one that decides**, and the list below is drawn from it: reading a disagreement off the narrower interval is exactly what a family-wise correction exists to stop.

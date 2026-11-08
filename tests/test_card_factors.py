@@ -222,6 +222,72 @@ def test_a_rotation_player_who_sat_the_last_game_is_treated_as_missing():
     assert missing == {} and factor == {}
 
 
+def test_the_minutes_reading_costs_the_same_absence_by_minutes_share():
+    """`lineup_minutes`: the same player out, costed by his share of the club's minutes."""
+    team_rows = pd.DataFrame(
+        [{"team_id": 7, "game_id": g, "slate_date": f"2026-01-{g:02d}"} for g in range(1, 9)]
+    )
+    players = []
+    for g in range(1, 9):
+        for name, minutes, points in (("Star", 30.0, 20.0), ("Glue", 25.0, 8.0), ("Bench", 5.0, 1.0)):
+            sat = g == 8 and name == "Star"
+            players.append({
+                "game_id": g, "team_id": 7, "athlete_display_name": name,
+                "did_not_play": sat, "minutes": None if sat else minutes,
+                "points": None if sat else points, "season": 2026,
+                "slate_date": f"2026-01-{g:02d}",
+            })
+    frame = pd.DataFrame(players)
+    _, by_points = CF.missing_rotation(frame, team_rows, teams={7})
+    missing, by_minutes = CF.missing_rotation(
+        frame, team_rows, teams={7}, weight=CF.LINEUP_WEIGHT_MINUTES
+    )
+    assert [m["name"] for m in missing[7]] == ["Star"]
+    share = (30.0 * 7) / (30.0 * 7 + 25.0 * 8 + 5.0 * 8)
+    assert by_minutes[7] == pytest.approx(max(CF.AVAILABILITY_FLOOR, 1 - CF.AVAILABILITY_SHARE * share))
+    # Star carries more of the points than of the minutes, so minutes cost less
+    # (compared on the shares, since both factors here can sit at the floor).
+    points_share = (20.0 * 7) / (20.0 * 7 + 8.0 * 8 + 1.0 * 8)
+    assert share < points_share
+    assert by_minutes[7] >= by_points[7]
+
+
+def test_november_form_reads_the_whole_season_and_shrinks_faster():
+    """`november_form`: every game so far, shrunk at the faster constant."""
+
+    class _Ratings:
+        offence = {1: 0.0, 2: 0.0}
+        defence = {1: 0.0, 2: 0.0}
+        venue_level_home_effect = False
+
+    def row(day, team, opp, own, allowed):
+        return {
+            "game_id": int(day.replace("-", "")), "slate_date": day, "team_id": team,
+            "opponent_id": opp, "efficiency": own, "opponent_score": allowed,
+            "game_possessions": 100.0, "venue_state": "neutral", "local_team_id": None,
+            "venue_id": None, "season": 2027, "home_away": "home",
+        }
+
+    days = ["2026-11-%02d" % d for d in range(2, 9)]
+    rows = pd.DataFrame([row(d, 1, 2, 103.0, 100.0) for d in days])
+    form, games = CF.team_form(
+        rows, _Ratings(), games=None,
+        shrinkage=CF.NOVEMBER_FORM_SHRINKAGE_GAMES, clamp=CF.NOVEMBER_FORM_CLAMP,
+    )
+    assert games == {1: 7}
+    assert form[1] == pytest.approx(3.0 * 7 / (7 + CF.NOVEMBER_FORM_SHRINKAGE_GAMES))
+    ordinary, _ = CF.team_form(rows, _Ratings())
+    assert form[1] > ordinary[1]
+
+
+def test_the_two_new_candidates_are_off_until_the_audit_adds_them():
+    candidates = dict(CF.CANDIDATE_LAYERS)
+    assert "lineup_minutes" in candidates and "november_form" in candidates
+    switches = CF.default_switches()
+    assert switches["lineup_minutes"] is False
+    assert switches["november_form"] is False
+
+
 def _second_opinion(path: Path, *, as_of: str, teams: int, season: int = 2026) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     rows = [
