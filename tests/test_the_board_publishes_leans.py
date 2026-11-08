@@ -85,3 +85,71 @@ def test_the_freeze_wins_over_the_model_when_it_holds_an_opinion() -> None:
     assert not builder.frozen_has_opinion([{**_frozen("0.01")[0], "edge": ""}])
     source = BUILDER.read_text(encoding="utf-8")
     assert 'not row["started"]' in source and "not frozen_has_opinion(my_frozen)" in source
+
+
+# --------------------------------------------------------------------------
+# Decision 79: a lean reads the probability the card's edge bar reads.
+# --------------------------------------------------------------------------
+
+
+class _Table:
+    active = True
+
+    def __init__(self, weights: dict) -> None:
+        self.weights = weights
+
+    def weight(self, tier) -> float:
+        return self.weights.get(tier, 0.0)
+
+
+def _two_sided(model_home: str, home_odds: str = "+120", away_odds: str = "-140") -> list[dict]:
+    """A spread both sides of which two books quote, the model loving the dog."""
+    row = lambda sel, line, odds, book, p: {"market": "spreads", "selection": sel, "line": line, "american_odds": odds,
+                                            "book": book, "model_probability": p, "edge": "0.30", "tier": "mid_major"}
+    p_home = float(model_home)
+    return [row("home", "7.5", home_odds, "a", model_home), row("away", "-7.5", away_odds, "a", f"{1 - p_home}"),
+            row("home", "7.5", "-110", "b", model_home), row("away", "-7.5", "-110", "b", f"{1 - p_home}")]
+
+
+def test_a_tier_the_card_no_longer_trusts_publishes_no_lean_on_the_models_word() -> None:
+    builder = _builder()
+    rows = _two_sided("0.70", home_odds="-105", away_odds="-115")
+    assert builder.pick_from_frozen(rows, "DUKE", "UNC", [], ALLOW)["kind"] == "lean"
+    trust = builder.LeanTrust(_Table({"mid_major": 0.0}))
+    assert builder.pick_from_frozen(rows, "DUKE", "UNC", [], ALLOW, trust)["kind"] == "pass"
+
+
+def test_a_trusted_tier_still_leans_and_shows_the_trusted_edge() -> None:
+    builder = _builder()
+    rows = _two_sided("0.70", home_odds="-105", away_odds="-115")
+    pick = builder.pick_from_frozen(rows, "DUKE", "UNC", [], ALLOW, builder.LeanTrust(_Table({"mid_major": 1.0})))
+    assert pick["kind"] == "lean" and pick["side"] == "home"
+    half = builder.pick_from_frozen(rows, "DUKE", "UNC", [], ALLOW, builder.LeanTrust(_Table({"mid_major": 0.5})))
+    assert half["trustedProb"] < pick["trustedProb"] and half["edgePct"] < pick["edgePct"]
+
+
+def test_with_no_trust_table_a_lean_needs_a_book_beating_the_fair_price() -> None:
+    builder = _builder()
+    # Fair is the median of book a's and book b's own pairs; +120 at book a
+    # beats it by more than the bar even with the model ignored.
+    pick = builder.pick_from_frozen(_two_sided("0.70"), "DUKE", "UNC", [], ALLOW, builder.LeanTrust(None))
+    assert pick["kind"] == "lean" and pick["price"] == 120
+
+
+def test_a_one_sided_price_carries_no_trusted_lean() -> None:
+    builder = _builder()
+    assert builder.pick_from_frozen(_frozen("0.30"), "DUKE", "UNC", [], ALLOW, builder.LeanTrust(_Table({}))) ["kind"] == "pass"
+
+
+def test_the_model_lean_reads_the_trust_too() -> None:
+    builder = _builder()
+    rows = _board_rows() + [{"market": "spreads", "selection": "away", "line": "4.5", "american_odds": "-110", "book": "b"}]
+    untrusted = builder.pick_from_model(rows, _model(0.66, 0.42, 0.5), "DUKE", "UNC", -4.5, 140.5, ALLOW,
+                                        builder.LeanTrust(_Table({"high_major": 0.0})), "high_major")
+    assert untrusted is None or untrusted["kind"] == "pass"
+
+
+def test_the_board_build_passes_the_trust_table_to_both_lean_paths() -> None:
+    source = BUILDER.read_text(encoding="utf-8")
+    assert "lean_trust = load_lean_trust(lab, day)" in source
+    assert "lean_markets, lean_trust)" in source and "lean_markets, lean_trust, tier)" in source

@@ -27,12 +27,17 @@ Each game may carry, beside the keys the shared Board reads:
   `kind: "pass"` with `units: null`. A pass is a priced opinion the card did
   not select; a game the model refused has no `pick` at all and is never a
   pass. Since decision 74 an opinion the card did not select is
-  `kind: "lean"` when its edge on the model's own probability is at least
+  `kind: "lean"` when its edge is at least
   `LEAN_EDGE` (the card's 2% bar), its market is allowlisted under a verified
   receipt and its price is inside the card's band; it stakes nothing and is
   graded into `record.leans`. `basis` is `"frozen"` for an opinion read off the
   forward freeze and `"model"` for one read off the board's own projection on a
   game the freeze holds no opinion on, which is published before tip only.
+  Since decision 79 that edge is read on the trust-weighted probability the
+  card's edge bar reads -- `market + w_tier x (model - market)`, the market
+  the de-vigged two-sided price -- not the model's own; a side with no
+  two-sided price is a pass. `modelProb` stays the model's own number and
+  `trustedProb` carries the one the edge was read on.
 - `factors`: the home win chance repriced step by step in the card's order,
   `[{key, label, homeWin, delta, homePts, awayPts, possessions, note}]`, keys
   `strength`, `home_court`, `form`, `rest`, `lineup`, `second_opinion`. The last

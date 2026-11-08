@@ -987,7 +987,10 @@ did not select is shown as a lean when the model's own probability clears the
 card's 2% edge bar on an allowlisted main market inside the price band, before
 the trust table pulls it toward the market. A lean stakes nothing, is graded
 into its own record, and is never a bet; the card, the trust table and the
-allowlist are untouched.
+allowlist are untouched. **Superseded for the edge it reads by decision 79
+(2026-11-08):** a lean now clears the bar on the trust-weighted probability
+the card reads, because the raw model's disagreement with the price carried
+no information in the first week and the raw leans were nearly all underdogs.
 
 ### 2026-11-03: the model learns from each night, and says what it learned
 
