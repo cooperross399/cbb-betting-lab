@@ -767,12 +767,15 @@ def load_frozen(lab: Path, day: date) -> list[dict]:
 
 
 #: The edge a lean must clear: the card's own bar,
-#: `reports.card_pricing.EDGE_THRESHOLD`, read on the model's OWN probability
-#: rather than the trust-weighted one the card selects on. A lean is an opinion
-#: that clears the bar before the trust table pulls it toward the market and not
-#: after — the "cleared part of it" in the Methods page's definition — so it is
-#: graded and kept in its own record, and stakes nothing. Pinned equal to the
-#: card's constant by `tests/test_the_board_publishes_leans.py` (decision 74).
+#: `reports.card_pricing.EDGE_THRESHOLD`, read on the TRUST-WEIGHTED
+#: probability the card selects on (decision 79). Until 2026-11-08 a lean read
+#: the model's own probability, before the trust table pulled it toward the
+#: market (decision 74); over the first week that published 271 leans, 88% of
+#: them underdogs at a claimed edge near 30%, going 121-150, because the
+#: model's raw disagreement with the price carries no information this season
+#: (the trust table had already set high- and mid-major to 0). A lean is still
+#: graded in its own record and stakes nothing. Pinned equal to the card's
+#: constant by `tests/test_the_board_publishes_leans.py`.
 LEAN_EDGE = 0.02
 #: `reports.card_pricing.PRICE_BAND`: a lean is never shown at a price the card
 #: would refuse, because the largest apparent edges live out there and are the
@@ -846,7 +849,119 @@ def bet_down_to_from_edge(edge, price):
     return bet_down_to((1.0 + e) / (1.0 + profit_per_unit(number)))
 
 
-def pick_from_frozen(frozen_rows: list[dict], home_abbr: str, away_abbr: str, selected=(), allowlist=()) -> dict | None:
+# --------------------------------------------------------------------------
+# Leans read the probability the card reads (decision 79)
+# --------------------------------------------------------------------------
+
+#: Tier order for a game: it takes the higher of its two sides' tiers, as the
+#: card does.
+TIER_ORDER = ("high_major", "mid_major", "low_major", "unplaced")
+
+
+def game_tier(*tiers) -> str | None:
+    found = [str(t) for t in tiers if t]
+    for tier in TIER_ORDER:
+        if tier in found:
+            return tier
+    return found[0] if found else None
+
+
+def implied(american) -> float | None:
+    number = finite(american)
+    if number is None or number == 0:
+        return None
+    return 100.0 / (number + 100.0) if number > 0 else -number / (-number + 100.0)
+
+
+def _pair_line(market: str, selection: str, line) -> tuple | None:
+    """The key both sides of one wager share: the line in the home's frame for
+    a spread, the line as filed for a total, nothing for a moneyline."""
+    number = finite(line)
+    if market == "moneyline" and selection in ("home", "away"):
+        return ("moneyline",)
+    if market == "spread" and selection in ("home", "away") and number is not None:
+        return ("spread", round(number if selection == "home" else -number, 2))
+    if market == "total" and selection in ("over", "under") and number is not None:
+        return ("total", round(number, 2))
+    return None
+
+
+def fair_probability(rows, market: str, selection: str, line) -> float | None:
+    """The de-vigged market probability of one side: each book quoting both
+    sides normalised on its own pair, the median across those books, the same
+    rule as `models.trust.market_probabilities`. None when no book quotes both
+    sides -- a missing price stays missing."""
+    key = _pair_line(market, selection, line)
+    if key is None:
+        return None
+    mine: dict = {}
+    other: dict = {}
+    for r in rows:
+        m = norm_market(r)
+        sel = (r.get("selection") or "").lower()
+        if _pair_line(m, sel, r.get("line")) != key:
+            continue
+        p = implied(r.get("american_odds"))
+        if p is None:
+            continue
+        book = r.get("book") or ""
+        (mine if sel == selection else other).setdefault(book, p)
+    fair = sorted(a / (a + other[b]) for b, a in mine.items() if b in other and a + other[b] > 1.0)
+    if not fair:
+        return None
+    n = len(fair)
+    return fair[n // 2] if n % 2 else 0.5 * (fair[n // 2 - 1] + fair[n // 2])
+
+
+class LeanTrust:
+    """How far a lean trusts the model against the price, per tier: the card's
+    own trust table for the day. Built with no table, every tier trusts the
+    market (w = 0), which is the fail-safe direction: a lean then needs a book
+    beating the consensus fair price by the bar, exactly as the card would."""
+
+    def __init__(self, table=None):
+        self.table = table
+
+    def weight(self, tier) -> float:
+        if self.table is None or not getattr(self.table, "active", False):
+            return 0.0
+        try:
+            return float(self.table.weight(tier))
+        except Exception:  # noqa: BLE001 - an unreadable weight is the market's
+            return 0.0
+
+    def pulled(self, raw, market_p, tier) -> float | None:
+        if raw is None or market_p is None:
+            return None
+        return market_p + self.weight(tier) * (raw - market_p)
+
+
+def load_lean_trust(lab: Path, day: date) -> LeanTrust:
+    """The card's trust table for `day`, read the way `run_gameday_card` reads
+    it: `data/outputs/cbb_forecast_skill.json` for the seed and the settled
+    forward ledger for the update. Anything unreadable leaves the market."""
+    try:
+        import pandas as pd  # noqa: PLC0415
+        from cbb_betting_lab.models import trust  # type: ignore  # noqa: PLC0415
+
+        path = lab / "data" / "processed" / "cbb_forward_evidence.csv"
+        ledger = pd.read_csv(path, low_memory=False) if path.is_file() else None
+        return LeanTrust(trust.build(day.isoformat(), outputs_dir=lab / "data" / "outputs", ledger=ledger))
+    except Exception as exc:  # noqa: BLE001 - the board must still build
+        print(f"Leans trust the market tonight: the trust table could not be read ({exc}).", file=sys.stderr)
+        return LeanTrust(None)
+
+
+def trusted_edge(win, price, market_p, tier, trust: LeanTrust):
+    """(edge, probability) on the trust-weighted probability, or (None, None)."""
+    number = finite(price)
+    t = trust.pulled(finite(win), market_p, tier)
+    if t is None or number is None or number == 0:
+        return None, None
+    return t * profit_per_unit(number) - (1.0 - t), t
+
+
+def pick_from_frozen(frozen_rows: list[dict], home_abbr: str, away_abbr: str, selected=(), allowlist=(), trust: "LeanTrust | None" = None) -> dict | None:
     """The card's pick on this game, and what it is.
 
     `selected` is the card's own selections for the game, as
@@ -873,6 +988,20 @@ def pick_from_frozen(frozen_rows: list[dict], home_abbr: str, away_abbr: str, se
         return 0.0 if number is None else number
 
     top = max(team, key=edge_of)
+    trusted = None
+    if not chosen and trust is not None:
+        # Decision 79: an unselected opinion is ranked and judged on the
+        # probability the card's edge bar reads, not the model's own.
+        scored = []
+        for r in team:
+            rm, rs = norm_market(r), (r.get("selection") or "").lower()
+            fair = fair_probability(frozen_rows, rm, rs, r.get("line"))
+            e, t = trusted_edge(r.get("model_probability"), r.get("american_odds"), fair, r.get("tier"), trust)
+            if e is not None:
+                scored.append((e, t, r))
+        if scored:
+            e, t, top = max(scored, key=lambda x: x[0])
+            trusted = (e, t)
     m, sel = norm_market(top), (top.get("selection") or "").lower()
     side = home_abbr if sel == "home" else away_abbr if sel == "away" else sel.capitalize()
     try:
@@ -886,12 +1015,22 @@ def pick_from_frozen(frozen_rows: list[dict], home_abbr: str, away_abbr: str, se
     # The card records its own bet-down-to on a selection; a frozen opinion
     # carries none, so it is recovered from the row's edge and price.
     recorded_floor = finite_int(top.get("bet_down_to"))
+    shown_edge, floor = top.get("edge"), None
+    if not chosen and trust is not None:
+        # No two-sided price anywhere on this game: no trusted opinion, so a
+        # pass, never a lean on the model's own number.
+        edge = trusted[0] if trusted else None
+        shown_edge = edge
+        floor = bet_down_to(trusted[1]) if trusted else None
     leaning = (not chosen and edge is not None and edge >= LEAN_EDGE
                and lean_allowed(m, allowlist) and in_lean_band(price))
+    if floor is None and (chosen or trust is None):
+        floor = recorded_floor if recorded_floor is not None else bet_down_to_from_edge(top.get("edge"), price)
     return with_display({"kind": "bet" if chosen else "lean" if leaning else "pass", "basis": "frozen", "market": MARKETS[m], "label": label, "price": price, "book": top.get("book"), "tier": top.get("tier") or None,
-            "units": 1.0 if chosen else None, "edgePct": percent(top.get("edge")),
-            "betDownTo": recorded_floor if recorded_floor is not None else bet_down_to_from_edge(top.get("edge"), price),
+            "units": 1.0 if chosen else None, "edgePct": percent(shown_edge),
+            "betDownTo": floor,
             "modelProb": None if model_probability is None else round(model_probability, 4),
+            **({"trustedProb": round(trusted[1], 4)} if trusted else {}),
             **pick_side_and_line(m, sel, line)})
 
 
@@ -965,7 +1104,7 @@ def frozen_has_opinion(frozen_rows: list[dict]) -> bool:
     return any(norm_market(r) in MARKETS and finite(r.get("edge")) is not None for r in frozen_rows)
 
 
-def pick_from_model(mine: list[dict], pr: dict, home_abbr: str, away_abbr: str, spread_line, total_line, allowlist=()) -> dict | None:
+def pick_from_model(mine: list[dict], pr: dict, home_abbr: str, away_abbr: str, spread_line, total_line, allowlist=(), trust: "LeanTrust | None" = None, tier=None) -> dict | None:
     """The model's own opinion on a game the freeze holds no opinion on.
 
     Read off the same projection the board prints, against the best current
@@ -982,6 +1121,16 @@ def pick_from_model(mine: list[dict], pr: dict, home_abbr: str, away_abbr: str, 
         if quote is None or win is None:
             return
         price, book = quote
+        if trust is not None:
+            # Decision 79: the side's chance is pulled toward the de-vigged
+            # price by the tier's trust, as the card's edge bar reads it; a
+            # side with no two-sided price carries no opinion.
+            fair = fair_probability(mine, market, selection, line)
+            t = trust.pulled(win, fair, tier)
+            if t is None:
+                return
+            push = max(0.0, 1.0 - win - loss)
+            win, loss = t * (1.0 - push), (1.0 - t) * (1.0 - push)
         sides.append((win * profit_per_unit(price) - loss, market, selection, line, win, price, book, loss))
 
     hw = finite(pr.get("home_win"))
@@ -1171,6 +1320,9 @@ def build(lab: Path, day: date) -> dict:
     policy = load_policy(lab)
     # Leans read the allowlist only when every receipt behind it verifies.
     lean_markets = set(policy.allowlist) if policy and not policy.receipt_failures else set()
+    # Decision 79: leans read the card's trust table, so the board never
+    # leans where the card's own learning has stopped trusting the model.
+    lean_trust = load_lean_trust(lab, day)
     teams, games, history = {}, [], {}
     for g in slate:
         h, a = g["home"], g["away"]
@@ -1205,7 +1357,7 @@ def build(lab: Path, day: date) -> dict:
         # would be a column that does not exist reading as "morning" forever.
         row = {"id": g["id"], "tip": g["tip"], "venue": g["venue"], "city": g["city"], "tv": g["tv"], "neutral": g["neutral"], "started": g["state"] != "pre",
                "cardSlot": slot,
-               "home": {"abbr": ha, "record": h["record"]}, "away": {"abbr": aa, "record": a["record"]}, "pick": pick_from_frozen(my_frozen, ha, aa, selected.get((hk, ak), []), lean_markets)}
+               "home": {"abbr": ha, "record": h["record"]}, "away": {"abbr": aa, "record": a["record"]}, "pick": pick_from_frozen(my_frozen, ha, aa, selected.get((hk, ak), []), lean_markets, lean_trust)}
         spread_line = total_line = None
         if mine:
             spread_line = consensus_line(mine, "spread", "home")
@@ -1248,7 +1400,9 @@ def build(lab: Path, day: date) -> dict:
             # ran, or added to the slate after it -- takes the model's own
             # opinion from the projection above, before tip only.
             if mine and not row["started"] and not selected.get((hk, ak)) and not frozen_has_opinion(my_frozen):
-                live = pick_from_model(mine, pr, ha, aa, spread_line, total_line, lean_markets)
+                game_obj = pr.get("game")
+                tier = game_tier(*((side_ratings(fit, game_obj, w) or {}).get("tier") for w in ("home", "away"))) if game_obj is not None else None
+                live = pick_from_model(mine, pr, ha, aa, spread_line, total_line, lean_markets, lean_trust, tier)
                 if live is not None:
                     row["pick"] = live
             # The game page: the price after each layer the card applied,
