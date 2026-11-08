@@ -2254,6 +2254,174 @@
       "predicted_direction": "higher",
       "stage": "discovery",
       "realised_direction": ""
+    },
+    {
+      "search": "min_books_2026_11_08",
+      "name": "high-major: requiring at least trust.MIN_FAIR_BOOKS (three) books quoting both sides before a wager carries a fair price, and so a trusted opinion, raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-08",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "min_books_2026_11_08",
+      "name": "mid-major: requiring at least trust.MIN_FAIR_BOOKS (three) books quoting both sides before a wager carries a fair price, and so a trusted opinion, raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-08",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "min_books_2026_11_08",
+      "name": "low-major: requiring at least trust.MIN_FAIR_BOOKS (three) books quoting both sides before a wager carries a fair price, and so a trusted opinion, raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-08",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "closing_gate_2026_11_08",
+      "name": "high-major: closing the tier's main markets (and their alternate ladders) that the closing-line alarm has tripped raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-08",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "closing_gate_2026_11_08",
+      "name": "mid-major: closing the tier's main markets (and their alternate ladders) that the closing-line alarm has tripped raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-08",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "closing_gate_2026_11_08",
+      "name": "low-major: closing the tier's main markets (and their alternate ladders) that the closing-line alarm has tripped raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-08",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "november_home_2026_11_08",
+      "name": "high-major: adding card_factors.EARLY_HOME_BONUS_POINTS (2.66) of margin to a true home side, fading linearly to zero over EARLY_HOME_BONUS_DAYS (45) from the season's first game, raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-08",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "november_home_2026_11_08",
+      "name": "mid-major: adding card_factors.EARLY_HOME_BONUS_POINTS (2.66) of margin to a true home side, fading linearly to zero over EARLY_HOME_BONUS_DAYS (45) from the season's first game, raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-08",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "november_home_2026_11_08",
+      "name": "low-major: adding card_factors.EARLY_HOME_BONUS_POINTS (2.66) of margin to a true home side, fading linearly to zero over EARLY_HOME_BONUS_DAYS (45) from the season's first game, raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-08",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "market_ratings_2026_11_08",
+      "name": "high-major: the candidate layer market_ratings (ratings fitted from closing spreads and totals of games already played, blended at card_factors.MARKET_BLEND_WEIGHT on margin and total), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-08",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "market_ratings_2026_11_08",
+      "name": "mid-major: the candidate layer market_ratings (ratings fitted from closing spreads and totals of games already played, blended at card_factors.MARKET_BLEND_WEIGHT on margin and total), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-08",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "market_ratings_2026_11_08",
+      "name": "low-major: the candidate layer market_ratings (ratings fitted from closing spreads and totals of games already played, blended at card_factors.MARKET_BLEND_WEIGHT on margin and total), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-08",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
     }
   ]
 }

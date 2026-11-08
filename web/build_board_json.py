@@ -886,11 +886,16 @@ def _pair_line(market: str, selection: str, line) -> tuple | None:
     return None
 
 
+#: Mirrors `models.trust.MIN_FAIR_BOOKS`; a test holds the two equal.
+MIN_FAIR_BOOKS = 3
+
+
 def fair_probability(rows, market: str, selection: str, line) -> float | None:
     """The de-vigged market probability of one side: each book quoting both
     sides normalised on its own pair, the median across those books, the same
-    rule as `models.trust.market_probabilities`. None when no book quotes both
-    sides -- a missing price stays missing."""
+    rule as `models.trust.market_probabilities`, including its floor of
+    `MIN_FAIR_BOOKS` books (decision 81). None when fewer books quote both
+    sides -- a missing price stays missing, and a thin one is not a price."""
     key = _pair_line(market, selection, line)
     if key is None:
         return None
@@ -907,7 +912,7 @@ def fair_probability(rows, market: str, selection: str, line) -> float | None:
         book = r.get("book") or ""
         (mine if sel == selection else other).setdefault(book, p)
     fair = sorted(a / (a + other[b]) for b, a in mine.items() if b in other and a + other[b] > 1.0)
-    if not fair:
+    if not fair or len(fair) < MIN_FAIR_BOOKS:
         return None
     n = len(fair)
     return fair[n // 2] if n % 2 else 0.5 * (fair[n // 2 - 1] + fair[n // 2])

@@ -11,6 +11,44 @@ from cbb_betting_lab.models import trust
 from cbb_betting_lab.reports.card_pricing import Quote, Wager
 
 
+@pytest.fixture(autouse=True)
+def _one_book_is_a_price(request, monkeypatch):
+    """The tests below exercise the pull and the de-vig with one or two books;
+    the floor of `MIN_FAIR_BOOKS` has its own tests, which opt out."""
+    if "the_floor" not in request.node.name:
+        monkeypatch.setattr(trust, "MIN_FAIR_BOOKS", 1)
+
+
+def test_the_floor_is_three_books():
+    assert trust.MIN_FAIR_BOOKS == 3
+
+
+def test_the_floor_refuses_a_price_two_books_make():
+    home = _wager("home", {"a": -110, "b": -120})
+    away = _wager("away", {"a": -110, "b": +100})
+    assert trust.market_probabilities([home, away]) == {}
+    third = _wager("home", {"a": -110, "b": -120, "c": -115})
+    other = _wager("away", {"a": -110, "b": +100, "c": -105})
+    assert set(trust.market_probabilities([third, other])) == {third.key, other.key}
+
+
+def test_the_floor_takes_a_thin_wager_off_the_trusted_map(tmp_path):
+    _seed(tmp_path, {"mid_major": 0.25})
+    table = trust.build("2026-11-10", outputs_dir=tmp_path, ledger=None)
+    home, away = _wager("home", {"a": -110, "b": -110}), _wager("away", {"a": -110, "b": -110})
+    assert trust.apply({home.key: 0.7, away.key: 0.3}, [home, away], table) == {}
+
+
+def test_the_floor_is_the_boards_floor_too():
+    import importlib.util
+    from pathlib import Path
+    path = Path(__file__).resolve().parents[1] / "web" / "build_board_json.py"
+    spec = importlib.util.spec_from_file_location("_board_for_floor", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.MIN_FAIR_BOOKS == trust.MIN_FAIR_BOOKS
+
+
 def _wager(selection: str, quotes: dict[str, float], *, line=-3.5, tier="mid_major", market="spread") -> Wager:
     return Wager(
         key=("e1", market, selection, line),

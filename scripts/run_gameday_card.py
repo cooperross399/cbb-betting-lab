@@ -94,7 +94,7 @@ from cbb_betting_lab.config import OUTPUTS_DIR, PROCESSED_DIR, RAW_DIR, STAGING_
 from cbb_betting_lab import forward_evidence
 from cbb_betting_lab.forward_evidence import ARCHIVE_DIR, SnapshotKeyError
 from cbb_betting_lab import line_movement
-from cbb_betting_lab.models import line_move, trust
+from cbb_betting_lab.models import closing_gate, line_move, trust
 from cbb_betting_lab.providers import staging
 from cbb_betting_lab.providers.env_file import load_provider_env, redact
 from cbb_betting_lab.providers.odds_api import (
@@ -240,6 +240,15 @@ def _line_moves(competition):
         if moves.by_event else f"Line movement: not read ({moves.reason})."
     )
     return moves
+
+
+def _closing_gate(day: str, outputs: Path):
+    """The cells the closing-line alarm closed (`models/closing_gate.py`), read
+    off the record this run's alarm step wrote. No record is nothing closed,
+    never no card."""
+    gate = closing_gate.load(outputs / closing_gate.RECORD_NAME, day)
+    print(gate.line())
+    return gate
 
 
 def _write_state(path: Path, run: GC.CardRun) -> None:
@@ -473,6 +482,7 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=outputs,
             trust=_trust_table(day, outputs),
             moves=_line_moves(competition),
+            gate=_closing_gate(day, outputs),
         )
     except (ValueError, GC.CardError, SnapshotKeyError) as exc:
         # Refusal three, and its two neighbours. `AccountingIdentity` raises a

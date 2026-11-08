@@ -121,6 +121,35 @@ SECOND_OPINION_COLUMNS = (
 #: 2026-10-26), and the layer records which of the two put it there.
 HOME_COURT_DEPARTURE = True
 
+#: The early-season home bonus (decision 83, Cooper 2026-11-08). In November a
+#: true home side wins by more than the model says: the November schedule is
+#: full of buy games, in which a stronger host pays a weaker visitor to come to
+#: its building, and a prior built from last season does not see the gap the
+#: buy game was arranged to exploit. Measured walk-forward before it was built:
+#: the model's true-home margins ran short by 2.66 points over the first
+#: `EARLY_HOME_BONUS_DAYS` of 2024-25 and 2025-26 (1,059 games) and by about
+#: 0.7 the other way mid-season, so the bonus fades linearly to zero.
+#: Fitted on one November and tested on the other it cut the margin miss in
+#: both directions (10.82 -> 10.62 and 10.75 -> 10.66), and on the first week
+#: of 2026-27, which it was not fitted on, 10.46 -> 10.22. Applied only at a
+#: true home venue (`VenueState.HOME`), never on a neutral or quasi-neutral
+#: floor, on top of the tier's effect, inside the home-court layer.
+EARLY_HOME_BONUS_POINTS = 2.66
+EARLY_HOME_BONUS_DAYS = 45
+
+
+def early_home_bonus(season_day) -> float:
+    """Points of margin added to a true home side, `season_day` days after the
+    season's first game: the full bonus on opening day, none from
+    `EARLY_HOME_BONUS_DAYS` on. An unknown day moves nothing."""
+    try:
+        day = float(season_day)
+    except (TypeError, ValueError):
+        return 0.0
+    if day != day or day < 0 or day >= EARLY_HOME_BONUS_DAYS:
+        return 0.0
+    return EARLY_HOME_BONUS_POINTS * (1.0 - day / EARLY_HOME_BONUS_DAYS)
+
 #: The layers, in the order they are applied, with the label a page shows.
 LAYERS: tuple[tuple[str, str], ...] = (
     ("strength", "Team strength"),
@@ -141,6 +170,7 @@ CANDIDATE_LAYERS: tuple[tuple[str, str], ...] = (
     ("travel", "Travel and time zones"),
     ("shooting_luck", "Shooting luck"),
     ("shot_quality", "Shot quality inside the arc"),
+    ("market_ratings", "Ratings from the betting lines"),
 )
 #: `lineup_strict`: a rotation player counts as out only after missing this
 #: many of the club's games in a row. When on, it replaces the single-game
@@ -215,6 +245,12 @@ SHOT_QUALITY_SHARE = 0.5
 SHOT_QUALITY_MIN_GAMES = 5
 SHOT_QUALITY_CLAMP = 3.0
 SHOT_QUALITY_ZONES = ("rim", "mid")
+#: Ratings from the betting lines (`models/market_ratings.py`, decision 84):
+#: the margin and the total moved `MARKET_BLEND_WEIGHT` of the way toward what
+#: the two teams' market ratings, fitted from closing lines of games already
+#: played, say of tonight. Margin and total both, so the totals side of the
+#: card reads the market's view of each team's pace and scoring too.
+MARKET_BLEND_WEIGHT = 0.5
 
 #: Where the audit's switches are read from, and how stale they may be.
 LAYER_AUDIT_DIR = "layer_audit"
@@ -262,6 +298,8 @@ class DayContext:
     #: team_id -> shrunk net form per 100, and the games it was read from.
     form: dict = field(default_factory=dict)
     form_games: dict = field(default_factory=dict)
+    #: Days since the season's first game (0 on opening day), None unknown.
+    season_day: int | None = None
     #: team_id -> days since its last game this season, None for an opener.
     rest_days: dict = field(default_factory=dict)
     #: (tier, bucket) -> effect per 100, net, relative to ordinary rest.
@@ -286,6 +324,8 @@ class DayContext:
     #: team_id -> (attack, defence) two-point over-performance taken back, per
     #: 100 possessions (candidate).
     shot_quality: dict = field(default_factory=dict)
+    #: Market ratings fitted from closing lines before the day (candidate).
+    market_ratings: object = None
     #: layer key -> on the card or not; `default_switches` unless an audit
     #: dated within `LAYER_AUDIT_MAX_AGE_DAYS` of the day said otherwise.
     switches: dict = field(default_factory=default_switches)
@@ -443,6 +483,17 @@ def days_since_last_game(rows: pd.DataFrame, day: str, *, teams=None) -> dict:
             continue
         out[team] = int((target - stamp).days)
     return out
+
+
+def season_day(rows: pd.DataFrame, day: str) -> int:
+    """Whole days between the season's first game in `rows` and `day`; 0 when
+    `rows` holds no game yet, which is opening day."""
+    if rows is None or len(rows) == 0 or "slate_date" not in rows.columns:
+        return 0
+    first = pd.to_datetime(rows["slate_date"].astype(str).str[:10], errors="coerce").min()
+    if pd.isna(first):
+        return 0
+    return max(0, int((pd.Timestamp(str(day)[:10]) - first).days))
 
 
 def rest_effects(history: pd.DataFrame, ratings) -> dict:
@@ -925,6 +976,24 @@ def load_layer_audit(raw_dir: Path | str | None, *, day: str) -> tuple[dict | No
     return switches, as_of, ""
 
 
+def load_market_ratings(raw_dir, schedule, *, day: str):
+    """Market ratings fitted from the line-movement store's closing lines of
+    games before `day`, or None when the store or the schedule is absent."""
+    from cbb_betting_lab import line_movement
+    from cbb_betting_lab.models import market_ratings as MR
+
+    if raw_dir is None or schedule is None or len(schedule) == 0:
+        return None
+    path = line_movement.store_path(CBB, Path(raw_dir).parent / "processed")
+    try:
+        store = MR.read_store(path)
+        if store is None:
+            return None
+        return MR.fit(MR.lined_games(store, schedule, day=day), as_of=day)
+    except (OSError, ValueError, KeyError):  # a bad store is no layer, never no card
+        return None
+
+
 def build_context(
     *,
     day: str,
@@ -935,6 +1004,7 @@ def build_context(
     raw_dir: Path | str | None,
     teams=None,
     home_states: Mapping | None = None,
+    schedule: pd.DataFrame | None = None,
 ) -> DayContext:
     """Everything tonight's layers read, from frames cut before `day`."""
     day = str(day)[:10]
@@ -947,6 +1017,7 @@ def build_context(
 
     context.form, context.form_games = team_form(season_rows, ratings, teams=teams)
     context.rest_days = days_since_last_game(season_rows, day, teams=teams)
+    context.season_day = season_day(season_rows, day)
     context.rest_effects = rest_effects(history_rows, ratings)
     if player_history is None or len(player_history) == 0:
         context.notes.append("no player table was handed over, so nobody is treated as missing")
@@ -983,6 +1054,9 @@ def build_context(
             team: state for team, state in home_states.items()
             if teams is None or team in teams
         }
+    context.market_ratings = load_market_ratings(raw_dir, schedule, day=day)
+    if context.market_ratings is None or not len(context.market_ratings):
+        context.notes.append("no betting-line ratings yet, so that layer moves nothing")
     switches, as_of, reason = load_layer_audit(raw_dir, day=day)
     if switches is not None:
         context.switches = switches
@@ -1071,12 +1145,23 @@ def apply(
             departure = own
         elif local_team_id == away_id:
             departure = -own
+    # The early-season bonus, in points of margin, turned into a net move per
+    # 100 at tonight's possessions, to whichever side the building belongs to.
+    early = 0.0
+    points = early_home_bonus(context.season_day) if state == VenueState.HOME.value else 0.0
+    if points and possessions > 0:
+        early = points * 100.0 / possessions
+        if local_team_id is not None and local_team_id == away_id:
+            early = -early
     detail["home_court"] = {
         "tier_margin": float(home_add - away_add),
         "departure": float(departure) if context.is_on("home_court") else 0.0,
+        "early_season": float(early) if context.is_on("home_court") else 0.0,
+        "season_day": context.season_day,
         "applied_by": "the fit" if ratings.venue_level_home_effect else "the card",
     }
-    take("home_court", (departure / 2.0, -departure / 2.0, 0.0))
+    move = departure + early
+    take("home_court", (move / 2.0, -move / 2.0, 0.0))
 
     # 3. Form.
     form_home = float(context.form.get(home_id, 0.0))
@@ -1202,6 +1287,28 @@ def apply(
         "away_attack": sq_away[0], "away_defence": sq_away[1],
     }
     take("shot_quality", (-sq_home[0] - sq_away[1], -sq_away[0] - sq_home[1], 0.0))
+
+    # Ratings from the betting lines: margin and total toward the market's
+    # view of these two teams, from games already played.
+    market = context.market_ratings
+    neutral = state != VenueState.HOME.value
+    m_margin = market.margin(home_id, away_id, neutral=neutral) if market is not None else None
+    m_total = market.total(home_id, away_id) if market is not None else None
+    move = (0.0, 0.0, 0.0)
+    if (m_margin is not None or m_total is not None) and possessions > 0:
+        margin_now = (home - away) * possessions / 100.0
+        total_now = (home + away) * possessions / 100.0
+        margin_new = margin_now + MARKET_BLEND_WEIGHT * ((m_margin if m_margin is not None else margin_now) - margin_now)
+        total_new = total_now + MARKET_BLEND_WEIGHT * ((m_total if m_total is not None else total_now) - total_now)
+        home_new = (total_new + margin_new) / 2.0 * 100.0 / possessions
+        away_new = (total_new - margin_new) / 2.0 * 100.0 / possessions
+        move = (home_new - home, away_new - away, 0.0)
+    detail["market_ratings"] = {
+        "as_of": None if market is None else market.as_of,
+        "events": 0 if market is None else market.events,
+        "margin": m_margin, "total": m_total, "weight": MARKET_BLEND_WEIGHT,
+    }
+    take("market_ratings", move)
 
     detail["switches"] = {key: context.is_on(key) for key in SWITCHABLE}
     detail["audit_as_of"] = context.audit_as_of

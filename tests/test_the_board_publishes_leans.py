@@ -103,12 +103,21 @@ class _Table:
 
 
 def _two_sided(model_home: str, home_odds: str = "+120", away_odds: str = "-140") -> list[dict]:
-    """A spread both sides of which two books quote, the model loving the dog."""
+    """A spread both sides of which three books quote (the floor), the model
+    loving the dog."""
     row = lambda sel, line, odds, book, p: {"market": "spreads", "selection": sel, "line": line, "american_odds": odds,
                                             "book": book, "model_probability": p, "edge": "0.30", "tier": "mid_major"}
     p_home = float(model_home)
     return [row("home", "7.5", home_odds, "a", model_home), row("away", "-7.5", away_odds, "a", f"{1 - p_home}"),
-            row("home", "7.5", "-110", "b", model_home), row("away", "-7.5", "-110", "b", f"{1 - p_home}")]
+            row("home", "7.5", "-110", "b", model_home), row("away", "-7.5", "-110", "b", f"{1 - p_home}"),
+            row("home", "7.5", "-110", "c", model_home), row("away", "-7.5", "-110", "c", f"{1 - p_home}")]
+
+
+def test_two_books_are_not_a_fair_price_on_the_board() -> None:
+    builder = _builder()
+    rows = [r for r in _two_sided("0.70") if r["book"] != "c"]
+    assert builder.fair_probability(rows, "spread", "home", "7.5") is None
+    assert builder.fair_probability(_two_sided("0.70"), "spread", "home", "7.5") is not None
 
 
 def test_a_tier_the_card_no_longer_trusts_publishes_no_lean_on_the_models_word() -> None:
@@ -130,7 +139,7 @@ def test_a_trusted_tier_still_leans_and_shows_the_trusted_edge() -> None:
 
 def test_with_no_trust_table_a_lean_needs_a_book_beating_the_fair_price() -> None:
     builder = _builder()
-    # Fair is the median of book a's and book b's own pairs; +120 at book a
+    # Fair is the median of books a, b and c's own pairs; +120 at book a
     # beats it by more than the bar even with the model ignored.
     pick = builder.pick_from_frozen(_two_sided("0.70"), "DUKE", "UNC", [], ALLOW, builder.LeanTrust(None))
     assert pick["kind"] == "lean" and pick["price"] == 120
