@@ -1,19 +1,19 @@
 # CBB closing-line alarm
 
-As of 2026-11-07. Whether the model's leans (frozen full-game team rows with an edge of at least 2%) beat the closing line, per tier and main market, from the settled forward ledger and the line-movement captures (101 capture(s) read). Intervals are clustered by game and corrected across 152 cumulative hypotheses (x1.8324). Closing-line value is not a return, and a lean that beat the close can still lose.
+As of 2026-11-08. Whether the model's leans (frozen full-game team rows with an edge of at least 2%) beat the closing line, per tier and main market, from the settled forward ledger and the line-movement captures (104 capture(s) read). Intervals are clustered by game and corrected across 152 cumulative hypotheses (x1.8324). Closing-line value is not a return, and a lean that beat the close can still lose.
 
 **Alarm: high_major / spread, high_major / total_points.** The corrected interval of closing-line value lies entirely below zero over enough leans and games. Each is a candidate for withdrawal from the allowlist; this report withdraws nothing.
 
 | Tier | Market | Leans | Games | Mean CLV | Corrected | Beat the close | Survived / gone / unknown |
 |:---|:---|---:|---:|---:|:---|---:|:---|
-| high-major | moneyline | 99 | 99 | +0.6% | +0.1% to +1.2% | 81% | 64 / 12 / 23 |
-| high-major | spread | 323 | 128 | -0.73 | -1.34 to -0.12 | 26% | 136 / 67 / 120 |
-| high-major | total_points | 276 | 112 | -1.08 | -1.74 to -0.42 | 20% | 145 / 53 / 78 |
-| mid-major | moneyline | 79 | 79 | +0.3% | -0.8% to +1.3% | 61% | 39 / 21 / 19 |
-| mid-major | spread | 193 | 79 | -0.12 | -0.70 to +0.47 | 40% | 115 / 35 / 43 |
-| mid-major | total_points | 191 | 78 | -0.71 | -1.64 to +0.22 | 26% | 105 / 30 / 56 |
-| low-major | moneyline | 18 | 18 | -0.2% | -4.0% to +3.7% | 44% | 7 / 3 / 8 |
-| low-major | spread | 37 | 18 | -0.39 | -2.10 to +1.33 | 32% | 15 / 9 / 13 |
-| low-major | total_points | 38 | 20 | -1.25 | -3.12 to +0.62 | 18% | 11 / 10 / 17 |
+| high-major | moneyline | 103 | 103 | +0.4% | -0.5% to +1.2% | 79% | 66 / 12 / 25 |
+| high-major | spread | 332 | 132 | -0.75 | -1.34 to -0.16 | 25% | 137 / 72 / 123 |
+| high-major | total_points | 280 | 113 | -1.07 | -1.72 to -0.41 | 20% | 148 / 53 / 79 |
+| mid-major | moneyline | 105 | 105 | +0.1% | -0.7% to +1.0% | 61% | 52 / 26 / 27 |
+| mid-major | spread | 245 | 104 | -0.22 | -0.74 to +0.29 | 38% | 131 / 47 / 67 |
+| mid-major | total_points | 232 | 97 | -0.76 | -1.62 to +0.10 | 28% | 125 / 41 / 66 |
+| low-major | moneyline | 29 | 29 | +0.4% | -2.5% to +3.3% | 45% | 13 / 5 / 11 |
+| low-major | spread | 59 | 32 | -0.11 | -1.29 to +1.07 | 34% | 22 / 17 / 20 |
+| low-major | total_points | 67 | 32 | -1.72 | -4.19 to +0.74 | 24% | 23 / 16 / 28 |
 
 Spread and total values are points; moneyline values are probability, the closing de-vigged price minus the frozen price's implied probability. Unknown survival means the next capture did not cover the event, and is never counted as gone.
