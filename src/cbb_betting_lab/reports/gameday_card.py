@@ -151,6 +151,8 @@ from cbb_betting_lab.markets import FUTURES, MARKETS_BY_KEY, PLAYER, per_event_p
 from cbb_betting_lab.models import distributions, player_census, player_rates, slate
 from cbb_betting_lab.models import closing_gate
 from cbb_betting_lab.models import line_move
+from cbb_betting_lab.models import rung_cap
+from cbb_betting_lab.models import sizing
 from cbb_betting_lab.models import trust as trust_model
 from cbb_betting_lab.population import VenueState
 from cbb_betting_lab.providers import staging, team_names
@@ -2222,6 +2224,8 @@ class CardRun:
     matchup_census: str = ""
     #: How far the edge bar trusted the model against the price, per tier.
     trust_line: str = ""
+    #: tier -> the trust weight the edge bar read, for the size column.
+    trust_weights: dict = field(default_factory=dict)
     movement_line: str = ""
     #: Dominated rungs on each book's own ladder (`ladder_coherence`).
     ladder_lines: list[str] = field(default_factory=list)
@@ -2382,6 +2386,9 @@ def run_card(
     # (`models/closing_gate.py`, decision 82). It only removes wagers from the
     # edge bar's reach; the freeze below still records every one of them.
     trusted, _gated_by_close = closing_gate.apply(trusted, wagers, gate)
+    # Nothing past `rung_cap.MAX_RUNG_DISTANCE` down an alternate ladder
+    # (`models/rung_cap.py`, decision 86). Withdrawal only.
+    trusted, _capped_rungs = rung_cap.apply(trusted, wagers)
 
     # The tip guard is read for **every** wager on the board, not only for the
     # ones that reach it inside `select`. `select` applies its bars in order and
@@ -2477,6 +2484,10 @@ def run_card(
         ),
         rows_off_this_slate=off_slate,
         matchup_census=str(matchup_census or ""),
+        trust_weights=(
+            {t: float(v.weight) for t, v in trust.by_tier.items()}
+            if trust is not None and trust.active else {}
+        ),
         trust_line=(trust.line() if trust is not None else "")
         + (("\n\n" + gate.line()) if gate is not None and gate.closed else ""),
         movement_line=restraint.line,
@@ -2760,8 +2771,8 @@ def _selections_section(run: CardRun) -> list[str]:
             ]
     else:
         lines += [
-            "| Game | Market | Selection | Price | Bet down to | Book | Model | Edge | Push mass | Prior weight | Tier |",
-            "|:---|:---|:---|---:|---:|:---|---:|---:|---:|---:|:---|",
+            "| Game | Market | Selection | Price | Bet down to | Size | Book | Model | Edge | Push mass | Prior weight | Tier |",
+            "|:---|:---|:---|---:|---:|---:|:---|---:|---:|---:|---:|:---|",
         ]
         for row in run.selections:
             push = row.get("push_mass")
@@ -2773,6 +2784,7 @@ def _selections_section(run: CardRun) -> list[str]:
                 f"| {row['selection']}{line} "
                 f"| {float(row['american_odds']):+g} "
                 f"| {_bet_down_to_cell(row)} "
+                f"| {sizing.units(run.trust_weights.get(str(row.get('tier') or ''))):.2f}u "
                 f"| {row['book']} "
                 f"| {float(row['model_probability']):.1%} "
                 f"| {float(row['edge']):+.2%} "
@@ -2787,6 +2799,8 @@ def _selections_section(run: CardRun) -> list[str]:
             "probability the bar read, floored at the price band's "
             f"{PRICE_BAND[0]:+g}. Below it the same wager would not be a "
             "selection.",
+            "",
+            sizing.EXPLANATION,
             "",
             "Each edge is stated **per wager** and none of them is added to "
             "another. A game's spread, its moneyline, both team totals, the "

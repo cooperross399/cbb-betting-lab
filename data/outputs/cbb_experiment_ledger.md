@@ -4,11 +4,11 @@
 
 College basketball's large sample makes this **more** urgent, not less. A bigger n narrows every interval, including the intervals of the hypotheses that are wrong. Sample size buys power, never innocence.
 
-**167 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.84** before it means what it says.
+**173 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.85** before it means what it says.
 
 **Alpha budget: 6 new hypotheses a week**, declared 2026-09-01. Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state — re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise.
 
-**126 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
+**132 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
 
 | Search | Hypotheses |
 |:---|---:|
@@ -33,6 +33,8 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | closing_gate_2026_11_08 | 3 |
 | november_home_2026_11_08 | 3 |
 | market_ratings_2026_11_08 | 3 |
+| rung_cap_2026_11_08 | 3 |
+| trust_sizing_2026_11_08 | 3 |
 | november_prior | 2 |
 | reachability | 1 |
 | champion_challenger | 1 |
@@ -208,6 +210,12 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | 165 | market_ratings_2026_11_08 | high-major: the candidate layer market_ratings (ratings fitted from closing spreads and totals of games already played, blended at card_factors.MARKET_BLEND_WEIGHT on margin and total), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
 | 166 | market_ratings_2026_11_08 | mid-major: the candidate layer market_ratings (ratings fitted from closing spreads and totals of games already played, blended at card_factors.MARKET_BLEND_WEIGHT on margin and total), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
 | 167 | market_ratings_2026_11_08 | low-major: the candidate layer market_ratings (ratings fitted from closing spreads and totals of games already played, blended at card_factors.MARKET_BLEND_WEIGHT on margin and total), when the layer audit puts it on the card, raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 168 | rung_cap_2026_11_08 | high-major: withdrawing alternate spreads and totals more than rung_cap.MAX_RUNG_DISTANCE (eight) points from their game's main line raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 169 | rung_cap_2026_11_08 | mid-major: withdrawing alternate spreads and totals more than rung_cap.MAX_RUNG_DISTANCE (eight) points from their game's main line raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 170 | rung_cap_2026_11_08 | low-major: withdrawing alternate spreads and totals more than rung_cap.MAX_RUNG_DISTANCE (eight) points from their game's main line raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 171 | trust_sizing_2026_11_08 | high-major: sizing the card's selections at sizing.BASE_UNITS times (1 + the tier's trust weight), at most sizing.MAX_UNITS, raises the return per unit risked of the card's team selections against the card-time price over flat 0.25u sizing (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 172 | trust_sizing_2026_11_08 | mid-major: sizing the card's selections at sizing.BASE_UNITS times (1 + the tier's trust weight), at most sizing.MAX_UNITS, raises the return per unit risked of the card's team selections against the card-time price over flat 0.25u sizing (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 173 | trust_sizing_2026_11_08 | low-major: sizing the card's selections at sizing.BASE_UNITS times (1 + the tier's trust weight), at most sizing.MAX_UNITS, raises the return per unit risked of the card's team selections against the card-time price over flat 0.25u sizing (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
 
 ## 7 quantities declared descriptive-only
 

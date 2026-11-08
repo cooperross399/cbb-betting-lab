@@ -1353,6 +1353,78 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    # ---------------------------------------------------------------------
+    # decisions 86-87 (Cooper, 2026-11-08, 'DO all 7'): two card changes registered before they are built. First: no alternate spread or total more than rung_cap.MAX_RUNG_DISTANCE (8) points from its game's main line. Per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="rung_cap_2026_11_08",
+        name=(
+            "high-major: withdrawing alternate spreads and totals more than rung_cap.MAX_RUNG_DISTANCE (eight) points from their game's main line raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="rung_cap_2026_11_08",
+        name=(
+            "mid-major: withdrawing alternate spreads and totals more than rung_cap.MAX_RUNG_DISTANCE (eight) points from their game's main line raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="rung_cap_2026_11_08",
+        name=(
+            "low-major: withdrawing alternate spreads and totals more than rung_cap.MAX_RUNG_DISTANCE (eight) points from their game's main line raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    # ---------------------------------------------------------------------
+    # Second: the card's size column scales 0.25u by (1 + the tier's trust weight), at most 0.5u. Per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="trust_sizing_2026_11_08",
+        name=(
+            "high-major: sizing the card's selections at sizing.BASE_UNITS times (1 + the tier's trust weight), at most sizing.MAX_UNITS, raises the return per unit risked of the card's team selections against the card-time price over flat 0.25u sizing (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="trust_sizing_2026_11_08",
+        name=(
+            "mid-major: sizing the card's selections at sizing.BASE_UNITS times (1 + the tier's trust weight), at most sizing.MAX_UNITS, raises the return per unit risked of the card's team selections against the card-time price over flat 0.25u sizing (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="trust_sizing_2026_11_08",
+        name=(
+            "low-major: sizing the card's selections at sizing.BASE_UNITS times (1 + the tier's trust weight), at most sizing.MAX_UNITS, raises the return per unit risked of the card's team selections against the card-time price over flat 0.25u sizing (forward ledger only)"
+        ),
+        tested_on="2026-11-08",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 
