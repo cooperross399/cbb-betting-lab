@@ -311,6 +311,9 @@ _ROW_FOR_SELECTION: dict[str, str] = {
     AWAY_UNDER: "away",
 }
 
+#: The selections on a game total, which name no side.
+_TOTAL_SELECTIONS: frozenset[str] = frozenset({"over", "under"})
+
 #: The two markets whose `game` argument is a `cbb_game_segments.csv` row
 #: rather than a team-games row: they settle on who scored the first basket,
 #: which lives in the segments table.
@@ -1441,6 +1444,13 @@ def _game_row_for(row: SimpleNamespace, market, bundle, team_id=None) -> object:
     # a neutral court. When the caller could not establish the team, this
     # returns None and the row is refused rather than settled from a default.
     if _ROW_FOR_SELECTION.get(row.selection) is None:
+        # A game total names no side. The total is symmetric, so either row
+        # settles it (`settlement.settle`'s own contract), and the home row is
+        # taken. Until 2026-11-08 this returned None, and `_settle_row` refused
+        # every full-game and half total as unsettleable: from #77 (2026-09-16)
+        # no over/under on a game total was ever graded (decision 85).
+        if str(row.selection) in _TOTAL_SELECTIONS:
+            return bundle.get("home") if bundle.get("home") is not None else bundle.get("away")
         return None
     return _row_by_team(bundle, team_id)
 

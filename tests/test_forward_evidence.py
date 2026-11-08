@@ -2039,3 +2039,23 @@ def test_a_bet_with_no_survival_reading_is_not_counted_as_a_vanished_price():
     assert vanished_rows and all("| 100 " in line for line in vanished_rows), (
         f"the table's `vanished` group is not the 100 observed rows: {vanished_rows}"
     )
+
+
+def test_a_game_total_settles_and_is_never_refused_for_naming_no_side(tmp_path):
+    """Purdue 80, Butler 70: a total of 150. From #77 to 2026-11-08 every
+    over/under on a game total was refused as unsettleable, because the row
+    lookup asked which side the selection named and a total names none
+    (decision 85). Either team's row settles a total; the outcome must be graded."""
+    rows = [
+        price(event_id="e1", market="total_points", selection="over", line=145.5),
+        price(event_id="e1", market="total_points", selection="under", line=145.5),
+        price(event_id="e1", market="alternate_total_points", selection="over", line=155.5),
+    ]
+    freeze(tmp_path, rows, {})
+    result = settle(tmp_path)
+    assert result.rows_unsettleable == 0
+    ledger = fe.read_ledger(tmp_path / fe.LEDGER_FILENAME)
+    graded = {(r.market, r.selection, float(r.line)): r.outcome for r in ledger.itertuples()}
+    assert graded[("total_points", "over", 145.5)] == Outcome.WON.value
+    assert graded[("total_points", "under", 145.5)] == Outcome.LOST.value
+    assert graded[("alternate_total_points", "over", 155.5)] == Outcome.LOST.value
