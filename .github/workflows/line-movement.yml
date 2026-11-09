@@ -341,14 +341,11 @@ jobs:
           add cbb_line_movement.csv data/processed/cbb_line_movement.csv "$INPUT"
           add latest_line_movement.md data/outputs/cbb_line_movement.md "$INPUT"
           add latest_price_shop.md data/outputs/cbb_price_shop.md "$INPUT"
-<<<<<<< HEAD
           # The shop's record and its chat alert (decision 93): the board
           # reads the first, a scheduled task posts the second when it is
           # not empty. Absent when the shop step did not run this round.
           add latest_price_shop.json data/outputs/cbb_price_shop.json "$INPUT"
           add latest_price_shop_alert.md data/outputs/cbb_price_shop_alert.md "$INPUT"
-=======
->>>>>>> origin/main
           TREE=$(git mktree < "$INPUT")
           export GIT_AUTHOR_NAME="CBB Line Movement" GIT_AUTHOR_EMAIL="actions@github.com"
           export GIT_COMMITTER_NAME="CBB Line Movement" GIT_COMMITTER_EMAIL="actions@github.com"
