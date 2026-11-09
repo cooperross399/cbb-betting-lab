@@ -1,0 +1,90 @@
+{
+  "alert_edge": 0.03,
+  "alerts": [
+    {
+      "american": 450,
+      "away_team": "Florida Gators",
+      "book": "fanduel",
+      "books": 12,
+      "commence": "2026-11-10T23:00:00+00:00",
+      "edge": 0.1162,
+      "event_id": "72eacb4b3afe5e4526420aa503a8ff1f",
+      "fair_american": 393,
+      "game": "Florida Gators at Florida St Seminoles",
+      "home_team": "Florida St Seminoles",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
+    }
+  ],
+  "as_of": "2026-11-09T20:41+00:00",
+  "captures": 96,
+  "cells": [
+    {
+      "beat_close": 0.6875,
+      "games": 15,
+      "graded": 16,
+      "high": null,
+      "low": null,
+      "mean": 0.11153878092422848,
+      "shops": 22,
+      "tier": "high_major",
+      "ungraded": 6
+    },
+    {
+      "beat_close": 0.6470588235294118,
+      "games": 47,
+      "graded": 51,
+      "high": 0.21786052449247792,
+      "low": -0.12018156999259019,
+      "mean": 0.04883947724994387,
+      "shops": 57,
+      "tier": "mid_major",
+      "ungraded": 6
+    },
+    {
+      "beat_close": 0.6428571428571429,
+      "games": 24,
+      "graded": 28,
+      "high": null,
+      "low": null,
+      "mean": 0.03282319276318989,
+      "shops": 30,
+      "tier": "low_major",
+      "ungraded": 2
+    },
+    {
+      "beat_close": 0.5,
+      "games": 4,
+      "graded": 4,
+      "high": null,
+      "low": null,
+      "mean": -0.08529328270024208,
+      "shops": 6,
+      "tier": "unplaced",
+      "ungraded": 2
+    }
+  ],
+  "correction_factor": 1.8685342994948144,
+  "current": [
+    {
+      "american": 450,
+      "away_team": "Florida Gators",
+      "book": "fanduel",
+      "books": 12,
+      "commence": "2026-11-10T23:00:00+00:00",
+      "edge": 0.1162,
+      "event_id": "72eacb4b3afe5e4526420aa503a8ff1f",
+      "fair_american": 393,
+      "game": "Florida Gators at Florida St Seminoles",
+      "home_team": "Florida St Seminoles",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
+    }
+  ],
+  "latest_capture": "2026-11-09T20:41:31+00:00",
+  "looks": 200,
+  "min_books": 3,
+  "shop_edge": 0.02
+}
