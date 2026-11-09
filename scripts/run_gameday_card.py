@@ -212,7 +212,7 @@ def _read_previous_fingerprint(path: Path, *, day: str, card_slot: str) -> str:
     return str(payload.get("fingerprint", ""))
 
 
-def _trust_table(day: str, outputs: Path):
+def _trust_table(day: str, outputs: Path, competition):
     """How far tonight's edge bar trusts the model, per tier (`models/trust.py`).
 
     Seeded from the forecast-skill record and updated from the settled forward
@@ -223,7 +223,11 @@ def _trust_table(day: str, outputs: Path):
     except Exception as exc:  # noqa: BLE001 - the seed alone still applies
         print(f"Trust: the forward ledger could not be read ({type(exc).__name__}); seed only.")
         ledger = None
-    table = trust.build(day, outputs_dir=outputs, ledger=ledger)
+    # The closing-line update reads the same capture store the line-movement
+    # step fetched (decision 94). Absent, results alone update the table.
+    path = line_movement.store_path(competition, PROCESSED_DIR)
+    captures = line_move.read_captures(path) if path.is_file() else None
+    table = trust.build(day, outputs_dir=outputs, ledger=ledger, captures=captures)
     print(table.line())
     return table
 
@@ -480,7 +484,7 @@ def main(argv: list[str] | None = None) -> int:
                 state, day=day, card_slot=slot.name
             ),
             output_dir=outputs,
-            trust=_trust_table(day, outputs),
+            trust=_trust_table(day, outputs, competition),
             moves=_line_moves(competition),
             gate=_closing_gate(day, outputs),
         )

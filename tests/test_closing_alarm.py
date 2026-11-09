@@ -56,9 +56,12 @@ def test_only_settled_full_game_team_leans_above_the_bar_count():
         {**_lean("e", "total_points", "over", 140.5), "outcome": ""},
         {**_lean("e", "spread", "home", -3.5), "segment": "h1"},
         {**_lean("e", "spread", "home", -3.5), "player": "Someone"},
+        _lean("e", "spread_h1", "home", -1.5),
         _lean("e", "alternate_spread", "home", -7.5),
+        _lean("e", "team_total", "home_over", 72.5),
     ]
-    assert len(CA.leans(pd.DataFrame(rows))) == 1
+    # Since decision 94 the high-hold markets are leans too; halves are not.
+    assert sorted(CA.leans(pd.DataFrame(rows))["market"]) == ["alternate_spread", "spread", "team_total"]
 
 
 def test_the_alarm_trips_only_with_enough_leans_all_losing_to_the_close():
@@ -84,3 +87,37 @@ def test_an_empty_ledger_says_it_is_empty():
     record = CA.build_record(pd.DataFrame(), pd.DataFrame(), looks=150, as_of="2026-11-01")
     assert record["leans"] == 0 and not record["alarms"]
     assert "silent because it is empty" in CA.render(record)
+
+
+def test_a_high_hold_row_is_graded_in_probability_against_the_main_close():
+    from statistics import NormalDist
+
+    close = {("e", "spread"): -5.5, ("e", "total_points"): 143.5}
+    z = NormalDist().cdf
+    # Home -7.5 needs a margin over 7.5 against a closing margin of 5.5.
+    rung = CA.close_probability(_lean("e", "alternate_spread", "home", -7.5), close)
+    assert rung == pytest.approx(z((5.5 - 7.5) / CA.MARGIN_SD))
+    away = CA.close_probability(_lean("e", "alternate_spread", "away", 9.5), close)
+    assert away == pytest.approx(z((9.5 - 5.5) / CA.MARGIN_SD))
+    over = CA.close_probability(_lean("e", "alternate_total_points", "over", 150.5), close)
+    assert over == pytest.approx(z((143.5 - 150.5) / CA.TOTAL_SD))
+    # The home side's share of a 143.5 total at -5.5 is 74.5 points.
+    team = CA.close_probability(_lean("e", "team_total", "home_over", 72.5), close)
+    assert team == pytest.approx(z((74.5 - 72.5) / CA.TEAM_TOTAL_SD))
+    under = CA.close_probability(_lean("e", "team_total", "away_under", 70.5), close)
+    assert under == pytest.approx(1 - z((69.0 - 70.5) / CA.TEAM_TOTAL_SD))
+    # The hold counts against it: closing chance minus the price's implied chance.
+    value = CA.closing_value(_lean("e", "team_total", "home_over", 72.5, odds=-120), close)
+    assert value == pytest.approx(team - 120 / 220)
+    assert CA.closing_value(_lean("x", "team_total", "home_over", 72.5), close) is None
+
+
+def test_a_high_hold_cell_trips_its_own_alarm():
+    store, ledger = [], []
+    for game in range(40):
+        event = f"g{game}"
+        store += _store(event, home_line=-3.5, total=140.5, at="2026-11-10T22:00:00Z")
+        for _ in range(3):
+            ledger.append(_lean(event, "team_total", "home_over", 74.5 + game % 3, odds=-130))
+    record = CA.build_record(pd.DataFrame(ledger), pd.DataFrame(store), looks=150, as_of="2026-12-01")
+    assert record["alarms"] == ["mid_major / team_total"]

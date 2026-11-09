@@ -30,6 +30,15 @@ bar because the market's own fair price carries no edge.
   ledger, through the same de-vig (scope `wager`, because a frozen row is the
   best price and not one book's quote), with the seed as a ridge prior worth
   `PRIOR_ROWS` rows. Only rows settled before the card's day are read.
+* **The closing-line update** (decision 94, Cooper 2026-11-09: *"Do all 5"*)
+  is the same regression with the close in place of the result: (closing
+  chance - market) on (model - market), over every frozen full-game team row
+  in the closing-line alarm's markets whose game tipped before the card's day
+  and whose close the line-movement captures hold (`closing_alarm.
+  close_probability`). A result is one coin flip; where the market closed is
+  what the whole market learned before tip, so it reads in days what results
+  read in months. Each such row counts `CLV_WEIGHT` times a settled one in the
+  same ridge. Registered as `trust_clv_2026_11_09`, one per tier.
 * `w` is clamped to `[0, 1]`: below zero would bet against the model's own
   opinion, above one would amplify an opinion this lab has never shown is
   realised.
@@ -67,6 +76,13 @@ TYPICAL_DISAGREEMENT_SQ = 0.01
 #: The seed's source, under `data/outputs/`.
 SEED_RECORD = "cbb_forecast_skill.json"
 
+#: How many settled results one closing-line row is worth in the ridge. A
+#: closing price moves far less than a result, so its residual is far less
+#: noisy; four is this lab's choice, made before any weight was read, and
+#: deliberately well short of the variance ratio, because rows on one game's
+#: ladder are not independent.
+CLV_WEIGHT = 4.0
+
 #: Tiers with no seed and no ledger rows get this: the market.
 UNSEEDED = 0.0
 
@@ -82,6 +98,7 @@ class TierTrust:
     seed_rows: int
     ledger_rows: int
     weight: float
+    clv_rows: int = 0
 
 
 @dataclass
@@ -102,7 +119,7 @@ class TrustTable:
             return f"Trust in the model against the price: not applied ({self.reason})."
         parts = [
             f"{t.tier.replace('_', '-')} {t.weight:.3f} (seed {t.seed:.3f}, "
-            f"{t.ledger_rows:,} settled forward row(s))"
+            f"{t.ledger_rows:,} settled forward row(s), {t.clv_rows:,} closing-line row(s))"
             for t in sorted(self.by_tier.values(), key=lambda t: t.tier)
         ]
         return (
@@ -154,18 +171,60 @@ def _settled_pairs(ledger: pd.DataFrame, *, before: str) -> pd.DataFrame:
     return frame.assign(won=(frame["outcome"].astype(str) == "won").astype(float))
 
 
-def posterior(seed: float, pairs: pd.DataFrame) -> float:
-    """Ridge regression of (won - market) on (model - market), shrunk to the seed."""
+def _clv_pairs(ledger: pd.DataFrame, captures: pd.DataFrame | None, *, before: str) -> pd.DataFrame:
+    """Frozen full-game team rows whose game tipped before `before`, with a
+    de-vigged price and the closing chance of their side (`close`)."""
+    from cbb_betting_lab.reports import closing_alarm as CA
+    from cbb_betting_lab.reports import forecast_skill as FS
+
+    if ledger is None or ledger.empty or captures is None or captures.empty:
+        return pd.DataFrame()
+    store = captures[pd.to_datetime(captures["captured_at"], utc=True, errors="coerce")
+                     < pd.Timestamp(str(before), tz="UTC")]
+    close = CA.closing_consensus(store)
+    if not close:
+        return pd.DataFrame()
+    frame = ledger.copy()
+    frame = frame[frame["snapshot_date"].astype(str) < str(before)]
+    tipped = pd.to_datetime(frame["commence_time"], utc=True, errors="coerce") < pd.Timestamp(str(before), tz="UTC")
+    frame = frame[tipped]
+    frame = frame[frame["market"].astype(str).isin(CA.MARKETS)]
+    frame = frame[frame["segment"].astype(str).isin(CA.FULL_GAME)]
+    frame = frame[frame["player"].fillna("").astype(str).str.strip() == ""]
+    if frame.empty:
+        return frame
+    frame, _census = FS.devig(frame, scope="wager")
+    frame["model_probability"] = pd.to_numeric(frame["model_probability"], errors="coerce")
+    frame = frame.dropna(subset=["market_implied", "model_probability"])
+    if frame.empty:
+        return frame
+    frame = frame.assign(close=[CA.close_probability(r, close) for r in frame.to_dict("records")])
+    return frame.dropna(subset=["close"])
+
+
+def posterior(seed: float, pairs: pd.DataFrame, clv: pd.DataFrame | None = None) -> float:
+    """Ridge regression of (won - market) on (model - market), shrunk to the
+    seed, with each closing-line row's (close - market) counted `CLV_WEIGHT`
+    times beside the results."""
     penalty = PRIOR_ROWS * TYPICAL_DISAGREEMENT_SQ
-    if pairs is None or pairs.empty:
-        return clamp(seed)
-    d = (pairs["model_probability"] - pairs["market_implied"]).to_numpy(dtype=float)
-    r = (pairs["won"] - pairs["market_implied"]).to_numpy(dtype=float)
-    return clamp((float((d * r).sum()) + penalty * seed) / (float((d * d).sum()) + penalty))
+    num, den = penalty * seed, penalty
+    if pairs is not None and not pairs.empty:
+        d = (pairs["model_probability"] - pairs["market_implied"]).to_numpy(dtype=float)
+        r = (pairs["won"] - pairs["market_implied"]).to_numpy(dtype=float)
+        num += float((d * r).sum())
+        den += float((d * d).sum())
+    if clv is not None and not clv.empty:
+        d = (clv["model_probability"] - clv["market_implied"]).to_numpy(dtype=float)
+        r = (clv["close"] - clv["market_implied"]).to_numpy(dtype=float)
+        num += CLV_WEIGHT * float((d * r).sum())
+        den += CLV_WEIGHT * float((d * d).sum())
+    return clamp(num / den)
 
 
-def build(day: str, *, outputs_dir: Path | str, ledger: pd.DataFrame | None) -> TrustTable:
-    """The table the card prices `day` with."""
+def build(day: str, *, outputs_dir: Path | str, ledger: pd.DataFrame | None,
+          captures: pd.DataFrame | None = None) -> TrustTable:
+    """The table the card prices `day` with. `captures`, the line-movement
+    store, adds the closing-line update; absent, results alone update it."""
     if str(day) < TRUST_FROM:
         return TrustTable(day=str(day), active=False,
                           reason=f"{day} is before {TRUST_FROM}, the first day the seed is known")
@@ -174,10 +233,16 @@ def build(day: str, *, outputs_dir: Path | str, ledger: pd.DataFrame | None) -> 
         return TrustTable(day=str(day), active=False,
                           reason=f"no fitted disagreement coefficient in {SEED_RECORD}")
     pairs = _settled_pairs(ledger, before=str(day)) if ledger is not None else pd.DataFrame()
+    try:
+        clv = _clv_pairs(ledger, captures, before=str(day)) if ledger is not None else pd.DataFrame()
+    except Exception:  # noqa: BLE001 - an unreadable store is results only, never no table
+        clv = pd.DataFrame()
     table = TrustTable(day=str(day))
     for tier, (seed, rows) in seeds.items():
         mine = pairs[pairs["tier"].astype(str) == tier] if not pairs.empty else pairs
-        table.by_tier[tier] = TierTrust(tier, seed, rows, int(len(mine)), posterior(seed, mine))
+        closing = clv[clv["tier"].astype(str) == tier] if not clv.empty else clv
+        table.by_tier[tier] = TierTrust(tier, seed, rows, int(len(mine)), posterior(seed, mine, closing),
+                                        int(len(closing)))
     return table
 
 

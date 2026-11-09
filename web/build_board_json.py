@@ -951,7 +951,15 @@ def load_lean_trust(lab: Path, day: date) -> LeanTrust:
 
         path = lab / "data" / "processed" / "cbb_forward_evidence.csv"
         ledger = pd.read_csv(path, low_memory=False) if path.is_file() else None
-        return LeanTrust(trust.build(day.isoformat(), outputs_dir=lab / "data" / "outputs", ledger=ledger))
+        from cbb_betting_lab import line_movement  # type: ignore  # noqa: PLC0415
+        from cbb_betting_lab.competitions import CBB  # type: ignore  # noqa: PLC0415
+        from cbb_betting_lab.models import line_move  # type: ignore  # noqa: PLC0415
+
+        # The closing-line update (decision 94): the capture store Publish
+        # Board reads from line-movement. Absent, results alone update it.
+        store = line_movement.store_path(CBB, lab / "data" / "processed")
+        captures = line_move.read_captures(store) if store.is_file() else None
+        return LeanTrust(trust.build(day.isoformat(), outputs_dir=lab / "data" / "outputs", ledger=ledger, captures=captures))
     except Exception as exc:  # noqa: BLE001 - the board must still build
         print(f"Leans trust the market tonight: the trust table could not be read ({exc}).", file=sys.stderr)
         return LeanTrust(None)

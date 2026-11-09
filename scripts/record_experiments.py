@@ -1656,6 +1656,72 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    E.Hypothesis(
+        search="trust_clv_2026_11_09",
+        name=(
+            "high-major: the trust table updated from closing-line value as well as results (models/trust.py: each frozen full-game team row whose game has tipped regresses its closing chance minus the de-vigged price on the model's disagreement with that price, counted four times a settled result in the same ridge) improves the card's closing-price return over the results-only update (forward only)"
+        ),
+        tested_on="2026-11-09",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="trust_clv_2026_11_09",
+        name=(
+            "mid-major: the trust table updated from closing-line value as well as results (models/trust.py: each frozen full-game team row whose game has tipped regresses its closing chance minus the de-vigged price on the model's disagreement with that price, counted four times a settled result in the same ridge) improves the card's closing-price return over the results-only update (forward only)"
+        ),
+        tested_on="2026-11-09",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="trust_clv_2026_11_09",
+        name=(
+            "low-major: the trust table updated from closing-line value as well as results (models/trust.py: each frozen full-game team row whose game has tipped regresses its closing chance minus the de-vigged price on the model's disagreement with that price, counted four times a settled result in the same ridge) improves the card's closing-price return over the results-only update (forward only)"
+        ),
+        tested_on="2026-11-09",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="high_hold_gate_2026_11_09",
+        name=(
+            "high-major: the closing-line gate taking a tier's team totals and alternate ladders off the card when the closing-line alarm grades them, at their own prices against the main market's close translated through a normal at their own number, as losing to the close (models/closing_gate.py, reports/closing_alarm.py) improves the card's closing-price return (forward only)"
+        ),
+        tested_on="2026-11-09",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="high_hold_gate_2026_11_09",
+        name=(
+            "mid-major: the closing-line gate taking a tier's team totals and alternate ladders off the card when the closing-line alarm grades them, at their own prices against the main market's close translated through a normal at their own number, as losing to the close (models/closing_gate.py, reports/closing_alarm.py) improves the card's closing-price return (forward only)"
+        ),
+        tested_on="2026-11-09",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="high_hold_gate_2026_11_09",
+        name=(
+            "low-major: the closing-line gate taking a tier's team totals and alternate ladders off the card when the closing-line alarm grades them, at their own prices against the main market's close translated through a normal at their own number, as losing to the close (models/closing_gate.py, reports/closing_alarm.py) improves the card's closing-price return (forward only)"
+        ),
+        tested_on="2026-11-09",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 

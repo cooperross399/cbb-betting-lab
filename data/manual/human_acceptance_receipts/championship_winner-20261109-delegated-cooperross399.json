@@ -1,0 +1,19 @@
+{
+  "market": "championship_winner",
+  "receipt_id": "championship_winner-20261109-delegated-cooperross399",
+  "evidence": {
+    "path": "data/outputs/cbb_price_backtest.md",
+    "sha256": "1317efb3287795a42f9b3c76be94482ffe4e9117872ebb8e7a2b956971a378cc"
+  },
+  "signed_by": "Cooper Ross (delegated: executed by his AI assistant on his written instruction)",
+  "executed_by": "Claude",
+  "signed_on": "2026-11-09",
+  "supersedes": "championship_winner-20261030-delegated-cooperross399",
+  "authorisation": {
+    "instruction": "Chose \"Re-sign all 35 now\" on the decision card asking \"Re-sign the 35 market receipts so items 3 and 4 can ship?\" (2026-11-09T18:29:50Z)",
+    "option_consequence": "I re-render the signed backtest and re-execute the 35 receipts on the same terms, as on Oct 30. The allowlist doesn't change, and trust learning plus the high-hold cut ship today.",
+    "context": "Registering the closing-line trust update and the high-hold closing gate took the experiment ledger from 194 to 200, at which one blind null-baseline cell in the signed report (mid_major / total_points / always over, -3.1% over 43,265 bets) moves from demonstrated deficit to no demonstrated edge (it crosses at the 197th). The earlier receipts cited the render at 143 looks.",
+    "session": "https://claude.ai/code/session_01PSdZ6eZuFFyYvBfvVPrx91"
+  },
+  "statement": "Executed by Claude on Cooper Ross's explicit written instruction, as his delegate; Cooper did not personally review this evidence first. It re-cites the same market against the price-backtest report re-rendered at the ledger's current count, and changes nothing about which markets are allowlisted. This receipt records an owner's decision to run the market forward and accumulate a live record, not a finding that an edge exists."
+}
