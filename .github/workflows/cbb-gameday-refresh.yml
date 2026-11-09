@@ -766,7 +766,6 @@ jobs:
             exit 1
           fi
           echo "The card returned decision=$DECISION (exit $CARD_STATUS, degraded ${CARD_DEGRADED:-unknown}). A refusal and a degraded card are verdicts, not faults: this step succeeds and the feed is stamped with the word."
-          echo "=====CARD-BEGIN====="; cat data/outputs/cbb_card_comment.md || true; echo "=====CARD-END====="
 
       - name: Rebuild the claims report
         # Offline and free — it reads the ledger and the verdict files and
