@@ -75,3 +75,14 @@ def test_a_high_hold_cell_is_closed_on_its_own_alarm(tmp_path):
     out, removed = closing_gate.apply({w.key: 0.6 for w in closed + kept}, closed + kept, gate)
     assert removed == 2
     assert set(out) == {w.key for w in kept}
+
+
+def test_an_alternate_team_total_takes_the_team_totals_verdict(tmp_path):
+    """The 2026-11-09 evening card bought alternate team totals in high-major
+    and mid-major while both tiers' team totals were closed."""
+    gate = closing_gate.load(_record(tmp_path, "2026-11-09", ["high_major / team_total"]), "2026-11-10")
+    closed = [_wager("alternate_team_total")]
+    kept = [_wager("alternate_team_total", tier="mid_major"), _wager("team_total_h1", segment="h1")]
+    out, removed = closing_gate.apply({w.key: 0.6 for w in closed + kept}, closed + kept, gate)
+    assert removed == 1
+    assert set(out) == {w.key for w in kept}
