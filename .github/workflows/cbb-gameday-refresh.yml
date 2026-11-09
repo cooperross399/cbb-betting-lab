@@ -518,6 +518,9 @@ jobs:
         timeout-minutes: 5
         env:
           PYTHONPATH: src
+          # Cooper's KenPom subscription key (decision 92). Absent, KenPom
+          # is skipped and the log says so; it is never printed.
+          KENPOM_API_KEY: ${{ secrets.KENPOM_API_KEY }}
         run: |
           set -eu
           python scripts/fetch_second_opinion.py --as-of "${{ steps.identity.outputs.day }}"
@@ -624,6 +627,10 @@ jobs:
           # same ledger, so it rides in this step and on the feed beside it.
           python scripts/run_decision_rule.py
           cat data/outputs/cbb_decision_rule.md >> "$GITHUB_STEP_SUMMARY"
+          # The price shop's closing-line grades (decision 91), from the same
+          # ledger and captures: per tier, advice only, the card reads none.
+          python scripts/run_price_shop.py
+          cat data/outputs/cbb_price_shop.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Grade last night and show what the model learned
         # Cooper, 2026-11-03: "Make sure the model learns from each night of
@@ -1062,6 +1069,7 @@ jobs:
           # `add` when its step did not write it.
           add latest_closing_alarm.md data/outputs/cbb_closing_alarm.md "$ROOT_INPUT"
           add latest_decision_rule.md data/outputs/cbb_decision_rule.md "$ROOT_INPUT"
+          add latest_price_shop.md data/outputs/cbb_price_shop.md "$ROOT_INPUT"
           add latest_layer_audit.json data/raw/cbb/layer_audit/latest.json "$ROOT_INPUT"
           # What the model learned from last night (decision 78), and the
           # season's one-row-per-night history. The history is carried from

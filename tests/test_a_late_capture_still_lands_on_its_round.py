@@ -24,9 +24,14 @@ WORKFLOW = PROJECT_ROOT / ".github" / "workflows" / "line-movement.yml"
 SCRIPT = PROJECT_ROOT / "scripts" / "wait_for_round.py"
 
 #: The rounds the capture brackets the slate with, in UTC (hour, minute):
-#: mid-morning, early afternoon, an hour before the 19:00 ET block, and late
-#: in the evening slate. They are what the crons said before the wait existed.
-ROUNDS = {(14, 13), (18, 13), (23, 13), (3, 13)}
+#: mid-morning, then every hour from 16:13 to 03:13 through the slate
+#: (decision 91). The four the crons said before the wait existed -- 14:13,
+#: 18:13, 23:13 and 03:13 -- are all still among them.
+ROUNDS = {(14, 13)} | {(h % 24, 13) for h in range(16, 28)}
+
+
+def test_the_original_four_rounds_are_still_rounds() -> None:
+    assert {(14, 13), (18, 13), (23, 13), (3, 13)} <= ROUNDS
 
 
 def _load_script():

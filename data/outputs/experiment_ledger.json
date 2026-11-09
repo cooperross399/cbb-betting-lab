@@ -2632,6 +2632,174 @@
       "predicted_direction": "higher",
       "stage": "discovery",
       "realised_direction": ""
+    },
+    {
+      "search": "price_shop_2026_11_09",
+      "name": "high-major: price shopping (reports/price_shop.py): an allowlisted main-market side whose best book beats the all-book median no-vig fair price by at least 2% in an hourly line-movement capture closes with positive closing-line value against the fair price of the same side at the same line at the last capture before tip (forward captures only)",
+      "tested_on": "2026-11-09",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "price_shop_2026_11_09",
+      "name": "mid-major: price shopping (reports/price_shop.py): an allowlisted main-market side whose best book beats the all-book median no-vig fair price by at least 2% in an hourly line-movement capture closes with positive closing-line value against the fair price of the same side at the same line at the last capture before tip (forward captures only)",
+      "tested_on": "2026-11-09",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "price_shop_2026_11_09",
+      "name": "low-major: price shopping (reports/price_shop.py): an allowlisted main-market side whose best book beats the all-book median no-vig fair price by at least 2% in an hourly line-movement capture closes with positive closing-line value against the fair price of the same side at the same line at the last capture before tip (forward captures only)",
+      "tested_on": "2026-11-09",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "model_inputs_2026_11_09",
+      "name": "high-major: the four-factor style-matchup candidate layer (models/four_factors.py: each factor combined on the log-odds scale, priced by its season weight, beyond the straight sum the ratings hold), once the layer audit puts it on the card, improves the card's closing-price return (forward only)",
+      "tested_on": "2026-11-09",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "model_inputs_2026_11_09",
+      "name": "mid-major: the four-factor style-matchup candidate layer (models/four_factors.py: each factor combined on the log-odds scale, priced by its season weight, beyond the straight sum the ratings hold), once the layer audit puts it on the card, improves the card's closing-price return (forward only)",
+      "tested_on": "2026-11-09",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "model_inputs_2026_11_09",
+      "name": "low-major: the four-factor style-matchup candidate layer (models/four_factors.py: each factor combined on the log-odds scale, priced by its season weight, beyond the straight sum the ratings hold), once the layer audit puts it on the card, improves the card's closing-price return (forward only)",
+      "tested_on": "2026-11-09",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "model_inputs_2026_11_09",
+      "name": "high-major: the close-game luck candidate layer (models/four_factors.py: a share of wins run ahead of the team's own ratings taken back), once the layer audit puts it on the card, improves the card's closing-price return (forward only)",
+      "tested_on": "2026-11-09",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "model_inputs_2026_11_09",
+      "name": "mid-major: the close-game luck candidate layer (models/four_factors.py: a share of wins run ahead of the team's own ratings taken back), once the layer audit puts it on the card, improves the card's closing-price return (forward only)",
+      "tested_on": "2026-11-09",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "model_inputs_2026_11_09",
+      "name": "low-major: the close-game luck candidate layer (models/four_factors.py: a share of wins run ahead of the team's own ratings taken back), once the layer audit puts it on the card, improves the card's closing-price return (forward only)",
+      "tested_on": "2026-11-09",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "model_inputs_2026_11_09",
+      "name": "high-major: the second opinion read as the consensus of every published table on disk (ESPN's power index, KenPom with Cooper's key, the NCAA NET where robots.txt allows, tables Cooper drops by hand) rather than one table improves the card's closing-price return (forward only)",
+      "tested_on": "2026-11-09",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "model_inputs_2026_11_09",
+      "name": "mid-major: the second opinion read as the consensus of every published table on disk (ESPN's power index, KenPom with Cooper's key, the NCAA NET where robots.txt allows, tables Cooper drops by hand) rather than one table improves the card's closing-price return (forward only)",
+      "tested_on": "2026-11-09",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "model_inputs_2026_11_09",
+      "name": "low-major: the second opinion read as the consensus of every published table on disk (ESPN's power index, KenPom with Cooper's key, the NCAA NET where robots.txt allows, tables Cooper drops by hand) rather than one table improves the card's closing-price return (forward only)",
+      "tested_on": "2026-11-09",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
     }
   ]
 }

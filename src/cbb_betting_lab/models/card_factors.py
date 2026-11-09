@@ -173,6 +173,8 @@ CANDIDATE_LAYERS: tuple[tuple[str, str], ...] = (
     ("market_ratings", "Ratings from the betting lines"),
     ("lineup_minutes", "Who is missing, by minutes"),
     ("november_form", "Early-season form, learned faster"),
+    ("four_factors", "Four-factor style matchup"),
+    ("close_game_luck", "Close-game luck"),
 )
 #: `lineup_strict`: a rotation player counts as out only after missing this
 #: many of the club's games in a row. When on, it replaces the single-game
@@ -351,6 +353,12 @@ class DayContext:
     shot_quality: dict = field(default_factory=dict)
     #: Market ratings fitted from closing lines before the day (candidate).
     market_ratings: object = None
+    #: The season's four factors, attack and defence (candidate, decision 92).
+    four_factors: object = None
+    #: team_id -> Wins Above Bubble so far (shown, never priced on its own).
+    wab: dict = field(default_factory=dict)
+    #: team_id -> close-game luck taken back, per 100 (candidate, decision 92).
+    close_game_luck: dict = field(default_factory=dict)
     #: layer key -> on the card or not; `default_switches` unless an audit
     #: dated within `LAYER_AUDIT_MAX_AGE_DAYS` of the day said otherwise.
     switches: dict = field(default_factory=default_switches)
@@ -691,22 +699,62 @@ def missing_rotation(
     return missing, factor
 
 
-def second_opinion_path(raw_dir: Path | str | None, season: int) -> Path:
+def second_opinion_path(raw_dir: Path | str | None, season: int, source: str | None = None) -> Path:
+    """`<season>.csv` for the primary table, `<season>.<source>.csv` for each
+    further published table the consensus reads (decision 92)."""
     base = Path(raw_dir) if raw_dir else Path("data/raw")
-    return base / CBB.data_dir_segment / SECOND_OPINION_DIR / f"{int(season)}.csv"
+    name = f"{int(season)}.csv" if not source else f"{int(season)}.{source}.csv"
+    return base / CBB.data_dir_segment / SECOND_OPINION_DIR / name
 
 
 def load_second_opinion(
     raw_dir: Path | str | None, *, season: int, day: str
 ) -> tuple[SecondOpinion | None, str]:
-    """The second opinion for `day`, or None and the reason.
+    """The second opinion for `day`: the CONSENSUS of every published table on
+    disk that passes the rules below, or None and the reasons.
 
-    Refused when the file is absent, dated after the day (a walk-forward over
-    a past day must not read today's table), older than
+    Each table is read on its own and refused when it is dated after the day
+    (a walk-forward over a past day must not read today's table), older than
     `SECOND_OPINION_MAX_AGE_DAYS`, or resolving fewer than
-    `SECOND_OPINION_MIN_TEAMS` teams.
+    `SECOND_OPINION_MIN_TEAMS` teams. The survivors are averaged team by
+    team, each as deviations from its own mean, so a table on another scale
+    or level moves nothing by being on it (decision 92). One table alone is
+    read exactly as before.
     """
-    path = second_opinion_path(raw_dir, season)
+    primary = second_opinion_path(raw_dir, season)
+    paths = [primary] + sorted(
+        p for p in primary.parent.glob(f"{int(season)}.*.csv") if p != primary
+    ) if primary.parent.is_dir() else [primary]
+    read: list[SecondOpinion] = []
+    reasons: list[str] = []
+    for path in paths:
+        table, reason = _load_one_opinion(path, day=day)
+        if table is not None:
+            read.append(table)
+        elif reason:
+            reasons.append(reason)
+    if not read:
+        return None, "; ".join(reasons[:1] or [f"no second opinion on disk at {primary}"])
+    if len(read) == 1:
+        return read[0], ""
+    teams: dict = {}
+    for team in set().union(*(t.teams for t in read)):
+        views = [t.teams[team] for t in read if team in t.teams]
+        tempos = [v[2] for v in views if v[2] == v[2]]
+        teams[team] = (
+            float(np.mean([v[0] for v in views])),
+            float(np.mean([v[1] for v in views])),
+            float(np.mean(tempos)) if tempos else float("nan"),
+        )
+    return SecondOpinion(
+        as_of=min(t.as_of for t in read),
+        source="+".join(t.source for t in read),
+        teams=teams,
+    ), ""
+
+
+def _load_one_opinion(path: Path, *, day: str) -> tuple[SecondOpinion | None, str]:
+    """One published table, under the rules `load_second_opinion` states."""
     if not path.is_file():
         return None, f"no second opinion on disk at {path}"
     try:
@@ -1106,6 +1154,11 @@ def build_context(
             team: state for team, state in home_states.items()
             if teams is None or team in teams
         }
+    from cbb_betting_lab.models import four_factors as FF
+
+    factors = FF.FactorTable(FF.game_factors(season_rows))
+    context.four_factors = factors if len(factors) else None
+    context.wab, context.close_game_luck = FF.resume(season_rows, ratings, teams=teams)
     context.market_ratings = load_market_ratings(raw_dir, schedule, day=day)
     if context.market_ratings is None or not len(context.market_ratings):
         context.notes.append("no betting-line ratings yet, so that layer moves nothing")
@@ -1398,6 +1451,22 @@ def apply(
         "window_days": NOVEMBER_FORM_DAYS,
     }
     take("november_form", (d_home / 2.0 - d_away / 2.0, d_away / 2.0 - d_home / 2.0, 0.0))
+
+    # Four-factor style matchup (decision 92): what each attack gains from the
+    # pairing of styles beyond the straight sum the ratings already hold.
+    table = context.four_factors
+    ff_home = (table.mismatch(home_id, away_id) if table is not None else None) or 0.0
+    ff_away = (table.mismatch(away_id, home_id) if table is not None else None) or 0.0
+    detail["four_factors"] = {"home": ff_home, "away": ff_away}
+    take("four_factors", (ff_home, ff_away, 0.0))
+
+    # Close-game luck (decision 92): wins run ahead of the team's own ratings
+    # do not repeat, so a share of the excess is taken back from its net.
+    luck_home = float(context.close_game_luck.get(home_id, 0.0))
+    luck_away = float(context.close_game_luck.get(away_id, 0.0))
+    detail["close_game_luck"] = {"home": luck_home, "away": luck_away}
+    detail["resume"] = {"wab_home": context.wab.get(home_id), "wab_away": context.wab.get(away_id)}
+    take("close_game_luck", (-(luck_home - luck_away) / 2.0, (luck_home - luck_away) / 2.0, 0.0))
 
     detail["switches"] = {key: context.is_on(key) for key in SWITCHABLE}
     detail["audit_as_of"] = context.audit_as_of

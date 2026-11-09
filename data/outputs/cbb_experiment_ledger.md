@@ -4,11 +4,11 @@
 
 College basketball's large sample makes this **more** urgent, not less. A bigger n narrows every interval, including the intervals of the hypotheses that are wrong. Sample size buys power, never innocence.
 
-**182 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.86** before it means what it says.
+**194 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.86** before it means what it says.
 
 **Alpha budget: 6 new hypotheses a week**, declared 2026-09-01. Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state — re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise.
 
-**141 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
+**153 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
 
 | Search | Hypotheses |
 |:---|---:|
@@ -16,6 +16,7 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | player_props_vs_devig | 30 |
 | residual_regression_2026_09_15 | 27 |
 | ladders_and_halves | 11 |
+| model_inputs_2026_11_09 | 9 |
 | layer_audit_2026_10_30 | 5 |
 | core_team_markets | 4 |
 | conference_tier | 4 |
@@ -38,6 +39,7 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | lineup_minutes_2026_11_08 | 3 |
 | november_form_2026_11_08 | 3 |
 | bet_timing_2026_11_08 | 3 |
+| price_shop_2026_11_09 | 3 |
 | november_prior | 2 |
 | reachability | 1 |
 | champion_challenger | 1 |
@@ -228,6 +230,18 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | 180 | bet_timing_2026_11_08 | high-major: the card's When column (models/timing.py): selections marked Now, where the market had already moved toward the selection since its first capture, beat their closing price by more than selections marked Near tip (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
 | 181 | bet_timing_2026_11_08 | mid-major: the card's When column (models/timing.py): selections marked Now, where the market had already moved toward the selection since its first capture, beat their closing price by more than selections marked Near tip (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
 | 182 | bet_timing_2026_11_08 | low-major: the card's When column (models/timing.py): selections marked Now, where the market had already moved toward the selection since its first capture, beat their closing price by more than selections marked Near tip (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-08 | pending |
+| 183 | price_shop_2026_11_09 | high-major: price shopping (reports/price_shop.py): an allowlisted main-market side whose best book beats the all-book median no-vig fair price by at least 2% in an hourly line-movement capture closes with positive closing-line value against the fair price of the same side at the same line at the last capture before tip (forward captures only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-09 | pending |
+| 184 | price_shop_2026_11_09 | mid-major: price shopping (reports/price_shop.py): an allowlisted main-market side whose best book beats the all-book median no-vig fair price by at least 2% in an hourly line-movement capture closes with positive closing-line value against the fair price of the same side at the same line at the last capture before tip (forward captures only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-09 | pending |
+| 185 | price_shop_2026_11_09 | low-major: price shopping (reports/price_shop.py): an allowlisted main-market side whose best book beats the all-book median no-vig fair price by at least 2% in an hourly line-movement capture closes with positive closing-line value against the fair price of the same side at the same line at the last capture before tip (forward captures only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-09 | pending |
+| 186 | model_inputs_2026_11_09 | high-major: the four-factor style-matchup candidate layer (models/four_factors.py: each factor combined on the log-odds scale, priced by its season weight, beyond the straight sum the ratings hold), once the layer audit puts it on the card, improves the card's closing-price return (forward only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-09 | pending |
+| 187 | model_inputs_2026_11_09 | mid-major: the four-factor style-matchup candidate layer (models/four_factors.py: each factor combined on the log-odds scale, priced by its season weight, beyond the straight sum the ratings hold), once the layer audit puts it on the card, improves the card's closing-price return (forward only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-09 | pending |
+| 188 | model_inputs_2026_11_09 | low-major: the four-factor style-matchup candidate layer (models/four_factors.py: each factor combined on the log-odds scale, priced by its season weight, beyond the straight sum the ratings hold), once the layer audit puts it on the card, improves the card's closing-price return (forward only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-09 | pending |
+| 189 | model_inputs_2026_11_09 | high-major: the close-game luck candidate layer (models/four_factors.py: a share of wins run ahead of the team's own ratings taken back), once the layer audit puts it on the card, improves the card's closing-price return (forward only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-09 | pending |
+| 190 | model_inputs_2026_11_09 | mid-major: the close-game luck candidate layer (models/four_factors.py: a share of wins run ahead of the team's own ratings taken back), once the layer audit puts it on the card, improves the card's closing-price return (forward only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-09 | pending |
+| 191 | model_inputs_2026_11_09 | low-major: the close-game luck candidate layer (models/four_factors.py: a share of wins run ahead of the team's own ratings taken back), once the layer audit puts it on the card, improves the card's closing-price return (forward only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-09 | pending |
+| 192 | model_inputs_2026_11_09 | high-major: the second opinion read as the consensus of every published table on disk (ESPN's power index, KenPom with Cooper's key, the NCAA NET where robots.txt allows, tables Cooper drops by hand) rather than one table improves the card's closing-price return (forward only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-09 | pending |
+| 193 | model_inputs_2026_11_09 | mid-major: the second opinion read as the consensus of every published table on disk (ESPN's power index, KenPom with Cooper's key, the NCAA NET where robots.txt allows, tables Cooper drops by hand) rather than one table improves the card's closing-price return (forward only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-09 | pending |
+| 194 | model_inputs_2026_11_09 | low-major: the second opinion read as the consensus of every published table on disk (ESPN's power index, KenPom with Cooper's key, the NCAA NET where robots.txt allows, tables Cooper drops by hand) rather than one table improves the card's closing-price return (forward only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-09 | pending |
 
 ## 7 quantities declared descriptive-only
 
