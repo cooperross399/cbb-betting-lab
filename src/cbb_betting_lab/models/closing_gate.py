@@ -15,7 +15,8 @@ Since decision 94 the alarm also grades the high-hold markets on their own --
 both alternate ladders and full-game team totals, at their own prices against
 the main close -- and a tripped high-hold cell is closed here too, so a ladder
 is off the card when either its main market or the ladder itself loses to the
-close. Halves and props are untouched: the alarm does not read them.
+close. The alternate team total takes the team total's verdict (`LADDER_OF`).
+Halves and props are untouched: the alarm does not read them.
 
 **Direction.** This only ever removes a wager from the card's reach. It never
 adds one, never touches the allowlist (`staging_provider_policy.json` is not
@@ -54,6 +55,12 @@ GATE_ON = True
 MAX_AGE_DAYS = 3
 RECORD_NAME = "cbb_closing_alarm.json"
 FULL_GAME = ("game", "full_game")
+#: Ladders the alarm does not grade itself, and the cell whose verdict each
+#: takes. A rung is the same opinion as its market at another number, so an
+#: alternate team total is closed wherever the team total is (decision 94:
+#: the 2026-11-09 evening card bought three of them in tiers whose team
+#: totals the gate had closed).
+LADDER_OF = {"alternate_team_total": "team_total"}
 
 
 @dataclass
@@ -73,7 +80,7 @@ class Gate:
         tier = str(getattr(wager, "tier", "") or "")
         if (tier, market) in self.closed:
             return True
-        main = MAIN_MARKET.get(market)
+        main = MAIN_MARKET.get(market) or LADDER_OF.get(market)
         return main is not None and (tier, main) in self.closed
 
     def line(self) -> str:
