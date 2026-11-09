@@ -1953,9 +1953,15 @@ def test_no_document_quotes_the_devigged_advantage_as_the_raw_one():
     uncorrected = f"[{devigged['low']:.5f}, {devigged['high']:.5f}]"
     documents = sorted((PROJECT_ROOT / "docs").rglob("*.md"))
     assert documents, "no documents to check"
+    # An occurrence that opens a corrected interval (`<value> to <bound>`) is
+    # the low end of some per-tier interval, not this point estimate: at 200
+    # hypotheses low-major's corrected Brier bound prints as the same five
+    # decimals as the pooled de-vigged advantage, in both generated blocks.
+    # Every other spelling is still refused, and so are the uncorrected bounds.
+    pattern = re.compile(re.escape(value) + r"(?!\d)(?! to [+-]\d)")
     for path in documents:
         text = path.read_text(encoding="utf-8")
-        assert value not in text, (
+        assert not pattern.search(text), (
             f"{path.name} prints {value}, the pooled DE-VIGGED Brier advantage. "
             "This repository reports that comparison per tier and against the "
             "raw market, and never pools Division I into one headline figure."

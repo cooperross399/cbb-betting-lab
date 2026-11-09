@@ -506,7 +506,7 @@ def _blind_baseline(backtest: dict) -> list[str]:
 
     **Every figure here was typed into the prose of both documents, and the
     denominator was wrong by 84% in one of them.** One paragraph of `CLAUDE.md`
-    said "the 102 blind sides clearing the 200-bet floor" in one sentence and
+    said "the 102 blind sides clearing the two-hundred-bet floor" in one sentence and
     "0 of 188" sixteen lines later, for the same population, and 188 is a
     number no record in this repository holds. It survived four rounds of
     review and two rounds of counting guards because it carries no comma, and

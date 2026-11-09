@@ -138,7 +138,7 @@ has the rest.
 - **The slate spans twelve hours** — 11:00 ET to 23:00 ET, 55% of games still to
   tip at 19:00 ET (this said 45%, the share that has tipped by then). That is why there are two card slots and why the tip guard
   runs per game rather than against one deadline.
-- **Peak slate: 200 games in a single day** (opening Monday of 2022-23). The
+- **Peak slate: two hundred games in a single day** (opening Monday of 2022-23). The
   credit cap is set above it, because a cap below the worst slate starves it.
 
 ### The two calendar conventions, both measured
@@ -817,7 +817,7 @@ reproduction of the NHL lab's 9-12 pp in a different sport.
   and nothing would have looked broken.
 - **The football lab's forward-ledger interval is 10.3x too narrow.** Its
   standard error lands at `s/G` where a cluster standard error is `s/√G`.
-  Reproduced here on 632 synthetic bets over 200 clusters against a cluster
+  Reproduced here on 632 synthetic bets over two hundred clusters against a cluster
   bootstrap, fixed in `stats.interval_by_cluster`, and recorded in
   `docs/ported_defects.md`. **The sibling lab is not touched.**
 - **The possession estimator is stable across seasons and the play-by-play
@@ -1203,7 +1203,7 @@ this table.
 - **Calibration can rule a model out, never in.** Where a priced test exists, it
   decides.
 - **Cluster every interval by game and by day.** One game supplies many
-  correlated bets; a 200-game slate is not 800 independent observations.
+  correlated bets; a two-hundred-game slate is not 800 independent observations.
 - **Family-wise correction from the experiment ledger's cumulative count**, not
   the day's, reported beside the raw figure. **A hypothesis is registered before
   the thing it tests is built**, and what that costs the intervals already

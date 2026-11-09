@@ -28,7 +28,7 @@ population — wagers offered, graded bets, games — and the way its
 market-and-tier cells fall across the verdicts are in the record census below,
 generated from the record. Across those cells **there is no demonstrated edge
 anywhere**; the cells that carry a phrase rather than a number are the ones
-below the 200-bet floor declared in advance. Every one of those counts was
+below the two-hundred-bet floor declared in advance. Every one of those counts was
 typed here by hand until 2026-09-18 and every one of them was wrong. The
 honest word for this lab's state is no longer *unmeasured*. It is *measured*,
 and the finding is a loss.
