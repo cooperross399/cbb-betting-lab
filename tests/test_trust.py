@@ -154,3 +154,36 @@ def test_the_card_line_says_what_was_applied(tmp_path):
     line = trust.build("2026-11-10", outputs_dir=tmp_path, ledger=None).line()
     assert "high-major 0.050" in line and "market + trust x (model - market)" in line
     assert "not applied" in trust.build("2026-10-01", outputs_dir=tmp_path, ledger=None).line()
+
+
+def _clv_case(home_close: float):
+    rows, store = [], []
+    for i in range(300):
+        event = f"g{i}"
+        for sel, line, p in (("home", -3.5, 0.7), ("away", 3.5, 0.3)):
+            rows.append({"snapshot_date": "2026-11-05", "commence_time": "2026-11-05T23:00:00Z",
+                         "event_id": event, "market": "spread", "segment": "game", "player": "",
+                         "selection": sel, "line": line, "american_odds": -110, "book": "a",
+                         "model_probability": p, "tier": "mid_major", "outcome": ""})
+            store.append({"captured_at": "2026-11-05T22:13:00+00:00", "event_id": event,
+                          "commence_time": "2026-11-05T23:00:00Z", "market": "spread", "segment": "game",
+                          "player": "", "selection": sel, "book": "a", "american_odds": -110,
+                          "line": home_close if sel == "home" else -home_close})
+    return pd.DataFrame(rows), pd.DataFrame(store)
+
+
+def test_the_close_moves_the_weight_before_any_result_does(tmp_path):
+    """Decision 94: where the market closed is evidence the day after tip."""
+    _seed(tmp_path, {"mid_major": 0.3})
+    toward, store_toward = _clv_case(-7.5)
+    against, store_against = _clv_case(+0.5)
+    up = trust.build("2026-11-10", outputs_dir=tmp_path, ledger=toward, captures=store_toward)
+    down = trust.build("2026-11-10", outputs_dir=tmp_path, ledger=against, captures=store_against)
+    assert up.by_tier["mid_major"].ledger_rows == 0, "nothing has settled"
+    assert up.by_tier["mid_major"].clv_rows == 600
+    assert up.weight("mid_major") > 0.3 > down.weight("mid_major")
+    # Without the captures the same ledger is the seed alone.
+    assert trust.build("2026-11-10", outputs_dir=tmp_path, ledger=toward).weight("mid_major") == pytest.approx(0.3)
+    # A close captured on or after the card's day is not read.
+    assert trust.build("2026-11-05", outputs_dir=tmp_path, ledger=toward,
+                       captures=store_toward).by_tier["mid_major"].clv_rows == 0

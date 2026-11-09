@@ -102,10 +102,16 @@ def _trust(as_of: str, outputs_dir, processed_dir) -> tuple[str, dict]:
     except Exception:  # noqa: BLE001 - the seed alone still reads
         ledger = None
     try:
-        table = trust.build(as_of, outputs_dir=outputs_dir, ledger=ledger)
+        from cbb_betting_lab import line_movement  # noqa: PLC0415
+        from cbb_betting_lab.competitions import CBB  # noqa: PLC0415
+        from cbb_betting_lab.models import line_move  # noqa: PLC0415
+
+        store = line_movement.store_path(CBB, processed_dir)
+        captures = line_move.read_captures(store) if store.is_file() else None
+        table = trust.build(as_of, outputs_dir=outputs_dir, ledger=ledger, captures=captures)
     except Exception as exc:  # noqa: BLE001
         return f"Trust table not read ({type(exc).__name__}).", {}
-    weights = {t: {"weight": round(v.weight, 4), "seed": round(v.seed, 4), "settled_rows": v.ledger_rows}
+    weights = {t: {"weight": round(v.weight, 4), "seed": round(v.seed, 4), "settled_rows": v.ledger_rows, "closing_rows": v.clv_rows}
                for t, v in table.by_tier.items()}
     return table.line(), weights
 

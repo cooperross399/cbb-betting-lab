@@ -20,9 +20,23 @@ capture at or before tip (the consensus over books, `line_move`):
 * moneyline: probability, the closing de-vigged price of the side minus the
   implied probability of the frozen price, so the vig counts against it.
 
-Alternate ladders, halves, team totals and props are left out: their close is
-not the main market's close, and grading one rung against another would be a
-figure about the ladder rather than the model.
+Halves and props are left out: their close is not the main market's close.
+
+**The high-hold markets** (decision 94, Cooper 2026-11-09: cut team totals and
+alternate ladders where they lose to the close). The capture holds no closing
+price for a rung or a team total, so each is graded against the main market's
+close translated to its own number: the closing margin (minus the closing home
+spread) or the closing total, taken as the centre of a normal with the
+spread `MARGIN_SD`, `TOTAL_SD` or `TEAM_TOTAL_SD`, gives the closing chance
+that the row's side wins, and its closing-line value is that chance minus the
+frozen price's implied probability, in probability like the moneyline, so the
+vig counts against it. A team total's centre is the team's share of the
+closing total and spread: (total - home spread) / 2 for the home side. The
+three spreads are this lab's choices: 11.0 for the margin, which the season's
+first week measured at 11.4 over 316 settled games against the close, 16.0 for
+the total and 9.7 for one team's score (the two combined as independent). A
+high-hold cell trips the same alarm as a main market, and the closing-line
+gate (`models/closing_gate.py`) takes a tripped cell off the card.
 
 **The alarm** trips for a tier and market when it holds at least
 `ALARM_MIN_LEANS` leans over `ALARM_MIN_GAMES` games and the family-corrected
@@ -41,6 +55,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from statistics import NormalDist
 from typing import Mapping
 
 import pandas as pd
@@ -53,8 +68,18 @@ from cbb_betting_lab.models import line_move
 
 ALARM_MIN_LEANS = 100
 ALARM_MIN_GAMES = 20
-MARKETS = ("moneyline", "spread", "total_points")
-UNIT = {"moneyline": "probability", "spread": "points", "total_points": "points"}
+MAIN_MARKETS = ("moneyline", "spread", "total_points")
+#: The high-hold markets graded against the main close (decision 94).
+HIGH_HOLD = ("alternate_spread", "alternate_total_points", "team_total")
+MARKETS = MAIN_MARKETS + HIGH_HOLD
+UNIT = {"moneyline": "probability", "spread": "points", "total_points": "points",
+        "alternate_spread": "probability", "alternate_total_points": "probability",
+        "team_total": "probability"}
+#: The spread of a final around the closing number, in points.
+MARGIN_SD = 11.0
+TOTAL_SD = 16.0
+TEAM_TOTAL_SD = 9.7
+_NORMAL = NormalDist()
 TIERS = ("high_major", "mid_major", "low_major")
 FULL_GAME = ("game", "full_game")
 
@@ -83,17 +108,60 @@ def closing_consensus(store: pd.DataFrame) -> dict:
     out: dict = {}
     for event_id, rows in frame.groupby("event_id"):
         last = rows[rows["captured_at"] == rows["captured_at"].max()]
-        for market in MARKETS:
+        for market in MAIN_MARKETS:
             value = line_move._consensus(last, market)
             if value is not None:
                 out[(str(event_id), market)] = value
     return out
 
 
+def close_probability(row: Mapping, close: Mapping) -> float | None:
+    """The closing chance that the row's side wins: the de-vigged closing price
+    on a moneyline, otherwise the main market's close taken as the centre of a
+    normal at the row's own line. None when the close does not hold it."""
+    market = str(row.get("market") or "")
+    selection = str(row.get("selection") or "")
+    event = str(row.get("event_id"))
+    line = _num(row.get("line"))
+    if market == "moneyline":
+        value = close.get((event, "moneyline"))
+        if value is None or selection not in ("home", "away"):
+            return None
+        return value if selection == "home" else 1.0 - value
+    if line is None:
+        return None
+    if market in ("spread", "alternate_spread"):
+        spread = close.get((event, "spread"))
+        if spread is None or selection not in ("home", "away"):
+            return None
+        margin = -spread  # the home side's expected margin at the close
+        edge = margin + line if selection == "home" else line - margin
+        return _NORMAL.cdf(edge / MARGIN_SD)
+    if market in ("total_points", "alternate_total_points"):
+        total = close.get((event, "total_points"))
+        if total is None or selection not in ("over", "under"):
+            return None
+        over = _NORMAL.cdf((total - line) / TOTAL_SD)
+        return over if selection == "over" else 1.0 - over
+    if market == "team_total":
+        total, spread = close.get((event, "total_points")), close.get((event, "spread"))
+        team, _, side = selection.partition("_")
+        if total is None or spread is None or team not in ("home", "away") or side not in ("over", "under"):
+            return None
+        centre = (total - spread) / 2.0 if team == "home" else (total + spread) / 2.0
+        over = _NORMAL.cdf((centre - line) / TEAM_TOTAL_SD)
+        return over if side == "over" else 1.0 - over
+    return None
+
+
 def closing_value(row: Mapping, close: Mapping) -> float | None:
     """One lean's closing-line value, in its market's unit, from its side."""
     market = str(row.get("market") or "")
     selection = str(row.get("selection") or "")
+    if market in HIGH_HOLD:
+        chance = close_probability(row, close)
+        implied = line_move._implied(row.get("american_odds"))
+        return None if chance is None or implied is None else chance - implied
     value = close.get((str(row.get("event_id")), market))
     if value is None:
         return None
@@ -216,7 +284,8 @@ def render(record: Mapping) -> str:
         lines += [
             "**Alarm: " + ", ".join(record["alarms"]) + ".** The corrected interval of closing-line "
             "value lies entirely below zero over enough leans and games. Each is a candidate for "
-            "withdrawal from the allowlist; this report withdraws nothing.",
+            "withdrawal from the allowlist; this report withdraws nothing, and the closing-line gate "
+            "takes the cell off the card while the alarm holds.",
             "",
         ]
     elif record["leans"] == 0:
@@ -239,7 +308,10 @@ def render(record: Mapping) -> str:
     lines += [
         "",
         "Spread and total values are points; moneyline values are probability, the closing "
-        "de-vigged price minus the frozen price's implied probability. Unknown survival means "
+        "de-vigged price minus the frozen price's implied probability. Alternate ladders and team "
+        "totals are probability too: the main market's close, read at the row's own number through "
+        "a normal, minus the frozen price's implied probability, so their hold counts against "
+        "them. A tripped cell is taken off the card by the closing-line gate. Unknown survival means "
         "the next capture did not cover the event, and is never counted as gone.",
         "",
     ]

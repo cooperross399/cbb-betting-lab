@@ -60,3 +60,18 @@ def test_the_card_reads_the_gate_after_trust_and_before_select():
     source = (Path(__file__).resolve().parents[1] / "src/cbb_betting_lab/reports/gameday_card.py").read_text()
     gate_at = source.index("closing_gate.apply(trusted, wagers, gate)")
     assert source.index("line_move.apply(trusted") < gate_at < source.index("result = select(")
+
+
+def test_a_high_hold_cell_is_closed_on_its_own_alarm(tmp_path):
+    """Decision 94: a team total or a ladder whose own cell loses to the close
+    is off the card, while its main market stays on."""
+    gate = closing_gate.load(
+        _record(tmp_path, "2026-11-09", ["mid_major / team_total", "mid_major / alternate_total_points"]),
+        "2026-11-10",
+    )
+    closed = [_wager("team_total", tier="mid_major"), _wager("alternate_total_points", tier="mid_major")]
+    kept = [_wager("total_points", tier="mid_major"), _wager("team_total"),
+            _wager("alternate_spread", tier="mid_major")]
+    out, removed = closing_gate.apply({w.key: 0.6 for w in closed + kept}, closed + kept, gate)
+    assert removed == 2
+    assert set(out) == {w.key for w in kept}

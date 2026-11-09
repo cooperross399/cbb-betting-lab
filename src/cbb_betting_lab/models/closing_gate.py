@@ -11,7 +11,11 @@ off the probability map the edge bar reads, so the card cannot select it.
 **What a cell covers.** The alarm grades moneyline, spread and total_points.
 The alternate ladders take their main market's verdict (`line_move.MAIN_MARKET`),
 because a rung is the same opinion about the same game at another number.
-Halves, team totals and props are untouched: the alarm does not read them.
+Since decision 94 the alarm also grades the high-hold markets on their own --
+both alternate ladders and full-game team totals, at their own prices against
+the main close -- and a tripped high-hold cell is closed here too, so a ladder
+is off the card when either its main market or the ladder itself loses to the
+close. Halves and props are untouched: the alarm does not read them.
 
 **Direction.** This only ever removes a wager from the card's reach. It never
 adds one, never touches the allowlist (`staging_provider_policy.json` is not
@@ -65,8 +69,12 @@ class Gate:
             return False
         if str(getattr(wager, "player", "") or "").strip():
             return False
-        main = MAIN_MARKET.get(str(getattr(wager, "market", "") or ""))
-        return main is not None and (str(getattr(wager, "tier", "") or ""), main) in self.closed
+        market = str(getattr(wager, "market", "") or "")
+        tier = str(getattr(wager, "tier", "") or "")
+        if (tier, market) in self.closed:
+            return True
+        main = MAIN_MARKET.get(market)
+        return main is not None and (tier, main) in self.closed
 
     def line(self) -> str:
         if not self.closed:
