@@ -33,10 +33,13 @@ import io
 import json
 import re
 import urllib.error
+import urllib.parse
 import urllib.request
+import urllib.robotparser
 from datetime import date
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from cbb_betting_lab.models import card_factors
@@ -266,9 +269,10 @@ def write(
     as_of: date | str,
     source: str = SOURCE,
     unresolved: list[str] | None = None,
+    primary: bool = True,
 ) -> Path:
     """`data/raw/cbb/second_opinion/<season>.csv` in the columns the card reads."""
-    path = card_factors.second_opinion_path(raw_dir, season)
+    path = card_factors.second_opinion_path(raw_dir, season, source=None if primary else source)
     path.parent.mkdir(parents=True, exist_ok=True)
     out = frame.copy()
     out.insert(0, "source", source)
@@ -344,3 +348,195 @@ def parse_bpi(payload: bytes, *, season: int | None = None) -> pd.DataFrame:
         raise SecondOpinionError("the power index carried no team with offence and defence")
     frame["team_id"] = frame["team_id"].astype("Int64")
     return frame
+
+
+# --------------------------------------------------------------------------
+# More published tables: a consensus, not one opinion (decision 92)
+# --------------------------------------------------------------------------
+#
+# Cooper, 2026-11-09: KenPom, the NCAA's NET and T-Rank "should all have a huge
+# influence". Each source below writes its own `<season>.<source>.csv` beside
+# the power index's `<season>.csv`, and `card_factors.load_second_opinion`
+# reads every readable table and blends their CONSENSUS, so one source's quirk
+# moves the card a third as far when three agree against it.
+#
+# How each is reached, and why:
+#
+# * KenPom through its own API, on Cooper's subscription, with his key in the
+#   `KENPOM_API_KEY` secret. A licensed feed read with the owner's credential;
+#   absent the secret it is skipped and the log says so.
+# * The NCAA's NET from ncaa.com, ONLY when the site's robots.txt allows this
+#   lab's agent. It is a ranking, not a rating, so it is mapped onto the
+#   power index's own scale by rank (`net_to_ratings`).
+# * T-Rank, Haslametrics or any other table in T-Rank's CSV shape from a file
+#   Cooper drops into `data/manual/ratings_drop/<source>_<YYYY-MM-DD>.csv`.
+#   barttorvik.com's robots.txt disallows ClaudeBot and anthropic-ai by name,
+#   so this lab does not fetch it; a table its owner downloads is his to give.
+
+
+KENPOM_SOURCE = "kenpom"
+KENPOM_URL = "https://kenpom.com/api.php?endpoint=ratings&y={season}"
+NET_SOURCE = "ncaa_net"
+NET_URL = "https://www.ncaa.com/rankings/basketball-men/d1/ncaa-mens-basketball-net-rankings"
+#: The agent names a robots.txt is read for. A fetch goes ahead only when
+#: every one of them is allowed: this lab does not pick the name a site has
+#: not closed to.
+ROBOTS_AGENTS: tuple[str, ...] = ("ClaudeBot", "anthropic-ai", "*")
+DROP_DIR = Path("data/manual/ratings_drop")
+DROP_NAME = re.compile(r"^(?P<source>[a-z0-9_]+)_(?P<day>\d{4}-\d{2}-\d{2})\.csv$")
+#: The spread of a D-I net rating per 100 possessions, used to place a NET
+#: rank only when no rated table of the same day is there to borrow a scale
+#: from. Measured on the power index's own table of 2026-11-08.
+NET_FALLBACK_SD = 11.5
+
+
+def allowed_by_robots(url: str, *, timeout: float = 30.0) -> tuple[bool, str]:
+    """Whether the site's robots.txt allows every agent in ROBOTS_AGENTS.
+
+    A robots.txt that cannot be read is NOT permission: the answer is no."""
+    parts = urllib.parse.urlsplit(url)
+    robots = f"{parts.scheme}://{parts.netloc}/robots.txt"
+    request = urllib.request.Request(robots, headers={"User-Agent": USER_AGENT})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            body = response.read().decode("utf-8", "replace")
+    except (urllib.error.URLError, OSError, TimeoutError) as exc:
+        return False, f"{robots} could not be read ({type(exc).__name__}); not fetched"
+    parser = urllib.robotparser.RobotFileParser()
+    parser.parse(body.splitlines())
+    closed = [agent for agent in ROBOTS_AGENTS if not parser.can_fetch(agent, url)]
+    if closed:
+        return False, f"{robots} disallows {', '.join(closed)}; not fetched"
+    return True, ""
+
+
+def _get(url: str, *, headers: dict | None = None, timeout: float = 60.0) -> bytes:
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, **(headers or {})})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.read()
+    except urllib.error.HTTPError as exc:
+        raise SecondOpinionError(f"{url.split('?')[0]}: HTTP {exc.code}") from exc
+    except (urllib.error.URLError, OSError, TimeoutError) as exc:
+        raise SecondOpinionError(f"{url.split('?')[0]}: {type(exc).__name__}") from exc
+
+
+def fetch_kenpom(api_key: str, season: int) -> bytes:
+    """KenPom's ratings for `season`, with the subscriber's key. The key is
+    sent as a bearer token and never printed, logged or written."""
+    if not api_key:
+        raise SecondOpinionError("no KenPom key")
+    return _get(KENPOM_URL.format(season=int(season)),
+                headers={"Authorization": f"Bearer {api_key}", "Accept": "application/json"})
+
+
+def _field(row: dict, names: tuple[str, ...]):
+    keyed = {_key(k): v for k, v in row.items()}
+    for name in names:
+        if name in keyed and keyed[name] not in (None, ""):
+            return keyed[name]
+    return None
+
+
+def parse_kenpom(payload: bytes) -> pd.DataFrame:
+    """`team, adj_off, adj_def, adj_tempo` from KenPom's ratings JSON.
+
+    Read by field NAME (`AdjOE`, `AdjDE`, `AdjTempo`, `TeamName`, in any case
+    or spacing), from a list of rows or a list under `data`. A row whose
+    values sit outside the ranges a D-I efficiency and tempo sit in is
+    dropped, and a table with none left is refused."""
+    try:
+        data = json.loads(payload)
+    except ValueError as exc:
+        raise SecondOpinionError(f"KenPom did not answer JSON: {exc}") from exc
+    if isinstance(data, dict):
+        data = data.get("data") or data.get("ratings") or data.get("teams") or []
+    out = []
+    for row in data if isinstance(data, list) else []:
+        if not isinstance(row, dict):
+            continue
+        team = _field(row, HEADER_NAMES["team"] + ("school", "name"))
+        try:
+            off = float(_field(row, HEADER_NAMES["adj_off"]))
+            de = float(_field(row, HEADER_NAMES["adj_def"]))
+        except (TypeError, ValueError):
+            continue
+        tempo = _field(row, HEADER_NAMES["adj_tempo"])
+        try:
+            tempo = float(tempo)
+        except (TypeError, ValueError):
+            tempo = float("nan")
+        if not team or not (EFFICIENCY_RANGE[0] <= off <= EFFICIENCY_RANGE[1]
+                            and EFFICIENCY_RANGE[0] <= de <= EFFICIENCY_RANGE[1]):
+            continue
+        if tempo == tempo and not TEMPO_RANGE[0] <= tempo <= TEMPO_RANGE[1]:
+            tempo = float("nan")
+        out.append({"team": str(team).strip(), "adj_off": off, "adj_def": de, "adj_tempo": tempo})
+    if not out:
+        raise SecondOpinionError("KenPom's answer held no team with offence and defence")
+    return pd.DataFrame(out, columns=["team", "adj_off", "adj_def", "adj_tempo"])
+
+
+_ROW = re.compile(r"<tr[^>]*>(.*?)</tr>", re.S | re.I)
+_CELL = re.compile(r"<t[dh][^>]*>(.*?)</t[dh]>", re.S | re.I)
+_TAG = re.compile(r"<[^>]+>")
+
+
+def parse_net(payload: bytes) -> pd.DataFrame:
+    """`team, net_rank` from the NCAA's NET page: the first table whose rows
+    open with a rank and a school."""
+    text = payload.decode("utf-8", "replace")
+    out = []
+    for row in _ROW.findall(text):
+        cells = [re.sub(r"\s+", " ", _TAG.sub("", c)).strip() for c in _CELL.findall(row)]
+        if len(cells) < 2 or not cells[0].isdigit():
+            continue
+        rank, school = int(cells[0]), cells[1].replace("&amp;", "&")
+        if school:
+            out.append({"team": school, "net_rank": rank})
+    frame = pd.DataFrame(out, columns=["team", "net_rank"]).drop_duplicates("team")
+    if len(frame) < card_factors.SECOND_OPINION_MIN_TEAMS:
+        raise SecondOpinionError(f"the NET page held {len(frame)} ranked school(s); a table needs "
+                                 f"{card_factors.SECOND_OPINION_MIN_TEAMS}")
+    return frame
+
+
+def net_to_ratings(net: pd.DataFrame, reference: pd.DataFrame | None = None) -> pd.DataFrame:
+    """A NET rank placed on a rating scale: the k-th ranked team takes the k-th
+    best net rating of `reference` (a rated table of the same day, as the card
+    reads it), or a normal quantile at `NET_FALLBACK_SD` without one. The net
+    is split evenly between offence and defence, around a nominal 100, and the
+    tempo is left empty: NET says nothing about pace."""
+    frame = net.sort_values("net_rank").reset_index(drop=True)
+    n = len(frame)
+    nets = None
+    if reference is not None and len(reference) >= n // 2:
+        ref = (pd.to_numeric(reference["adj_off"], errors="coerce")
+               - pd.to_numeric(reference["adj_def"], errors="coerce")).dropna()
+        ref = ref - ref.mean()
+        if len(ref) >= 2:
+            qs = (frame.index.to_numpy() + 0.5) / n
+            nets = np.quantile(ref.to_numpy(), 1.0 - qs)
+    if nets is None:
+        from statistics import NormalDist
+
+        dist = NormalDist(0.0, NET_FALLBACK_SD)
+        nets = np.array([dist.inv_cdf(1.0 - (i + 0.5) / n) for i in range(n)])
+    out = frame.assign(adj_off=100.0 + nets / 2.0, adj_def=100.0 - nets / 2.0, adj_tempo=float("nan"))
+    return out[["team", "adj_off", "adj_def", "adj_tempo", "net_rank"]]
+
+
+def drops(day: str, *, root: Path | str = ".") -> dict[str, Path]:
+    """The newest dropped table per source dated on or before `day`."""
+    base = Path(root) / DROP_DIR
+    found: dict[str, tuple[str, Path]] = {}
+    if not base.is_dir():
+        return {}
+    for path in base.iterdir():
+        match = DROP_NAME.match(path.name)
+        if not match or match["day"] > str(day)[:10]:
+            continue
+        source = match["source"]
+        if source not in found or match["day"] > found[source][0]:
+            found[source] = (match["day"], path)
+    return {source: path for source, (_, path) in found.items()}

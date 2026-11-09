@@ -36,6 +36,8 @@ PROVIDER_ENV_ALLOWLIST: tuple[str, ...] = (
     "CBB_ODDS_API_BASE_URL",
     "CBBD_API_KEY",
     "CBBD_API_BASE_URL",
+    # Cooper's KenPom subscription (decision 92), read by the second opinion.
+    "KENPOM_API_KEY",
 )
 
 

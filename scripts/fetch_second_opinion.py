@@ -58,7 +58,9 @@ def main(argv: list[str] | None = None) -> int:
         # table this used to fetch answered HTTP 403 to every Actions run, and
         # its robots.txt closes it to this agent (`docs/cbb_data_sources.md`,
         # "Deliberately not used"), so it is no longer asked.
-        return _from_bpi(season, as_of, raw_dir)
+        code = _from_bpi(season, as_of, raw_dir)
+        extra = _more_tables(season, as_of, raw_dir)
+        return 0 if extra else code
     try:
         table = second_opinion.parse(payload)
     except second_opinion.SecondOpinionError as exc:
@@ -117,6 +119,76 @@ def _from_bpi(season: int, as_of: str, raw_dir: Path) -> int:
         print(f"::warning::{count} teams is under the {card_factors.SECOND_OPINION_MIN_TEAMS} the card needs.", file=sys.stderr)
         return 2
     return 0
+
+
+def _schedule(season: int, raw_dir: Path):
+    import pandas as pd
+
+    path = hoopr.FEEDS["schedules"].path(season, raw_dir)
+    return pd.read_parquet(path) if path.is_file() else None
+
+
+def _write_named(table, *, source: str, season: int, as_of: str, raw_dir: Path, schedule) -> bool:
+    """Resolve a name-keyed table and write it as `<season>.<source>.csv`."""
+    if schedule is None:
+        print(f"::warning::{source}: no cached schedule for {season}, so its names cannot be resolved.", file=sys.stderr)
+        return False
+    resolved, unresolved = second_opinion.resolve(table, schedule)
+    path = second_opinion.write(resolved, raw_dir=raw_dir, season=season, as_of=as_of,
+                                source=source, unresolved=unresolved, primary=False)
+    count = int(resolved["team_id"].notna().sum())
+    print(f"Second opinion ({source}): {len(table)} team(s) read, {count} resolved, "
+          f"{len(unresolved)} not. Wrote {path} dated {as_of}.")
+    if unresolved:
+        print(f"  Unresolved ({source}): " + ", ".join(sorted(unresolved)[:30]) + (" …" if len(unresolved) > 30 else ""))
+    return count >= card_factors.SECOND_OPINION_MIN_TEAMS
+
+
+def _more_tables(season: int, as_of: str, raw_dir: Path) -> bool:
+    """Every further published table this run can lawfully read (decision 92):
+    KenPom with Cooper's key, the NET where robots.txt allows it, and any table
+    Cooper dropped by hand. Each is soft and says why when it is skipped."""
+    import os
+
+    schedule = _schedule(season, raw_dir)
+    wrote = False
+    key = os.environ.get("KENPOM_API_KEY", "").strip()
+    if key:
+        try:
+            table = second_opinion.parse_kenpom(second_opinion.fetch_kenpom(key, season))
+            wrote |= _write_named(table, source=second_opinion.KENPOM_SOURCE, season=season,
+                                  as_of=as_of, raw_dir=raw_dir, schedule=schedule)
+        except second_opinion.SecondOpinionError as exc:
+            print(f"::warning::KenPom could not be read: {exc}", file=sys.stderr)
+    else:
+        print("KenPom: no KENPOM_API_KEY secret, so not read.")
+    allowed, why = second_opinion.allowed_by_robots(second_opinion.NET_URL)
+    if allowed:
+        try:
+            net = second_opinion.parse_net(second_opinion._get(second_opinion.NET_URL))
+            import pandas as pd
+
+            reference = None
+            primary = card_factors.second_opinion_path(raw_dir, season)
+            if primary.is_file():
+                reference = pd.read_csv(primary)
+            wrote |= _write_named(second_opinion.net_to_ratings(net, reference),
+                                  source=second_opinion.NET_SOURCE, season=season,
+                                  as_of=as_of, raw_dir=raw_dir, schedule=schedule)
+        except second_opinion.SecondOpinionError as exc:
+            print(f"::warning::The NET could not be read: {exc}", file=sys.stderr)
+    else:
+        print(f"NET: {why}.")
+    for source, path in sorted(second_opinion.drops(as_of).items()):
+        try:
+            table = second_opinion.parse(path.read_bytes())
+        except second_opinion.SecondOpinionError as exc:
+            print(f"::warning::The dropped table {path} could not be read: {exc}", file=sys.stderr)
+            continue
+        day = path.stem.rsplit("_", 1)[-1]
+        wrote |= _write_named(table, source=source, season=season, as_of=day,
+                              raw_dir=raw_dir, schedule=schedule)
+    return wrote
 
 
 if __name__ == "__main__":

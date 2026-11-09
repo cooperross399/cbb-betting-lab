@@ -274,6 +274,37 @@ leaves tempo to the lab's own rating. ESPN recomputes BPI as the season runs
 and keeps no dated archive, so like T-Rank it is read forward only, under
 the same freshness rule.
 
+### The consensus: every published table this lab may read (since 2026-11-09)
+
+**Decision 92.** Cooper asked for KenPom, the NET and T-Rank to carry real
+weight. `card_factors.load_second_opinion` now reads every
+`data/raw/cbb/second_opinion/<season>[.<source>].csv` that passes the date,
+age and team-count rules and blends their consensus, each table as
+deviations from its own mean, at the same 0.5:
+
+- **ESPN's power index**, `<season>.csv`, as above.
+- **KenPom**, `<season>.kenpom.csv`, from `kenpom.com/api.php` on Cooper's own
+  subscription, his key in the `KENPOM_API_KEY` repository secret, sent as a
+  bearer token and never printed. Read by field name (`AdjOE`, `AdjDE`,
+  `AdjTempo`, `TeamName`); resolved by name like T-Rank. Without the secret it
+  is skipped and the log says so. Whether his plan includes API access is
+  his to check; a plan without it answers an HTTP error, logged.
+- **The NCAA NET**, `<season>.ncaa_net.csv`, from the ncaa.com rankings page,
+  fetched only when that site's robots.txt allows `ClaudeBot`, `anthropic-ai`
+  and `*` alike; an unreadable robots.txt is a no. A rank is not a rating, so
+  the k-th ranked team takes the k-th best net of the same day's power index
+  (a normal at 11.5 per 100 without one), split evenly between offence and
+  defence, no tempo.
+- **Tables Cooper downloads himself**, `data/manual/ratings_drop/<source>_<date>.csv`
+  in T-Rank's CSV shape, T-Rank above all: its robots.txt closes it to this
+  agent by name, and a table its subscriber exports is his to give. Read for
+  two days after its date, like every table.
+
+The rule below that a public rating is a benchmark and never an input is
+kept as far as it can be: the consensus moves the lab's own ratings half
+way, the layer audit can switch it off, and the lab's ratings are still
+fitted from box scores on its own rules.
+
 ### Superseded: Bart Torvik's T-Rank
 
 `scripts/fetch_second_opinion.py` fetches
@@ -403,8 +434,8 @@ the critical path — hoopR settles everything already wired.
   EvanMiya ~$29.99/month. The subscription case is in the final report.
 - **NET rankings** — 365 D-I teams with an official `Non-Div I` column, which is
   a free authoritative marker for the exclusion. **No archive and no date
-  selector**: it must be snapshotted daily or it cannot be reconstructed. Worth
-  starting a daily snapshot; not depended on for anything yet.
+  selector**: it must be snapshotted daily or it cannot be reconstructed. Read
+  daily into the consensus since 2026-11-09 where robots.txt allows (above).
 
 **A public rating is a benchmark to be beaten, never a model input.** A lab
 whose ratings are someone else's ratings is a wrapper, its history is revised
