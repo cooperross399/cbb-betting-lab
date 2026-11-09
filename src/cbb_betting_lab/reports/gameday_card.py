@@ -1335,6 +1335,48 @@ class OpinionCensus:
         return "\n".join(lines)
 
 
+WITHDRAWN_NO_FAIR_PRICE = (
+    "no fair price: fewer than the trust table's minimum of books quote both sides"
+)
+WITHDRAWN_CLOSING_GATE = "closed by the closing-line gate (models/closing_gate.py)"
+WITHDRAWN_RUNG_CAP = "past the alternate-ladder cap (models/rung_cap.py)"
+
+
+def _has_probability(probabilities: Mapping | None, key) -> bool:
+    try:
+        value = float((probabilities or {}).get(key))
+    except (TypeError, ValueError):
+        return False
+    return value == value
+
+
+def _withdrawn_lines(run) -> list[str]:
+    """The priced wagers a step before the edge bar took away, by reason.
+
+    The selection identity counts these as `no_opinion`, because the bar saw no
+    probability for them, while the opinion census above counts them as priced.
+    Without this table the two disagree by exactly its total and nothing on the
+    card says why.
+    """
+    withdrawn = dict(getattr(run, "withdrawn_before_bar", {}) or {})
+    if not withdrawn:
+        return []
+    total = sum(withdrawn.values())
+    lines = [
+        f"{total:,} wager(s) the model priced were taken out of the edge bar's "
+        "reach before it read them, so the identity above counts them under "
+        "`no_opinion` with the wagers the model declined:",
+        "",
+        "| Withdrawn before the edge bar | Wagers |",
+        "|:---|---:|",
+    ]
+    lines += [
+        f"| {reason} | {count:,} |"
+        for reason, count in sorted(withdrawn.items(), key=lambda kv: (-kv[1], kv[0]))
+    ]
+    return lines + [""]
+
+
 def _side_and_which(selection: str) -> tuple[str, str]:
     """`home_over` -> (`over`, `home`). Anything else -> (selection, '')."""
     if selection.startswith("home_"):
@@ -2228,6 +2270,10 @@ class CardRun:
     #: tier -> the trust weight the edge bar read, for the size column.
     trust_weights: dict = field(default_factory=dict)
     movement_line: str = ""
+    #: Wagers the model priced that a step before the edge bar took out of its
+    #: reach, by reason. The identity counts them as `no_opinion`, because the
+    #: bar saw no probability; this is what explains the rest of that line.
+    withdrawn_before_bar: dict = field(default_factory=dict)
     #: Dominated rungs on each book's own ladder (`ladder_coherence`).
     ladder_lines: list[str] = field(default_factory=list)
     degraded: list[str] = field(default_factory=list)
@@ -2377,6 +2423,14 @@ def run_card(
     # earned trust in its tier (`models/trust.py`); the freeze below keeps the
     # model's own probability, so the forward test still measures the model.
     trusted = trust_model.apply(probabilities, wagers, trust)
+    # A wager the model priced that the trust table could not pull toward a
+    # fair price (fewer than `trust.MIN_FAIR_BOOKS` books quote both sides)
+    # leaves the edge bar's reach here. Counted, so the identity's
+    # `no_opinion` line can be explained in full rather than in part.
+    without_fair_price = sum(
+        1 for w in wagers
+        if _has_probability(probabilities, w.key) and w.key not in trusted
+    )
     market = trust_model.market_probabilities(wagers) if trust is not None and trust.active else {}
     # A lean the market has moved against since its first capture is halved
     # (`models/line_move.py`). It needs the de-vigged price, so it acts only
@@ -2495,6 +2549,15 @@ def run_card(
         trust_line=(trust.line() if trust is not None else "")
         + (("\n\n" + gate.line()) if gate is not None and gate.closed else ""),
         movement_line=restraint.line,
+        withdrawn_before_bar={
+            reason: count
+            for reason, count in (
+                (WITHDRAWN_NO_FAIR_PRICE, without_fair_price),
+                (WITHDRAWN_CLOSING_GATE, int(_gated_by_close)),
+                (WITHDRAWN_RUNG_CAP, int(_capped_rungs)),
+            )
+            if count
+        },
         ladder_lines=ladder_coherence.summary_lines(
             ladder_coherence.dominated_quotes(wagers),
             ladders_read=any(w.line is not None for w in wagers),
@@ -3109,6 +3172,7 @@ def _model_section(run: CardRun) -> list[str]:
         "",
         run.opinions.table(),
         "",
+        *_withdrawn_lines(run),
         f"Recorded verdicts in force: {run.verdicts_line}.",
         "",
     ]

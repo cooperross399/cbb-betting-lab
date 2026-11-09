@@ -2819,6 +2819,34 @@ def test_a_trust_table_pulls_the_edge_bar_to_the_market_and_says_so(
     assert "Trust in the model against the price" not in GC.render_card(untrusted)
 
 
+def test_every_no_opinion_the_identity_counts_is_explained_on_the_card(board, day, tmp_path, now):
+    """2026-11-09's card counted 7,071 wagers under `no_opinion` and explained
+    487: the rest were priced wagers the trust table, the closing gate or the
+    rung cap took away before the edge bar, and the card said nothing about
+    them. The declined and the withdrawn must now add up to the identity's
+    line, and the withdrawn must be printed with their reason."""
+    from cbb_betting_lab.models import trust
+    from cbb_betting_lab.reports.card_pricing import Bar
+
+    run = GC.run_card(
+        board, archive_dir=tmp_path, competition=CBB, day=day, card_slot="morning",
+        policy=a_policy("moneyline", "spread", "total_points", "team_total"),
+        matchups={"evt-cardable": a_matchup()}, now=lambda: now,
+        trust=trust.TrustTable(day=day, by_tier={}),
+    )
+    no_opinion = run.result.bar_counts.get(Bar.NO_OPINION.value, 0)
+    declined = sum(run.opinions.declined.values())
+    withdrawn = sum(run.withdrawn_before_bar.values())
+    assert run.opinions.wagers - run.opinions.priced == declined
+    assert no_opinion == declined + withdrawn
+    assert withdrawn, "the fixture must withdraw something for this test to mean anything"
+    if withdrawn:
+        text = GC.render_card(run)
+        assert "Withdrawn before the edge bar" in text
+        for reason in run.withdrawn_before_bar:
+            assert reason in text
+
+
 def test_a_game_the_provider_files_the_other_way_round_is_priced_from_the_providers_side(board, day):
     """Decision 72. The matchup is oriented to the schedule and a wager's
     `home` names the PROVIDER's home; on opening day the two disagreed on both
