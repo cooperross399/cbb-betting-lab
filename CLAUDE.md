@@ -1108,6 +1108,16 @@ straight sum) and `close_game_luck` (the forecastable part of WAB), are off
 until the layer audit adds them. WAB itself is shown, not priced.
 Registered as `model_inputs_2026_11_09`, nine hypotheses.
 
+### 2026-11-09: the price shops reach the chat and the game pages
+
+Cooper: *"Do all 5"*. Decision 93. Each hourly capture's new shops of 3% or
+more (`price_shop.ALERT_EDGE`) are written to `latest_price_shop_alert.md`
+on `line-movement` and posted to the project chat by a scheduled task; each
+game page lists its shops under *Best prices right now*, and Publish Board
+runs after every capture to keep them current. The ratings view shows WAB,
+NET and BPI ranks beside the lab's; KenPom is read, never shown. Display and
+advice only: nothing registered, nothing selected.
+
 ### 2026-11-04: every tracked bet on the site is counted at 0.25u
 
 Cooper: *"Make it so every bet weve tracked on the website in records and

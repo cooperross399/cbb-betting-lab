@@ -12,7 +12,9 @@ on:
   schedule:
     - cron: "0 12 * * *"   # 12:00 UTC daily; the two card slots retrigger it
   workflow_run:
-    workflows: ["CBB Gameday Refresh"]
+    # Line Movement too (decision 93): each hourly capture re-shops the
+    # board, and the game pages show the shops it found.
+    workflows: ["CBB Gameday Refresh", "Line Movement"]
     types: [completed]
   workflow_dispatch:
 
@@ -188,6 +190,38 @@ jobs:
         run: |
           set -eu
           python scripts/fetch_second_opinion.py
+
+      - name: Read the latest price shop
+        # The newest capture's shops (`reports/price_shop.py`, decision 93),
+        # read from line-movement READ-ONLY into data/outputs/, and the
+        # capture store into data/processed/. Each game page lists its own
+        # shops. Soft: absent, the pages show no shop and say nothing.
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}"
+          TMP=$(mktemp)
+          mkdir -p data/outputs
+          if git fetch --depth=1 "$REMOTE" +refs/heads/line-movement:refs/lm-read 2>/dev/null \
+            && git show refs/lm-read:latest_price_shop.json > "$TMP" 2>/dev/null && [ -s "$TMP" ]; then
+            mv "$TMP" data/outputs/cbb_price_shop.json
+            echo "Price shop read from line-movement."
+          else
+            rm -f "$TMP"
+            echo "No price shop on line-movement yet; the game pages show none."
+          fi
+          # The capture store too: the leans' trust table reads the closing
+          # line from it, as the card's does (decision 93).
+          mkdir -p data/processed
+          if git rev-parse --verify -q refs/lm-read >/dev/null \
+            && git show refs/lm-read:cbb_line_movement.csv > "$TMP" 2>/dev/null && [ -s "$TMP" ]; then
+            mv "$TMP" data/processed/cbb_line_movement.csv
+          else
+            rm -f "$TMP"
+          fi
 
       - name: Copy in the shared pages at the pinned tag
         # Board, Results, Archive, Graphic, lib/live.js, lib/format.js,

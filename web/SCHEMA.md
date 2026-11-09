@@ -56,6 +56,14 @@ Each game may carry, beside the keys the shared Board reads:
   `total.fairOverPrice`: the model's chances and fair prices on the posted
   lines.
 
+- `shops` (decision 93): the newest hourly capture's price shops on the game,
+  before tip only, best first: `[{label, market, side, line, book, price,
+  fair, edgePct, books, asOf}]`, a book whose price beats the median of
+  every book's own no-vig price by at least 2% (`reports/price_shop.py`).
+  Read from `line-movement`'s `latest_price_shop.json`; absent when that
+  capture is more than three hours old. A slow book, never a model pick. The
+  Tonight board is a shared page and does not show it; the game page does.
+
 At the top level, `league: {efficiency, tempo}` is the Division I average
 the ratings are measured against (points per 100 possessions, possessions
 per game), so the game page can show each team as "+N% vs average". Absent
@@ -131,9 +139,16 @@ cached schedule, priced on the ratings and venue alone.
 {generatedAt, season, asOf, through, league: {efficiency, tempo, marginSd},
  tierCounts, rated,
  teams: [{id, abbr, name, short, conferenceId, conference, tier, offence,
-          defence, net, tempo, games, form, logo, rank, tonight?: {id, label, vs}}],
+          defence, net, tempo, games, form, logo, rank, wab, netRank?, bpiRank?,
+          tonight?: {id, label, vs}}],
  note}
 ```
+
+`wab` is wins above bubble from the day's ratings (`models/four_factors.resume`).
+`netRank` and `bpiRank` (decision 93) are the NCAA's NET and ESPN's power
+index, each ranked by its own net rating from the table the card's second
+opinion read, shown only when that table is dated within a week of the page.
+A subscription table the card reads is not shown.
 
 ## Bet down to (2026-11-01)
 

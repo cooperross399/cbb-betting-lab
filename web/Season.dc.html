@@ -160,14 +160,14 @@
             </sc-for>
           </div>
           <div style="margin-top:14px;overflow-x:auto;scrollbar-width:thin;margin-left:calc(-1 * clamp(16px,3vw,24px));margin-right:calc(-1 * clamp(16px,3vw,24px));padding:0 clamp(16px,3vw,24px);">
-            <div role="table" aria-label="Ratings" style="min-width:820px;border-top:2px solid var(--ink);">
-              <div role="row" style="display:grid;grid-template-columns:40px minmax(200px,2fr) minmax(110px,1fr) 90px 70px 70px 70px 70px 70px minmax(100px,1fr);gap:0 10px;padding:6px 0;align-items:center;">
-                <sc-for list="{{ rtHead }}" as="h" hint-placeholder-count="10">
+            <div role="table" aria-label="Ratings" style="min-width:1010px;border-top:2px solid var(--ink);">
+              <div role="row" style="display:grid;grid-template-columns:40px minmax(200px,2fr) minmax(110px,1fr) 90px 70px 70px 70px 70px 70px 56px 56px 56px minmax(100px,1fr);gap:0 10px;padding:6px 0;align-items:center;">
+                <sc-for list="{{ rtHead }}" as="h" hint-placeholder-count="13">
                   <button class="th" onClick="{{ h.onClick }}" aria-sort="{{ h.sort }}" style="text-align:{{ h.align }};color:{{ h.color }};">{{ h.label }}</button>
                 </sc-for>
               </div>
               <sc-for list="{{ rtRows }}" as="r" hint-placeholder-count="25">
-                <div role="row" style="display:grid;grid-template-columns:40px minmax(200px,2fr) minmax(110px,1fr) 90px 70px 70px 70px 70px 70px minmax(100px,1fr);gap:0 10px;padding:8px 0;border-top:1px solid var(--rule-2);align-items:center;font-size:13px;">
+                <div role="row" style="display:grid;grid-template-columns:40px minmax(200px,2fr) minmax(110px,1fr) 90px 70px 70px 70px 70px 70px 56px 56px 56px minmax(100px,1fr);gap:0 10px;padding:8px 0;border-top:1px solid var(--rule-2);align-items:center;font-size:13px;">
                   <span class="mono" style="color:var(--mute);">{{ r.rank }}</span>
                   <span style="display:flex;align-items:center;gap:10px;min-width:0;">
                     <span aria-hidden="true" style="position:relative;width:26px;height:26px;border-radius:50%;flex:none;overflow:hidden;background:var(--rule-2);"><img src="{{ r.logo }}" alt="" loading="lazy" decoding="async" onError="{{ r.onLogoError }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:2px;"></span>
@@ -180,13 +180,16 @@
                   <span class="mono" style="text-align:right;">{{ r.defence }}</span>
                   <span class="mono" style="text-align:right;">{{ r.tempo }}</span>
                   <span class="mono" style="text-align:right;color:{{ r.formColor }};">{{ r.form }}</span>
+                  <span class="mono" style="text-align:right;color:{{ r.wabColor }};">{{ r.wab }}</span>
+                  <span class="mono" style="text-align:right;">{{ r.netRank }}</span>
+                  <span class="mono" style="text-align:right;">{{ r.bpiRank }}</span>
                   <span class="mono" style="font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.tonight }}</span>
                 </div>
               </sc-for>
             </div>
           </div>
           <sc-if value="{{ noRatingRows }}" hint-placeholder-val="{{ false }}"><p style="margin:12px 0 0;font-size:14px;color:var(--ink-2);">{{ noRatingRowsText }}</p></sc-if>
-          <p class="mono" style="margin:10px 0 0;font-size:11px;color:var(--mute);">Off and Def: points scored and allowed per 100 possessions against the average, after who was played and where; a negative Def is good. Tempo: possessions per game against the average. Last five: net against what the ratings expected, shrunk. {{ ratingsNote }}</p>
+          <p class="mono" style="margin:10px 0 0;font-size:11px;color:var(--mute);">Off and Def: points scored and allowed per 100 possessions against the average, after who was played and where; a negative Def is good. Tempo: possessions per game against the average. Last five: net against what the ratings expected, shrunk. WAB: wins above what a bubble team would have against the same schedule. NET and BPI: the NCAA's and ESPN's own ranks. {{ ratingsNote }}</p>
         </section>
       </sc-if>
 
@@ -279,13 +282,13 @@ class Component extends DCLogic {
     const rteams = (R && R.teams) || [];
     const rf = this.state.rfilter;
     const ratingChips = [["all", "Everyone"], ["tonight", "Playing tonight"], ["High major", "High major"], ["Mid major", "Mid major"], ["Low major", "Low major"]].map(([k, label]) => ({ label, pressed: rf === k ? "true" : "false", bg: rf === k ? "var(--ink)" : "transparent", fg: rf === k ? "var(--paper)" : "var(--ink)", onClick: () => this.setState({ rfilter: k }) }));
-    const rkeys = { rank: (t) => t.rank, name: (t) => t.name, conference: (t) => t.conference || "", tier: (t) => t.tier || "", net: (t) => -(t.net ?? -99), offence: (t) => -(t.offence ?? -99), defence: (t) => t.defence ?? 99, tempo: (t) => -(t.tempo ?? -99), form: (t) => -(t.form ?? -99), tonight: (t) => (t.tonight ? 0 : 1) };
+    const rkeys = { rank: (t) => t.rank, name: (t) => t.name, conference: (t) => t.conference || "", tier: (t) => t.tier || "", net: (t) => -(t.net ?? -99), offence: (t) => -(t.offence ?? -99), defence: (t) => t.defence ?? 99, tempo: (t) => -(t.tempo ?? -99), form: (t) => -(t.form ?? -99), wab: (t) => -(t.wab ?? -99), netRank: (t) => t.netRank ?? 999, bpiRank: (t) => t.bpiRank ?? 999, tonight: (t) => (t.tonight ? 0 : 1) };
     const rs = this.state.rsort;
     const rpool = rteams.filter((t) => (rf === "all" ? true : rf === "tonight" ? !!t.tonight : t.tier === rf)).filter((t) => !q || `${t.name} ${t.abbr} ${t.short} ${t.conference}`.toLowerCase().includes(q));
     const rsorted = rpool.slice().sort((a, b) => { const ka = rkeys[rs.k](a), kb = rkeys[rs.k](b); const c = typeof ka === "string" ? ka.localeCompare(kb) : (ka ?? 0) - (kb ?? 0); return (c || a.rank - b.rank) * rs.dir; });
-    const rtRows = rsorted.map((t) => ({ rank: String(t.rank), name: t.name, abbr: t.abbr, logo: t.logo || `./logos/${encodeURIComponent(t.abbr)}.png`, onLogoError: hideLogo, conference: t.conference || "", tier: t.tier || "", net: signed(t.net), netColor: typeof t.net === "number" ? (t.net > 0 ? "var(--win)" : t.net < 0 ? "var(--alert)" : "var(--mute)") : "var(--mute)", offence: signed(t.offence), defence: signed(t.defence), tempo: signed(t.tempo), form: typeof t.form === "number" ? signed(t.form) : "—", formColor: typeof t.form === "number" ? (t.form > 0 ? "var(--win)" : t.form < 0 ? "var(--alert)" : "var(--mute)") : "var(--mute)", tonight: t.tonight ? t.tonight.vs || t.tonight.label : "" }));
+    const rtRows = rsorted.map((t) => ({ rank: String(t.rank), name: t.name, abbr: t.abbr, logo: t.logo || `./logos/${encodeURIComponent(t.abbr)}.png`, onLogoError: hideLogo, conference: t.conference || "", tier: t.tier || "", net: signed(t.net), netColor: typeof t.net === "number" ? (t.net > 0 ? "var(--win)" : t.net < 0 ? "var(--alert)" : "var(--mute)") : "var(--mute)", offence: signed(t.offence), defence: signed(t.defence), tempo: signed(t.tempo), form: typeof t.form === "number" ? signed(t.form) : "—", formColor: typeof t.form === "number" ? (t.form > 0 ? "var(--win)" : t.form < 0 ? "var(--alert)" : "var(--mute)") : "var(--mute)", wab: typeof t.wab === "number" ? signed(t.wab) : "—", wabColor: typeof t.wab === "number" ? (t.wab > 0 ? "var(--win)" : t.wab < 0 ? "var(--alert)" : "var(--mute)") : "var(--mute)", netRank: typeof t.netRank === "number" ? String(t.netRank) : "—", bpiRank: typeof t.bpiRank === "number" ? String(t.bpiRank) : "—", tonight: t.tonight ? t.tonight.vs || t.tonight.label : "" }));
     const setRsort = (k) => this.setState((st) => ({ rsort: { k, dir: st.rsort.k === k ? -st.rsort.dir : 1 } }));
-    const rtHead = th([["rank", "#"], ["name", "Team"], ["conference", "Conference"], ["tier", "Tier"], ["net", "Net", "right"], ["offence", "Off", "right"], ["defence", "Def", "right"], ["tempo", "Tempo", "right"], ["form", "Last 5", "right"], ["tonight", "Tonight"]], rs, setRsort);
+    const rtHead = th([["rank", "#"], ["name", "Team"], ["conference", "Conference"], ["tier", "Tier"], ["net", "Net", "right"], ["offence", "Off", "right"], ["defence", "Def", "right"], ["tempo", "Tempo", "right"], ["form", "Last 5", "right"], ["wab", "WAB", "right"], ["netRank", "NET", "right"], ["bpiRank", "BPI", "right"], ["tonight", "Tonight"]], rs, setRsort);
     const standings = this.state.view !== "ratings";
     return { ...base, ready: true, empty: false, seasonLabel,
       title: pre ? "Before the first game" : "Standings and projections",

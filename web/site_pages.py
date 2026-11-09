@@ -246,7 +246,40 @@ def team_table(fit: dict, schedule) -> dict[int, dict]:
     return out
 
 
-def ratings_page(fit: dict, teams: dict[int, dict], day: date, board: dict | None = None) -> dict:
+#: The published rankings shown beside the lab's own (decision 93): the
+#: NCAA's NET and ESPN's power index, by the file the fetch writes for each.
+#: A subscription table the card reads is NOT shown: its terms are for the
+#: subscriber, and a public page reprinting it would republish it.
+OUTSIDE_TABLES = (("netRank", "ncaa_net"), ("bpiRank", None))
+
+
+def outside_ranks(lab: Path, season: int, day: date) -> dict[str, dict]:
+    """field -> {team id: rank}, each table ranked by its own net rating, read
+    only when dated on or before `day` and no more than a week old."""
+    try:
+        from cbb_betting_lab.models import card_factors  # type: ignore  # noqa: PLC0415
+        import pandas as pd  # noqa: PLC0415
+    except Exception:  # noqa: BLE001 - the page builds without them
+        return {}
+    out: dict[str, dict] = {}
+    for field, source in OUTSIDE_TABLES:
+        path = card_factors.second_opinion_path(Path(lab) / "data" / "raw", season, source=source)
+        try:
+            frame = pd.read_csv(path)
+            stamp = date.fromisoformat(str(frame["as_of"].iloc[0])[:10])
+        except Exception:  # noqa: BLE001 - absent or unreadable is no column
+            continue
+        if stamp > day or (day - stamp).days > 7:
+            continue
+        frame = frame.dropna(subset=["team_id"]).copy()
+        frame["n"] = pd.to_numeric(frame["adj_off"], errors="coerce") - pd.to_numeric(frame["adj_def"], errors="coerce")
+        frame = frame.dropna(subset=["n"]).sort_values("n", ascending=False).drop_duplicates("team_id")
+        out[field] = {int(t): i for i, t in enumerate(frame["team_id"], start=1)}
+    return out
+
+
+def ratings_page(fit: dict, teams: dict[int, dict], day: date, board: dict | None = None,
+                 outside: dict | None = None) -> dict:
     rated = fit["ratings"]
     tonight: dict[str, dict] = {}
     for g in (board or {}).get("games") or []:
@@ -256,8 +289,13 @@ def ratings_page(fit: dict, teams: dict[int, dict], day: date, board: dict | Non
         tonight[str(g["home"].get("abbr"))] = {"id": g.get("id"), "label": label, "vs": f"v {g['away'].get('abbr')}"}
         tonight[str(g["away"].get("abbr"))] = {"id": g.get("id"), "label": label, "vs": f"@ {g['home'].get('abbr')}"}
     rows = sorted((t for t in teams.values() if t["net"] is not None), key=lambda t: -t["net"])
+    context = fit.get("context")
+    wab = getattr(context, "wab", {}) or {} if context is not None else {}
     for rank, t in enumerate(rows, start=1):
         t["rank"] = rank
+        t["wab"] = _round(wab.get(t.get("key")), 1)
+        for field, ranks in (outside or {}).items():
+            t[field] = ranks.get(t["id"])
         if t["abbr"] in tonight:
             t["tonight"] = tonight[t["abbr"]]
     tiers: dict[str, int] = {}
@@ -282,7 +320,9 @@ def ratings_page(fit: dict, teams: dict[int, dict], day: date, board: dict | Non
             "after the strength of every opponent played; defence above zero allows more. Net is "
             "offence minus defence. Tempo is possessions per game against the average. Early in a "
             "season each number leans on the team's prior; the weight moves to this season's games as "
-            "they are played."
+            "they are played. WAB is wins above bubble: wins minus what a bubble team (the 45th "
+            "best by our net rating) would expect against the same schedule at the same sites. NET "
+            "and BPI are the NCAA's and ESPN's own rankings, shown beside ours."
         ),
     }
 
@@ -418,7 +458,8 @@ def write_model_pages(lab: Path, out: Path, day: date, fit: dict, board: dict | 
     schedule = _schedule(Path(lab), int(fit.get("season") or 0))
     teams = team_table(fit, schedule)
     written = []
-    _dump(Path(out) / "ratings.json", ratings_page(fit, teams, day, board))
+    outside = outside_ranks(Path(lab), int(fit.get("season") or 0), day)
+    _dump(Path(out) / "ratings.json", ratings_page(fit, teams, day, board, outside))
     written.append("ratings.json")
     _dump(Path(out) / "season.json", season_page(fit, teams, schedule, day))
     written.append("season.json")

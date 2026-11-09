@@ -98,3 +98,44 @@ def test_an_empty_store_says_so():
     record = PS.build_record(None, tiers=None, looks=182, as_of="2026-11-09")
     assert record["latest_capture"] is None
     assert "No capture holds an untipped game" in PS.render(record)
+
+
+def _with_slow_book_at(*stamps, away=+150):
+    rows = []
+    for stamp in stamps:
+        for book in ("a", "b", "c"):
+            rows += _pair(stamp, book, -140, +120)
+        rows += _pair(stamp, "slow", -170, away)
+    return pd.DataFrame(rows)
+
+
+def test_a_new_alert_sized_shop_is_an_alert():
+    record = PS.build_record(_with_slow_book_at("2026-11-09T17:13:00+00:00"), tiers={}, looks=200,
+                             as_of="x", now="2026-11-09T18:00:00Z")
+    assert [a["book"] for a in record["alerts"]] == ["slow"]
+    assert record["alerts"][0]["edge"] >= PS.ALERT_EDGE
+    text = PS.alert_text(record)
+    assert "Away U moneyline" in text and "+150 at slow" in text and "ET" in text
+    assert "not a model pick" in text
+
+
+def test_a_shop_already_alerted_an_hour_ago_is_not_posted_again():
+    store = _with_slow_book_at("2026-11-09T17:13:00+00:00", "2026-11-09T18:13:00+00:00")
+    record = PS.build_record(store, tiers={}, looks=200, as_of="x", now="2026-11-09T19:00:00Z")
+    assert record["current"] and record["alerts"] == []
+    assert PS.alert_text(record) == ""
+
+
+def test_a_shop_under_the_alert_bar_is_listed_but_not_posted():
+    # +134 against a fair price of about 43.8% clears 2% but not 3%.
+    store = _with_slow_book_at("2026-11-09T17:13:00+00:00", away=+134)
+    record = PS.build_record(store, tiers={}, looks=200, as_of="x", now="2026-11-09T18:00:00Z")
+    assert record["current"] and all(r["edge"] < PS.ALERT_EDGE for r in record["current"])
+    assert record["alerts"] == []
+
+
+def test_the_alert_is_written_beside_the_record(tmp_path):
+    record = PS.build_record(_with_slow_book_at("2026-11-09T17:13:00+00:00"), tiers={}, looks=200,
+                             as_of="x", now="2026-11-09T18:00:00Z")
+    PS.write(record, tmp_path)
+    assert (tmp_path / PS.ALERT_NAME).read_text(encoding="utf-8").startswith("**CBB price shop")
