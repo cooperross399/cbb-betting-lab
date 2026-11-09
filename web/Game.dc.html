@@ -294,6 +294,26 @@
       </section>
       </sc-if>
 
+      <sc-if value="{{ hasShops }}" hint-placeholder-val="{{ false }}">
+      <section aria-labelledby="shop-h" style="padding:28px 0 26px;border-bottom:1px solid var(--ink);">
+        <h2 id="shop-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">Best prices right now</h2>
+        <p class="mono" style="margin:8px 0 0;max-width:640px;font-size:12px;line-height:1.5;color:var(--mute);">{{ shopNote }}</p>
+        <div style="margin-top:12px;border-top:2px solid var(--ink);max-width:560px;">
+          <div class="mono" style="display:grid;grid-template-columns:minmax(0,1fr) 72px 64px 64px;gap:0 10px;padding:6px 0;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);">
+            <span>Bet</span><span style="text-align:right;">Price</span><span style="text-align:right;">Fair</span><span style="text-align:right;">Better</span>
+          </div>
+          <sc-for list="{{ shops }}" as="s" hint-placeholder-count="2">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 64px 64px;gap:0 10px;padding:9px 0;border-top:1px solid var(--rule-2);align-items:baseline;">
+              <span style="min-width:0;"><span style="font-size:15px;font-weight:600;">{{ s.label }}</span> <span class="mono" style="font-size:12px;color:var(--mute);white-space:nowrap;">at {{ s.book }}</span></span>
+              <span class="mono" style="text-align:right;font-size:15px;font-weight:600;">{{ s.price }}</span>
+              <span class="mono" style="text-align:right;font-size:15px;color:var(--mute);">{{ s.fair }}</span>
+              <span class="mono" style="text-align:right;font-size:15px;">{{ s.edge }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+      </sc-if>
+
       <section aria-labelledby="after-h" style="padding:28px 0 26px;">
         <h2 id="after-h" class="cond" style="margin:0;font-weight:700;font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.01em;">After the game</h2>
         <sc-if value="{{ after.pending }}" hint-placeholder-val="{{ true }}">
@@ -553,6 +573,13 @@ class Component extends DCLogic {
       }
     }
 
+    // Best prices right now (decision 93): a book beating the market's own
+    // fair price by the card's bar. A slow book, not a model pick.
+    const shopList = Array.isArray(g.shops) && !g.started ? g.shops : [];
+    const shops = shopList.map((x) => ({ label: x.label || "", book: x.book || "", price: odds(x.price), fair: num(x.fair) ? odds(x.fair) : "—", edge: num(x.edgePct) ? `+${x.edgePct.toFixed(1)}%` : "—" }));
+    const shopAt = shopList.length && shopList[0].asOf ? new Date(shopList[0].asOf) : null;
+    const shopNote = `A book whose price beats the market's fair price (the middle of every book's no-vig price) by at least 2%. No model is read and nothing is staked; prices move, so check the book first.${shopAt && !isNaN(shopAt) ? ` As of ${shopAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })} ET.` : ""}`;
+
     // After the game.
     let fin = this.state.final;
     if (!fin && this.state.isSample && this.props.afterGame) fin = { away: 70, home: 74, finish: "REG", pick: p ? { result: p.side === "home" || p.side === "under" ? "win" : "loss", label: p.label, price: p.price } : null };
@@ -588,7 +615,7 @@ class Component extends DCLogic {
       barAria: `${awayName} ${pct0(aw)}, ${homeName} ${pct0(hw)}`,
       unpriced, unpricedNote, pick, priced,
       hasWhy: why.length > 0, why,
-      hasRatings, cmp, cmpNote, paceLine, lineups, markets, after, bx };
+      hasRatings, cmp, cmpNote, paceLine, lineups, markets, hasShops: shops.length > 0, shops, shopNote, after, bx };
   }
   boxView(g, away, home, aColor, hColor) {
     const B = this.state.box, F = this.F || {}, at = this.state.boxAt, err = this.state.boxErr, now = this.state.now || Date.now();

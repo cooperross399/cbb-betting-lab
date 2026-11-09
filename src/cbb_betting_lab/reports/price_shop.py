@@ -34,6 +34,13 @@ apart). Intervals are clustered by game and corrected at the experiment
 ledger's cumulative count. Registered as `price_shop_2026_11_09`, one per
 tier. Closing-line value is not a return, and it never selects, stakes or
 withdraws anything: this report is advice the card does not read.
+
+**Alerts** (decision 93, Cooper 2026-11-09: *"Do all 5"*): a side in the
+newest capture whose edge is at least `ALERT_EDGE` and which was not already
+an alert-sized shop at the same book in the capture before it. That is what a
+scheduled task posts to the project chat after each hourly capture, so a slow
+book is seen while it is still slow. The same list rides to the site, where
+each game's page shows its shops. Still advice: nothing here is a pick.
 """
 
 from __future__ import annotations
@@ -53,6 +60,9 @@ from cbb_betting_lab.reports.card_pricing import PRICE_BAND
 #: card's own edge bar, so a shop and a pick clear the same height.
 SHOP_EDGE = 0.02
 
+#: The edge a new shop needs before it is posted to the project chat.
+ALERT_EDGE = 0.03
+
 #: The main markets the capture holds, by their allowlist names.
 MARKETS = ("moneyline", "spread", "total_points")
 TIERS = ("high_major", "mid_major", "low_major")
@@ -64,6 +74,7 @@ MIN_GRADED = 30
 
 JSON_NAME = "cbb_price_shop.json"
 MD_NAME = "cbb_price_shop.md"
+ALERT_NAME = "cbb_price_shop_alert.md"
 
 
 def _decimal(american: pd.Series) -> pd.Series:
@@ -160,6 +171,24 @@ def latest(board: pd.DataFrame, shop_rows: pd.DataFrame) -> tuple[str | None, pd
     return newest.isoformat(), mine.sort_values(["commence", "shop_edge"], ascending=[True, False])
 
 
+def alerts(board: pd.DataFrame, shop_rows: pd.DataFrame, *, edge: float = ALERT_EDGE) -> pd.DataFrame:
+    """The newest capture's shops of at least `edge` that were not already
+    one, at the same book, in the capture before it. A side that stays slow
+    for three hours is posted once, when it first appears."""
+    if board.empty or shop_rows.empty:
+        return shop_rows.iloc[0:0]
+    stamps = sorted(board["captured_at"].unique())
+    big = shop_rows[shop_rows["shop_edge"] >= edge]
+    now = big[big["captured_at"] == stamps[-1]]
+    if len(stamps) < 2 or now.empty:
+        return now.sort_values(["commence", "shop_edge"], ascending=[True, False])
+    side = ["event_id", "market", "pair_line", "selection", "best_book"]
+    before = big[big["captured_at"] == stamps[-2]][side].drop_duplicates()
+    fresh = now.merge(before.assign(_seen=True), on=side, how="left")
+    fresh = fresh[fresh["_seen"].isna()].drop(columns="_seen")
+    return fresh.sort_values(["commence", "shop_edge"], ascending=[True, False])
+
+
 def graded(board: pd.DataFrame, shop_rows: pd.DataFrame, *, now=None) -> pd.DataFrame:
     """Each side's FIRST shop, with its closing-line value where the close
     quoted the same line. Only games that have tipped are graded."""
@@ -211,16 +240,8 @@ def build_record(store: pd.DataFrame | None, *, tiers: Mapping[str, str] | None,
         grades["tier"] = grades["event_id"].map(lambda e: tiers.get(str(e), UNPLACED))
     cells = [_cell(grades[grades["tier"] == t] if not grades.empty else grades, tier=t, looks=looks)
              for t in TIERS + (UNPLACED,)]
-    listing = [
-        {
-            "event_id": r.event_id, "commence": r.commence.isoformat(),
-            "game": f"{r.away_team} at {r.home_team}", "market": r.market,
-            "selection": r.selection, "line": r.line, "book": r.best_book,
-            "american": int(r.best_american), "fair_american": _american(r.fair),
-            "edge": round(float(r.shop_edge), 4), "books": int(r.books),
-        }
-        for r in current.itertuples()
-    ]
+    listing = [_listed(r) for r in current.itertuples()]
+    fresh = [_listed(r) for r in alerts(board, found).itertuples()]
     return {
         "as_of": as_of,
         "looks": int(looks),
@@ -230,8 +251,47 @@ def build_record(store: pd.DataFrame | None, *, tiers: Mapping[str, str] | None,
         "captures": int(board["captured_at"].nunique()) if not board.empty else 0,
         "latest_capture": stamp,
         "current": listing,
+        "alert_edge": ALERT_EDGE,
+        "alerts": fresh,
         "cells": cells,
     }
+
+
+def _listed(r) -> dict:
+    line = None if r.line != r.line else float(r.line)
+    return {
+        "event_id": r.event_id, "commence": r.commence.isoformat(),
+        "game": f"{r.away_team} at {r.home_team}", "home_team": r.home_team,
+        "away_team": r.away_team, "market": r.market,
+        "selection": r.selection, "line": line, "book": r.best_book,
+        "american": int(r.best_american), "fair_american": _american(r.fair),
+        "edge": round(float(r.shop_edge), 4), "books": int(r.books),
+    }
+
+
+def alert_text(record: Mapping) -> str:
+    """The message a scheduled task posts to the project chat, or "" when the
+    newest capture holds no new alert-sized shop."""
+    rows = record.get("alerts") or []
+    if not rows:
+        return ""
+    lines = [
+        f"**CBB price shop: {len(rows)} new price(s) at least {record.get('alert_edge', ALERT_EDGE):.0%} "
+        f"better than the market's fair price** (prices as of {_eastern(record.get('latest_capture') or '')})",
+        "",
+    ]
+    for row in rows:
+        fair = "—" if row["fair_american"] is None else f"{row['fair_american']:+d}"
+        lines.append(
+            f"- {row['game']}, {named_side(row)}: **{row['american']:+d} at {row['book']}** "
+            f"(fair {fair}, {row['edge']:+.1%}; {row['books']} books), tip {_eastern(row['commence'])}"
+        )
+    lines += [
+        "",
+        "A slow book, not a model pick: no model is read and nothing is staked. Prices move; "
+        "check the book before betting.",
+    ]
+    return "\n".join(lines) + "\n"
 
 
 def _american(probability: float) -> int | None:
@@ -249,6 +309,30 @@ def _side(row: Mapping) -> str:
     if line is None:
         return selection
     return f"{selection} {line:+g}" if market == "spread" else f"{selection} {line:g}"
+
+
+def _eastern(stamp: str) -> str:
+    """A tip time as Cooper reads it: 'Tue 9:30 PM ET'."""
+    from zoneinfo import ZoneInfo
+
+    try:
+        when = pd.Timestamp(stamp).tz_convert(ZoneInfo("America/New_York"))
+    except (ValueError, TypeError):
+        return str(stamp)
+    return f"{when:%a} {when.hour % 12 or 12}:{when:%M} {'AM' if when.hour < 12 else 'PM'} ET"
+
+
+def named_side(row: Mapping) -> str:
+    """The side as a bettor reads it: the team for a moneyline or spread."""
+    market, selection, line = row["market"], row["selection"], row.get("line")
+    team = row.get("home_team") if selection == "home" else row.get("away_team") if selection == "away" else None
+    if market == "moneyline" and team:
+        return f"{team} moneyline"
+    if market == "spread" and team and line is not None:
+        return f"{team} {line:+g}"
+    if market == "total_points" and line is not None:
+        return f"{selection.capitalize()} {line:g}"
+    return _side(row)
 
 
 def _pct(value) -> str:
@@ -325,4 +409,5 @@ def write(record: Mapping, output_dir: Path | str) -> tuple[Path, Path]:
     json_path, md_path = base / JSON_NAME, base / MD_NAME
     json_path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     md_path.write_text(render(record), encoding="utf-8")
+    (base / ALERT_NAME).write_text(alert_text(record), encoding="utf-8")
     return json_path, md_path

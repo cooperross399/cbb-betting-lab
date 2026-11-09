@@ -1194,6 +1194,61 @@ def load_status(lab: Path, day: date) -> dict:
     return {}
 
 
+#: Shops older than this are not shown: an hourly capture that stopped is
+#: not a price that is still there.
+SHOP_MAX_AGE_H = 3.0
+
+
+def load_shops(lab: Path, now: datetime, by_name) -> dict:
+    """(home key, away key) -> the newest capture's price shops on that game
+    (`reports/price_shop.py`, decision 93), each restated as the board reads
+    a side. Absent or stale records give nothing; a shop is never invented."""
+    path = lab / "data" / "outputs" / "cbb_price_shop.json"
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+        stamp = datetime.fromisoformat(str(record.get("latest_capture")).replace("Z", "+00:00"))
+    except (OSError, ValueError, TypeError):
+        return {}
+    if (now - stamp).total_seconds() > SHOP_MAX_AGE_H * 3600:
+        return {}
+    out: dict = {}
+    for row in record.get("current") or []:
+        if not isinstance(row, dict):
+            continue
+        key = (by_name(row.get("home_team") or ""), by_name(row.get("away_team") or ""))
+        out.setdefault(key, []).append({**row, "capturedAt": stamp.isoformat(timespec="minutes").replace("+00:00", "Z")})
+    return out
+
+
+def shops_for(groups: dict, key: tuple, home_abbr: str, away_abbr: str) -> list[dict]:
+    """The game's shops from the board's side: a pair the provider filed the
+    other way round has home and away swapped and its spread line negated."""
+    rows, flipped = groups.get(key), False
+    if rows is None and (key[1], key[0]) in groups:
+        rows, flipped = groups[(key[1], key[0])], True
+    out = []
+    for r in rows or []:
+        market, sel, line = r.get("market"), str(r.get("selection") or ""), finite(r.get("line"))
+        if flipped and sel in ("home", "away"):
+            sel = "away" if sel == "home" else "home"
+        team = home_abbr if sel == "home" else away_abbr if sel == "away" else None
+        if market == "moneyline" and team:
+            label = f"{team} ML"
+        elif market == "spread" and team and line is not None:
+            label = f"{team} {line:+g}".replace("-", "\u2212")
+        elif market == "total_points" and line is not None:
+            label = f"{sel.capitalize()} {line:g}"
+        else:
+            continue
+        price, fair, edge = finite_int(r.get("american")), finite_int(r.get("fair_american")), finite(r.get("edge"))
+        if price is None or edge is None:
+            continue
+        out.append({"label": label, "market": market, "side": sel, "line": line, "book": r.get("book") or "",
+                    "price": price, "fair": fair, "edgePct": round(100 * edge, 1),
+                    "books": finite_int(r.get("books")), "asOf": r.get("capturedAt")})
+    return sorted(out, key=lambda x: -x["edgePct"])
+
+
 def load_record(lab: Path) -> dict:
     """The forward record, in the shape `forward_evidence.report_payload` writes.
 
@@ -1328,6 +1383,7 @@ def build(lab: Path, day: date) -> dict:
     # Decision 79: leans read the card's trust table, so the board never
     # leans where the card's own learning has stopped trusting the model.
     lean_trust = load_lean_trust(lab, day)
+    shop_groups = load_shops(lab, now, by_name)
     teams, games, history = {}, [], {}
     for g in slate:
         h, a = g["home"], g["away"]
@@ -1363,6 +1419,9 @@ def build(lab: Path, day: date) -> dict:
         row = {"id": g["id"], "tip": g["tip"], "venue": g["venue"], "city": g["city"], "tv": g["tv"], "neutral": g["neutral"], "started": g["state"] != "pre",
                "cardSlot": slot,
                "home": {"abbr": ha, "record": h["record"]}, "away": {"abbr": aa, "record": a["record"]}, "pick": pick_from_frozen(my_frozen, ha, aa, selected.get((hk, ak), []), lean_markets, lean_trust)}
+        shopped = [] if row["started"] else shops_for(shop_groups, (hk, ak), ha, aa)
+        if shopped:
+            row["shops"] = shopped
         spread_line = total_line = None
         if mine:
             spread_line = consensus_line(mine, "spread", "home")
