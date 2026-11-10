@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 500,
-      "away_team": "Bradley Braves",
-      "book": "fanatics",
-      "books": 16,
-      "commence": "2026-11-11T00:00:00+00:00",
-      "edge": 0.0312,
-      "event_id": "59827fe0f02a369e1af3d183360ba896",
-      "fair_american": 482,
-      "game": "Bradley Braves at Davidson Wildcats",
-      "home_team": "Davidson Wildcats",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-10T16:24+00:00",
-  "captures": 104,
+  "alerts": [],
+  "as_of": "2026-11-10T17:14+00:00",
+  "captures": 105,
   "cells": [
     {
       "beat_close": 0.6363636363636364,
@@ -83,29 +67,14 @@
       "selection": "home"
     },
     {
-      "american": 500,
-      "away_team": "Bradley Braves",
-      "book": "fanatics",
-      "books": 16,
-      "commence": "2026-11-11T00:00:00+00:00",
-      "edge": 0.0312,
-      "event_id": "59827fe0f02a369e1af3d183360ba896",
-      "fair_american": 482,
-      "game": "Bradley Braves at Davidson Wildcats",
-      "home_team": "Davidson Wildcats",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 439,
+      "american": 471,
       "away_team": "Winthrop Eagles",
       "book": "courtside",
       "books": 14,
       "commence": "2026-11-11T00:00:00+00:00",
-      "edge": 0.0304,
+      "edge": 0.0302,
       "event_id": "16aed83105c1683d2a5eb84cdef8c8f4",
-      "fair_american": 423,
+      "fair_american": 454,
       "game": "Winthrop Eagles at Kennesaw St Owls",
       "home_team": "Kennesaw St Owls",
       "line": null,
@@ -118,32 +87,17 @@
       "book": "fanduel",
       "books": 17,
       "commence": "2026-11-11T00:30:00+00:00",
-      "edge": 0.0757,
+      "edge": 0.0599,
       "event_id": "6e5f0afa161cb1c7b90a86be779800bf",
-      "fair_american": 365,
+      "fair_american": 372,
       "game": "Evansville Purple Aces at Middle Tennessee Blue Raiders",
       "home_team": "Middle Tennessee Blue Raiders",
       "line": null,
       "market": "moneyline",
       "selection": "away"
-    },
-    {
-      "american": 375,
-      "away_team": "Nicholls St Colonels",
-      "book": "hardrockbet",
-      "books": 12,
-      "commence": "2026-11-11T00:30:00+00:00",
-      "edge": 0.0236,
-      "event_id": "1bdd1ebc0dbf42b45f00e0e042a95bbc",
-      "fair_american": 364,
-      "game": "Nicholls St Colonels at Tulane Green Wave",
-      "home_team": "Tulane Green Wave",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-10T16:24:14+00:00",
+  "latest_capture": "2026-11-10T17:13:41+00:00",
   "looks": 200,
   "min_books": 3,
   "shop_edge": 0.02
