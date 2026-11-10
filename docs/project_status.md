@@ -80,7 +80,7 @@ registration the way every figure in this file used to be:
 | `holdout/cbb_price_backtest.json` | 130 | x1.8115 |
 | `holdout/cbb_replication.json` | 133 | x1.8145 |
 
-**`data/outputs/cbb_price_backtest.md` is held at the render 35 human acceptance receipt(s) cite** (scored under 200 looks, x1.8685): the receipts pin it by checksum, this lab may not re-sign them, and so it is the one generated report not re-rendered when the ledger grows. Restated at the ledger's count, all 208 of its judgements are what the ledger's count gives; the gap is interval width only. Lifting the pin is Cooper's: re-read the current render and sign again.
+**`data/outputs/cbb_price_backtest.md` is held at the render 32 human acceptance receipt(s) cite** (scored under 200 looks, x1.8685): the receipts pin it by checksum, this lab may not re-sign them, and so it is the one generated report not re-rendered when the ledger grows. Restated at the ledger's count, all 208 of its judgements are what the ledger's count gives; the gap is interval width only. Lifting the pin is Cooper's: re-read the current render and sign again.
 
 **The populations those verdicts are measured on.**
 

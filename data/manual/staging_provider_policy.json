@@ -3,14 +3,6 @@
   "mode": "allowlisted",
   "allowlist": [
     {
-      "market": "alternate_spread",
-      "receipt_id": "alternate_spread-20261109-delegated-cooperross399"
-    },
-    {
-      "market": "alternate_team_total",
-      "receipt_id": "alternate_team_total-20261109-delegated-cooperross399"
-    },
-    {
       "market": "alternate_total_points",
       "receipt_id": "alternate_total_points-20261109-delegated-cooperross399"
     },
@@ -107,10 +99,6 @@
       "receipt_id": "player_turnovers-20261109-delegated-cooperross399"
     },
     {
-      "market": "spread",
-      "receipt_id": "spread-20261109-delegated-cooperross399"
-    },
-    {
       "market": "spread_h1",
       "receipt_id": "spread_h1-20261109-delegated-cooperross399"
     },
@@ -143,5 +131,27 @@
       "receipt_id": "total_points_h2-20261109-delegated-cooperross399"
     }
   ],
-  "withdrawn": []
+  "withdrawn": [
+    {
+      "market": "alternate_spread",
+      "receipt_id": "alternate_spread-20261109-delegated-cooperross399",
+      "approved_on": "",
+      "withdrawn_at": "2026-11-09T20:31:59+00:00",
+      "reason": "Auto-demotion by CBB Weekly Refit and Measure run 42693853606: the market's pooled forward interval fell below its receipt's floor. That run holds contents: read and could not commit its policy edit; committed on Cooper's instruction of 2026-11-10."
+    },
+    {
+      "market": "alternate_team_total",
+      "receipt_id": "alternate_team_total-20261109-delegated-cooperross399",
+      "approved_on": "",
+      "withdrawn_at": "2026-11-09T20:31:59+00:00",
+      "reason": "Auto-demotion by CBB Weekly Refit and Measure run 42693853606: the market's pooled forward interval fell below its receipt's floor. That run holds contents: read and could not commit its policy edit; committed on Cooper's instruction of 2026-11-10."
+    },
+    {
+      "market": "spread",
+      "receipt_id": "spread-20261109-delegated-cooperross399",
+      "approved_on": "",
+      "withdrawn_at": "2026-11-09T20:31:59+00:00",
+      "reason": "Auto-demotion by CBB Weekly Refit and Measure run 42693853606: the market's pooled forward interval fell below its receipt's floor. That run holds contents: read and could not commit its policy edit; committed on Cooper's instruction of 2026-11-10."
+    }
+  ]
 }
