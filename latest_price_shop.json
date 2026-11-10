@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-10T01:13+00:00",
-  "captures": 99,
+  "as_of": "2026-11-10T02:13+00:00",
+  "captures": 100,
   "cells": [
     {
       "beat_close": 0.6875,
@@ -57,9 +57,9 @@
       "book": "fanduel",
       "books": 11,
       "commence": "2026-11-10T23:00:00+00:00",
-      "edge": 0.0805,
+      "edge": 0.1092,
       "event_id": "72eacb4b3afe5e4526420aa503a8ff1f",
-      "fair_american": 409,
+      "fair_american": 396,
       "game": "Florida Gators at Florida St Seminoles",
       "home_team": "Florida St Seminoles",
       "line": null,
@@ -72,11 +72,26 @@
       "book": "fanduel",
       "books": 6,
       "commence": "2026-11-11T00:00:00+00:00",
-      "edge": 0.0642,
+      "edge": 0.0483,
       "event_id": "59827fe0f02a369e1af3d183360ba896",
-      "fair_american": 530,
+      "fair_american": 539,
       "game": "Bradley Braves at Davidson Wildcats",
       "home_team": "Davidson Wildcats",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    },
+    {
+      "american": 590,
+      "away_team": "Iona Gaels",
+      "book": "fanduel",
+      "books": 10,
+      "commence": "2026-11-11T00:00:00+00:00",
+      "edge": 0.0293,
+      "event_id": "59b9d34023c04a38ae8a01e9508650b9",
+      "fair_american": 570,
+      "game": "Iona Gaels at Fordham Rams",
+      "home_team": "Fordham Rams",
       "line": null,
       "market": "moneyline",
       "selection": "away"
@@ -97,6 +112,21 @@
       "selection": "away"
     },
     {
+      "american": 153,
+      "away_team": "Youngstown St Penguins",
+      "book": "courtside",
+      "books": 10,
+      "commence": "2026-11-11T00:00:00+00:00",
+      "edge": 0.0221,
+      "event_id": "604069251e105a4695deda046f92b38b",
+      "fair_american": 148,
+      "game": "Youngstown St Penguins at Central Michigan Chippewas",
+      "home_team": "Central Michigan Chippewas",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    },
+    {
       "american": -176,
       "away_team": "Washington St Cougars",
       "book": "fanduel",
@@ -112,7 +142,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-10T01:13:31+00:00",
+  "latest_capture": "2026-11-10T02:13:33+00:00",
   "looks": 200,
   "min_books": 3,
   "shop_edge": 0.02
