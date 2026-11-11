@@ -1170,6 +1170,14 @@ passes stay graded and unstaked. The season tallies
 on the board and Results carry no units. The Record page says so. The card,
 tonight's stakes, every model, the ledgers and the policy are unchanged.
 
+**2026-11-11: long prices are sized by the NHL Due List ladder** (decision
+97). Cooper: *"Use the same unit price ranges for cbb that we do for the NHL
+due list"*, *".25u,.15u,.1u,.05u"*. From +200 the card's Size column and the
+site's tracker both read it: 0.15u up through +500, 0.1u up through +1500
+and 0.05u beyond that. Below +200 the rule above stands.
+`models/sizing.PRICE_BRACKETS` and `web/site_pages.STAKE_BRACKETS` are pinned
+equal by a test.
+
 **A Pages deploy can stick on one commit.** On 2026-11-04 four Publish Board
 runs of commit 9b9ce5a failed at "Deploy to GitHub Pages" (three timeouts with
 a blank status, then "Deployment cancelled" at once) while the same files, a

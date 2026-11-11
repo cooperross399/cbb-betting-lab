@@ -258,6 +258,10 @@ def test_a_bet_kept_at_the_cards_stake_is_restated_at_a_quarter_unit():
     assert (rows["8"]["staked"], rows["8"]["units"]) == (0.25, 0.375)
     assert site_pages.quarter(-110, "push") == (0.0, 0.275)
     assert site_pages.quarter(None, "win") is None
+    # The NHL Due List ladder from +200 (Cooper, 2026-11-11).
+    assert site_pages.quarter(250, "win") == (0.375, 0.15)
+    assert site_pages.quarter(599, "loss") == (-0.1, 0.1)
+    assert site_pages.quarter(2000, "win") == (1.0, 0.05)
 
 
 def test_the_settled_night_keeps_its_graded_games():

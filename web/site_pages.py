@@ -777,8 +777,27 @@ def _grade(settle, pick: dict, g: dict, hf: int, af: int, teams: dict) -> str | 
 #: 0.25u on a minus price, whatever the card staked it (Cooper, 2026-11-04:
 #: "Make it so every bet weve tracked on the website in records and stuff is
 #: all .25u or to win .25u for -odds").
+#: From +200 the stake follows the NHL Due List's ladder (Cooper, 2026-11-11:
+#: "Use the same unit price ranges for cbb that we do for the NHL due list",
+#: ".25u,.15u,.1u,.05u"): +200 to +500 0.15u, +501 to +1500 0.1u, longer
+#: 0.05u. Each pair is (longest price, stake). Every past night is restated,
+#: because the tracker is rebuilt from the frozen boards each run. The card's
+#: Size column reads the same ladder (`models/sizing.py`).
 TRACKED_STAKE = 0.25
-STAKE_RULE = "0.25u, to win 0.25u on a minus price"
+STAKE_BRACKETS: tuple[tuple[int, float], ...] = ((500, 0.15), (1500, 0.1))
+STAKE_LONGEST = 0.05
+STAKE_RULE = "0.25u, to win 0.25u on a minus price; +200 to +500 0.15u, +501 to +1500 0.1u, longer than +1500 0.05u"
+
+
+def tracked_stake(price) -> float:
+    """The stake one tracked bet at `price` is counted at."""
+    p = _num(price)
+    if p is None or p < 200:
+        return TRACKED_STAKE
+    for longest, stake in STAKE_BRACKETS:
+        if p <= longest:
+            return stake
+    return STAKE_LONGEST
 
 
 def quarter(price, result) -> tuple[float, float] | None:
@@ -787,8 +806,9 @@ def quarter(price, result) -> tuple[float, float] | None:
     p = _num(price)
     if p is None or -100 < p < 100 or result not in ("win", "loss", "push"):
         return None
-    risk = TRACKED_STAKE * abs(p) / 100.0 if p < 0 else TRACKED_STAKE
-    win = TRACKED_STAKE if p < 0 else TRACKED_STAKE * p / 100.0
+    stake = tracked_stake(p)
+    risk = stake * abs(p) / 100.0 if p < 0 else stake
+    win = stake if p < 0 else stake * p / 100.0
     profit = win if result == "win" else -risk if result == "loss" else 0.0
     return round(profit, 4), round(risk, 4)
 
@@ -812,7 +832,7 @@ def tracker_rows(graded: list[dict], settle=None, lines_for=None) -> list[dict]:
         price = _int(pick.get("price"))
         bet = kind == "bet"
         stake, units = 0.0, None
-        if kind in ("bet", "lean"):  # leans tracked at 0.25u too, kept apart from the bets
+        if kind in ("bet", "lean"):  # leans tracked by the same rule, kept apart from the bets
             got = quarter(price, result)
             if got is not None:  # no usable price: graded, never counted in units
                 units, stake = got
@@ -880,6 +900,9 @@ def tracker_page(rows: list[dict], nights: int) -> dict:
         "teamPickDefaultUnits": TRACKED_STAKE,
         "stake": TRACKED_STAKE,
         "stakeRule": STAKE_RULE,
+        "stakeLadder": [{"from": None, "to": 199, "stake": TRACKED_STAKE}]
+        + [{"from": lo, "to": hi, "stake": st} for lo, (hi, st) in zip([200] + [b[0] + 1 for b in STAKE_BRACKETS], STAKE_BRACKETS)]
+        + [{"from": STAKE_BRACKETS[-1][0] + 1, "to": None, "stake": STAKE_LONGEST}],
         "overall": _tally(bets),
         "byMarket": _grouped(bets, lambda r: [r["market"]]),
         "byTeam": _grouped(bets, lambda r: [r["team"]] if r["team"] else list(r["teams"])),
@@ -893,8 +916,8 @@ def tracker_page(rows: list[dict], nights: int) -> dict:
         },
         "rows": rows,
         "notes": [
-            "A bet is a frozen opinion the card selected: it cleared the edge bar on an allowlisted market with a human receipt behind it. Each is counted at 0.25u at the board's price, or enough to win 0.25u on a minus price, whatever the card staked it.",
-            "An opinion is a frozen price the card did not select. A lean is tracked at the same 0.25u, apart from the bets; a pass is graded for the record and stakes nothing.",
+            "A bet is a frozen opinion the card selected: it cleared the edge bar on an allowlisted market with a human receipt behind it. Each is counted at the board's price at 0.25u, or enough to win 0.25u on a minus price, up to +199; +200 to +500 at 0.15u, +501 to +1500 at 0.1u and longer than +1500 at 0.05u, whatever the card staked it.",
+            "An opinion is a frozen price the card did not select. A lean is tracked by the same stakes, apart from the bets; a pass is graded for the record and stakes nothing.",
             "Ten or more bets to read a row; fewer swing with one week.",
         ],
     }
