@@ -609,6 +609,39 @@ def read_staged_board(
     )
 
 
+def slate_bound(
+    provider: OddsApiProvider,
+    *,
+    competition: Competition,
+    day: str,
+    market_tiers: tuple[int, ...] = (1, 2, 3),
+) -> int:
+    """Tonight's pessimistic credit bound: what `fetch_board` could spend at most.
+
+    The bulk call (`markets x regions`) plus the whole per-event stage
+    (`games x per-event keys x regions`), from the free events listing and the
+    same key lists `fetch_board` asks with. Cooper, 2026-11-11: the account
+    held 39,164 credits against the 40,000 daily cap and the morning card
+    refused, on a slate whose own bound was a few thousand. The pre-start
+    guard compares the balance with THIS figure when the balance is below the
+    daily cap, and the run is then capped at it, so the per-event stage still
+    fits whole or is skipped whole and no tip-ordered prefix can be frozen.
+
+    Raises `ProviderError` when the listing cannot be read: a bound that could
+    not be computed is no reason to start.
+    """
+    events = provider.list_events()
+    games = sum(
+        1 for event in events if slate_date(event.get("commence_time"), competition) == day
+    )
+    bulk_keys = tuple(sorted(BULK_SAFE_MARKETS))
+    per_event_keys = tuple(
+        k for k in per_event_provider_keys(tiers=market_tiers) if k not in BULK_SAFE_MARKETS
+    )
+    regions = len([r for r in provider.regions.split(",") if r.strip()]) or 1
+    return (len(bulk_keys) + games * len(per_event_keys)) * regions
+
+
 def fetch_board(
     provider: OddsApiProvider,
     *,

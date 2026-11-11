@@ -383,6 +383,35 @@ def main(argv: list[str] | None = None) -> int:
             enough, note = sufficient_quota(headers, cap, why=CARD_STARVATION)
             print(note)
             if not enough:
+                # Below the daily cap is not below TONIGHT. Cooper, 2026-11-11:
+                # the cap is sized to the worst night this sport has produced,
+                # so a shared account a few credits under it refused a slate
+                # that costs a few thousand. Compare the balance with the
+                # slate's own pessimistic bound instead, and cap the run at
+                # that bound so the per-event stage fits whole or not at all.
+                try:
+                    bound = GC.slate_bound(
+                        provider, competition=competition, day=day, market_tiers=tiers
+                    )
+                except ProviderError as exc:
+                    print(redact(f"::error::{exc}"), file=sys.stderr)
+                else:
+                    # The header is known to be readable here: an unreadable
+                    # one lets `sufficient_quota` through, so this branch only
+                    # runs on a measured shortfall against the daily cap.
+                    left = int(str(headers.get("x-requests-remaining", "")).strip())
+                    enough = left >= bound
+                    print(
+                        f"Tonight's pessimistic bound is {bound:,} credits and "
+                        f"{left:,} remain."
+                    )
+                    if enough:
+                        cap = bound
+                        print(
+                            f"The run is capped at tonight's bound, {cap:,} credits, "
+                            "rather than the daily cap."
+                        )
+            if not enough:
                 print(
                     "::error::Refusing to start. Nothing was fetched and "
                     "nothing was frozen.",
