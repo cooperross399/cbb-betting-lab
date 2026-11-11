@@ -1,54 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 460,
-      "away_team": "Loyola (Chi) Ramblers",
-      "book": "ballybet",
-      "books": 17,
-      "commence": "2026-11-11T20:00:00+00:00",
-      "edge": 0.0314,
-      "event_id": "b4a1814a6efc7eb096e5ac5e857915b5",
-      "fair_american": 443,
-      "game": "Loyola (Chi) Ramblers at Air Force Falcons",
-      "home_team": "Air Force Falcons",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    },
-    {
-      "american": 439,
-      "away_team": "UMass Lowell River Hawks",
-      "book": "courtside",
-      "books": 15,
-      "commence": "2026-11-12T00:00:00+00:00",
-      "edge": 0.0595,
-      "event_id": "231f3efb3503e4f16e17f3d798e3a5b7",
-      "fair_american": 409,
-      "game": "UMass Lowell River Hawks at Massachusetts Minutemen",
-      "home_team": "Massachusetts Minutemen",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 210,
-      "away_team": "Campbell Fighting Camels",
-      "book": "hardrockbet",
-      "books": 18,
-      "commence": "2026-11-12T00:00:00+00:00",
-      "edge": 0.0495,
-      "event_id": "3701dfd3294546a83cc0c666d61f49eb",
-      "fair_american": 195,
-      "game": "Campbell Fighting Camels at East Tennessee St Buccaneers",
-      "home_team": "East Tennessee St Buccaneers",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-11T17:14+00:00",
-  "captures": 120,
+  "alerts": [],
+  "as_of": "2026-11-11T17:46+00:00",
+  "captures": 121,
   "cells": [
     {
       "beat_close": 0.6923076923076923,
@@ -148,9 +102,9 @@
       "book": "hardrockbet",
       "books": 18,
       "commence": "2026-11-12T00:00:00+00:00",
-      "edge": 0.0495,
+      "edge": 0.0427,
       "event_id": "3701dfd3294546a83cc0c666d61f49eb",
-      "fair_american": 195,
+      "fair_american": 197,
       "game": "Campbell Fighting Camels at East Tennessee St Buccaneers",
       "home_team": "East Tennessee St Buccaneers",
       "line": null,
@@ -173,7 +127,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-11T17:13:37+00:00",
+  "latest_capture": "2026-11-11T17:45:32+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
