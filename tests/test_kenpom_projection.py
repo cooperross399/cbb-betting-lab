@@ -133,3 +133,10 @@ def test_every_known_spelling_names_the_school_espn_files_under_that_id():
     assert set(expected) == set(second_opinion.KNOWN_IDS)
     for spelling, tid in second_opinion.KNOWN_IDS.items():
         assert names.get(tid) == expected[spelling], (spelling, tid, names.get(tid))
+
+
+def test_a_day_recorded_empty_is_read_as_no_projection_not_an_error(tmp_path):
+    kenpom.write_fanmatch(kenpom.parse_fanmatch(b"[]", day=DAY), raw_dir=tmp_path, day=DAY)
+    assert kenpom.fanmatch_path(tmp_path, DAY).is_file()
+    projected, reason = CF.load_kenpom(tmp_path, day=DAY)
+    assert projected == {} and "resolves no game" in reason
