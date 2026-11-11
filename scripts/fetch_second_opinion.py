@@ -210,13 +210,20 @@ def _kenpom_fanmatch(key: str, as_of: str, raw_dir: Path, schedule) -> None:
     today = date.fromisoformat(as_of)
     days = [(today - timedelta(days=n)).isoformat() for n in range(kenpom.BACKFILL_DAYS, -1, -1)]
     named = False
-    fetched = games = 0
+    fetched = games = quiet = 0
     for day in days:
         if day != as_of and kenpom.fanmatch_path(raw_dir, day).is_file():
             continue
         try:
             payload = kenpom.fetch(key, "fanmatch", d=day)
         except kenpom.KenPomError as exc:
+            if "HTTP 404" in str(exc) and day != as_of:
+                # KenPom answers 404 for a day it has no games for (measured
+                # 2026-11-11: every day before the season's first). Recorded as
+                # an empty day so it is not asked again on every run.
+                kenpom.write_fanmatch(kenpom.parse_fanmatch(b"[]", day=day), raw_dir=raw_dir, day=day)
+                quiet += 1
+                continue
             print(f"::warning::KenPom FanMatch for {day} could not be read: {exc}", file=sys.stderr)
             continue
         if not named and kenpom.field_names(payload):
@@ -236,7 +243,8 @@ def _kenpom_fanmatch(key: str, as_of: str, raw_dir: Path, schedule) -> None:
             print(f"KenPom FanMatch {day}: {len(table)} game(s) projected, {both} with both teams resolved. Wrote {path}.")
             if unresolved:
                 print("  Unresolved (KenPom FanMatch): " + ", ".join(unresolved[:30]))
-    print(f"KenPom FanMatch: {fetched} day(s) read this run, {games} resolved game(s) written.")
+    print(f"KenPom FanMatch: {fetched} day(s) read this run, {games} resolved game(s) written"
+          + (f"; {quiet} earlier day(s) KenPom has no games for, recorded as empty." if quiet else "."))
 
 
 if __name__ == "__main__":
