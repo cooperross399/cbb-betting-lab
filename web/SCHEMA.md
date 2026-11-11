@@ -116,8 +116,8 @@ until each holds at least 10 games.
 A tally is `{w, l, p, bets, staked, units, returnPct}`; a grouped list is
 `[{key, ...tally}]`. A best bet is counted at 0.25u on a plus price, or
 enough to win 0.25u on a minus price, at the board's price, whatever the card
-staked it (2026-11-04); `staked` is the amount risked, and a push returns 0. A
-bet with no usable price is graded with `units: null`. A lean is tracked at the same 0.25u (2026-11-04), tallied under `opinions` and never in `overall`; a pass is graded and staked nothing (`units: null`). `byTier` keys are
+staked it (2026-11-04), up to +199; from +200 the NHL Due List's ladder applies, +200 to +500 at 0.15u, +501 to +1500 at 0.1u and longer than +1500 at 0.05u (2026-11-11, `stakeLadder`); `staked` is the amount risked, and a push returns 0. A
+bet with no usable price is graded with `units: null`. A lean is tracked at the same stakes (2026-11-04), tallied under `opinions` and never in `overall`; a pass is graded and staked nothing (`units: null`). `byTier` keys are
 the card's tier letters (A high major, B mid major, C low major).
 
 ## season.json

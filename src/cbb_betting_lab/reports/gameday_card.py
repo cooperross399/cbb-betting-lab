@@ -2884,7 +2884,7 @@ def _selections_section(run: CardRun) -> list[str]:
                 f"| {row['selection']}{line} "
                 f"| {float(row['american_odds']):+g} "
                 f"| {_bet_down_to_cell(row)} "
-                f"| {sizing.units(run.trust_weights.get(str(row.get('tier') or ''))):.2f}u "
+                f"| {sizing.units(run.trust_weights.get(str(row.get('tier') or '')), row.get('american_odds')):.2f}u "
                 f"| {row.get('timing') or timing.NEAR_TIP} "
                 f"| {row['book']} "
                 f"| {float(row['model_probability']):.1%} "
