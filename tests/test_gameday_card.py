@@ -1757,6 +1757,7 @@ def test_a_balance_under_the_daily_cap_but_over_tonights_bound_runs_capped_at_th
         "--archive-dir", str(tmp_path / "archive"),
         "--output-dir", str(tmp_path / "outputs"),
         "--raw-dir", str(tmp_path / "raw"),
+        "--staging-dir", str(tmp_path / "staging"),
     )
     captured = capsys.readouterr()
 
