@@ -3,7 +3,7 @@
   "slate_date": "2026-11-11",
   "decision": "selections",
   "degraded": "false",
-  "trigger": "workflow_dispatch",
-  "run_url": "https://github.com/cooperross399/cbb-betting-lab/actions/runs/43042824833",
-  "card_slot": "morning"
+  "trigger": "schedule",
+  "run_url": "https://github.com/cooperross399/cbb-betting-lab/actions/runs/43084586774",
+  "card_slot": "evening"
 }
