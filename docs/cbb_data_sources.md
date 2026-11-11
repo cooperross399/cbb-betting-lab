@@ -289,6 +289,22 @@ deviations from its own mean, at the same 0.5:
   `AdjTempo`, `TeamName`); resolved by name like T-Rank. Without the secret it
   is skipped and the log says so. Whether his plan includes API access is
   his to check; a plan without it answers an HTTP error, logged.
+  **Measured 2026-11-11** (Publish Board, the first run with the secret): 365
+  teams read, 348 resolved; the other 17 are spelled differently from ESPN or
+  are short forms the provider index will not place, and
+  `second_opinion.KNOWN_IDS` now names each by its ESPN id (decision 96).
+- **KenPom FanMatch** (decision 96), `data/raw/cbb/kenpom/fanmatch/<day>.csv`,
+  from `kenpom.com/api.php?endpoint=fanmatch&d=<day>` with the same key: KenPom's
+  projected score, home win probability and tempo for every game on a day,
+  read by field name and resolved by name. Fetched for today on every run and
+  for any of the last 28 days not already on disk, so the layer audit's
+  walk-forward has it. The card reads only the file of the day it prices.
+  **What it cannot tell us:** whether KenPom revises a past day's projection
+  after the games are played is not established, so a backfilled day is read
+  as KenPom files it today. Forward days are read as published that morning.
+  It feeds the candidate layer `kenpom`, off until the layer audit adds it.
+  **Licence:** subscriber data, never committed (git-ignored) and never shown
+  on the public site.
 - **The NCAA NET**, `<season>.ncaa_net.csv`, from the ncaa.com rankings page,
   fetched only when that site's robots.txt allows `ClaudeBot`, `anthropic-ai`
   and `*` alike; an unreadable robots.txt is a no. A rank is not a rating, so
@@ -430,7 +446,8 @@ the critical path — hoopR settles everything already wired.
 - **Sagarin** — **dead.** `Last-Modified: 20 Apr 2023`, header reads "FINAL
   College Basketball 2022-2023". No new ratings for three seasons.
 - **KenPom, EvanMiya, Haslametrics** — paid and ToS-restricted. Not scraped, not
-  depended on. KenPom ~$24.95/year with a paid API at an unpublished price;
+  depended on. (KenPom has since been read through its own API on Cooper's
+  subscription: decisions 92 and 96, above.) KenPom ~$24.95/year with a paid API at an unpublished price;
   EvanMiya ~$29.99/month. The subscription case is in the final report.
 - **NET rankings** — 365 D-I teams with an official `Non-Div I` column, which is
   a free authoritative marker for the exclusion. **No archive and no date

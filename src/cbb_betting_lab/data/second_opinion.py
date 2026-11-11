@@ -234,14 +234,43 @@ def spellings(name: str) -> list[str]:
     return seen
 
 
+#: Spellings a published table uses that the provider index will not place,
+#: by the ESPN team id they name. Read off KenPom's ratings on the first run
+#: with Cooper's key (Publish Board, 2026-11-11: 348 of 365 resolved, these 17
+#: not). Most are spelled differently from ESPN ("Appalachian St." for App
+#: State, "Illinois Chicago" for UIC); a few are short forms the index will not
+#: place on their own ("Boston College", "Seattle"). Each id is the one ESPN
+#: files the school under, checked against the schedule's own names by
+#: `tests/test_kenpom_projection.py`.
+KNOWN_IDS: dict[str, int] = {
+    "Albany": 399,
+    "Appalachian St.": 2026,
+    "Boston College": 103,
+    "Boston University": 104,
+    "Cal Baptist": 2856,
+    "Cornell": 172,
+    "Grambling St.": 2755,
+    "Hawaii": 62,
+    "Illinois Chicago": 82,
+    "Louisiana Monroe": 2433,
+    "Sam Houston St.": 2534,
+    "Seattle": 2547,
+    "Southeast Missouri": 2546,
+    "Southeastern Louisiana": 2545,
+    "Tennessee Martin": 2630,
+    "Texas A&M Corpus Chris": 357,
+    "USC Upstate": 2908,
+}
+
+
 def resolve(frame: pd.DataFrame, schedule: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
     """The table with this lab's team ids, and the names that did not resolve."""
     index = team_names.build_index(schedule)
     ids = []
     unresolved: list[str] = []
     for name in frame["team"]:
-        team = None
-        for spelling in spellings(name):
+        team = KNOWN_IDS.get(str(name or "").strip())
+        for spelling in ([] if team is not None else spellings(name)):
             team = index.resolve(spelling)
             if team is not None:
                 break

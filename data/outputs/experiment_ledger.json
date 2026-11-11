@@ -2884,6 +2884,48 @@
       "predicted_direction": "higher",
       "stage": "discovery",
       "realised_direction": ""
+    },
+    {
+      "search": "kenpom_projection_2026_11_11",
+      "name": "high-major: the candidate layer kenpom (the card's margin and total moved card_factors.KENPOM_BLEND_WEIGHT of the way to KenPom's own projected score for the game, read from its FanMatch endpoint with Cooper's key), once the layer audit puts it on the card, improves the card's closing-price return (forward only)",
+      "tested_on": "2026-11-11",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "kenpom_projection_2026_11_11",
+      "name": "mid-major: the candidate layer kenpom (the card's margin and total moved card_factors.KENPOM_BLEND_WEIGHT of the way to KenPom's own projected score for the game, read from its FanMatch endpoint with Cooper's key), once the layer audit puts it on the card, improves the card's closing-price return (forward only)",
+      "tested_on": "2026-11-11",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "kenpom_projection_2026_11_11",
+      "name": "low-major: the candidate layer kenpom (the card's margin and total moved card_factors.KENPOM_BLEND_WEIGHT of the way to KenPom's own projected score for the game, read from its FanMatch endpoint with Cooper's key), once the layer audit puts it on the card, improves the card's closing-price return (forward only)",
+      "tested_on": "2026-11-11",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
     }
   ]
 }

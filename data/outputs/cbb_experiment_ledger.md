@@ -4,11 +4,11 @@
 
 College basketball's large sample makes this **more** urgent, not less. A bigger n narrows every interval, including the intervals of the hypotheses that are wrong. Sample size buys power, never innocence.
 
-**200 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.87** before it means what it says.
+**203 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.87** before it means what it says.
 
 **Alpha budget: 6 new hypotheses a week**, declared 2026-09-01. Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state — re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise.
 
-**159 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
+**162 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
 
 | Search | Hypotheses |
 |:---|---:|
@@ -42,6 +42,7 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | price_shop_2026_11_09 | 3 |
 | trust_clv_2026_11_09 | 3 |
 | high_hold_gate_2026_11_09 | 3 |
+| kenpom_projection_2026_11_11 | 3 |
 | november_prior | 2 |
 | reachability | 1 |
 | champion_challenger | 1 |
@@ -250,6 +251,9 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | 198 | high_hold_gate_2026_11_09 | high-major: the closing-line gate taking a tier's team totals and alternate ladders off the card when the closing-line alarm grades them, at their own prices against the main market's close translated through a normal at their own number, as losing to the close (models/closing_gate.py, reports/closing_alarm.py) improves the card's closing-price return (forward only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-09 | pending |
 | 199 | high_hold_gate_2026_11_09 | mid-major: the closing-line gate taking a tier's team totals and alternate ladders off the card when the closing-line alarm grades them, at their own prices against the main market's close translated through a normal at their own number, as losing to the close (models/closing_gate.py, reports/closing_alarm.py) improves the card's closing-price return (forward only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-09 | pending |
 | 200 | high_hold_gate_2026_11_09 | low-major: the closing-line gate taking a tier's team totals and alternate ladders off the card when the closing-line alarm grades them, at their own prices against the main market's close translated through a normal at their own number, as losing to the close (models/closing_gate.py, reports/closing_alarm.py) improves the card's closing-price return (forward only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-09 | pending |
+| 201 | kenpom_projection_2026_11_11 | high-major: the candidate layer kenpom (the card's margin and total moved card_factors.KENPOM_BLEND_WEIGHT of the way to KenPom's own projected score for the game, read from its FanMatch endpoint with Cooper's key), once the layer audit puts it on the card, improves the card's closing-price return (forward only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-11 | pending |
+| 202 | kenpom_projection_2026_11_11 | mid-major: the candidate layer kenpom (the card's margin and total moved card_factors.KENPOM_BLEND_WEIGHT of the way to KenPom's own projected score for the game, read from its FanMatch endpoint with Cooper's key), once the layer audit puts it on the card, improves the card's closing-price return (forward only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-11 | pending |
+| 203 | kenpom_projection_2026_11_11 | low-major: the candidate layer kenpom (the card's margin and total moved card_factors.KENPOM_BLEND_WEIGHT of the way to KenPom's own projected score for the game, read from its FanMatch endpoint with Cooper's key), once the layer audit puts it on the card, improves the card's closing-price return (forward only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-11 | pending |
 
 ## 7 quantities declared descriptive-only
 
