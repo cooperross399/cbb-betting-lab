@@ -175,6 +175,7 @@ CANDIDATE_LAYERS: tuple[tuple[str, str], ...] = (
     ("november_form", "Early-season form, learned faster"),
     ("four_factors", "Four-factor style matchup"),
     ("close_game_luck", "Close-game luck"),
+    ("kenpom", "KenPom's projection"),
 )
 #: `lineup_strict`: a rotation player counts as out only after missing this
 #: many of the club's games in a row. When on, it replaces the single-game
@@ -274,6 +275,10 @@ SHOT_QUALITY_ZONES = ("rim", "mid")
 #: played, say of tonight. Margin and total both, so the totals side of the
 #: card reads the market's view of each team's pace and scoring too.
 MARKET_BLEND_WEIGHT = 0.5
+#: `kenpom` (decision 96): the share of the way from the card's margin and
+#: total to KenPom's own projected score (FanMatch) for the game. The same
+#: mechanic and weight as `market_ratings`, chosen before any price was read.
+KENPOM_BLEND_WEIGHT = 0.5
 
 #: Where the audit's switches are read from, and how stale they may be.
 LAYER_AUDIT_DIR = "layer_audit"
@@ -359,6 +364,9 @@ class DayContext:
     wab: dict = field(default_factory=dict)
     #: team_id -> close-game luck taken back, per 100 (candidate, decision 92).
     close_game_luck: dict = field(default_factory=dict)
+    #: (home_id, away_id) -> (home points, away points, home win probability),
+    #: KenPom's projection for the day's games (candidate, decision 96).
+    kenpom: dict = field(default_factory=dict)
     #: layer key -> on the card or not; `default_switches` unless an audit
     #: dated within `LAYER_AUDIT_MAX_AGE_DAYS` of the day said otherwise.
     switches: dict = field(default_factory=default_switches)
@@ -1086,6 +1094,61 @@ def load_market_ratings(raw_dir, schedule, *, day: str):
         return None
 
 
+def kenpom_path(raw_dir: Path | str | None, day: str) -> Path:
+    base = Path(raw_dir) if raw_dir else Path("data/raw")
+    return base / CBB.data_dir_segment / "kenpom" / "fanmatch" / f"{str(day)[:10]}.csv"
+
+
+def load_kenpom(raw_dir: Path | str | None, *, day: str) -> tuple[dict, str]:
+    """KenPom's projected scores for `day`'s games, keyed by (home id, away id)
+    as KenPom filed them, from the file of THAT day only: a day is never priced
+    with a projection published for a later one. Empty, with the reason, when
+    there is no file or nothing in it resolves."""
+    path = kenpom_path(raw_dir, day)
+    if not path.is_file():
+        return {}, f"no KenPom projection on disk for {str(day)[:10]}"
+    try:
+        frame = pd.read_csv(path)
+    except (OSError, ValueError, pd.errors.ParserError, pd.errors.EmptyDataError) as exc:
+        return {}, f"KenPom's projection at {path} could not be read ({exc})"
+    out: dict = {}
+    for row in frame.itertuples(index=False):
+        if str(getattr(row, "day", ""))[:10] != str(day)[:10]:
+            continue
+        try:
+            home_id, away_id = int(row.home_id), int(row.away_id)
+            hp, ap = float(row.home_pred), float(row.away_pred)
+        except (TypeError, ValueError, AttributeError):
+            continue
+        if not (np.isfinite(hp) and np.isfinite(ap)):
+            continue
+        wp = getattr(row, "home_wp", float("nan"))
+        try:
+            wp = float(wp)
+        except (TypeError, ValueError):
+            wp = float("nan")
+        out[(home_id, away_id)] = (hp, ap, wp)
+    if not out:
+        return {}, f"KenPom's projection for {str(day)[:10]} resolves no game"
+    return out, ""
+
+
+def kenpom_for(context: "DayContext", home_id, away_id) -> tuple[float, float, float] | None:
+    """KenPom's (home points, away points, home win probability) oriented to
+    THIS matchup's home side, or None. A neutral-floor game KenPom filed the
+    other way round is turned over rather than missed."""
+    try:
+        h, a = int(home_id), int(away_id)
+    except (TypeError, ValueError):
+        return None
+    if (h, a) in context.kenpom:
+        return context.kenpom[(h, a)]
+    if (a, h) in context.kenpom:
+        hp, ap, wp = context.kenpom[(a, h)]
+        return ap, hp, (1.0 - wp) if wp == wp else wp
+    return None
+
+
 def build_context(
     *,
     day: str,
@@ -1162,6 +1225,9 @@ def build_context(
     context.market_ratings = load_market_ratings(raw_dir, schedule, day=day)
     if context.market_ratings is None or not len(context.market_ratings):
         context.notes.append("no betting-line ratings yet, so that layer moves nothing")
+    context.kenpom, reason = load_kenpom(raw_dir, day=day)
+    if reason:
+        context.notes.append(reason)
     switches, as_of, reason = load_layer_audit(raw_dir, day=day)
     if switches is not None:
         context.switches = switches
@@ -1467,6 +1533,31 @@ def apply(
     detail["close_game_luck"] = {"home": luck_home, "away": luck_away}
     detail["resume"] = {"wab_home": context.wab.get(home_id), "wab_away": context.wab.get(away_id)}
     take("close_game_luck", (-(luck_home - luck_away) / 2.0, (luck_home - luck_away) / 2.0, 0.0))
+
+    # KenPom's projection (decision 96): margin and total toward KenPom's own
+    # projected score for this game, the same blend as the betting-line
+    # ratings above. A game KenPom did not project moves nothing.
+    projected = kenpom_for(context, home_id, away_id)
+    move = (0.0, 0.0, 0.0)
+    if projected is not None and possessions > 0:
+        k_margin = projected[0] - projected[1]
+        k_total = projected[0] + projected[1]
+        margin_now = (home - away) * possessions / 100.0
+        total_now = (home + away) * possessions / 100.0
+        margin_new = margin_now + KENPOM_BLEND_WEIGHT * (k_margin - margin_now)
+        total_new = total_now + KENPOM_BLEND_WEIGHT * (k_total - total_now)
+        move = (
+            (total_new + margin_new) / 2.0 * 100.0 / possessions - home,
+            (total_new - margin_new) / 2.0 * 100.0 / possessions - away,
+            0.0,
+        )
+    detail["kenpom"] = {
+        "margin": None if projected is None else projected[0] - projected[1],
+        "total": None if projected is None else projected[0] + projected[1],
+        "home_win_probability": None if projected is None else projected[2],
+        "weight": KENPOM_BLEND_WEIGHT,
+    }
+    take("kenpom", move)
 
     detail["switches"] = {key: context.is_on(key) for key in SWITCHABLE}
     detail["audit_as_of"] = context.audit_as_of

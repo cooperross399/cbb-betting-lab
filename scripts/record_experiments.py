@@ -1722,6 +1722,42 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    # ---------------------------------------------------------------------
+    # decision 96 (Cooper, 2026-11-11, 'work the kenpom rankings and stats into the model'): the candidate layer kenpom, the card's margin and total moved card_factors.KENPOM_BLEND_WEIGHT of the way to KenPom's own projected score (FanMatch). Registered before it was built. Per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="kenpom_projection_2026_11_11",
+        name=(
+            "high-major: the candidate layer kenpom (the card's margin and total moved card_factors.KENPOM_BLEND_WEIGHT of the way to KenPom's own projected score for the game, read from its FanMatch endpoint with Cooper's key), once the layer audit puts it on the card, improves the card's closing-price return (forward only)"
+        ),
+        tested_on="2026-11-11",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="kenpom_projection_2026_11_11",
+        name=(
+            "mid-major: the candidate layer kenpom (the card's margin and total moved card_factors.KENPOM_BLEND_WEIGHT of the way to KenPom's own projected score for the game, read from its FanMatch endpoint with Cooper's key), once the layer audit puts it on the card, improves the card's closing-price return (forward only)"
+        ),
+        tested_on="2026-11-11",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="kenpom_projection_2026_11_11",
+        name=(
+            "low-major: the candidate layer kenpom (the card's margin and total moved card_factors.KENPOM_BLEND_WEIGHT of the way to KenPom's own projected score for the game, read from its FanMatch endpoint with Cooper's key), once the layer audit puts it on the card, improves the card's closing-price return (forward only)"
+        ),
+        tested_on="2026-11-11",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 

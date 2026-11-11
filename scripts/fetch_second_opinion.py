@@ -155,11 +155,16 @@ def _more_tables(season: int, as_of: str, raw_dir: Path) -> bool:
     key = os.environ.get("KENPOM_API_KEY", "").strip()
     if key:
         try:
-            table = second_opinion.parse_kenpom(second_opinion.fetch_kenpom(key, season))
+            from cbb_betting_lab.data import kenpom
+
+            payload = second_opinion.fetch_kenpom(key, season)
+            print("KenPom ratings fields: " + ", ".join(kenpom.field_names(payload)))
+            table = second_opinion.parse_kenpom(payload)
             wrote |= _write_named(table, source=second_opinion.KENPOM_SOURCE, season=season,
                                   as_of=as_of, raw_dir=raw_dir, schedule=schedule)
         except second_opinion.SecondOpinionError as exc:
             print(f"::warning::KenPom could not be read: {exc}", file=sys.stderr)
+        _kenpom_fanmatch(key, as_of, raw_dir, schedule)
     else:
         print("KenPom: no KENPOM_API_KEY secret, so not read.")
     allowed, why = second_opinion.allowed_by_robots(second_opinion.NET_URL)
@@ -189,6 +194,49 @@ def _more_tables(season: int, as_of: str, raw_dir: Path) -> bool:
         wrote |= _write_named(table, source=source, season=season, as_of=day,
                               raw_dir=raw_dir, schedule=schedule)
     return wrote
+
+
+def _kenpom_fanmatch(key: str, as_of: str, raw_dir: Path, schedule) -> None:
+    """KenPom's projected scores for today, and for every day of the last
+    `kenpom.BACKFILL_DAYS` not already on disk (decision 96). Soft: a day that
+    cannot be read is skipped and the log says so; the key is never printed."""
+    from datetime import date, timedelta
+
+    from cbb_betting_lab.data import kenpom
+
+    if schedule is None:
+        print("::warning::KenPom FanMatch: no cached schedule, so its names cannot be resolved.", file=sys.stderr)
+        return
+    today = date.fromisoformat(as_of)
+    days = [(today - timedelta(days=n)).isoformat() for n in range(kenpom.BACKFILL_DAYS, -1, -1)]
+    named = False
+    fetched = games = 0
+    for day in days:
+        if day != as_of and kenpom.fanmatch_path(raw_dir, day).is_file():
+            continue
+        try:
+            payload = kenpom.fetch(key, "fanmatch", d=day)
+        except kenpom.KenPomError as exc:
+            print(f"::warning::KenPom FanMatch for {day} could not be read: {exc}", file=sys.stderr)
+            continue
+        if not named and kenpom.field_names(payload):
+            print("KenPom FanMatch fields: " + ", ".join(kenpom.field_names(payload)))
+            named = True
+        try:
+            table = kenpom.parse_fanmatch(payload, day=day)
+        except kenpom.KenPomError as exc:
+            print(f"::warning::KenPom FanMatch for {day}: {exc}", file=sys.stderr)
+            continue
+        resolved, unresolved = kenpom.resolve(table, schedule)
+        path = kenpom.write_fanmatch(resolved, raw_dir=raw_dir, day=day)
+        fetched += 1
+        both = int((resolved["home_id"].notna() & resolved["away_id"].notna()).sum()) if len(resolved) else 0
+        games += both
+        if day == as_of:
+            print(f"KenPom FanMatch {day}: {len(table)} game(s) projected, {both} with both teams resolved. Wrote {path}.")
+            if unresolved:
+                print("  Unresolved (KenPom FanMatch): " + ", ".join(unresolved[:30]))
+    print(f"KenPom FanMatch: {fetched} day(s) read this run, {games} resolved game(s) written.")
 
 
 if __name__ == "__main__":

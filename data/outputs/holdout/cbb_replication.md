@@ -12,9 +12,9 @@ Generated 2026-09-18T00:22:10Z.
 
 **The discovery record does not name the model that priced it.** The agreement between the two runs on that one point is asserted by the operator who passed `--model`, not verified by this report, and it is said here rather than left implicit.
 
-**Family correction: 200 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.87. That is the ledger's **cumulative** count and never the day's — a search that runs every week is not twelve tests, it is twelve tests a week, forever. 32 of them are this run's own holdout looks: putting a discovery finding to the holdout **is** a second look and is counted as one.
+**Family correction: 203 cumulative hypotheses** in the experiment ledger, widening every 95% interval by x1.87. That is the ledger's **cumulative** count and never the day's — a search that runs every week is not twelve tests, it is twelve tests a week, forever. 32 of them are this run's own holdout looks: putting a discovery finding to the holdout **is** a second look and is counted as one.
 
-**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 133 cumulative hypotheses (x1.8145), and `cbb_replication.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 200 hypotheses (x1.8685), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
+**The verdicts below are stated at the ledger's count as of this render, not the one this run was scored at.** The run itself was scored at 133 cumulative hypotheses (x1.8145), and `cbb_replication.json` still records that — it is the measurement and it does not move. Every corrected interval and every verdict below is re-derived from that run's own point estimates and standard errors at 203 hypotheses (x1.8705), the ledger's cumulative count at render time. Nothing was re-measured to do it, and a wider correction can only ever retract a claim — never make one.
 
 **Below 2,000 held-out bets there is no number**, only the words *not enough evidence*. That floor is `promotion.Criteria.minimum_bets`, declared 2026-09-01 in `/Users/cooperross/Projects/cbb-betting-lab/data/manual/promotion_criteria.json`. This module reads that bar rather than inventing a second one — a bar written here would be a bar chosen after the first one existed.
 
@@ -38,7 +38,7 @@ The **Discovery** column quotes the backtest's own figure at the backtest's own 
 | mid_major | alternate_spread | -6.8% over 8,349 (no claim) | 0 | 0 | — | — | — | — | **untestable** |
 | mid_major | alternate_team_total | — | 0 | 0 | — | — | — | — | **untestable** |
 | mid_major | alternate_total_points | -15.6% over 7,598 (no claim) | 0 | 0 | — | — | — | — | **untestable** |
-| mid_major | moneyline | -7.8% over 5,854 (no claim) | 3,019 | 229 | -8.6% | -15.0% to -2.1% | -20.7% to +3.5% | no demonstrated edge | **not enough evidence** |
+| mid_major | moneyline | -7.8% over 5,854 (no claim) | 3,019 | 229 | -8.6% | -15.0% to -2.1% | -20.7% to +3.6% | no demonstrated edge | **not enough evidence** |
 | mid_major | moneyline_h1 | — | 0 | 0 | — | — | — | — | **untestable** |
 | mid_major | spread | -2.5% over 12,821 (no claim) | 7,147 | 3,053 | -3.6% | -7.2% to +0.0% | -10.3% to +3.1% | no demonstrated edge | **nothing to replicate** |
 | mid_major | spread_h1 | -15.2% over 693 (no claim) | 0 | 0 | — | — | — | — | **untestable** |
@@ -85,7 +85,7 @@ Every state below carries its sample size, and every cell whose held-out interva
 - **mid_major / moneyline_h1 — untestable**: 2025: the held-out season carries no graded bet in this cell, so no test was run. That is not a failure to replicate — those are different claims and this lab does not report them the same way.; 2026: the held-out season carries no graded bet in this cell, so no test was run. That is not a failure to replicate — those are different claims and this lab does not report them the same way.
 - **mid_major / spread — nothing to replicate**: 2025: the discovery window demonstrated nothing here (no demonstrated edge), so there is no result to reproduce. The held-out season is no demonstrated edge as well, over 3,665 bets.; 2026: the discovery window demonstrated nothing here (no demonstrated edge), so there is no result to reproduce. The held-out season is no demonstrated edge as well, over 3,482 bets.
 - **mid_major / spread_h1 — untestable**: 2025: the held-out season carries no graded bet in this cell, so no test was run. That is not a failure to replicate — those are different claims and this lab does not report them the same way.; 2026: the held-out season carries no graded bet in this cell, so no test was run. That is not a failure to replicate — those are different claims and this lab does not report them the same way.
-- **mid_major / team_total — nothing to replicate**: 2025: the discovery window demonstrated nothing here (no demonstrated edge), so there is no result to reproduce. The held-out season is no demonstrated edge as well, over 3,421 bets.; 2026: the discovery window demonstrated nothing here (no demonstrated edge), so there is no result to reproduce — and the held-out season's own -6.9% over 4,429 bets excludes zero. That is a NEW DISCOVERY MADE ON THE HOLDOUT, not a replication: the only clean season this lab had is now spent on it, and it has no held-out test of its own.
+- **mid_major / team_total — nothing to replicate**: 2025: the discovery window demonstrated nothing here (no demonstrated edge), so there is no result to reproduce. The held-out season is no demonstrated edge as well, over 3,421 bets.; 2026: the discovery window demonstrated nothing here (no demonstrated edge), so there is no result to reproduce. The held-out season is no demonstrated edge as well, over 4,429 bets.
 - **mid_major / total_points — nothing to replicate**: 2025: the discovery window demonstrated nothing here (no demonstrated edge), so there is no result to reproduce. The held-out season is no demonstrated edge as well, over 4,220 bets.; 2026: the discovery window demonstrated nothing here (no demonstrated edge), so there is no result to reproduce. The held-out season is no demonstrated edge as well, over 4,047 bets.
 - **mid_major / total_points_h1 — untestable**: 2025: the held-out season carries no graded bet in this cell, so no test was run. That is not a failure to replicate — those are different claims and this lab does not report them the same way.; 2026: the held-out season carries no graded bet in this cell, so no test was run. That is not a failure to replicate — those are different claims and this lab does not report them the same way.
 - **low_major / alternate_spread — untestable**: 2025: the held-out season carries no graded bet in this cell, so no test was run. That is not a failure to replicate — those are different claims and this lab does not report them the same way.; 2026: the held-out season carries no graded bet in this cell, so no test was run. That is not a failure to replicate — those are different claims and this lab does not report them the same way.
@@ -102,12 +102,6 @@ Every state below carries its sample size, and every cell whose held-out interva
 - **unplaced / spread — untestable**: 2025: the held-out season carries no graded bet in this cell, so no test was run. That is not a failure to replicate — those are different claims and this lab does not report them the same way.; 2026: the held-out season carries no graded bet in this cell, so no test was run. That is not a failure to replicate — those are different claims and this lab does not report them the same way.
 - **unplaced / total_points — untestable**: 2025: the held-out season carries no graded bet in this cell, so no test was run. That is not a failure to replicate — those are different claims and this lab does not report them the same way.; 2026: the held-out season carries no graded bet in this cell, so no test was run. That is not a failure to replicate — those are different claims and this lab does not report them the same way.
 
-### Found on the holdout, which is not a replication
-
-1 cell(s) demonstrated nothing in the discovery window and demonstrate something on the held-out season. **That is a new discovery made on the only clean data this lab had left**, not a confirmation of anything: the cell has no held-out test of its own, and the season it would have been tested on has now been spent. It is counted in the experiment ledger like any other look and it is not a candidate for a receipt.
-
-- mid_major / team_total: -6.8% over 7,850 held-out bets — demonstrated deficit.
-
 ### Every held-out season on its own
 
 `must_clear_every_season` is pre-registered: a cell replicates only if it replicates in **all 2** of these, never on their pooled average. The football lab's verdict for one policy flipped depending on which season had been scored last — same policy, same script, opposite verdicts.
@@ -123,13 +117,13 @@ Every state below carries its sample size, and every cell whose held-out interva
 | high_major | moneyline_h1 | 2025 | 0 | 0 | — | — | — | untestable |
 | high_major | moneyline_h1 | 2026 | 0 | 0 | — | — | — | untestable |
 | high_major | spread | 2025 | 2,456 | 938 | -1.7% | -8.1% to +4.6% | -13.6% to +10.1% | nothing to replicate |
-| high_major | spread | 2026 | 2,042 | 817 | -6.1% | -13.1% to +0.8% | -19.1% to +6.8% | nothing to replicate |
+| high_major | spread | 2026 | 2,042 | 817 | -6.1% | -13.1% to +0.8% | -19.1% to +6.9% | nothing to replicate |
 | high_major | spread_h1 | 2025 | 0 | 0 | — | — | — | untestable |
 | high_major | spread_h1 | 2026 | 0 | 0 | — | — | — | untestable |
 | high_major | team_total | 2025 | 2,224 | 966 | -4.1% | -8.6% to +0.3% | -12.4% to +4.2% | nothing to replicate |
 | high_major | team_total | 2026 | 2,363 | 833 | -3.1% | -8.0% to +1.8% | -12.2% to +6.0% | nothing to replicate |
 | high_major | total_points | 2025 | 2,660 | 127 | -4.6% | -11.0% to +1.8% | -16.6% to +7.4% | nothing to replicate |
-| high_major | total_points | 2026 | 2,296 | 119 | -2.4% | -9.5% to +4.7% | -15.7% to +10.8% | nothing to replicate |
+| high_major | total_points | 2026 | 2,296 | 119 | -2.4% | -9.5% to +4.7% | -15.7% to +10.9% | nothing to replicate |
 | high_major | total_points_h1 | 2025 | 0 | 0 | — | — | — | untestable |
 | high_major | total_points_h1 | 2026 | 0 | 0 | — | — | — | untestable |
 | mid_major | alternate_spread | 2025 | 0 | 0 | — | — | — | untestable |
@@ -147,7 +141,7 @@ Every state below carries its sample size, and every cell whose held-out interva
 | mid_major | spread_h1 | 2025 | 0 | 0 | — | — | — | untestable |
 | mid_major | spread_h1 | 2026 | 0 | 0 | — | — | — | untestable |
 | mid_major | team_total | 2025 | 3,421 | 115 | -6.6% | -10.6% to -2.7% | -14.0% to +0.7% | nothing to replicate |
-| mid_major | team_total | 2026 | 4,429 | 1,659 | -6.9% | -10.6% to -3.2% | -13.8% to -0.0% | nothing to replicate |
+| mid_major | team_total | 2026 | 4,429 | 1,659 | -6.9% | -10.6% to -3.2% | -13.8% to +0.0% | nothing to replicate |
 | mid_major | total_points | 2025 | 4,220 | 129 | -8.5% | -13.8% to -3.2% | -18.4% to +1.4% | nothing to replicate |
 | mid_major | total_points | 2026 | 4,047 | 1,592 | -4.5% | -9.5% to +0.5% | -13.8% to +4.8% | nothing to replicate |
 | mid_major | total_points_h1 | 2025 | 0 | 0 | — | — | — | untestable |

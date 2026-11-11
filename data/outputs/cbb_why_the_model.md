@@ -14,7 +14,7 @@ Read `docs/what_we_can_and_cannot_claim.md` first. This says what the evidence *
 
 Measured on 175,690 graded bets over 26,622 games and 791 days of the 2021-2026 seasons, across 32 market-and-tier cells.
 
-Every interval is corrected for 200 cumulative distinct hypotheses — the experiment ledger's count at render time, not the count when the backtest ran — which widens each one by x1.87. The correction can only ever get stricter as the search continues, which is the only direction it is allowed to move.
+Every interval is corrected for 203 cumulative distinct hypotheses — the experiment ledger's count at render time, not the count when the backtest ran — which widens each one by x1.87. The correction can only ever get stricter as the search continues, which is the only direction it is allowed to move.
 
 | Tier | Result |
 |:---|:---|
@@ -28,8 +28,8 @@ Cut finer, by market **and** tier: **0 of 32 cells shows a demonstrated edge** a
 - `moneyline / high_major`: 4,393 bets, **-11.1%**, corrected -21.7% to -0.4% — demonstrated deficit
 - `moneyline / mid_major`: 8,873 bets, **-8.0%**, corrected -14.9% to -1.2% — demonstrated deficit
 - `team_total / mid_major`: 11,618 bets, **-6.3%**, corrected -10.2% to -2.4% — demonstrated deficit
-- `moneyline / low_major`: 6,967 bets, **-9.8%**, corrected -16.9% to -2.6% — demonstrated deficit
-- `total_points / low_major`: 17,978 bets, **-5.2%**, corrected -9.6% to -0.8% — demonstrated deficit
+- `moneyline / low_major`: 6,967 bets, **-9.8%**, corrected -17.0% to -2.6% — demonstrated deficit
+- `total_points / low_major`: 17,978 bets, **-5.2%**, corrected -9.7% to -0.8% — demonstrated deficit
 
 ### The tier this lab was built expecting to be the best
 
@@ -65,8 +65,8 @@ Each is a rule that needs no model at all. All 3 measured tiers return more than
 
 | Tier | Rows | Model minus raw market | Reading |
 |:---|---:|:---|:---|
-| high-major | 53,844 | -0.01783, corrected -0.02397 to -0.01168 | demonstrated deficit |
-| mid-major | 127,094 | -0.01066, corrected -0.01439 to -0.00693 | demonstrated deficit |
+| high-major | 53,844 | -0.01783, corrected -0.02398 to -0.01168 | demonstrated deficit |
+| mid-major | 127,094 | -0.01066, corrected -0.01440 to -0.00693 | demonstrated deficit |
 | low-major | 89,546 | -0.00782, corrected -0.01130 to -0.00434 | demonstrated deficit |
 
 A **negative** advantage is the model scoring worse than the price it is betting into. The verdict column reads the sign the same way every other interval in this repository does; it is a Brier difference and not a return, and it is never added to one.
@@ -79,7 +79,7 @@ In high-major (0.25160 against 0.25000, 53,844 rows) the model's Brier is worse 
   - claimed-edge bucket (below -10%): 21,290 bets, **-3.5%**, corrected -9.2% to +2.3% — no demonstrated edge
   - claimed-edge bucket (-10% to -5%): 4,642 bets, **-0.8%**, corrected -8.7% to +7.0% — no demonstrated edge
   - claimed-edge bucket (-5% to +0%): 4,847 bets, **-5.2%**, corrected -12.1% to +1.8% — no demonstrated edge
-  - claimed-edge bucket (+0% to +2%): 1,769 bets, **-6.4%**, corrected -20.0% to +7.1% — no demonstrated edge
+  - claimed-edge bucket (+0% to +2%): 1,769 bets, **-6.4%**, corrected -20.0% to +7.2% — no demonstrated edge
   - worst-returning bucket (+2% to +5%): 2,474 bets, **-9.5%**, corrected -19.4% to +0.4% — no demonstrated edge
   - claimed-edge bucket (+5% to +10%): 3,654 bets, **-4.7%**, corrected -15.7% to +6.3% — no demonstrated edge
   - claimed-edge bucket (+10% to +20%): 5,609 bets, **-3.8%**, corrected -12.7% to +5.0% — no demonstrated edge
@@ -89,7 +89,7 @@ In high-major (0.25160 against 0.25000, 53,844 rows) the model's Brier is worse 
   - claimed-edge bucket (-10% to -5%): 13,774 bets, **-1.4%**, corrected -5.6% to +2.9% — no demonstrated edge
   - claimed-edge bucket (-5% to +0%): 14,264 bets, **-4.0%**, corrected -8.7% to +0.6% — no demonstrated edge
   - claimed-edge bucket (+0% to +2%): 5,177 bets, **-4.8%**, corrected -12.6% to +2.9% — no demonstrated edge
-  - claimed-edge bucket (+2% to +5%): 7,278 bets, **-5.1%**, corrected -12.2% to +2.1% — no demonstrated edge
+  - claimed-edge bucket (+2% to +5%): 7,278 bets, **-5.1%**, corrected -12.3% to +2.1% — no demonstrated edge
   - worst-returning bucket (+5% to +10%): 10,038 bets, **-6.2%**, corrected -13.0% to +0.7% — no demonstrated edge
   - claimed-edge bucket (+10% to +20%): 13,457 bets, **-2.7%**, corrected -9.4% to +4.0% — no demonstrated edge
   - claimed-edge bucket (+20% and above): 16,132 bets, **-5.7%**, corrected -13.0% to +1.6% — no demonstrated edge
@@ -100,7 +100,7 @@ In high-major (0.25160 against 0.25000, 53,844 rows) the model's Brier is worse 
   - claimed-edge bucket (+0% to +2%): 3,985 bets, **-1.4%**, corrected -9.5% to +6.7% — no demonstrated edge
   - claimed-edge bucket (+2% to +5%): 5,418 bets, **-4.1%**, corrected -11.7% to +3.6% — no demonstrated edge
   - claimed-edge bucket (+5% to +10%): 7,820 bets, **-3.9%**, corrected -10.4% to +2.7% — no demonstrated edge
-  - claimed-edge bucket (+10% to +20%): 10,186 bets, **-5.5%**, corrected -12.8% to +1.8% — no demonstrated edge
+  - claimed-edge bucket (+10% to +20%): 10,186 bets, **-5.5%**, corrected -12.9% to +1.8% — no demonstrated edge
   - worst-returning bucket (+20% and above): 9,225 bets, **-5.8%**, corrected -14.2% to +2.6% — no demonstrated edge
 
 A bucket whose family-corrected interval lies entirely below zero is worse than no edge, not the same as it: in low-major -5% to +0% the model's own claimed edge selected wagers that lost money on the evidence of this run. Each is printed above with the corrected interval this sentence is read off.

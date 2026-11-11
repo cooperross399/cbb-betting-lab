@@ -1256,6 +1256,7 @@ jobs:
             data/raw/cbb/schedules/
             data/raw/cbb/second_opinion/
             data/raw/cbb/layer_audit/
+            data/raw/cbb/kenpom/
           if-no-files-found: warn
           retention-days: 3
 
