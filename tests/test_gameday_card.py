@@ -1707,8 +1707,16 @@ def test_a_run_that_starts_with_less_quota_than_its_cap_refuses(
     """Refusing loses a night. Starting short freezes the games the run happened
     to reach — and in this sport the fetch works in tip order, so a starved run
     keeps the early games and drops the late ones, which is the West Coast,
-    low-major end of the board this lab was built to look at."""
-    monkeypatch.setattr(odds_api, "OddsApiProvider", FakeProvider)
+    low-major end of the board this lab was built to look at.
+
+    Since 2026-11-11 a balance under the daily cap is compared with tonight's
+    own bound before refusing; this balance is under both (an empty slate's
+    bound is the bulk call, three markets by two regions)."""
+
+    class ShortProvider(FakeProvider):
+        remaining = "3"
+
+    monkeypatch.setattr(odds_api, "OddsApiProvider", ShortProvider)
     status = run_script(
         "--live",
         "--card-slot", "morning",
@@ -1723,6 +1731,38 @@ def test_a_run_that_starts_with_less_quota_than_its_cap_refuses(
     assert "Refusing to start" in captured.err
     assert captured.out.rstrip().endswith(f"decision={GC.Decision.REFUSED.value}")
     assert not (tmp_path / "archive").exists()
+
+
+def test_a_balance_under_the_daily_cap_but_over_tonights_bound_runs_capped_at_the_bound(
+    tmp_path, monkeypatch, capsys, no_network, no_credential
+):
+    """Cooper, 2026-11-11: 39,164 credits against the 40,000 daily cap refused
+    a slate whose own bound was a few thousand. A balance under the daily cap
+    is compared with the slate's pessimistic bound, and the run is capped at
+    that bound so the per-event stage fits whole or not at all."""
+    seen: dict[str, int] = {}
+
+    class TightProvider(FakeProvider):
+        remaining = "39164"
+
+        def fetch_bulk(self, markets, *, spend, credit_cap):
+            seen["cap"] = credit_cap
+            return super().fetch_bulk(markets, spend=spend, credit_cap=credit_cap)
+
+    monkeypatch.setattr(odds_api, "OddsApiProvider", TightProvider)
+    run_script(
+        "--live",
+        "--card-slot", "morning",
+        "--credit-cap", "40000",
+        "--archive-dir", str(tmp_path / "archive"),
+        "--output-dir", str(tmp_path / "outputs"),
+        "--raw-dir", str(tmp_path / "raw"),
+    )
+    captured = capsys.readouterr()
+
+    assert "Refusing to start" not in captured.err
+    assert "Tonight's pessimistic bound is 6 credits" in captured.out
+    assert seen.get("cap") == 6, "The run was not capped at tonight's bound."
 
 
 def test_the_cap_is_charged_from_the_measured_header_not_the_estimate(now):
