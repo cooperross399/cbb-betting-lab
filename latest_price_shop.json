@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 315,
-      "away_team": "USC Trojans",
-      "book": "fanduel",
-      "books": 18,
-      "commence": "2026-11-12T04:00:00+00:00",
-      "edge": 0.0358,
-      "event_id": "92cc2f2a169d4efd4f1a0ac9d25672bc",
-      "fair_american": 301,
-      "game": "USC Trojans at California Golden Bears",
-      "home_team": "California Golden Bears",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "as_of": "2026-11-11T18:14+00:00",
-  "captures": 122,
+  "alerts": [],
+  "as_of": "2026-11-11T19:14+00:00",
+  "captures": 123,
   "cells": [
     {
       "beat_close": 0.6923076923076923,
@@ -54,13 +38,13 @@
       "ungraded": 1
     },
     {
-      "beat_close": 0.4,
-      "games": 5,
-      "graded": 5,
+      "beat_close": 0.3333333333333333,
+      "games": 6,
+      "graded": 6,
       "high": null,
       "low": null,
-      "mean": -0.06036779961047976,
-      "shops": 7,
+      "mean": -0.057137100768296034,
+      "shops": 8,
       "tier": "unplaced",
       "ungraded": 2
     }
@@ -68,19 +52,19 @@
   "correction_factor": 1.8704788371613228,
   "current": [
     {
-      "american": 460,
-      "away_team": "Loyola (Chi) Ramblers",
-      "book": "ballybet",
-      "books": 17,
-      "commence": "2026-11-11T20:00:00+00:00",
-      "edge": 0.029,
-      "event_id": "b4a1814a6efc7eb096e5ac5e857915b5",
-      "fair_american": 444,
-      "game": "Loyola (Chi) Ramblers at Air Force Falcons",
-      "home_team": "Air Force Falcons",
+      "american": 325,
+      "away_team": "North Carolina Central Eagles",
+      "book": "hardrockbet",
+      "books": 15,
+      "commence": "2026-11-11T23:00:00+00:00",
+      "edge": 0.0213,
+      "event_id": "5b6355f8a6a8f6fe34a477c2b8e3a7e7",
+      "fair_american": 316,
+      "game": "North Carolina Central Eagles at VMI Keydets",
+      "home_team": "VMI Keydets",
       "line": null,
       "market": "moneyline",
-      "selection": "home"
+      "selection": "away"
     },
     {
       "american": 315,
@@ -98,29 +82,14 @@
       "selection": "away"
     },
     {
-      "american": 423,
-      "away_team": "UMass Lowell River Hawks",
-      "book": "courtside",
-      "books": 15,
-      "commence": "2026-11-12T00:00:00+00:00",
-      "edge": 0.088,
-      "event_id": "231f3efb3503e4f16e17f3d798e3a5b7",
-      "fair_american": 381,
-      "game": "UMass Lowell River Hawks at Massachusetts Minutemen",
-      "home_team": "Massachusetts Minutemen",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
       "american": 210,
       "away_team": "Campbell Fighting Camels",
       "book": "hardrockbet",
       "books": 18,
       "commence": "2026-11-12T00:00:00+00:00",
-      "edge": 0.0427,
+      "edge": 0.0416,
       "event_id": "3701dfd3294546a83cc0c666d61f49eb",
-      "fair_american": 197,
+      "fair_american": 198,
       "game": "Campbell Fighting Camels at East Tennessee St Buccaneers",
       "home_team": "East Tennessee St Buccaneers",
       "line": null,
@@ -128,14 +97,14 @@
       "selection": "away"
     },
     {
-      "american": 575,
+      "american": 599,
       "away_team": "Furman Paladins",
-      "book": "fanatics",
+      "book": "courtside",
       "books": 15,
       "commence": "2026-11-12T00:00:00+00:00",
       "edge": 0.0256,
       "event_id": "9e33af22fe8e08e53ec595237d2c8ee9",
-      "fair_american": 558,
+      "fair_american": 582,
       "game": "Furman Paladins at Holy Cross Crusaders",
       "home_team": "Holy Cross Crusaders",
       "line": null,
@@ -158,7 +127,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-11T18:13:41+00:00",
+  "latest_capture": "2026-11-11T19:13:36+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
