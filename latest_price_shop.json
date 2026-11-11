@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-11T00:14+00:00",
-  "captures": 113,
+  "as_of": "2026-11-11T01:14+00:00",
+  "captures": 114,
   "cells": [
     {
       "beat_close": 0.6363636363636364,
@@ -38,49 +38,19 @@
       "ungraded": 1
     },
     {
-      "beat_close": 0.6,
-      "games": 9,
-      "graded": 10,
+      "beat_close": 0.7142857142857143,
+      "games": 13,
+      "graded": 14,
       "high": null,
       "low": null,
-      "mean": 0.02111405123209805,
-      "shops": 12,
+      "mean": 0.0382654549045159,
+      "shops": 16,
       "tier": "unplaced",
       "ungraded": 2
     }
   ],
   "correction_factor": 1.8685342994948144,
   "current": [
-    {
-      "american": 420,
-      "away_team": "Evansville Purple Aces",
-      "book": "fanduel",
-      "books": 17,
-      "commence": "2026-11-11T00:30:00+00:00",
-      "edge": 0.0487,
-      "event_id": "6e5f0afa161cb1c7b90a86be779800bf",
-      "fair_american": 396,
-      "game": "Evansville Purple Aces at Middle Tennessee Blue Raiders",
-      "home_team": "Middle Tennessee Blue Raiders",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 350,
-      "away_team": "Nicholls St Colonels",
-      "book": "fanduel",
-      "books": 13,
-      "commence": "2026-11-11T00:30:00+00:00",
-      "edge": 0.0245,
-      "event_id": "1bdd1ebc0dbf42b45f00e0e042a95bbc",
-      "fair_american": 339,
-      "game": "Nicholls St Colonels at Tulane Green Wave",
-      "home_team": "Tulane Green Wave",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
     {
       "american": 572,
       "away_team": "Montana Grizzlies",
@@ -97,16 +67,16 @@
       "selection": "away"
     },
     {
-      "american": 430,
-      "away_team": "North Carolina A&T Aggies",
-      "book": "fanduel",
-      "books": 4,
-      "commence": "2026-11-11T21:00:00+00:00",
-      "edge": 0.0239,
-      "event_id": "83af3d625408a5c5f1b726fe740fc2ef",
-      "fair_american": 418,
-      "game": "North Carolina A&T Aggies at East Carolina Pirates",
-      "home_team": "East Carolina Pirates",
+      "american": 105,
+      "away_team": "Charleston Cougars",
+      "book": "betmgm",
+      "books": 8,
+      "commence": "2026-11-11T23:30:00+00:00",
+      "edge": 0.025,
+      "event_id": "c07a4ccdd6e2560b5829395b56863dc1",
+      "fair_american": -100,
+      "game": "Charleston Cougars at Temple Owls",
+      "home_team": "Temple Owls",
       "line": null,
       "market": "moneyline",
       "selection": "away"
@@ -125,24 +95,9 @@
       "line": null,
       "market": "moneyline",
       "selection": "home"
-    },
-    {
-      "american": 275,
-      "away_team": "USC Trojans",
-      "book": "fanduel",
-      "books": 5,
-      "commence": "2026-11-12T04:00:00+00:00",
-      "edge": 0.0422,
-      "event_id": "92cc2f2a169d4efd4f1a0ac9d25672bc",
-      "fair_american": 260,
-      "game": "USC Trojans at California Golden Bears",
-      "home_team": "California Golden Bears",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-11T00:13:42+00:00",
+  "latest_capture": "2026-11-11T01:13:42+00:00",
   "looks": 200,
   "min_books": 3,
   "shop_edge": 0.02
