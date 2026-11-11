@@ -37,6 +37,19 @@ believing this lab is sound. **Do not refactor the sibling labs — that
 prohibition is absolute and is not a question to bring Cooper.** They hold
 measured numbers that cannot be rebought.
 
+## Odds API plan: five million credits a month (from 2026-11-11)
+
+Cooper upgraded The Odds API subscription on 2026-11-11: "i updated my
+subscription to 5 million credits. let all the models/hubs know". One account
+funds every lab (nhl, cbb, epl/soccer, football, ncaaf; separate secret names,
+one shared quota), and the month starts on the first of the month. Before the
+upgrade the plan was one hundred thousand a month and the account was on course
+to run dry in mid-November, with this lab's opening fortnight the largest new
+consumer. **Any statement in this file that measures a spend against the old
+plan is superseded by this note.** Live gates still read
+`x-requests-remaining`, which is the truth on any given day; check it before a
+large purchase.
+
 ## Read these first
 
 Every session, in this order. These replace chat history as project memory.
