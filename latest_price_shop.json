@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-11T17:46+00:00",
-  "captures": 121,
+  "alerts": [
+    {
+      "american": 315,
+      "away_team": "USC Trojans",
+      "book": "fanduel",
+      "books": 18,
+      "commence": "2026-11-12T04:00:00+00:00",
+      "edge": 0.0358,
+      "event_id": "92cc2f2a169d4efd4f1a0ac9d25672bc",
+      "fair_american": 301,
+      "game": "USC Trojans at California Golden Bears",
+      "home_team": "California Golden Bears",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
+    }
+  ],
+  "as_of": "2026-11-11T18:14+00:00",
+  "captures": 122,
   "cells": [
     {
       "beat_close": 0.6923076923076923,
@@ -57,9 +73,9 @@
       "book": "ballybet",
       "books": 17,
       "commence": "2026-11-11T20:00:00+00:00",
-      "edge": 0.0314,
+      "edge": 0.029,
       "event_id": "b4a1814a6efc7eb096e5ac5e857915b5",
-      "fair_american": 443,
+      "fair_american": 444,
       "game": "Loyola (Chi) Ramblers at Air Force Falcons",
       "home_team": "Air Force Falcons",
       "line": null,
@@ -72,9 +88,9 @@
       "book": "fanduel",
       "books": 18,
       "commence": "2026-11-11T23:30:00+00:00",
-      "edge": 0.0364,
+      "edge": 0.0408,
       "event_id": "460ff0fdd5edcbe00e3f8cb6e74d6fbb",
-      "fair_american": 300,
+      "fair_american": 299,
       "game": "Southern Indiana Screaming Eagles at IUPUI Jaguars",
       "home_team": "IUPUI Jaguars",
       "line": null,
@@ -82,14 +98,14 @@
       "selection": "away"
     },
     {
-      "american": 439,
+      "american": 423,
       "away_team": "UMass Lowell River Hawks",
       "book": "courtside",
       "books": 15,
       "commence": "2026-11-12T00:00:00+00:00",
-      "edge": 0.0595,
+      "edge": 0.088,
       "event_id": "231f3efb3503e4f16e17f3d798e3a5b7",
-      "fair_american": 409,
+      "fair_american": 381,
       "game": "UMass Lowell River Hawks at Massachusetts Minutemen",
       "home_team": "Massachusetts Minutemen",
       "line": null,
@@ -125,9 +141,24 @@
       "line": null,
       "market": "moneyline",
       "selection": "home"
+    },
+    {
+      "american": 315,
+      "away_team": "USC Trojans",
+      "book": "fanduel",
+      "books": 18,
+      "commence": "2026-11-12T04:00:00+00:00",
+      "edge": 0.0358,
+      "event_id": "92cc2f2a169d4efd4f1a0ac9d25672bc",
+      "fair_american": 301,
+      "game": "USC Trojans at California Golden Bears",
+      "home_team": "California Golden Bears",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-11T17:45:32+00:00",
+  "latest_capture": "2026-11-11T18:13:41+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
