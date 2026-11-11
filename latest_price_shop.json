@@ -2,23 +2,23 @@
   "alert_edge": 0.03,
   "alerts": [
     {
-      "american": 240,
-      "away_team": "Stephen F. Austin Lumberjacks",
-      "book": "hardrockbet",
-      "books": 15,
-      "commence": "2026-11-12T01:00:00+00:00",
-      "edge": 0.0329,
-      "event_id": "5d71d9f77f845ab0748462e4714c0215",
-      "fair_american": 229,
-      "game": "Stephen F. Austin Lumberjacks at Abilene Christian Wildcats",
-      "home_team": "Abilene Christian Wildcats",
+      "american": 600,
+      "away_team": "Canisius Golden Griffins",
+      "book": "fanatics",
+      "books": 4,
+      "commence": "2026-11-13T00:00:00+00:00",
+      "edge": 0.0533,
+      "event_id": "60340e8a19f88be7b0c22c5428810081",
+      "fair_american": 565,
+      "game": "Canisius Golden Griffins at Brown Bears",
+      "home_team": "Brown Bears",
       "line": null,
       "market": "moneyline",
-      "selection": "home"
+      "selection": "away"
     }
   ],
-  "as_of": "2026-11-11T22:14+00:00",
-  "captures": 126,
+  "as_of": "2026-11-11T23:14+00:00",
+  "captures": 127,
   "cells": [
     {
       "beat_close": 0.6923076923076923,
@@ -54,49 +54,19 @@
       "ungraded": 1
     },
     {
-      "beat_close": 0.375,
-      "games": 8,
-      "graded": 8,
+      "beat_close": 0.4444444444444444,
+      "games": 9,
+      "graded": 9,
       "high": null,
       "low": null,
-      "mean": -0.05337603471583152,
-      "shops": 10,
+      "mean": -0.04707176163652285,
+      "shops": 11,
       "tier": "unplaced",
       "ungraded": 2
     }
   ],
   "correction_factor": 1.8704788371613228,
   "current": [
-    {
-      "american": 303,
-      "away_team": "Cornell Big Red",
-      "book": "courtside",
-      "books": 18,
-      "commence": "2026-11-12T00:00:00+00:00",
-      "edge": 0.0285,
-      "event_id": "2ad8e525847167b94b3fe19623b9447a",
-      "fair_american": 292,
-      "game": "Cornell Big Red at St. Bonaventure Bonnies",
-      "home_team": "St. Bonaventure Bonnies",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 310,
-      "away_team": "UMass Lowell River Hawks",
-      "book": "fanatics",
-      "books": 15,
-      "commence": "2026-11-12T00:00:00+00:00",
-      "edge": 0.0249,
-      "event_id": "231f3efb3503e4f16e17f3d798e3a5b7",
-      "fair_american": 300,
-      "game": "UMass Lowell River Hawks at Massachusetts Minutemen",
-      "home_team": "Massachusetts Minutemen",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
     {
       "american": 240,
       "away_team": "Stephen F. Austin Lumberjacks",
@@ -126,9 +96,24 @@
       "line": null,
       "market": "moneyline",
       "selection": "away"
+    },
+    {
+      "american": 600,
+      "away_team": "Canisius Golden Griffins",
+      "book": "fanatics",
+      "books": 4,
+      "commence": "2026-11-13T00:00:00+00:00",
+      "edge": 0.0533,
+      "event_id": "60340e8a19f88be7b0c22c5428810081",
+      "fair_american": 565,
+      "game": "Canisius Golden Griffins at Brown Bears",
+      "home_team": "Brown Bears",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-11T22:13:35+00:00",
+  "latest_capture": "2026-11-11T23:13:32+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
