@@ -192,6 +192,18 @@
       "reason": "106 game(s) over 18 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
       "standard_error": 0.3195527291212553,
       "z": -0.4944210339639351
+    },
+    {
+      "days": 10,
+      "default": false,
+      "gain_per_game": 24.137983616117324,
+      "games": 417,
+      "key": "kenpom",
+      "label": "KenPom's projection",
+      "on": true,
+      "reason": "it made the predictions better (z +5.20, bar +2.0); added to the card",
+      "standard_error": 4.644124361524258,
+      "z": 5.197531706105076
     }
   ],
   "notes": [],
@@ -209,6 +221,7 @@
     "form": true,
     "four_factors": false,
     "home_court": true,
+    "kenpom": true,
     "lineup": true,
     "lineup_minutes": false,
     "lineup_strict": false,

@@ -1,6 +1,6 @@
 # CBB decision rule
 
-As of 2026-11-11. This is a dry run: the rule is read on 2027-04-19, and nothing in this report is a verdict before then. The rule and its floors were declared in `docs/when_this_ends.md` on 2026-09-01. Intervals are clustered by game and by day and corrected across 200 cumulative hypotheses.
+As of 2026-11-11. This is a dry run: the rule is read on 2027-04-19, and nothing in this report is a verdict before then. The rule and its floors were declared in `docs/when_this_ends.md` on 2026-09-01. Intervals are clustered by game and by day and corrected across 203 cumulative hypotheses.
 
 | Tier | Opinions | Games | Return | Corrected | Survived-price return | Outcome |
 |:---|---:|---:|---:|:---|---:|:---|
