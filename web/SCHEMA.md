@@ -9,6 +9,8 @@ source of any input; the lab's documentation does that.
 | `board.json` | `build_board_json.py` | Board (shared), Game, Graphic (shared), Results (shared) |
 | `history/<day>[_<slot>].json`, `history/index.json` | `site_history.py` | Archive (shared), Game (`?date=`) |
 | `history/settled/<day>.json`, `results.json` | `settle_results.py` | Results (shared), Game (final), `site_pages.py` |
+
+In `results.json` and `history/settled/<day>.json` (2026-11-12) a graded CBB bet or lean carries `units` and `staked` at the tracked stake and `baseLabel`, its label as the board published it; `label` is `baseLabel · ±N.NNu`, so the shared Results page shows the units. `summary.picks` / `summary.leans`, `seasonRecord.picks` / `.leans` and `board.json` `record.picks` / `.leans` carry `units` and `staked` beside `w`, `l`, `p`.
 | `history/finals/<day>.json` | `site_pages.py` | `site_pages.py` (a finals cache for days the settle did not keep) |
 | `record.json` | `build_site_pages.py` | Record |
 | `tracker.json` | `build_site_pages.py` | All results (Tracker) |
@@ -120,8 +122,6 @@ enough to win 0.25u on a minus price, at the board's price, whatever the card
 staked it (2026-11-04), up to +199; from +200 the NHL Due List's ladder applies, +200 to +500 at 0.15u, +501 to +1500 at 0.1u and longer than +1500 at 0.05u (2026-11-11, `stakeLadder`); `staked` is the amount risked, and a push returns 0. A
 bet with no usable price is graded with `units: null`. A lean is tracked at the same stakes (2026-11-04), tallied under `opinions` and never in `overall`, and on its own under `leans` (2026-11-12), so every lean record the Record page shows carries its units; a pass is graded and staked nothing (`units: null`). `byTier` keys are
 the card's tier letters (A high major, B mid major, C low major).
-
-The same units ride on the records the Tonight and Results pages read (2026-11-12, decision 99): board.json's `record.picks` and `record.leans`, and results.json's `seasonRecord.picks` / `.leans` and the night's `summary.picks` / `.leans`, each gain `units`, `staked` and `returnPct` summed from these rows (the night's from its `resultsDate`). A tally that is absent stays absent.
 
 ## season.json
 
