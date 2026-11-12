@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-12T17:44+00:00",
-  "captures": 136,
+  "as_of": "2026-11-12T18:14+00:00",
+  "captures": 137,
   "cells": [
     {
       "beat_close": 0.6428571428571429,
@@ -50,24 +50,8 @@
     }
   ],
   "correction_factor": 1.8704788371613228,
-  "current": [
-    {
-      "american": 600,
-      "away_team": "Coppin St Eagles",
-      "book": "fanatics",
-      "books": 13,
-      "commence": "2026-11-12T23:00:00+00:00",
-      "edge": 0.0219,
-      "event_id": "d5ffc3709a43565e263ddd08e42c27c0",
-      "fair_american": 585,
-      "game": "Coppin St Eagles at Bradley Braves",
-      "home_team": "Bradley Braves",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "latest_capture": "2026-11-12T17:43:51+00:00",
+  "current": [],
+  "latest_capture": "2026-11-12T18:13:33+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
