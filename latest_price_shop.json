@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 420,
-      "away_team": "Stetson Hatters",
-      "book": "fanatics",
-      "books": 14,
-      "commence": "2026-11-13T00:00:00+00:00",
-      "edge": 0.0443,
-      "event_id": "1898e50ec19d9c95f900cd2487cb18ae",
-      "fair_american": 398,
-      "game": "Stetson Hatters at Howard Bison",
-      "home_team": "Howard Bison",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-12T22:14+00:00",
-  "captures": 141,
+  "alerts": [],
+  "as_of": "2026-11-12T23:14+00:00",
+  "captures": 142,
   "cells": [
     {
       "beat_close": 0.6428571428571429,
@@ -54,34 +38,19 @@
       "ungraded": 1
     },
     {
-      "beat_close": 0.5,
-      "games": 4,
-      "graded": 4,
+      "beat_close": 0.4,
+      "games": 5,
+      "graded": 5,
       "high": null,
       "low": null,
-      "mean": -0.07012120501736754,
-      "shops": 6,
+      "mean": -0.06452435302819037,
+      "shops": 7,
       "tier": "unplaced",
       "ungraded": 2
     }
   ],
   "correction_factor": 1.8704788371613228,
   "current": [
-    {
-      "american": 420,
-      "away_team": "Stetson Hatters",
-      "book": "fanatics",
-      "books": 14,
-      "commence": "2026-11-13T00:00:00+00:00",
-      "edge": 0.0443,
-      "event_id": "1898e50ec19d9c95f900cd2487cb18ae",
-      "fair_american": 398,
-      "game": "Stetson Hatters at Howard Bison",
-      "home_team": "Howard Bison",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
     {
       "american": 308,
       "away_team": "Oklahoma St Cowboys",
@@ -96,9 +65,24 @@
       "line": null,
       "market": "moneyline",
       "selection": "away"
+    },
+    {
+      "american": 400,
+      "away_team": "Ohio State Buckeyes",
+      "book": "fanduel",
+      "books": 7,
+      "commence": "2026-11-14T00:30:00+00:00",
+      "edge": 0.0247,
+      "event_id": "82d63fe987183f4f973a6edc91edce1d",
+      "fair_american": 388,
+      "game": "Ohio State Buckeyes at UConn Huskies",
+      "home_team": "UConn Huskies",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-12T22:13:43+00:00",
+  "latest_capture": "2026-11-12T23:13:44+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
