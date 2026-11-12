@@ -1,20 +1,19 @@
 # CBB price shop
 
-As of 2026-11-12T13:43+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
+As of 2026-11-12T15:15+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
 
 ## Right now
 
-From the capture of 2026-11-12T13:42:40+00:00.
+From the capture of 2026-11-12T15:15:16+00:00.
 
 | Tip (UTC) | Game | Side | Book | Price | Fair | Edge |
 |:---|:---|:---|:---|---:|---:|---:|
-| 2026-11-12 23:00 | Coppin St Eagles at Bradley Braves | away moneyline | fanduel | +570 | +491 | +13.3% |
-| 2026-11-13 00:00 | Stetson Hatters at Howard Bison | away moneyline | courtside | +471 | +454 | +3.0% |
-| 2026-11-13 00:00 | CSU Bakersfield Roadrunners at Western Illinois Leathernecks | home moneyline | fanduel | +365 | +351 | +3.0% |
+| 2026-11-12 23:00 | Coppin St Eagles at Bradley Braves | away moneyline | betmgm | +575 | +559 | +2.4% |
+| 2026-11-13 03:00 | UC Riverside Highlanders at San José St Spartans | away moneyline | hardrockbet | +350 | +329 | +4.9% |
 
 ## Did the shops beat the close?
 
-Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (132 capture(s) read). Per tier, clustered by game, corrected across 203 cumulative hypotheses (x1.8705); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
+Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (133 capture(s) read). Per tier, clustered by game, corrected across 203 cumulative hypotheses (x1.8705); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
 
 | Tier | Shops | Graded | Games | Mean CLV | Corrected | Beat the close | Line gone at close |
 |:---|---:|---:|---:|---:|:---|---:|---:|
