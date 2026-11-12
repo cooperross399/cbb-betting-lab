@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 600,
-      "away_team": "Chicago St Cougars",
-      "book": "espnbet",
-      "books": 13,
-      "commence": "2026-11-12T03:00:00+00:00",
-      "edge": 0.0328,
-      "event_id": "4ce17fb9ee09bdd8e5cc71178b3afc47",
-      "fair_american": 578,
-      "game": "Chicago St Cougars at Cal Baptist Lancers",
-      "home_team": "Cal Baptist Lancers",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-12T01:14+00:00",
-  "captures": 129,
+  "alerts": [],
+  "as_of": "2026-11-12T02:14+00:00",
+  "captures": 130,
   "cells": [
     {
       "beat_close": 0.6923076923076923,
@@ -81,9 +65,24 @@
       "line": null,
       "market": "moneyline",
       "selection": "away"
+    },
+    {
+      "american": 225,
+      "away_team": "Pacific Tigers",
+      "book": "betparx",
+      "books": 17,
+      "commence": "2026-11-12T03:00:00+00:00",
+      "edge": 0.0225,
+      "event_id": "4a67ec53bead3f5556b92ef5ad63885c",
+      "fair_american": 218,
+      "game": "Pacific Tigers at Long Beach St 49ers",
+      "home_team": "Long Beach St 49ers",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-12T01:13:45+00:00",
+  "latest_capture": "2026-11-12T02:13:42+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
