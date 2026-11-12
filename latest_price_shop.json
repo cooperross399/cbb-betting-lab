@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-12T00:13+00:00",
-  "captures": 128,
+  "alerts": [
+    {
+      "american": 600,
+      "away_team": "Chicago St Cougars",
+      "book": "espnbet",
+      "books": 13,
+      "commence": "2026-11-12T03:00:00+00:00",
+      "edge": 0.0328,
+      "event_id": "4ce17fb9ee09bdd8e5cc71178b3afc47",
+      "fair_american": 578,
+      "game": "Chicago St Cougars at Cal Baptist Lancers",
+      "home_team": "Cal Baptist Lancers",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    }
+  ],
+  "as_of": "2026-11-12T01:14+00:00",
+  "captures": 129,
   "cells": [
     {
       "beat_close": 0.6923076923076923,
@@ -38,13 +54,13 @@
       "ungraded": 1
     },
     {
-      "beat_close": 0.5882352941176471,
-      "games": 17,
-      "graded": 17,
+      "beat_close": 0.6363636363636364,
+      "games": 21,
+      "graded": 22,
       "high": null,
       "low": null,
-      "mean": 0.011922593591688686,
-      "shops": 20,
+      "mean": 0.01711409296018146,
+      "shops": 25,
       "tier": "unplaced",
       "ungraded": 3
     }
@@ -52,44 +68,14 @@
   "correction_factor": 1.8704788371613228,
   "current": [
     {
-      "american": 240,
-      "away_team": "Stephen F. Austin Lumberjacks",
-      "book": "hardrockbet",
-      "books": 15,
-      "commence": "2026-11-12T01:00:00+00:00",
-      "edge": 0.0392,
-      "event_id": "5d71d9f77f845ab0748462e4714c0215",
-      "fair_american": 227,
-      "game": "Stephen F. Austin Lumberjacks at Abilene Christian Wildcats",
-      "home_team": "Abilene Christian Wildcats",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    },
-    {
-      "american": 360,
-      "away_team": "Jackson St Tigers",
-      "book": "courtside",
-      "books": 15,
-      "commence": "2026-11-12T01:00:00+00:00",
-      "edge": 0.0279,
-      "event_id": "b6e943b2f08200881262b4621a7871ba",
-      "fair_american": 347,
-      "game": "Jackson St Tigers at Southern Miss Golden Eagles",
-      "home_team": "Southern Miss Golden Eagles",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
       "american": 600,
       "away_team": "Chicago St Cougars",
       "book": "espnbet",
-      "books": 14,
+      "books": 13,
       "commence": "2026-11-12T03:00:00+00:00",
-      "edge": 0.0299,
+      "edge": 0.0328,
       "event_id": "4ce17fb9ee09bdd8e5cc71178b3afc47",
-      "fair_american": 580,
+      "fair_american": 578,
       "game": "Chicago St Cougars at Cal Baptist Lancers",
       "home_team": "Cal Baptist Lancers",
       "line": null,
@@ -97,7 +83,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-12T00:13:29+00:00",
+  "latest_capture": "2026-11-12T01:13:45+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
