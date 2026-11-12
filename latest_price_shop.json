@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 350,
-      "away_team": "UC Riverside Highlanders",
-      "book": "hardrockbet",
-      "books": 17,
-      "commence": "2026-11-13T03:00:00+00:00",
-      "edge": 0.0485,
-      "event_id": "41ff76ffb87fd6a1186e8bd6e4e78efa",
-      "fair_american": 329,
-      "game": "UC Riverside Highlanders at San Jos\u00e9 St Spartans",
-      "home_team": "San Jos\u00e9 St Spartans",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-12T15:15+00:00",
-  "captures": 133,
+  "alerts": [],
+  "as_of": "2026-11-12T16:47+00:00",
+  "captures": 134,
   "cells": [
     {
       "beat_close": 0.6428571428571429,
@@ -66,39 +50,8 @@
     }
   ],
   "correction_factor": 1.8704788371613228,
-  "current": [
-    {
-      "american": 575,
-      "away_team": "Coppin St Eagles",
-      "book": "betmgm",
-      "books": 14,
-      "commence": "2026-11-12T23:00:00+00:00",
-      "edge": 0.0236,
-      "event_id": "d5ffc3709a43565e263ddd08e42c27c0",
-      "fair_american": 559,
-      "game": "Coppin St Eagles at Bradley Braves",
-      "home_team": "Bradley Braves",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 350,
-      "away_team": "UC Riverside Highlanders",
-      "book": "hardrockbet",
-      "books": 17,
-      "commence": "2026-11-13T03:00:00+00:00",
-      "edge": 0.0485,
-      "event_id": "41ff76ffb87fd6a1186e8bd6e4e78efa",
-      "fair_american": 329,
-      "game": "UC Riverside Highlanders at San Jos\u00e9 St Spartans",
-      "home_team": "San Jos\u00e9 St Spartans",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "latest_capture": "2026-11-12T15:15:16+00:00",
+  "current": [],
+  "latest_capture": "2026-11-12T16:47:08+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
