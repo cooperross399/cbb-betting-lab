@@ -1,6 +1,6 @@
 # CBB closing-line alarm
 
-As of 2026-11-12. Whether the model's leans (frozen full-game team rows with an edge of at least 2%) beat the closing line, per tier and main market, from the settled forward ledger and the line-movement captures (150 capture(s) read). Intervals are clustered by game and corrected across 203 cumulative hypotheses (x1.8705). Closing-line value is not a return, and a lean that beat the close can still lose.
+As of 2026-11-12. Whether the model's leans (frozen full-game team rows with an edge of at least 2%) beat the closing line, per tier and main market, from the settled forward ledger and the line-movement captures (157 capture(s) read). Intervals are clustered by game and corrected across 203 cumulative hypotheses (x1.8705). Closing-line value is not a return, and a lean that beat the close can still lose.
 
 **Alarm: high_major / spread, high_major / total_points, high_major / alternate_spread, high_major / alternate_total_points, high_major / team_total, mid_major / alternate_spread, mid_major / alternate_total_points, mid_major / team_total, low_major / alternate_total_points, low_major / team_total.** The corrected interval of closing-line value lies entirely below zero over enough leans and games. Each is a candidate for withdrawal from the allowlist; this report withdraws nothing, and the closing-line gate takes the cell off the card while the alarm holds.
 
