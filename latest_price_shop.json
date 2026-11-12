@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 600,
-      "away_team": "Canisius Golden Griffins",
-      "book": "fanatics",
-      "books": 4,
-      "commence": "2026-11-13T00:00:00+00:00",
-      "edge": 0.0533,
-      "event_id": "60340e8a19f88be7b0c22c5428810081",
-      "fair_american": 565,
-      "game": "Canisius Golden Griffins at Brown Bears",
-      "home_team": "Brown Bears",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-11T23:14+00:00",
-  "captures": 127,
+  "alerts": [],
+  "as_of": "2026-11-12T00:13+00:00",
+  "captures": 128,
   "cells": [
     {
       "beat_close": 0.6923076923076923,
@@ -54,15 +38,15 @@
       "ungraded": 1
     },
     {
-      "beat_close": 0.4444444444444444,
-      "games": 9,
-      "graded": 9,
+      "beat_close": 0.5882352941176471,
+      "games": 17,
+      "graded": 17,
       "high": null,
       "low": null,
-      "mean": -0.04707176163652285,
-      "shops": 11,
+      "mean": 0.011922593591688686,
+      "shops": 20,
       "tier": "unplaced",
-      "ungraded": 2
+      "ungraded": 3
     }
   ],
   "correction_factor": 1.8704788371613228,
@@ -73,9 +57,9 @@
       "book": "hardrockbet",
       "books": 15,
       "commence": "2026-11-12T01:00:00+00:00",
-      "edge": 0.0329,
+      "edge": 0.0392,
       "event_id": "5d71d9f77f845ab0748462e4714c0215",
-      "fair_american": 229,
+      "fair_american": 227,
       "game": "Stephen F. Austin Lumberjacks at Abilene Christian Wildcats",
       "home_team": "Abilene Christian Wildcats",
       "line": null,
@@ -83,12 +67,27 @@
       "selection": "home"
     },
     {
-      "american": 599,
-      "away_team": "Chicago St Cougars",
+      "american": 360,
+      "away_team": "Jackson St Tigers",
       "book": "courtside",
+      "books": 15,
+      "commence": "2026-11-12T01:00:00+00:00",
+      "edge": 0.0279,
+      "event_id": "b6e943b2f08200881262b4621a7871ba",
+      "fair_american": 347,
+      "game": "Jackson St Tigers at Southern Miss Golden Eagles",
+      "home_team": "Southern Miss Golden Eagles",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    },
+    {
+      "american": 600,
+      "away_team": "Chicago St Cougars",
+      "book": "espnbet",
       "books": 14,
       "commence": "2026-11-12T03:00:00+00:00",
-      "edge": 0.0284,
+      "edge": 0.0299,
       "event_id": "4ce17fb9ee09bdd8e5cc71178b3afc47",
       "fair_american": 580,
       "game": "Chicago St Cougars at Cal Baptist Lancers",
@@ -96,24 +95,9 @@
       "line": null,
       "market": "moneyline",
       "selection": "away"
-    },
-    {
-      "american": 600,
-      "away_team": "Canisius Golden Griffins",
-      "book": "fanatics",
-      "books": 4,
-      "commence": "2026-11-13T00:00:00+00:00",
-      "edge": 0.0533,
-      "event_id": "60340e8a19f88be7b0c22c5428810081",
-      "fair_american": 565,
-      "game": "Canisius Golden Griffins at Brown Bears",
-      "home_team": "Brown Bears",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-11T23:13:32+00:00",
+  "latest_capture": "2026-11-12T00:13:29+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
