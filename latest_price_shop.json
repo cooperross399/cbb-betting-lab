@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-12T18:14+00:00",
-  "captures": 137,
+  "as_of": "2026-11-12T19:14+00:00",
+  "captures": 138,
   "cells": [
     {
       "beat_close": 0.6428571428571429,
@@ -50,8 +50,24 @@
     }
   ],
   "correction_factor": 1.8704788371613228,
-  "current": [],
-  "latest_capture": "2026-11-12T18:13:33+00:00",
+  "current": [
+    {
+      "american": 308,
+      "away_team": "Oklahoma St Cowboys",
+      "book": "courtside",
+      "books": 18,
+      "commence": "2026-11-13T01:00:00+00:00",
+      "edge": 0.0267,
+      "event_id": "4dd17035607c57aff8b475d30545a677",
+      "fair_american": 297,
+      "game": "Oklahoma St Cowboys at Texas A&M Aggies",
+      "home_team": "Texas A&M Aggies",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    }
+  ],
+  "latest_capture": "2026-11-12T19:13:39+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
