@@ -43,6 +43,12 @@ TEAMS = {
 }
 
 
+
+def _wlp(tally: dict) -> dict:
+    """The win-loss-push part of a tally; `units` and `staked` ride beside it
+    since 2026-11-12 and are checked on their own."""
+    return {k: v for k, v in tally.items() if k in ("w", "l", "p")}
+
 def _module():
     spec = importlib.util.spec_from_file_location("settle_results_season", SETTLE)
     module = importlib.util.module_from_spec(spec)
@@ -152,10 +158,10 @@ def test_one_settled_day_publishes_the_four_records_and_keeps_the_old_keys(tmp_p
     season = results["seasonRecord"]
     assert season["nights"] == 1 and season["missingNights"] == 0
     assert season["firstDate"] == season["lastDate"] == "2026-11-03"
-    assert season["straightUp"] == {"w": 1, "l": 1}
-    assert season["totals"] == {"w": 1, "l": 1, "p": 0}
-    assert season["picks"] == {"w": 0, "l": 0, "p": 0}
-    assert season["leans"] == {"w": 0, "l": 0, "p": 0}
+    assert _wlp(season["straightUp"]) == {"w": 1, "l": 1}
+    assert _wlp(season["totals"]) == {"w": 1, "l": 1, "p": 0}
+    assert _wlp(season["picks"]) == {"w": 0, "l": 0, "p": 0}
+    assert _wlp(season["leans"]) == {"w": 0, "l": 0, "p": 0}
     record = board["record"]
     for key in ("picks", "straightUp", "totals", "leans"):
         assert record[key] == season[key]
@@ -183,12 +189,18 @@ def test_a_lean_is_never_counted_in_picks(tmp_path: Path, monkeypatch) -> None:
 
     results, board = _run(module, tmp_path, "2026-11-04")
 
-    assert results["summary"]["picks"] == {"w": 0, "l": 0, "p": 0}
-    assert results["summary"]["leans"] == {"w": 1, "l": 0, "p": 0}
+    assert _wlp(results["summary"]["picks"]) == {"w": 0, "l": 0, "p": 0}
+    assert _wlp(results["summary"]["leans"]) == {"w": 1, "l": 0, "p": 0}
     season = results["seasonRecord"]
-    assert season["picks"] == {"w": 1, "l": 0, "p": 0}, "a lean reached the best bets' record"
-    assert season["leans"] == {"w": 1, "l": 1, "p": 0}
-    assert board["record"]["picks"] == {"w": 1, "l": 0, "p": 0}
+    assert _wlp(season["picks"]) == {"w": 1, "l": 0, "p": 0}, "a lean reached the best bets' record"
+    assert _wlp(season["leans"]) == {"w": 1, "l": 1, "p": 0}
+    assert _wlp(board["record"]["picks"]) == {"w": 1, "l": 0, "p": 0}
+    # Units at the tracked stake: the bet won 0.25u at -150 (0.375 risked),
+    # the leans won 0.25u at -110 and lost 0.30u at -120.
+    assert season["picks"]["units"] == 0.25 and season["picks"]["staked"] == 0.38
+    assert season["leans"]["units"] == -0.05
+    assert results["games"][0]["pick"]["label"] == "Over 140.5 \u00b7 +0.25u"
+    assert results["games"][0]["pick"]["baseLabel"] == "Over 140.5"
 
 
 def test_a_frozen_opinion_is_graded_into_neither(tmp_path: Path, monkeypatch) -> None:
@@ -201,8 +213,8 @@ def test_a_frozen_opinion_is_graded_into_neither(tmp_path: Path, monkeypatch) ->
 
     results, _ = _run(module, tmp_path, "2026-11-03")
 
-    assert results["seasonRecord"]["picks"] == {"w": 0, "l": 0, "p": 0}
-    assert results["seasonRecord"]["leans"] == {"w": 0, "l": 0, "p": 0}
+    assert _wlp(results["seasonRecord"]["picks"]) == {"w": 0, "l": 0, "p": 0}
+    assert _wlp(results["seasonRecord"]["leans"]) == {"w": 0, "l": 0, "p": 0}
 
 
 def test_a_day_the_settler_skipped_is_in_missing_nights(tmp_path: Path, monkeypatch) -> None:
@@ -280,7 +292,7 @@ def test_a_settled_day_is_kept_and_read_back_without_the_scoreboard(tmp_path: Pa
     assert "2026-11-03" not in second.asked  # type: ignore[attr-defined]
     season = results["seasonRecord"]
     assert season["nights"] == 3 and season["missingNights"] == 0
-    assert season["picks"] == {"w": 1, "l": 0, "p": 0}
+    assert _wlp(season["picks"]) == {"w": 1, "l": 0, "p": 0}
     assert season["firstDate"] == "2026-11-03" and season["lastDate"] == "2026-11-05"
 
 

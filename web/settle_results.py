@@ -168,6 +168,38 @@ def frozen_board(hist: Path, day: date) -> Path | None:
     return frozen[0] if frozen else None
 
 
+def _stake_rule():
+    """`site_pages.quarter`, the one place the tracked stake ladder lives."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("site_pages_for_units", Path(__file__).resolve().parent / "site_pages.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.quarter
+
+
+def fmt_units(value: float) -> str:
+    """+0.25u / −0.28u, the Record page's spelling."""
+    sign = "+" if value > 0 else "\u2212" if value < 0 else ""
+    return f"{sign}{abs(value):.2f}u"
+
+
+def with_units(pick: dict, tally: dict) -> dict:
+    """A graded bet or lean with its units at the tracked stake (Cooper,
+    2026-11-12: unit profit under every record). The shared Results page
+    prints a pick's `label` and no units field, so the units ride on the
+    label too; `units`, `staked` and `baseLabel` carry them as data. A pick
+    with no usable price is left as it was, and so is the tally."""
+    got = _stake_rule()(pick.get("price"), pick.get("result"))
+    if got is None:
+        return pick
+    units, staked = got
+    tally["units"] = tally.get("units", 0.0) + units
+    tally["staked"] = tally.get("staked", 0.0) + staked
+    base = pick.get("label") or ""
+    return {**pick, "units": units, "staked": staked, "baseLabel": base, "label": f"{base} \u00b7 {fmt_units(units)}"}
+
+
 def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
     """One day's results.json body, and whether a game on it still has no final.
 
@@ -191,11 +223,14 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
         hf, af = f["home"], f["away"]
         pick = g.get("pick")
         res = grade_pick(sport, pick, g, hf, af, board.get("teams") or {})
+        shown_pick = {**pick, "result": res} if pick and res else None
         if res in ("win", "loss", "push"):
             tally = leans if pick.get("kind", "bet") == "lean" else picks
             tally[{"win": "w", "loss": "l", "push": "p"}[res]] += 1
+            if sport == "cbb":
+                shown_pick = with_units(shown_pick, tally)
         row = {"id": g["id"], "home": {"abbr": g["home"]["abbr"], "final": hf}, "away": {"abbr": g["away"]["abbr"], "final": af}, "finish": f["finish"],
-               "pick": {**pick, "result": res} if pick and res else None}
+               "pick": shown_pick}
         if sport == "epl":
             row["home"]["projGoals"], row["away"]["projGoals"] = g["home"].get("projGoals"), g["away"].get("projGoals")
             hp, dp, ap_ = g["home"].get("winProb"), g.get("drawProb"), g["away"].get("winProb")
@@ -233,6 +268,9 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
                 t = hf + af
                 tots["p" if t == tt["current"] else "w" if (tt["proj"] > tt["current"]) == (t > tt["current"]) else "l"] += 1
         games.append(row)
+    for tally in (picks, leans):
+        if "units" in tally:
+            tally["units"], tally["staked"] = round(tally["units"], 2), round(tally["staked"], 2)
     summary = {"picks": picks, "leans": leans}
     if sport == "epl":
         summary.update(result=su, totals={"w": tots["w"], "l": tots["l"]})
@@ -275,7 +313,8 @@ def night_record(results: dict) -> dict:
 #: older number (or none) is settled again from its frozen board, so a fix to
 #: `grade_pick` restates every night already kept rather than only the nights
 #: after it. 2 (2026-11-12): an away spread is scored on its own handicap.
-GRADING = 2
+#: 3 (2026-11-12): each graded bet and lean carries its units.
+GRADING = 3
 
 
 def _kept_night(path: Path) -> dict | None:
@@ -364,7 +403,10 @@ def season_record(sport: str, day: date, hist: Path, latest: dict | None, latest
         last = d.isoformat()
         for key in SEASON_KEYS:
             for k, v in (night["summary"].get(key) or {}).items():
-                if k in tally[key]:
+                if k in ("units", "staked"):
+                    if isinstance(v, (int, float)) and not isinstance(v, bool):
+                        tally[key][k] = round(tally[key].get(k, 0.0) + float(v), 2)
+                elif k in tally[key]:
                     tally[key][k] += int(v)
     span = {"nights": nights, "firstDate": first, "lastDate": last, "missingNights": missing}
     return {**tally, **span} if nights else span
