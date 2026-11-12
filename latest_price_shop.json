@@ -2,23 +2,23 @@
   "alert_edge": 0.03,
   "alerts": [
     {
-      "american": 380,
-      "away_team": "CSU Bakersfield Roadrunners",
-      "book": "ballybet",
-      "books": 15,
+      "american": 420,
+      "away_team": "Stetson Hatters",
+      "book": "fanatics",
+      "books": 14,
       "commence": "2026-11-13T00:00:00+00:00",
-      "edge": 0.0468,
-      "event_id": "bb076258b9d68ac93facc485d09f8f17",
-      "fair_american": 359,
-      "game": "CSU Bakersfield Roadrunners at Western Illinois Leathernecks",
-      "home_team": "Western Illinois Leathernecks",
+      "edge": 0.0443,
+      "event_id": "1898e50ec19d9c95f900cd2487cb18ae",
+      "fair_american": 398,
+      "game": "Stetson Hatters at Howard Bison",
+      "home_team": "Howard Bison",
       "line": null,
       "market": "moneyline",
-      "selection": "home"
+      "selection": "away"
     }
   ],
-  "as_of": "2026-11-12T21:14+00:00",
-  "captures": 140,
+  "as_of": "2026-11-12T22:14+00:00",
+  "captures": 141,
   "cells": [
     {
       "beat_close": 0.6428571428571429,
@@ -68,19 +68,19 @@
   "correction_factor": 1.8704788371613228,
   "current": [
     {
-      "american": 380,
-      "away_team": "CSU Bakersfield Roadrunners",
-      "book": "ballybet",
-      "books": 15,
+      "american": 420,
+      "away_team": "Stetson Hatters",
+      "book": "fanatics",
+      "books": 14,
       "commence": "2026-11-13T00:00:00+00:00",
-      "edge": 0.0468,
-      "event_id": "bb076258b9d68ac93facc485d09f8f17",
-      "fair_american": 359,
-      "game": "CSU Bakersfield Roadrunners at Western Illinois Leathernecks",
-      "home_team": "Western Illinois Leathernecks",
+      "edge": 0.0443,
+      "event_id": "1898e50ec19d9c95f900cd2487cb18ae",
+      "fair_american": 398,
+      "game": "Stetson Hatters at Howard Bison",
+      "home_team": "Howard Bison",
       "line": null,
       "market": "moneyline",
-      "selection": "home"
+      "selection": "away"
     },
     {
       "american": 308,
@@ -98,7 +98,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-12T21:13:43+00:00",
+  "latest_capture": "2026-11-12T22:13:43+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
