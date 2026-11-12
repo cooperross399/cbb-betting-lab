@@ -92,6 +92,43 @@ def test_a_home_spread_is_not_settled_against_the_away_side() -> None:
     assert _module().grade_pick("cbb", pick, HOOPS, 80, 70, BOARD["teams"]) == "win"
 
 
+@pytest.mark.parametrize(
+    "label, line, home, away, expected",
+    [
+        # Villanova (away) +27.5 losing by 10 covers. Scored -margin - line,
+        # as it was until 2026-11-12, it needed to WIN by 27.5: a loss.
+        ("Villanova +27.5", 27.5, 80, 70, "win"),
+        ("Villanova +27.5", 27.5, 100, 70, "loss"),
+        # Villanova (away) -4.5 winning by 2 does not cover; scored the old
+        # way it read as +4.5 and won.
+        ("Villanova −4.5", -4.5, 70, 72, "loss"),
+        ("Villanova −4.5", -4.5, 70, 80, "win"),
+        ("Villanova +3", 3, 73, 70, "push"),
+        # A home dog: unchanged, and the control for the rows above.
+        ("Notre Dame +6.5", 6.5, 70, 75, "win"),
+    ],
+)
+def test_an_away_spread_is_scored_on_its_own_handicap(label, line, home, away, expected) -> None:
+    """A pick's `line` is the picked side's handicap, as its label prints it.
+
+    The site's spread leans read 8-127 over the first ten nights because an
+    away pick was scored `-margin - line`: every away underdog had to win by
+    its own number. `lib/live.js` and the closing-line value already read the
+    line as the picked side's, so only the settled grade disagreed.
+    """
+    pick = {"kind": "lean", "market": "spread", "label": label, "line": line}
+    assert _module().grade_pick("cbb", pick, HOOPS, home, away, BOARD["teams"]) == expected
+
+
+def test_a_spread_with_no_line_of_its_own_reads_the_home_line_for_its_side() -> None:
+    """The board's `spread.current` is the home line, so an away pick with no
+    line of its own takes its negative."""
+    game = {**HOOPS, "spread": {"current": -6.5}}  # Notre Dame -6.5, Villanova +6.5
+    pick = {"kind": "bet", "market": "spread", "label": "Villanova +6.5"}
+    assert _module().grade_pick("cbb", pick, game, 72, 70, BOARD["teams"]) == "win"
+    assert _module().grade_pick("cbb", {**pick, "label": "Notre Dame −6.5"}, game, 72, 70, BOARD["teams"]) == "loss"
+
+
 def _executable_source() -> str:
     """The file with its comments and docstrings gone, other strings kept.
 

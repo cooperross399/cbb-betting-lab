@@ -130,9 +130,22 @@ def grade_pick(sport, pick, g, hf, af, teams=None):
             side = side_named(label, g, teams)
             if side is None:
                 return None
+            # A pick's `line` is the PICKED side's handicap, as its label
+            # prints it ("NAU +27.5" carries 27.5 on the away side), the same
+            # convention `lib/live.js` and `site_pages.closing_value` read.
+            # Until 2026-11-12 an away pick was scored `-margin - line`, which
+            # turned every away +27.5 into "win by 27.5": the site's spread
+            # leans read 8-127. The board's own `spread.current` is the HOME
+            # line, so it is turned to the picked side before it is used.
             home = side == "home"
-            line = float(pick.get("line") or (g.get("spread") or {}).get("current") or 0)
-            adj = margin + line if home else -margin - line
+            line = pick.get("line")
+            if line in (None, ""):
+                current = (g.get("spread") or {}).get("current")
+                if current in (None, ""):
+                    return None
+                line = float(current) if home else -float(current)
+            mine = margin if home else -margin
+            adj = mine + float(line)
             return "win" if adj > 0 else "loss" if adj < 0 else "push"
         if m == "total":
             line = float(pick.get("line") or (g.get("total") or {}).get("current") or 0)
@@ -258,8 +271,16 @@ def night_record(results: dict) -> dict:
     return {"games": len(games), "summary": results.get("summary") or {}, "graded": list(games)}
 
 
+#: The grading rule a kept day was settled under. A kept day carrying an
+#: older number (or none) is settled again from its frozen board, so a fix to
+#: `grade_pick` restates every night already kept rather than only the nights
+#: after it. 2 (2026-11-12): an away spread is scored on its own handicap.
+GRADING = 2
+
+
 def _kept_night(path: Path) -> dict | None:
-    """A day read from history/settled, or None when none is kept or it cannot be read."""
+    """A day read from history/settled, or None when none is kept, it cannot
+    be read, or it was graded under an older rule than GRADING."""
     if not path.is_file():
         return None
     try:
@@ -267,6 +288,8 @@ def _kept_night(path: Path) -> dict | None:
     except (OSError, UnicodeError, json.JSONDecodeError):
         return None
     if not isinstance(night, dict) or not isinstance(night.get("summary"), dict):
+        return None
+    if night.get("grading") != GRADING:
         return None
     return night
 
@@ -327,7 +350,7 @@ def season_record(sport: str, day: date, hist: Path, latest: dict | None, latest
                 patient = d > day - timedelta(days=PATIENCE_DAYS)
                 if not (waiting and patient):
                     kept.mkdir(parents=True, exist_ok=True)
-                    cached.write_text(json.dumps({"resultsDate": d.isoformat(), **night}, indent=1), encoding="utf-8")
+                    cached.write_text(json.dumps({"resultsDate": d.isoformat(), "grading": GRADING, **night}, indent=1), encoding="utf-8")
                 waiting = waiting and patient
         if not night["games"]:
             # Games were on the board and none has a final yet: not settled,
