@@ -9,6 +9,8 @@ source of any input; the lab's documentation does that.
 | `board.json` | `build_board_json.py` | Board (shared), Game, Graphic (shared), Results (shared) |
 | `history/<day>[_<slot>].json`, `history/index.json` | `site_history.py` | Archive (shared), Game (`?date=`) |
 | `history/settled/<day>.json`, `results.json` | `settle_results.py` | Results (shared), Game (final), `site_pages.py` |
+
+In `results.json` and `history/settled/<day>.json` (2026-11-12) a graded CBB bet or lean carries `units` and `staked` at the tracked stake and `baseLabel`, its label as the board published it; `label` is `baseLabel · ±N.NNu`, so the shared Results page shows the units. `summary.picks` / `summary.leans`, `seasonRecord.picks` / `.leans` and `board.json` `record.picks` / `.leans` carry `units` and `staked` beside `w`, `l`, `p`.
 | `history/finals/<day>.json` | `site_pages.py` | `site_pages.py` (a finals cache for days the settle did not keep) |
 | `record.json` | `build_site_pages.py` | Record |
 | `tracker.json` | `build_site_pages.py` | All results (Tracker) |
