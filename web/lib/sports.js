@@ -367,6 +367,7 @@ function cbbResults(data) {
 }
 
 // The CBB Results strip, with the units under the best-bet and lean records
+// (each lab's publish step adds the strip's sub line to Results.dc.html)
 // (Cooper, 2026-11-12: "the unit profit tracked under each record"): the
 // night's units, then the season's record and units when the file carries a
 // settled season. The units are the CBB tracker's stakes (0.25u, to win 0.25u
@@ -376,8 +377,9 @@ function cbbResults(data) {
 const unitsOf = (r) => (r && typeof r.units === "number" ? `${r.units > 0 ? "+" : r.units < 0 ? "−" : ""}${Math.abs(r.units).toFixed(2)}u` : "");
 function unitsLine(night, season, key) {
   const n = unitsOf(night[key]), all = season && season.nights && season[key] ? season[key] : null;
-  const s = all ? `Season ${F.recStr(all)}${unitsOf(all) ? ` · ${unitsOf(all)}` : ""}` : "";
-  return [n && `${n} on the night`, s].filter(Boolean).join("\n");
+  // A word joiner either side of each dash, so a narrow cell wraps between the parts and never inside a record.
+  const s = all ? `season ${F.recStr(all).replace(/–/g, "\u2060–\u2060")}${unitsOf(all) ? `, ${unitsOf(all)}` : ""}` : "";
+  return [n && `${n} on the night`, s].filter(Boolean).join(" · ");
 }
 function cbbResultsStrip(s, season) {
   return [{ label: "Straight up", value: F.recStr(s.straightUp || { w: 0, l: 0 }) },

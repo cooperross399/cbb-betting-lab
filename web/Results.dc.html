@@ -92,7 +92,7 @@
         <div style="padding:22px 0;border-bottom:1px solid var(--rule);">
           <div style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ c.label }}</div>
           <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:44px;line-height:1;margin-top:8px;">{{ c.value }}</div>
-          <sc-if value="{{ c.sub }}" hint-placeholder-val="{{ false }}"><div style="font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.5;color:var(--ink-2);margin-top:6px;white-space:pre-line;">{{ c.sub }}</div></sc-if>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink-2);margin-top:6px;">{{ c.sub }}</div>
         </div>
       </sc-for>
     </section>
@@ -372,8 +372,7 @@ class Component extends DCLogic {
       });
       return { show: true, strip, rows, notes: notes.join(" "), hasNotes: notes.length > 0, empty: rows.length ? "" : "Nobody on the Due List for this date." };
     })();
-    // A strip cell may carry a sub line (CBB: the units under each record); a cell without one shows none.
-    return { ...vm, strip: (vm.strip || []).map((c) => ({ ...c, sub: c.sub || "" })), games, tabs, themeAttr, pr, dl, hasProps: !!P, sportLong: vm.sport.longName, hasFeedNotice: !!this.state.feedNotice, feedNotice: this.state.feedNotice || "" };
+    return { ...vm, games, tabs, themeAttr, pr, dl, hasProps: !!P, sportLong: vm.sport.longName, hasFeedNotice: !!this.state.feedNotice, feedNotice: this.state.feedNotice || "" };
   }
 }
 </script>
