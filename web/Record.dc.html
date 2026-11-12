@@ -302,7 +302,7 @@ class Component extends DCLogic {
     const bets = rows.filter((r) => r.kind === "bet");
     const span = d.firstDate && d.lastDate ? `${d.firstDate} to ${d.lastDate} · ${d.nights || 0} nights` : "no night graded yet";
     if (!rows.length) return { ...base, ready: false, empty: true, kicker: "College basketball · our record", headline: "No pick has been graded yet.", emptyLink: true, emptyTitle: "No pick has been graded yet", emptyNote: "This page starts once the first night of picks has final scores." };
-    const ov = d.overall || {}, lean = (((d.opinions || {}).byKind || []).find((k) => k.key === "lean")) || {};
+    const L = d.leans || {}, ov = d.overall || {}, lean = L.overall || (((d.opinions || {}).byKind || []).find((k) => k.key === "lean")) || {};
     const cards = [
       { title: "Best bets", stamp: `${ov.bets || 0} bets`, record: rec(ov), unitsLabel: "Won / lost", units: u(ov.units), unitsColor: uc(ov.units), rateLabel: "Per unit bet", rate: ret(ov), note: "The picks we bet: 0.25u, or to win 0.25u on minus odds; +200 to +500 0.15u, +501 to +1500 0.1u, longer 0.05u." },
       { title: "Leans", stamp: `${lean.bets || 0} graded`, record: rec(lean), unitsLabel: "Won / lost", units: u(lean.units), unitsColor: uc(lean.units), rateLabel: "Per unit", rate: ret(lean), note: "Picks that were close but not a best bet, tracked at the same stakes as the best bets. Kept apart from them." },
@@ -340,6 +340,12 @@ class Component extends DCLogic {
       table("market", "By type of bet", d.byMarket, { noun: "Type of bet", rowsNoun: "types" }),
       table("team", "By team", d.byTeam, { noun: "Team", rowsNoun: "teams", logos: true, search: true, names: (k) => (T[k] || {}).name || k }),
       table("month", "By month", d.byMonth, { noun: "Month", rowsNoun: "months", names: monthName, sortMonths: true }),
+      table("price", "By price", d.byPrice, { noun: "Price", rowsNoun: "price ranges" }),
+      // Leans, broken down the same way and in the same units (0.25u, or to
+      // win 0.25u on minus odds; the long-price ladder from +200).
+      table("leanMarket", "Leans by type of bet", L.byMarket, { noun: "Type of bet", rowsNoun: "types" }),
+      table("leanPrice", "Leans by price", L.byPrice, { noun: "Price", rowsNoun: "price ranges" }),
+      table("leanMonth", "Leans by month", L.byMonth, { noun: "Month", rowsNoun: "months", names: monthName, sortMonths: true }),
     ];
     // Log
     const f = this.state.filter;

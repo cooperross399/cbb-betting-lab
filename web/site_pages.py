@@ -891,6 +891,7 @@ def price_band(price) -> str:
 def tracker_page(rows: list[dict], nights: int) -> dict:
     bets = [r for r in rows if r["kind"] == "bet"]
     opinions = [r for r in rows if r["kind"] != "bet"]
+    leans = [r for r in rows if r["kind"] == "lean"]
     dates = sorted({r["date"] for r in rows})
     return {
         "generatedAt": _now(),
@@ -909,6 +910,15 @@ def tracker_page(rows: list[dict], nights: int) -> dict:
         "byTier": _grouped(bets, lambda r: [r["tier"] or "no tier"]),
         "byPrice": _grouped(bets, lambda r: [price_band(r["price"])]),
         "byMonth": _grouped(bets, lambda r: [r["date"][:7]]),
+        # The leans on their own, every record with its units (Cooper,
+        # 2026-11-12: "the unit profit tracked under each record"). `opinions`
+        # mixes leans with passes, which stake nothing.
+        "leans": {
+            "overall": _tally(leans),
+            "byMarket": _grouped(leans, lambda r: [r["market"]]),
+            "byPrice": _grouped(leans, lambda r: [price_band(r["price"])]),
+            "byMonth": _grouped(leans, lambda r: [r["date"][:7]]),
+        },
         "opinions": {
             "overall": _tally(opinions),
             "byMarket": _grouped(opinions, lambda r: [r["market"]]),
