@@ -949,6 +949,43 @@ def _publish_clv_on_the_board(path: Path, clv: dict) -> None:
     _dump(path, board)
 
 
+def _with_units(tally, rows: list[dict]):
+    """A published W-L tally with the tracker's units beside it. Only a tally
+    already there gains them: a record nobody has made stays absent."""
+    if not isinstance(tally, dict):
+        return tally
+    t = _tally(rows)
+    return {**tally, "units": t["units"], "staked": t["staked"], "returnPct": t["returnPct"]}
+
+
+def _publish_units(data: Path, rows: list[dict]) -> None:
+    """The units under every best-bet and lean record the Tonight and Results
+    pages show (Cooper, 2026-11-12: "the unit profit tracked under each record
+    on the website using our same unit sizing"): `units`, `staked` and
+    `returnPct` on board.json's `record.picks` / `record.leans`, results.json's
+    `seasonRecord` and the night's `summary`. Each is summed from the tracker's
+    rows, so every page reads the one stake rule (`quarter`). A file that
+    cannot be read is left alone."""
+    by_kind = {k: [r for r in rows if r["kind"] == k] for k in ("bet", "lean")}
+    for name in ("board.json", "results.json"):
+        path = Path(data) / name
+        try:
+            body = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            continue
+        if not isinstance(body, dict):
+            continue
+        day = body.get("resultsDate")
+        tallies = [(body.get("record"), None), (body.get("seasonRecord"), None), (body.get("summary"), day)]
+        for holder, only in tallies:
+            if not isinstance(holder, dict) or (holder is body.get("summary") and not day):
+                continue
+            for key, kind in (("picks", "bet"), ("leans", "lean")):
+                if isinstance(holder.get(key), dict):
+                    holder[key] = _with_units(holder[key], [r for r in by_kind[kind] if only is None or r["date"] == only])
+        _dump(path, body)
+
+
 def write_record_pages(data: Path, today: date, fetch: bool = True) -> dict:
     hist = Path(data) / "history"
     settle = _module("settle_results")
@@ -960,4 +997,5 @@ def write_record_pages(data: Path, today: date, fetch: bool = True) -> dict:
     _dump(Path(data) / "record.json", record)
     _dump(Path(data) / "tracker.json", tracker)
     _publish_clv_on_the_board(Path(data) / "board.json", record["clv"])
+    _publish_units(Path(data), rows)
     return {"games": len(graded), "nights": record["nights"], "bets": tracker["overall"]["bets"], "opinions": tracker["opinions"]["overall"]["bets"]}

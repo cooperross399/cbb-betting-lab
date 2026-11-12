@@ -121,6 +121,8 @@ staked it (2026-11-04), up to +199; from +200 the NHL Due List's ladder applies,
 bet with no usable price is graded with `units: null`. A lean is tracked at the same stakes (2026-11-04), tallied under `opinions` and never in `overall`, and on its own under `leans` (2026-11-12), so every lean record the Record page shows carries its units; a pass is graded and staked nothing (`units: null`). `byTier` keys are
 the card's tier letters (A high major, B mid major, C low major).
 
+The same units ride on the records the Tonight and Results pages read (2026-11-12, decision 99): board.json's `record.picks` and `record.leans`, and results.json's `seasonRecord.picks` / `.leans` and the night's `summary.picks` / `.leans`, each gain `units`, `staked` and `returnPct` summed from these rows (the night's from its `resultsDate`). A tally that is absent stays absent.
+
 ## season.json
 
 ```

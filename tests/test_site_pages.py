@@ -510,3 +510,29 @@ def test_a_lean_is_tracked_at_a_quarter_unit_apart_from_the_bets():
     assert page["overall"]["bets"] == 0, "a lean never reaches the best bets"
     kinds = {k["key"]: k for k in page["opinions"]["byKind"]}
     assert kinds["lean"]["units"] == -0.26 and kinds["lean"]["staked"] == 0.26
+
+
+def test_the_tonight_and_results_records_carry_their_units(tmp_path):
+    """Cooper, 2026-11-12: "the unit profit tracked under each record on the
+    website". The best-bet and lean records on board.json and results.json
+    carry the tracker's units; a record nobody tallied stays absent."""
+    site_pages = _load(WEB / "site_pages.py", "test_site_pages_units_on_records")
+    rows = [
+        {"date": "2026-11-11", "kind": "bet", "result": "win", "staked": 0.4, "units": 0.25},
+        {"date": "2026-11-12", "kind": "bet", "result": "loss", "staked": 0.25, "units": -0.25},
+        {"date": "2026-11-12", "kind": "lean", "result": "win", "staked": 0.15, "units": 0.3},
+        {"date": "2026-11-12", "kind": "pass", "result": "win", "staked": 0.0, "units": None},
+    ]
+    (tmp_path / "board.json").write_text(json.dumps({"record": {"picks": {"w": 1, "l": 1, "p": 0}, "leans": {"w": 1, "l": 0, "p": 0}, "clvPoints": 0.1}}), encoding="utf-8")
+    (tmp_path / "results.json").write_text(json.dumps({"resultsDate": "2026-11-12", "summary": {"picks": {"w": 0, "l": 1, "p": 0}, "leans": {"w": 1, "l": 0, "p": 0}},
+                                                       "seasonRecord": {"nights": 2, "picks": {"w": 1, "l": 1, "p": 0}, "leans": {"w": 1, "l": 0, "p": 0}}}), encoding="utf-8")
+    site_pages._publish_units(tmp_path, rows)
+    board = json.loads((tmp_path / "board.json").read_text(encoding="utf-8"))
+    assert board["record"]["picks"] == {"w": 1, "l": 1, "p": 0, "units": 0.0, "staked": 0.65, "returnPct": 0.0}
+    assert board["record"]["leans"]["units"] == 0.3 and board["record"]["clvPoints"] == 0.1
+    results = json.loads((tmp_path / "results.json").read_text(encoding="utf-8"))
+    assert results["summary"]["picks"]["units"] == -0.25, "the night counts only its own date"
+    assert results["summary"]["leans"]["units"] == 0.3 and results["seasonRecord"]["picks"]["staked"] == 0.65
+    (tmp_path / "board.json").write_text(json.dumps({"record": {"markets": []}}), encoding="utf-8")
+    site_pages._publish_units(tmp_path, rows)
+    assert json.loads((tmp_path / "board.json").read_text(encoding="utf-8"))["record"] == {"markets": []}, "no tally, no units"
