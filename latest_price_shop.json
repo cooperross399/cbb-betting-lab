@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-13T20:56+00:00",
-  "captures": 154,
+  "alerts": [
+    {
+      "american": 150,
+      "away_team": "Pittsburgh Panthers",
+      "book": "hardrockbet",
+      "books": 17,
+      "commence": "2026-11-13T23:30:00+00:00",
+      "edge": 0.0425,
+      "event_id": "58ad8bd17a0fe9ec1b9661c093ebef4b",
+      "fair_american": 140,
+      "game": "Pittsburgh Panthers at Butler Bulldogs",
+      "home_team": "Butler Bulldogs",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    }
+  ],
+  "as_of": "2026-11-13T21:14+00:00",
+  "captures": 155,
   "cells": [
     {
       "beat_close": 0.6,
@@ -52,12 +68,12 @@
   "correction_factor": 1.8704788371613228,
   "current": [
     {
-      "american": 145,
+      "american": 150,
       "away_team": "Pittsburgh Panthers",
       "book": "hardrockbet",
       "books": 17,
       "commence": "2026-11-13T23:30:00+00:00",
-      "edge": 0.0217,
+      "edge": 0.0425,
       "event_id": "58ad8bd17a0fe9ec1b9661c093ebef4b",
       "fair_american": 140,
       "game": "Pittsburgh Panthers at Butler Bulldogs",
@@ -65,24 +81,9 @@
       "line": null,
       "market": "moneyline",
       "selection": "away"
-    },
-    {
-      "american": 600,
-      "away_team": "Harvard Crimson",
-      "book": "fanatics",
-      "books": 17,
-      "commence": "2026-11-14T00:00:00+00:00",
-      "edge": 0.0636,
-      "event_id": "800cf2e12ab8e83a5f1c8d234a963dfe",
-      "fair_american": 558,
-      "game": "Harvard Crimson at GW Revolutionaries",
-      "home_team": "GW Revolutionaries",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-13T20:55:24+00:00",
+  "latest_capture": "2026-11-13T21:13:32+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
