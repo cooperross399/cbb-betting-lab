@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-13T18:14+00:00",
-  "captures": 152,
+  "alerts": [
+    {
+      "american": 572,
+      "away_team": "Ohio State Buckeyes",
+      "book": "courtside",
+      "books": 18,
+      "commence": "2026-11-14T00:30:00+00:00",
+      "edge": 0.0368,
+      "event_id": "82d63fe987183f4f973a6edc91edce1d",
+      "fair_american": 548,
+      "game": "Ohio State Buckeyes at UConn Huskies",
+      "home_team": "UConn Huskies",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    }
+  ],
+  "as_of": "2026-11-13T19:14+00:00",
+  "captures": 153,
   "cells": [
     {
       "beat_close": 0.6,
@@ -72,9 +88,9 @@
       "book": "courtside",
       "books": 18,
       "commence": "2026-11-14T00:30:00+00:00",
-      "edge": 0.021,
+      "edge": 0.0368,
       "event_id": "82d63fe987183f4f973a6edc91edce1d",
-      "fair_american": 558,
+      "fair_american": 548,
       "game": "Ohio State Buckeyes at UConn Huskies",
       "home_team": "UConn Huskies",
       "line": null,
@@ -82,7 +98,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-13T18:13:39+00:00",
+  "latest_capture": "2026-11-13T19:13:40+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
