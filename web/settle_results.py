@@ -200,6 +200,20 @@ def with_units(pick: dict, tally: dict) -> dict:
     return {**pick, "units": units, "staked": staked, "baseLabel": base, "label": f"{base} \u00b7 {fmt_units(units)}"}
 
 
+def _call_units(price, result, tally: dict) -> None:
+    """Units for a straight-up or totals call at the tracked stake, added to
+    its tally (Cooper, 2026-11-13: profit under straight up and totals, at
+    the NHL sizing). The price is the one the frozen board showed for the
+    called side; a call the board showed no price for is counted in
+    `unpriced` and stakes nothing, never a price made up for it."""
+    got = _stake_rule()(price, result)
+    if got is None:
+        tally["unpriced"] = tally.get("unpriced", 0) + 1
+        return
+    tally["units"] = tally.get("units", 0.0) + got[0]
+    tally["staked"] = tally.get("staked", 0.0) + got[1]
+
+
 def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
     """One day's results.json body, and whether a game on it still has no final.
 
@@ -247,7 +261,10 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
             row["projWinner"] = g["home"]["abbr"] if (hp or 0.5) >= 0.5 else g["away"]["abbr"]
             winner = g["home"]["abbr"] if hf > af else g["away"]["abbr"]
             if isinstance(hp, (int, float)):
-                su["w" if winner == row["projWinner"] else "l"] += 1
+                hit = winner == row["projWinner"]
+                su["w" if hit else "l"] += 1
+                side = "home" if row["projWinner"] == g["home"]["abbr"] else "away"
+                _call_units(((g.get("moneyline") or {}).get("current") or {}).get(side), "win" if hit else "loss", su)
             sp, tt = g.get("spread") or {}, g.get("total") or {}
             # A market goes in only when the board carried its line: the shared
             # Results page formats `markets.spread.line` whenever `spread` is
@@ -266,9 +283,11 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
                 ats["p" if adj == 0 else "w" if (adj > 0) == model_home else "l"] += 1
             if isinstance(tt.get("proj"), (int, float)) and isinstance(tt.get("current"), (int, float)):
                 t = hf + af
-                tots["p" if t == tt["current"] else "w" if (tt["proj"] > tt["current"]) == (t > tt["current"]) else "l"] += 1
+                res = "push" if t == tt["current"] else "win" if (tt["proj"] > tt["current"]) == (t > tt["current"]) else "loss"
+                tots[{"win": "w", "loss": "l", "push": "p"}[res]] += 1
+                _call_units(tt.get("overPrice" if tt["proj"] > tt["current"] else "underPrice"), res, tots)
         games.append(row)
-    for tally in (picks, leans):
+    for tally in (picks, leans, su, tots):
         if "units" in tally:
             tally["units"], tally["staked"] = round(tally["units"], 2), round(tally["staked"], 2)
     summary = {"picks": picks, "leans": leans}
@@ -314,7 +333,8 @@ def night_record(results: dict) -> dict:
 #: `grade_pick` restates every night already kept rather than only the nights
 #: after it. 2 (2026-11-12): an away spread is scored on its own handicap.
 #: 3 (2026-11-12): each graded bet and lean carries its units.
-GRADING = 3
+#: 4 (2026-11-13): straight up and totals carry their units.
+GRADING = 4
 
 
 def _kept_night(path: Path) -> dict | None:
@@ -406,8 +426,8 @@ def season_record(sport: str, day: date, hist: Path, latest: dict | None, latest
                 if k in ("units", "staked"):
                     if isinstance(v, (int, float)) and not isinstance(v, bool):
                         tally[key][k] = round(tally[key].get(k, 0.0) + float(v), 2)
-                elif k in tally[key]:
-                    tally[key][k] += int(v)
+                elif k in tally[key] or k == "unpriced":
+                    tally[key][k] = tally[key].get(k, 0) + int(v)
     span = {"nights": nights, "firstDate": first, "lastDate": last, "missingNights": missing}
     return {**tally, **span} if nights else span
 
