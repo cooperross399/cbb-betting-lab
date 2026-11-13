@@ -1435,7 +1435,8 @@ def build(lab: Path, day: date) -> dict:
             spread_line = consensus_line(mine, "spread", "home")
             total_line = consensus_line(mine, "total")
             row["moneyline"] = {"open": opens["moneyline"], "current": {"home": best(mine, "moneyline", "home"), "away": best(mine, "moneyline", "away")}, "fair": None}
-            row["spread"] = {"open": opens["spread"], "current": spread_line, "homePrice": best(mine, "spread", "home", spread_line), "proj": None}
+            row["spread"] = {"open": opens["spread"], "current": spread_line, "homePrice": best(mine, "spread", "home", spread_line),
+                             "awayPrice": None if spread_line is None else best(mine, "spread", "away", -spread_line), "proj": None}
             row["total"] = {"open": opens["total"], "current": total_line, "overPrice": best(mine, "total", "over", total_line),
                             "underPrice": best(mine, "total", "under", total_line), "proj": None}
             # Model probabilities the freeze recorded, when there is no live

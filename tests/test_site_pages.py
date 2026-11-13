@@ -507,8 +507,47 @@ def test_straight_up_and_totals_carry_their_units(monkeypatch):
     body, _ = settle.settle_day("cbb", None, board)
     su, tots = body["summary"]["straightUp"], body["summary"]["totals"]
     assert (su["w"], su["l"]) == (1, 1)
-    assert (su["units"], su["staked"]) == (0.0, 0.75), "+0.25u at -200 risking 0.5u, -0.25u at +120"
+    assert (su["units"], su["staked"]) == (-0.12, 0.5), "flat risk: +0.125u at -200 risking 0.25u, -0.25u at +120"
     assert (tots["w"], tots["l"], tots["units"], tots["staked"], tots["unpriced"]) == (2, 0, 0.25, 0.26, 1)
+
+
+def test_straight_up_risks_the_stake_flat_and_follows_the_ladder_from_plus_200():
+    """Cooper, 2026-11-13: "do a flat .25u", and "bring the .15u, .1u, and
+    .05u sizing disciplines into play like the NHL"."""
+    site_pages = _load(WEB / "site_pages.py", "test_site_pages_flat_risk")
+    assert site_pages.flat_risk(-800, "loss") == (-0.25, 0.25)
+    assert site_pages.flat_risk(-800, "win") == (0.0312, 0.25)
+    assert site_pages.flat_risk(150, "win") == (0.375, 0.25)
+    assert site_pages.flat_risk(300, "loss") == (-0.15, 0.15)
+    assert site_pages.flat_risk(1000, "win") == (1.0, 0.1)
+    assert site_pages.flat_risk(2000, "loss") == (-0.05, 0.05)
+    assert site_pages.flat_risk(None, "win") is None
+
+
+def test_against_the_spread_carries_its_units(monkeypatch):
+    """Cooper, 2026-11-13: a record for the side of the spread the model
+    picks in every game, with units at the tracked stake. The home line is
+    `spread.current`; the model takes home when its projected line is below
+    it. An away call on a board that carried no away price is unpriced."""
+    settle = _load(WEB / "settle_results.py", "test_site_pages_ats_units")
+    board = {"teams": {}, "games": [
+        # Home -5.5 at -110; model says -9, so home. Home wins by 10: covers.
+        {"id": "1", "home": {"abbr": "A"}, "away": {"abbr": "B"},
+         "spread": {"current": -5.5, "proj": -9.0, "homePrice": -110, "awayPrice": -110}},
+        # Home -5.5; model says -2, so away +5.5 at +100. Home wins by 8: away misses.
+        {"id": "2", "home": {"abbr": "C"}, "away": {"abbr": "D"},
+         "spread": {"current": -5.5, "proj": -2.0, "homePrice": -120, "awayPrice": 100}},
+        # Away call on an older board with only the home price: graded, unpriced.
+        {"id": "3", "home": {"abbr": "E"}, "away": {"abbr": "F"},
+         "spread": {"current": -3.5, "proj": 1.0, "homePrice": -110}},
+    ]}
+    monkeypatch.setattr(settle, "finals", lambda sport, day: {
+        "1": {"home": 80, "away": 70, "finish": "REG"}, "2": {"home": 78, "away": 70, "finish": "REG"},
+        "3": {"home": 60, "away": 70, "finish": "REG"}})
+    body, _ = settle.settle_day("cbb", None, board)
+    ats = body["summary"]["ats"]
+    assert (ats["w"], ats["l"], ats["p"]) == (2, 1, 0)
+    assert (ats["units"], ats["staked"], ats["unpriced"]) == (0.0, 0.53, 1), "+0.25u risking 0.275u, -0.25u at +100"
 
 
 def test_a_lean_is_tracked_at_a_quarter_unit_apart_from_the_bets():

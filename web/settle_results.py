@@ -168,14 +168,15 @@ def frozen_board(hist: Path, day: date) -> Path | None:
     return frozen[0] if frozen else None
 
 
-def _stake_rule():
-    """`site_pages.quarter`, the one place the tracked stake ladder lives."""
+def _stake_rule(name: str = "quarter"):
+    """`site_pages.quarter` (or another rule there, such as `flat_risk`), the
+    one place the tracked stake ladder lives."""
     import importlib.util
 
     spec = importlib.util.spec_from_file_location("site_pages_for_units", Path(__file__).resolve().parent / "site_pages.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.quarter
+    return getattr(module, name)
 
 
 def fmt_units(value: float) -> str:
@@ -200,13 +201,13 @@ def with_units(pick: dict, tally: dict) -> dict:
     return {**pick, "units": units, "staked": staked, "baseLabel": base, "label": f"{base} \u00b7 {fmt_units(units)}"}
 
 
-def _call_units(price, result, tally: dict) -> None:
+def _call_units(price, result, tally: dict, rule: str = "quarter") -> None:
     """Units for a straight-up or totals call at the tracked stake, added to
     its tally (Cooper, 2026-11-13: profit under straight up and totals, at
     the NHL sizing). The price is the one the frozen board showed for the
     called side; a call the board showed no price for is counted in
     `unpriced` and stakes nothing, never a price made up for it."""
-    got = _stake_rule()(price, result)
+    got = _stake_rule(rule)(price, result)
     if got is None:
         tally["unpriced"] = tally.get("unpriced", 0) + 1
         return
@@ -264,7 +265,7 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
                 hit = winner == row["projWinner"]
                 su["w" if hit else "l"] += 1
                 side = "home" if row["projWinner"] == g["home"]["abbr"] else "away"
-                _call_units(((g.get("moneyline") or {}).get("current") or {}).get(side), "win" if hit else "loss", su)
+                _call_units(((g.get("moneyline") or {}).get("current") or {}).get(side), "win" if hit else "loss", su, "flat_risk")
             sp, tt = g.get("spread") or {}, g.get("total") or {}
             # A market goes in only when the board carried its line: the shared
             # Results page formats `markets.spread.line` whenever `spread` is
@@ -280,14 +281,19 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
             if isinstance(sp.get("proj"), (int, float)) and isinstance(sp.get("current"), (int, float)):
                 model_home = sp["proj"] < sp["current"]
                 adj = (hf - af) + sp["current"]
-                ats["p" if adj == 0 else "w" if (adj > 0) == model_home else "l"] += 1
+                res = "push" if adj == 0 else "win" if (adj > 0) == model_home else "loss"
+                ats[{"win": "w", "loss": "l", "push": "p"}[res]] += 1
+                # Priced at the frozen board's best price for the side the
+                # model's line picked; an older board carried only the home
+                # price, so an away call there stakes nothing (unpriced).
+                _call_units(sp.get("homePrice" if model_home else "awayPrice"), res, ats)
             if isinstance(tt.get("proj"), (int, float)) and isinstance(tt.get("current"), (int, float)):
                 t = hf + af
                 res = "push" if t == tt["current"] else "win" if (tt["proj"] > tt["current"]) == (t > tt["current"]) else "loss"
                 tots[{"win": "w", "loss": "l", "push": "p"}[res]] += 1
                 _call_units(tt.get("overPrice" if tt["proj"] > tt["current"] else "underPrice"), res, tots)
         games.append(row)
-    for tally in (picks, leans, su, tots):
+    for tally in (picks, leans, su, ats, tots):
         if "units" in tally:
             tally["units"], tally["staked"] = round(tally["units"], 2), round(tally["staked"], 2)
     summary = {"picks": picks, "leans": leans}
@@ -308,8 +314,9 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
 #: the season reads an old day once instead of re-fetching its finals daily.
 SETTLED_DIR = "settled"
 
-#: The four season tallies, in the NHL lab's shape (web/SCHEMA.md there).
-SEASON_KEYS = ("straightUp", "picks", "leans", "totals")
+#: The season tallies: the NHL lab's four (web/SCHEMA.md there), and the
+#: model's side against the spread (Cooper, 2026-11-13).
+SEASON_KEYS = ("straightUp", "picks", "leans", "totals", "ats")
 
 #: How long a day with a game still lacking a final is settled again each run
 #: rather than kept: the NHL lab's patience, so a postponed game cannot hold a
@@ -334,7 +341,9 @@ def night_record(results: dict) -> dict:
 #: after it. 2 (2026-11-12): an away spread is scored on its own handicap.
 #: 3 (2026-11-12): each graded bet and lean carries its units.
 #: 4 (2026-11-13): straight up and totals carry their units.
-GRADING = 4
+#: 5 (2026-11-13): against the spread carries its units and a season tally;
+#: straight up risks the tracked stake flat (`site_pages.flat_risk`).
+GRADING = 5
 
 
 def _kept_night(path: Path) -> dict | None:
