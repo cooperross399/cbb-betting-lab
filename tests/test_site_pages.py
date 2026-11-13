@@ -311,8 +311,8 @@ def test_publish_board_builds_the_feeds_and_lists_the_pages():
     steps = workflow["jobs"]["build"]["steps"] if "build" in workflow["jobs"] else next(iter(workflow["jobs"].values()))["steps"]
     build = next(s for s in steps if s.get("name") == "Build the board")["run"]
     lines = [line.strip() for line in build.splitlines() if line.strip()]
-    assert "python web/settle_results.py --data dist/data --sport cbb" in lines
-    assert lines.index("python web/build_site_pages.py --data dist/data") > lines.index("python web/settle_results.py --data dist/data --sport cbb"), "the record pages read what the settle kept"
+    assert "python web/settle_results.py --data dist/data --sport cbb --lab ." in lines
+    assert lines.index("python web/build_site_pages.py --data dist/data") > lines.index("python web/settle_results.py --data dist/data --sport cbb --lab ."), "the record pages read what the settle kept"
     site = next(line for line in lines if line.startswith("printf"))
     payload = json.loads(re.search(r"'(\{.*\})'", site).group(1))
     assert payload == {"sport": "cbb", "pages": ["season", "record", "tracker", "methods", "game"]}
@@ -507,8 +507,76 @@ def test_straight_up_and_totals_carry_their_units(monkeypatch):
     body, _ = settle.settle_day("cbb", None, board)
     su, tots = body["summary"]["straightUp"], body["summary"]["totals"]
     assert (su["w"], su["l"]) == (1, 1)
-    assert (su["units"], su["staked"]) == (0.0, 0.75), "+0.25u at -200 risking 0.5u, -0.25u at +120"
+    assert (su["units"], su["staked"]) == (-0.12, 0.5), "flat risk: +0.125u at -200 risking 0.25u, -0.25u at +120"
     assert (tots["w"], tots["l"], tots["units"], tots["staked"], tots["unpriced"]) == (2, 0, 0.25, 0.26, 1)
+
+
+def test_straight_up_risks_the_stake_flat_and_follows_the_ladder_from_plus_200():
+    """Cooper, 2026-11-13: "do a flat .25u", and "bring the .15u, .1u, and
+    .05u sizing disciplines into play like the NHL"."""
+    site_pages = _load(WEB / "site_pages.py", "test_site_pages_flat_risk")
+    assert site_pages.flat_risk(-800, "loss") == (-0.25, 0.25)
+    assert site_pages.flat_risk(-800, "win") == (0.0312, 0.25)
+    assert site_pages.flat_risk(150, "win") == (0.375, 0.25)
+    assert site_pages.flat_risk(300, "loss") == (-0.15, 0.15)
+    assert site_pages.flat_risk(1000, "win") == (1.0, 0.1)
+    assert site_pages.flat_risk(2000, "loss") == (-0.05, 0.05)
+    assert site_pages.flat_risk(None, "win") is None
+
+
+def test_against_the_spread_carries_its_units(monkeypatch):
+    """Cooper, 2026-11-13: a record for the side of the spread the model
+    picks in every game, with units at the tracked stake. The home line is
+    `spread.current`; the model takes home when its projected line is below
+    it. An away call on a board that carried no away price is unpriced."""
+    settle = _load(WEB / "settle_results.py", "test_site_pages_ats_units")
+    board = {"teams": {}, "games": [
+        # Home -5.5 at -110; model says -9, so home. Home wins by 10: covers.
+        {"id": "1", "home": {"abbr": "A"}, "away": {"abbr": "B"},
+         "spread": {"current": -5.5, "proj": -9.0, "homePrice": -110, "awayPrice": -110}},
+        # Home -5.5; model says -2, so away +5.5 at +100. Home wins by 8: away misses.
+        {"id": "2", "home": {"abbr": "C"}, "away": {"abbr": "D"},
+         "spread": {"current": -5.5, "proj": -2.0, "homePrice": -120, "awayPrice": 100}},
+        # Away call on an older board with only the home price: graded, unpriced.
+        {"id": "3", "home": {"abbr": "E"}, "away": {"abbr": "F"},
+         "spread": {"current": -3.5, "proj": 1.0, "homePrice": -110}},
+    ]}
+    monkeypatch.setattr(settle, "finals", lambda sport, day: {
+        "1": {"home": 80, "away": 70, "finish": "REG"}, "2": {"home": 78, "away": 70, "finish": "REG"},
+        "3": {"home": 60, "away": 70, "finish": "REG"}})
+    body, _ = settle.settle_day("cbb", None, board)
+    ats = body["summary"]["ats"]
+    assert (ats["w"], ats["l"], ats["p"]) == (2, 1, 0)
+    assert (ats["units"], ats["staked"], ats["unpriced"]) == (0.0, 0.53, 1), "+0.25u risking 0.275u, -0.25u at +100"
+
+
+def test_a_side_the_board_did_not_price_is_priced_from_the_line_captures(monkeypatch):
+    """Cooper, 2026-11-13: "find a spread for both teams in every game".
+    An away spread call on a board that carried only the home price takes
+    the best captured price for THAT team at its own handicap, from the last
+    capture before the board froze; a later capture is never read, and a
+    game the provider files the other way round is matched by team."""
+    settle = _load(WEB / "settle_results.py", "test_site_pages_captures")
+    prices = _load(WEB / "capture_prices.py", "test_site_pages_capture_prices")
+    head = ["captured_at", "slate_date", "home_team", "away_team", "market", "segment", "player", "selection", "line", "book", "american_odds"]
+    rows = [dict(zip(head, r)) for r in [
+        # Provider files E-F the other way round: F is its "home".
+        ("2026-11-03T14:00:00+00:00", "2026-11-03", "Fteam", "Eteam", "spread", "game", "", "away", "-3.5", "dk", "-115"),
+        ("2026-11-03T14:00:00+00:00", "2026-11-03", "Fteam", "Eteam", "spread", "game", "", "away", "-3.5", "fd", "-108"),
+        ("2026-11-03T14:00:00+00:00", "2026-11-03", "Fteam", "Eteam", "spread", "game", "", "home", "3.5", "fd", "-112"),
+        # After the board froze: never read.
+        ("2026-11-03T20:00:00+00:00", "2026-11-03", "Fteam", "Eteam", "spread", "game", "", "home", "3.5", "fd", "150"),
+    ]]
+    monkeypatch.setattr(settle, "CAPTURES", prices.CapturePrices(rows))
+    board = {"generatedAt": "2026-11-03T15:00:00Z", "teams": {"E": {"name": "Eteam"}, "F": {"name": "Fteam"}}, "games": [
+        # Home E -3.5 at -110; model says +1, so F (away on the board) +3.5.
+        {"id": "3", "home": {"abbr": "E"}, "away": {"abbr": "F"}, "spread": {"current": -3.5, "proj": 1.0, "homePrice": -110}}]}
+    monkeypatch.setattr(settle, "finals", lambda sport, day: {"3": {"home": 60, "away": 70, "finish": "REG"}})
+    from datetime import date as _date
+    body, _ = settle.settle_day("cbb", _date(2026, 11, 3), board)
+    ats = body["summary"]["ats"]
+    assert (ats["w"], ats.get("unpriced", 0)) == (1, 0)
+    assert (ats["units"], ats["staked"]) == (0.25, 0.28), "F +3.5 at -112 (the provider's home row), risking 0.28u to win 0.25u; E's -108 is the other side"
 
 
 def test_a_lean_is_tracked_at_a_quarter_unit_apart_from_the_bets():

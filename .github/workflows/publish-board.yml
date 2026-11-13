@@ -265,7 +265,7 @@ jobs:
         run: |
           python web/build_board_json.py --lab . --out dist/data
           python web/site_history.py --data dist/data
-          python web/settle_results.py --data dist/data --sport cbb
+          python web/settle_results.py --data dist/data --sport cbb --lab .
           python web/build_site_pages.py --data dist/data
           printf '{"sport":"cbb","pages":["season","record","tracker","methods","game"]}' > dist/site.json
 

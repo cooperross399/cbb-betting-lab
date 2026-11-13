@@ -813,6 +813,20 @@ def quarter(price, result) -> tuple[float, float] | None:
     return round(profit, 4), round(risk, 4)
 
 
+def flat_risk(price, result) -> tuple[float, float] | None:
+    """(profit, risked) for one straight-up call: the tracked stake is the
+    amount RISKED at every price (Cooper, 2026-11-13: "do a flat .25u", with
+    the NHL Due List's 0.15u / 0.1u / 0.05u from +200). A heavy favourite at
+    -800 risks 0.25u to win 0.03u, rather than 2u to win 0.25u."""
+    p = _num(price)
+    if p is None or -100 < p < 100 or result not in ("win", "loss", "push"):
+        return None
+    risk = tracked_stake(p)
+    win = risk * 100.0 / abs(p) if p < 0 else risk * p / 100.0
+    profit = win if result == "win" else -risk if result == "loss" else 0.0
+    return round(profit, 4), round(risk, 4)
+
+
 def tracker_rows(graded: list[dict], settle=None, lines_for=None) -> list[dict]:
     """One row per graded pick: a bet or a lean at the tracked stake
     (`quarter`), a pass graded for the record and staked nothing. The
