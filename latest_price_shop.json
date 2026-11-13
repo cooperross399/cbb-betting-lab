@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 600,
-      "away_team": "Harvard Crimson",
-      "book": "fanatics",
-      "books": 17,
-      "commence": "2026-11-14T00:00:00+00:00",
-      "edge": 0.0636,
-      "event_id": "800cf2e12ab8e83a5f1c8d234a963dfe",
-      "fair_american": 558,
-      "game": "Harvard Crimson at GW Revolutionaries",
-      "home_team": "GW Revolutionaries",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-13T17:15+00:00",
-  "captures": 150,
+  "alerts": [],
+  "as_of": "2026-11-13T17:43+00:00",
+  "captures": 151,
   "cells": [
     {
       "beat_close": 0.6,
@@ -101,11 +85,11 @@
       "american": 572,
       "away_team": "Ohio State Buckeyes",
       "book": "courtside",
-      "books": 16,
+      "books": 17,
       "commence": "2026-11-14T00:30:00+00:00",
-      "edge": 0.0336,
+      "edge": 0.0421,
       "event_id": "82d63fe987183f4f973a6edc91edce1d",
-      "fair_american": 550,
+      "fair_american": 545,
       "game": "Ohio State Buckeyes at UConn Huskies",
       "home_team": "UConn Huskies",
       "line": null,
@@ -128,7 +112,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-13T17:14:31+00:00",
+  "latest_capture": "2026-11-13T17:42:37+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
