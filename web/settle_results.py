@@ -215,6 +215,25 @@ def _call_units(price, result, tally: dict, rule: str = "quarter") -> None:
     tally["staked"] = tally.get("staked", 0.0) + got[1]
 
 
+#: The hourly line captures (`capture_prices.CapturePrices`), set by `main`
+#: when the store is on disk: a call whose side the frozen board carried no
+#: price for is priced from it (decision 102). None prices from the board only.
+CAPTURES = None
+
+
+def _board_or_captured(board: dict, day, price, market: str, team: str, opponent: str,
+                       selection: str, line) -> float | None:
+    """The board's own price when it carried one, else the captured best
+    price for that side at that line before the board froze, else None."""
+    if isinstance(price, (int, float)) and not isinstance(price, bool):
+        return price
+    if CAPTURES is None or day is None:
+        return None
+    names = board.get("teams") or {}
+    name = lambda abbr: (names.get(abbr) or {}).get("name") or abbr
+    return CAPTURES.price(day.isoformat(), market, name(team), name(opponent), selection, line, board.get("generatedAt"))
+
+
 def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
     """One day's results.json body, and whether a game on it still has no final.
 
@@ -265,7 +284,10 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
                 hit = winner == row["projWinner"]
                 su["w" if hit else "l"] += 1
                 side = "home" if row["projWinner"] == g["home"]["abbr"] else "away"
-                _call_units(((g.get("moneyline") or {}).get("current") or {}).get(side), "win" if hit else "loss", su, "flat_risk")
+                other = g["away"]["abbr"] if side == "home" else g["home"]["abbr"]
+                price = _board_or_captured(board, day, ((g.get("moneyline") or {}).get("current") or {}).get(side),
+                                           "moneyline", row["projWinner"], other, side, None)
+                _call_units(price, "win" if hit else "loss", su, "flat_risk")
             sp, tt = g.get("spread") or {}, g.get("total") or {}
             # A market goes in only when the board carried its line: the shared
             # Results page formats `markets.spread.line` whenever `spread` is
@@ -286,12 +308,19 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
                 # Priced at the frozen board's best price for the side the
                 # model's line picked; an older board carried only the home
                 # price, so an away call there stakes nothing (unpriced).
-                _call_units(sp.get("homePrice" if model_home else "awayPrice"), res, ats)
+                team, other = (g["home"]["abbr"], g["away"]["abbr"]) if model_home else (g["away"]["abbr"], g["home"]["abbr"])
+                handicap = float(sp["current"]) if model_home else -float(sp["current"])
+                price = _board_or_captured(board, day, sp.get("homePrice" if model_home else "awayPrice"),
+                                           "spread", team, other, "home" if model_home else "away", handicap)
+                _call_units(price, res, ats)
             if isinstance(tt.get("proj"), (int, float)) and isinstance(tt.get("current"), (int, float)):
                 t = hf + af
                 res = "push" if t == tt["current"] else "win" if (tt["proj"] > tt["current"]) == (t > tt["current"]) else "loss"
                 tots[{"win": "w", "loss": "l", "push": "p"}[res]] += 1
-                _call_units(tt.get("overPrice" if tt["proj"] > tt["current"] else "underPrice"), res, tots)
+                over = tt["proj"] > tt["current"]
+                price = _board_or_captured(board, day, tt.get("overPrice" if over else "underPrice"), "total",
+                                           g["home"]["abbr"], g["away"]["abbr"], "over" if over else "under", float(tt["current"]))
+                _call_units(price, res, tots)
         games.append(row)
     for tally in (picks, leans, su, ats, tots):
         if "units" in tally:
@@ -343,7 +372,9 @@ def night_record(results: dict) -> dict:
 #: 4 (2026-11-13): straight up and totals carry their units.
 #: 5 (2026-11-13): against the spread carries its units and a season tally;
 #: straight up risks the tracked stake flat (`site_pages.flat_risk`).
-GRADING = 5
+#: 6 (2026-11-13): a side the board carried no price for is priced from the
+#: hourly line captures (decision 102).
+GRADING = 6
 
 
 def _kept_night(path: Path) -> dict | None:
@@ -466,13 +497,43 @@ def write_season(data: Path, results: dict, season: dict) -> None:
     board_path.write_text(json.dumps(board, indent=1, ensure_ascii=False, allow_nan=False), encoding="utf-8")
 
 
+def load_captures(lab: Path) -> None:
+    """Point CAPTURES at the lab's line-capture store, names resolved by the
+    board builder's own resolver; a missing store or resolver leaves the
+    board's prices as the only ones."""
+    global CAPTURES
+    import importlib.util
+
+    here = Path(__file__).resolve().parent
+    def module(name):
+        spec = importlib.util.spec_from_file_location(f"{name}_for_settle", here / f"{name}.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    store = lab / "data" / "processed" / "cbb_line_movement.csv"
+    if not store.is_file():
+        print("no line-capture store: a side the board did not price stays unpriced")
+        return
+    try:
+        resolve = module("build_board_json").load_names(lab, datetime.now(timezone.utc).date())
+    except Exception as exc:
+        print(f"team names unavailable ({type(exc).__name__}); captures matched by name as spelled")
+        resolve = None
+    CAPTURES = module("capture_prices").CapturePrices.load(store, resolve)
+    print("line captures read" if CAPTURES is not None else "line-capture store unreadable")
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--data", default="dist/data")
     ap.add_argument("--sport", required=True, choices=list(ESPN))
     ap.add_argument("--date", default="")
+    ap.add_argument("--lab", default="", help="the lab checkout: its cbb_line_movement.csv prices a side the board did not")
     args = ap.parse_args(argv)
     data = Path(args.data)
+    if args.lab:
+        load_captures(Path(args.lab))
     day = date.fromisoformat(args.date) if args.date else (datetime.now(timezone.utc) - timedelta(days=1)).date()
     hist = data / "history"
     frozen = frozen_board(hist, day)

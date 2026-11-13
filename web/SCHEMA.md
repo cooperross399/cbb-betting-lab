@@ -164,3 +164,5 @@ price; a model-basis lean reads it off the push-aware win and loss chances.
 The same pick carries `sub` and `extra`, the two lines the shared Board prints
 under its label, with the bet-down-to number in `sub`. `tracker.json` rows
 carry `betDownTo` too.
+
+A settled straight-up, spread or totals call whose side the frozen board did not price (2026-11-13, decision 102) is priced from the hourly line captures (`web/capture_prices.py`): the best price across books for that team at that line in the last capture at or before the board was frozen. A side the captures do not hold stays `unpriced`.

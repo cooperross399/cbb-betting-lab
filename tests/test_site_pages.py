@@ -311,8 +311,8 @@ def test_publish_board_builds_the_feeds_and_lists_the_pages():
     steps = workflow["jobs"]["build"]["steps"] if "build" in workflow["jobs"] else next(iter(workflow["jobs"].values()))["steps"]
     build = next(s for s in steps if s.get("name") == "Build the board")["run"]
     lines = [line.strip() for line in build.splitlines() if line.strip()]
-    assert "python web/settle_results.py --data dist/data --sport cbb" in lines
-    assert lines.index("python web/build_site_pages.py --data dist/data") > lines.index("python web/settle_results.py --data dist/data --sport cbb"), "the record pages read what the settle kept"
+    assert "python web/settle_results.py --data dist/data --sport cbb --lab ." in lines
+    assert lines.index("python web/build_site_pages.py --data dist/data") > lines.index("python web/settle_results.py --data dist/data --sport cbb --lab ."), "the record pages read what the settle kept"
     site = next(line for line in lines if line.startswith("printf"))
     payload = json.loads(re.search(r"'(\{.*\})'", site).group(1))
     assert payload == {"sport": "cbb", "pages": ["season", "record", "tracker", "methods", "game"]}
@@ -548,6 +548,35 @@ def test_against_the_spread_carries_its_units(monkeypatch):
     ats = body["summary"]["ats"]
     assert (ats["w"], ats["l"], ats["p"]) == (2, 1, 0)
     assert (ats["units"], ats["staked"], ats["unpriced"]) == (0.0, 0.53, 1), "+0.25u risking 0.275u, -0.25u at +100"
+
+
+def test_a_side_the_board_did_not_price_is_priced_from_the_line_captures(monkeypatch):
+    """Cooper, 2026-11-13: "find a spread for both teams in every game".
+    An away spread call on a board that carried only the home price takes
+    the best captured price for THAT team at its own handicap, from the last
+    capture before the board froze; a later capture is never read, and a
+    game the provider files the other way round is matched by team."""
+    settle = _load(WEB / "settle_results.py", "test_site_pages_captures")
+    prices = _load(WEB / "capture_prices.py", "test_site_pages_capture_prices")
+    head = ["captured_at", "slate_date", "home_team", "away_team", "market", "segment", "player", "selection", "line", "book", "american_odds"]
+    rows = [dict(zip(head, r)) for r in [
+        # Provider files E-F the other way round: F is its "home".
+        ("2026-11-03T14:00:00+00:00", "2026-11-03", "Fteam", "Eteam", "spread", "game", "", "away", "-3.5", "dk", "-115"),
+        ("2026-11-03T14:00:00+00:00", "2026-11-03", "Fteam", "Eteam", "spread", "game", "", "away", "-3.5", "fd", "-108"),
+        ("2026-11-03T14:00:00+00:00", "2026-11-03", "Fteam", "Eteam", "spread", "game", "", "home", "3.5", "fd", "-112"),
+        # After the board froze: never read.
+        ("2026-11-03T20:00:00+00:00", "2026-11-03", "Fteam", "Eteam", "spread", "game", "", "home", "3.5", "fd", "150"),
+    ]]
+    monkeypatch.setattr(settle, "CAPTURES", prices.CapturePrices(rows))
+    board = {"generatedAt": "2026-11-03T15:00:00Z", "teams": {"E": {"name": "Eteam"}, "F": {"name": "Fteam"}}, "games": [
+        # Home E -3.5 at -110; model says +1, so F (away on the board) +3.5.
+        {"id": "3", "home": {"abbr": "E"}, "away": {"abbr": "F"}, "spread": {"current": -3.5, "proj": 1.0, "homePrice": -110}}]}
+    monkeypatch.setattr(settle, "finals", lambda sport, day: {"3": {"home": 60, "away": 70, "finish": "REG"}})
+    from datetime import date as _date
+    body, _ = settle.settle_day("cbb", _date(2026, 11, 3), board)
+    ats = body["summary"]["ats"]
+    assert (ats["w"], ats.get("unpriced", 0)) == (1, 0)
+    assert (ats["units"], ats["staked"]) == (0.25, 0.28), "F +3.5 at -112 (the provider's home row), risking 0.28u to win 0.25u; E's -108 is the other side"
 
 
 def test_a_lean_is_tracked_at_a_quarter_unit_apart_from_the_bets():
