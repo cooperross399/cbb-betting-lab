@@ -1,14 +1,14 @@
 # CBB price shop
 
-As of 2026-11-13T01:14+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
+As of 2026-11-13T02:14+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
 
 ## Right now
 
-Nothing clears the bar in the capture of 2026-11-13T01:13:41+00:00.
+Nothing clears the bar in the capture of 2026-11-13T02:13:35+00:00.
 
 ## Did the shops beat the close?
 
-Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (144 capture(s) read). Per tier, clustered by game, corrected across 203 cumulative hypotheses (x1.8705); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
+Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (145 capture(s) read). Per tier, clustered by game, corrected across 203 cumulative hypotheses (x1.8705); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
 
 | Tier | Shops | Graded | Games | Mean CLV | Corrected | Beat the close | Line gone at close |
 |:---|---:|---:|---:|---:|:---|---:|---:|
