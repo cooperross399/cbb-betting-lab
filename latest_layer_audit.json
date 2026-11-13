@@ -1,53 +1,53 @@
 {
-  "as_of": "2026-11-12",
+  "as_of": "2026-11-13",
   "layers": [
     {
       "days": 17,
       "default": true,
-      "gain_per_game": 46.55877251698347,
-      "games": 463,
+      "gain_per_game": 45.65759682734711,
+      "games": 476,
       "key": "home_court",
       "label": "Home court",
       "on": true,
-      "reason": "z +4.94 does not cross the -2.0 bar; kept as declared",
-      "standard_error": 9.424755183936803,
-      "z": 4.9400511321860625
+      "reason": "z +4.86 does not cross the -2.0 bar; kept as declared",
+      "standard_error": 9.394644538298206,
+      "z": 4.8599600167115815
     },
     {
       "days": 26,
       "default": true,
-      "gain_per_game": -1.4304722773225578,
-      "games": 416,
+      "gain_per_game": -1.8629067441658997,
+      "games": 430,
       "key": "form",
       "label": "Last five games",
       "on": true,
-      "reason": "z -0.92 does not cross the -2.0 bar; kept as declared",
-      "standard_error": 1.5495251131765428,
-      "z": -0.9231681791785061
+      "reason": "z -1.14 does not cross the -2.0 bar; kept as declared",
+      "standard_error": 1.6276488334836325,
+      "z": -1.1445384937110472
     },
     {
       "days": 19,
       "default": true,
-      "gain_per_game": 1.913152035129888,
-      "games": 161,
+      "gain_per_game": 1.4472776522186417,
+      "games": 169,
       "key": "rest",
       "label": "Rest",
       "on": true,
-      "reason": "161 game(s) over 19 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
-      "standard_error": 1.6388821088226195,
-      "z": 1.1673518338084155
+      "reason": "169 game(s) over 19 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
+      "standard_error": 1.653624365452098,
+      "z": 0.8752154857266865
     },
     {
-      "days": 13,
+      "days": 12,
       "default": true,
-      "gain_per_game": -17.529144635671038,
-      "games": 32,
+      "gain_per_game": -15.457885446655625,
+      "games": 30,
       "key": "lineup",
       "label": "Who is missing",
       "on": true,
-      "reason": "32 game(s) over 13 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
-      "standard_error": 20.370386074953316,
-      "z": -0.860520982330533
+      "reason": "30 game(s) over 12 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
+      "standard_error": 21.51834851251945,
+      "z": -0.7183583553199807
     },
     {
       "days": 0,
@@ -64,74 +64,74 @@
     {
       "days": 26,
       "default": false,
-      "gain_per_game": 0.8953823896417539,
-      "games": 412,
+      "gain_per_game": 0.8278361873943513,
+      "games": 426,
       "key": "pace_form",
       "label": "Pace, last five games",
       "on": false,
-      "reason": "z +1.08 does not cross the +2.0 bar; kept as declared",
-      "standard_error": 0.8252685722804559,
-      "z": 1.0849587876193483
+      "reason": "z +1.03 does not cross the +2.0 bar; kept as declared",
+      "standard_error": 0.8030329608755709,
+      "z": 1.0308869345683354
     },
     {
-      "days": 17,
+      "days": 16,
       "default": false,
-      "gain_per_game": -0.9762394723651531,
-      "games": 105,
+      "gain_per_game": -1.5160751243152306,
+      "games": 95,
       "key": "three_point_luck",
       "label": "Three-point defence luck",
       "on": false,
-      "reason": "105 game(s) over 17 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
-      "standard_error": 3.036340197281544,
-      "z": -0.32151847584114157
+      "reason": "95 game(s) over 16 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
+      "standard_error": 3.3148126707281826,
+      "z": -0.45736374115590256
     },
     {
       "days": 9,
       "default": false,
-      "gain_per_game": 37.04708504704982,
+      "gain_per_game": 37.04708504704985,
       "games": 16,
       "key": "lineup_strict",
       "label": "Who is missing, two games running",
       "on": false,
       "reason": "16 game(s) over 9 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
-      "standard_error": 28.58371181172033,
-      "z": 1.2960907698439363
+      "standard_error": 28.583711811720327,
+      "z": 1.2960907698439375
     },
     {
       "days": 26,
       "default": false,
-      "gain_per_game": -0.3129853028470989,
-      "games": 230,
+      "gain_per_game": -0.1200023016724706,
+      "games": 235,
       "key": "travel",
       "label": "Travel and time zones",
       "on": false,
-      "reason": "z -0.23 does not cross the +2.0 bar; kept as declared",
-      "standard_error": 1.3385317632974694,
-      "z": -0.23382732590227107
+      "reason": "z -0.09 does not cross the +2.0 bar; kept as declared",
+      "standard_error": 1.3390076946917886,
+      "z": -0.08962032268238204
     },
     {
-      "days": 17,
+      "days": 16,
       "default": false,
-      "gain_per_game": -0.7356369555667273,
-      "games": 105,
+      "gain_per_game": -1.0401981745574103,
+      "games": 95,
       "key": "shooting_luck",
       "label": "Shooting luck",
       "on": false,
-      "reason": "105 game(s) over 17 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
-      "standard_error": 4.800695194821426,
-      "z": -0.15323550563265684
+      "reason": "95 game(s) over 16 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
+      "standard_error": 5.302454996473463,
+      "z": -0.19617293786542675
     },
     {
-      "days": 17,
+      "days": 16,
       "default": false,
-      "gain_per_game": -6.87807448858047,
-      "games": 105,
+      "gain_per_game": -10.44180134836539,
+      "games": 95,
       "key": "shot_quality",
       "label": "Shot quality inside the arc",
       "on": false,
-      "reason": "105 game(s) over 17 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
-      "standard_error": 8.19581152326831,
-      "z": -0.8392182359310338
+      "reason": "95 game(s) over 16 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
+      "standard_error": 7.966829768861379,
+      "z": -1.3106595284836535
     },
     {
       "days": 0,
@@ -146,64 +146,64 @@
       "z": null
     },
     {
-      "days": 13,
+      "days": 12,
       "default": false,
-      "gain_per_game": 1.6549802538960803,
-      "games": 31,
+      "gain_per_game": 0.5079953036339053,
+      "games": 29,
       "key": "lineup_minutes",
       "label": "Who is missing, by minutes",
       "on": false,
-      "reason": "31 game(s) over 13 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
-      "standard_error": 4.832153285461419,
-      "z": 0.34249332670704946
+      "reason": "29 game(s) over 12 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
+      "standard_error": 4.994554903291358,
+      "z": 0.10170982469311567
     },
     {
-      "days": 9,
+      "days": 10,
       "default": false,
-      "gain_per_game": -1.7996181979033823,
-      "games": 315,
+      "gain_per_game": -2.8117091483190952,
+      "games": 339,
       "key": "november_form",
       "label": "Early-season form, learned faster",
       "on": false,
-      "reason": "z -0.73 does not cross the +2.0 bar; kept as declared",
-      "standard_error": 2.448833011204585,
-      "z": -0.7348880832908028
+      "reason": "z -1.12 does not cross the +2.0 bar; kept as declared",
+      "standard_error": 2.516626525176419,
+      "z": -1.1172532436540183
     },
     {
-      "days": 17,
+      "days": 16,
       "default": false,
-      "gain_per_game": 0.5061020538841582,
-      "games": 105,
+      "gain_per_game": 0.6132581327616952,
+      "games": 95,
       "key": "four_factors",
       "label": "Four-factor style matchup",
       "on": false,
-      "reason": "105 game(s) over 17 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
-      "standard_error": 0.5808155937255118,
-      "z": 0.87136443881935
+      "reason": "95 game(s) over 16 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
+      "standard_error": 0.6348238804095809,
+      "z": 0.9660287706348227
     },
     {
-      "days": 17,
+      "days": 16,
       "default": false,
-      "gain_per_game": -0.16050022708962763,
-      "games": 101,
+      "gain_per_game": -0.04994957693883469,
+      "games": 91,
       "key": "close_game_luck",
       "label": "Close-game luck",
       "on": false,
-      "reason": "101 game(s) over 17 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
-      "standard_error": 0.33610580883276997,
-      "z": -0.47752886999190425
+      "reason": "91 game(s) over 16 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
+      "standard_error": 0.34537665468284634,
+      "z": -0.14462348934586375
     },
     {
-      "days": 11,
+      "days": 12,
       "default": false,
-      "gain_per_game": 23.010410169313484,
-      "games": 465,
+      "gain_per_game": 23.29446529329802,
+      "games": 489,
       "key": "kenpom",
       "label": "KenPom's projection",
       "on": true,
-      "reason": "it made the predictions better (z +5.14, bar +2.0); added to the card",
-      "standard_error": 4.4748313801723985,
-      "z": 5.142184858913495
+      "reason": "it made the predictions better (z +5.53, bar +2.0); added to the card",
+      "standard_error": 4.210561274880006,
+      "z": 5.532389572922644
     }
   ],
   "notes": [],
@@ -237,7 +237,6 @@
   },
   "window": {
     "days": [
-      "2026-03-17",
       "2026-03-18",
       "2026-03-19",
       "2026-03-20",
@@ -264,8 +263,9 @@
       "2026-11-08",
       "2026-11-09",
       "2026-11-10",
-      "2026-11-11"
+      "2026-11-11",
+      "2026-11-12"
     ],
-    "games": 571
+    "games": 585
   }
 }
