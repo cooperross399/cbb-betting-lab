@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-13T17:43+00:00",
-  "captures": 151,
+  "as_of": "2026-11-13T18:14+00:00",
+  "captures": 152,
   "cells": [
     {
       "beat_close": 0.6,
@@ -67,52 +67,22 @@
       "selection": "away"
     },
     {
-      "american": 275,
-      "away_team": "Iona Gaels",
-      "book": "hardrockbet",
-      "books": 17,
-      "commence": "2026-11-14T00:00:00+00:00",
-      "edge": 0.0302,
-      "event_id": "838d1ef6513a649bf75f324f5983b4ca",
-      "fair_american": 264,
-      "game": "Iona Gaels at Hofstra Pride",
-      "home_team": "Hofstra Pride",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
       "american": 572,
       "away_team": "Ohio State Buckeyes",
       "book": "courtside",
-      "books": 17,
+      "books": 18,
       "commence": "2026-11-14T00:30:00+00:00",
-      "edge": 0.0421,
+      "edge": 0.021,
       "event_id": "82d63fe987183f4f973a6edc91edce1d",
-      "fair_american": 545,
+      "fair_american": 558,
       "game": "Ohio State Buckeyes at UConn Huskies",
       "home_team": "UConn Huskies",
       "line": null,
       "market": "moneyline",
       "selection": "away"
-    },
-    {
-      "american": 225,
-      "away_team": "Virginia Cavaliers",
-      "book": "bovada",
-      "books": 16,
-      "commence": "2026-11-14T01:00:00+00:00",
-      "edge": 0.0226,
-      "event_id": "cc4fc7b11a58f2ff7e9aa162f38a824b",
-      "fair_american": 218,
-      "game": "Virginia Cavaliers at Maryland Terrapins",
-      "home_team": "Maryland Terrapins",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-13T17:42:37+00:00",
+  "latest_capture": "2026-11-13T18:13:39+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02

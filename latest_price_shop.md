@@ -1,21 +1,19 @@
 # CBB price shop
 
-As of 2026-11-13T17:43+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
+As of 2026-11-13T18:14+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
 
 ## Right now
 
-From the capture of 2026-11-13T17:42:37+00:00.
+From the capture of 2026-11-13T18:13:39+00:00.
 
 | Tip (UTC) | Game | Side | Book | Price | Fair | Edge |
 |:---|:---|:---|:---|---:|---:|---:|
 | 2026-11-14 00:00 | Harvard Crimson at GW Revolutionaries | away moneyline | fanatics | +600 | +558 | +6.4% |
-| 2026-11-14 00:00 | Iona Gaels at Hofstra Pride | away moneyline | hardrockbet | +275 | +264 | +3.0% |
-| 2026-11-14 00:30 | Ohio State Buckeyes at UConn Huskies | away moneyline | courtside | +572 | +545 | +4.2% |
-| 2026-11-14 01:00 | Virginia Cavaliers at Maryland Terrapins | home moneyline | bovada | +225 | +218 | +2.3% |
+| 2026-11-14 00:30 | Ohio State Buckeyes at UConn Huskies | away moneyline | courtside | +572 | +558 | +2.1% |
 
 ## Did the shops beat the close?
 
-Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (151 capture(s) read). Per tier, clustered by game, corrected across 203 cumulative hypotheses (x1.8705); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
+Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (152 capture(s) read). Per tier, clustered by game, corrected across 203 cumulative hypotheses (x1.8705); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
 
 | Tier | Shops | Graded | Games | Mean CLV | Corrected | Beat the close | Line gone at close |
 |:---|---:|---:|---:|---:|:---|---:|---:|
