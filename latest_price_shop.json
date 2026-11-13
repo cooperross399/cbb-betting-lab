@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-12T23:14+00:00",
-  "captures": 142,
+  "alerts": [
+    {
+      "american": 500,
+      "away_team": "Harvard Crimson",
+      "book": "fanatics",
+      "books": 8,
+      "commence": "2026-11-14T00:00:00+00:00",
+      "edge": 0.065,
+      "event_id": "800cf2e12ab8e83a5f1c8d234a963dfe",
+      "fair_american": 463,
+      "game": "Harvard Crimson at GW Revolutionaries",
+      "home_team": "GW Revolutionaries",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    }
+  ],
+  "as_of": "2026-11-13T00:14+00:00",
+  "captures": 143,
   "cells": [
     {
       "beat_close": 0.6428571428571429,
@@ -38,13 +54,13 @@
       "ungraded": 1
     },
     {
-      "beat_close": 0.4,
-      "games": 5,
-      "graded": 5,
+      "beat_close": 0.375,
+      "games": 8,
+      "graded": 8,
       "high": null,
       "low": null,
-      "mean": -0.06452435302819037,
-      "shops": 7,
+      "mean": -0.055401087971981386,
+      "shops": 10,
       "tier": "unplaced",
       "ungraded": 2
     }
@@ -57,9 +73,9 @@
       "book": "courtside",
       "books": 18,
       "commence": "2026-11-13T01:00:00+00:00",
-      "edge": 0.0244,
+      "edge": 0.0266,
       "event_id": "4dd17035607c57aff8b475d30545a677",
-      "fair_american": 298,
+      "fair_american": 297,
       "game": "Oklahoma St Cowboys at Texas A&M Aggies",
       "home_team": "Texas A&M Aggies",
       "line": null,
@@ -67,22 +83,22 @@
       "selection": "away"
     },
     {
-      "american": 400,
-      "away_team": "Ohio State Buckeyes",
-      "book": "fanduel",
-      "books": 7,
-      "commence": "2026-11-14T00:30:00+00:00",
-      "edge": 0.0247,
-      "event_id": "82d63fe987183f4f973a6edc91edce1d",
-      "fair_american": 388,
-      "game": "Ohio State Buckeyes at UConn Huskies",
-      "home_team": "UConn Huskies",
+      "american": 500,
+      "away_team": "Harvard Crimson",
+      "book": "fanatics",
+      "books": 8,
+      "commence": "2026-11-14T00:00:00+00:00",
+      "edge": 0.065,
+      "event_id": "800cf2e12ab8e83a5f1c8d234a963dfe",
+      "fair_american": 463,
+      "game": "Harvard Crimson at GW Revolutionaries",
+      "home_team": "GW Revolutionaries",
       "line": null,
       "market": "moneyline",
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-12T23:13:44+00:00",
+  "latest_capture": "2026-11-13T00:13:35+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
