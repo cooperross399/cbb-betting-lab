@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 572,
-      "away_team": "Ohio State Buckeyes",
-      "book": "courtside",
-      "books": 18,
-      "commence": "2026-11-14T00:30:00+00:00",
-      "edge": 0.0368,
-      "event_id": "82d63fe987183f4f973a6edc91edce1d",
-      "fair_american": 548,
-      "game": "Ohio State Buckeyes at UConn Huskies",
-      "home_team": "UConn Huskies",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-13T19:14+00:00",
-  "captures": 153,
+  "alerts": [],
+  "as_of": "2026-11-13T20:56+00:00",
+  "captures": 154,
   "cells": [
     {
       "beat_close": 0.6,
@@ -68,6 +52,21 @@
   "correction_factor": 1.8704788371613228,
   "current": [
     {
+      "american": 145,
+      "away_team": "Pittsburgh Panthers",
+      "book": "hardrockbet",
+      "books": 17,
+      "commence": "2026-11-13T23:30:00+00:00",
+      "edge": 0.0217,
+      "event_id": "58ad8bd17a0fe9ec1b9661c093ebef4b",
+      "fair_american": 140,
+      "game": "Pittsburgh Panthers at Butler Bulldogs",
+      "home_team": "Butler Bulldogs",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    },
+    {
       "american": 600,
       "away_team": "Harvard Crimson",
       "book": "fanatics",
@@ -81,24 +80,9 @@
       "line": null,
       "market": "moneyline",
       "selection": "away"
-    },
-    {
-      "american": 572,
-      "away_team": "Ohio State Buckeyes",
-      "book": "courtside",
-      "books": 18,
-      "commence": "2026-11-14T00:30:00+00:00",
-      "edge": 0.0368,
-      "event_id": "82d63fe987183f4f973a6edc91edce1d",
-      "fair_american": 548,
-      "game": "Ohio State Buckeyes at UConn Huskies",
-      "home_team": "UConn Huskies",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-13T19:13:40+00:00",
+  "latest_capture": "2026-11-13T20:55:24+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
