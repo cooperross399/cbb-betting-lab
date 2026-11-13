@@ -1436,7 +1436,8 @@ def build(lab: Path, day: date) -> dict:
             total_line = consensus_line(mine, "total")
             row["moneyline"] = {"open": opens["moneyline"], "current": {"home": best(mine, "moneyline", "home"), "away": best(mine, "moneyline", "away")}, "fair": None}
             row["spread"] = {"open": opens["spread"], "current": spread_line, "homePrice": best(mine, "spread", "home", spread_line), "proj": None}
-            row["total"] = {"open": opens["total"], "current": total_line, "overPrice": best(mine, "total", "over", total_line), "proj": None}
+            row["total"] = {"open": opens["total"], "current": total_line, "overPrice": best(mine, "total", "over", total_line),
+                            "underPrice": best(mine, "total", "under", total_line), "proj": None}
             # Model probabilities the freeze recorded, when there is no live
             # model to ask. Through `finite`, because the column is a CSV
             # round-trip: an empty cell reads back as the float NaN and a

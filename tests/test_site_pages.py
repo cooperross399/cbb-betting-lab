@@ -487,6 +487,30 @@ def test_a_game_with_no_posted_line_carries_no_market_for_it(monkeypatch):
     assert second["markets"] == {"spread": {"line": -3.5, "proj": -4.0}, "total": {"line": 140.5, "proj": 138.0}}
 
 
+def test_straight_up_and_totals_carry_their_units(monkeypatch):
+    """Cooper, 2026-11-13: profit under straight up and totals, at the
+    tracked stake ladder (0.25u, to win 0.25u on a minus price). Each call is
+    priced at the frozen board's price for the called side; a call the board
+    showed no price for is counted in `unpriced`, never given a price."""
+    settle = _load(WEB / "settle_results.py", "test_site_pages_su_units")
+    board = {"teams": {}, "games": [
+        # Home projected to win at -200 and does; under projected at -105 and lands.
+        {"id": "1", "home": {"abbr": "A", "winProb": 0.7}, "away": {"abbr": "B"},
+         "moneyline": {"current": {"home": -200, "away": 170}},
+         "total": {"current": 140.5, "proj": 135.0, "overPrice": -115, "underPrice": -105}},
+        # Away projected (+120) and loses; over projected with no over price.
+        {"id": "2", "home": {"abbr": "C", "winProb": 0.45}, "away": {"abbr": "D"},
+         "moneyline": {"current": {"home": -140, "away": 120}},
+         "total": {"current": 140.5, "proj": 150.0, "underPrice": -110}},
+    ]}
+    monkeypatch.setattr(settle, "finals", lambda sport, day: {"1": {"home": 70, "away": 60, "finish": "REG"}, "2": {"home": 75, "away": 70, "finish": "REG"}})
+    body, _ = settle.settle_day("cbb", None, board)
+    su, tots = body["summary"]["straightUp"], body["summary"]["totals"]
+    assert (su["w"], su["l"]) == (1, 1)
+    assert (su["units"], su["staked"]) == (0.0, 0.75), "+0.25u at -200 risking 0.5u, -0.25u at +120"
+    assert (tots["w"], tots["l"], tots["units"], tots["staked"], tots["unpriced"]) == (2, 0, 0.25, 0.26, 1)
+
+
 def test_a_lean_is_tracked_at_a_quarter_unit_apart_from_the_bets():
     """Leans are tracked at the same 0.25u as the bets (2026-11-04), tallied
     under `opinions` and never in the bets' `overall`; a pass stakes nothing."""
