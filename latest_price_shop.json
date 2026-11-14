@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 303,
-      "away_team": "Miami (OH) RedHawks",
-      "book": "courtside",
-      "books": 9,
-      "commence": "2026-11-14T19:00:00+00:00",
-      "edge": 0.0324,
-      "event_id": "51f9ec7bdcf8d8941d395ace6f54d2fe",
-      "fair_american": 290,
-      "game": "Miami (OH) RedHawks at Evansville Purple Aces",
-      "home_team": "Evansville Purple Aces",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "as_of": "2026-11-14T00:14+00:00",
-  "captures": 158,
+  "alerts": [],
+  "as_of": "2026-11-14T01:14+00:00",
+  "captures": 159,
   "cells": [
     {
       "beat_close": 0.6,
@@ -54,13 +38,13 @@
       "ungraded": 1
     },
     {
-      "beat_close": 0.625,
-      "games": 8,
-      "graded": 8,
+      "beat_close": 0.6666666666666666,
+      "games": 12,
+      "graded": 12,
       "high": null,
       "low": null,
-      "mean": -0.021178305655379995,
-      "shops": 10,
+      "mean": -0.028400475015802618,
+      "shops": 14,
       "tier": "unplaced",
       "ungraded": 2
     }
@@ -68,29 +52,14 @@
   "correction_factor": 1.8704788371613228,
   "current": [
     {
-      "american": 220,
-      "away_team": "SE Missouri St Redhawks",
-      "book": "hardrockbet",
-      "books": 16,
-      "commence": "2026-11-14T00:30:00+00:00",
-      "edge": 0.0544,
-      "event_id": "a75b53f6f3069aebd0d6889fd109a53d",
-      "fair_american": 203,
-      "game": "SE Missouri St Redhawks at Middle Tennessee Blue Raiders",
-      "home_team": "Middle Tennessee Blue Raiders",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
       "american": 580,
       "away_team": "Tulane Green Wave",
       "book": "fanduel",
-      "books": 9,
+      "books": 10,
       "commence": "2026-11-14T17:00:00+00:00",
-      "edge": 0.0438,
+      "edge": 0.0405,
       "event_id": "4d805b3dd5cc85c566db652de1b4ca4e",
-      "fair_american": 551,
+      "fair_american": 554,
       "game": "Tulane Green Wave at Akron Zips",
       "home_team": "Akron Zips",
       "line": null,
@@ -101,28 +70,13 @@
       "american": 303,
       "away_team": "Miami (OH) RedHawks",
       "book": "courtside",
-      "books": 9,
+      "books": 10,
       "commence": "2026-11-14T19:00:00+00:00",
-      "edge": 0.0324,
+      "edge": 0.0306,
       "event_id": "51f9ec7bdcf8d8941d395ace6f54d2fe",
-      "fair_american": 290,
+      "fair_american": 291,
       "game": "Miami (OH) RedHawks at Evansville Purple Aces",
       "home_team": "Evansville Purple Aces",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    },
-    {
-      "american": 375,
-      "away_team": "Toledo Rockets",
-      "book": "fanduel",
-      "books": 6,
-      "commence": "2026-11-14T21:00:00+00:00",
-      "edge": 0.0403,
-      "event_id": "4b25bcaf9f4a6dcfa8d36ebd39eb0c28",
-      "fair_american": 357,
-      "game": "Toledo Rockets at Detroit Mercy Titans",
-      "home_team": "Detroit Mercy Titans",
       "line": null,
       "market": "moneyline",
       "selection": "home"
@@ -143,7 +97,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-14T00:13:35+00:00",
+  "latest_capture": "2026-11-14T01:13:38+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
