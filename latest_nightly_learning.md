@@ -23,9 +23,39 @@ Per tier, never pooled. These are forecast-accuracy figures on free data: they s
 
 ## What the ratings took from it
 
-Refitted on 469 game(s) this season, through 2026-11-12 (was 469, through 2026-11-12). 0 team(s) moved by 0.05 points per 100 or more.
+Refitted on 521 game(s) this season, through 2026-11-13 (was 469, through 2026-11-12). 226 team(s) moved by 0.05 points per 100 or more.
 
-Median share of each rating still carried by the preseason prior: offence 47% → 47%, defence 56% → 56%, tempo 40% → 40%. This falls as the season's results take over.
+Median share of each rating still carried by the preseason prior: offence 47% → 46%, defence 56% → 56%, tempo 40% → 39%. This falls as the season's results take over.
+
+**Biggest risers** (net rating, points per 100 on a neutral floor):
+
+| Team | Tier | Before | After | Change |
+|:---|:---|---:|---:|---:|
+| Northern Arizona | low-major | -11.85 | -8.41 | +3.44 |
+| Utah State | mid-major | +22.42 | +25.73 | +3.31 |
+| DePaul | high-major | +13.15 | +16.36 | +3.21 |
+| Tennessee State | low-major | -5.33 | -2.75 | +2.58 |
+| George Washington | mid-major | +15.86 | +18.38 | +2.53 |
+| Northeastern | mid-major | -5.93 | -3.43 | +2.50 |
+| Wright State | low-major | +11.25 | +13.58 | +2.33 |
+| Chattanooga | low-major | -6.29 | -4.06 | +2.23 |
+| San Diego | mid-major | -1.42 | +0.77 | +2.19 |
+| Georgetown | high-major | +9.19 | +11.37 | +2.18 |
+
+**Biggest fallers** (net rating, points per 100 on a neutral floor):
+
+| Team | Tier | Before | After | Change |
+|:---|:---|---:|---:|---:|
+| Harvard | mid-major | +4.97 | +1.41 | -3.55 |
+| Northwestern | high-major | +11.47 | +7.97 | -3.50 |
+| UC San Diego | low-major | +10.47 | +7.17 | -3.30 |
+| Kentucky | high-major | +16.20 | +13.41 | -2.78 |
+| Samford | low-major | -1.12 | -3.88 | -2.76 |
+| TCU | high-major | +24.00 | +21.54 | -2.47 |
+| Tarleton State | low-major | -2.56 | -4.94 | -2.38 |
+| West Florida | unplaced | -0.71 | -3.08 | -2.37 |
+| North Alabama | low-major | -10.17 | -12.48 | -2.30 |
+| Oregon State | mid-major | +11.80 | +9.56 | -2.24 |
 
 ## The other two learners
 
@@ -48,6 +78,6 @@ Median share of each rating still carried by the preseason prior: offence 47% �
 | 2026-11-10 | 56 | 9.89 | 14.18 | 82.1% | 56% |
 | 2026-11-11 | 48 | 10.03 | 12.87 | 75.0% | 47% |
 | 2026-11-12 | 24 | 8.75 | 13.20 | 70.8% | 47% |
-| 2026-11-13 | 55 | 10.54 | 11.83 | 76.4% | 47% |
+| 2026-11-13 | 55 | 10.54 | 11.83 | 76.4% | 46% |
 
 _6 of 61 game(s) on 2026-11-13 carry no graded projection: a non-D-I opponent, a team the prior does not know, or a score not yet in the tables._
