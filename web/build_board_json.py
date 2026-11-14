@@ -344,6 +344,77 @@ def staged_captures(lab: Path, day: date, key) -> list[dict]:
     return out
 
 
+#: The hourly line-movement capture store (`line-movement` branch), which
+#: Publish Board copies to `data/processed/` before this file runs. Named by
+#: the competition registry where the package is importable.
+def _hourly_store(lab: Path) -> Path:
+    try:
+        from cbb_betting_lab import line_movement  # type: ignore  # noqa: PLC0415
+        from cbb_betting_lab.competitions import CBB  # type: ignore  # noqa: PLC0415
+    except ImportError:
+        return lab / "data" / "processed" / "cbb_line_movement.csv"
+    return line_movement.store_path(CBB, lab / "data" / "processed")
+
+
+def _instant(text) -> datetime | None:
+    if not text:
+        return None
+    try:
+        t = datetime.fromisoformat(str(text).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+
+
+def hourly_captures(lab: Path, day: date, key, now: datetime | None = None) -> dict:
+    """The hourly capture's lines for every game of the slate day (decision 103).
+
+    The card's own capture is taken twice a day and ESPN's scoreboard drops a
+    game's line the moment it tips, so a game that tipped before the card read
+    the board -- or was added after it -- was drawn with no line at all. The
+    line-movement capture reads every book on every game the provider lists,
+    hourly, and is already on disk. This returns, per resolved `(home, away)`
+    pair in the provider's orientation, `{"close": rows, "open": rows}`:
+    `close` the rows of the LAST capture taken at or before tip (and before
+    `now`), which is the closing line once a game has started, and `open` the
+    rows of the first. Real prices from real books; nothing is estimated, and
+    a game the store never captured is absent.
+    """
+    path = _hourly_store(lab)
+    if not path.is_file():
+        return {}
+    now = now or datetime.now(timezone.utc)
+    wanted = day.isoformat()
+    by_pair: dict[tuple[str, str], dict[datetime, list[dict]]] = {}
+    seen: dict[str, str] = {}
+
+    def k(name: str) -> str:
+        if name not in seen:
+            seen[name] = key(name)
+        return seen[name]
+
+    try:
+        with open(path, newline="", encoding="utf-8") as fh:
+            for r in csv.DictReader(fh):
+                if r.get("slate_date") != wanted:
+                    continue
+                if (r.get("segment") or FULL_GAME) != FULL_GAME or (r.get("player") or "").strip():
+                    continue
+                if norm_market(r) not in BOARD_MARKETS:
+                    continue
+                when, tip = _instant(r.get("captured_at")), _instant(r.get("commence_time"))
+                if when is None or when > now or (tip is not None and when > tip):
+                    continue
+                pair = (k(r.get("home_team", "")), k(r.get("away_team", "")))
+                by_pair.setdefault(pair, {}).setdefault(when, []).append(r)
+    except (OSError, UnicodeError, csv.Error):
+        return {}
+    out = {}
+    for pair, captures in by_pair.items():
+        out[pair] = {"close": captures[max(captures)], "open": captures[min(captures)] if len(captures) >= 2 else None}
+    return out
+
+
 def capture_values(rows: list[dict]) -> dict:
     """What one capture says about one game, in `lineHistory`'s keys
     (`web/site_history.py::SERIES`): the best home moneyline, and the most
@@ -1374,6 +1445,7 @@ def build(lab: Path, day: date) -> dict:
     # the morning's best price stand as tonight's -- and a game that tipped
     # before the evening read keeps the morning's prices as its last.
     captures = staged_captures(lab, day, by_name)
+    hourly_groups = hourly_captures(lab, day, by_name, now)
     frozen_rows = group_rows(load_frozen(lab, day), by_name)
     # The card's own selections for this day, from its state file. A state
     # file from another day was already refused by `load_status`; a
@@ -1410,8 +1482,24 @@ def build(lab: Path, day: date) -> dict:
         # The scoreboard's posted line fills whatever the card's capture does
         # not hold, market by market: the capture wins wherever it has a
         # number, because it is every book's best price rather than one's.
-        posted = g.get("posted") or {}
+        #
+        # Between the two, the hourly capture (decision 103): every book, the
+        # last read before tip, so a game that tipped before the card read
+        # the board -- when ESPN has already taken its line down -- keeps the
+        # line it closed at.
         held = {norm_market(r) for r in mine}
+        hourly = hourly_groups.get((hk, ak))
+        if hourly is None and (ak, hk) in hourly_groups:
+            flipped = hourly_groups[(ak, hk)]
+            hourly = {"close": [flip_row(r) for r in flipped["close"]],
+                      "open": None if flipped["open"] is None else [flip_row(r) for r in flipped["open"]]}
+        if hourly:
+            mine += [r for r in hourly["close"] if norm_market(r) not in held]
+            for slot_name, value in opening_prices(hourly["open"]).items():
+                if opens.get(slot_name) is None and slot_name not in held and value is not None:
+                    opens[slot_name] = value
+            held = {norm_market(r) for r in mine}
+        posted = g.get("posted") or {}
         mine += [r for r in posted.get("rows") or [] if norm_market(r) not in held]
         for slot_name, value in (posted.get("open") or {}).items():
             if opens.get(slot_name) is None and slot_name not in held and value is not None:
