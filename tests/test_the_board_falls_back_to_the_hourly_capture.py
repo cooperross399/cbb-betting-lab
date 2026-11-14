@@ -155,3 +155,42 @@ def test_a_game_nobody_captured_has_no_line(tmp_path: Path, monkeypatch) -> None
     g = _game(_build(tmp_path, monkeypatch), "504")
 
     assert "moneyline" not in g and "spread" not in g and "total" not in g
+
+
+# ---------------------------------------------------------------------------
+# Decision 104: a game no book prices carries a labelled ESPN projection.
+# ---------------------------------------------------------------------------
+
+
+def test_a_game_nobody_prices_carries_a_labelled_projection(tmp_path: Path, monkeypatch) -> None:
+    _fixture(tmp_path)
+    board_mod = _load(BUILD, "board_build_for_projection")
+    monkeypatch.setattr(board_mod, "slate_for", lambda day: SLATE)
+    monkeypatch.setattr(board_mod, "load_model", lambda lab, day, games: None)
+    asked = []
+
+    def chance(event_id):
+        asked.append(event_id)
+        return 0.75
+
+    monkeypatch.setattr(board_mod, "espn_home_chance", chance)
+    built = board_mod.build(tmp_path, DAY)
+    json.dumps(built, allow_nan=False)
+
+    assert asked == ["504"], "only the game with no line and no model asks ESPN"
+    g = _game(built, "504")
+    assert g["lineNote"] == board_mod.PROJECTION_NOTE
+    assert g["moneyline"]["current"] is None and g["spread"]["current"] is None, "a projection is never a price"
+    assert g["moneyline"]["fair"] == {"home": -300, "away": 300}
+    # 75% at a margin spread of 11 points is a home side about 7.4 points better.
+    assert g["spread"]["proj"] == -7.5
+    assert "winProb" not in g["home"] and "winProb" not in g["away"], "ESPN's chance never enters the model's record"
+    assert "lineNote" not in _game(built, "501")
+
+
+def test_the_cbb_board_draws_the_note_under_the_win_bar() -> None:
+    smooth = _load(PROJECT_ROOT / "web" / "smooth_pages.py", "smooth_for_projection")
+    js = (PROJECT_ROOT / "web" / "lib" / "sports.js").read_text(encoding="utf-8")
+    patched = smooth.patch("lib/sports.js", js, "cbb")
+    assert 'barNote: g.lineNote || ""' in patched
+    assert 'barNote: g.lineNote || ""' not in smooth.patch("lib/sports.js", js, "nhl")
