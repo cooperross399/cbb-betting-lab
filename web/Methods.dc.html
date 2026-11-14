@@ -2,6 +2,15 @@
 <html>
 <head>
 <meta charset="utf-8">
+<!-- smooth-pages -->
+<style>@media (max-width:719px){header>nav[aria-label="Site"]{flex-basis:100%;}}section div:has(+h1){min-height:1.2em;}nav[aria-label="Board sections"]{overflow-x:auto;scrollbar-width:none;}nav[aria-label="Board sections"] a{flex:1 0 auto!important;min-width:0!important;padding:0 7px!important;}@media (max-width:519px){nav[aria-label="Board sections"] a{font-size:11px!important;letter-spacing:.03em!important;padding:0 5px!important;}}html.sp-wait body{visibility:hidden;}</style>
+<script>(function(){var d=document.documentElement;d.classList.add('sp-wait');var n=0,saw=0,last=Date.now(),t0=last,done=0,f=window.fetch;function own(u){try{return new URL(u&&u.url||u,location.href).origin===location.origin}catch(e){return 0}}if(f)window.fetch=function(u){var o=own(u);if(o)n++;var p=f.apply(this,arguments);if(o){var e=function(){n--;saw=1;last=Date.now()};p.then(e,e)}return p};function show(){if(done)return;done=1;d.classList.remove('sp-wait')}function tick(){if(done)return;var now=Date.now(),fo=!document.fonts||document.fonts.status==='loaded';if(now-t0>1600||(saw&&!n&&fo&&now-last>120&&document.readyState!=='loading'))show();else setTimeout(tick,40)}new MutationObserver(function(){last=Date.now()}).observe(d,{subtree:true,childList:true,characterData:true,attributes:true});setTimeout(tick,40)})();</script>
+<script type="speculationrules">{"prerender":[{"where":{"href_matches":"/*.dc.html"},"eagerness":"moderate"}]}</script>
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="script" href="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z">
+<link rel="preload" as="script" href="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./support.js"></script>
@@ -19,25 +28,60 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@mavhightower">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root, html[data-sport="cbb"], html[data-sport="cbb"] [data-theme="light"] { color-scheme: light; --paper:#ffffff; --ink:#14151a; --ink-2:#2a2d3a; --mute:#62656f; --mute-2:#9a9ca6; --rule:#dddbd6; --rule-2:#ecebe7; --on-ink:#d6d3cc; --alert:#b0341f; --on-alert:#ffffff; --win:#2c7a5a; --on-win:#ffffff; --desk:#eeede9; }
     @media (prefers-color-scheme: dark) { html[data-sport="cbb"] { color-scheme: dark; --paper:#0f1a2b; --ink:#eef1f6; --ink-2:#cdd4e0; --mute:#9ba6b8; --mute-2:#7a869a; --rule:#2b3a52; --rule-2:#1c2a3f; --on-ink:#2b3a52; --alert:#f08a72; --on-alert:#0f1a2b; --win:#5cc196; --on-win:#0f1a2b; --desk:#0a1220; } }
     html[data-sport="cbb"] [data-theme="dark"] { color-scheme: dark; --paper:#0f1a2b; --ink:#eef1f6; --ink-2:#cdd4e0; --mute:#9ba6b8; --mute-2:#7a869a; --rule:#2b3a52; --rule-2:#1c2a3f; --on-ink:#2b3a52; --alert:#f08a72; --on-alert:#0f1a2b; --win:#5cc196; --on-win:#0f1a2b; --desk:#0a1220; }
-    html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: "IBM Plex Sans", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; scroll-behavior: smooth; }
+    html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); font-family: "Inter", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; scroll-behavior: smooth; }
+    [style*="Playfair Display"], .cond { font-variant-numeric: lining-nums; }
     * { box-sizing: border-box; }
     a { color: var(--ink); text-decoration: none; }
     a:hover { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
     a:focus-visible, button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
     .mono { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
-    .cond { font-family: "Barlow Condensed", sans-serif; }
+    .cond { font-family:"Playfair Display",Georgia,serif; }
     .skip { position: absolute; left: 12px; top: -60px; background: var(--ink); color: var(--paper); padding: 10px 14px; z-index: 10; font-size: 14px; }
     .skip:focus { top: 12px; }
     .entry { scroll-margin-top: 64px; }
     @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
   </style>
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#0e1013">
   <script>(function(){if(typeof document!=="undefined"){document.documentElement.setAttribute("data-sport","cbb");}})();</script>
+  <style id="mh-modern">
+    /* Modern App theme (2026-11-13): one dark slate look for all three sites, electric-blue accent, rounded cards, pill tabs. */
+    html, html [data-theme], html[data-sport], html[data-sport] [data-theme] {
+      color-scheme: dark;
+      --paper:#0e1013 !important; --ink:#f3f4f6 !important; --ink-2:#c9cdd5 !important; --mute:#8d93a0 !important; --mute-2:#6b7180 !important;
+      --rule:#262a33 !important; --rule-2:#1c1f26 !important; --on-ink:#262a33 !important;
+      --alert:#f87171 !important; --on-alert:#0e1013 !important; --win:#34d399 !important; --on-win:#0e1013 !important; --desk:#0a0b0e !important;
+      --accent:#3b82f6; --accent-2:#60a5fa; --card:#171a20; --logo-disc:#f1f3f6;
+    }
+    html, body { background:#0e1013 !important; }
+    /* Hard white rules become soft dividers */
+    [style*="solid var(--ink)"] { border-color: var(--rule) !important; }
+    html body header[style*="border-top:4px"], html body header[style*="border-top: 4px"] { border-top:0 !important; padding-top:16px !important; }
+    /* Boxes become rounded cards */
+    [style*="border:1px solid var(--"], [style*="border: 1px solid var(--"] { border-radius:12px; }
+    /* Inverse blocks (best bets, MH mark, selected buttons) use the accent */
+    [style*="background:var(--ink)"], [style*="background: var(--ink)"] { background: var(--accent) !important; color:#fff !important; border-color: var(--accent) !important; border-radius:10px; }
+    [style*="background:var(--ink)"] *, [style*="background: var(--ink)"] * { color:#fff; }
+    /* Pill tabs */
+    html body nav[aria-label="Board sections"] { border-bottom:1px solid var(--rule) !important; gap:6px; padding:10px 0; background:rgba(14,16,19,.92) !important; backdrop-filter: blur(8px); }
+    html body nav[aria-label="Board sections"] a { flex:0 0 auto !important; max-width:none !important; min-height:38px !important; padding:0 16px !important; border-radius:999px; box-shadow:none !important; text-transform:none !important; letter-spacing:0 !important; font-size:14px !important; font-weight:600 !important; color: var(--mute) !important; }
+    html body nav[aria-label="Board sections"] a:hover { background: var(--card); color: var(--ink) !important; text-decoration:none; }
+    html body nav[aria-label="Board sections"] a[aria-current="page"] { background: var(--accent) !important; color:#fff !important; }
+    html body nav[aria-label="Board sections"] a[aria-current="page"] * { color:#fff !important; }
+    /* Team logos sit on a light disc so dark logos stay visible */
+    img[style*="object-fit:contain"], img[style*="object-fit: contain"], img.team-logo { background: var(--logo-disc) !important; }
+    /* Cards: stat strip, score tiles, game blocks */
+    section[style*="210px"] { gap:12px !important; border-bottom:0 !important; padding:10px 0 6px; }
+    section[style*="210px"] div[style*="border-bottom"] { background:var(--card); border:1px solid var(--rule) !important; border-radius:14px; padding:18px 20px !important; }
+    button[style*="scroll-snap-align"] { background:var(--card) !important; border-radius:12px !important; }
+    article[id][style*="scroll-margin"], article[style*="340px"] { background:var(--card); border:1px solid var(--rule) !important; border-radius:16px; padding:4px 20px 8px !important; margin:14px 0; box-shadow:0 8px 24px rgba(0,0,0,.28); }
+    a:focus-visible, button:focus-visible { outline-color: var(--accent) !important; }
+    ::selection { background: rgba(59,130,246,.35); }
+  </style>
 </helmet>
 <div data-screen-label="Methods" style="min-height:100vh;background:var(--paper);color:var(--ink);">
   <a href="#main" class="skip">Skip to the methods</a>
@@ -45,10 +89,10 @@
 
     <header style="border-top:4px solid var(--ink);padding:10px 0 4px;display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;">
       <a href="https://maverickhightower.com/" aria-label="Maverick Hightower home" style="display:flex;align-items:center;gap:12px;min-height:44px;">
-        <span aria-hidden="true" style="width:36px;height:36px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;letter-spacing:.04em;">MH</span>
+        <span aria-hidden="true" style="width:36px;height:36px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-family:'Inter',sans-serif;font-weight:800;font-size:18px;letter-spacing:.04em;">MH</span>
         <span style="display:flex;flex-direction:column;line-height:1.1;">
           <span style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">Maverick Hightower</span>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;letter-spacing:.02em;text-transform:uppercase;">College Basketball</span>
+          <span style="font-family:'Playfair Display',Georgia,serif;font-weight:700;font-size:22px;letter-spacing:-.01em;">College Basketball</span>
         </span>
       </a>
       <nav aria-label="Site" style="display:flex;gap:0 18px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;font-weight:500;flex-wrap:wrap;">
