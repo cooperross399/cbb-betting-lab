@@ -234,6 +234,85 @@ def posted_lines(comp: dict, home_name: str, away_name: str) -> dict:
     return {"rows": rows, "open": opened}
 
 
+#: ESPN's game summary, which carries its "Matchup Predictor" on every game,
+#: including the ones no book prices.
+ESPN_SUMMARY = ESPN.rsplit("/", 1)[0] + "/summary"
+
+#: The note the board shows on a game priced from ESPN's predictor rather than
+#: a book (decision 104). The page prints it under the win bar.
+PROJECTION_NOTE = "No book line · ESPN projection"
+
+
+def _margin_sd() -> float:
+    """The lab's spread of a final margin about its expectation, in points."""
+    try:
+        from cbb_betting_lab.models.four_factors import MARGIN_SD  # type: ignore  # noqa: PLC0415
+    except ImportError:
+        return 11.0
+    return float(MARGIN_SD)
+
+
+def espn_home_chance(event_id: str) -> float | None:
+    """ESPN's Matchup Predictor chance that the home side wins, or None.
+
+    Read from the game summary: the predictor before tip, the opening point
+    of the win-probability chart after it. A chance outside (0, 1), a missing field or a
+    fetch that fails is None: the game then shows no projection.
+    """
+    try:
+        payload = fetch_json(f"{ESPN_SUMMARY}?event={event_id}")
+    except Exception:  # noqa: BLE001 - a projection beside the board, never the board
+        return None
+    pred = payload.get("predictor") or {}
+    home = finite((pred.get("homeTeam") or {}).get("gameProjection"))
+    if home is None:
+        away = finite((pred.get("awayTeam") or {}).get("gameProjection"))
+        home = None if away is None else 100.0 - away
+    if home is None:
+        # Once a game tips ESPN drops the predictor; the first point of its
+        # win-probability chart is the same pre-game chance, as a fraction.
+        first = next((w for w in (payload.get("winprobability") or []) if isinstance(w, dict)), None)
+        pregame = finite((first or {}).get("homeWinPercentage"))
+        home = None if pregame is None else 100.0 * pregame
+    if home is None or not 0.0 < home < 100.0:
+        return None
+    return home / 100.0
+
+
+def projected_line(home_chance: float) -> dict:
+    """A labelled projection for a game no book prices (decision 104).
+
+    Cooper, 2026-11-14, chose a labelled projection over a blank for the
+    Division I sides hosting non-Division I schools: no book the lab can read
+    hangs a line on them. ESPN's predictor gives the home side's chance; the
+    fair moneyline is that chance at no vig, and the projected spread is the
+    margin that chance implies under the lab's own margin spread
+    (`four_factors.MARGIN_SD`), to the half point. Both go in the `fair` and
+    `proj` slots the page already labels Fair and Proj; `current` stays null,
+    because it is not a price anybody offered, and no win probability is
+    written, so the projection never enters the model's straight-up record or
+    its calibration.
+    """
+    p = min(max(home_chance, 0.001), 0.999)
+    margin = _margin_sd() * _normal_quantile(p)
+    return {
+        "moneyline": {"open": None, "current": None, "fair": {"home": to_american(p), "away": to_american(1 - p)}},
+        "spread": {"open": None, "current": None, "homePrice": None, "proj": round(-margin * 2) / 2},
+    }
+
+
+def _normal_quantile(p: float) -> float:
+    """The standard normal quantile, by bisection on `math.erf` (no SciPy here)."""
+    lo, hi = -10.0, 10.0
+    for _ in range(80):
+        mid = (lo + hi) / 2
+        if 0.5 * (1 + math.erf(mid / math.sqrt(2))) < p:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2
+
+
 def ink_for(hex_color: str) -> str:
     h = (hex_color or "14151a").lstrip("#")
     try:
@@ -341,6 +420,77 @@ def staged_captures(lab: Path, day: date, key) -> list[dict]:
         hour = hours.get(slot)
         out.append({"slot": slot, "t": None if hour is None else f"{day.isoformat()}T{hour:02d}:00:00Z",
                     "games": group_rows(read_csv(path), key)})
+    return out
+
+
+#: The hourly line-movement capture store (`line-movement` branch), which
+#: Publish Board copies to `data/processed/` before this file runs. Named by
+#: the competition registry where the package is importable.
+def _hourly_store(lab: Path) -> Path:
+    try:
+        from cbb_betting_lab import line_movement  # type: ignore  # noqa: PLC0415
+        from cbb_betting_lab.competitions import CBB  # type: ignore  # noqa: PLC0415
+    except ImportError:
+        return lab / "data" / "processed" / "cbb_line_movement.csv"
+    return line_movement.store_path(CBB, lab / "data" / "processed")
+
+
+def _instant(text) -> datetime | None:
+    if not text:
+        return None
+    try:
+        t = datetime.fromisoformat(str(text).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+
+
+def hourly_captures(lab: Path, day: date, key, now: datetime | None = None) -> dict:
+    """The hourly capture's lines for every game of the slate day (decision 103).
+
+    The card's own capture is taken twice a day and ESPN's scoreboard drops a
+    game's line the moment it tips, so a game that tipped before the card read
+    the board -- or was added after it -- was drawn with no line at all. The
+    line-movement capture reads every book on every game the provider lists,
+    hourly, and is already on disk. This returns, per resolved `(home, away)`
+    pair in the provider's orientation, `{"close": rows, "open": rows}`:
+    `close` the rows of the LAST capture taken at or before tip (and before
+    `now`), which is the closing line once a game has started, and `open` the
+    rows of the first. Real prices from real books; nothing is estimated, and
+    a game the store never captured is absent.
+    """
+    path = _hourly_store(lab)
+    if not path.is_file():
+        return {}
+    now = now or datetime.now(timezone.utc)
+    wanted = day.isoformat()
+    by_pair: dict[tuple[str, str], dict[datetime, list[dict]]] = {}
+    seen: dict[str, str] = {}
+
+    def k(name: str) -> str:
+        if name not in seen:
+            seen[name] = key(name)
+        return seen[name]
+
+    try:
+        with open(path, newline="", encoding="utf-8") as fh:
+            for r in csv.DictReader(fh):
+                if r.get("slate_date") != wanted:
+                    continue
+                if (r.get("segment") or FULL_GAME) != FULL_GAME or (r.get("player") or "").strip():
+                    continue
+                if norm_market(r) not in BOARD_MARKETS:
+                    continue
+                when, tip = _instant(r.get("captured_at")), _instant(r.get("commence_time"))
+                if when is None or when > now or (tip is not None and when > tip):
+                    continue
+                pair = (k(r.get("home_team", "")), k(r.get("away_team", "")))
+                by_pair.setdefault(pair, {}).setdefault(when, []).append(r)
+    except (OSError, UnicodeError, csv.Error):
+        return {}
+    out = {}
+    for pair, captures in by_pair.items():
+        out[pair] = {"close": captures[max(captures)], "open": captures[min(captures)] if len(captures) >= 2 else None}
     return out
 
 
@@ -1374,6 +1524,7 @@ def build(lab: Path, day: date) -> dict:
     # the morning's best price stand as tonight's -- and a game that tipped
     # before the evening read keeps the morning's prices as its last.
     captures = staged_captures(lab, day, by_name)
+    hourly_groups = hourly_captures(lab, day, by_name, now)
     frozen_rows = group_rows(load_frozen(lab, day), by_name)
     # The card's own selections for this day, from its state file. A state
     # file from another day was already refused by `load_status`; a
@@ -1410,8 +1561,24 @@ def build(lab: Path, day: date) -> dict:
         # The scoreboard's posted line fills whatever the card's capture does
         # not hold, market by market: the capture wins wherever it has a
         # number, because it is every book's best price rather than one's.
-        posted = g.get("posted") or {}
+        #
+        # Between the two, the hourly capture (decision 103): every book, the
+        # last read before tip, so a game that tipped before the card read
+        # the board -- when ESPN has already taken its line down -- keeps the
+        # line it closed at.
         held = {norm_market(r) for r in mine}
+        hourly = hourly_groups.get((hk, ak))
+        if hourly is None and (ak, hk) in hourly_groups:
+            flipped = hourly_groups[(ak, hk)]
+            hourly = {"close": [flip_row(r) for r in flipped["close"]],
+                      "open": None if flipped["open"] is None else [flip_row(r) for r in flipped["open"]]}
+        if hourly:
+            mine += [r for r in hourly["close"] if norm_market(r) not in held]
+            for slot_name, value in opening_prices(hourly["open"]).items():
+                if opens.get(slot_name) is None and slot_name not in held and value is not None:
+                    opens[slot_name] = value
+            held = {norm_market(r) for r in mine}
+        posted = g.get("posted") or {}
         mine += [r for r in posted.get("rows") or [] if norm_market(r) not in held]
         for slot_name, value in (posted.get("open") or {}).items():
             if opens.get(slot_name) is None and slot_name not in held and value is not None:
@@ -1494,6 +1661,13 @@ def build(lab: Path, day: date) -> dict:
                     court = context.get("home_court") or {}
                     if court:
                         row["homeCourt"] = {"tierMargin": finite(court.get("tier_margin")), "departure": finite(court.get("departure")), "appliedBy": court.get("applied_by")}
+        # Decision 104: a game no book prices and the model cannot project
+        # carries ESPN's projection, labelled, in the Fair and Proj slots.
+        if not mine and not pr:
+            chance = espn_home_chance(g["id"])
+            if chance is not None:
+                row.update(projected_line(chance))
+                row["lineNote"] = PROJECTION_NOTE
         games.append(row)
     # "No market is allowlisted" was written into both sentences as a
     # constant. It is a fact about a file that Cooper can change in one pull
@@ -1591,7 +1765,7 @@ def main(argv=None) -> int:
     frozen = hist / f"{day.isoformat()}_{board['cardSlot']}.json"
     if not frozen.exists():
         frozen.write_text(text, encoding="utf-8")
-    print(f"board {day} ({board['cardSlot']}): {len(board['games'])} games, {sum(1 for g in board['games'] if (g.get('spread') or {}).get('current') is not None or (g.get('moneyline') or {}).get('current'))} with a market line. No odds were bought, no credit was spent, and no bet was placed.")
+    print(f"board {day} ({board['cardSlot']}): {len(board['games'])} games, {sum(1 for g in board['games'] if (g.get('spread') or {}).get('current') is not None or (g.get('moneyline') or {}).get('current'))} with a market line, {sum(1 for g in board['games'] if g.get('lineNote'))} with a labelled ESPN projection only. No odds were bought, no credit was spent, and no bet was placed.")
     # The ratings and season pages read the fit the board priced on. They
     # are pages beside the board, not the board: a failure here is a warning
     # and the board stands.

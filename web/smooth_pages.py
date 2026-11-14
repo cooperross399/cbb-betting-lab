@@ -175,6 +175,20 @@ PATCHES: dict[str, list[tuple[str, str]]] = {
 }
 
 
+# A CBB game no book prices carries a labelled ESPN projection (decision 104,
+# Cooper 2026-11-14: "lines/odds for every single game on the website"). The
+# builder writes the label as `lineNote`; the shared CBB board draws an empty
+# note under the win bar, and this draws the label there instead.
+CBB_PATCHES: dict[str, list[tuple[str, str]]] = {
+    "lib/sports.js": [
+        (
+            'barTail: typeof g.away.winProb === "number" ? (T[hm] ? T[hm].color : "#6b6e7a") : "transparent", barNote: "",',
+            'barTail: typeof g.away.winProb === "number" ? (T[hm] ? T[hm].color : "#6b6e7a") : "transparent", barNote: g.lineNote || "",',
+        ),
+    ],
+}
+
+
 def react_files(support: Path) -> list[tuple[str, str]]:
     """(url, integrity) of the React files support.js loads, read from it so a
     runtime update can never leave a preload pointing at the wrong file."""
@@ -237,7 +251,8 @@ def site_sport(dist: Path) -> str:
 
 def patch(name: str, text: str, sport: str = "nhl") -> str:
     text = drop_tracker_tab(name, text)
-    for old, new in (PATCHES.get(name, []) if sport == "nhl" else []):
+    patches = PATCHES if sport == "nhl" else CBB_PATCHES if sport == "cbb" else {}
+    for old, new in patches.get(name, []):
         if text.count(old) != 1:
             raise SystemExit(f"{name}: expected one {old!r} to patch, found {text.count(old)}")
         text = text.replace(old, new)
