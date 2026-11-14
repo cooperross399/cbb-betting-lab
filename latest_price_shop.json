@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-14T01:14+00:00",
-  "captures": 159,
+  "alerts": [
+    {
+      "american": 385,
+      "away_team": "Brown Bears",
+      "book": "fanduel",
+      "books": 7,
+      "commence": "2026-11-15T00:00:00+00:00",
+      "edge": 0.1192,
+      "event_id": "824ff9f1733ae523c61341ca8d9f2fc9",
+      "fair_american": 333,
+      "game": "Brown Bears at Siena Saints",
+      "home_team": "Siena Saints",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    }
+  ],
+  "as_of": "2026-11-14T02:14+00:00",
+  "captures": 160,
   "cells": [
     {
       "beat_close": 0.6,
@@ -55,11 +71,11 @@
       "american": 580,
       "away_team": "Tulane Green Wave",
       "book": "fanduel",
-      "books": 10,
+      "books": 11,
       "commence": "2026-11-14T17:00:00+00:00",
-      "edge": 0.0405,
+      "edge": 0.0438,
       "event_id": "4d805b3dd5cc85c566db652de1b4ca4e",
-      "fair_american": 554,
+      "fair_american": 551,
       "game": "Tulane Green Wave at Akron Zips",
       "home_team": "Akron Zips",
       "line": null,
@@ -70,16 +86,31 @@
       "american": 303,
       "away_team": "Miami (OH) RedHawks",
       "book": "courtside",
-      "books": 10,
+      "books": 11,
       "commence": "2026-11-14T19:00:00+00:00",
-      "edge": 0.0306,
+      "edge": 0.0278,
       "event_id": "51f9ec7bdcf8d8941d395ace6f54d2fe",
-      "fair_american": 291,
+      "fair_american": 292,
       "game": "Miami (OH) RedHawks at Evansville Purple Aces",
       "home_team": "Evansville Purple Aces",
       "line": null,
       "market": "moneyline",
       "selection": "home"
+    },
+    {
+      "american": 385,
+      "away_team": "Brown Bears",
+      "book": "fanduel",
+      "books": 7,
+      "commence": "2026-11-15T00:00:00+00:00",
+      "edge": 0.1192,
+      "event_id": "824ff9f1733ae523c61341ca8d9f2fc9",
+      "fair_american": 333,
+      "game": "Brown Bears at Siena Saints",
+      "home_team": "Siena Saints",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
     },
     {
       "american": 420,
@@ -97,7 +128,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-14T01:13:38+00:00",
+  "latest_capture": "2026-11-14T02:13:29+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
