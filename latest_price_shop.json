@@ -1,54 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 440,
-      "away_team": "Boise State Broncos",
-      "book": "fanduel",
-      "books": 17,
-      "commence": "2026-11-15T18:00:00+00:00",
-      "edge": 0.0415,
-      "event_id": "4907c399e1707ee794cd6acb25c791cc",
-      "fair_american": 418,
-      "game": "Boise State Broncos at Nebraska Cornhuskers",
-      "home_team": "Nebraska Cornhuskers",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 200,
-      "away_team": "Texas Longhorns",
-      "book": "bovada",
-      "books": 17,
-      "commence": "2026-11-15T20:00:00+00:00",
-      "edge": 0.0733,
-      "event_id": "9c21bbabccdd9d32f5b61b32dbdc8bbf",
-      "fair_american": 180,
-      "game": "Texas Longhorns at Baylor Bears",
-      "home_team": "Baylor Bears",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    },
-    {
-      "american": 570,
-      "away_team": "Air Force Falcons",
-      "book": "fanduel",
-      "books": 4,
-      "commence": "2026-11-15T21:00:00+00:00",
-      "edge": 0.0331,
-      "event_id": "c3c58341c48b659af034931964de5495",
-      "fair_american": 549,
-      "game": "Air Force Falcons at Pacific Tigers",
-      "home_team": "Pacific Tigers",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-15T13:57+00:00",
-  "captures": 173,
+  "alerts": [],
+  "as_of": "2026-11-15T14:14+00:00",
+  "captures": 174,
   "cells": [
     {
       "beat_close": 0.6111111111111112,
@@ -103,9 +57,9 @@
       "book": "fanduel",
       "books": 17,
       "commence": "2026-11-15T18:00:00+00:00",
-      "edge": 0.0415,
+      "edge": 0.0493,
       "event_id": "4907c399e1707ee794cd6acb25c791cc",
-      "fair_american": 418,
+      "fair_american": 415,
       "game": "Boise State Broncos at Nebraska Cornhuskers",
       "home_team": "Nebraska Cornhuskers",
       "line": null,
@@ -113,19 +67,19 @@
       "selection": "away"
     },
     {
-      "american": 329,
-      "away_team": "Louisville Cardinals",
-      "book": "courtside",
-      "books": 17,
+      "american": 600,
+      "away_team": "Norfolk St Spartans",
+      "book": "espnbet",
+      "books": 14,
       "commence": "2026-11-15T18:00:00+00:00",
-      "edge": 0.0214,
-      "event_id": "460c23d41c84519f5edf6c04d47cb25a",
-      "fair_american": 320,
-      "game": "Louisville Cardinals at Memphis Tigers",
-      "home_team": "Memphis Tigers",
+      "edge": 0.0272,
+      "event_id": "29c07e686c26cabf4f2032b342d49bee",
+      "fair_american": 581,
+      "game": "Norfolk St Spartans at Georgia St Panthers",
+      "home_team": "Georgia St Panthers",
       "line": null,
       "market": "moneyline",
-      "selection": "home"
+      "selection": "away"
     },
     {
       "american": 200,
@@ -173,7 +127,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-15T13:56:38+00:00",
+  "latest_capture": "2026-11-15T14:13:36+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
