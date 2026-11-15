@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-15T18:14+00:00",
-  "captures": 178,
+  "as_of": "2026-11-15T19:14+00:00",
+  "captures": 179,
   "cells": [
     {
       "beat_close": 0.6111111111111112,
@@ -55,34 +55,19 @@
       "american": 260,
       "away_team": "Western Michigan Broncos",
       "book": "hardrockbet",
-      "books": 17,
+      "books": 16,
       "commence": "2026-11-15T21:30:00+00:00",
-      "edge": 0.0203,
+      "edge": 0.0251,
       "event_id": "12dd3befa793d2e2ca193838dfac645e",
-      "fair_american": 253,
+      "fair_american": 251,
       "game": "Western Michigan Broncos at Southern Indiana Screaming Eagles",
       "home_team": "Southern Indiana Screaming Eagles",
       "line": null,
       "market": "moneyline",
       "selection": "home"
-    },
-    {
-      "american": 155,
-      "away_team": "Texas State Bobcats",
-      "book": "ballybet",
-      "books": 17,
-      "commence": "2026-11-16T01:00:00+00:00",
-      "edge": 0.0244,
-      "event_id": "f4c65b06069e702dd02ef61b171d055e",
-      "fair_american": 149,
-      "game": "Texas State Bobcats at UTSA Roadrunners",
-      "home_team": "UTSA Roadrunners",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-15T18:13:40+00:00",
+  "latest_capture": "2026-11-15T19:13:35+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
