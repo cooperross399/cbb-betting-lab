@@ -561,8 +561,22 @@ jobs:
           mkdir -p data/processed
           REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}"
           git fetch --depth=1 "$REMOTE" +refs/heads/line-movement:refs/lm-read 2>/dev/null || { echo "The line-movement branch could not be fetched; the card reads no movement."; exit 1; }
+          # The store lives on the branch GZIPPED as cbb_line_movement.csv.gz: plain,
+          # it passed GitHub's 100 MB file limit on 2026-11-14 and every push was
+          # refused. A tip written before then holds it plain, so both are read,
+          # the compressed copy first. 0 only when a non-empty store was read.
+          read_store() {
+            if git cat-file -e "$1:cbb_line_movement.csv.gz" 2>/dev/null; then
+              git show "$1:cbb_line_movement.csv.gz" > "$2.gz" && gunzip -c "$2.gz" > "$2"
+              local status=$?
+              rm -f "$2.gz"
+              [ "$status" -eq 0 ] && [ -s "$2" ]
+            else
+              git show "$1:cbb_line_movement.csv" > "$2" && [ -s "$2" ]
+            fi
+          }
           TMP="$(mktemp)"
-          if git show refs/lm-read:cbb_line_movement.csv > "$TMP" 2>/dev/null && [ -s "$TMP" ]; then
+          if read_store refs/lm-read "$TMP" 2>/dev/null; then
             mv "$TMP" data/processed/cbb_line_movement.csv
             echo "Line movement: $(wc -l < data/processed/cbb_line_movement.csv) capture line(s) read."
           else
