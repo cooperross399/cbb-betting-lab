@@ -1,20 +1,22 @@
 # CBB price shop
 
-As of 2026-11-15T17:14+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
+As of 2026-11-15T17:43+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
 
 ## Right now
 
-From the capture of 2026-11-15T17:13:38+00:00.
+From the capture of 2026-11-15T17:42:33+00:00.
 
 | Tip (UTC) | Game | Side | Book | Price | Fair | Edge |
 |:---|:---|:---|:---|---:|---:|---:|
-| 2026-11-15 18:00 | Quinnipiac Bobcats at Central Connecticut St Blue Devils | home moneyline | fliff | +200 | +176 | +8.6% |
+| 2026-11-15 18:00 | Quinnipiac Bobcats at Central Connecticut St Blue Devils | home moneyline | fanduel | +500 | +452 | +8.8% |
 | 2026-11-15 18:00 | Boise State Broncos at Nebraska Cornhuskers | away moneyline | fanduel | +430 | +396 | +6.8% |
-| 2026-11-15 18:00 | Norfolk St Spartans at Georgia St Panthers | away moneyline | fanatics | +600 | +578 | +3.3% |
+| 2026-11-15 18:00 | Norfolk St Spartans at Georgia St Panthers | away moneyline | fanatics | +575 | +561 | +2.1% |
+| 2026-11-15 21:30 | Western Michigan Broncos at Southern Indiana Screaming Eagles | home moneyline | hardrockbet | +260 | +253 | +2.0% |
+| 2026-11-16 01:00 | Texas State Bobcats at UTSA Roadrunners | home moneyline | ballybet | +155 | +149 | +2.4% |
 
 ## Did the shops beat the close?
 
-Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (176 capture(s) read). Per tier, clustered by game, corrected across 203 cumulative hypotheses (x1.8705); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
+Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (177 capture(s) read). Per tier, clustered by game, corrected across 203 cumulative hypotheses (x1.8705); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
 
 | Tier | Shops | Graded | Games | Mean CLV | Corrected | Beat the close | Line gone at close |
 |:---|---:|---:|---:|---:|:---|---:|---:|
