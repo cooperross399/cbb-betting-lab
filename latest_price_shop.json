@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 500,
-      "away_team": "Quinnipiac Bobcats",
-      "book": "fanduel",
-      "books": 15,
-      "commence": "2026-11-15T18:00:00+00:00",
-      "edge": 0.0878,
-      "event_id": "357a70575c2cb9185f1773634d7f1624",
-      "fair_american": 452,
-      "game": "Quinnipiac Bobcats at Central Connecticut St Blue Devils",
-      "home_team": "Central Connecticut St Blue Devils",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "as_of": "2026-11-15T17:43+00:00",
-  "captures": 177,
+  "alerts": [],
+  "as_of": "2026-11-15T18:14+00:00",
+  "captures": 178,
   "cells": [
     {
       "beat_close": 0.6111111111111112,
@@ -54,64 +38,19 @@
       "ungraded": 1
     },
     {
-      "beat_close": 0.5925925925925926,
-      "games": 25,
-      "graded": 27,
-      "high": null,
-      "low": null,
-      "mean": 0.02047679861816508,
-      "shops": 32,
+      "beat_close": 0.5161290322580645,
+      "games": 29,
+      "graded": 31,
+      "high": 0.08769197324349244,
+      "low": -0.09712790836596304,
+      "mean": -0.0047179675612353,
+      "shops": 36,
       "tier": "unplaced",
       "ungraded": 5
     }
   ],
   "correction_factor": 1.8704788371613228,
   "current": [
-    {
-      "american": 500,
-      "away_team": "Quinnipiac Bobcats",
-      "book": "fanduel",
-      "books": 15,
-      "commence": "2026-11-15T18:00:00+00:00",
-      "edge": 0.0878,
-      "event_id": "357a70575c2cb9185f1773634d7f1624",
-      "fair_american": 452,
-      "game": "Quinnipiac Bobcats at Central Connecticut St Blue Devils",
-      "home_team": "Central Connecticut St Blue Devils",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    },
-    {
-      "american": 430,
-      "away_team": "Boise State Broncos",
-      "book": "fanduel",
-      "books": 17,
-      "commence": "2026-11-15T18:00:00+00:00",
-      "edge": 0.0679,
-      "event_id": "4907c399e1707ee794cd6acb25c791cc",
-      "fair_american": 396,
-      "game": "Boise State Broncos at Nebraska Cornhuskers",
-      "home_team": "Nebraska Cornhuskers",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 575,
-      "away_team": "Norfolk St Spartans",
-      "book": "fanatics",
-      "books": 14,
-      "commence": "2026-11-15T18:00:00+00:00",
-      "edge": 0.0207,
-      "event_id": "29c07e686c26cabf4f2032b342d49bee",
-      "fair_american": 561,
-      "game": "Norfolk St Spartans at Georgia St Panthers",
-      "home_team": "Georgia St Panthers",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
     {
       "american": 260,
       "away_team": "Western Michigan Broncos",
@@ -143,7 +82,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-15T17:42:33+00:00",
+  "latest_capture": "2026-11-15T18:13:40+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
