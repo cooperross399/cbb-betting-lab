@@ -211,13 +211,28 @@ jobs:
             printf '## Not published\n\nThe line-movement branch exists but could not be fetched. Nothing was pushed; the tip stands.\n' >> "$GITHUB_STEP_SUMMARY"
             exit 1
           }
-          if ! git cat-file -e refs/lm-tip:cbb_line_movement.csv 2>/dev/null; then
+          # The store lives on the branch GZIPPED as cbb_line_movement.csv.gz: plain,
+          # it passed GitHub's 100 MB file limit on 2026-11-14 and every push was
+          # refused. A tip written before then holds it plain, so both are read,
+          # the compressed copy first. 0 only when a non-empty store was read.
+          read_store() {
+            if git cat-file -e "$1:cbb_line_movement.csv.gz" 2>/dev/null; then
+              git show "$1:cbb_line_movement.csv.gz" > "$2.gz" && gunzip -c "$2.gz" > "$2"
+              local status=$?
+              rm -f "$2.gz"
+              [ "$status" -eq 0 ] && [ -s "$2" ]
+            else
+              git show "$1:cbb_line_movement.csv" > "$2" && [ -s "$2" ]
+            fi
+          }
+          if ! git cat-file -e refs/lm-tip:cbb_line_movement.csv.gz 2>/dev/null \
+            && ! git cat-file -e refs/lm-tip:cbb_line_movement.csv 2>/dev/null; then
             echo "store=empty" >> "$GITHUB_OUTPUT"
             echo "The ref exists and holds no store yet; this is the first capture on it."
             exit 0
           fi
           TMP=$(mktemp)
-          if git show refs/lm-tip:cbb_line_movement.csv > "$TMP" 2>"$GIT_ERROR" && [ -s "$TMP" ]; then
+          if read_store refs/lm-tip "$TMP" 2>"$GIT_ERROR"; then
             mv "$TMP" data/processed/cbb_line_movement.csv
             echo "store=restored" >> "$GITHUB_OUTPUT"
             echo "Restored $(wc -l < data/processed/cbb_line_movement.csv) lines."
@@ -319,8 +334,22 @@ jobs:
           # read back off the ref that is about to be overwritten, seconds
           # before the push, and a shorter tree is refused rather than
           # fast-forwarded over the season.
+          # The store lives on the branch GZIPPED as cbb_line_movement.csv.gz: plain,
+          # it passed GitHub's 100 MB file limit on 2026-11-14 and every push was
+          # refused. A tip written before then holds it plain, so both are read,
+          # the compressed copy first. 0 only when a non-empty store was read.
+          read_store() {
+            if git cat-file -e "$1:cbb_line_movement.csv.gz" 2>/dev/null; then
+              git show "$1:cbb_line_movement.csv.gz" > "$2.gz" && gunzip -c "$2.gz" > "$2"
+              local status=$?
+              rm -f "$2.gz"
+              [ "$status" -eq 0 ] && [ -s "$2" ]
+            else
+              git show "$1:cbb_line_movement.csv" > "$2" && [ -s "$2" ]
+            fi
+          }
           TIP_STORE=$(mktemp)
-          if [ -n "$PARENT" ] && git show refs/lm-tip:cbb_line_movement.csv > "$TIP_STORE" 2>/dev/null; then
+          if [ -n "$PARENT" ] && read_store refs/lm-tip "$TIP_STORE" 2>/dev/null; then
             TIP_LINES=$(wc -l < "$TIP_STORE")
             NEW_LINES=$(wc -l < data/processed/cbb_line_movement.csv)
             if [ "$NEW_LINES" -lt "$TIP_LINES" ]; then
@@ -338,7 +367,12 @@ jobs:
             [ -f "$2" ] || return 0
             printf '100644 blob %s\t%s\n' "$(git hash-object -w "$2")" "$1" >> "$INPUT"
           }
-          add cbb_line_movement.csv data/processed/cbb_line_movement.csv "$INPUT"
+          # Gzipped, and the plain copy is no longer written (see read_store
+          # above). `-n` keeps no name or time in the header, so one store
+          # always compresses to one blob.
+          STORE_GZ=$(mktemp)
+          gzip -n -9 -c data/processed/cbb_line_movement.csv > "$STORE_GZ"
+          add cbb_line_movement.csv.gz "$STORE_GZ" "$INPUT"
           add latest_line_movement.md data/outputs/cbb_line_movement.md "$INPUT"
           add latest_price_shop.md data/outputs/cbb_price_shop.md "$INPUT"
           # The shop's record and its chat alert (decision 93): the board

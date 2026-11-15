@@ -78,6 +78,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import gzip
 import os
 import re
 import shlex
@@ -3494,11 +3495,72 @@ def test_the_capture_publish_refuses_a_tree_shorter_than_the_tip_it_would_replac
     )
     assert longer.returncode == 0, longer.stderr
     assert tip_of(tmp_path, "refs/heads/line-movement") != before, "a legitimate capture did not publish"
-    published = subprocess.run(
-        ["git", "-C", str(tmp_path / "remote.git"), "show", "refs/heads/line-movement:cbb_line_movement.csv"],
+    assert published_store(tmp_path) == grown
+
+
+def published_store(root: Path) -> str:
+    """The store on the scratch remote's line-movement tip, decompressed.
+
+    It is published gzipped: plain, it passed GitHub's 100 MB file limit on
+    2026-11-14 and every push was refused. The plain name must be gone from
+    a tree the publish step wrote, or the next push carries both."""
+    remote = str(root / "remote.git")
+    names = subprocess.run(
+        ["git", "-C", remote, "ls-tree", "--name-only", "refs/heads/line-movement"],
         capture_output=True, text=True, check=True,
+    ).stdout.split()
+    assert "cbb_line_movement.csv" not in names, names
+    blob = subprocess.run(
+        ["git", "-C", remote, "show", "refs/heads/line-movement:cbb_line_movement.csv.gz"],
+        capture_output=True, check=True,
     ).stdout
-    assert published == grown, published
+    return gzip.decompress(blob).decode("utf-8")
+
+
+def push_gzipped_line_movement(root: Path, store: str) -> str:
+    """A tip holding the store as the publish step now writes it."""
+    remote = root / "remote.git"
+    blob = subprocess.run(
+        ["git", "-C", str(remote), "hash-object", "-w", "--stdin"],
+        input=gzip.compress(store.encode("utf-8"), mtime=0), capture_output=True, check=True,
+    ).stdout.decode().strip()
+    tree = subprocess.run(
+        ["git", "-C", str(remote), "mktree"], input=f"100644 blob {blob}\tcbb_line_movement.csv.gz\n",
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    commit = subprocess.run(
+        ["git", "-C", str(remote), "commit-tree", tree, "-m", "capture"],
+        capture_output=True, text=True, check=True, env={**os.environ, **GIT_IDENTITY},
+    ).stdout.strip()
+    subprocess.run(["git", "-C", str(remote), "update-ref", "refs/heads/line-movement", commit], check=True)
+    return commit
+
+
+def test_a_gzipped_store_restores_and_holds_the_floor(tmp_path: Path) -> None:
+    """The store as it is published now: restored byte for byte, a shorter
+    tree refused against it, a longer one published over it gzipped."""
+    remote = scratch_remote(tmp_path)
+    before = push_gzipped_line_movement(tmp_path, CAPTURE_STORE)
+
+    restored, workspace = run_capture_block_for_real(tmp_path, line_movement_step("restore"), remote)
+    assert restored.returncode == 0, restored.stderr
+    assert "store=restored" in runner_file(workspace, "GITHUB_OUTPUT")
+    assert (workspace / "data/processed/cbb_line_movement.csv").read_text(encoding="utf-8") == CAPTURE_STORE
+
+    short, workspace = run_capture_block_for_real(
+        tmp_path, line_movement_step("publish"), remote,
+        values={"steps.restore.outcome": "success"}, store=ONE_CAPTURE_STORE,
+    )
+    assert short.returncode != 0, "a one-capture store published over a gzipped tip holding four"
+    assert tip_of(tmp_path, "refs/heads/line-movement") == before
+
+    grown = CAPTURE_STORE + "2026-11-03T03:13:00Z,e1,spread,fanduel,home_minus_2_5,-115\n"
+    longer, workspace = run_capture_block_for_real(
+        tmp_path, line_movement_step("publish"), remote,
+        values={"steps.restore.outcome": "success"}, store=grown,
+    )
+    assert longer.returncode == 0, longer.stderr
+    assert published_store(tmp_path) == grown
 
 
 # --------------------------------------------------------------------------

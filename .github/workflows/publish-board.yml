@@ -216,8 +216,22 @@ jobs:
           # The capture store too: the leans' trust table reads the closing
           # line from it, as the card's does (decision 93).
           mkdir -p data/processed
+          # The store lives on the branch GZIPPED as cbb_line_movement.csv.gz: plain,
+          # it passed GitHub's 100 MB file limit on 2026-11-14 and every push was
+          # refused. A tip written before then holds it plain, so both are read,
+          # the compressed copy first. 0 only when a non-empty store was read.
+          read_store() {
+            if git cat-file -e "$1:cbb_line_movement.csv.gz" 2>/dev/null; then
+              git show "$1:cbb_line_movement.csv.gz" > "$2.gz" && gunzip -c "$2.gz" > "$2"
+              local status=$?
+              rm -f "$2.gz"
+              [ "$status" -eq 0 ] && [ -s "$2" ]
+            else
+              git show "$1:cbb_line_movement.csv" > "$2" && [ -s "$2" ]
+            fi
+          }
           if git rev-parse --verify -q refs/lm-read >/dev/null \
-            && git show refs/lm-read:cbb_line_movement.csv > "$TMP" 2>/dev/null && [ -s "$TMP" ]; then
+            && read_store refs/lm-read "$TMP" 2>/dev/null; then
             mv "$TMP" data/processed/cbb_line_movement.csv
           else
             rm -f "$TMP"
