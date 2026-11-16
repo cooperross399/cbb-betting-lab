@@ -10,7 +10,7 @@
 | mid-major | 9 | 15.7 | +1.7 | 17.0 | +14.1 | 77.8% |
 | low-major | 22 | 11.2 | +1.5 | 14.2 | -9.6 | 77.3% |
 
-34 of them were priced on the preseason prior alone (the results did not yet join the two teams): margin miss 11.9, winner called 79.4%.
+34 of them were matchups the season's results do not yet tie together (less than one head-to-head meeting's worth of common opponents), so the gap between the two teams leans on the preseason prior; each team's own rating still carries its games: margin miss 11.9, winner called 79.4%.
 
 Per tier, never pooled. These are forecast-accuracy figures on free data: they say how close the projections were, not whether any bet had an edge. Bets are graded on the Record tab and in the forward ledger.
 

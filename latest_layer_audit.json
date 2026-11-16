@@ -2,8 +2,10 @@
   "as_of": "2026-11-16",
   "layers": [
     {
+      "best_scale": 0.9687189413423755,
       "days": 19,
       "default": true,
+      "gain_at_best_scale": 32.250603129744384,
       "gain_per_game": 32.216974811938755,
       "games": 605,
       "key": "home_court",
@@ -14,8 +16,10 @@
       "z": 2.733371865374956
     },
     {
+      "best_scale": -0.015714431318522275,
       "days": 26,
       "default": true,
+      "gain_at_best_scale": 0.0002877956913311342,
       "gain_per_game": -1.2020602319488496,
       "games": 534,
       "key": "form",
@@ -26,8 +30,10 @@
       "z": -1.009755470260668
     },
     {
+      "best_scale": -0.5676091485243963,
       "days": 19,
       "default": true,
+      "gain_at_best_scale": 0.1480712242526733,
       "gain_per_game": -0.9813279673434095,
       "games": 213,
       "key": "rest",
@@ -38,8 +44,10 @@
       "z": -0.6184398743334598
     },
     {
+      "best_scale": 0.17002188634781876,
       "days": 10,
       "default": true,
+      "gain_at_best_scale": 1.2438562856136144,
       "gain_per_game": -28.397210178037,
       "games": 20,
       "key": "lineup",
@@ -50,8 +58,10 @@
       "z": -0.9079388479248663
     },
     {
+      "best_scale": null,
       "days": 0,
       "default": true,
+      "gain_at_best_scale": null,
       "gain_per_game": null,
       "games": 0,
       "key": "second_opinion",
@@ -62,8 +72,10 @@
       "z": null
     },
     {
+      "best_scale": 1.6394724117189918,
       "days": 26,
       "default": false,
+      "gain_at_best_scale": 0.6570476016713569,
       "gain_per_game": 0.5570862237551536,
       "games": 528,
       "key": "pace_form",
@@ -74,8 +86,10 @@
       "z": 0.8354621297195628
     },
     {
+      "best_scale": -0.314219520830628,
       "days": 15,
       "default": false,
+      "gain_at_best_scale": 0.3292519805366859,
       "gain_per_game": -5.430421974270977,
       "games": 56,
       "key": "three_point_luck",
@@ -86,8 +100,10 @@
       "z": -1.1873107466920136
     },
     {
+      "best_scale": 1.0013176513281281,
       "days": 7,
       "default": false,
+      "gain_at_best_scale": 46.92427814105006,
       "gain_per_game": 46.924196885157606,
       "games": 12,
       "key": "lineup_strict",
@@ -98,8 +114,10 @@
       "z": 1.348326505028638
     },
     {
+      "best_scale": 0.44770187045877335,
       "days": 26,
       "default": false,
+      "gain_at_best_scale": 0.1323215285155203,
       "gain_per_game": -0.06905082049988798,
       "games": 261,
       "key": "travel",
@@ -110,8 +128,10 @@
       "z": -0.052785946900769064
     },
     {
+      "best_scale": 1.1247743590349062,
       "days": 15,
       "default": false,
+      "gain_at_best_scale": 5.969072504446351,
       "gain_per_game": 5.89561659592681,
       "games": 56,
       "key": "shooting_luck",
@@ -122,8 +142,10 @@
       "z": 0.8684954703967572
     },
     {
+      "best_scale": 0.5274833777944468,
       "days": 15,
       "default": false,
+      "gain_at_best_scale": 2.142139114441327,
       "gain_per_game": 0.42318495335131495,
       "games": 56,
       "key": "shot_quality",
@@ -134,8 +156,10 @@
       "z": 0.03880081413599017
     },
     {
+      "best_scale": null,
       "days": 0,
       "default": false,
+      "gain_at_best_scale": null,
       "gain_per_game": null,
       "games": 0,
       "key": "market_ratings",
@@ -146,8 +170,10 @@
       "z": null
     },
     {
+      "best_scale": 0.3187416716565995,
       "days": 10,
       "default": false,
+      "gain_at_best_scale": 0.22610055139914245,
       "gain_per_game": -0.8067740034291951,
       "games": 19,
       "key": "lineup_minutes",
@@ -158,8 +184,10 @@
       "z": -0.11212257774254661
     },
     {
+      "best_scale": -0.5771766942213397,
       "days": 13,
       "default": false,
+      "gain_at_best_scale": 0.6077249291227301,
       "gain_per_game": -3.930125536768186,
       "games": 483,
       "key": "november_form",
@@ -170,8 +198,10 @@
       "z": -2.0686527486701753
     },
     {
+      "best_scale": 4.6842778886935275,
       "days": 13,
       "default": false,
+      "gain_at_best_scale": 2.2567059490121446,
       "gain_per_game": 0.8606769786434401,
       "games": 53,
       "key": "four_factors",
@@ -182,8 +212,10 @@
       "z": 0.9412797017109454
     },
     {
+      "best_scale": 1.1168354448363504,
       "days": 15,
       "default": false,
+      "gain_at_best_scale": 0.03663838234503222,
       "gain_per_game": 0.0362374167162074,
       "games": 54,
       "key": "close_game_luck",
@@ -194,8 +226,10 @@
       "z": 0.08125027637156322
     },
     {
+      "best_scale": 1.784950871379343,
       "days": 15,
       "default": false,
+      "gain_at_best_scale": 28.399544672822792,
       "gain_per_game": 22.90737691120547,
       "games": 636,
       "key": "kenpom",
