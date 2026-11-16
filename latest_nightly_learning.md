@@ -1,66 +1,66 @@
-# What the model learned from 2026-11-14
+# What the model learned from 2026-11-15
 
-**57 finished game(s) graded**, each priced walk-forward through the card's own seam and layers, fitted only on games before 2026-11-14. Error is final minus projection, home side, in points.
+**35 finished game(s) graded**, each priced walk-forward through the card's own seam and layers, fitted only on games before 2026-11-15. Error is final minus projection, home side, in points.
 
 ## How last night's projections did
 
 | Tier | Games | Margin miss (avg) | Margin bias | Total miss (avg) | Total bias | Winner called |
 |:---|---:|---:|---:|---:|---:|---:|
-| high-major | 1 | 5.8 | +5.8 | 38.5 | -38.5 | 100.0% |
-| mid-major | 11 | 9.9 | -5.5 | 14.1 | -3.4 | 54.5% |
-| low-major | 45 | 10.2 | -4.2 | 14.8 | -6.7 | 68.9% |
+| high-major | 4 | 6.1 | -2.1 | 12.6 | -12.6 | 75.0% |
+| mid-major | 9 | 15.7 | +1.7 | 17.0 | +14.1 | 77.8% |
+| low-major | 22 | 11.2 | +1.5 | 14.2 | -9.6 | 77.3% |
 
-56 of them were priced on the preseason prior alone (the results did not yet join the two teams): margin miss 10.1, winner called 66.1%.
+34 of them were priced on the preseason prior alone (the results did not yet join the two teams): margin miss 11.9, winner called 79.4%.
 
 Per tier, never pooled. These are forecast-accuracy figures on free data: they say how close the projections were, not whether any bet had an edge. Bets are graded on the Record tab and in the forward ledger.
 
 **Biggest misses:**
-- Loyola Chicago at Colorado State: projected +12.5 (home), finished -15; total 154.0 projected, 131 scored.
-- Portland State at San Francisco: projected +10.7 (home), finished -16; total 139.6 projected, 152 scored.
-- UC Davis at Sacramento State: projected +7.3 (home), finished -19; total 158.2 projected, 131 scored.
-- Cincinnati at Dayton: projected -2.7 (home), finished -23; total 142.8 projected, 167 scored.
-- Howard at Davidson: projected +14.1 (home), finished -6; total 140.7 projected, 122 scored.
+- Arkansas-Pine Bluff at USC: projected +39.2 (home), finished +76; total 157.9 projected, 168 scored.
+- High Point at Saint Louis: projected +18.2 (home), finished -10; total 162.7 projected, 126 scored.
+- Louisville at Memphis: projected -7.2 (home), finished +20; total 162.0 projected, 176 scored.
+- Chicago State at Loyola Marymount: projected +12.8 (home), finished +37; total 147.5 projected, 135 scored.
+- Boise State at Nebraska: projected +6.0 (home), finished +27; total 154.8 projected, 177 scored.
 
 ## What the ratings took from it
 
-Refitted on 576 game(s) this season, through 2026-11-14 (was 521, through 2026-11-13). 244 team(s) moved by 0.05 points per 100 or more.
+Refitted on 609 game(s) this season, through 2026-11-15 (was 575, through 2026-11-14). 191 team(s) moved by 0.05 points per 100 or more.
 
-Median share of each rating still carried by the preseason prior: offence 46% → 45%, defence 56% → 55%, tempo 39% → 39%. This falls as the season's results take over.
+Median share of each rating still carried by the preseason prior: offence 45% → 44%, defence 55% → 53%, tempo 39% → 36%. This falls as the season's results take over.
 
 **Biggest risers** (net rating, points per 100 on a neutral floor):
 
 | Team | Tier | Before | After | Change |
 |:---|:---|---:|---:|---:|
-| Wake Forest | high-major | +7.65 | +10.89 | +3.24 |
-| Portland State | low-major | -3.47 | -0.31 | +3.16 |
-| Loyola Chicago | mid-major | +0.21 | +3.33 | +3.12 |
-| South Dakota State | low-major | +4.15 | +7.18 | +3.03 |
-| Wyoming | mid-major | +7.62 | +10.52 | +2.90 |
-| Cincinnati | high-major | +18.16 | +20.87 | +2.70 |
-| Texas Tech | high-major | +21.06 | +23.74 | +2.68 |
-| UC Davis | low-major | -1.29 | +1.31 | +2.60 |
-| Jackson State | low-major | -16.82 | -14.47 | +2.36 |
-| Army | low-major | -14.94 | -12.69 | +2.26 |
+| USC | high-major | +13.98 | +18.98 | +5.00 |
+| Loyola Marymount | mid-major | -0.43 | +3.68 | +4.10 |
+| Memphis | mid-major | +9.14 | +12.65 | +3.51 |
+| Georgia State | mid-major | -5.17 | -2.33 | +2.84 |
+| High Point | low-major | +12.09 | +14.92 | +2.83 |
+| Texas State | mid-major | +3.62 | +6.26 | +2.64 |
+| Montana State | low-major | +6.03 | +8.58 | +2.55 |
+| Temple | mid-major | -2.56 | -0.19 | +2.37 |
+| Nebraska | high-major | +24.03 | +26.40 | +2.37 |
+| Coastal Carolina | mid-major | -7.95 | -5.83 | +2.12 |
 
 **Biggest fallers** (net rating, points per 100 on a neutral floor):
 
 | Team | Tier | Before | After | Change |
 |:---|:---|---:|---:|---:|
-| Northern Colorado | low-major | -0.06 | -4.23 | -4.17 |
-| Southern Utah | low-major | -10.68 | -14.47 | -3.78 |
-| Sacramento State | low-major | +0.55 | -3.11 | -3.66 |
-| Colorado State | mid-major | +11.05 | +7.80 | -3.25 |
-| Denver | low-major | -2.88 | -6.11 | -3.22 |
-| Stonehill | low-major | -15.39 | -18.44 | -3.05 |
-| San Francisco | mid-major | +3.08 | +0.09 | -2.99 |
-| UMBC | low-major | -7.80 | -10.34 | -2.54 |
-| Dayton | mid-major | +8.16 | +5.66 | -2.50 |
-| Davidson | mid-major | +10.92 | +8.51 | -2.41 |
+| Arkansas-Pine Bluff | low-major | -25.37 | -29.84 | -4.47 |
+| Louisville | high-major | +24.05 | +20.30 | -3.75 |
+| Saint Louis | mid-major | +27.69 | +24.26 | -3.43 |
+| Chicago State | low-major | -14.02 | -17.24 | -3.23 |
+| Cal Poly | low-major | +1.53 | -1.37 | -2.89 |
+| Norfolk State | low-major | -15.39 | -18.24 | -2.84 |
+| UTSA | mid-major | -2.61 | -5.15 | -2.53 |
+| Boise State | mid-major | +15.38 | +12.88 | -2.49 |
+| New Haven | low-major | -13.79 | -15.97 | -2.18 |
+| William & Mary | mid-major | +3.90 | +1.75 | -2.15 |
 
 ## The other two learners
 
 - Trust in the model against the price, per tier (0 is the market, 1 is the model as it stands): high-major 0.000 (seed 0.046, 47,506 settled forward row(s), 31,434 closing-line row(s)); low-major 0.104 (seed 0.011, 11,150 settled forward row(s), 8,854 closing-line row(s)); mid-major 0.000 (seed 0.032, 43,604 settled forward row(s), 28,602 closing-line row(s)). Every wager's probability is pulled to market + trust x (model - market) before the edge bar; a wager with no two-sided price carries no trusted opinion.
-- Layer audit (2026-11-15): on the card: Home court, Last five games, Rest, Who is missing, Second opinion, KenPom's projection.
+- Layer audit (2026-11-16): on the card: Home court, Last five games, Rest, Who is missing, Second opinion, KenPom's projection.
 - Switched from the declared card: KenPom's projection.
 
 ## The season so far
@@ -80,5 +80,6 @@ Median share of each rating still carried by the preseason prior: offence 46% �
 | 2026-11-12 | 24 | 8.75 | 13.20 | 70.8% | 47% |
 | 2026-11-13 | 55 | 10.54 | 11.83 | 76.4% | 46% |
 | 2026-11-14 | 57 | 10.07 | 15.07 | 66.7% | 45% |
+| 2026-11-15 | 35 | 11.78 | 14.73 | 77.1% | 44% |
 
-_11 of 68 game(s) on 2026-11-14 carry no graded projection: a non-D-I opponent, a team the prior does not know, or a score not yet in the tables._
+_8 of 43 game(s) on 2026-11-15 carry no graded projection: a non-D-I opponent, a team the prior does not know, or a score not yet in the tables._
