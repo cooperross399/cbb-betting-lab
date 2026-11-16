@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-16T22:01+00:00",
-  "captures": 195,
+  "alerts": [
+    {
+      "american": 575,
+      "away_team": "Western Carolina Catamounts",
+      "book": "fanatics",
+      "books": 7,
+      "commence": "2026-11-18T00:00:00+00:00",
+      "edge": 0.0498,
+      "event_id": "f2f76ded2b49c859cfcdb18510fc4461",
+      "fair_american": 543,
+      "game": "Western Carolina Catamounts at Butler Bulldogs",
+      "home_team": "Butler Bulldogs",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    }
+  ],
+  "as_of": "2026-11-16T22:43+00:00",
+  "captures": 196,
   "cells": [
     {
       "beat_close": 0.6111111111111112,
@@ -82,16 +98,46 @@
       "selection": "away"
     },
     {
+      "american": 210,
+      "away_team": "Abilene Christian Wildcats",
+      "book": "hardrockbet",
+      "books": 17,
+      "commence": "2026-11-17T01:00:00+00:00",
+      "edge": 0.0214,
+      "event_id": "34ef63b5d05083472f9c48c62ad3b7cf",
+      "fair_american": 204,
+      "game": "Abilene Christian Wildcats at Missouri St Bears",
+      "home_team": "Missouri St Bears",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    },
+    {
       "american": 450,
       "away_team": "Hofstra Pride",
       "book": "fanduel",
-      "books": 6,
+      "books": 7,
       "commence": "2026-11-17T17:00:00+00:00",
-      "edge": 0.0854,
+      "edge": 0.0866,
       "event_id": "7baca68d6b97b29d21efc5ccd35ee124",
-      "fair_american": 407,
+      "fair_american": 406,
       "game": "Hofstra Pride at Murray St Racers",
       "home_team": "Murray St Racers",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    },
+    {
+      "american": 575,
+      "away_team": "Western Carolina Catamounts",
+      "book": "fanatics",
+      "books": 7,
+      "commence": "2026-11-18T00:00:00+00:00",
+      "edge": 0.0498,
+      "event_id": "f2f76ded2b49c859cfcdb18510fc4461",
+      "fair_american": 543,
+      "game": "Western Carolina Catamounts at Butler Bulldogs",
+      "home_team": "Butler Bulldogs",
       "line": null,
       "market": "moneyline",
       "selection": "away"
@@ -102,9 +148,9 @@
       "book": "courtside",
       "books": 11,
       "commence": "2026-11-18T00:00:00+00:00",
-      "edge": 0.0408,
+      "edge": 0.0346,
       "event_id": "39bce9119f7631dfd8656e4e8d388192",
-      "fair_american": 104,
+      "fair_american": 105,
       "game": "Villanova Wildcats at Pittsburgh Panthers",
       "home_team": "Pittsburgh Panthers",
       "line": null,
@@ -112,7 +158,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-16T22:00:28+00:00",
+  "latest_capture": "2026-11-16T22:42:25+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
