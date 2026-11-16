@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 392,
-      "away_team": "Tarleton State Texans",
-      "book": "courtside",
-      "books": 17,
-      "commence": "2026-11-17T00:30:00+00:00",
-      "edge": 0.0429,
-      "event_id": "9c9906480af93da224cd3dc2f4351b9d",
-      "fair_american": 372,
-      "game": "Tarleton State Texans at Drake Bulldogs",
-      "home_team": "Drake Bulldogs",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-16T19:39+00:00",
-  "captures": 192,
+  "alerts": [],
+  "as_of": "2026-11-16T20:24+00:00",
+  "captures": 193,
   "cells": [
     {
       "beat_close": 0.6111111111111112,
@@ -86,11 +70,11 @@
       "american": 303,
       "away_team": "Illinois Fighting Illini",
       "book": "courtside",
-      "books": 9,
+      "books": 10,
       "commence": "2026-11-18T00:00:00+00:00",
-      "edge": 0.0278,
+      "edge": 0.0227,
       "event_id": "e53746f0d6118f523272cb956b7d0133",
-      "fair_american": 292,
+      "fair_american": 294,
       "game": "Illinois Fighting Illini at Duke Blue Devils",
       "home_team": "Duke Blue Devils",
       "line": null,
@@ -98,7 +82,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-16T19:38:22+00:00",
+  "latest_capture": "2026-11-16T20:23:03+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
