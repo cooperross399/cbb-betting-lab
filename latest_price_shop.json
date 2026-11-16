@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 575,
-      "away_team": "Western Carolina Catamounts",
-      "book": "fanatics",
-      "books": 7,
-      "commence": "2026-11-18T00:00:00+00:00",
-      "edge": 0.0498,
-      "event_id": "f2f76ded2b49c859cfcdb18510fc4461",
-      "fair_american": 543,
-      "game": "Western Carolina Catamounts at Butler Bulldogs",
-      "home_team": "Butler Bulldogs",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-16T22:43+00:00",
-  "captures": 196,
+  "alerts": [],
+  "as_of": "2026-11-16T22:53+00:00",
+  "captures": 197,
   "cells": [
     {
       "beat_close": 0.6111111111111112,
@@ -116,11 +100,11 @@
       "american": 450,
       "away_team": "Hofstra Pride",
       "book": "fanduel",
-      "books": 7,
+      "books": 8,
       "commence": "2026-11-17T17:00:00+00:00",
-      "edge": 0.0866,
+      "edge": 0.0428,
       "event_id": "7baca68d6b97b29d21efc5ccd35ee124",
-      "fair_american": 406,
+      "fair_american": 427,
       "game": "Hofstra Pride at Murray St Racers",
       "home_team": "Murray St Racers",
       "line": null,
@@ -131,11 +115,11 @@
       "american": 575,
       "away_team": "Western Carolina Catamounts",
       "book": "fanatics",
-      "books": 7,
+      "books": 6,
       "commence": "2026-11-18T00:00:00+00:00",
-      "edge": 0.0498,
+      "edge": 0.0752,
       "event_id": "f2f76ded2b49c859cfcdb18510fc4461",
-      "fair_american": 543,
+      "fair_american": 528,
       "game": "Western Carolina Catamounts at Butler Bulldogs",
       "home_team": "Butler Bulldogs",
       "line": null,
@@ -148,9 +132,9 @@
       "book": "courtside",
       "books": 11,
       "commence": "2026-11-18T00:00:00+00:00",
-      "edge": 0.0346,
+      "edge": 0.037,
       "event_id": "39bce9119f7631dfd8656e4e8d388192",
-      "fair_american": 105,
+      "fair_american": 104,
       "game": "Villanova Wildcats at Pittsburgh Panthers",
       "home_team": "Pittsburgh Panthers",
       "line": null,
@@ -158,7 +142,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-16T22:42:25+00:00",
+  "latest_capture": "2026-11-16T22:52:17+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
