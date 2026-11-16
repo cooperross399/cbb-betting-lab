@@ -1259,7 +1259,15 @@ def build(
     return GameDistribution(
         joint=joint,
         segment=segment,
-        resolves_ties=resolve,
+        # A second half settled including overtime still ends LEVEL whenever
+        # regulation was not: home +5 at the break and a 30-30 second half is
+        # a level half and no overtime. `resolve` there decides only whether
+        # overtime is played out onto the regulation-level mass; the segment
+        # itself can push, so it does not resolve ties. Until 2026-11-16 this
+        # passed `resolve` through and the invariant below refused every
+        # second-half joint, so no second-half wager carried an opinion
+        # (decision 105).
+        resolves_ties=resolve and segment != SECOND_HALF,
         possessions=tempo,
         home_points_per_possession=float(home_points_per_possession),
         away_points_per_possession=float(away_points_per_possession),
