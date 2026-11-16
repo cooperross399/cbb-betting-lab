@@ -27,6 +27,7 @@ import urllib.error
 import urllib.request
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 #: NO custom User-Agent, deliberately, and this is the opposite of the rule the
 #: NHL lab pins for api-web.nhle.com. That host refuses urllib's default and
@@ -524,6 +525,26 @@ def load_captures(lab: Path) -> None:
     print("line captures read" if CAPTURES is not None else "line-capture store unreadable")
 
 
+#: The zone a slate day is named in: the plain Eastern calendar date
+#: (CLAUDE.md, "The slate day is the plain Eastern calendar date"), the same
+#: zone `build_site_pages.py` names the Record and Tracker pages' day in.
+SLATE_TZ = ZoneInfo("America/New_York")
+
+
+def slate_yesterday(now: datetime | None = None) -> date:
+    """Yesterday's slate day, in the zone slate days are named in.
+
+    Until 2026-11-16 this was the UTC date less one. From 00:00 to 05:00 UTC
+    -- 7 PM to midnight Eastern, the middle of every evening slate -- that is
+    TONIGHT's Eastern date, so each evening publish settled the slate still
+    being played: the board's lean record counted tonight's early finals
+    while the Tracker, which names its day in Eastern time, did not
+    (132-156 against 132-154 on the night of 2026-11-15).
+    """
+    now = now or datetime.now(timezone.utc)
+    return (now.astimezone(SLATE_TZ) - timedelta(days=1)).date()
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--data", default="dist/data")
@@ -534,7 +555,7 @@ def main(argv=None) -> int:
     data = Path(args.data)
     if args.lab:
         load_captures(Path(args.lab))
-    day = date.fromisoformat(args.date) if args.date else (datetime.now(timezone.utc) - timedelta(days=1)).date()
+    day = date.fromisoformat(args.date) if args.date else slate_yesterday()
     hist = data / "history"
     frozen = frozen_board(hist, day)
     now = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")

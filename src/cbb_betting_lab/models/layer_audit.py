@@ -75,6 +75,13 @@ class LayerVerdict:
     standard_error: float | None
     z: float | None
     reason: str
+    #: Diagnostic only, never a switch: the multiple of the layer's move that
+    #: would have minimised the same squared error over the same games (1 is
+    #: the layer as built, 0 is the layer off), and the gain per game at it.
+    #: It is how a layer's declared weight gets checked against results; a
+    #: weight changed on its strength is a model change, registered first.
+    best_scale: float | None = None
+    gain_at_best_scale: float | None = None
 
 
 def _margin_total(home: float, away: float, possessions: float) -> tuple[float, float]:
@@ -148,7 +155,31 @@ def _gains(frame: pd.DataFrame, key: str) -> pd.DataFrame:
         (actual_m - without_m) ** 2 - (actual_m - with_m) ** 2
         + (actual_t - without_t) ** 2 - (actual_t - with_t) ** 2
     )
-    return rows.assign(gain=gain)
+    return rows.assign(
+        gain=gain,
+        move_m=move_m, move_t=move_t,
+        resid_m=actual_m - without_m, resid_t=actual_t - without_t,
+    )
+
+
+def best_scale(rows: pd.DataFrame) -> tuple[float | None, float | None]:
+    """The least-squares multiple of the layer's move, and the gain per game at it.
+
+    The layer's predictions are `without + k * move`; the squared error of
+    margin plus total is a parabola in `k` with its minimum at
+    sum(move * residual) / sum(move ** 2), the residual being the final score
+    less the prediction without the layer.
+    """
+    if rows.empty or not {"move_m", "resid_m"} <= set(rows.columns):
+        return None, None
+    mm, mt = rows["move_m"].to_numpy(float), rows["move_t"].to_numpy(float)
+    rm, rt = rows["resid_m"].to_numpy(float), rows["resid_t"].to_numpy(float)
+    denominator = float((mm**2).sum() + (mt**2).sum())
+    if denominator <= 0:
+        return None, None
+    k = float(((mm * rm).sum() + (mt * rt).sum()) / denominator)
+    gain = (rm**2 - (rm - k * mm) ** 2 + rt**2 - (rt - k * mt) ** 2).mean()
+    return k, float(gain)
 
 
 def clustered_mean(values: pd.Series, clusters: pd.Series) -> tuple[float, float | None]:
@@ -180,6 +211,7 @@ def judge(frame: pd.DataFrame) -> list[LayerVerdict]:
             continue
         mean, se = clustered_mean(rows["gain"], rows["day"])
         z = None if se is None else mean / se
+        k, k_gain = best_scale(rows)
         on = default
         if games < MIN_GAMES or days < MIN_DAYS or z is None:
             reason = (
@@ -195,7 +227,8 @@ def judge(frame: pd.DataFrame) -> list[LayerVerdict]:
         else:
             bar = DROP_Z if default else ADD_Z
             reason = f"z {z:+.2f} does not cross the {bar:+.1f} bar; kept as declared"
-        out.append(LayerVerdict(key, CF.LABELS[key], default, on, games, days, mean, se, z, reason))
+        out.append(LayerVerdict(key, CF.LABELS[key], default, on, games, days, mean, se, z, reason,
+                                best_scale=k, gain_at_best_scale=k_gain))
     return out
 
 
@@ -228,19 +261,26 @@ def render(record: Mapping) -> str:
         "drop in squared error of margin plus total per game when it is in "
         "(positive helps), clustered by day.",
         "",
-        "| Layer | On the card | Declared | Games | Days | Gain per game | z | Why |",
-        "|:--|:--|:--|--:|--:|--:|--:|:--|",
+        "| Layer | On the card | Declared | Games | Days | Gain per game | z | Best scale | Why |",
+        "|:--|:--|:--|--:|--:|--:|--:|--:|:--|",
     ]
     for v in record["layers"]:
         gain = "—" if v["gain_per_game"] is None else f"{v['gain_per_game']:+.2f}"
         z = "—" if v["z"] is None else f"{v['z']:+.2f}"
+        k = v.get("best_scale")
+        k = "—" if k is None else f"x{k:.2f}"
         lines.append(
             f"| {v['label']} | {'on' if v['on'] else 'off'} | {'on' if v['default'] else 'off'} "
-            f"| {v['games']:,} | {v['days']} | {gain} | {z} | {v['reason']} |"
+            f"| {v['games']:,} | {v['days']} | {gain} | {z} | {k} | {v['reason']} |"
         )
     for note in record.get("notes") or []:
         lines += ["", f"- {note}"]
     lines += [
+        "",
+        "**Best scale** is the multiple of each layer's move that would have "
+        "fitted this window's finals best (x1.00 is the layer as built, x0.00 "
+        "is the layer off). It is a diagnostic: it switches nothing and "
+        "changes no weight.",
         "",
         "Judged on results, not prices. Nothing here is a claim that a layer "
         "beats the market; that is the price backtest's question.",

@@ -347,8 +347,10 @@ def render(record: Mapping, history: Sequence[Mapping] = ()) -> str:
         )
     prior = record.get("priced_on_prior", {})
     if prior.get("games"):
-        lines += ["", f"{prior['games']:,} of them were priced on the preseason prior "
-                  f"alone (the results did not yet join the two teams): margin miss "
+        lines += ["", f"{prior['games']:,} of them were matchups the season's results do not "
+                  f"yet tie together (less than one head-to-head meeting's worth of "
+                  f"common opponents), so the gap between the two teams leans on the "
+                  f"preseason prior; each team's own rating still carries its games: margin miss "
                   f"{_pts(prior.get('margin_mae'))}, winner called {_pct(prior.get('winner_pct'))}."]
     lines += ["", "Per tier, never pooled. These are forecast-accuracy figures on free "
               "data: they say how close the projections were, not whether any bet "
