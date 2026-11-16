@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 480,
-      "away_team": "Eastern Kentucky Colonels",
-      "book": "fanduel",
-      "books": 10,
-      "commence": "2026-11-17T00:00:00+00:00",
-      "edge": 0.042,
-      "event_id": "4a23f296a8cd67712e5f1f97df7db777",
-      "fair_american": 457,
-      "game": "Eastern Kentucky Colonels at Kent State Golden Flashes",
-      "home_team": "Kent State Golden Flashes",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-16T01:14+00:00",
-  "captures": 185,
+  "alerts": [],
+  "as_of": "2026-11-16T02:14+00:00",
+  "captures": 186,
   "cells": [
     {
       "beat_close": 0.6111111111111112,
@@ -71,19 +55,34 @@
       "american": 480,
       "away_team": "Eastern Kentucky Colonels",
       "book": "fanduel",
-      "books": 10,
+      "books": 12,
       "commence": "2026-11-17T00:00:00+00:00",
-      "edge": 0.042,
+      "edge": 0.0457,
       "event_id": "4a23f296a8cd67712e5f1f97df7db777",
-      "fair_american": 457,
+      "fair_american": 455,
       "game": "Eastern Kentucky Colonels at Kent State Golden Flashes",
       "home_team": "Kent State Golden Flashes",
       "line": null,
       "market": "moneyline",
       "selection": "away"
+    },
+    {
+      "american": 265,
+      "away_team": "Western Kentucky Hilltoppers",
+      "book": "fanduel",
+      "books": 12,
+      "commence": "2026-11-17T00:00:00+00:00",
+      "edge": 0.0255,
+      "event_id": "3ea03086daebd51dbd93ac315be259c8",
+      "fair_american": 256,
+      "game": "Western Kentucky Hilltoppers at Tulsa Golden Hurricane",
+      "home_team": "Tulsa Golden Hurricane",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-16T01:13:43+00:00",
+  "latest_capture": "2026-11-16T02:13:36+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
