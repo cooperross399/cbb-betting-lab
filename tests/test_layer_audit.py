@@ -263,3 +263,23 @@ def test_shot_quality_takes_back_two_point_over_performance_and_reads_only_games
     assert sq[2] == (pytest.approx(-CF.SHOT_QUALITY_CLAMP), pytest.approx(CF.SHOT_QUALITY_CLAMP))
     assert CF.shot_quality(pd.DataFrame(rows[:8]), pd.DataFrame(zones)) == {}, "too few games"
     assert CF.shot_quality(pd.DataFrame(rows), None) == {}
+
+
+def test_best_scale_recovers_the_multiple_of_the_move_the_finals_wanted():
+    # The finals sit at twice the layer's move from the prediction without it,
+    # so the least-squares multiple is 2 and it beats the layer as built.
+    rows = []
+    for i in range(300):
+        move = 1.0 + (i % 5)
+        without = 0.0
+        rows.append({
+            "day": f"2026-11-{1 + i % 10:02d}", "game_id": i,
+            "actual_margin": without + 2.0 * move, "actual_total": 140.0,
+            "pred_margin": without + move, "pred_total": 140.0,
+            "kenpom:margin": move, "kenpom:total": 0.0, "kenpom:on": True,
+        })
+    verdict = _verdict(pd.DataFrame(rows), "kenpom")
+    assert abs(verdict.best_scale - 2.0) < 1e-9, verdict
+    assert verdict.gain_at_best_scale > verdict.gain_per_game
+    record = LA.payload([verdict], as_of="2026-11-16", frame=pd.DataFrame(rows), days_priced=["2026-11-01"])
+    assert "x2.00" in LA.render(record)
