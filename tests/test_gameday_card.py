@@ -1200,13 +1200,12 @@ def test_a_distribution_that_refuses_a_segment_is_counted_not_crashed(day, tmp_p
     """A market whose joint cannot be built is a counted absence, never an
     exception out of the card.
 
-    The live example today is the **second half**: `distributions.build` defaults
-    `resolves_ties=True` for that segment and then refuses its own joint,
-    because a second half settled including overtime can still end level and the
-    invariant reads it as a full game that cannot. That is an upstream defect,
-    reported rather than patched from here. This test asserts only the property
-    this module owns — the card survives it and says so — so it keeps passing on
-    the day the default is corrected.
+    The live example until 2026-11-16 was the **second half**:
+    `distributions.build` refused its own second-half joint, because a half
+    settled including overtime can still end level and the invariant read it as
+    a full game that cannot. That was corrected upstream (decision 105,
+    `tests/test_second_half_prices.py`). This test asserts only the property
+    this module owns — whatever refuses, the card survives it and says so.
     """
     tip = now + timedelta(hours=6)
     payload = _event(

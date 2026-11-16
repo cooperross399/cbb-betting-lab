@@ -1203,6 +1203,17 @@ registered before it was built as `kenpom_projection_2026_11_11`, one per
 tier. KenPom data is a paid subscription: it is never committed (it is
 ignored by git) and never shown on the public site.
 
+### 2026-11-16: second-half markets are priced at last (a defect, decision 105)
+
+The weekly improvement review found that no second-half wager had carried a
+model opinion on any card this season: `distributions.build` refused its own
+second-half joint, because a half settled including overtime can still end
+level when regulation did not, and the invariant read it as a full game that
+cannot. The joint is now marked as a segment that can push, and overtime is
+still played onto the regulation-level mass. Nothing is registered (no
+constant, layer or input moved), no receipt is touched, and no frozen opinion
+is re-cut. Second halves stay a settlement ambiguity in every report.
+
 ## Contract strings — never change these
 
 Cooper's scheduled routines hard-code these. Renaming any of them silently
