@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-17T17:37+00:00",
-  "captures": 206,
+  "as_of": "2026-11-17T17:44+00:00",
+  "captures": 207,
   "cells": [
     {
       "beat_close": 0.6111111111111112,
@@ -97,7 +97,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-17T17:36:38+00:00",
+  "latest_capture": "2026-11-17T17:43:11+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
