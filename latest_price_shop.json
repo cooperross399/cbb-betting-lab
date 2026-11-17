@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-17T22:17+00:00",
-  "captures": 213,
+  "as_of": "2026-11-17T22:43+00:00",
+  "captures": 214,
   "cells": [
     {
       "beat_close": 0.6111111111111112,
@@ -82,16 +82,16 @@
       "selection": "home"
     },
     {
-      "american": 350,
-      "away_team": "Illinois Fighting Illini",
-      "book": "betonlineag",
+      "american": 125,
+      "away_team": "CSU Northridge Matadors",
+      "book": "hardrockbet",
       "books": 18,
       "commence": "2026-11-18T00:00:00+00:00",
-      "edge": 0.0255,
-      "event_id": "e53746f0d6118f523272cb956b7d0133",
-      "fair_american": 339,
-      "game": "Illinois Fighting Illini at Duke Blue Devils",
-      "home_team": "Duke Blue Devils",
+      "edge": 0.0243,
+      "event_id": "988091cc2c64949c28e2aa6a677ef63f",
+      "fair_american": 120,
+      "game": "CSU Northridge Matadors at Troy Trojans",
+      "home_team": "Troy Trojans",
       "line": null,
       "market": "moneyline",
       "selection": "away"
@@ -127,7 +127,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-17T22:16:07+00:00",
+  "latest_capture": "2026-11-17T22:42:10+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02

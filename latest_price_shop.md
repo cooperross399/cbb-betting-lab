@@ -1,22 +1,22 @@
 # CBB price shop
 
-As of 2026-11-17T22:17+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
+As of 2026-11-17T22:43+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
 
 ## Right now
 
-From the capture of 2026-11-17T22:16:07+00:00.
+From the capture of 2026-11-17T22:42:10+00:00.
 
 | Tip (UTC) | Game | Side | Book | Price | Fair | Edge |
 |:---|:---|:---|:---|---:|---:|---:|
 | 2026-11-18 00:00 | Tennessee St Tigers at South Florida Bulls | away moneyline | courtside | +545 | +504 | +6.7% |
 | 2026-11-18 00:00 | Green Bay Phoenix at West Florida Argonauts | home moneyline | ballybet | +200 | +192 | +2.8% |
-| 2026-11-18 00:00 | Illinois Fighting Illini at Duke Blue Devils | away moneyline | betonlineag | +350 | +339 | +2.5% |
+| 2026-11-18 00:00 | CSU Northridge Matadors at Troy Trojans | away moneyline | hardrockbet | +125 | +120 | +2.4% |
 | 2026-11-18 01:30 | Sam Houston St Bearkats at Wyoming Cowboys | away moneyline | courtside | +599 | +583 | +2.3% |
 | 2026-11-18 03:00 | UC Irvine Anteaters at Stanford Cardinal | away moneyline | circasports | +270 | +256 | +4.1% |
 
 ## Did the shops beat the close?
 
-Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (213 capture(s) read). Per tier, clustered by game, corrected across 203 cumulative hypotheses (x1.8705); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
+Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (214 capture(s) read). Per tier, clustered by game, corrected across 203 cumulative hypotheses (x1.8705); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
 
 | Tier | Shops | Graded | Games | Mean CLV | Corrected | Beat the close | Line gone at close |
 |:---|---:|---:|---:|---:|:---|---:|---:|
