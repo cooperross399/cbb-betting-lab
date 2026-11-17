@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-17T00:14+00:00",
-  "captures": 200,
+  "alerts": [
+    {
+      "american": 550,
+      "away_team": "Fordham Rams",
+      "book": "williamhill_us",
+      "books": 7,
+      "commence": "2026-11-18T00:00:00+00:00",
+      "edge": 0.0598,
+      "event_id": "adedd94d034d2092e66251afaae53807",
+      "fair_american": 513,
+      "game": "Fordham Rams at Manhattan Jaspers",
+      "home_team": "Manhattan Jaspers",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
+    }
+  ],
+  "as_of": "2026-11-17T01:14+00:00",
+  "captures": 201,
   "cells": [
     {
       "beat_close": 0.6111111111111112,
@@ -38,13 +54,13 @@
       "ungraded": 1
     },
     {
-      "beat_close": 0.5897435897435898,
-      "games": 37,
-      "graded": 39,
-      "high": 0.09202346400951521,
-      "low": -0.06573503690828116,
-      "mean": 0.013144213550617031,
-      "shops": 44,
+      "beat_close": 0.6097560975609756,
+      "games": 39,
+      "graded": 41,
+      "high": 0.08988612375945883,
+      "low": -0.06045074857228452,
+      "mean": 0.014717687593587154,
+      "shops": 46,
       "tier": "unplaced",
       "ungraded": 5
     }
@@ -55,7 +71,7 @@
       "american": 530,
       "away_team": "Hofstra Pride",
       "book": "fanduel",
-      "books": 7,
+      "books": 8,
       "commence": "2026-11-17T17:00:00+00:00",
       "edge": 0.1674,
       "event_id": "7baca68d6b97b29d21efc5ccd35ee124",
@@ -70,11 +86,11 @@
       "american": 575,
       "away_team": "Western Carolina Catamounts",
       "book": "fanatics",
-      "books": 6,
+      "books": 7,
       "commence": "2026-11-18T00:00:00+00:00",
-      "edge": 0.0482,
+      "edge": 0.1005,
       "event_id": "f2f76ded2b49c859cfcdb18510fc4461",
-      "fair_american": 544,
+      "fair_american": 513,
       "game": "Western Carolina Catamounts at Butler Bulldogs",
       "home_team": "Butler Bulldogs",
       "line": null,
@@ -82,10 +98,25 @@
       "selection": "away"
     },
     {
+      "american": 550,
+      "away_team": "Fordham Rams",
+      "book": "williamhill_us",
+      "books": 7,
+      "commence": "2026-11-18T00:00:00+00:00",
+      "edge": 0.0598,
+      "event_id": "adedd94d034d2092e66251afaae53807",
+      "fair_american": 513,
+      "game": "Fordham Rams at Manhattan Jaspers",
+      "home_team": "Manhattan Jaspers",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
+    },
+    {
       "american": 303,
       "away_team": "Illinois Fighting Illini",
       "book": "courtside",
-      "books": 11,
+      "books": 12,
       "commence": "2026-11-18T00:00:00+00:00",
       "edge": 0.0278,
       "event_id": "e53746f0d6118f523272cb956b7d0133",
@@ -100,9 +131,9 @@
       "american": 100,
       "away_team": "West Virginia Mountaineers",
       "book": "betmgm",
-      "books": 11,
+      "books": 12,
       "commence": "2026-11-18T05:00:00+00:00",
-      "edge": 0.0217,
+      "edge": 0.022,
       "event_id": "e8f832a92172e3b4111a673d4ed242d5",
       "fair_american": -104,
       "game": "West Virginia Mountaineers at Auburn Tigers",
@@ -112,7 +143,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-17T00:13:33+00:00",
+  "latest_capture": "2026-11-17T01:13:40+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
