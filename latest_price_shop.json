@@ -1,54 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 540,
-      "away_team": "Hofstra Pride",
-      "book": "fanduel",
-      "books": 18,
-      "commence": "2026-11-17T17:00:00+00:00",
-      "edge": 0.0398,
-      "event_id": "7baca68d6b97b29d21efc5ccd35ee124",
-      "fair_american": 515,
-      "game": "Hofstra Pride at Murray St Racers",
-      "home_team": "Murray St Racers",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 580,
-      "away_team": "Tennessee St Tigers",
-      "book": "fanduel",
-      "books": 18,
-      "commence": "2026-11-18T00:00:00+00:00",
-      "edge": 0.0649,
-      "event_id": "b7ec520482df7b2c5286ab241222384d",
-      "fair_american": 539,
-      "game": "Tennessee St Tigers at South Florida Bulls",
-      "home_team": "South Florida Bulls",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 460,
-      "away_team": "Bryant Bulldogs",
-      "book": "fanatics",
-      "books": 14,
-      "commence": "2026-11-18T00:30:00+00:00",
-      "edge": 0.0615,
-      "event_id": "4739482816cbaec0b724e890a4609efb",
-      "fair_american": 428,
-      "game": "Bryant Bulldogs at Massachusetts Minutemen",
-      "home_team": "Massachusetts Minutemen",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-17T16:01+00:00",
-  "captures": 205,
+  "alerts": [],
+  "as_of": "2026-11-17T17:37+00:00",
+  "captures": 206,
   "cells": [
     {
       "beat_close": 0.6111111111111112,
@@ -84,34 +38,19 @@
       "ungraded": 1
     },
     {
-      "beat_close": 0.5675675675675675,
-      "games": 35,
-      "graded": 37,
-      "high": 0.08541624792418871,
-      "low": -0.07495416102588588,
-      "mean": 0.005231043449151413,
-      "shops": 42,
+      "beat_close": 0.5526315789473685,
+      "games": 36,
+      "graded": 38,
+      "high": 0.08104939845159227,
+      "low": -0.07646223584936261,
+      "mean": 0.0022935813011148326,
+      "shops": 43,
       "tier": "unplaced",
       "ungraded": 5
     }
   ],
   "correction_factor": 1.8704788371613228,
   "current": [
-    {
-      "american": 540,
-      "away_team": "Hofstra Pride",
-      "book": "fanduel",
-      "books": 18,
-      "commence": "2026-11-17T17:00:00+00:00",
-      "edge": 0.0398,
-      "event_id": "7baca68d6b97b29d21efc5ccd35ee124",
-      "fair_american": 515,
-      "game": "Hofstra Pride at Murray St Racers",
-      "home_team": "Murray St Racers",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
     {
       "american": 580,
       "away_team": "Tennessee St Tigers",
@@ -131,11 +70,11 @@
       "american": 460,
       "away_team": "Bryant Bulldogs",
       "book": "fanatics",
-      "books": 14,
+      "books": 16,
       "commence": "2026-11-18T00:30:00+00:00",
-      "edge": 0.0615,
+      "edge": 0.0414,
       "event_id": "4739482816cbaec0b724e890a4609efb",
-      "fair_american": 428,
+      "fair_american": 438,
       "game": "Bryant Bulldogs at Massachusetts Minutemen",
       "home_team": "Massachusetts Minutemen",
       "line": null,
@@ -146,11 +85,11 @@
       "american": 599,
       "away_team": "Sam Houston St Bearkats",
       "book": "courtside",
-      "books": 17,
+      "books": 18,
       "commence": "2026-11-18T01:30:00+00:00",
-      "edge": 0.0313,
+      "edge": 0.023,
       "event_id": "44a2054c3d6bc226d39ae83a89cd4356",
-      "fair_american": 578,
+      "fair_american": 583,
       "game": "Sam Houston St Bearkats at Wyoming Cowboys",
       "home_team": "Wyoming Cowboys",
       "line": null,
@@ -158,7 +97,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-17T16:00:43+00:00",
+  "latest_capture": "2026-11-17T17:36:38+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
