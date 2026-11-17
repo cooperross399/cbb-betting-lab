@@ -2,12 +2,12 @@
   "alert_edge": 0.03,
   "alerts": [
     {
-      "american": 330,
+      "american": 325,
       "away_team": "Illinois Fighting Illini",
-      "book": "ballybet",
+      "book": "betparx",
       "books": 18,
       "commence": "2026-11-18T00:00:00+00:00",
-      "edge": 0.0443,
+      "edge": 0.0322,
       "event_id": "e53746f0d6118f523272cb956b7d0133",
       "fair_american": 312,
       "game": "Illinois Fighting Illini at Duke Blue Devils",
@@ -15,25 +15,10 @@
       "line": null,
       "market": "moneyline",
       "selection": "away"
-    },
-    {
-      "american": 580,
-      "away_team": "Fordham Rams",
-      "book": "fanduel",
-      "books": 18,
-      "commence": "2026-11-18T00:00:00+00:00",
-      "edge": 0.0332,
-      "event_id": "adedd94d034d2092e66251afaae53807",
-      "fair_american": 558,
-      "game": "Fordham Rams at Manhattan Jaspers",
-      "home_team": "Manhattan Jaspers",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
     }
   ],
-  "as_of": "2026-11-17T19:10+00:00",
-  "captures": 209,
+  "as_of": "2026-11-17T19:54+00:00",
+  "captures": 210,
   "cells": [
     {
       "beat_close": 0.6111111111111112,
@@ -98,12 +83,12 @@
       "selection": "away"
     },
     {
-      "american": 330,
+      "american": 325,
       "away_team": "Illinois Fighting Illini",
-      "book": "ballybet",
+      "book": "betparx",
       "books": 18,
       "commence": "2026-11-18T00:00:00+00:00",
-      "edge": 0.0443,
+      "edge": 0.0322,
       "event_id": "e53746f0d6118f523272cb956b7d0133",
       "fair_american": 312,
       "game": "Illinois Fighting Illini at Duke Blue Devils",
@@ -118,9 +103,9 @@
       "book": "fanduel",
       "books": 18,
       "commence": "2026-11-18T00:00:00+00:00",
-      "edge": 0.0332,
+      "edge": 0.0312,
       "event_id": "adedd94d034d2092e66251afaae53807",
-      "fair_american": 558,
+      "fair_american": 559,
       "game": "Fordham Rams at Manhattan Jaspers",
       "home_team": "Manhattan Jaspers",
       "line": null,
@@ -148,9 +133,9 @@
       "book": "betonlineag",
       "books": 17,
       "commence": "2026-11-18T00:30:00+00:00",
-      "edge": 0.0577,
+      "edge": 0.0557,
       "event_id": "4739482816cbaec0b724e890a4609efb",
-      "fair_american": 428,
+      "fair_american": 429,
       "game": "Bryant Bulldogs at Massachusetts Minutemen",
       "home_team": "Massachusetts Minutemen",
       "line": null,
@@ -168,6 +153,21 @@
       "fair_american": 583,
       "game": "Sam Houston St Bearkats at Wyoming Cowboys",
       "home_team": "Wyoming Cowboys",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    },
+    {
+      "american": 550,
+      "away_team": "Alabama St Hornets",
+      "book": "betparx",
+      "books": 17,
+      "commence": "2026-11-18T02:00:00+00:00",
+      "edge": 0.0263,
+      "event_id": "41c79876d3c7f7f356c4b1a19332478f",
+      "fair_american": 533,
+      "game": "Alabama St Hornets at UC Davis Aggies",
+      "home_team": "UC Davis Aggies",
       "line": null,
       "market": "moneyline",
       "selection": "away"
@@ -203,7 +203,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-17T19:09:22+00:00",
+  "latest_capture": "2026-11-17T19:52:52+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
