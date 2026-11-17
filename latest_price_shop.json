@@ -1,39 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 225,
-      "away_team": "Saint Peter's Peacocks",
-      "book": "ballybet",
-      "books": 16,
-      "commence": "2026-11-17T23:00:00+00:00",
-      "edge": 0.0968,
-      "event_id": "cc8bda41e5ca0051fa27efd930cd1ba2",
-      "fair_american": 196,
-      "game": "Saint Peter's Peacocks at UMass Lowell River Hawks",
-      "home_team": "UMass Lowell River Hawks",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 545,
-      "away_team": "Tennessee St Tigers",
-      "book": "courtside",
-      "books": 18,
-      "commence": "2026-11-18T00:00:00+00:00",
-      "edge": 0.0671,
-      "event_id": "b7ec520482df7b2c5286ab241222384d",
-      "fair_american": 504,
-      "game": "Tennessee St Tigers at South Florida Bulls",
-      "home_team": "South Florida Bulls",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-17T21:46+00:00",
-  "captures": 212,
+  "alerts": [],
+  "as_of": "2026-11-17T22:17+00:00",
+  "captures": 213,
   "cells": [
     {
       "beat_close": 0.6111111111111112,
@@ -83,21 +52,6 @@
   "correction_factor": 1.8704788371613228,
   "current": [
     {
-      "american": 225,
-      "away_team": "Saint Peter's Peacocks",
-      "book": "ballybet",
-      "books": 16,
-      "commence": "2026-11-17T23:00:00+00:00",
-      "edge": 0.0968,
-      "event_id": "cc8bda41e5ca0051fa27efd930cd1ba2",
-      "fair_american": 196,
-      "game": "Saint Peter's Peacocks at UMass Lowell River Hawks",
-      "home_team": "UMass Lowell River Hawks",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
       "american": 545,
       "away_team": "Tennessee St Tigers",
       "book": "courtside",
@@ -108,21 +62,6 @@
       "fair_american": 504,
       "game": "Tennessee St Tigers at South Florida Bulls",
       "home_team": "South Florida Bulls",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 330,
-      "away_team": "Illinois Fighting Illini",
-      "book": "ballybet",
-      "books": 18,
-      "commence": "2026-11-18T00:00:00+00:00",
-      "edge": 0.0515,
-      "event_id": "e53746f0d6118f523272cb956b7d0133",
-      "fair_american": 309,
-      "game": "Illinois Fighting Illini at Duke Blue Devils",
-      "home_team": "Duke Blue Devils",
       "line": null,
       "market": "moneyline",
       "selection": "away"
@@ -143,12 +82,27 @@
       "selection": "home"
     },
     {
-      "american": 600,
+      "american": 350,
+      "away_team": "Illinois Fighting Illini",
+      "book": "betonlineag",
+      "books": 18,
+      "commence": "2026-11-18T00:00:00+00:00",
+      "edge": 0.0255,
+      "event_id": "e53746f0d6118f523272cb956b7d0133",
+      "fair_american": 339,
+      "game": "Illinois Fighting Illini at Duke Blue Devils",
+      "home_team": "Duke Blue Devils",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    },
+    {
+      "american": 599,
       "away_team": "Sam Houston St Bearkats",
-      "book": "betmgm",
+      "book": "courtside",
       "books": 18,
       "commence": "2026-11-18T01:30:00+00:00",
-      "edge": 0.0245,
+      "edge": 0.023,
       "event_id": "44a2054c3d6bc226d39ae83a89cd4356",
       "fair_american": 583,
       "game": "Sam Houston St Bearkats at Wyoming Cowboys",
@@ -173,7 +127,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-17T21:45:11+00:00",
+  "latest_capture": "2026-11-17T22:16:07+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
