@@ -1,32 +1,25 @@
 # CBB price shop
 
-As of 2026-11-17T20:29+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
+As of 2026-11-18T12:38+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
 
 ## Right now
 
-From the capture of 2026-11-17T19:52:52+00:00.
+From the capture of 2026-11-18T03:13:38+00:00.
 
 | Tip (UTC) | Game | Side | Book | Price | Fair | Edge |
 |:---|:---|:---|:---|---:|---:|---:|
-| 2026-11-18 00:00 | Tennessee St Tigers at South Florida Bulls | away moneyline | fanduel | +580 | +543 | +5.8% |
-| 2026-11-18 00:00 | Illinois Fighting Illini at Duke Blue Devils | away moneyline | betparx | +325 | +312 | +3.2% |
-| 2026-11-18 00:00 | Fordham Rams at Manhattan Jaspers | home moneyline | fanduel | +580 | +559 | +3.1% |
-| 2026-11-18 00:00 | Western Carolina Catamounts at Butler Bulldogs | away moneyline | courtside | +572 | +558 | +2.2% |
-| 2026-11-18 00:30 | Bryant Bulldogs at Massachusetts Minutemen | away moneyline | betonlineag | +458 | +429 | +5.6% |
-| 2026-11-18 01:30 | Sam Houston St Bearkats at Wyoming Cowboys | away moneyline | betmgm | +600 | +583 | +2.5% |
-| 2026-11-18 02:00 | Alabama St Hornets at UC Davis Aggies | away moneyline | betparx | +550 | +533 | +2.6% |
-| 2026-11-18 03:00 | UC Irvine Anteaters at Stanford Cardinal | away moneyline | circasports | +270 | +256 | +4.1% |
-| 2026-11-18 03:00 | Seattle Redhawks at Cal Baptist Lancers | home moneyline | betrivers | +330 | +320 | +2.3% |
+| 2026-11-18 23:30 | Detroit Mercy Titans at Eastern Michigan Eagles | under 143.5 | circasports | -110 | -117 | +3.0% |
+| 2026-11-19 00:00 | James Madison Dukes at Towson Tigers | home moneyline | fanduel | -166 | -179 | +2.9% |
 
 ## Did the shops beat the close?
 
-Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (210 capture(s) read). Per tier, clustered by game, corrected across 203 cumulative hypotheses (x1.8705); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
+Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (219 capture(s) read). Per tier, clustered by game, corrected across 206 cumulative hypotheses (x1.8724); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
 
 | Tier | Shops | Graded | Games | Mean CLV | Corrected | Beat the close | Line gone at close |
 |:---|---:|---:|---:|---:|:---|---:|---:|
-| high-major | 18 | 18 | 18 | +9.0% | — | 61% | 0 |
-| mid-major | 88 | 83 | 78 | +4.8% | -6.0% to +15.5% (no demonstrated edge) | 65% | 5 |
-| low-major | 36 | 35 | 33 | +2.4% | -4.9% to +9.7% (no demonstrated edge) | 63% | 1 |
-| unplaced | 43 | 38 | 36 | +0.2% | -7.6% to +8.1% (no demonstrated edge) | 55% | 5 |
+| high-major | 8 | 7 | 7 | +7.6% | — | 100% | 1 |
+| mid-major | 33 | 29 | 29 | +7.9% | — | 66% | 4 |
+| low-major | 15 | 13 | 12 | -0.2% | — | 69% | 2 |
+| unplaced | 18 | 13 | 11 | +2.0% | — | 77% | 5 |
 
 Line gone at close: the side's line was no longer quoted by enough books at the last capture, so it is ungraded rather than guessed. Unplaced games are ones the forward ledger never froze.

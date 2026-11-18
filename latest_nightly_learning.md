@@ -1,72 +1,72 @@
-# What the model learned from 2026-11-16
+# What the model learned from 2026-11-17
 
-**22 finished game(s) graded**, each priced walk-forward through the card's own seam and layers, fitted only on games before 2026-11-16. Error is final minus projection, home side, in points.
+**55 finished game(s) graded**, each priced walk-forward through the card's own seam and layers, fitted only on games before 2026-11-17. Error is final minus projection, home side, in points.
 
 ## How last night's projections did
 
 | Tier | Games | Margin miss (avg) | Margin bias | Total miss (avg) | Total bias | Winner called |
 |:---|---:|---:|---:|---:|---:|---:|
-| mid-major | 3 | 14.5 | -11.0 | 15.9 | -15.9 | 66.7% |
-| low-major | 19 | 13.1 | +6.1 | 17.8 | +5.0 | 84.2% |
+| high-major | 8 | 9.3 | +0.2 | 12.5 | +1.4 | 62.5% |
+| mid-major | 14 | 8.4 | -2.5 | 11.9 | +7.0 | 71.4% |
+| low-major | 33 | 11.8 | -4.6 | 13.7 | -0.5 | 81.8% |
 
-20 of them were matchups the season's results do not yet tie together (less than one head-to-head meeting's worth of common opponents), so the gap between the two teams leans on the preseason prior; each team's own rating still carries its games: margin miss 13.9, winner called 85.0%.
+31 of them were matchups the season's results do not yet tie together (less than one head-to-head meeting's worth of common opponents), so the gap between the two teams leans on the preseason prior; each team's own rating still carries its games: margin miss 10.4, winner called 77.4%.
 
 Per tier, never pooled. These are forecast-accuracy figures on free data: they say how close the projections were, not whether any bet had an edge. Bets are graded on the Record tab and in the forward ledger.
 
 **Biggest misses:**
-- Columbia at Northwestern: projected +10.9 (home), finished -22; total 141.2 projected, 128 scored.
-- Alcorn State at Maryland: projected +28.3 (home), finished +60; total 154.3 projected, 174 scored.
-- Jacksonville at Georgia: projected +19.4 (home), finished +45; total 149.8 projected, 169 scored.
-- Montana at Kansas State: projected +16.1 (home), finished +41; total 153.3 projected, 131 scored.
-- Eastern Kentucky at Kent State: projected +8.1 (home), finished -16; total 163.2 projected, 114 scored.
+- Lehigh at Mount St. Mary's: projected +1.5 (home), finished -34; total 134.1 projected, 164 scored.
+- Lamar at Omaha: projected -0.1 (home), finished -30; total 145.2 projected, 178 scored.
+- Cleveland State at Xavier: projected +36.5 (home), finished +8; total 164.1 projected, 142 scored.
+- Illinois at Duke: projected +5.7 (home), finished -21; total 164.3 projected, 177 scored.
+- Bryant at Massachusetts: projected +18.6 (home), finished -4; total 134.5 projected, 162 scored.
 
 ## What the ratings took from it
 
-Refitted on 631 game(s) this season, through 2026-11-16 (was 609, through 2026-11-15). 169 team(s) moved by 0.05 points per 100 or more.
+Refitted on 684 game(s) this season, through 2026-11-17 (was 631, through 2026-11-16). 261 team(s) moved by 0.05 points per 100 or more.
 
-Median share of each rating still carried by the preseason prior: offence 44% → 39%, defence 53% → 50%, tempo 36% → 34%. This falls as the season's results take over.
+Median share of each rating still carried by the preseason prior: offence 39% → 38%, defence 50% → 49%, tempo 34% → 32%. This falls as the season's results take over.
 
 **Biggest risers** (net rating, points per 100 on a neutral floor):
 
 | Team | Tier | Before | After | Change |
 |:---|:---|---:|---:|---:|
-| Columbia | mid-major | +0.10 | +4.54 | +4.44 |
-| Maryland | high-major | +10.71 | +14.94 | +4.23 |
-| Kansas State | high-major | +11.66 | +15.67 | +4.01 |
-| Eastern Kentucky | low-major | -7.91 | -4.49 | +3.42 |
-| Georgia | high-major | +15.60 | +18.88 | +3.28 |
-| Oregon State | mid-major | +9.52 | +12.55 | +3.03 |
-| Oklahoma State | high-major | +17.16 | +19.91 | +2.76 |
-| UTEP | mid-major | -3.98 | -1.50 | +2.48 |
-| Texas Southern | low-major | -13.58 | -11.77 | +1.81 |
-| UCLA | high-major | +28.63 | +30.30 | +1.67 |
+| Lehigh | low-major | -6.14 | -1.74 | +4.39 |
+| Lamar | low-major | -3.37 | +0.93 | +4.30 |
+| Alabama State | low-major | -15.31 | -12.14 | +3.17 |
+| Cleveland State | low-major | -16.28 | -13.24 | +3.03 |
+| Seattle U | mid-major | +0.66 | +3.65 | +2.99 |
+| Tennessee | high-major | +15.48 | +18.46 | +2.97 |
+| West Florida | unplaced | -3.06 | -0.40 | +2.66 |
+| Illinois | high-major | +34.94 | +37.55 | +2.61 |
+| Oral Roberts | low-major | -10.17 | -7.57 | +2.60 |
+| DePaul | high-major | +16.02 | +18.35 | +2.33 |
 
 **Biggest fallers** (net rating, points per 100 on a neutral floor):
 
 | Team | Tier | Before | After | Change |
 |:---|:---|---:|---:|---:|
-| Northwestern | high-major | +8.19 | +4.02 | -4.18 |
-| Montana | low-major | -1.59 | -5.66 | -4.06 |
-| Kent State | mid-major | -3.01 | -6.87 | -3.86 |
-| Jacksonville | low-major | -5.57 | -9.27 | -3.70 |
-| Alcorn State | low-major | -20.19 | -23.64 | -3.45 |
-| East Texas A&M | low-major | -4.81 | -8.01 | -3.20 |
-| Florida A&M | low-major | -21.01 | -23.70 | -2.68 |
-| Central Arkansas | low-major | +5.52 | +2.98 | -2.54 |
-| The Citadel | low-major | -16.90 | -18.95 | -2.06 |
-| UC San Diego | low-major | +7.25 | +5.59 | -1.66 |
+| Mount St. Mary's | low-major | -10.08 | -14.69 | -4.60 |
+| Michigan State | high-major | +32.11 | +28.58 | -3.53 |
+| Akron | mid-major | +7.13 | +3.90 | -3.23 |
+| Xavier | high-major | +20.51 | +17.44 | -3.07 |
+| Omaha | low-major | -9.92 | -12.93 | -3.02 |
+| California Baptist | low-major | -9.65 | -12.64 | -2.99 |
+| Duke | high-major | +34.37 | +31.41 | -2.96 |
+| UC Davis | low-major | +1.36 | -1.44 | -2.80 |
+| Villanova | high-major | +15.52 | +13.17 | -2.36 |
+| Maryland Eastern Shore | low-major | -18.80 | -21.10 | -2.30 |
 
 ## The other two learners
 
-- Trust in the model against the price, per tier (0 is the market, 1 is the model as it stands): high-major 0.000 (seed 0.046, 50,566 settled forward row(s), 31,706 closing-line row(s)); low-major 0.095 (seed 0.011, 12,078 settled forward row(s), 8,986 closing-line row(s)); mid-major 0.000 (seed 0.032, 45,274 settled forward row(s), 28,698 closing-line row(s)). Every wager's probability is pulled to market + trust x (model - market) before the edge bar; a wager with no two-sided price carries no trusted opinion.
-- Layer audit (2026-11-17): on the card: Home court, Last five games, Rest, Who is missing, Second opinion, KenPom's projection.
+- Trust in the model against the price, per tier (0 is the market, 1 is the model as it stands): high-major 0.000 (seed 0.046, 57,612 settled forward row(s), 33,318 closing-line row(s)); low-major 0.064 (seed 0.011, 13,788 settled forward row(s), 9,506 closing-line row(s)); mid-major 0.000 (seed 0.032, 51,046 settled forward row(s), 29,612 closing-line row(s)). Every wager's probability is pulled to market + trust x (model - market) before the edge bar; a wager with no two-sided price carries no trusted opinion.
+- Layer audit (2026-11-18): on the card: Home court, Last five games, Rest, Who is missing, Second opinion, KenPom's projection.
 - Switched from the declared card: KenPom's projection.
 
 ## The season so far
 
 | Night | Games | Margin miss | Total miss | Winner called | Prior share |
 |:---|---:|---:|---:|---:|---:|
-| 2026-11-03 | 19 | 16.58 | 11.78 | 89.5% | 89% |
 | 2026-11-04 | 10 | 9.32 | 16.44 | 80.0% | 89% |
 | 2026-11-05 | 43 | 10.21 | 15.54 | 79.1% | 89% |
 | 2026-11-06 | 58 | 12.75 | 13.49 | 84.5% | 89% |
@@ -80,5 +80,6 @@ Median share of each rating still carried by the preseason prior: offence 44% �
 | 2026-11-14 | 57 | 10.07 | 15.07 | 66.7% | 45% |
 | 2026-11-15 | 35 | 11.78 | 14.73 | 77.1% | 44% |
 | 2026-11-16 | 22 | 13.30 | 17.51 | 81.8% | 39% |
+| 2026-11-17 | 55 | 10.54 | 13.06 | 76.4% | 38% |
 
-_11 of 33 game(s) on 2026-11-16 carry no graded projection: a non-D-I opponent, a team the prior does not know, or a score not yet in the tables._
+_13 of 68 game(s) on 2026-11-17 carry no graded projection: a non-D-I opponent, a team the prior does not know, or a score not yet in the tables._

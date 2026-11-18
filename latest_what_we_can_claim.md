@@ -2,17 +2,17 @@
 
 Generated from the measurement records on disk, so it cannot drift from them. The hand-written rules — written before the first measurement, which is the whole point of them — live in `docs/what_we_can_and_cannot_claim.md`. **This file is re-rendered from its own run record and is never edited by hand.**
 
-- Generated: 2026-11-17T20:30:43+00:00
+- Generated: 2026-11-18T12:39:31+00:00
 - Sample floor: **200 bets**, declared in advance. Below it this document prints a phrase and not a number.
 
 **The only result that survives is a loss.** 32 market-and-tier cell(s) across 10 market(s) are measured against real prices. None excludes zero on the winning side; 5 exclude(s) it on the **losing** side after correcting for everything this lab has ever tested, which is a **demonstrated deficit**: `moneyline` / high_major (historical price backtest, bets) at -11.1% over 4,393 bets across 609 days; `moneyline` / mid_major (historical price backtest, bets) at -8.0% over 8,873 bets across 648 days; `team_total` / mid_major (historical price backtest, bets) at -6.3% over 11,618 bets across 345 days; `moneyline` / low_major (historical price backtest, bets) at -9.8% over 6,967 bets across 590 days; `total_points` / low_major (historical price backtest, bets) at -5.2% over 17,978 bets across 7,137 games. A demonstrated deficit is a finding, not a null result, and it is the finding this lab has.
 
 ## The correction this document applies
 
-**203 distinct hypotheses have ever been tested here**, and every interval below is widened by **x1.87** before it means what it says. That is the ledger's **cumulative** count and never the day's: *a search that runs every week is not twelve tests, it is twelve tests a week, forever.*
+**206 distinct hypotheses have ever been tested here**, and every interval below is widened by **x1.87** before it means what it says. That is the ledger's **cumulative** count and never the day's: *a search that runs every week is not twelve tests, it is twelve tests a week, forever.*
 
 - Alpha budget: **6 new hypotheses a week**, declared 2026-09-01. When it is spent the search waits; it never lowers the bar.
-- 162 discovery, 41 holdout. Putting a discovery finding to the holdout is a second look and is counted as one.
+- 165 discovery, 41 holdout. Putting a discovery finding to the holdout is a second look and is counted as one.
 
 The correction is re-applied here at render time rather than copied out of the record it came from. A backtest run in December carries December's family size; by March the ledger has grown and the same number means less. This can only ever make an interval wider.
 
@@ -27,7 +27,7 @@ Prices bought after the games resolved. **A backtest that beats the opening numb
 | Market | Tier | Cut | Bets | Clusters | ROI | 95% interval | Family-corrected | Replication | Verdict |
 |:---|:---|:---|---:|---:|---:|:---|:---|:---|:---|
 | `alternate_spread` | high_major | bets | 2,213 | 58 games | -4.5% | -29.1% to +20.1% | -50.6% to +41.6% | no held-out test has been run | no demonstrated edge |
-| `alternate_total_points` | high_major | bets | 2,136 | 63 games | +0.3% | -29.7% to +30.3% | -55.9% to +56.4% | no held-out test has been run | no demonstrated edge |
+| `alternate_total_points` | high_major | bets | 2,136 | 63 games | +0.3% | -29.7% to +30.3% | -55.9% to +56.5% | no held-out test has been run | no demonstrated edge |
 | `moneyline` | high_major | bets | 4,393 | 609 days | -11.1% | -16.8% to -5.4% | -21.7% to -0.4% | not enough evidence on the 2025, 2026 (held out) window | demonstrated deficit |
 | `moneyline_h1` | high_major | bets | 47 | 37 days | — | — | — | no held-out test has been run | not enough evidence (47 bets, below the 200 declared in advance) |
 | `spread` | high_major | bets | 10,908 | 4,711 games | -2.9% | -5.8% to +0.0% | -8.3% to +2.5% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
@@ -37,11 +37,11 @@ Prices bought after the games resolved. **A backtest that beats the opening numb
 | `total_points_h1` | high_major | bets | 181 | 57 games | — | — | — | no held-out test has been run | not enough evidence (181 bets, below the 200 declared in advance) |
 | `alternate_spread` | mid_major | bets | 8,349 | 89 days | -6.8% | -16.9% to +3.4% | -25.8% to +12.2% | no held-out test has been run | no demonstrated edge |
 | `alternate_team_total` | mid_major | bets | 13 | 3 days | — | — | — | no held-out test has been run | not enough evidence (13 bets, below the 200 declared in advance) |
-| `alternate_total_points` | mid_major | bets | 7,598 | 231 games | -15.6% | -28.4% to -2.9% | -39.4% to +8.2% | no held-out test has been run | no demonstrated edge |
+| `alternate_total_points` | mid_major | bets | 7,598 | 231 games | -15.6% | -28.4% to -2.9% | -39.5% to +8.2% | no held-out test has been run | no demonstrated edge |
 | `moneyline` | mid_major | bets | 8,873 | 648 days | -8.0% | -11.7% to -4.4% | -14.9% to -1.2% | not enough evidence on the 2025, 2026 (held out) window | demonstrated deficit |
 | `moneyline_h1` | mid_major | bets | 168 | 168 games | — | — | — | no held-out test has been run | not enough evidence (168 bets, below the 200 declared in advance) |
 | `spread` | mid_major | bets | 19,968 | 650 days | -2.9% | -5.1% to -0.7% | -7.0% to +1.2% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
-| `spread_h1` | mid_major | bets | 693 | 216 games | -15.2% | -29.2% to -1.1% | -41.5% to +11.1% | no held-out test has been run | no demonstrated edge |
+| `spread_h1` | mid_major | bets | 693 | 216 games | -15.2% | -29.2% to -1.1% | -41.5% to +11.2% | no held-out test has been run | no demonstrated edge |
 | `team_total` | mid_major | bets | 11,618 | 345 days | -6.3% | -8.4% to -4.2% | -10.2% to -2.4% | nothing to replicate on the 2025, 2026 (held out) window | demonstrated deficit |
 | `total_points` | mid_major | bets | 23,517 | 728 days | -2.4% | -4.6% to -0.3% | -6.5% to +1.6% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
 | `total_points_h1` | mid_major | bets | 607 | 207 games | -2.1% | -17.1% to +12.9% | -30.2% to +26.0% | no held-out test has been run | no demonstrated edge |
@@ -51,10 +51,10 @@ Prices bought after the games resolved. **A backtest that beats the opening numb
 | `moneyline` | low_major | bets | 6,967 | 590 days | -9.8% | -13.6% to -5.9% | -17.0% to -2.6% | not enough evidence on the 2025, 2026 (held out) window | demonstrated deficit |
 | `moneyline_h1` | low_major | bets | 79 | 79 games | — | — | — | no held-out test has been run | not enough evidence (79 bets, below the 200 declared in advance) |
 | `spread` | low_major | bets | 14,596 | 589 days | -0.7% | -3.2% to +1.7% | -5.3% to +3.9% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
-| `spread_h1` | low_major | bets | 370 | 117 games | +5.2% | -15.3% to +25.8% | -33.2% to +43.6% | no held-out test has been run | no demonstrated edge |
+| `spread_h1` | low_major | bets | 370 | 117 games | +5.2% | -15.3% to +25.8% | -33.2% to +43.7% | no held-out test has been run | no demonstrated edge |
 | `team_total` | low_major | bets | 9,042 | 313 days | -3.8% | -6.6% to -1.0% | -9.1% to +1.5% | nothing to replicate on the 2025, 2026 (held out) window | no demonstrated edge |
 | `total_points` | low_major | bets | 17,978 | 7,137 games | -5.2% | -7.6% to -2.8% | -9.7% to -0.8% | nothing to replicate on the 2025, 2026 (held out) window | demonstrated deficit |
-| `total_points_h1` | low_major | bets | 321 | 106 games | -11.2% | -32.1% to +9.6% | -50.3% to +27.8% | no held-out test has been run | no demonstrated edge |
+| `total_points_h1` | low_major | bets | 321 | 106 games | -11.2% | -32.1% to +9.6% | -50.3% to +27.9% | no held-out test has been run | no demonstrated edge |
 | `moneyline` | unplaced | bets | 1 | 1 games | — | — | — | no held-out test has been run | not enough evidence (1 bets, below the 200 declared in advance) |
 | `spread` | unplaced | bets | 3 | 2 games | — | — | — | no held-out test has been run | not enough evidence (3 bets, below the 200 declared in advance) |
 | `total_points` | unplaced | bets | 3 | 1 games | — | — | — | no held-out test has been run | not enough evidence (3 bets, below the 200 declared in advance) |
@@ -67,11 +67,11 @@ Prices bought after the games resolved. **A backtest that beats the opening numb
 |:---|---:|---:|---:|:---|:---|:---|
 | alternate_spread | 13,776 | 425 games | -5.9% | -14.2% to +2.5% | -21.5% to +9.8% | no demonstrated edge |
 | alternate_team_total | 23 | 4 games | — | — | — | not enough evidence (23 bets, below the 200 declared in advance) |
-| alternate_total_points | 13,497 | 411 games | -11.6% | -21.8% to -1.3% | -30.8% to +7.6% | no demonstrated edge |
+| alternate_total_points | 13,497 | 411 games | -11.6% | -21.8% to -1.3% | -30.8% to +7.7% | no demonstrated edge |
 | moneyline | 20,234 | 694 days | -9.3% | -11.8% to -6.8% | -14.0% to -4.6% | demonstrated deficit |
 | moneyline_h1 | 294 | 294 games | +1.6% | -17.7% to +20.8% | -34.5% to +37.6% | no demonstrated edge |
 | spread | 45,475 | 20,550 games | -2.2% | -3.6% to -0.8% | -4.8% to +0.4% | no demonstrated edge |
-| spread_h1 | 1,252 | 390 games | -10.7% | -21.4% to -0.1% | -30.7% to +9.2% | no demonstrated edge |
+| spread_h1 | 1,252 | 390 games | -10.7% | -21.4% to -0.1% | -30.8% to +9.3% | no demonstrated edge |
 | team_total | 26,230 | 365 days | -4.9% | -6.4% to -3.3% | -7.7% to -2.0% | demonstrated deficit |
 | total_points | 53,800 | 21,189 games | -3.6% | -4.9% to -2.2% | -6.1% to -1.0% | demonstrated deficit |
 | total_points_h1 | 1,109 | 370 games | -5.1% | -16.2% to +6.1% | -26.0% to +15.8% | no demonstrated edge |
@@ -150,14 +150,14 @@ The survival split is computed in `data/outputs/cbb_forward_evidence.md`. Nothin
 
 ## How much data would settle it
 
-Sized to **demonstrate** the edge, not merely to observe it: at 80% power and at the ledger's 203 cumulative hypotheses. An earlier version of this table gave the uncorrected 50%-power figure — the sample at which an interval just excludes zero when the observed effect happens to equal the true one — which understated a +5% edge by 4.8x.
+Sized to **demonstrate** the edge, not merely to observe it: at 80% power and at the ledger's 206 cumulative hypotheses. An earlier version of this table gave the uncorrected 50%-power figure — the sample at which an interval just excludes zero when the observed effect happens to equal the true one — which understated a +5% edge by 4.8x.
 
 | If the true edge were | Bets needed to demonstrate it |
 |---:|---:|
-| +5% | ~8,128 |
-| +8% | ~3,175 |
-| +10% | ~2,032 |
-| +15% | ~904 |
+| +5% | ~8,142 |
+| +8% | ~3,181 |
+| +10% | ~2,036 |
+| +15% | ~905 |
 
 `docs/when_this_ends.md` set the decision date at **2027-04-19** and the sample floor at **10,000 settled opinions across at least 2,000 distinct games**, both declared on 2026-09-01 before any data existed. The forward ledger currently holds **0 settled opinions**. Below the floor the correct action is to diagnose the pipeline and **not to read the number**.
 
