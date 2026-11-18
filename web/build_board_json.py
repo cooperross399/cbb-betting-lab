@@ -1040,9 +1040,20 @@ def _pair_line(market: str, selection: str, line) -> tuple | None:
 MIN_FAIR_BOOKS = 3
 
 
+def _fair_pair(first: float, second: float) -> float | None:
+    """One book's fair probability of `first`: the card's own de-vig
+    (`models.trust.fair_from_pair`, power since decision 108), so a lean and a
+    pick read the same fair price."""
+    try:
+        from cbb_betting_lab.models.trust import fair_from_pair  # type: ignore  # noqa: PLC0415
+    except ImportError:  # pragma: no cover - the workflow runs with PYTHONPATH=src
+        return first / (first + second)
+    return fair_from_pair(first, second)
+
+
 def fair_probability(rows, market: str, selection: str, line) -> float | None:
     """The de-vigged market probability of one side: each book quoting both
-    sides normalised on its own pair, the median across those books, the same
+    sides de-vigged on its own pair (power, decision 108), the median across those books, the same
     rule as `models.trust.market_probabilities`, including its floor of
     `MIN_FAIR_BOOKS` books (decision 81). None when fewer books quote both
     sides -- a missing price stays missing, and a thin one is not a price."""
@@ -1061,7 +1072,10 @@ def fair_probability(rows, market: str, selection: str, line) -> float | None:
             continue
         book = r.get("book") or ""
         (mine if sel == selection else other).setdefault(book, p)
-    fair = sorted(a / (a + other[b]) for b, a in mine.items() if b in other and a + other[b] > 1.0)
+    fair = sorted(
+        f for f in (_fair_pair(a, other[b]) for b, a in mine.items() if b in other and a + other[b] > 1.0)
+        if f is not None
+    )
     if not fair or len(fair) < MIN_FAIR_BOOKS:
         return None
     n = len(fair)

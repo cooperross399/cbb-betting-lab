@@ -93,7 +93,7 @@ def test_the_market_is_each_books_own_pair_devigged_and_the_median_taken():
     away = _wager("away", {"a": -110, "b": +100})
     market = trust.market_probabilities([home, away])
     pa = 0.5
-    rb = (120 / 220) / (120 / 220 + 0.5)
+    rb = trust.fair_from_pair(120 / 220, 0.5)
     assert market[home.key] == pytest.approx((pa + rb) / 2)
     assert market[away.key] == pytest.approx(1 - market[home.key])
 
@@ -187,3 +187,29 @@ def test_the_close_moves_the_weight_before_any_result_does(tmp_path):
     # A close captured on or after the card's day is not read.
     assert trust.build("2026-11-05", outputs_dir=tmp_path, ledger=toward,
                        captures=store_toward).by_tier["mid_major"].clv_rows == 0
+
+
+def test_the_fair_price_is_the_power_devig():
+    # decision 108: a**k + b**k == 1, which leaves less of the hold on the longshot
+    assert trust.FAIR_DEVIG == "power"
+    fav, dog = 1 / 1.1, 1 / 6.0  # about -1000 / +500
+    p = trust.power_fair(fav, dog)
+    q = trust.power_fair(dog, fav)
+    assert p + q == pytest.approx(1.0, abs=1e-9)
+    assert q < dog / (fav + dog)  # the longshot is fairer-priced lower than proportional says
+    assert trust.fair_from_pair(0.55, 0.55) == pytest.approx(0.5)
+
+
+def test_a_pair_with_no_hold_is_not_a_fair_price():
+    assert trust.power_fair(0.5, 0.4) is None
+    assert trust.fair_from_pair(0.5, 0.4) is None
+
+
+def test_the_board_and_the_price_shop_read_the_same_fair_price():
+    import importlib.util
+    from pathlib import Path
+    builder = Path(__file__).resolve().parents[1] / "web" / "build_board_json.py"
+    spec = importlib.util.spec_from_file_location("build_board_json_devig", builder)
+    board = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(board)
+    assert board._fair_pair(1 / 1.1, 1 / 6.0) == pytest.approx(trust.fair_from_pair(1 / 1.1, 1 / 6.0))
