@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 175,
-      "away_team": "Binghamton Bearcats",
-      "book": "betrivers",
-      "books": 17,
-      "commence": "2026-11-19T00:00:00+00:00",
-      "edge": 0.0484,
-      "event_id": "2d384959bdc012ce27ff3913426f3e74",
-      "fair_american": 162,
-      "game": "Binghamton Bearcats at Lafayette Leopards",
-      "home_team": "Lafayette Leopards",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-18T17:15+00:00",
-  "captures": 222,
+  "alerts": [],
+  "as_of": "2026-11-18T17:43+00:00",
+  "captures": 223,
   "cells": [
     {
       "beat_close": 1.0,
@@ -68,21 +52,6 @@
   "correction_factor": 1.8723930931473785,
   "current": [
     {
-      "american": 175,
-      "away_team": "Binghamton Bearcats",
-      "book": "betrivers",
-      "books": 17,
-      "commence": "2026-11-19T00:00:00+00:00",
-      "edge": 0.0484,
-      "event_id": "2d384959bdc012ce27ff3913426f3e74",
-      "fair_american": 162,
-      "game": "Binghamton Bearcats at Lafayette Leopards",
-      "home_team": "Lafayette Leopards",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
       "american": -194,
       "away_team": "Howard Bison",
       "book": "fanduel",
@@ -98,7 +67,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-18T17:13:50+00:00",
+  "latest_capture": "2026-11-18T17:42:03+00:00",
   "looks": 206,
   "min_books": 3,
   "shop_edge": 0.02
