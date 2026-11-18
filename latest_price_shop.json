@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-18T21:25+00:00",
-  "captures": 228,
+  "as_of": "2026-11-18T22:15+00:00",
+  "captures": 229,
   "cells": [
     {
       "beat_close": 1.0,
@@ -50,8 +50,24 @@
     }
   ],
   "correction_factor": 1.8723930931473785,
-  "current": [],
-  "latest_capture": "2026-11-18T21:24:09+00:00",
+  "current": [
+    {
+      "american": 310,
+      "away_team": "Samford Bulldogs",
+      "book": "fanduel",
+      "books": 17,
+      "commence": "2026-11-18T23:30:00+00:00",
+      "edge": 0.0232,
+      "event_id": "b91f691e19e9cc60d077ebbc55aa4133",
+      "fair_american": 301,
+      "game": "Samford Bulldogs at South Carolina Upstate Spartans",
+      "home_team": "South Carolina Upstate Spartans",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
+    }
+  ],
+  "latest_capture": "2026-11-18T22:13:44+00:00",
   "looks": 206,
   "min_books": 3,
   "shop_edge": 0.02
