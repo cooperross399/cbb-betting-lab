@@ -133,7 +133,13 @@ def fair_board(store: pd.DataFrame | None, *, min_books: int = MIN_FAIR_BOOKS) -
     if True not in per_book.columns or False not in per_book.columns:
         return pd.DataFrame(columns=columns)
     per_book = per_book.dropna(subset=[True, False])
-    per_book["devig"] = per_book[True] / (per_book[True] + per_book[False])
+    # The card's own de-vig, per book (power since decision 108).
+    from cbb_betting_lab.models.trust import fair_from_pair  # noqa: PLC0415
+
+    per_book["devig"] = [
+        fair_from_pair(a, b) for a, b in zip(per_book[True].to_numpy(float), per_book[False].to_numpy(float))
+    ]
+    per_book = per_book.dropna(subset=["devig"])
     fair = per_book.groupby(level=keys)["devig"].agg(["median", "size"])
     fair = fair[fair["size"] >= min_books].rename(columns={"median": "fair_first", "size": "books"})
     if fair.empty:

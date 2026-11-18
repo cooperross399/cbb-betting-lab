@@ -261,6 +261,51 @@ def _record(wager) -> dict:
 #: under an active trust table it has no trusted opinion and cannot be picked.
 MIN_FAIR_BOOKS = 3
 
+#: How one book's two-sided quote becomes a fair probability (decision 108,
+#: 2026-11-18). Until then it was proportional (each side's implied
+#: probability over their sum), which leaves the whole favourite-longshot bias
+#: in the longshot's "fair" price: over 605 games' closing moneylines this
+#: season, sides proportional put at 4.1% won 1.5% and power put at 1.7%;
+#: sides proportional put at 11.7% won 8.9% and power put at 8.7%. The card,
+#: with trust at zero, was a price shop against that inflated fair price, so
+#: its "edge" lived in long underdogs: 209 of the 230 sides a 2% bar picked
+#: against proportional were +300 or longer, and 7% of them beat the
+#: power-devigged close. Power is `a**k + b**k = 1`, solved per book.
+FAIR_DEVIG = "power"
+
+
+def power_fair(first: float, second: float) -> float | None:
+    """The power de-vig of `first` against `second`: `first**k` with
+    `first**k + second**k == 1`. None for a pair that is not a real two-sided
+    quote (a side outside (0, 1), or no overround), never the proportional
+    answer in disguise."""
+    try:
+        a, b = float(first), float(second)
+    except (TypeError, ValueError):
+        return None
+    if not (0.0 < a < 1.0 and 0.0 < b < 1.0) or not a + b > 1.0:
+        return None
+    low, high = 1.0, 2.0
+    while a**high + b**high > 1.0:
+        high *= 2.0
+        if high > 1e6:
+            return None
+    for _ in range(80):
+        mid = 0.5 * (low + high)
+        if a**mid + b**mid > 1.0:
+            low = mid
+        else:
+            high = mid
+    return float(a ** (0.5 * (low + high)))
+
+
+def fair_from_pair(first: float, second: float) -> float | None:
+    """One book's fair probability of `first`, by :data:`FAIR_DEVIG`."""
+    if FAIR_DEVIG == "power":
+        return power_fair(first, second)
+    total = first + second
+    return first / total if total > 1.0 else None
+
 
 def market_probabilities(wagers: Iterable, min_books: int | None = None) -> dict[tuple, float]:
     """Wager key -> de-vigged market probability, the median over books that
@@ -286,7 +331,9 @@ def market_probabilities(wagers: Iterable, min_books: int | None = None) -> dict
         for book in a.keys() & b.keys():
             total = a[book] + b[book]
             if total == total and total > FS.MINIMUM_OVERROUND:
-                fair.append(a[book] / total)
+                value = fair_from_pair(a[book], b[book])
+                if value is not None:
+                    fair.append(value)
         if fair and len(fair) >= floor:
             out[first.key] = float(median(fair))
             out[second.key] = 1.0 - out[first.key]

@@ -1758,6 +1758,42 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    # ---------------------------------------------------------------------
+    # decision 108 (Cooper, 2026-11-18: "find winners"): the fair price is the power de-vig. Per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="power_devig_2026_11_18",
+        name=(
+            "high-major: de-vigging each book's two-sided quote by the power method (trust.FAIR_DEVIG) rather than proportionally, for the fair price the card's edge bar, the board's leans and the price shop read, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-18",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="power_devig_2026_11_18",
+        name=(
+            "mid-major: de-vigging each book's two-sided quote by the power method (trust.FAIR_DEVIG) rather than proportionally, for the fair price the card's edge bar, the board's leans and the price shop read, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-18",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="power_devig_2026_11_18",
+        name=(
+            "low-major: de-vigging each book's two-sided quote by the power method (trust.FAIR_DEVIG) rather than proportionally, for the fair price the card's edge bar, the board's leans and the price shop read, raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-18",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 

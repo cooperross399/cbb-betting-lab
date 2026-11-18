@@ -127,8 +127,8 @@ def test_a_shop_already_alerted_an_hour_ago_is_not_posted_again():
 
 
 def test_a_shop_under_the_alert_bar_is_listed_but_not_posted():
-    # +134 against a fair price of about 43.8% clears 2% but not 3%.
-    store = _with_slow_book_at("2026-11-09T17:13:00+00:00", away=+134)
+    # +136 against the power-devigged fair price (decision 108) clears 2% but not 3%.
+    store = _with_slow_book_at("2026-11-09T17:13:00+00:00", away=+136)
     record = PS.build_record(store, tiers={}, looks=200, as_of="x", now="2026-11-09T18:00:00Z")
     assert record["current"] and all(r["edge"] < PS.ALERT_EDGE for r in record["current"])
     assert record["alerts"] == []
