@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-18T17:43+00:00",
-  "captures": 223,
+  "as_of": "2026-11-18T18:07+00:00",
+  "captures": 224,
   "cells": [
     {
       "beat_close": 1.0,
@@ -57,9 +57,9 @@
       "book": "fanduel",
       "books": 17,
       "commence": "2026-11-19T00:00:00+00:00",
-      "edge": 0.022,
+      "edge": 0.0207,
       "event_id": "2fd5bc9363a020aee55c69334d7edd58",
-      "fair_american": -207,
+      "fair_american": -206,
       "game": "Howard Bison at Duquesne Dukes",
       "home_team": "Duquesne Dukes",
       "line": null,
@@ -67,7 +67,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-18T17:42:03+00:00",
+  "latest_capture": "2026-11-18T18:06:15+00:00",
   "looks": 206,
   "min_books": 3,
   "shop_edge": 0.02
