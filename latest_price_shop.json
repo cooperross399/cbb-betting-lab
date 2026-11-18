@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-18T18:50+00:00",
-  "captures": 225,
+  "as_of": "2026-11-18T19:26+00:00",
+  "captures": 226,
   "cells": [
     {
       "beat_close": 1.0,
@@ -50,24 +50,8 @@
     }
   ],
   "correction_factor": 1.8723930931473785,
-  "current": [
-    {
-      "american": -194,
-      "away_team": "Howard Bison",
-      "book": "fanduel",
-      "books": 17,
-      "commence": "2026-11-19T00:00:00+00:00",
-      "edge": 0.022,
-      "event_id": "2fd5bc9363a020aee55c69334d7edd58",
-      "fair_american": -207,
-      "game": "Howard Bison at Duquesne Dukes",
-      "home_team": "Duquesne Dukes",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "latest_capture": "2026-11-18T18:49:38+00:00",
+  "current": [],
+  "latest_capture": "2026-11-18T19:24:58+00:00",
   "looks": 206,
   "min_books": 3,
   "shop_edge": 0.02
