@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-17T23:14+00:00",
-  "captures": 215,
+  "as_of": "2026-11-18T00:14+00:00",
+  "captures": 216,
   "cells": [
     {
       "beat_close": 0.6111111111111112,
@@ -38,13 +38,13 @@
       "ungraded": 1
     },
     {
-      "beat_close": 0.5641025641025641,
-      "games": 37,
-      "graded": 39,
-      "high": 0.0824701990714773,
-      "low": -0.07233739426232823,
-      "mean": 0.00506640240457454,
-      "shops": 44,
+      "beat_close": 0.574468085106383,
+      "games": 45,
+      "graded": 47,
+      "high": 0.07337815443744193,
+      "low": -0.06160076727331658,
+      "mean": 0.005888693582062674,
+      "shops": 52,
       "tier": "unplaced",
       "ungraded": 5
     }
@@ -52,44 +52,14 @@
   "correction_factor": 1.8704788371613228,
   "current": [
     {
-      "american": 545,
-      "away_team": "Tennessee St Tigers",
-      "book": "courtside",
-      "books": 18,
-      "commence": "2026-11-18T00:00:00+00:00",
-      "edge": 0.0671,
-      "event_id": "b7ec520482df7b2c5286ab241222384d",
-      "fair_american": 504,
-      "game": "Tennessee St Tigers at South Florida Bulls",
-      "home_team": "South Florida Bulls",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 200,
-      "away_team": "Green Bay Phoenix",
-      "book": "ballybet",
-      "books": 17,
-      "commence": "2026-11-18T00:00:00+00:00",
-      "edge": 0.0256,
-      "event_id": "bbe54785b59f4fe1e6949ea309e9a554",
-      "fair_american": 192,
-      "game": "Green Bay Phoenix at West Florida Argonauts",
-      "home_team": "West Florida Argonauts",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    },
-    {
       "american": 270,
       "away_team": "UC Irvine Anteaters",
       "book": "circasports",
-      "books": 18,
+      "books": 17,
       "commence": "2026-11-18T03:00:00+00:00",
-      "edge": 0.0536,
+      "edge": 0.0392,
       "event_id": "e6fc3d1d4dfbd6b227ae2a4d1cbf6351",
-      "fair_american": 251,
+      "fair_american": 256,
       "game": "UC Irvine Anteaters at Stanford Cardinal",
       "home_team": "Stanford Cardinal",
       "line": null,
@@ -97,7 +67,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-17T23:13:47+00:00",
+  "latest_capture": "2026-11-18T00:13:42+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
