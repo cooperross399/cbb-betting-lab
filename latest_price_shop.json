@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-18T13:43+00:00",
-  "captures": 220,
+  "as_of": "2026-11-18T15:41+00:00",
+  "captures": 221,
   "cells": [
     {
       "beat_close": 1.0,
@@ -52,22 +52,22 @@
   "correction_factor": 1.8723930931473785,
   "current": [
     {
-      "american": 220,
-      "away_team": "Florida Gulf Coast Eagles",
-      "book": "hardrockbet",
-      "books": 13,
+      "american": -194,
+      "away_team": "Howard Bison",
+      "book": "fanduel",
+      "books": 17,
       "commence": "2026-11-19T00:00:00+00:00",
-      "edge": 0.0281,
-      "event_id": "4464e03ee9677e6c8c25743754e3848c",
-      "fair_american": 211,
-      "game": "Florida Gulf Coast Eagles at Florida Atlantic Owls",
-      "home_team": "Florida Atlantic Owls",
+      "edge": 0.022,
+      "event_id": "2fd5bc9363a020aee55c69334d7edd58",
+      "fair_american": -207,
+      "game": "Howard Bison at Duquesne Dukes",
+      "home_team": "Duquesne Dukes",
       "line": null,
       "market": "moneyline",
-      "selection": "away"
+      "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-18T13:42:40+00:00",
+  "latest_capture": "2026-11-18T15:40:11+00:00",
   "looks": 206,
   "min_books": 3,
   "shop_edge": 0.02
