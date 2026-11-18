@@ -1,8 +1,39 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-18T01:15+00:00",
-  "captures": 217,
+  "alerts": [
+    {
+      "american": 106,
+      "away_team": "Detroit Mercy Titans",
+      "book": "betparx",
+      "books": 9,
+      "commence": "2026-11-18T23:30:00+00:00",
+      "edge": 0.0389,
+      "event_id": "a380dacabd02f4dfc6c8387131a7ff81",
+      "fair_american": -102,
+      "game": "Detroit Mercy Titans at Eastern Michigan Eagles",
+      "home_team": "Eastern Michigan Eagles",
+      "line": 143.5,
+      "market": "total_points",
+      "selection": "over"
+    },
+    {
+      "american": 275,
+      "away_team": "Fort Wayne Mastodons",
+      "book": "betrivers",
+      "books": 9,
+      "commence": "2026-11-19T01:00:00+00:00",
+      "edge": 0.0422,
+      "event_id": "0184484f6b614c2d85a18a6cd254f32f",
+      "fair_american": 260,
+      "game": "Fort Wayne Mastodons at Bradley Braves",
+      "home_team": "Bradley Braves",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    }
+  ],
+  "as_of": "2026-11-18T02:14+00:00",
+  "captures": 218,
   "cells": [
     {
       "beat_close": 0.6111111111111112,
@@ -38,13 +69,13 @@
       "ungraded": 1
     },
     {
-      "beat_close": 0.56,
-      "games": 48,
-      "graded": 50,
-      "high": 0.06919193986933743,
-      "low": -0.06159997101763319,
-      "mean": 0.003795984425852117,
-      "shops": 55,
+      "beat_close": 0.5471698113207547,
+      "games": 51,
+      "graded": 53,
+      "high": 0.06283764107853908,
+      "low": -0.06444805493176096,
+      "mean": -0.0008052069266109374,
+      "shops": 58,
       "tier": "unplaced",
       "ungraded": 5
     }
@@ -57,17 +88,47 @@
       "book": "circasports",
       "books": 17,
       "commence": "2026-11-18T03:00:00+00:00",
-      "edge": 0.0392,
+      "edge": 0.0585,
       "event_id": "e6fc3d1d4dfbd6b227ae2a4d1cbf6351",
-      "fair_american": 256,
+      "fair_american": 250,
       "game": "UC Irvine Anteaters at Stanford Cardinal",
       "home_team": "Stanford Cardinal",
       "line": null,
       "market": "moneyline",
       "selection": "away"
+    },
+    {
+      "american": 106,
+      "away_team": "Detroit Mercy Titans",
+      "book": "betparx",
+      "books": 9,
+      "commence": "2026-11-18T23:30:00+00:00",
+      "edge": 0.0389,
+      "event_id": "a380dacabd02f4dfc6c8387131a7ff81",
+      "fair_american": -102,
+      "game": "Detroit Mercy Titans at Eastern Michigan Eagles",
+      "home_team": "Eastern Michigan Eagles",
+      "line": 143.5,
+      "market": "total_points",
+      "selection": "over"
+    },
+    {
+      "american": 275,
+      "away_team": "Fort Wayne Mastodons",
+      "book": "betrivers",
+      "books": 9,
+      "commence": "2026-11-19T01:00:00+00:00",
+      "edge": 0.0422,
+      "event_id": "0184484f6b614c2d85a18a6cd254f32f",
+      "fair_american": 260,
+      "game": "Fort Wayne Mastodons at Bradley Braves",
+      "home_team": "Bradley Braves",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-18T01:13:45+00:00",
+  "latest_capture": "2026-11-18T02:13:47+00:00",
   "looks": 203,
   "min_books": 3,
   "shop_edge": 0.02
