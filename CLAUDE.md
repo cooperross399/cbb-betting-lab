@@ -1253,6 +1253,14 @@ measured as best, and stays off until the audit adds it. The nightly learning
 history now carries bias per tier. Recent form is left to the audit. Registered
 as `audit_inputs_2026_11_19`, one per tier.
 
+### 2026-11-19: the card withdraws nothing (decision 111)
+
+Cooper: *"dont withdraw anything"*. The closing-line gate and the
+alternate-ladder cap are switched off (`closing_gate.GATE_ON`,
+`rung_cap.MAX_RUNG_DISTANCE`); both modules stay and their tests switch them on.
+The closing-line alarm still reports. The allowlist is untouched: a market
+withdrawn earlier returns only on a receipt Cooper signs.
+
 ## Contract strings — never change these
 
 Cooper's scheduled routines hard-code these. Renaming any of them silently

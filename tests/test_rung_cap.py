@@ -4,8 +4,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from cbb_betting_lab.models import rung_cap
 from cbb_betting_lab.reports.card_pricing import Quote, Wager
+
+
+@pytest.fixture(autouse=True)
+def _cap_on(monkeypatch):
+    # The card runs with the cap off (decision 111); these test the mechanism.
+    monkeypatch.setattr(rung_cap, "MAX_RUNG_DISTANCE", 8.0)
 
 
 def _w(market, selection, line, books=3, event="e1", segment="game"):

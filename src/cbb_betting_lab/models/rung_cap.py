@@ -26,7 +26,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Iterable, Mapping
 
-MAX_RUNG_DISTANCE: float | None = 8.0
+MAX_RUNG_DISTANCE: float | None = None
 
 #: ladder market -> its main market
 LADDERS = {"alternate_spread": "spread", "alternate_total_points": "total_points"}
