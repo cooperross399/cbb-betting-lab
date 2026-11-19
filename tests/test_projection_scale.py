@@ -18,9 +18,15 @@ DAY = "2026-03-12"
 
 
 def test_kenpom_carries_the_weight_the_audit_measured():
-    # The 2026-11-18 audit: best at 1.77 times a 0.5 blend, so 0.89; 0.85 rounds down.
-    assert CF.KENPOM_BLEND_WEIGHT == pytest.approx(0.85)
-    assert 0.5 < CF.KENPOM_BLEND_WEIGHT < 0.5 * 1.77
+    # The 2026-11-19 audit: best at 0.77 times a 0.85 blend, so 0.65 (decision 112).
+    assert CF.KENPOM_BLEND_WEIGHT == pytest.approx(0.65)
+    assert CF.KENPOM_BLEND_WEIGHT == pytest.approx(0.85 * 0.77, abs=0.01)
+
+
+def test_the_second_opinion_carries_the_weight_the_audit_measured():
+    # The same audit: best at 1.96 times a 0.5 blend, so 0.98; 0.9 rounds down.
+    assert CF.BLEND_WEIGHT == pytest.approx(0.9)
+    assert 0.5 < CF.BLEND_WEIGHT < 0.5 * 1.96
 
 
 def test_the_margin_stretch_is_a_candidate_and_off_on_the_declared_card():

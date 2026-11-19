@@ -106,8 +106,11 @@ ROTATION_MIN_APPEARANCES = 3
 AVAILABILITY_SHARE = 0.5
 AVAILABILITY_FLOOR = 0.92
 
-#: The second opinion's weight on offence, defence and tempo.
-BLEND_WEIGHT = 0.5
+#: The second opinion's weight on offence, defence and tempo. 0.5 until
+#: 2026-11-19; **0.9 from decision 112**: the first audit that could see the
+#: second opinion (dated KenPom copies, decision 110) measured 0.5 best scaled
+#: by 1.96 over 773 games (z +5.82), which is 0.98, and 0.9 rounds it down.
+BLEND_WEIGHT = 0.9
 SECOND_OPINION_MAX_AGE_DAYS = 2
 SECOND_OPINION_MIN_TEAMS = 300
 SECOND_OPINION_DIR = "second_opinion"
@@ -294,7 +297,9 @@ MARKET_BLEND_WEIGHT = 0.5
 #: **0.85 from 2026-11-19 (decision 109)**: the layer audit of 2026-11-18
 #: measured the move at 0.5 best scaled by 1.77 over 713 games (z +6.96),
 #: which is 0.89 of the way, and 0.85 rounds that down rather than up.
-KENPOM_BLEND_WEIGHT = 0.85
+#: **0.65 from 2026-11-19 (decision 112)**: the next morning's audit measured
+#: 0.85 best scaled by 0.77 over 774 games (z +1.92), which is 0.65.
+KENPOM_BLEND_WEIGHT = 0.65
 #: `margin_stretch` (decision 109): the card's margin, after every other
 #: layer, multiplied by this, the total untouched. Over the first fortnight of
 #: 2026-27 the card's margins ran about 0.7 times the closing spread's, and a

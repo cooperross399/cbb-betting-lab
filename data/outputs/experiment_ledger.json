@@ -3052,6 +3052,48 @@
       "predicted_direction": "higher",
       "stage": "discovery",
       "realised_direction": ""
+    },
+    {
+      "search": "projection_weights_2026_11_19",
+      "name": "high-major: the decision-112 weights together (card_factors.KENPOM_BLEND_WEIGHT 0.85 -> 0.65 on the candidate layer kenpom, and card_factors.BLEND_WEIGHT 0.5 -> 0.9 on the second opinion) raise the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-19",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "projection_weights_2026_11_19",
+      "name": "mid-major: the decision-112 weights together (card_factors.KENPOM_BLEND_WEIGHT 0.85 -> 0.65 on the candidate layer kenpom, and card_factors.BLEND_WEIGHT 0.5 -> 0.9 on the second opinion) raise the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-19",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "projection_weights_2026_11_19",
+      "name": "low-major: the decision-112 weights together (card_factors.KENPOM_BLEND_WEIGHT 0.85 -> 0.65 on the candidate layer kenpom, and card_factors.BLEND_WEIGHT 0.5 -> 0.9 on the second opinion) raise the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-19",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
     }
   ]
 }
