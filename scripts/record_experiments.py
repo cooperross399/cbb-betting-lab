@@ -1794,6 +1794,42 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    # ---------------------------------------------------------------------
+    # decision 109 (Cooper, 2026-11-19, "do all 4"): KenPom's blend weight raised to the audit's measured scale, a candidate margin-stretch layer, and the November home bonus fading over 21 days instead of 45. One hypothesis per tier for the three together, because they ship together and the forward ledger cannot tell them apart. Per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="projection_scale_2026_11_19",
+        name=(
+            "high-major: the decision-109 projection changes together (card_factors.KENPOM_BLEND_WEIGHT 0.5 -> 0.85, the candidate layer margin_stretch at card_factors.MARGIN_STRETCH when the layer audit adds it, and card_factors.EARLY_HOME_BONUS_DAYS 45 -> 21) raise the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-19",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="projection_scale_2026_11_19",
+        name=(
+            "mid-major: the decision-109 projection changes together (card_factors.KENPOM_BLEND_WEIGHT 0.5 -> 0.85, the candidate layer margin_stretch at card_factors.MARGIN_STRETCH when the layer audit adds it, and card_factors.EARLY_HOME_BONUS_DAYS 45 -> 21) raise the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-19",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="projection_scale_2026_11_19",
+        name=(
+            "low-major: the decision-109 projection changes together (card_factors.KENPOM_BLEND_WEIGHT 0.5 -> 0.85, the candidate layer margin_stretch at card_factors.MARGIN_STRETCH when the layer audit adds it, and card_factors.EARLY_HOME_BONUS_DAYS 45 -> 21) raise the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-19",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 

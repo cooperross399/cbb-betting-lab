@@ -525,24 +525,6 @@ jobs:
           set -eu
           python scripts/fetch_second_opinion.py --as-of "${{ steps.identity.outputs.day }}"
 
-      - name: Audit the card's layers against what happened
-        # The model checking itself (Cooper, 2026-10-30; decision 65). Re-prices
-        # the last fortnight of slate days walk-forward and switches each layer
-        # in `card_factors` on or off by whether it moved the predicted margin
-        # and total toward the final score (`models/layer_audit.py`). Results
-        # only: no price is read and no credit spent. SOFT, like the second
-        # opinion: a run that cannot audit leaves the card on its declared
-        # layers, and the health step says so as a warning. Exit 2 is "nothing
-        # to audit yet", which writes nothing.
-        id: layer_audit
-        continue-on-error: true
-        timeout-minutes: 25
-        env:
-          PYTHONPATH: src
-        run: |
-          set -eu
-          python scripts/run_layer_audit.py --as-of "${{ steps.identity.outputs.day }}" --budget-minutes 18 --summary "$GITHUB_STEP_SUMMARY"
-
       - name: Read the line-movement captures
         # The edge bar halves a lean that the market has moved against since
         # the day's first capture (`models/line_move.py`, decision 67). READ
@@ -584,6 +566,27 @@ jobs:
             echo "The line-movement branch holds no store yet; the card reads no movement."
             exit 1
           fi
+
+      - name: Audit the card's layers against what happened
+        # The model checking itself (Cooper, 2026-10-30; decision 65). Re-prices
+        # the last fortnight of slate days walk-forward and switches each layer
+        # in `card_factors` on or off by whether it moved the predicted margin
+        # and total toward the final score (`models/layer_audit.py`). Results
+        # only: no price is read and no credit spent. SOFT, like the second
+        # opinion: a run that cannot audit leaves the card on its declared
+        # layers, and the health step says so as a warning. Exit 2 is "nothing
+        # to audit yet", which writes nothing. It runs AFTER the line-movement
+        # read: `market_ratings` is fitted from that store, and until
+        # 2026-11-19 the audit ran first, found no store and measured the
+        # layer as moving no game at all (decision 109).
+        id: layer_audit
+        continue-on-error: true
+        timeout-minutes: 25
+        env:
+          PYTHONPATH: src
+        run: |
+          set -eu
+          python scripts/run_layer_audit.py --as-of "${{ steps.identity.outputs.day }}" --budget-minutes 18 --summary "$GITHUB_STEP_SUMMARY"
 
       - name: Settle whatever finished, then append to the forward ledger
         # POST-SLATE SETTLEMENT, and it lives here rather than in a workflow of
