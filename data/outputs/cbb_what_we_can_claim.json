@@ -1096,12 +1096,14 @@
       "title": "First team basket scorer"
     }
   ],
-  "generated_at": "2026-11-19T01:55:07+00:00",
+  "generated_at": "2026-11-19T13:07:30+00:00",
   "headline": "**The only result that survives is a loss.** 32 market-and-tier cell(s) across 10 market(s) are measured against real prices. None excludes zero on the winning side; 5 exclude(s) it on the **losing** side after correcting for everything this lab has ever tested, which is a **demonstrated deficit**: `moneyline` / high_major (historical price backtest, bets) at -11.1% over 4,393 bets across 609 days; `moneyline` / mid_major (historical price backtest, bets) at -8.0% over 8,873 bets across 648 days; `team_total` / mid_major (historical price backtest, bets) at -6.3% over 11,618 bets across 345 days; `moneyline` / low_major (historical price backtest, bets) at -9.8% over 6,967 bets across 590 days; `total_points` / low_major (historical price backtest, bets) at -5.2% over 17,978 bets across 7,137 games. A demonstrated deficit is a finding, not a null result, and it is the finding this lab has.",
   "minimum_bets": 200,
   "no_demonstrated_edge_phrase": "no demonstrated edge",
   "policy": {
     "allowlisted": [
+      "alternate_spread",
+      "alternate_team_total",
       "alternate_total_points",
       "championship_winner",
       "moneyline",
@@ -1126,6 +1128,7 @@
       "player_threes",
       "player_triple_double",
       "player_turnovers",
+      "spread",
       "spread_h1",
       "spread_h2",
       "team_total",
@@ -1138,7 +1141,7 @@
     "manual_only": false,
     "mode": "allowlisted",
     "provider": "the_odds_api",
-    "summary": "`the_odds_api:cbb` allowlists 32 market(s): alternate_total_points, championship_winner, moneyline, moneyline_h1, moneyline_h2, player_assists, player_blocks, player_blocks_steals, player_double_double, player_field_goals, player_first_basket, player_first_team_basket, player_frees_attempts, player_frees_made, player_points, player_points_assists, player_points_rebounds, player_pra, player_rebounds, player_rebounds_assists, player_steals, player_threes, player_triple_double, player_turnovers, spread_h1, spread_h2, team_total, team_total_h1, team_total_h2, total_points, total_points_h1, total_points_h2, each behind a verified human acceptance receipt.",
+    "summary": "`the_odds_api:cbb` allowlists 35 market(s): alternate_spread, alternate_team_total, alternate_total_points, championship_winner, moneyline, moneyline_h1, moneyline_h2, player_assists, player_blocks, player_blocks_steals, player_double_double, player_field_goals, player_first_basket, player_first_team_basket, player_frees_attempts, player_frees_made, player_points, player_points_assists, player_points_rebounds, player_pra, player_rebounds, player_rebounds_assists, player_steals, player_threes, player_triple_double, player_turnovers, spread, spread_h1, spread_h2, team_total, team_total_h1, team_total_h2, total_points, total_points_h1, total_points_h2, each behind a verified human acceptance receipt.",
     "withdrawn": 3
   },
   "pooled": [
