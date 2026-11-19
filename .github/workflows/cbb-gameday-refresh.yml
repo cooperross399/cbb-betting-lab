@@ -929,6 +929,42 @@ jobs:
             echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           } >> card_comment.md
 
+      - name: Grade every pick the card has made
+        # The card's own record (Cooper, 2026-11-19: "do all 3"): every
+        # selection either card made, every market, both slots, settled by
+        # the forward ledger's settlement and read against the closing line
+        # (`reports/card_record.py`). The site's Record page reads the JSON
+        # this writes. The record of picks lives on card-feed
+        # (`card_selections.csv`) and is carried run to run; the first run
+        # without it reads every past card back from the history of
+        # `latest_card_comment.md`. SOFT: it spends no credit and changes
+        # nothing the card reads, so a run that cannot grade still publishes.
+        id: card_record
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          PYTHONPATH: src
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          COMMENTS="$RUNNER_TEMP/card_comments"
+          mkdir -p "$COMMENTS" data/processed
+          if git cat-file -e refs/card-feed-tip:card_selections.csv 2>/dev/null; then
+            git show refs/card-feed-tip:card_selections.csv > data/processed/cbb_card_selections.csv
+          else
+            echo "No card_selections.csv on card-feed yet: reading every past card back from its comment."
+            gh api --paginate "repos/${{ github.repository }}/commits?sha=card-feed&path=latest_card_comment.md&per_page=100" \
+              --jq '.[].sha' | while read -r sha; do
+                gh api -H "Accept: application/vnd.github.raw" \
+                  "repos/${{ github.repository }}/contents/latest_card_comment.md?ref=$sha" > "$COMMENTS/$sha.md" || rm -f "$COMMENTS/$sha.md"
+              done
+          fi
+          if [ -f card_comment.md ]; then
+            cp card_comment.md "$COMMENTS/this_run.md"
+          fi
+          python scripts/run_card_record.py --comments-dir "$COMMENTS"
+
       - name: Zero email, and it takes two changes rather than one
         # The card comment MENTIONS NOBODY. That is half of zero email and only
         # half: an @mention overrides an ignored repository subscription, so
@@ -1093,6 +1129,15 @@ jobs:
           # the tip when this run holds none, so a run whose grading step
           # failed never drops the season's rows from the tree.
           add latest_nightly_learning.md data/outputs/cbb_nightly_learning.md "$ROOT_INPUT"
+          # Every card pick and its grade (`reports/card_record.py`). The
+          # picks are carried from the tip when this run holds none, so a run
+          # whose grading step failed never drops the season's picks.
+          add latest_card_record.json data/outputs/cbb_card_record.json "$ROOT_INPUT"
+          if [ -s data/processed/cbb_card_selections.csv ]; then
+            add card_selections.csv data/processed/cbb_card_selections.csv "$ROOT_INPUT"
+          elif git cat-file -e refs/card-feed-tip:card_selections.csv 2>/dev/null; then
+            printf '100644 blob %s\tcard_selections.csv\n' "$(git rev-parse refs/card-feed-tip:card_selections.csv)" >> "$ROOT_INPUT"
+          fi
           if [ -s data/processed/cbb_nightly_learning_history.csv ]; then
             add nightly_learning_history.csv data/processed/cbb_nightly_learning_history.csv "$ROOT_INPUT"
           elif git cat-file -e refs/card-feed-tip:nightly_learning_history.csv 2>/dev/null; then
