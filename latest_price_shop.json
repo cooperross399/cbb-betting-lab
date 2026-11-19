@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 180,
-      "away_team": "Chattanooga Mocs",
-      "book": "circasports",
-      "books": 17,
-      "commence": "2026-11-18T23:30:00+00:00",
-      "edge": 0.0489,
-      "event_id": "6bb27db4d687cfe912b43ff3fab4d67a",
-      "fair_american": 167,
-      "game": "Chattanooga Mocs at Winthrop Eagles",
-      "home_team": "Winthrop Eagles",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "as_of": "2026-11-18T23:14+00:00",
-  "captures": 231,
+  "alerts": [],
+  "as_of": "2026-11-19T00:15+00:00",
+  "captures": 232,
   "cells": [
     {
       "beat_close": 1.0,
@@ -54,36 +38,20 @@
       "ungraded": 2
     },
     {
-      "beat_close": 0.7692307692307693,
-      "games": 11,
-      "graded": 13,
+      "beat_close": 0.7222222222222222,
+      "games": 16,
+      "graded": 18,
       "high": null,
       "low": null,
-      "mean": 0.020310188256958097,
-      "shops": 18,
+      "mean": 0.014240416960372518,
+      "shops": 26,
       "tier": "unplaced",
-      "ungraded": 5
+      "ungraded": 8
     }
   ],
   "correction_factor": 1.8723930931473785,
-  "current": [
-    {
-      "american": 180,
-      "away_team": "Chattanooga Mocs",
-      "book": "circasports",
-      "books": 17,
-      "commence": "2026-11-18T23:30:00+00:00",
-      "edge": 0.0489,
-      "event_id": "6bb27db4d687cfe912b43ff3fab4d67a",
-      "fair_american": 167,
-      "game": "Chattanooga Mocs at Winthrop Eagles",
-      "home_team": "Winthrop Eagles",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "latest_capture": "2026-11-18T23:13:37+00:00",
+  "current": [],
+  "latest_capture": "2026-11-19T00:13:53+00:00",
   "looks": 206,
   "min_books": 3,
   "shop_edge": 0.02
