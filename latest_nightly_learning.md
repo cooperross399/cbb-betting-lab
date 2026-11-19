@@ -6,20 +6,20 @@
 
 | Tier | Games | Margin miss (avg) | Margin bias | Total miss (avg) | Total bias | Winner called |
 |:---|---:|---:|---:|---:|---:|---:|
-| high-major | 4 | 5.6 | +0.1 | 28.8 | +28.8 | 75.0% |
-| mid-major | 12 | 10.5 | -7.4 | 10.4 | +4.2 | 75.0% |
-| low-major | 45 | 9.9 | +1.1 | 13.6 | +1.2 | 86.7% |
+| high-major | 4 | 5.9 | +1.1 | 28.6 | +28.6 | 100.0% |
+| mid-major | 12 | 10.7 | -7.4 | 10.6 | +4.2 | 83.3% |
+| low-major | 45 | 9.8 | +1.2 | 13.6 | +0.6 | 91.1% |
 
-21 of them were matchups the season's results do not yet tie together (less than one head-to-head meeting's worth of common opponents), so the gap between the two teams leans on the preseason prior; each team's own rating still carries its games: margin miss 8.5, winner called 85.7%.
+21 of them were matchups the season's results do not yet tie together (less than one head-to-head meeting's worth of common opponents), so the gap between the two teams leans on the preseason prior; each team's own rating still carries its games: margin miss 8.5, winner called 90.5%.
 
 Per tier, never pooled. These are forecast-accuracy figures on free data: they say how close the projections were, not whether any bet had an edge. Bets are graded on the Record tab and in the forward ledger.
 
 **Biggest misses:**
-- Cal State Fullerton at UCLA: projected +32.5 (home), finished +4; total 163.3 projected, 146 scored.
-- Alcorn State at Missouri: projected +33.6 (home), finished +61; total 152.8 projected, 143 scored.
-- UL Monroe at LSU: projected +36.6 (home), finished +12; total 158.2 projected, 146 scored.
-- James Madison at Towson: projected +6.6 (home), finished -18; total 140.0 projected, 122 scored.
-- Detroit Mercy at Eastern Michigan: projected +13.5 (home), finished +37; total 145.0 projected, 161 scored.
+- Alcorn State at Missouri: projected +31.0 (home), finished +61; total 152.9 projected, 143 scored.
+- Cal State Fullerton at UCLA: projected +32.0 (home), finished +4; total 161.2 projected, 146 scored.
+- Detroit Mercy at Eastern Michigan: projected +13.2 (home), finished +37; total 146.9 projected, 161 scored.
+- James Madison at Towson: projected +5.3 (home), finished -18; total 139.9 projected, 122 scored.
+- Texas Southern at San Diego State: projected +23.1 (home), finished +46; total 159.0 projected, 148 scored.
 
 ## What the ratings took from it
 
@@ -80,6 +80,6 @@ Median share of each rating still carried by the preseason prior: offence 38% â†
 | 2026-11-15 | 35 | 11.78 | 14.73 | 77.1% | 44% |
 | 2026-11-16 | 22 | 13.30 | 17.51 | 81.8% | 39% |
 | 2026-11-17 | 55 | 10.54 | 13.06 | 76.4% | 38% |
-| 2026-11-18 | 61 | 9.77 | 13.99 | 83.6% | 37% |
+| 2026-11-18 | 61 | 9.75 | 13.99 | 90.2% | 37% |
 
 _10 of 71 game(s) on 2026-11-18 carry no graded projection: a non-D-I opponent, a team the prior does not know, or a score not yet in the tables._

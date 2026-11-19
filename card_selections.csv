@@ -1,0 +1,390 @@
+slate_date,card_slot,event_id,commence_time,home_team,away_team,market,segment,player,selection,line,american_odds,bet_down_to,book,model_probability,edge,tier,source
+2026-11-01,evening,d961840cf470389306fa79cf82f5d46c,2026-11-02T04:59:00Z,Liberty Flames,High Point Panthers,alternate_spread,game,,away,-12.5,225.0,,fanduel,0.26,0.0395,mid_major,comment
+2026-11-02,morning,ee203d32a891882aceddfb2dce86fb28,2026-11-03T00:00:00Z,Florida Atlantic Owls,LIU Sharks,moneyline,game,,away,,570.0,484.0,fanduel,0.157,0.1718,mid_major,comment
+2026-11-02,morning,b4b50158580ccc997661bd708666b056,2026-11-03T00:00:00Z,Boston Univ. Terriers,Northeastern Huskies,alternate_spread,game,,home,-10.5,450.0,394.0,bovada,0.266,0.1369,mid_major,comment
+2026-11-02,morning,,,Louisville Cardinals,Chattanooga Mocs,alternate_spread,game,,home,-37.5,240.0,206.0,hardrockbet,0.073,0.1366,high_major,comment
+2026-11-02,morning,03af4f75c7ae5385320efa8abb0f332f,2026-11-03T00:00:00Z,Marist Red Foxes,Dartmouth Big Green,alternate_spread,game,,home,-15.5,410.0,359.0,fanduel,0.19,0.1355,mid_major,comment
+2026-11-02,morning,7fded130677616b91fa25bd9f659cad2,2026-11-03T00:30:00Z,Wisconsin Badgers,Denver Pioneers,alternate_spread,game,,away,15.5,300.0,261.0,fanduel,0.33799999999999997,0.1309,high_major,comment
+2026-11-02,morning,,,Miami Hurricanes,Florida Gators,alternate_spread,game,,away,-14.5,390.0,346.0,fanduel,0.16699999999999998,0.1231,high_major,comment
+2026-11-02,morning,1a2a8077d8a265e4cfbd5946eaecd278,2026-11-03T00:00:00Z,East Carolina Pirates,South Carolina Upstate Spartans,alternate_spread,game,,away,4.5,430.0,382.0,bovada,0.415,0.1216,mid_major,comment
+2026-11-02,morning,3f9010c85d42b1b85e59bdc3cd64214c,2026-11-03T00:00:00Z,North Carolina Tar Heels,Western Carolina Catamounts,alternate_total_points,game,,under,148.5,245.0,219.0,fanduel,0.41700000000000004,0.1048,high_major,comment
+2026-11-02,morning,c026662dbd1c30e0c9bafd4292794574,2026-11-03T00:30:00Z,NC State Wolfpack,Campbell Fighting Camels,alternate_spread,game,,home,-32.5,310.0,280.0,fanduel,0.134,0.10339999999999999,high_major,comment
+2026-11-02,morning,,,Tulane Green Wave,Tenn-Martin Skyhawks,moneyline,game,,away,,310.0,282.0,fanatics,0.298,0.0966,mid_major,comment
+2026-11-02,morning,796a448142e15c540cc43b5259cf2df2,2026-11-03T00:00:00Z,Michigan St Spartans,Quinnipiac Bobcats,alternate_spread,game,,away,23.5,230.0,209.0,hardrockbet,0.546,0.0928,high_major,comment
+2026-11-02,morning,2321b7a60af9c91a161665b10896b5ff,2026-11-03T00:00:00Z,West Virginia Mountaineers,Niagara Purple Eagles,alternate_spread,game,,away,23.5,210.0,191.0,hardrockbet,0.62,0.08960000000000001,high_major,comment
+2026-11-02,morning,db74aa8355868d6663689ba1cb8db484,2026-11-03T00:00:00Z,Xavier Musketeers,Mt. St. Mary's Mountaineers,alternate_spread,game,,away,19.5,240.0,219.0,hardrockbet,0.5660000000000001,0.0877,high_major,comment
+2026-11-02,morning,d24afa0d4b584d802f58276aac527691,2026-11-03T02:30:00Z,Baylor Bears,Northwestern St Demons,alternate_spread,game,,away,28.5,115.0,102.0,bovada,0.7390000000000001,0.08689999999999999,high_major,comment
+2026-11-02,morning,,,Georgia St Panthers,Bowling Green Falcons,total_points_h1,h1,,under,74.5,142.0,128.0,fanduel,0.723,0.08380000000000001,mid_major,comment
+2026-11-02,morning,,,Texas State Bobcats,Texas A&M-CC Islanders,alternate_spread,game,,away,1.5,375.0,348.0,bovada,0.336,0.0821,mid_major,comment
+2026-11-02,morning,,,Iowa State Cyclones,Memphis Tigers,alternate_spread,game,,away,6.5,320.0,297.0,bovada,0.35600000000000004,0.0799,high_major,comment
+2026-11-02,morning,,,BYU Cougars,Ohio State Buckeyes,alternate_spread,game,,home,-12.5,390.0,364.0,fanduel,0.14300000000000002,0.078,high_major,comment
+2026-11-02,morning,d3cbb1ed34c91fcc519aea048dc71aaf,2026-11-03T00:30:00Z,Georgia Bulldogs,North Carolina Central Eagles,alternate_spread,game,,away,28.5,280.0,262.0,bovada,0.653,0.0725,high_major,comment
+2026-11-02,morning,72f21b114426c23ca2e174bc79720068,2026-11-03T00:00:00Z,St. Bonaventure Bonnies,Youngstown St Penguins,moneyline,game,,away,,475.0,449.0,espnbet,0.313,0.0696,mid_major,comment
+2026-11-02,morning,,,Grand Canyon Antelopes,Texas Southern Tigers,alternate_total_points,game,,over,147.5,143.0,128.0,courtside,0.512,0.0872,mid_major,comment
+2026-11-02,morning,,,Murray St Racers,Tennessee St Tigers,moneyline,game,,away,,450.0,417.0,betus,0.385,0.0855,mid_major,comment
+2026-11-02,morning,,,Arizona Wildcats,UCLA Bruins,alternate_total_points,game,,under,141.5,245.0,230.0,fanduel,0.276,0.0692,high_major,comment
+2026-11-02,morning,5b4208115143f6568999034cb79d82d8,2026-11-03T00:30:00Z,Penn State Nittany Lions,Canisius Golden Griffins,alternate_spread,game,,home,-28.5,250.0,237.0,hardrockbet,0.151,0.061900000000000004,high_major,comment
+2026-11-02,morning,77dc931bac3660e66c7d2d5f6f0cbb6a,2026-11-03T00:00:00Z,Pittsburgh Panthers,Rider Broncs,alternate_spread,game,,away,21.5,220.0,208.0,hardrockbet,0.602,0.061500000000000006,high_major,comment
+2026-11-02,morning,,,SMU Mustangs,Southern Jaguars,alternate_total_points,game,,over,155.5,-110.0,-119.0,hardrockbet,0.469,0.059000000000000004,high_major,comment
+2026-11-02,evening,,,Louisville Cardinals,Chattanooga Mocs,alternate_spread,game,,away,25.5,225.0,178.0,hardrockbet,0.65,0.1961,high_major,comment
+2026-11-02,evening,41369f9374342e6dccca913bf4498c8c,2026-11-03T01:00:00Z,Kansas Jayhawks,Fordham Rams,total_points_h1,h1,,over,74.5,235.0,200.0,fanduel,0.203,0.1402,high_major,comment
+2026-11-02,evening,3581ed4a2f597c24bcc9c7b0b2d8a061,2026-11-03T00:00:00Z,Indiana Hoosiers,Eastern Illinois Panthers,alternate_team_total,game,,away_over,63.5,480.0,426.0,fanduel,0.38,0.1251,high_major,comment
+2026-11-02,evening,26ea50197c90508dd0685b166c64ec96,2026-11-02T23:30:00Z,Georgetown Hoyas,Loyola (MD) Greyhounds,alternate_spread,game,,away,20.5,250.0,218.0,hardrockbet,0.6759999999999999,0.1232,high_major,comment
+2026-11-02,evening,,,Iowa State Cyclones,Memphis Tigers,alternate_team_total,game,,home_under,77.5,490.0,439.0,fanduel,0.391,0.1175,high_major,comment
+2026-11-02,evening,dfc5070c79c73952d6e449771ede3c12,2026-11-03T01:00:00Z,Creighton Bluejays,UMKC Kangaroos,alternate_spread,game,,away,20.5,240.0,211.0,hardrockbet,0.467,0.1165,high_major,comment
+2026-11-02,evening,8cc9c58f48f7b3a5cd24b4ebf7227e85,2026-11-03T00:00:00Z,Clemson Tigers,Stetson Hatters,alternate_spread,game,,home,-28.5,250.0,221.0,hardrockbet,0.23800000000000002,0.11230000000000001,high_major,comment
+2026-11-02,evening,,,TCU Horned Frogs,Lindenwood Lions,alternate_spread,game,,away,20.5,300.0,268.0,fanduel,0.491,0.1112,high_major,comment
+2026-11-02,evening,3f9010c85d42b1b85e59bdc3cd64214c,2026-11-03T00:00:00Z,North Carolina Tar Heels,Western Carolina Catamounts,alternate_team_total,game,,away_under,59.5,440.0,397.0,fanduel,0.22399999999999998,0.1099,high_major,comment
+2026-11-02,evening,,,Washington St Cougars,Davidson Wildcats,alternate_spread,game,,home,-11.5,390.0,351.0,fanduel,0.23399999999999999,0.1093,mid_major,comment
+2026-11-02,evening,,,Arkansas St Red Wolves,Toledo Rockets,alternate_spread,game,,home,-12.5,390.0,351.0,fanduel,0.22899999999999998,0.10859999999999999,mid_major,comment
+2026-11-02,evening,c026662dbd1c30e0c9bafd4292794574,2026-11-03T00:30:00Z,NC State Wolfpack,Campbell Fighting Camels,alternate_total_points,game,,under,150.5,250.0,224.0,fanduel,0.368,0.10289999999999999,high_major,comment
+2026-11-02,evening,01a67a2b10f3120e0b60ced75ee9b8bb,2026-11-02T23:30:00Z,St. John's Red Storm,Monmouth Hawks,alternate_spread,game,,away,21.5,240.0,215.0,hardrockbet,0.5579999999999999,0.1023,high_major,comment
+2026-11-02,evening,72f21b114426c23ca2e174bc79720068,2026-11-03T00:00:00Z,St. Bonaventure Bonnies,Youngstown St Penguins,alternate_team_total,game,,home_under,73.5,460.0,420.0,fanduel,0.34299999999999997,0.09880000000000001,mid_major,comment
+2026-11-02,evening,2321b7a60af9c91a161665b10896b5ff,2026-11-03T00:00:00Z,West Virginia Mountaineers,Niagara Purple Eagles,alternate_spread,game,,away,22.5,225.0,202.0,betrivers,0.584,0.098,high_major,comment
+2026-11-02,evening,3d7267336c139cfb6aa2c4ce4b77133b,2026-11-03T02:30:00Z,Oregon St Beavers,Weber State Wildcats,moneyline_h1,h1,,away,,520.0,477.0,fanduel,0.282,0.0967,mid_major,comment
+2026-11-02,evening,c3bdeee7ea74d19de8151e87a84e42c8,2026-11-03T02:00:00Z,Texas Longhorns,Chicago St Cougars,alternate_spread,game,,away,32.5,250.0,226.0,fanduel,0.7040000000000001,0.0959,high_major,comment
+2026-11-03,morning,,,Cal Baptist Lancers,North Florida Ospreys,alternate_spread,game,,away,8.5,112.0,104.0,betrivers,0.505,0.06,low_major,comment
+2026-11-03,morning,,,Kansas St Wildcats,South Dakota St Jackrabbits,moneyline,game,,away,,508.0,500.0,courtside,0.161,0.0345,high_major,comment
+2026-11-03,morning,,,Arkansas Razorbacks,Arkansas-Pine Bluff Golden Lions,alternate_total_points,game,,under,165.5,-115.0,-117.0,hardrockbet,0.685,0.029300000000000003,high_major,comment
+2026-11-03,evening,89383b9fbe1119324bcf6c064e07dcd9,2026-11-04T00:30:00Z,Alabama Crimson Tide,Sam Houston St Bearkats,alternate_spread,game,,away,21.5,210.0,181.0,hardrockbet,0.53,0.1278,high_major,comment
+2026-11-03,evening,ca4aa34ceb6699753f69ffd1d68d944b,2026-11-04T00:00:00Z,Kentucky Wildcats,Manhattan Jaspers,alternate_spread,game,,away,26.5,250.0,224.0,hardrockbet,0.509,0.1039,high_major,comment
+2026-11-03,evening,0156259278d95832bc9e08be0fdfa7eb,2026-11-04T00:30:00Z,Virginia Cavaliers,Drexel Dragons,alternate_spread,game,,away,25.5,225.0,203.0,hardrockbet,0.6679999999999999,0.0959,high_major,comment
+2026-11-03,evening,d2c45b0c90f12321cb072d68bd3d4a1c,2026-11-04T00:00:00Z,Rhode Island Rams,Holy Cross Crusaders,alternate_spread,game,,home,-29.5,320.0,292.0,fanduel,0.055999999999999994,0.09539999999999998,mid_major,comment
+2026-11-03,evening,5327528ec3e4f115e5283df73f2a1ded,2026-11-04T00:00:00Z,South Carolina Gamecocks,Stetson Hatters,spread_h1,h1,,away,8.5,145.0,136.0,bovada,0.584,0.059000000000000004,high_major,comment
+2026-11-03,evening,,,Arkansas Razorbacks,Arkansas-Pine Bluff Golden Lions,alternate_total_points,game,,over,175.5,235.0,224.0,fanduel,0.171,0.055999999999999994,high_major,comment
+2026-11-03,evening,,,Texas A&M Aggies,Alabama St Hornets,total_points_h1,h1,,over,79.5,142.0,136.0,fanduel,0.272,0.049,high_major,comment
+2026-11-03,evening,,,Kansas St Wildcats,South Dakota St Jackrabbits,moneyline_h1,h1,,away,,310.0,300.0,fanduel,0.231,0.045599999999999995,high_major,comment
+2026-11-03,evening,38fbd99711e89870426e063d56d3d92c,2026-11-04T01:00:00Z,Missouri Tigers,Cleveland St Vikings,alternate_spread,game,,home,-31.5,190.0,184.0,hardrockbet,0.16699999999999998,0.0452,high_major,comment
+2026-11-03,evening,,,LSU Tigers,New Orleans Privateers,alternate_spread,game,,away,20.5,260.0,252.0,hardrockbet,0.6709999999999999,0.0446,high_major,comment
+2026-11-03,evening,a621e112c59b5b8369f80c2fb55e615d,2026-11-04T00:00:00Z,Georgia Tech Yellow Jackets,Hampton Pirates,alternate_spread,game,,away,8.5,240.0,233.0,fanduel,0.389,0.0418,high_major,comment
+2026-11-03,evening,8541be3aee4cd7967aab5691fad082f7,2026-11-04T00:00:00Z,Virginia Tech Hokies,Coppin St Eagles,alternate_spread,game,,away,24.5,250.0,244.0,hardrockbet,0.461,0.0406,high_major,comment
+2026-11-03,evening,2cccdbb5426caa7a69f652bb577b367c,2026-11-04T00:00:00Z,Boston College Eagles,Wagner Seahawks,spread_h1,h1,,away,1.5,550.0,539.0,bovada,0.253,0.0381,high_major,comment
+2026-11-03,evening,,,Iowa Hawkeyes,Lipscomb Bisons,alternate_spread,game,,home,-31.5,265.0,260.0,fanduel,0.10800000000000001,0.0347,high_major,comment
+2026-11-03,evening,e031a72df23e6b0e1a17d9398e7189fe,2026-11-04T03:00:00Z,San Diego St Aztecs,CSU Fullerton Titans,moneyline_h1,h1,,away,,470.0,464.0,fanduel,0.191,0.030899999999999997,mid_major,comment
+2026-11-03,evening,,,Cal Baptist Lancers,North Florida Ospreys,total_points_h1,h1,,over,77.5,158.0,157.0,fanduel,0.3,0.0276,low_major,comment
+2026-11-03,evening,f29847b36e1421985a46605e7bfec15d,2026-11-04T00:00:00Z,Duquesne Dukes,Fort Wayne Mastodons,total_points_h1,h1,,over,81.5,410.0,407.0,fanduel,0.172,0.026099999999999998,mid_major,comment
+2026-11-03,evening,5c606b3ad7d8fe599a32ce4141dc0033,2026-11-03T23:00:00Z,Tennessee Volunteers,Wofford Terriers,spread,game,,home,-25.5,105.0,104.0,hardrockbet,0.479,0.025,high_major,comment
+2026-11-04,morning,54080f4106befd3a23a86b2cbfee1a53,2026-11-05T03:00:00Z,Saint Mary's Gaels,North Dakota St Bison,alternate_team_total,game,,home_under,72.5,490.0,460.0,fanduel,0.19,0.076,mid_major,comment
+2026-11-04,morning,55ce7fcc3c7a9e642c63450e4df10a75,2026-11-05T00:30:00Z,Wichita St Shockers,CSU Northridge Matadors,alternate_team_total,game,,home_under,79.5,430.0,419.0,fanduel,0.35,0.042199999999999994,mid_major,comment
+2026-11-04,morning,3bc95ac74a5ada7d2739e050f53eb5d2,2026-11-05T00:00:00Z,High Point Panthers,Maryland-Eastern Shore Hawks,alternate_total_points,game,,under,150.5,-105.0,-108.0,betrivers,0.578,0.0359,low_major,comment
+2026-11-04,morning,dc8830b8a32f0650fc6dc1d128f71fda,2026-11-05T03:00:00Z,Loyola Marymount Lions,Queens University Royals,moneyline,game,,away,,260.0,256.0,bovada,0.336,0.0342,mid_major,comment
+2026-11-04,morning,,,South Dakota Coyotes,Northern Kentucky Norse,team_total_h1,h1,,away_over,38.5,-108.0,-110.0,fanduel,0.41100000000000003,0.0297,low_major,comment
+2026-11-04,morning,c1141fbe152494d369ada36710e91b55,2026-11-05T03:00:00Z,Santa Clara Broncos,Milwaukee Panthers,alternate_spread,game,,away,15.5,130.0,129.0,hardrockbet,0.495,0.0255,mid_major,comment
+2026-11-04,evening,3bc95ac74a5ada7d2739e050f53eb5d2,2026-11-05T00:00:00Z,High Point Panthers,Maryland-Eastern Shore Hawks,alternate_spread,game,,away,26.5,280.0,243.0,fanduel,0.716,0.1325,low_major,comment
+2026-11-04,evening,ee64dfa732b4b3e3bcc3d257c1836b94,2026-11-05T01:00:00Z,Auburn Tigers,SE Louisiana Lions,alternate_spread,game,,away,22.5,250.0,231.0,hardrockbet,0.47600000000000003,0.08070000000000001,high_major,comment
+2026-11-04,evening,55ce7fcc3c7a9e642c63450e4df10a75,2026-11-05T00:30:00Z,Wichita St Shockers,CSU Northridge Matadors,alternate_spread,game,,away,9.5,250.0,232.0,hardrockbet,0.428,0.07769999999999999,mid_major,comment
+2026-11-04,evening,eccb8794e834a22613f2c0a1e603ec73,2026-11-05T02:00:00Z,California Golden Bears,Radford Highlanders,alternate_team_total,game,,away_under,61.5,440.0,425.0,fanduel,0.165,0.050300000000000004,high_major,comment
+2026-11-04,evening,dc8830b8a32f0650fc6dc1d128f71fda,2026-11-05T03:00:00Z,Loyola Marymount Lions,Queens University Royals,alternate_spread,game,,home,-14.5,245.0,238.0,fanduel,0.198,0.0438,mid_major,comment
+2026-11-04,evening,9eb9f1ae70ff2e191c1322b68ee0458a,2026-11-05T00:00:00Z,Saint Joseph's Hawks,Longwood Lancers,alternate_team_total,game,,home_under,72.5,440.0,428.0,fanduel,0.266,0.0435,mid_major,comment
+2026-11-04,evening,54080f4106befd3a23a86b2cbfee1a53,2026-11-05T03:00:00Z,Saint Mary's Gaels,North Dakota St Bison,alternate_spread,game,,home,-18.5,225.0,218.0,betrivers,0.32,0.0435,mid_major,comment
+2026-11-04,evening,,,South Dakota Coyotes,Northern Kentucky Norse,alternate_team_total,game,,home_under,71.5,420.0,414.0,fanduel,0.245,0.0339,low_major,comment
+2026-11-04,evening,549bc17969103d4acc5b6378eca5602f,2026-11-05T00:00:00Z,Butler Bulldogs,Fairleigh Dickinson Knights,alternate_spread,game,,away,18.5,300.0,295.0,fanduel,0.46399999999999997,0.0338,high_major,comment
+2026-11-04,evening,c1141fbe152494d369ada36710e91b55,2026-11-05T03:00:00Z,Santa Clara Broncos,Milwaukee Panthers,moneyline_h1,h1,,away,,520.0,512.0,fanduel,0.161,0.0333,mid_major,comment
+2026-11-05,morning,0ecf898985b5ce93d808d02565bce97e,2026-11-06T00:00:00Z,Merrimack Warriors,UMass Lowell River Hawks,moneyline,game,,away,,320.0,282.0,bovada,0.349,0.12359999999999999,low_major,comment
+2026-11-05,morning,483ec5f7e12998303f0eb3cc7388c0c6,2026-11-06T00:00:00Z,Saint Peter's Peacocks,Binghamton Bearcats,moneyline,game,,away,,320.0,292.0,bovada,0.284,0.0955,low_major,comment
+2026-11-05,morning,0414ba396d0c4ed275a4bce4cfa7e342,2026-11-06T00:00:00Z,Rider Broncs,New Hampshire Wildcats,alternate_spread,game,,home,-7.5,275.0,252.0,bovada,0.212,0.087,low_major,comment
+2026-11-05,morning,f182504e9a38c42cedec008cf281a0f6,2026-11-06T00:00:00Z,Charlotte 49ers,Georgia St Panthers,moneyline,game,,away,,600.0,567.0,draftkings,0.22699999999999998,0.0711,mid_major,comment
+2026-11-05,morning,16b88da9c328520f2e802a9bc4f5c246,2026-11-06T01:30:00Z,DePaul Blue Demons,South Florida Bulls,alternate_total_points,game,,over,158.5,225.0,221.0,bovada,0.37,0.0333,high_major,comment
+2026-11-05,morning,7e1e9d3f832831f68d75b5b8eb1d27d0,2026-11-05T23:00:00Z,Penn State Nittany Lions,Chattanooga Mocs,alternate_total_points,game,,over,158.5,-110.0,-112.0,hardrockbet,0.43799999999999994,0.032400000000000005,high_major,comment
+2026-11-05,morning,2ae76a6632fefad0845df318c332b97e,2026-11-06T00:00:00Z,Navy Midshipmen,Delaware St Hornets,moneyline,game,,away,,375.0,370.0,bovada,0.213,0.0313,low_major,comment
+2026-11-05,morning,49546f313dfdc477c2c297aad9ba986f,2026-11-06T00:00:00Z,Notre Dame Fighting Irish,Mercyhurst Lakers,spread,game,,away,19.5,106.0,104.0,ballybet,0.574,0.03,high_major,comment
+2026-11-05,morning,53b56ecfbce0943c7383be5e406db13a,2026-11-06T00:00:00Z,Alcorn St Braves,Howard Bison,alternate_spread,game,,home,-2.5,323.0,320.0,draftkings,0.21,0.0296,low_major,comment
+2026-11-05,morning,e3cc352d1f8244d8775114a034a9355a,2026-11-05T22:00:00Z,North Texas Mean Green,McNeese Cowboys,alternate_spread,game,,away,-10.5,375.0,372.0,bovada,0.106,0.0275,mid_major,comment
+2026-11-05,morning,281daf2bc696b25be6b370fa26a16b44,2026-11-06T00:00:00Z,Fairfield Stags,Vermont Catamounts,alternate_spread,game,,home,-9.5,320.0,318.0,bovada,0.253,0.0254,low_major,comment
+2026-11-05,morning,582b7e49e8336dd23eca76cd47f5aeaf,2026-11-06T01:00:00Z,Florida Gators,Jacksonville Dolphins,alternate_spread,game,,away,31.5,130.0,130.0,hardrockbet,0.585,0.0229,high_major,comment
+2026-11-05,morning,3906de255fde2785a8bdde47dda988ba,2026-11-06T00:00:00Z,Lehigh Mountain Hawks,Cornell Big Red,alternate_spread,game,,away,-10.5,340.0,339.0,bovada,0.18899999999999997,0.0226,mid_major,comment
+2026-11-05,evening,d523281d43838dea9e18868e964a0b8b,2026-11-05T23:00:00Z,Vanderbilt Commodores,Wake Forest Demon Deacons,alternate_spread,game,,home,-27.5,400.0,318.0,hardrockbet,0.15,0.22260000000000002,high_major,comment
+2026-11-05,evening,9b6cb420308dc32beae2ec7b61de2dca,2026-11-05T23:00:00Z,Indiana Hoosiers,Bellarmine Knights,alternate_spread,game,,away,22.5,300.0,236.0,hardrockbet,0.494,0.2169,high_major,comment
+2026-11-05,evening,2784e2fb97dd5363e9e81517f5dc81a3,2026-11-06T01:00:00Z,Michigan St Spartans,Toledo Rockets,alternate_spread,game,,home,-33.5,275.0,219.0,hardrockbet,0.132,0.1996,high_major,comment
+2026-11-05,evening,582b7e49e8336dd23eca76cd47f5aeaf,2026-11-06T01:00:00Z,Florida Gators,Jacksonville Dolphins,alternate_spread,game,,home,-40.5,200.0,163.0,hardrockbet,0.156,0.1654,high_major,comment
+2026-11-05,evening,e99c31a25021bfcde3aa4d446d42f37a,2026-11-06T01:30:00Z,Illinois Fighting Illini,Pennsylvania Quakers,alternate_spread,game,,home,-37.5,260.0,217.0,hardrockbet,0.126,0.16140000000000002,high_major,comment
+2026-11-05,evening,3bead9fd4968c29875f674846e1d345b,2026-11-06T03:30:00Z,Arizona Wildcats,Cal Poly Mustangs,alternate_spread,game,,away,23.5,275.0,232.0,hardrockbet,0.392,0.1548,high_major,comment
+2026-11-05,evening,8e4eaf29e25ac652e7ef172a94588c59,2026-11-06T00:00:00Z,Virginia Tech Hokies,Mercer Bears,alternate_spread,game,,home,-27.5,265.0,227.0,betrivers,0.174,0.1406,high_major,comment
+2026-11-05,evening,c6165042e650e01e4b31f17315ec6f85,2026-11-06T00:00:00Z,Marist Red Foxes,UMBC Retrievers,alternate_spread,game,,away,-1.5,240.0,207.0,hardrockbet,0.331,0.1322,low_major,comment
+2026-11-05,evening,5156430ff006d5c2907fa72169ff7c64,2026-11-06T02:00:00Z,Texas Tech Red Raiders,Bethune-Cookman Wildcats,alternate_spread,game,,away,22.5,250.0,223.0,hardrockbet,0.434,0.1082,high_major,comment
+2026-11-05,evening,2560cabc5d300ae74f6eec7085f89899,2026-11-06T01:00:00Z,South Alabama Jaguars,Jacksonville St Gamecocks,alternate_spread,game,,home,-14.5,410.0,370.0,fanduel,0.158,0.1075,mid_major,comment
+2026-11-05,evening,7b71516706f86893c72e047cd9e37d4a,2026-11-06T01:00:00Z,SMU Mustangs,VMI Keydets,alternate_spread,game,,away,18.5,250.0,224.0,hardrockbet,0.40299999999999997,0.1039,high_major,comment
+2026-11-05,evening,6e4f744a03685bf3edc3130b13be36e9,2026-11-06T00:00:00Z,Cincinnati Bearcats,Green Bay Phoenix,alternate_spread,game,,home,-30.5,230.0,207.0,betrivers,0.193,0.0978,high_major,comment
+2026-11-05,evening,4cc2399eae4e1e79a5d4e947738e5c50,2026-11-06T00:00:00Z,Syracuse Orange,Central Connecticut St Blue Devils,alternate_spread,game,,home,-28.5,210.0,189.0,hardrockbet,0.134,0.0951,high_major,comment
+2026-11-05,evening,49546f313dfdc477c2c297aad9ba986f,2026-11-06T00:00:00Z,Notre Dame Fighting Irish,Mercyhurst Lakers,alternate_spread,game,,home,-27.5,240.0,217.0,hardrockbet,0.18100000000000002,0.0943,high_major,comment
+2026-11-05,evening,7db9fbc0fc22450af4cf67311151363a,2026-11-06T01:00:00Z,Loyola (Chi) Ramblers,West Georgia Wolves,alternate_spread,game,,home,-26.5,310.0,285.0,fanduel,0.071,0.08839999999999999,mid_major,comment
+2026-11-05,evening,590d00ebfc6e53d2afebe317131f0d52,2026-11-05T23:30:00Z,Seton Hall Pirates,LIU Sharks,moneyline_h1,h1,,away,,550.0,512.0,williamhill_us,0.127,0.0833,high_major,comment
+2026-11-05,evening,2673b97276f6ec652e6be74fe3d09327,2026-11-06T00:00:00Z,Manhattan Jaspers,Albany Great Danes,alternate_spread,game,,home,-12.5,375.0,349.0,fanduel,0.18899999999999997,0.08130000000000001,low_major,comment
+2026-11-05,evening,0414ba396d0c4ed275a4bce4cfa7e342,2026-11-06T00:00:00Z,Rider Broncs,New Hampshire Wildcats,alternate_spread,game,,away,-8.5,300.0,278.0,fanduel,0.263,0.0812,low_major,comment
+2026-11-05,evening,d37f8d29ce55bd028141256c1b461aac,2026-11-06T01:00:00Z,Creighton Bluejays,Le Moyne Dolphins,alternate_spread,game,,home,-38.5,275.0,255.0,fanduel,0.09300000000000001,0.07769999999999999,high_major,comment
+2026-11-05,evening,b478faa49e1113a24407a8e59104ad2b,2026-11-06T00:30:00Z,Mississippi St Bulldogs,Northwestern St Demons,alternate_spread,game,,home,-26.5,210.0,194.0,hardrockbet,0.26899999999999996,0.0757,high_major,comment
+2026-11-06,morning,2feed58d6c639bed26946d8c4a2a971a,2026-11-06T23:30:00Z,South Carolina Upstate Spartans,South Carolina St Bulldogs,moneyline,game,,away,,285.0,237.0,bovada,0.39799999999999996,0.16760000000000003,low_major,comment
+2026-11-06,morning,,,Boston College Eagles,Massachusetts Minutemen,alternate_spread,game,,home,-11.5,240.0,208.0,fanduel,0.201,0.1283,high_major,comment
+2026-11-06,morning,ff719278da96490139abb71ba4aaad4a,2026-11-07T00:00:00Z,Mt. St. Mary's Mountaineers,Loyola (MD) Greyhounds,moneyline,game,,away,,220.0,199.0,hardrockbet,0.41200000000000003,0.095,low_major,comment
+2026-11-06,morning,ea4694c82049ca1c7d91215cea6f89e3,2026-11-07T02:00:00Z,Kansas Jayhawks,Middle Tennessee Blue Raiders,alternate_spread,game,,home,-37.5,280.0,259.0,fanduel,0.095,0.08130000000000001,high_major,comment
+2026-11-06,morning,a6a80c85f705cc62b0e186abd2c1254b,2026-11-07T02:00:00Z,Kansas St Wildcats,CSU Northridge Matadors,moneyline,game,,away,,487.0,456.0,courtside,0.145,0.0771,high_major,comment
+2026-11-06,morning,d60136f35a646d85f6a3cfae9a318710,2026-11-07T01:00:00Z,UIC Flames,Robert Morris Colonials,moneyline,game,,away,,500.0,480.0,espnbet,0.15,0.056299999999999996,mid_major,comment
+2026-11-06,morning,5c26c14508ea693b221baa22091b376c,2026-11-07T00:00:00Z,Kentucky Wildcats,James Madison Dukes,alternate_spread,game,,away,16.5,310.0,297.0,fanduel,0.29,0.0541,high_major,comment
+2026-11-06,morning,ad5cbea23afd54eb897fe951c54a0142,2026-11-07T00:00:00Z,Saint Louis Billikens,Missouri Tigers,alternate_spread,game,,away,-11.5,390.0,380.0,fanduel,0.266,0.0432,high_major,comment
+2026-11-06,morning,f9984967019f38c1c1cab3726e7b8af1,2026-11-07T00:00:00Z,UCF Knights,Yale Bulldogs,alternate_total_points,game,,over,155.5,135.0,132.0,bovada,0.48200000000000004,0.0366,high_major,comment
+2026-11-06,morning,229b6af00a22bee24249299501e1f916,2026-11-07T00:00:00Z,Clemson Tigers,American Eagles,alternate_total_points,game,,under,143.5,-110.0,-112.0,hardrockbet,0.408,0.032400000000000005,high_major,comment
+2026-11-06,morning,,,Virginia Cavaliers,Northeastern Huskies,alternate_total_points,game,,over,168.5,240.0,237.0,fanduel,0.262,0.0319,high_major,comment
+2026-11-06,morning,,,Michigan Wolverines,UConn Huskies,alternate_spread,game,,home,-1.5,300.0,296.0,fanduel,0.384,0.0315,high_major,comment
+2026-11-06,morning,c29ec958503940fd63b689ac4e4fcfce,2026-11-06T22:00:00Z,Baylor Bears,Arkansas-Pine Bluff Golden Lions,alternate_total_points,game,,over,166.5,230.0,227.0,fanduel,0.326,0.0297,high_major,comment
+2026-11-06,morning,44ba8b3e451bea87743e9d0cf33e8151,2026-11-07T03:00:00Z,Stanford Cardinal,Oakland Golden Grizzlies,alternate_spread,game,,away,4.5,430.0,427.0,bovada,0.17300000000000001,0.0259,high_major,comment
+2026-11-06,morning,,,LSU Tigers,Texas Southern Tigers,spread,game,,away,30.5,105.0,104.0,fanatics,0.77,0.025,high_major,comment
+2026-11-06,evening,5c26c14508ea693b221baa22091b376c,2026-11-07T00:00:00Z,Kentucky Wildcats,James Madison Dukes,alternate_spread,game,,home,-31.5,275.0,232.0,hardrockbet,0.218,0.1537,high_major,comment
+2026-11-06,evening,c6396ba201be60c648648ff79089ef9e,2026-11-07T00:00:00Z,Georgia Tech Yellow Jackets,Georgia Southern Eagles,alternate_spread,game,,home,-25.5,290.0,251.0,fanduel,0.124,0.13419999999999999,high_major,comment
+2026-11-06,evening,08dc8872504680fb8932ef8065b92d3f,2026-11-07T00:30:00Z,Wisconsin Badgers,Delaware Blue Hens,alternate_spread,game,,home,-30.5,220.0,189.0,hardrockbet,0.17600000000000002,0.1304,high_major,comment
+2026-11-06,evening,fb7ba48c3852820bfba3c4b1e6b4c177,2026-11-07T00:30:00Z,Alabama Crimson Tide,Arkansas St Red Wolves,alternate_spread,game,,away,18.5,250.0,217.0,hardrockbet,0.336,0.1291,high_major,comment
+2026-11-06,evening,ea4694c82049ca1c7d91215cea6f89e3,2026-11-07T02:00:00Z,Kansas Jayhawks,Middle Tennessee Blue Raiders,alternate_spread,game,,away,21.5,275.0,242.0,fanduel,0.457,0.1186,high_major,comment
+2026-11-06,evening,6f3bb313ee8775acfe7d60dd309b516e,2026-11-07T01:00:00Z,Marquette Golden Eagles,Detroit Mercy Titans,team_total_h1,h1,,away_over,29.5,152.0,131.0,draftkings,0.515,0.115,high_major,comment
+2026-11-06,evening,0148c0bda5e1ea45765c0c84c40cb88f,2026-11-07T02:00:00Z,Colorado St Rams,Idaho Vandals,moneyline_h1,h1,,away,,600.0,542.0,williamhill_us,0.187,0.1121,mid_major,comment
+2026-11-06,evening,903278ae4bb4aa7fc4a623ea677c3585,2026-11-06T23:00:00Z,Oregon Ducks,Eastern Washington Eagles,moneyline_h1,h1,,away,,570.0,516.0,fanduel,0.174,0.1109,high_major,comment
+2026-11-06,evening,e8d14513abcb1352e0eca787066bb646,2026-11-07T02:00:00Z,Oklahoma St Cowboys,Queens University Royals,moneyline_h1,h1,,away,,550.0,498.0,williamhill_us,0.15,0.1105,high_major,comment
+2026-11-06,evening,5421ac38b66059c4de7441c51ca0633c,2026-11-07T00:00:00Z,Florida St Seminoles,Troy Trojans,alternate_spread,game,,home,-31.5,300.0,269.0,fanduel,0.111,0.1069,high_major,comment
+2026-11-06,evening,013d1268942b6898eb89ee0a7d5c8d49,2026-11-06T23:30:00Z,Ohio State Buckeyes,Youngstown St Penguins,alternate_spread,game,,away,19.5,240.0,215.0,hardrockbet,0.574,0.1011,high_major,comment
+2026-11-06,evening,,,Iowa State Cyclones,Southern Miss Golden Eagles,alternate_team_total,game,,away_over,65.5,460.0,420.0,fanduel,0.363,0.1001,high_major,comment
+2026-11-06,evening,,,Texas A&M Aggies,Northern Kentucky Norse,alternate_team_total,game,,away_under,63.5,490.0,448.0,fanduel,0.151,0.09939999999999999,high_major,comment
+2026-11-06,evening,a6a80c85f705cc62b0e186abd2c1254b,2026-11-07T02:00:00Z,Kansas St Wildcats,CSU Northridge Matadors,alternate_team_total,game,,home_over,96.5,460.0,421.0,fanduel,0.134,0.0984,high_major,comment
+2026-11-06,evening,c29ec958503940fd63b689ac4e4fcfce,2026-11-06T22:00:00Z,Baylor Bears,Arkansas-Pine Bluff Golden Lions,alternate_spread,game,,away,31.5,240.0,218.0,betrivers,0.595,0.09359999999999999,high_major,comment
+2026-11-06,evening,b01820f294f90f4d2d37d747724491a7,2026-11-07T01:30:00Z,Ole Miss Rebels,Central Arkansas Bears,alternate_spread,game,,home,-24.5,260.0,238.0,hardrockbet,0.18100000000000002,0.0892,high_major,comment
+2026-11-06,evening,46e4b95cdf9f4985351d5faf485c67a6,2026-11-07T00:00:00Z,NC State Wolfpack,East Tennessee St Buccaneers,moneyline_h1,h1,,away,,590.0,547.0,fanduel,0.147,0.0882,high_major,comment
+2026-11-06,evening,2b536fa185e2f2bcc75b562ec844356c,2026-11-06T23:30:00Z,Purdue Boilermakers,Valparaiso Beacons,spread_h1,h1,,away,9.5,125.0,112.0,bovada,0.557,0.087,high_major,comment
+2026-11-06,evening,861c26ed98ae416eee4157a6dbb3f439,2026-11-07T02:00:00Z,BYU Cougars,Omaha Mavericks,alternate_spread,game,,away,25.5,250.0,230.0,hardrockbet,0.45,0.08349999999999999,high_major,comment
+2026-11-07,morning,84d1c6e7d5e0b1c7442b5e7b1b39ffef,2026-11-07T19:00:00Z,Abilene Christian Wildcats,Lamar Cardinals,alternate_total_points,game,,under,153.5,245.0,155.0,bovada,0.6890000000000001,0.3825,low_major,comment
+2026-11-07,morning,5569c1c8821ecf008dd21c7bb1019d3c,2026-11-07T20:00:00Z,Longwood Lancers,North Carolina Central Eagles,moneyline,game,,away,,572.0,458.0,courtside,0.249,0.2303,low_major,comment
+2026-11-07,morning,ffdc4937cb4e802afce7b5b8894a1cf8,2026-11-07T21:00:00Z,UC Santa Barbara Gauchos,Oakland Golden Grizzlies,moneyline,game,,away,,575.0,500.0,betmgm,0.207,0.1479,low_major,comment
+2026-11-07,morning,a17b252a474151cdb7b2245ac963d946,2026-11-08T00:00:00Z,Western Illinois Leathernecks,Houston Christian Huskies,moneyline,game,,home,,360.0,320.0,betrivers,0.287,0.1193,low_major,comment
+2026-11-07,morning,7ce61dffdd710ea97915ce3eee02c768,2026-11-08T02:00:00Z,Weber State Wildcats,Utah Valley Wolverines,moneyline,game,,home,,293.0,264.0,courtside,0.32299999999999995,0.1041,low_major,comment
+2026-11-07,morning,5904d3d077ba83db899207c895146c4e,2026-11-07T19:00:00Z,South Dakota Coyotes,CSU Fullerton Titans,alternate_total_points,game,,under,165.5,215.0,192.0,bovada,0.527,0.10339999999999999,low_major,comment
+2026-11-07,morning,,,Louisville Cardinals,Morehead St Eagles,alternate_spread,game,,home,-42.5,210.0,193.0,hardrockbet,0.044000000000000004,0.0801,high_major,comment
+2026-11-07,morning,,,UNC Asheville Bulldogs,Western Carolina Catamounts,alternate_total_points,game,,over,161.5,308.0,289.0,courtside,0.325,0.0719,low_major,comment
+2026-11-07,morning,c530a7eb8fcd6a9778b6d0a4eac66c3f,2026-11-07T20:00:00Z,Montana St Bobcats,Long Beach St 49ers,moneyline,game,,away,,455.0,430.0,courtside,0.22,0.0698,low_major,comment
+2026-11-07,morning,ea605c0602ddafba2d5c0366c1971c20,2026-11-08T00:30:00Z,Georgetown Hoyas,Maryland Terrapins,alternate_spread,game,,away,-12.5,375.0,355.0,bovada,0.073,0.065,high_major,comment
+2026-11-07,morning,c0ca0d551636a0b9fa598de4f26b5eda,2026-11-07T22:00:00Z,IUPUI Jaguars,Tenn-Martin Skyhawks,alternate_total_points,game,,under,150.5,267.0,253.0,courtside,0.44799999999999995,0.06280000000000001,low_major,comment
+2026-11-07,morning,bee8eb51e6e5e53cda4d14e196962187,2026-11-07T17:00:00Z,Winthrop Eagles,North Dakota Fighting Hawks,moneyline,game,,away,,410.0,393.0,betparx,0.2,0.0564,low_major,comment
+2026-11-07,morning,e98027bf796b234fb9133f59ee7abefc,2026-11-07T23:30:00Z,Niagara Purple Eagles,Morgan St Bears,alternate_spread,game,,away,-3.5,221.0,211.0,draftkings,0.379,0.0558,low_major,comment
+2026-11-07,morning,,,Bucknell Bison,Old Dominion Monarchs,alternate_spread,game,,away,-10.5,215.0,206.0,bovada,0.28600000000000003,0.0527,mid_major,comment
+2026-11-07,morning,7795f37cca47b3cdf4005418da02c78d,2026-11-08T00:30:00Z,UC Riverside Highlanders,Denver Pioneers,alternate_spread,game,,home,-10.5,330.0,319.0,bovada,0.24,0.046799999999999994,low_major,comment
+2026-11-07,morning,95a884620a33548d3bba4614a54981e4,2026-11-07T18:00:00Z,Ohio Bobcats,North Carolina A&T Aggies,moneyline,game,,away,,600.0,592.0,espnbet,0.159,0.032799999999999996,mid_major,comment
+2026-11-07,morning,f13bf63f79eb03b92a2ba8b8c36f087c,2026-11-07T20:30:00Z,La Salle Explorers,LIU Sharks,total_points,game,,over,146.5,106.0,104.0,betparx,0.539,0.03,mid_major,comment
+2026-11-07,morning,13f00af18ed09193a860cfb25d9caff1,2026-11-08T00:00:00Z,Dayton Flyers,Northern Illinois Huskies,alternate_total_points,game,,under,148.5,-115.0,-117.0,hardrockbet,0.486,0.029300000000000003,mid_major,comment
+2026-11-07,morning,cb9ed150617cacee1bade170e023c9ed,2026-11-08T01:00:00Z,Bradley Braves,Pacific Tigers,alternate_spread,game,,home,-10.5,330.0,327.0,bovada,0.37200000000000005,0.0292,mid_major,comment
+2026-11-07,morning,2bddde1bb43d000ff50217cb17849385,2026-11-07T22:00:00Z,High Point Panthers,Washington St Cougars,moneyline,game,,away,,525.0,520.0,fanatics,0.068,0.0291,mid_major,comment
+2026-11-07,evening,c0ca0d551636a0b9fa598de4f26b5eda,2026-11-07T22:00:00Z,IUPUI Jaguars,Tenn-Martin Skyhawks,total_points_h1,h1,,under,70.5,430.0,293.0,bovada,0.446,0.3784,low_major,comment
+2026-11-07,evening,a17b252a474151cdb7b2245ac963d946,2026-11-08T00:00:00Z,Western Illinois Leathernecks,Houston Christian Huskies,alternate_spread,game,,home,2.5,285.0,249.0,bovada,0.359,0.1273,low_major,comment
+2026-11-07,evening,b88513a118e0f80f6bbc58abdbe4a009,2026-11-07T23:00:00Z,GW Revolutionaries,Hampton Pirates,alternate_spread,game,,home,-24.5,240.0,210.0,hardrockbet,0.253,0.12,mid_major,comment
+2026-11-07,evening,fc880e5a120c069cb1dae81b47fc1451,2026-11-08T03:00:00Z,Santa Clara Broncos,Sacramento St Hornets,alternate_spread,game,,home,-28.5,305.0,276.0,fanduel,0.14,0.09949999999999999,mid_major,comment
+2026-11-07,evening,,,Arkansas-Little Rock Trojans,SE Louisiana Lions,alternate_spread,game,,away,2.5,280.0,256.0,bovada,0.335,0.0891,low_major,comment
+2026-11-07,evening,260aeb4541ffc17bb1c580f72a76497b,2026-11-07T22:00:00Z,Furman Paladins,Northern Iowa Panthers,alternate_spread,game,,home,-13.5,340.0,314.0,fanduel,0.226,0.085,mid_major,comment
+2026-11-07,evening,7b31a734a4a7705b526103280714a016,2026-11-07T22:00:00Z,Gonzaga Bulldogs,New Mexico St Aggies,alternate_spread,game,,away,20.5,305.0,282.0,fanduel,0.478,0.08310000000000001,mid_major,comment
+2026-11-07,evening,7ce61dffdd710ea97915ce3eee02c768,2026-11-08T02:00:00Z,Weber State Wildcats,Utah Valley Wolverines,alternate_spread,game,,home,1.5,240.0,222.0,hardrockbet,0.36,0.0787,low_major,comment
+2026-11-07,evening,13f00af18ed09193a860cfb25d9caff1,2026-11-08T00:00:00Z,Dayton Flyers,Northern Illinois Huskies,alternate_spread,game,,home,-28.5,320.0,299.0,fanduel,0.18600000000000003,0.0751,mid_major,comment
+2026-11-07,evening,f9a714b70c2d395a4d28c564dfb901bc,2026-11-08T00:00:00Z,Canisius Golden Griffins,St. Bonaventure Bonnies,alternate_spread,game,,home,1.5,320.0,300.0,bovada,0.375,0.0728,mid_major,comment
+2026-11-07,evening,2bddde1bb43d000ff50217cb17849385,2026-11-07T22:00:00Z,High Point Panthers,Washington St Cougars,alternate_spread,game,,away,3.5,400.0,379.0,bovada,0.11800000000000001,0.06480000000000001,mid_major,comment
+2026-11-07,evening,2fe71d55b857b537c85ef94c9f50ef40,2026-11-07T23:00:00Z,New Mexico Lobos,Northern Arizona Lumberjacks,alternate_spread,game,,away,18.5,300.0,285.0,fanduel,0.431,0.061900000000000004,mid_major,comment
+2026-11-07,evening,e98027bf796b234fb9133f59ee7abefc,2026-11-07T23:30:00Z,Niagara Purple Eagles,Morgan St Bears,moneyline,game,,away,,143.0,137.0,courtside,0.494,0.0475,low_major,comment
+2026-11-07,evening,,,Lipscomb Bisons,SIU-Edwardsville Cougars,moneyline,game,,away,,300.0,291.0,fanduel,0.285,0.0446,low_major,comment
+2026-11-07,evening,f2832f61efc983964120a64ef0381763,2026-11-08T03:00:00Z,UC Irvine Anteaters,San José St Spartans,alternate_spread,game,,home,-12.5,200.0,194.0,hardrockbet,0.26899999999999996,0.040999999999999995,mid_major,comment
+2026-11-07,evening,1c0e5ef9fa1a43e347c18cfbb5f78536,2026-11-08T03:00:00Z,UC San Diego Tritons,Fresno St Bulldogs,moneyline,game,,away,,487.0,476.0,courtside,0.20600000000000002,0.0403,mid_major,comment
+2026-11-07,evening,ea605c0602ddafba2d5c0366c1971c20,2026-11-08T00:30:00Z,Georgetown Hoyas,Maryland Terrapins,spread_h1,h1,,home,-7.5,525.0,515.0,bovada,0.231,0.0371,high_major,comment
+2026-11-07,evening,596efaf67c61be49ebddb0f58e2a52fc,2026-11-08T03:00:00Z,Seattle Redhawks,Portland St Vikings,alternate_spread,game,,away,5.5,220.0,216.0,hardrockbet,0.38,0.0341,mid_major,comment
+2026-11-07,evening,e8b5176c1a4665b33b1fc7f70c8d4876,2026-11-08T00:00:00Z,Nebraska Cornhuskers,Providence Friars,alternate_spread,game,,home,-11.5,365.0,359.0,fanduel,0.264,0.0335,high_major,comment
+2026-11-08,morning,baa422a9e95dda81059499feb5d38a44,2026-11-08T23:00:00Z,CSU Bakersfield Roadrunners,North Dakota St Bison,moneyline,game,,home,,130.0,115.0,hardrockbet,0.545,0.0917,low_major,comment
+2026-11-08,morning,854ae8654870e362587557385518ddc5,2026-11-09T03:00:00Z,Hawai'i Rainbow Warriors,UT-Arlington Mavericks,moneyline,game,,away,,455.0,426.0,courtside,0.259,0.0766,low_major,comment
+2026-11-08,morning,,,Virginia Cavaliers,Arkansas Razorbacks,alternate_spread,game,,home,-11.5,320.0,307.0,bovada,0.157,0.054299999999999994,high_major,comment
+2026-11-08,morning,b791f115e68a00b090f9f78d07a757b1,2026-11-08T18:00:00Z,Siena Saints,Princeton Tigers,alternate_spread,game,,home,-7.5,260.0,249.0,bovada,0.18899999999999997,0.0529,mid_major,comment
+2026-11-08,morning,e9ad86daa5e64228cd112ac2dec3b591,2026-11-08T19:00:00Z,St. Thomas (MN) Tommies,Green Bay Phoenix,alternate_total_points,game,,over,160.5,298.0,287.0,courtside,0.302,0.049,low_major,comment
+2026-11-08,morning,9e16ed8203d19232e90330b202b1fd69,2026-11-08T20:00:00Z,Tennessee Tech Golden Eagles,Western Kentucky Hilltoppers,alternate_total_points,game,,over,159.5,-115.0,-119.0,hardrockbet,0.39899999999999997,0.0373,mid_major,comment
+2026-11-08,morning,4a88827c71210aaa950ea6b5995aabda,2026-11-08T18:00:00Z,South Carolina Gamecocks,SE Missouri St Redhawks,alternate_spread,game,,home,-26.5,300.0,295.0,bovada,0.221,0.0338,high_major,comment
+2026-11-08,morning,7757c80ca9080492a28d75de6e15e1cb,2026-11-08T21:30:00Z,Nevada Wolf Pack,Saint Mary's Gaels,alternate_total_points,game,,over,144.5,-110.0,-112.0,hardrockbet,0.609,0.0304,mid_major,comment
+2026-11-08,morning,d118b8116a95049e8b3254f6db14abb2,2026-11-08T20:00:00Z,Air Force Falcons,Idaho State Bengals,alternate_spread,game,,away,-3.5,316.0,316.0,draftkings,0.359,0.0212,mid_major,comment
+2026-11-08,evening,baa422a9e95dda81059499feb5d38a44,2026-11-08T23:00:00Z,CSU Bakersfield Roadrunners,North Dakota St Bison,alternate_spread,game,,home,-3.5,195.0,178.0,hardrockbet,0.426,0.0859,low_major,comment
+2026-11-08,evening,cd111ab90595f6edda41523f3c541390,2026-11-09T01:30:00Z,California Golden Bears,Houston Cougars,alternate_spread,game,,away,-25.5,230.0,216.0,hardrockbet,0.106,0.0664,high_major,comment
+2026-11-08,evening,726f85494ad38a3813f944ab1ee48a01,2026-11-08T22:00:00Z,Temple Owls,Richmond Spiders,alternate_total_points,game,,over,157.5,220.0,210.0,fanduel,0.368,0.0535,mid_major,comment
+2026-11-08,evening,f5da6ca8311593f74c000c5b491cc74c,2026-11-09T01:00:00Z,Penn State Nittany Lions,Pittsburgh Panthers,alternate_team_total,game,,home_under,73.5,148.0,142.0,fanduel,0.336,0.0472,high_major,comment
+2026-11-08,evening,854ae8654870e362587557385518ddc5,2026-11-09T03:00:00Z,Hawai'i Rainbow Warriors,UT-Arlington Mavericks,total_points_h1,h1,,over,71.5,144.0,139.0,fanduel,0.447,0.044500000000000005,low_major,comment
+2026-11-08,evening,554104210813f386269d72536774eded,2026-11-09T04:00:00Z,USC Trojans,Wichita St Shockers,alternate_spread,game,,home,-15.5,390.0,380.0,fanduel,0.18600000000000003,0.0432,high_major,comment
+2026-11-08,evening,ea6b86a1862adcd664fefd929040d3f1,2026-11-08T23:00:00Z,William & Mary Tribe,Norfolk St Spartans,alternate_spread,game,,away,2.5,330.0,321.0,bovada,0.313,0.0424,mid_major,comment
+2026-11-08,evening,fda713cae3e805506547d5b1e705bcc8,2026-11-09T00:00:00Z,UTEP Miners,Incarnate Word Cardinals,alternate_spread,game,,away,2.5,460.0,455.0,bovada,0.262,0.0304,mid_major,comment
+2026-11-09,morning,,,Jacksonville Dolphins,UMKC Kangaroos,alternate_total_points,game,,over,154.5,236.0,218.0,courtside,0.384,0.0802,low_major,comment
+2026-11-09,morning,,,Coastal Carolina Chanticleers,South Carolina Upstate Spartans,moneyline,game,,away,,400.0,389.0,bovada,0.226,0.044800000000000006,mid_major,comment
+2026-11-09,morning,6884179f3fa0670a0d5d729ed255d195,2026-11-10T00:00:00Z,Towson Tigers,LIU Sharks,alternate_spread,game,,away,-1.5,219.0,214.0,draftkings,0.20800000000000002,0.0369,mid_major,comment
+2026-11-09,morning,469286b8c4d62249df7d89201149dc5e,2026-11-10T00:00:00Z,Cincinnati Bearcats,Minnesota Golden Gophers,moneyline,game,,away,,267.0,263.0,courtside,0.192,0.0338,high_major,comment
+2026-11-09,morning,c69cf5f0ca3fe974013d761f98480b8e,2026-11-10T00:00:00Z,Columbia Lions,Stonehill Skyhawks,moneyline,game,,away,,471.0,464.0,courtside,0.113,0.0336,mid_major,comment
+2026-11-09,morning,,,Chicago St Cougars,South Carolina St Bulldogs,moneyline,game,,away,,194.0,193.0,courtside,0.36,0.025099999999999997,low_major,comment
+2026-11-09,evening,1152e203aa3ee97c99f07631aa18c375,2026-11-10T02:00:00Z,Auburn Tigers,Appalachian St Mountaineers,team_total_h1,h1,,away_over,28.5,131.0,120.0,draftkings,0.591,0.0731,high_major,comment
+2026-11-09,evening,,,Oregon St Beavers,Eastern Washington Eagles,spread_h1,h1,,home,-12.5,158.0,150.0,fanduel,0.26,0.053899999999999997,mid_major,comment
+2026-11-09,evening,,,Alabama Crimson Tide,Oakland Golden Grizzlies,alternate_team_total,game,,away_over,71.5,154.0,148.0,fanduel,0.564,0.0463,high_major,comment
+2026-11-09,evening,2a80dd8061cc9e506c15bafdfb0f7839,2026-11-10T03:00:00Z,Stanford Cardinal,Rice Owls,total_points_h1,h1,,under,66.5,146.0,141.0,fanduel,0.389,0.0451,high_major,comment
+2026-11-09,evening,,,Purdue Boilermakers,Illinois St Redbirds,total_points_h1,h1,,under,65.5,154.0,150.0,fanduel,0.258,0.0375,high_major,comment
+2026-11-09,evening,0574e9c6da7d89402da3146af5cbab6b,2026-11-10T00:00:00Z,Georgia Bulldogs,Florida Gulf Coast Eagles,alternate_team_total,game,,home_over,94.5,140.0,137.0,fanduel,0.37200000000000005,0.0331,high_major,comment
+2026-11-09,evening,,,Notre Dame Fighting Irish,Eastern Illinois Panthers,spread_h1,h1,,away,14.5,115.0,113.0,bovada,0.5429999999999999,0.0313,high_major,comment
+2026-11-09,evening,775e92f196ba760abeb98b6e5a9da49a,2026-11-10T02:00:00Z,Seton Hall Pirates,Charlotte 49ers,total_points_h1,h1,,under,60.5,110.0,109.0,hardrockbet,0.331,0.0287,high_major,comment
+2026-11-09,evening,a1c4f325bcf595352be2b3469ceb5481,2026-11-10T00:00:00Z,UIC Flames,UNC Greensboro Spartans,alternate_team_total,game,,home_over,86.5,144.0,144.0,fanduel,0.405,0.0229,mid_major,comment
+2026-11-10,morning,ee9da2e11b9dd590539d4c230c90a800,2026-11-10T23:30:00Z,Rutgers Scarlet Knights,NJIT Highlanders,spread_h1,h1,,away,11.5,110.0,103.0,bovada,0.501,0.0603,high_major,comment
+2026-11-10,morning,59b9d34023c04a38ae8a01e9508650b9,2026-11-11T00:00:00Z,Fordham Rams,Iona Gaels,moneyline,game,,away,,590.0,564.0,fanduel,0.19699999999999998,0.06,mid_major,comment
+2026-11-10,morning,,,Middle Tennessee Blue Raiders,Evansville Purple Aces,moneyline,game,,away,,319.0,308.0,courtside,0.187,0.049100000000000005,mid_major,comment
+2026-11-10,morning,2a4b1da6788e1f02b089f8c4598f55be,2026-11-11T01:00:00Z,Lipscomb Bisons,Belmont Bruins,moneyline,game,,home,,165.0,162.0,hardrockbet,0.47200000000000003,0.032400000000000005,mid_major,comment
+2026-11-10,morning,,,Florida St Seminoles,Florida Gators,moneyline_h1,h1,,home,,240.0,238.0,fanduel,0.341,0.028900000000000002,high_major,comment
+2026-11-10,morning,1bdd1ebc0dbf42b45f00e0e042a95bbc,2026-11-11T00:30:00Z,Tulane Green Wave,Nicholls St Colonels,moneyline,game,,away,,300.0,298.0,draftkings,0.311,0.0268,mid_major,comment
+2026-11-10,morning,,,UT Rio Grande Valley Vaqueros,Texas State Bobcats,moneyline,game,,home,,260.0,259.0,bovada,0.505,0.0256,mid_major,comment
+2026-11-10,morning,ec95fa37f8cd117d2b0e8da4db83b192,2026-11-11T03:00:00Z,San Francisco Dons,Montana Grizzlies,moneyline,game,,away,,572.0,569.0,courtside,0.21,0.025099999999999997,mid_major,comment
+2026-11-10,evening,,,Vanderbilt Commodores,Memphis Tigers,moneyline_h1,h1,,away,,470.0,398.0,fanduel,0.14,0.1677,high_major,comment
+2026-11-10,evening,,,GW Revolutionaries,Elon Phoenix,moneyline_h1,h1,,away,,460.0,392.0,betrivers,0.174,0.161,mid_major,comment
+2026-11-10,evening,df614b1deb38ca8766ece5d20ae04191,2026-11-11T00:00:00Z,Wake Forest Demon Deacons,Charleston Southern Buccaneers,total_points_h1,h1,,over,78.5,158.0,143.0,fanduel,0.3,0.0858,high_major,comment
+2026-11-10,evening,,,Florida St Seminoles,Florida Gators,total_points_h1,h1,,under,75.5,148.0,134.0,fanduel,0.455,0.083,high_major,comment
+2026-11-10,evening,,,Georgia Tech Yellow Jackets,Eastern Kentucky Colonels,moneyline_h1,h1,,away,,470.0,442.0,fanduel,0.17600000000000002,0.07429999999999999,high_major,comment
+2026-11-10,evening,16aed83105c1683d2a5eb84cdef8c8f4,2026-11-11T00:00:00Z,Kennesaw St Owls,Winthrop Eagles,moneyline,game,,away,,470.0,444.0,fanduel,0.163,0.0701,mid_major,comment
+2026-11-10,evening,,,North Carolina Tar Heels,Wyoming Cowboys,total_points_h1,h1,,under,73.5,115.0,108.0,bovada,0.48700000000000004,0.0581,high_major,comment
+2026-11-10,evening,1bdd1ebc0dbf42b45f00e0e042a95bbc,2026-11-11T00:30:00Z,Tulane Green Wave,Nicholls St Colonels,spread_h1,h1,,home,-3.5,-110.0,-118.0,bovada,0.455,0.057300000000000004,mid_major,comment
+2026-11-10,evening,,,UCF Knights,South Alabama Jaguars,moneyline_h1,h1,,away,,390.0,376.0,fanduel,0.126,0.05,high_major,comment
+2026-11-10,evening,,,Toledo Rockets,Wright St Raiders,total_points_h1,h1,,over,76.5,148.0,142.0,fanduel,0.43799999999999994,0.04650000000000001,mid_major,comment
+2026-11-10,evening,e4c5dde6dc40ba56df0f75056bc28b37,2026-11-11T00:00:00Z,NC State Wolfpack,Presbyterian Blue Hose,moneyline_h1,h1,,away,,600.0,585.0,williamhill_us,0.081,0.0438,high_major,comment
+2026-11-10,evening,c8cdef4896e31a481ccbbe46fd13c74c,2026-11-11T01:00:00Z,Northern Iowa Panthers,Green Bay Phoenix,moneyline,game,,away,,160.0,157.0,ballybet,0.321,0.0354,mid_major,comment
+2026-11-10,evening,9c96831c894928b32d315fa2542cdcdf,2026-11-11T02:00:00Z,Colorado Buffaloes,San Diego Toreros,total_points_h1,h1,,over,73.5,142.0,141.0,fanduel,0.517,0.0281,high_major,comment
+2026-11-10,evening,,,Northeastern Huskies,Harvard Crimson,spread_h1,h1,,away,-1.0,105.0,104.0,bovada,0.431,0.025,mid_major,comment
+2026-11-10,evening,,,Arkansas St Red Wolves,Tenn-Martin Skyhawks,spread_h1,h1,,away,2.5,110.0,110.0,bovada,0.376,0.0235,mid_major,comment
+2026-11-10,evening,d59d81aa5d936c398264a0634ed0daf2,2026-11-11T02:00:00Z,Fresno St Bulldogs,Georgia St Panthers,moneyline_h1,h1,,away,,175.0,175.0,bovada,0.32799999999999996,0.0222,mid_major,comment
+2026-11-10,evening,604069251e105a4695deda046f92b38b,2026-11-11T00:00:00Z,Central Michigan Chippewas,Youngstown St Penguins,spread_h1,h1,,away,0.5,115.0,115.0,bovada,0.509,0.022099999999999998,mid_major,comment
+2026-11-11,morning,015a3bad9e6d4b3ce108f6e7c663ed88,2026-11-12T00:00:00Z,UNC Wilmington Seahawks,Kent State Golden Flashes,spread_h1,h1,,home,-6.5,130.0,107.0,bovada,0.36700000000000005,0.1387,mid_major,comment
+2026-11-11,morning,9e33af22fe8e08e53ec595237d2c8ee9,2026-11-12T00:00:00Z,Holy Cross Crusaders,Furman Paladins,moneyline,game,,home,,600.0,538.0,espnbet,0.10800000000000001,0.12,low_major,comment
+2026-11-11,morning,,,Massachusetts Minutemen,UMass Lowell River Hawks,moneyline,game,,away,,600.0,538.0,espnbet,0.22,0.12,mid_major,comment
+2026-11-11,morning,6f26440351de53a17fb83781075b7698,2026-11-12T00:00:00Z,Delaware Blue Hens,James Madison Dukes,total_points_h1,h1,,under,67.5,160.0,138.0,bovada,0.401,0.11779999999999999,mid_major,comment
+2026-11-11,morning,,,Cal Baptist Lancers,Chicago St Cougars,spread_h1,h1,,away,3.5,155.0,136.0,bovada,0.43200000000000005,0.1023,low_major,comment
+2026-11-11,morning,,,Sam Houston St Bearkats,Pepperdine Waves,spread_h1,h1,,away,-2.5,120.0,107.0,bovada,0.22,0.087,mid_major,comment
+2026-11-11,morning,759951fe63ce023850658a6be1c38e38,2026-11-11T16:30:00Z,East Texas A&M Lions,Fairleigh Dickinson Knights,moneyline,game,,away,,600.0,569.0,fanatics,0.051,0.0678,low_major,comment
+2026-11-11,morning,,,Southern Miss Golden Eagles,Jackson St Tigers,spread_h1,h1,,home,-7.5,130.0,120.0,bovada,0.41200000000000003,0.0667,mid_major,comment
+2026-11-11,morning,3701dfd3294546a83cc0c666d61f49eb,2026-11-12T00:00:00Z,East Tennessee St Buccaneers,Campbell Fighting Camels,team_total_h1,h1,,home_under,34.5,115.0,107.0,draftkings,0.29,0.0645,mid_major,comment
+2026-11-11,morning,7519c97618a3f43c4af47a05aeb69e78,2026-11-12T03:00:00Z,Seattle Redhawks,UTSA Roadrunners,moneyline_h1,h1,,away,,550.0,524.0,williamhill_us,0.134,0.0636,mid_major,comment
+2026-11-11,morning,b4a1814a6efc7eb096e5ac5e857915b5,2026-11-11T20:00:00Z,Air Force Falcons,Loyola (Chi) Ramblers,total_points_h1,h1,,over,78.5,148.0,140.0,fanduel,0.17800000000000002,0.0583,mid_major,comment
+2026-11-11,morning,,,South Dakota St Jackrabbits,Valparaiso Beacons,spread_h1,h1,,home,-0.5,115.0,109.0,bovada,0.552,0.053200000000000004,mid_major,comment
+2026-11-11,morning,66797ed562dc7033f7796ca495f88219,2026-11-12T02:00:00Z,Nebraska Cornhuskers,Lindenwood Lions,team_total_h1,h1,,away_over,26.5,103.0,-101.0,draftkings,0.606,0.0449,high_major,comment
+2026-11-11,morning,eb4ac6c20fe9cf690a2a2409335a3341,2026-11-11T17:00:00Z,Florida A&M Rattlers,UMKC Kangaroos,moneyline,game,,home,,310.0,303.0,fanduel,0.191,0.0382,low_major,comment
+2026-11-11,morning,,,VMI Keydets,North Carolina Central Eagles,moneyline,game,,away,,303.0,303.0,courtside,0.337,0.020499999999999997,low_major,comment
+2026-11-11,morning,6f26440351de53a17fb83781075b7698,2026-11-12T00:00:00Z,Delaware Blue Hens,James Madison Dukes,total_points_h1,h1,,over,72.5,148.0,126.0,fanduel,0.402,0.12119999999999999,mid_major,comment
+2026-11-11,morning,,,Cal Baptist Lancers,Chicago St Cougars,spread_h1,h1,,away,4.5,125.0,111.0,bovada,0.514,0.0895,low_major,comment
+2026-11-11,morning,eb4ac6c20fe9cf690a2a2409335a3341,2026-11-11T17:00:00Z,Florida A&M Rattlers,UMKC Kangaroos,moneyline_h1,h1,,home,,220.0,204.0,hardrockbet,0.33399999999999996,0.0751,low_major,comment
+2026-11-11,morning,88cb10182238db0c3ef64ab9db01064f,2026-11-12T02:00:00Z,Boise State Broncos,Oakland Golden Grizzlies,moneyline_h1,h1,,away,,510.0,481.0,betrivers,0.111,0.07139999999999999,mid_major,comment
+2026-11-11,morning,b4a1814a6efc7eb096e5ac5e857915b5,2026-11-11T20:00:00Z,Air Force Falcons,Loyola (Chi) Ramblers,moneyline_h1,h1,,home,,285.0,271.0,fanduel,0.313,0.0592,mid_major,comment
+2026-11-11,morning,460ff0fdd5edcbe00e3f8cb6e74d6fbb,2026-11-11T23:30:00Z,IUPUI Jaguars,Southern Indiana Screaming Eagles,moneyline,game,,away,,315.0,309.0,fanduel,0.353,0.0364,low_major,comment
+2026-11-11,morning,,,Massachusetts Minutemen,UMass Lowell River Hawks,total_points,game,,under,149.5,106.0,105.0,lowvig,0.5720000000000001,0.027999999999999997,mid_major,comment
+2026-11-11,morning,b4c3775da0df075aa79f9f881d83ffde,2026-11-12T01:00:00Z,Tulsa Golden Hurricane,Oral Roberts Golden Eagles,moneyline_h1,h1,,away,,600.0,600.0,williamhill_us,0.12,0.02,mid_major,comment
+2026-11-11,evening,3701dfd3294546a83cc0c666d61f49eb,2026-11-12T00:00:00Z,East Tennessee St Buccaneers,Campbell Fighting Camels,total_points_h1,h1,,over,71.5,150.0,136.0,bovada,0.457,0.0806,mid_major,comment
+2026-11-11,evening,c5a909abd1412b4f70b5e5448a0b3b13,2026-11-12T00:00:00Z,Michigan Wolverines,Marquette Golden Eagles,total_points_h1,h1,,over,76.5,148.0,141.0,fanduel,0.312,0.0536,high_major,comment
+2026-11-11,evening,92cc2f2a169d4efd4f1a0ac9d25672bc,2026-11-12T04:00:00Z,California Golden Bears,USC Trojans,moneyline,game,,home,,315.0,309.0,fanduel,0.368,0.0358,high_major,comment
+2026-11-12,morning,,,Bradley Braves,Coppin St Eagles,moneyline,game,,away,,470.0,412.0,fanduel,0.154,0.1373,mid_major,comment
+2026-11-12,morning,,,South Alabama Jaguars,Loyola Marymount Lions,total_points,game,,over,144.5,115.0,111.0,hardrockbet,0.479,0.042,mid_major,comment
+2026-11-12,morning,,,UMBC Retrievers,Morgan St Bears,moneyline,game,,away,,250.0,246.0,bovada,0.29600000000000004,0.0327,low_major,comment
+2026-11-12,morning,,,Western Illinois Leathernecks,CSU Bakersfield Roadrunners,moneyline,game,,home,,365.0,361.0,fanduel,0.26899999999999996,0.030699999999999998,low_major,comment
+2026-11-12,morning,,,Alabama A&M Bulldogs,West Florida Argonauts,moneyline,game,,away,,287.0,286.0,courtside,0.409,0.024700000000000003,low_major,comment
+2026-11-12,evening,60340e8a19f88be7b0c22c5428810081,2026-11-13T00:00:00Z,Brown Bears,Canisius Golden Griffins,moneyline_h1,h1,,away,,360.0,341.0,betmgm,0.171,0.06509999999999999,mid_major,comment
+2026-11-12,evening,aedc154c22609923dadd12582547db3a,2026-11-13T00:00:00Z,West Virginia Mountaineers,Mercer Bears,spread_h1,h1,,home,-15.5,142.0,137.0,fanduel,0.302,0.042800000000000005,high_major,comment
+2026-11-12,evening,,,Southern Illinois Salukis,Richmond Spiders,moneyline_h1,h1,,home,,130.0,130.0,betus,0.382,0.023399999999999997,mid_major,comment
+2026-11-13,morning,2151748c9e4175d788ed587a685e52d7,2026-11-13T20:00:00Z,Cleveland St Vikings,West Florida Argonauts,moneyline,game,,away,,165.0,155.0,betrivers,0.578,0.0642,low_major,comment
+2026-11-13,morning,82d63fe987183f4f973a6edc91edce1d,2026-11-14T00:30:00Z,UConn Huskies,Ohio State Buckeyes,moneyline_h1,h1,,away,,275.0,271.0,hardrockbet,0.22399999999999998,0.0335,high_major,comment
+2026-11-13,evening,,,GW Revolutionaries,Harvard Crimson,moneyline_h1,h1,,away,,335.0,304.0,betrivers,0.22,0.09849999999999999,mid_major,comment
+2026-11-13,evening,64fbb88639d9f62fe8280c2a3d3b3a59,2026-11-14T02:00:00Z,Arizona St Sun Devils,UL Monroe Warhawks,spread_h1,h1,,home,-18.5,140.0,131.0,bovada,0.213,0.061900000000000004,high_major,comment
+2026-11-13,evening,,,Drake Bulldogs,South Dakota Coyotes,moneyline_h1,h1,,away,,390.0,375.0,fanduel,0.201,0.0542,mid_major,comment
+2026-11-13,evening,,,Samford Bulldogs,Wright St Raiders,spread_h1,h1,,away,-1.5,120.0,114.0,bovada,0.535,0.0535,low_major,comment
+2026-11-13,evening,6939a5b0fa016ba48db4addc3f95fa94,2026-11-14T01:00:00Z,TCU Horned Frogs,Milwaukee Panthers,spread_h1,h1,,home,-14.5,125.0,120.0,bovada,0.35700000000000004,0.0453,high_major,comment
+2026-11-13,evening,,,Texas State Bobcats,Southern Miss Golden Eagles,moneyline,game,,away,,525.0,511.0,betparx,0.11199999999999999,0.0446,mid_major,comment
+2026-11-13,evening,c08f7d2a57b7050d9effea514daa7bab,2026-11-14T03:00:00Z,Utah State Aggies,UC San Diego Tritons,spread_h1,h1,,home,-8.5,125.0,122.0,bovada,0.369,0.0346,mid_major,comment
+2026-11-13,evening,85a997dbe516f43742ed9726057606b1,2026-11-14T03:00:00Z,Saint Mary's Gaels,UIC Flames,total_points_h1,h1,,under,69.5,148.0,145.0,fanduel,0.439,0.0329,mid_major,comment
+2026-11-13,evening,,,Auburn Tigers,Arizona Wildcats,total_points_h1,h1,,over,77.5,142.0,141.0,fanduel,0.41,0.0281,high_major,comment
+2026-11-13,evening,58ad8bd17a0fe9ec1b9661c093ebef4b,2026-11-13T23:30:00Z,Butler Bulldogs,Pittsburgh Panthers,total_points_h1,h1,,over,77.5,142.0,141.0,fanduel,0.38,0.0281,high_major,comment
+2026-11-13,evening,a7588bfc726ad6da426fc78330827a7b,2026-11-14T02:00:00Z,UNLV Rebels,Stanford Cardinal,total_points_h1,h1,,over,73.5,142.0,141.0,fanduel,0.457,0.0281,high_major,comment
+2026-11-13,evening,,,NC State Wolfpack,Troy Trojans,spread_h1,h1,,away,12.0,110.0,109.0,bovada,0.625,0.027200000000000002,high_major,comment
+2026-11-13,evening,43c9888e11386fb7cd8000f3ffe347de,2026-11-14T01:45:00Z,Omaha Mavericks,Lindenwood Lions,total_points_h1,h1,,over,73.0,105.0,105.0,bovada,0.461,0.0204,low_major,comment
+2026-11-13,evening,,,Purdue Boilermakers,Ohio Bobcats,moneyline_h1,h1,,away,,600.0,600.0,williamhill_us,0.11800000000000001,0.02,high_major,comment
+2026-11-14,morning,99ab40e7e062011e0f76aa40b199d760,2026-11-14T23:00:00Z,Providence Friars,Colorado Buffaloes,moneyline,game,,away,,590.0,542.0,fanduel,0.22,0.09630000000000001,high_major,comment
+2026-11-14,morning,,,Fairfield Stags,NJIT Highlanders,moneyline,game,,away,,550.0,530.0,williamhill_us,0.13699999999999998,0.053099999999999994,low_major,comment
+2026-11-14,morning,,,Detroit Mercy Titans,Toledo Rockets,moneyline,game,,home,,500.0,486.0,fanatics,0.231,0.0458,mid_major,comment
+2026-11-14,morning,,,Towson Tigers,UMBC Retrievers,moneyline,game,,away,,450.0,439.0,bovada,0.13,0.0426,mid_major,comment
+2026-11-14,morning,,,Akron Zips,Tulane Green Wave,moneyline_h1,h1,,away,,320.0,312.0,fanduel,0.221,0.0407,mid_major,comment
+2026-11-14,morning,,,Le Moyne Dolphins,Manhattan Jaspers,moneyline,game,,away,,160.0,159.0,espnbet,0.36200000000000004,0.0264,low_major,comment
+2026-11-14,morning,1c57d052083707257ef138fc5f40c068,2026-11-15T03:00:00Z,Nevada Wolf Pack,Utah Valley Wolverines,moneyline,game,,away,,420.0,418.0,fanduel,0.168,0.025099999999999997,mid_major,comment
+2026-11-14,morning,,,Winthrop Eagles,Jackson St Tigers,moneyline,game,,away,,290.0,290.0,espnbet,0.225,0.0225,low_major,comment
+2026-11-14,evening,,,Campbell Fighting Camels,South Carolina Upstate Spartans,moneyline,game,,away,,400.0,368.0,fanduel,0.239,0.09050000000000001,mid_major,comment
+2026-11-14,evening,,,Duquesne Dukes,Binghamton Bearcats,moneyline_h1,h1,,away,,600.0,587.0,williamhill_us,0.157,0.0398,mid_major,comment
+2026-11-14,evening,,,Siena Saints,Brown Bears,moneyline,game,,away,,475.0,466.0,espnbet,0.23,0.0374,mid_major,comment
+2026-11-14,evening,3cc69eabd4a202f9480fe71743088275,2026-11-14T23:00:00Z,North Texas Mean Green,South Alabama Jaguars,moneyline,game,,away,,380.0,374.0,espnbet,0.151,0.0342,mid_major,comment
+2026-11-14,evening,,,Oakland Golden Grizzlies,Northern Iowa Panthers,total_points_h1,h1,,over,76.5,150.0,150.0,fanduel,0.45899999999999996,0.0212,mid_major,comment
+2026-11-14,evening,99ab40e7e062011e0f76aa40b199d760,2026-11-14T23:00:00Z,Providence Friars,Colorado Buffaloes,moneyline_h1,h1,,away,,300.0,300.0,hardrockbet,0.284,0.020099999999999996,high_major,comment
+2026-11-15,morning,d6c14f3934e52f439aa1020e487e61e9,2026-11-15T19:00:00Z,Holy Cross Crusaders,Albany Great Danes,moneyline,game,,home,,145.0,135.0,espnbet,0.51,0.0641,low_major,comment
+2026-11-15,evening,12dd3befa793d2e2ca193838dfac645e,2026-11-15T21:30:00Z,Southern Indiana Screaming Eagles,Western Michigan Broncos,moneyline,game,,home,,260.0,260.0,hardrockbet,0.299,0.0203,mid_major,comment
+2026-11-16,morning,a77c2fc5d2de369bc3134d3721347a6c,2026-11-17T00:00:00Z,Virginia Tech Hokies,Richmond Spiders,moneyline_h1,h1,,away,,370.0,340.0,fanduel,0.212,0.0904,high_major,comment
+2026-11-16,morning,4a23f296a8cd67712e5f1f97df7db777,2026-11-17T00:00:00Z,Kent State Golden Flashes,Eastern Kentucky Colonels,moneyline,game,,away,,487.0,466.0,courtside,0.207,0.059000000000000004,mid_major,comment
+2026-11-16,morning,9c9906480af93da224cd3dc2f4351b9d,2026-11-17T00:30:00Z,Drake Bulldogs,Tarleton State Texans,moneyline,game,,away,,425.0,406.0,betonlineag,0.221,0.0588,mid_major,comment
+2026-11-16,morning,4e13edb27d0b02e773edd81d7d05c6ee,2026-11-17T01:00:00Z,Oklahoma St Cowboys,Central Arkansas Bears,total_points,game,,over,160.5,108.0,104.0,betparx,0.4,0.04,high_major,comment
+2026-11-16,morning,037d59d2f185430c4ee7b3ec96f4e39e,2026-11-17T01:00:00Z,Northwestern Wildcats,Columbia Lions,moneyline,game,,away,,600.0,593.0,draftkings,0.14400000000000002,0.0304,high_major,comment
+2026-11-16,evening,310f03765b18b61b06efddde81161621,2026-11-16T23:00:00Z,Maryland Terrapins,Alcorn St Braves,spread_h1,h1,,away,19.5,105.0,-105.0,bovada,0.8109999999999999,0.0754,high_major,comment
+2026-11-16,evening,7822ea7db8607455907e63e54831b177,2026-11-17T00:00:00Z,Clemson Tigers,The Citadel Bulldogs,spread_h1,h1,,away,12.5,120.0,112.0,bovada,0.662,0.06280000000000001,high_major,comment
+2026-11-16,evening,34ef63b5d05083472f9c48c62ad3b7cf,2026-11-17T01:00:00Z,Missouri St Bears,Abilene Christian Wildcats,spread_h1,h1,,away,3.5,-110.0,-118.0,bovada,0.5379999999999999,0.057300000000000004,mid_major,comment
+2026-11-16,evening,,,Kentucky Wildcats,Grambling St Tigers,total_points_h1,h1,,under,73.5,110.0,104.0,bovada,0.48,0.05,high_major,comment
+2026-11-16,evening,4e13edb27d0b02e773edd81d7d05c6ee,2026-11-17T01:00:00Z,Oklahoma St Cowboys,Central Arkansas Bears,spread_h1,h1,,away,10.5,105.0,104.0,bovada,0.606,0.025,high_major,comment
+2026-11-16,evening,3ea03086daebd51dbd93ac315be259c8,2026-11-17T00:00:00Z,Tulsa Golden Hurricane,Western Kentucky Hilltoppers,moneyline,game,,away,,230.0,230.0,courtside,0.3,0.0204,mid_major,comment
+2026-11-16,evening,,,Georgia Bulldogs,Jacksonville Dolphins,team_total_h1,h1,,home_over,42.5,100.0,100.0,hardrockbet,0.32299999999999995,0.0202,high_major,comment
+2026-11-17,morning,,,Massachusetts Minutemen,Bryant Bulldogs,moneyline,game,,away,,550.0,508.0,fanduel,0.09300000000000001,0.0913,mid_major,comment
+2026-11-17,morning,,,Duke Blue Devils,Illinois Fighting Illini,moneyline,game,,away,,316.0,300.0,betonlineag,0.27899999999999997,0.06269999999999999,high_major,comment
+2026-11-17,morning,,,Dayton Flyers,Central Michigan Chippewas,moneyline,game,,away,,520.0,501.0,fanduel,0.20800000000000002,0.053899999999999997,mid_major,comment
+2026-11-17,morning,,,West Florida Argonauts,Green Bay Phoenix,moneyline,game,,home,,210.0,201.0,ballybet,0.384,0.0512,low_major,comment
+2026-11-17,morning,7baca68d6b97b29d21efc5ccd35ee124,2026-11-17T17:00:00Z,Murray St Racers,Hofstra Pride,moneyline,game,,away,,545.0,527.0,courtside,0.222,0.0507,mid_major,comment
+2026-11-17,morning,,,UMass Lowell River Hawks,Saint Peter's Peacocks,moneyline,game,,away,,250.0,242.0,bovada,0.203,0.046799999999999994,low_major,comment
+2026-11-17,morning,,,Providence Friars,Sacred Heart Pioneers,team_total_h1,h1,,away_over,28.5,100.0,-104.0,fanduel,0.5870000000000001,0.0406,high_major,comment
+2026-11-17,morning,,,Manhattan Jaspers,Fordham Rams,moneyline,game,,home,,550.0,539.0,fanduel,0.15,0.0388,mid_major,comment
+2026-11-17,morning,21b5086e60cae515922e9a8de32ffd84,2026-11-18T01:00:00Z,Evansville Purple Aces,Le Moyne Dolphins,moneyline,game,,away,,250.0,244.0,bovada,0.306,0.0384,mid_major,comment
+2026-11-17,morning,,,South Florida Bulls,Tennessee St Tigers,moneyline,game,,away,,560.0,552.0,circasports,0.13699999999999998,0.0333,mid_major,comment
+2026-11-17,morning,44a2054c3d6bc226d39ae83a89cd4356,2026-11-18T01:30:00Z,Wyoming Cowboys,Sam Houston St Bearkats,moneyline,game,,away,,599.0,592.0,courtside,0.18600000000000003,0.0313,mid_major,comment
+2026-11-17,morning,,,Army Knights,Marist Red Foxes,team_total_h1,h1,,home_over,30.5,-106.0,-107.0,fanduel,0.618,0.0292,low_major,comment
+2026-11-17,morning,436fbef33dd351b0ea0e838c6bfe2b96,2026-11-18T01:00:00Z,Omaha Mavericks,Lamar Cardinals,total_points,game,,under,156.5,-103.0,-103.0,lowvig,0.738,0.0222,low_major,comment
+2026-11-17,evening,,,Army Knights,Marist Red Foxes,spread_h1,h1,,home,-1.5,130.0,115.0,bovada,0.433,0.09300000000000001,low_major,comment
+2026-11-17,evening,,,South Florida Bulls,Tennessee St Tigers,moneyline_h1,h1,,away,,340.0,315.0,fanduel,0.214,0.0827,mid_major,comment
+2026-11-17,evening,,,Manhattan Jaspers,Fordham Rams,moneyline_h1,h1,,home,,325.0,304.0,hardrockbet,0.225,0.07429999999999999,mid_major,comment
+2026-11-17,evening,436fbef33dd351b0ea0e838c6bfe2b96,2026-11-18T01:00:00Z,Omaha Mavericks,Lamar Cardinals,moneyline,game,,home,,110.0,104.0,hardrockbet,0.564,0.054900000000000004,low_major,comment
+2026-11-17,evening,919bc2e81b79f536852f7e3aa2ec7754,2026-11-18T01:00:00Z,DePaul Blue Demons,Maryland-Eastern Shore Hawks,spread_h1,h1,,away,16.5,115.0,109.0,bovada,0.65,0.053200000000000004,high_major,comment
+2026-11-17,evening,0cd770ea3dc3281082424e2a0e950f0b,2026-11-18T03:00:00Z,Cal Baptist Lancers,Seattle Redhawks,total_points_h1,h1,,under,60.5,120.0,115.0,bovada,0.365,0.045899999999999996,mid_major,comment
+2026-11-17,evening,e6fc3d1d4dfbd6b227ae2a4d1cbf6351,2026-11-18T03:00:00Z,Stanford Cardinal,UC Irvine Anteaters,moneyline,game,,away,,270.0,264.0,circasports,0.23199999999999998,0.0392,high_major,comment
+2026-11-17,evening,,,Marshall Thundering Herd,East Tennessee St Buccaneers,team_total_h1,h1,,away_over,34.5,111.0,109.0,draftkings,0.46799999999999997,0.0336,mid_major,comment
+2026-11-17,evening,dd2fa1ecb90b4902086fa19865091651,2026-11-18T02:00:00Z,Tennessee Volunteers,Michigan St Spartans,total_points_h1,h1,,over,72.5,146.0,144.0,fanduel,0.40700000000000003,0.0316,high_major,comment
+2026-11-17,evening,27053ab77b65c239990d626417fbeaea,2026-11-18T01:00:00Z,SMU Mustangs,Oral Roberts Golden Eagles,spread_h1,h1,,away,12.5,110.0,109.0,bovada,0.622,0.0287,high_major,comment
+2026-11-17,evening,41c79876d3c7f7f356c4b1a19332478f,2026-11-18T02:00:00Z,UC Davis Aggies,Alabama St Hornets,moneyline,game,,away,,550.0,548.0,fanduel,0.16,0.0241,low_major,comment
+2026-11-17,evening,2ddc8451d53d2f18e2fd39e81a0f93c4,2026-11-18T02:30:00Z,Kansas Jayhawks,UNLV Rebels,total_points_h1,h1,,under,72.5,150.0,150.0,fanduel,0.48700000000000004,0.0212,high_major,comment
+2026-11-18,morning,2c56e621c3599727ec29c8ade581dd33,2026-11-19T00:00:00Z,LIU Sharks,UNC Wilmington Seahawks,total_points_h1,h1,,over,72.5,144.0,140.0,fanduel,0.39399999999999996,0.0393,mid_major,comment
+2026-11-18,morning,,,UNC Asheville Bulldogs,Tennessee Tech Golden Eagles,team_total_h1,h1,,home_over,37.5,-104.0,-107.0,fanduel,0.544,0.0369,low_major,comment
+2026-11-18,morning,,,Notre Dame Fighting Irish,Rutgers Scarlet Knights,moneyline_h1,h1,,home,,-142.0,-147.0,fanduel,0.513,0.0366,high_major,comment
+2026-11-18,morning,,,Holy Cross Crusaders,Brown Bears,moneyline,game,,away,,-220.0,-231.0,courtside,0.7020000000000001,0.0364,mid_major,comment
+2026-11-18,morning,d5b20b33c88b112012af9cf6db1b73b8,2026-11-19T00:00:00Z,Yale Bulldogs,Vermont Catamounts,moneyline,game,,home,,-159.0,-163.0,courtside,0.69,0.030699999999999998,mid_major,comment
+2026-11-18,morning,,,Marquette Golden Eagles,Northern Illinois Huskies,spread_h1,h1,,away,16.5,-110.0,-111.0,betus,0.737,0.028399999999999998,high_major,comment
+2026-11-18,morning,4285774fee0e485544f82fe4fc9261be,2026-11-19T01:00:00Z,Gardner-Webb Bulldogs,UNC Greensboro Spartans,moneyline,game,,home,,140.0,140.0,hardrockbet,0.379,0.022099999999999998,low_major,comment
+2026-11-18,evening,49eba9f976604d9b6da10df45921b2cc,2026-11-19T02:00:00Z,Missouri Tigers,Alcorn St Braves,spread_h1,h1,,away,22.5,145.0,103.0,bovada,0.809,0.23309999999999997,high_major,comment
+2026-11-18,evening,4748317ad843609d564fb880e52b2e23,2026-11-19T03:00:00Z,San Diego St Aztecs,Texas Southern Tigers,spread_h1,h1,,away,9.5,220.0,170.0,bovada,0.424,0.21289999999999998,mid_major,comment
+2026-11-18,evening,,,Charleston Southern Buccaneers,Wofford Terriers,spread_h1,h1,,home,-0.5,150.0,125.0,bovada,0.581,0.1361,low_major,comment
+2026-11-18,evening,,,La Salle Explorers,Coppin St Eagles,total_points_h1,h1,,under,66.5,120.0,104.0,bovada,0.499,0.1,mid_major,comment
+2026-11-18,evening,,,Florida Atlantic Owls,Florida Gulf Coast Eagles,total_points_h1,h1,,over,75.5,146.0,132.0,fanduel,0.424,0.0828,mid_major,comment
+2026-11-18,evening,,,Duquesne Dukes,Howard Bison,moneyline_h1,h1,,away,,180.0,170.0,bovada,0.402,0.0605,mid_major,comment
+2026-11-18,evening,3abdedf3ec3fe962c23a7e586bd447dc,2026-11-19T03:00:00Z,Washington St Cougars,Hawai'i Rainbow Warriors,total_points_h1,h1,,under,64.5,110.0,104.0,bovada,0.314,0.05,mid_major,comment
+2026-11-18,evening,50f9c229b6b49a7512f7511e6d825cd4,2026-11-19T03:30:00Z,UCLA Bruins,CSU Fullerton Titans,team_total_h1,h1,,away_under,30.5,100.0,-104.0,fanduel,0.494,0.0449,high_major,comment
+2026-11-18,evening,775c3580dd1c3bee5cf5d488c6b7d09f,2026-11-19T01:00:00Z,Syracuse Orange,Cornell Big Red,spread_h1,h1,,home,-11.5,125.0,120.0,bovada,0.377,0.0441,high_major,comment
+2026-11-18,evening,48693d82836455d24bbd3c8ae49b7138,2026-11-19T01:00:00Z,Stonehill Skyhawks,New Hampshire Wildcats,total_points_h1,h1,,under,60.5,125.0,120.0,bovada,0.42200000000000004,0.044000000000000004,low_major,comment
+2026-11-18,evening,,,Nebraska Cornhuskers,South Dakota Coyotes,total_points_h1,h1,,under,74.5,-113.0,-116.0,fanduel,0.428,0.0358,high_major,comment
+2026-11-18,evening,,,Colorado St Rams,North Dakota St Bison,spread_h1,h1,,home,-7.5,115.0,112.0,bovada,0.483,0.0344,mid_major,comment
+2026-11-18,evening,,,Winthrop Eagles,Chattanooga Mocs,moneyline_h1,h1,,away,,-135.0,-137.0,bovada,0.496,0.027200000000000002,low_major,comment
+2026-11-18,evening,,,UNC Asheville Bulldogs,Tennessee Tech Golden Eagles,moneyline_h1,h1,,away,,-130.0,-132.0,bovada,0.474,0.0271,low_major,comment
+2026-11-18,evening,cb68e9dce6ba865749c547670c2935c2,2026-11-19T00:00:00Z,St. John's Red Storm,Siena Saints,total_points_h1,h1,,under,82.5,-113.0,-114.0,fanduel,0.7559999999999999,0.026699999999999998,high_major,comment
+2026-11-18,evening,c9d6c86cc70b0ff1c34ab46d27686e4c,2026-11-19T01:00:00Z,UTSA Roadrunners,Florida A&M Rattlers,spread_h1,h1,,home,-10.5,110.0,109.0,bovada,0.35700000000000004,0.0265,mid_major,comment
+2026-11-18,evening,b735ae64835ee718f69f88fed8a8f79d,2026-11-19T00:00:00Z,Towson Tigers,James Madison Dukes,total_points_h1,h1,,under,64.0,110.0,109.0,bovada,0.401,0.0256,mid_major,comment
+2026-11-18,evening,,,Georgetown Hoyas,Navy Midshipmen,team_total_h1,h1,,home_under,39.5,-105.0,-106.0,bovada,0.584,0.0252,high_major,comment
+2026-11-18,evening,2d82f6779bd0ff45a95caa0215ae9be7,2026-11-19T02:00:00Z,Colorado Buffaloes,Portland Pilots,spread_h1,h1,,away,7.5,100.0,100.0,hardrockbet,0.561,0.022400000000000003,high_major,comment
+2026-11-18,evening,2c56e621c3599727ec29c8ade581dd33,2026-11-19T00:00:00Z,LIU Sharks,UNC Wilmington Seahawks,total_points_h1,h1,,under,72.5,-155.0,-155.0,betrivers,0.606,0.0202,mid_major,comment
+2026-11-19,morning,42a35684e7ff6f13af5834f9a5004df6,2026-11-20T03:30:00Z,Santa Clara Broncos,VCU Rams,moneyline,game,,away,,125.0,120.0,bovada,0.41100000000000003,0.0446,mid_major,comment
+2026-11-19,evening,94d6da045bf64876ebfa87d69df70fb9,2026-11-20T00:00:00Z,Jacksonville Dolphins,Arkansas-Little Rock Trojans,alternate_spread,game,,away,-6.5,340.0,311.0,draftkings,0.19347089992116856,0.09387648592575637,low_major,state
+2026-11-19,evening,9b9dda4d07eb93b5e16e9fc62ff01ca3,2026-11-20T04:00:00Z,USC Trojans,Tarleton State Texans,alternate_spread,game,,home,-33.5,230.0,209.0,hardrockbet,0.3076156309276023,0.09134806142849028,high_major,state
+2026-11-19,evening,12dc8b35d66981d6ff559ed3761c6fed,2026-11-20T00:00:00Z,Quinnipiac Bobcats,Maine Black Bears,spread_h1,h1,,away,5.5,-105.0,-114.0,bovada,0.6235720859190818,0.06132606503257709,low_major,state
+2026-11-19,evening,bd1799e8815981f90f74e705e6660de8,2026-11-20T00:00:00Z,High Point Panthers,Montana St Bobcats,alternate_spread,game,,away,9.5,165.0,156.0,betmgm,0.6906845786238136,0.05715391378746881,low_major,state
+2026-11-19,evening,9fd39939b846d3cbd50dc78087ec35f1,2026-11-20T00:30:00Z,Drake Bulldogs,Charleston Cougars,alternate_spread,game,,away,5.5,-175.0,-188.0,betmgm,0.754595652687254,0.046655347646402445,mid_major,state
+2026-11-19,evening,58f585d704a7d4680f9dd7e877eddaaf,2026-11-19T23:00:00Z,Murray St Racers,NC State Wolfpack,alternate_spread,game,,home,-5.5,351.0,340.0,draftkings,0.16044448951066662,0.045569920626511884,high_major,state
+2026-11-19,evening,8bc6641f480ada7dae2744e3336dbcfa,2026-11-20T00:30:00Z,Louisiana Tech Bulldogs,Tulane Green Wave,alternate_spread,game,,away,6.5,-190.0,-196.0,betmgm,0.7528866660481771,0.0313085979284673,mid_major,state
+2026-11-19,evening,a21492045a6fa8b2a6e9d8b136534ac4,2026-11-20T01:00:00Z,TCU Horned Frogs,Texas A&M Aggies,alternate_spread,game,,home,-1.5,116.0,114.0,courtside,0.5776323607437532,0.030692744926300586,high_major,state
+2026-11-19,evening,1a136a0253a5b66b6057918946a432df,2026-11-20T01:00:00Z,Louisville Cardinals,Stetson Hatters,alternate_spread,game,,away,42.5,-200.0,-204.0,hardrockbet,0.9043578753104163,0.028348603943843198,high_major,state
+2026-11-19,evening,7c168df70997b32224c52c8ab031d704,2026-11-20T00:00:00Z,St. Bonaventure Bonnies,Buffalo Bulls,alternate_spread,game,,home,-5.5,-280.0,-284.0,williamhill_us,0.6716811576348987,0.023835769057324763,mid_major,state
+2026-11-19,evening,06c795c1626c246ad89e38eb1a35dbfb,2026-11-20T02:00:00Z,Pepperdine Waves,UC Santa Barbara Gauchos,team_total_h1,h1,,away_over,35.5,-102.0,-102.0,fanduel,0.5682131427529632,0.023496205340407306,mid_major,state
+2026-11-19,evening,028a30dac6c59487da6c8a7d657875e0,2026-11-20T02:00:00Z,Washington Huskies,Utah Tech Trailblazers,alternate_spread,game,,away,12.5,210.0,210.0,betrivers,0.3351947222144357,0.02140024175244637,high_major,state
+2026-11-19,evening,32098b4b5ed4967c39128b31e6d16b6c,2026-11-20T02:00:00Z,New Mexico St Aggies,UTEP Miners,alternate_spread,game,,away,5.5,-190.0,-190.0,betmgm,0.6216429696856616,0.020878093783679663,mid_major,state
+2026-11-19,evening,6d51497e3276256e5dd07220b624c37f,2026-11-20T04:00:00Z,Kansas Jayhawks,Houston Cougars,alternate_spread,game,,home,6.5,-155.0,-155.0,betmgm,0.5158847867525886,0.02024527277516608,high_major,state
