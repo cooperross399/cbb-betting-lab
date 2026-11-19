@@ -1866,6 +1866,42 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    # ---------------------------------------------------------------------
+    # decision 112 (Cooper, 2026-11-18, "do anything and everything necessary to improve the model"): both projection weights set from the 2026-11-19 layer audit's best scale -- card_factors.KENPOM_BLEND_WEIGHT 0.85 -> 0.65 (best scale 0.77 at 0.85) and card_factors.BLEND_WEIGHT 0.5 -> 0.9 on the second opinion (best scale 1.96 at 0.5, z +5.82 over 773 games). One per tier for the two together. Per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="projection_weights_2026_11_19",
+        name=(
+            "high-major: the decision-112 weights together (card_factors.KENPOM_BLEND_WEIGHT 0.85 -> 0.65 on the candidate layer kenpom, and card_factors.BLEND_WEIGHT 0.5 -> 0.9 on the second opinion) raise the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-19",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="projection_weights_2026_11_19",
+        name=(
+            "mid-major: the decision-112 weights together (card_factors.KENPOM_BLEND_WEIGHT 0.85 -> 0.65 on the candidate layer kenpom, and card_factors.BLEND_WEIGHT 0.5 -> 0.9 on the second opinion) raise the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-19",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="projection_weights_2026_11_19",
+        name=(
+            "low-major: the decision-112 weights together (card_factors.KENPOM_BLEND_WEIGHT 0.85 -> 0.65 on the candidate layer kenpom, and card_factors.BLEND_WEIGHT 0.5 -> 0.9 on the second opinion) raise the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-19",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 
