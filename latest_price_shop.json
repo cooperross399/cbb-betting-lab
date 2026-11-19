@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-19T15:46+00:00",
-  "captures": 237,
+  "as_of": "2026-11-19T17:23+00:00",
+  "captures": 238,
   "cells": [
     {
       "beat_close": 0.7368421052631579,
@@ -19,8 +19,8 @@
       "beat_close": 0.7222222222222222,
       "games": 35,
       "graded": 36,
-      "high": 0.29748766931896986,
-      "low": -0.15610148511495,
+      "high": 0.2977087282387416,
+      "low": -0.15632254403472182,
       "mean": 0.07069309210200991,
       "shops": 48,
       "tier": "mid_major",
@@ -49,10 +49,26 @@
       "ungraded": 15
     }
   ],
-  "correction_factor": 1.8761343418011687,
-  "current": [],
-  "latest_capture": "2026-11-19T15:45:21+00:00",
-  "looks": 212,
+  "correction_factor": 1.8779630285186144,
+  "current": [
+    {
+      "american": 116,
+      "away_team": "Texas A&M Aggies",
+      "book": "courtside",
+      "books": 5,
+      "commence": "2026-11-20T01:00:00+00:00",
+      "edge": 0.0298,
+      "event_id": "a21492045a6fa8b2a6e9d8b136534ac4",
+      "fair_american": 110,
+      "game": "Texas A&M Aggies at TCU Horned Frogs",
+      "home_team": "TCU Horned Frogs",
+      "line": -1.5,
+      "market": "spread",
+      "selection": "home"
+    }
+  ],
+  "latest_capture": "2026-11-19T17:21:34+00:00",
+  "looks": 215,
   "min_books": 3,
   "shop_edge": 0.02
 }
