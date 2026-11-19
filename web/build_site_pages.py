@@ -28,12 +28,14 @@ def main(argv=None) -> int:
     ap.add_argument("--data", default="dist/data")
     ap.add_argument("--date", default="", help="Today (default: today in New York).")
     ap.add_argument("--no-fetch", action="store_true", help="Read only what is on disk; ask no scoreboard.")
+    ap.add_argument("--card-record", default="data/outputs/cbb_card_record.json",
+                    help="Every card pick, graded by Gameday Refresh (reports/card_record.py); absent, the board's picks are the record.")
     args = ap.parse_args(argv)
     today = date.fromisoformat(args.date) if args.date else datetime.now(ET).date()
     spec = importlib.util.spec_from_file_location("site_pages", Path(__file__).with_name("site_pages.py"))
     site_pages = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(site_pages)
-    summary = site_pages.write_record_pages(Path(args.data), today, fetch=not args.no_fetch)
+    summary = site_pages.write_record_pages(Path(args.data), today, fetch=not args.no_fetch, card_record=args.card_record)
     print(
         f"record pages through {today}: {summary['games']} graded games over {summary['nights']} nights, "
         f"{summary['bets']} bets and {summary['opinions']} opinions. No odds were fetched, no credit was spent, "

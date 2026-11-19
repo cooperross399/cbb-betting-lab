@@ -1274,6 +1274,19 @@ and `KENPOM_BLEND_WEIGHT` is 0.65, down from 0.85, each the audit's measured
 best scale rounded toward the old weight. Registered as
 `projection_weights_2026_11_19`, one per tier.
 
+### 2026-11-19: the Record page counts every card pick (decision 113)
+
+Cooper: *"do all 3"*. The site's record graded one full-game pick per game off
+the board. `reports/card_record.py`, run soft in Gameday Refresh by
+`scripts/run_card_record.py`, now grades every selection either card made, in
+every market and both slots, once per game, side and number at its first
+published price, with the forward ledger's own settlement and each full-game
+pick's closing-line value. The picks ride on card-feed as
+`card_selections.csv` (the first run reads every earlier card back from the
+history of `latest_card_comment.md`), the graded record as
+`latest_card_record.json`, and the Record page reads it with a CLV column.
+Nothing registered, nothing the card reads is changed.
+
 ## Contract strings — never change these
 
 Cooper's scheduled routines hard-code these. Renaming any of them silently

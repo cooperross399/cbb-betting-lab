@@ -143,7 +143,7 @@
           <div style="border-top:2px solid var(--ink);padding-top:10px;">
             <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><span class="cond" style="font-weight:700;font-size:18px;text-transform:uppercase;">{{ c.title }}</span><span class="mono" style="font-size:12px;color:var(--mute);">{{ c.stamp }}</span></div>
             <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 12px;margin-top:8px;">
-              <div><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">Record</div><div class="cond" style="font-weight:700;font-size:34px;line-height:1;margin-top:6px;">{{ c.record }}</div></div>
+              <div><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ c.recordLabel }}</div><div class="cond" style="font-weight:700;font-size:34px;line-height:1;margin-top:6px;">{{ c.record }}</div></div>
               <div><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ c.unitsLabel }}</div><div class="cond" style="font-weight:700;font-size:34px;line-height:1;margin-top:6px;color:{{ c.unitsColor }};">{{ c.units }}</div></div>
               <div><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);">{{ c.rateLabel }}</div><div class="cond" style="font-weight:700;font-size:34px;line-height:1;margin-top:6px;">{{ c.rate }}</div></div>
             </div>
@@ -257,10 +257,10 @@
         </div>
         <input type="search" value="{{ log.query }}" onInput="{{ log.onSearch }}" placeholder="Search a team, market or book" aria-label="Search picks" style="margin-top:12px;width:100%;max-width:420px;min-height:44px;padding:0 12px;background:var(--paper);color:var(--ink);border:1px solid var(--ink);font-family:inherit;font-size:14px;">
         <div style="margin-top:12px;overflow-x:auto;scrollbar-width:thin;margin-left:calc(-1 * clamp(16px,3vw,24px));margin-right:calc(-1 * clamp(16px,3vw,24px));padding:0 clamp(16px,3vw,24px);">
-          <div role="table" style="min-width:940px;border-top:2px solid var(--ink);">
-            <div role="row" class="mono" style="display:grid;grid-template-columns:96px 70px minmax(150px,1.4fr) minmax(170px,1.6fr) 70px 70px 110px 50px minmax(130px,1.2fr) 60px 70px;gap:0 10px;padding:6px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);"><span>Date</span><span>Kind</span><span>Game</span><span>Pick</span><span style="text-align:right;">Price</span><span style="text-align:right;" title="The worst price at which we would still take the pick">Down to</span><span>Book</span><span>Tier</span><span>Final</span><span>Result</span><span style="text-align:right;">Units</span></div>
+          <div role="table" style="min-width:1010px;border-top:2px solid var(--ink);">
+            <div role="row" class="mono" style="display:grid;grid-template-columns:96px 70px minmax(150px,1.4fr) minmax(170px,1.6fr) 70px 70px 110px 50px minmax(130px,1.2fr) 60px 70px 64px;gap:0 10px;padding:6px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);"><span>Date</span><span>Kind</span><span>Game</span><span>Pick</span><span style="text-align:right;">Price</span><span style="text-align:right;" title="The worst price at which we would still take the pick">Down to</span><span>Book</span><span>Tier</span><span>Final</span><span>Result</span><span style="text-align:right;">Units</span><span style="text-align:right;" title="Closing-line value: the closing chance the pick wins minus the chance its price implied">CLV</span></div>
             <sc-for list="{{ log.rows }}" as="r" hint-placeholder-count="10">
-              <div role="row" style="display:grid;grid-template-columns:96px 70px minmax(150px,1.4fr) minmax(170px,1.6fr) 70px 70px 110px 50px minmax(130px,1.2fr) 60px 70px;gap:0 10px;padding:8px 0;border-top:1px solid var(--rule-2);align-items:center;font-size:13px;">
+              <div role="row" style="display:grid;grid-template-columns:96px 70px minmax(150px,1.4fr) minmax(170px,1.6fr) 70px 70px 110px 50px minmax(130px,1.2fr) 60px 70px 64px;gap:0 10px;padding:8px 0;border-top:1px solid var(--rule-2);align-items:center;font-size:13px;">
                 <a href="{{ r.href }}" class="mono" style="font-size:12px;text-decoration:underline;text-underline-offset:3px;">{{ r.date }}</a>
                 <span class="cond" style="font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:{{ r.kindColor }};">{{ r.kind }}</span>
                 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.game }}</span>
@@ -272,6 +272,7 @@
                 <span class="mono" style="font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.final }}</span>
                 <span class="cond" style="display:inline-block;padding:2px 7px;font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:{{ r.resBg }};color:{{ r.resFg }};border:1px solid {{ r.resBorder }};justify-self:start;">{{ r.result }}</span>
                 <span class="mono" style="text-align:right;font-weight:600;color:{{ r.unitsColor }};">{{ r.units }}</span>
+                <span class="mono" style="text-align:right;font-size:12px;color:{{ r.clvColor }};">{{ r.clv }}</span>
               </div>
             </sc-for>
           </div>
@@ -368,10 +369,13 @@ class Component extends DCLogic {
     const bets = rows.filter((r) => r.kind === "bet");
     const span = d.firstDate && d.lastDate ? `${d.firstDate} to ${d.lastDate} · ${d.nights || 0} nights` : "no night graded yet";
     if (!rows.length) return { ...base, ready: false, empty: true, kicker: "College basketball · our record", headline: "No pick has been graded yet.", emptyLink: true, emptyTitle: "No pick has been graded yet", emptyNote: "This page starts once the first night of picks has final scores." };
+    const fromCard = d.source === "card", clvS = d.clv || {};
+    const pct = (v) => (typeof v === "number" ? `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(1)}%` : "—");
     const L = d.leans || {}, ov = d.overall || {}, lean = L.overall || (((d.opinions || {}).byKind || []).find((k) => k.key === "lean")) || {};
     const cards = [
-      { title: "Best bets", stamp: `${ov.bets || 0} bets`, record: rec(ov), unitsLabel: "Won / lost", units: u(ov.units), unitsColor: uc(ov.units), rateLabel: "Per unit bet", rate: ret(ov), note: "The picks we bet: 0.25u, or to win 0.25u on minus odds; +200 to +500 0.15u, +501 to +1500 0.1u, longer 0.05u." },
-      { title: "Leans", stamp: `${lean.bets || 0} graded`, record: rec(lean), unitsLabel: "Won / lost", units: u(lean.units), unitsColor: uc(lean.units), rateLabel: "Per unit", rate: ret(lean), note: "Picks that were close but not a best bet, tracked at the same stakes as the best bets. Kept apart from them." },
+      { title: "Best bets", stamp: `${ov.bets || 0} bets`, recordLabel: "Record", record: rec(ov), unitsLabel: "Won / lost", units: u(ov.units), unitsColor: uc(ov.units), rateLabel: "Per unit bet", rate: ret(ov), note: fromCard ? "Every pick either daily card made, in every market: 0.25u, or to win 0.25u on minus odds; +200 to +500 0.15u, +501 to +1500 0.1u, longer 0.05u." : "The picks we bet: 0.25u, or to win 0.25u on minus odds; +200 to +500 0.15u, +501 to +1500 0.1u, longer 0.05u." },
+      ...(clvS.picks ? [{ title: "Closing line", stamp: `${clvS.picks} picks`, recordLabel: "Beat the close", record: `${Math.round(clvS.beatClosePct)}%`, unitsLabel: "Average", units: pct(clvS.meanPct), unitsColor: uc(clvS.meanPct), rateLabel: "Picks read", rate: String(clvS.picks), note: "How often our price was better than where the market closed, and by how much win chance on average. Beating the close is the early sign of a real edge; halves have no captured close." }] : []),
+      { title: "Leans", stamp: `${lean.bets || 0} graded`, recordLabel: "Record", record: rec(lean), unitsLabel: "Won / lost", units: u(lean.units), unitsColor: uc(lean.units), rateLabel: "Per unit", rate: ret(lean), note: "Picks that were close but not a best bet, tracked at the same stakes as the best bets. Kept apart from them." },
     ];
     const TIERS = ["A", "B", "C"];
     const byTier = Array.isArray(d.byTier) ? d.byTier : [];
@@ -403,7 +407,9 @@ class Component extends DCLogic {
     };
     const monthName = (k) => { const [y, m] = String(k).split("-"); const d2 = new Date(Number(y), Number(m) - 1, 1); return isNaN(d2) ? k : d2.toLocaleString(undefined, { month: "long", year: "numeric" }); };
     const tables = [
+      ...(Array.isArray(d.byCategory) && d.byCategory.length ? [table("category", "Straight up, ATS and totals", d.byCategory, { noun: "Kind of bet", rowsNoun: "kinds" })] : []),
       table("market", "By type of bet", d.byMarket, { noun: "Type of bet", rowsNoun: "types" }),
+      ...(Array.isArray(d.bySlot) && d.bySlot.length ? [table("slot", "By card", d.bySlot, { noun: "Card", rowsNoun: "cards", names: (k) => ({ morning: "Morning card", evening: "Evening card" }[k] || k) })] : []),
       table("team", "By team", d.byTeam, { noun: "Team", rowsNoun: "teams", logos: true, search: true, names: (k) => (T[k] || {}).name || k }),
       table("month", "By month", d.byMonth, { noun: "Month", rowsNoun: "months", names: monthName, sortMonths: true }),
       table("price", "By price", d.byPrice, { noun: "Price", rowsNoun: "price ranges" }),
@@ -422,11 +428,12 @@ class Component extends DCLogic {
     const page = Math.min(this.state.page, pages - 1);
     const RES = { win: ["Win", "var(--win)", "var(--on-win)", "var(--win)"], loss: ["Loss", "transparent", "var(--alert)", "var(--alert)"], push: ["Push", "transparent", "var(--mute)", "var(--rule)"] };
     const logRows = lrows.slice(page * Component.PAGE, (page + 1) * Component.PAGE).map((r) => { const chip = RES[r.result] || ["—", "transparent", "var(--mute)", "var(--rule)"]; return {
-      date: r.date, href: `Game.dc.html?id=${encodeURIComponent(r.id)}&date=${encodeURIComponent(r.date)}`, kind: r.kind === "bet" ? "Bet" : r.kind === "lean" ? "Lean" : "Pass", kindColor: r.kind === "bet" ? "var(--ink)" : "var(--mute)",
-      game: r.teams ? `${r.teams[0]} @ ${r.teams[1]}` : "", pick: `${r.market}: ${r.label || ""}`, price: odds(r.price), down: odds(r.betDownTo), book: r.book || "", tier: r.tier || "", final: r.final || "", result: chip[0], resBg: chip[1], resFg: chip[2], resBorder: chip[3], units: typeof r.units === "number" ? u(r.units) : "—", unitsColor: typeof r.units === "number" ? uc(r.units) : "var(--mute)" }; });
+      date: r.date, href: r.id ? `Game.dc.html?id=${encodeURIComponent(r.id)}&date=${encodeURIComponent(r.date)}` : "Results.dc.html", kind: r.kind === "bet" ? "Bet" : r.kind === "lean" ? "Lean" : "Pass", kindColor: r.kind === "bet" ? "var(--ink)" : "var(--mute)",
+      game: r.teams ? `${r.teams[0]} @ ${r.teams[1]}` : "", pick: `${r.market}: ${r.label || ""}`, price: odds(r.price), down: odds(r.betDownTo), book: r.book || "", tier: r.tier || "", final: r.final || "", result: chip[0], resBg: chip[1], resFg: chip[2], resBorder: chip[3], units: typeof r.units === "number" ? u(r.units) : "—", unitsColor: typeof r.units === "number" ? uc(r.units) : "var(--mute)", clv: pct(r.clv), clvColor: typeof r.clv === "number" ? uc(r.clv) : "var(--mute)" }; });
     const log = { stamp: `${rows.length} picks · newest first`, query: this.state.logQuery, onSearch: (e) => this.setState({ logQuery: e.target.value, page: 0 }), noMatch: lrows.length === 0, noMatchText: `No pick matches “${this.state.logQuery}”.`, rows: logRows, pageText: lrows.length ? `${page * Component.PAGE + 1}–${Math.min(lrows.length, (page + 1) * Component.PAGE)} of ${lrows.length}` : "", onPrev: () => this.setState((s) => ({ page: Math.max(0, s.page - 1) })), onNext: () => this.setState((s) => ({ page: Math.min(pages - 1, s.page + 1) })), prevColor: page > 0 ? "var(--ink)" : "var(--rule)", nextColor: page < pages - 1 ? "var(--ink)" : "var(--rule)" };
     const notes = [
-      "Every best bet is counted the same way, at the price and book the board showed, however much the card staked it: 0.25u, or enough to win 0.25u on minus odds, up to +199; 0.15u from +200 to +500; 0.1u from +501 to +1500; 0.05u longer than +1500.",
+      "Best bets are every pick either daily card made, in every market (moneyline, spreads, totals, team totals and first halves), once per game, side and number, at the first price it was published. Each is counted the same way, however much the card staked it: 0.25u, or enough to win 0.25u on minus odds, up to +199; 0.15u from +200 to +500; 0.1u from +501 to +1500; 0.05u longer than +1500.",
+      "CLV, closing-line value, is the closing chance the pick wins minus the chance its price implied. Positive means our price beat the close.",
       "Leans are picks that were close but not a best bet. They are tracked at the same stakes, apart from the best bets. A pass had no value and is graded only.",
       "A tie on a spread or total is a push and refunds the bet. Overtime counts.",
       "A few bets is not much to go on. A team at +3u after a handful of bets can be back to zero after one bad night.",

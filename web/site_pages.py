@@ -867,6 +867,122 @@ def _closing_fields(pick: dict, g: dict, lines_for, day: str) -> dict:
             "clvPoints": None if closing is None else closing["points"]}
 
 
+# ---------- the card's own record (Cooper, 2026-11-19: "do all 3") ----------
+
+#: The four ways a bet is read (straight up, ATS, totals, team totals), by
+#: the market's leading word, as `reports/card_record.category` reads them.
+CATEGORY_PREFIXES = (("moneyline", "Straight up"), ("alternate_spread", "ATS"), ("spread", "ATS"),
+                     ("alternate_team_total", "Team totals"), ("team_total", "Team totals"),
+                     ("alternate_total_points", "Totals"), ("total_points", "Totals"))
+MARKET_WORDS = {"moneyline": "Moneyline", "spread": "Spread", "alternate_spread": "Alt spread",
+                "total_points": "Total", "alternate_total_points": "Alt total",
+                "team_total": "Team total", "alternate_team_total": "Alt team total"}
+HALF_WORDS = {"h1": "1st half", "h2": "2nd half"}
+
+
+def category_of(market) -> str:
+    text = str(market or "")
+    for prefix, name in CATEGORY_PREFIXES:
+        if text.startswith(prefix):
+            return name
+    return "Other"
+
+
+def market_words(market, segment=None) -> str:
+    """`spread_h1` -> "1st half spread"; an unknown key is shown as it is."""
+    text = str(market or "")
+    base, _, half = text.rpartition("_") if text.rsplit("_", 1)[-1] in HALF_WORDS else (text, "", "")
+    words = MARKET_WORDS.get(base, text)
+    half = half or (segment if segment in HALF_WORDS else "")
+    return f"{HALF_WORDS[half]} {words[0].lower()}{words[1:]}" if half else words
+
+
+def _key_name(name) -> str:
+    return "".join(ch for ch in str(name or "").lower() if ch.isalnum())
+
+
+def card_pick_label(row: dict) -> str:
+    """The pick in words: the team and its number, or over/under the total."""
+    sel = str(row.get("selection") or "")
+    line = _num(row.get("line"))
+    team = {"home": row.get("home"), "away": row.get("away")}
+    side, _, ou = sel.partition("_")
+    num = "" if line is None else (f"{line:+g}" if not ou and sel in ("home", "away") else f"{line:g}")
+    if sel in ("home", "away"):
+        return f"{team[sel]} {num}".strip() if line is not None else f"{team[sel]} to win"
+    if sel in ("over", "under"):
+        return f"{sel.capitalize()} {num}".strip()
+    if side in ("home", "away") and ou in ("over", "under"):
+        return f"{team[side]} {ou} {num}".strip()
+    return f"{sel} {num}".strip()
+
+
+def _game_index(graded: list[dict]) -> dict:
+    """(date, home name, away name) -> the board's game id and its two
+    abbreviations, by the names the frozen boards carried, so a card pick can
+    link to its game page. Names are compared as letters and digits only."""
+    index: dict = {}
+    for row in graded:
+        g, teams = row["game"], row.get("teams") or {}
+        ha, aa = (g.get("home") or {}).get("abbr"), (g.get("away") or {}).get("abbr")
+        hn, an = (teams.get(ha) or {}).get("name"), (teams.get(aa) or {}).get("name")
+        if not (hn and an):
+            continue
+        hit = {"id": str(g.get("id")), "home": ha, "away": aa, "final": f"{aa} {row['away']}, {ha} {row['home']}"}
+        index[(row["date"], _key_name(hn), _key_name(an))] = hit
+        index[(row["date"], _key_name(an), _key_name(hn))] = hit
+    return index
+
+
+def card_tracker_rows(record: dict | None, graded: list[dict] | None = None) -> list[dict]:
+    """Every card pick the card record graded (win, loss or push), as tracker
+    rows of kind `bet`, at the tracked stake. Pending, void and unsettleable
+    picks are counted by the record and staked nothing here."""
+    if not isinstance(record, dict):
+        return []
+    games = _game_index(graded or [])
+    out = []
+    for r in record.get("rows") or []:
+        if not isinstance(r, dict) or r.get("result") not in ("win", "loss", "push"):
+            continue
+        price = _int(r.get("price"))
+        got = quarter(price, r["result"])
+        units, stake = (None, 0.0) if got is None else got
+        hit = games.get((r.get("date"), _key_name(r.get("home")), _key_name(r.get("away")))) or {}
+        clv = _num(r.get("clv"))
+        out.append({
+            "date": r.get("date"), "id": hit.get("id") or "", "kind": "bet", "group": "card", "slot": r.get("slot"),
+            "market": market_words(r.get("market"), r.get("segment")), "category": r.get("category") or category_of(r.get("market")),
+            "label": card_pick_label(r), "price": price, "betDownTo": _int(r.get("betDownTo")), "book": r.get("book"), "tier": r.get("tier"),
+            "team": None, "teams": [hit.get("away") or r.get("away"), hit.get("home") or r.get("home")], "line": _num(r.get("line")),
+            "result": r["result"], "staked": stake, "units": units, "final": hit.get("final") or "",
+            "closeLine": None, "clvPoints": None, "clv": None if clv is None else round(100.0 * clv, 2),
+        })
+    return out
+
+
+def _clv_summary(rows: list[dict]) -> dict:
+    """Closing-line value over the bets that carry one: the mean, in
+    percentage points of win chance, and how often the price beat the close."""
+    values = [r["clv"] for r in rows if isinstance(r.get("clv"), (int, float))]
+    if not values:
+        return {"picks": 0, "meanPct": None, "beatClosePct": None}
+    return {"picks": len(values), "meanPct": round(sum(values) / len(values), 2),
+            "beatClosePct": round(100.0 * sum(1 for v in values if v > 0) / len(values), 1)}
+
+
+def load_card_record(path) -> dict | None:
+    """`data/outputs/cbb_card_record.json`, written by Gameday Refresh; None
+    when it is absent or unreadable, and the record falls back to the board."""
+    if not path:
+        return None
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) and isinstance(payload.get("rows"), list) else None
+
+
 def _tally(rows: list[dict]) -> dict:
     out = {"w": 0, "l": 0, "p": 0, "bets": len(rows), "staked": 0.0, "units": 0.0}
     for r in rows:
@@ -902,7 +1018,7 @@ def price_band(price) -> str:
     return "+200 and longer"
 
 
-def tracker_page(rows: list[dict], nights: int) -> dict:
+def tracker_page(rows: list[dict], nights: int, card: dict | None = None) -> dict:
     bets = [r for r in rows if r["kind"] == "bet"]
     opinions = [r for r in rows if r["kind"] != "bet"]
     leans = [r for r in rows if r["kind"] == "lean"]
@@ -924,6 +1040,15 @@ def tracker_page(rows: list[dict], nights: int) -> dict:
         "byTier": _grouped(bets, lambda r: [r["tier"] or "no tier"]),
         "byPrice": _grouped(bets, lambda r: [price_band(r["price"])]),
         "byMonth": _grouped(bets, lambda r: [r["date"][:7]]),
+        # Straight up, ATS, totals and team totals (Cooper, 2026-11-18), and
+        # the closing line over every bet that carries one.
+        "byCategory": _grouped(bets, lambda r: [r.get("category") or category_of(r.get("market"))]),
+        "bySlot": _grouped(bets, lambda r: [r.get("slot")] if r.get("slot") else []),
+        "clv": _clv_summary(bets),
+        # Where the bets come from: every pick either card made, graded by the
+        # card record, or the board's one pick per game when there is none.
+        "source": "card" if card else "board",
+        "cardCensus": None if not card else {"picks": card.get("picks"), "outcomes": card.get("outcomes"), "asOf": card.get("as_of")},
         # The leans on their own, every record with its units (Cooper,
         # 2026-11-12: "the unit profit tracked under each record"). `opinions`
         # mixes leans with passes, which stake nothing.
@@ -940,7 +1065,8 @@ def tracker_page(rows: list[dict], nights: int) -> dict:
         },
         "rows": rows,
         "notes": [
-            "A bet is a frozen opinion the card selected: it cleared the edge bar on an allowlisted market with a human receipt behind it. Each is counted at the board's price at 0.25u, or enough to win 0.25u on a minus price, up to +199; +200 to +500 at 0.15u, +501 to +1500 at 0.1u and longer than +1500 at 0.05u, whatever the card staked it.",
+            "A bet is a selection a card made: it cleared the edge bar on an allowlisted market with a human receipt behind it. Every pick either daily card made is counted, in every market, once per game, side and number, at the first price it was published at: 0.25u, or enough to win 0.25u on a minus price, up to +199; +200 to +500 at 0.15u, +501 to +1500 at 0.1u and longer than +1500 at 0.05u, whatever the card staked it.",
+            "Closing-line value is the closing chance the pick wins, from the last line capture before tip, minus the chance its price implied. Positive means the price beat the close. Halves have no captured close and carry none.",
             "An opinion is a frozen price the card did not select. A lean is tracked by the same stakes, apart from the bets; a pass is graded for the record and stakes nothing.",
             "Ten or more bets to read a row; fewer swing with one week.",
         ],
@@ -963,15 +1089,39 @@ def _publish_clv_on_the_board(path: Path, clv: dict) -> None:
     _dump(path, board)
 
 
-def write_record_pages(data: Path, today: date, fetch: bool = True) -> dict:
+def _publish_card_on_the_board(path: Path, overall: dict) -> None:
+    """The season strip's *Best bets* reads `record.picks`; with a card record
+    it is every card pick, the same tally the Record page heads with."""
+    try:
+        board = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return
+    if not isinstance(board, dict) or not isinstance(board.get("record"), dict):
+        return
+    picks = {k: overall.get(k) for k in ("w", "l", "p", "units", "staked")}
+    board["record"]["picks"] = picks
+    if isinstance(board["record"].get("season"), dict):
+        board["record"]["season"]["picks"] = dict(picks)
+    _dump(path, board)
+
+
+def write_record_pages(data: Path, today: date, fetch: bool = True, card_record=None) -> dict:
     hist = Path(data) / "history"
     settle = _module("settle_results")
     graded = graded_games(hist, today, settle, fetch=fetch) if hist.is_dir() else []
     lines_for = load_lines(hist)
     record = record_page(graded, today, lines_for)
     rows = tracker_rows(graded, settle, lines_for)
-    tracker = tracker_page(rows, record["nights"])
+    card = load_card_record(card_record)
+    card_rows = card_tracker_rows(card, graded)
+    if card_rows:
+        # The card's record replaces the board's one-pick-per-game best bets,
+        # which are a subset of it; leans and passes stay the board's.
+        rows = card_rows + [r for r in rows if r["kind"] != "bet"]
+    tracker = tracker_page(rows, record["nights"], card if card_rows else None)
     _dump(Path(data) / "record.json", record)
     _dump(Path(data) / "tracker.json", tracker)
     _publish_clv_on_the_board(Path(data) / "board.json", record["clv"])
+    if card_rows:
+        _publish_card_on_the_board(Path(data) / "board.json", tracker["overall"])
     return {"games": len(graded), "nights": record["nights"], "bets": tracker["overall"]["bets"], "opinions": tracker["opinions"]["overall"]["bets"]}
