@@ -1,74 +1,74 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-19T03:15+00:00",
-  "captures": 235,
+  "as_of": "2026-11-19T13:43+00:00",
+  "captures": 236,
   "cells": [
     {
-      "beat_close": 1.0,
-      "games": 7,
-      "graded": 7,
+      "beat_close": 0.7368421052631579,
+      "games": 19,
+      "graded": 19,
       "high": null,
       "low": null,
-      "mean": 0.07618499362101654,
-      "shops": 8,
+      "mean": 0.02583304550700725,
+      "shops": 30,
       "tier": "high_major",
-      "ungraded": 1
-    },
-    {
-      "beat_close": 0.6551724137931034,
-      "games": 29,
-      "graded": 29,
-      "high": null,
-      "low": null,
-      "mean": 0.07876397008355389,
-      "shops": 33,
-      "tier": "mid_major",
-      "ungraded": 4
-    },
-    {
-      "beat_close": 0.6923076923076923,
-      "games": 12,
-      "graded": 13,
-      "high": null,
-      "low": null,
-      "mean": -0.0015379447584676566,
-      "shops": 15,
-      "tier": "low_major",
-      "ungraded": 2
+      "ungraded": 11
     },
     {
       "beat_close": 0.7222222222222222,
+      "games": 35,
+      "graded": 36,
+      "high": 0.29748766931896986,
+      "low": -0.15610148511495,
+      "mean": 0.07069309210200991,
+      "shops": 48,
+      "tier": "mid_major",
+      "ungraded": 12
+    },
+    {
+      "beat_close": 0.6666666666666666,
       "games": 16,
       "graded": 18,
       "high": null,
       "low": null,
-      "mean": 0.01403347656001979,
-      "shops": 26,
+      "mean": 0.00472871602204511,
+      "shops": 23,
+      "tier": "low_major",
+      "ungraded": 5
+    },
+    {
+      "beat_close": 0.76,
+      "games": 23,
+      "graded": 25,
+      "high": null,
+      "low": null,
+      "mean": 0.01792273602394345,
+      "shops": 40,
       "tier": "unplaced",
-      "ungraded": 8
+      "ungraded": 15
     }
   ],
-  "correction_factor": 1.8723930931473785,
+  "correction_factor": 1.8761343418011687,
   "current": [
     {
-      "american": -185,
-      "away_team": "Wisconsin Badgers",
-      "book": "circasports",
-      "books": 11,
-      "commence": "2026-11-20T01:30:00+00:00",
-      "edge": 0.0286,
-      "event_id": "7f7fd17bc583d3d43cdde63affb31764",
-      "fair_american": -201,
-      "game": "Wisconsin Badgers at Seton Hall Pirates",
-      "home_team": "Seton Hall Pirates",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
+      "american": 105,
+      "away_team": "Utah Tech Trailblazers",
+      "book": "lowvig",
+      "books": 5,
+      "commence": "2026-11-20T02:00:00+00:00",
+      "edge": 0.025,
+      "event_id": "028a30dac6c59487da6c8a7d657875e0",
+      "fair_american": -100,
+      "game": "Utah Tech Trailblazers at Washington Huskies",
+      "home_team": "Washington Huskies",
+      "line": 156.0,
+      "market": "total_points",
+      "selection": "over"
     }
   ],
-  "latest_capture": "2026-11-19T03:13:36+00:00",
-  "looks": 206,
+  "latest_capture": "2026-11-19T13:42:31+00:00",
+  "looks": 212,
   "min_books": 3,
   "shop_edge": 0.02
 }
