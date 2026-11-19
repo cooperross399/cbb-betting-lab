@@ -2968,6 +2968,48 @@
       "predicted_direction": "higher",
       "stage": "discovery",
       "realised_direction": ""
+    },
+    {
+      "search": "projection_scale_2026_11_19",
+      "name": "high-major: the decision-109 projection changes together (card_factors.KENPOM_BLEND_WEIGHT 0.5 -> 0.85, the candidate layer margin_stretch at card_factors.MARGIN_STRETCH when the layer audit adds it, and card_factors.EARLY_HOME_BONUS_DAYS 45 -> 21) raise the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-19",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "projection_scale_2026_11_19",
+      "name": "mid-major: the decision-109 projection changes together (card_factors.KENPOM_BLEND_WEIGHT 0.5 -> 0.85, the candidate layer margin_stretch at card_factors.MARGIN_STRETCH when the layer audit adds it, and card_factors.EARLY_HOME_BONUS_DAYS 45 -> 21) raise the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-19",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
+    },
+    {
+      "search": "projection_scale_2026_11_19",
+      "name": "low-major: the decision-109 projection changes together (card_factors.KENPOM_BLEND_WEIGHT 0.5 -> 0.85, the candidate layer margin_stretch at card_factors.MARGIN_STRETCH when the layer audit adds it, and card_factors.EARLY_HOME_BONUS_DAYS 45 -> 21) raise the return of the card's team selections against the card-time price (forward ledger only)",
+      "tested_on": "2026-11-19",
+      "seasons": [
+        2027,
+        2028,
+        2029
+      ],
+      "outcome": "pending",
+      "predicted_direction": "higher",
+      "stage": "discovery",
+      "realised_direction": ""
     }
   ]
 }

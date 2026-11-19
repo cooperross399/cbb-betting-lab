@@ -134,8 +134,16 @@ HOME_COURT_DEPARTURE = True
 #: of 2026-27, which it was not fitted on, 10.46 -> 10.22. Applied only at a
 #: true home venue (`VenueState.HOME`), never on a neutral or quasi-neutral
 #: floor, on top of the tier's effect, inside the home-court layer.
+#:
+#: **It fades over three weeks, not six (decision 109, Cooper 2026-11-19).**
+#: On 2026-11-13 and 11-14 the card's home-side margin bias read -4.2 over 112
+#: games, with the bonus still worth about 1.9 points. Fitted with hindsight
+#: ratings, the true-home residual in 2024-25's and 2025-26's first weeks is
+#: within six tenths of a point of zero: the 2.66 was the walk-forward PRIOR missing
+#: the buy-game gap, which decision 80's re-scaled prior now carries, so the
+#: bonus is spent by the second week and was double-counting after it.
 EARLY_HOME_BONUS_POINTS = 2.66
-EARLY_HOME_BONUS_DAYS = 45
+EARLY_HOME_BONUS_DAYS = 21
 
 
 def early_home_bonus(season_day) -> float:
@@ -176,6 +184,7 @@ CANDIDATE_LAYERS: tuple[tuple[str, str], ...] = (
     ("four_factors", "Four-factor style matchup"),
     ("close_game_luck", "Close-game luck"),
     ("kenpom", "KenPom's projection"),
+    ("margin_stretch", "Margin stretch"),
 )
 #: `lineup_strict`: a rotation player counts as out only after missing this
 #: many of the club's games in a row. When on, it replaces the single-game
@@ -277,8 +286,20 @@ SHOT_QUALITY_ZONES = ("rim", "mid")
 MARKET_BLEND_WEIGHT = 0.5
 #: `kenpom` (decision 96): the share of the way from the card's margin and
 #: total to KenPom's own projected score (FanMatch) for the game. The same
-#: mechanic and weight as `market_ratings`, chosen before any price was read.
-KENPOM_BLEND_WEIGHT = 0.5
+#: mechanic as `market_ratings`. Declared at 0.5 before any price was read;
+#: **0.85 from 2026-11-19 (decision 109)**: the layer audit of 2026-11-18
+#: measured the move at 0.5 best scaled by 1.77 over 713 games (z +6.96),
+#: which is 0.89 of the way, and 0.85 rounds that down rather than up.
+KENPOM_BLEND_WEIGHT = 0.85
+#: `margin_stretch` (decision 109): the card's margin, after every other
+#: layer, multiplied by this, the total untouched. Over the first fortnight of
+#: 2026-27 the card's margins ran about 0.7 times the closing spread's, and a
+#: margin that is compressed toward zero leans every side toward the underdog
+#: and every total toward its own mean. A candidate like the rest: off until
+#: the layer audit measures it moving margins toward the finals, and the
+#: audit's `best_scale` then says how far the stretch should go
+#: (1 + 0.15 x best_scale).
+MARGIN_STRETCH = 1.15
 
 #: Where the audit's switches are read from, and how stale they may be.
 LAYER_AUDIT_DIR = "layer_audit"
@@ -1558,6 +1579,15 @@ def apply(
         "weight": KENPOM_BLEND_WEIGHT,
     }
     take("kenpom", move)
+
+    # Margin stretch (decision 109): the margin as it stands after every layer
+    # above, pushed away from zero by `MARGIN_STRETCH`; the total is held.
+    move = (0.0, 0.0, 0.0)
+    if possessions > 0:
+        stretch = (MARGIN_STRETCH - 1.0) * (home - away) / 2.0
+        move = (stretch, -stretch, 0.0)
+    detail["margin_stretch"] = {"factor": MARGIN_STRETCH}
+    take("margin_stretch", move)
 
     detail["switches"] = {key: context.is_on(key) for key in SWITCHABLE}
     detail["audit_as_of"] = context.audit_as_of
