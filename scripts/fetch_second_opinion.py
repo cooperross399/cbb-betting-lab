@@ -165,6 +165,7 @@ def _more_tables(season: int, as_of: str, raw_dir: Path) -> bool:
         except second_opinion.SecondOpinionError as exc:
             print(f"::warning::KenPom could not be read: {exc}", file=sys.stderr)
         _kenpom_fanmatch(key, as_of, raw_dir, schedule)
+        _kenpom_history(key, season, as_of, raw_dir, schedule)
     else:
         print("KenPom: no KENPOM_API_KEY secret, so not read.")
     allowed, why = second_opinion.allowed_by_robots(second_opinion.NET_URL)
@@ -245,6 +246,52 @@ def _kenpom_fanmatch(key: str, as_of: str, raw_dir: Path, schedule) -> None:
                 print("  Unresolved (KenPom FanMatch): " + ", ".join(unresolved[:30]))
     print(f"KenPom FanMatch: {fetched} day(s) read this run, {games} resolved game(s) written"
           + (f"; {quiet} earlier day(s) KenPom has no games for, recorded as empty." if quiet else "."))
+
+
+def _kenpom_history(key: str, season: int, as_of: str, raw_dir: Path, schedule) -> None:
+    """KenPom's ratings as they stood on each of the last `kenpom.BACKFILL_DAYS`
+    days, from its ratings archive (`endpoint=archive&d=<day>`), one dated copy
+    per day (decision 110), so the layer audit can measure the second opinion
+    on the days it re-prices. A day already on disk is not asked for again.
+    Soft: an archive that cannot be read is skipped and the log says so."""
+    from datetime import date, timedelta
+
+    from cbb_betting_lab.data import kenpom
+
+    if schedule is None:
+        return
+    today = date.fromisoformat(as_of)
+    fetched = failed = 0
+    named = False
+    for n in range(kenpom.BACKFILL_DAYS, 0, -1):
+        day = (today - timedelta(days=n)).isoformat()
+        path = card_factors.second_opinion_history_path(raw_dir, day, second_opinion.KENPOM_SOURCE)
+        if path.is_file():
+            continue
+        try:
+            payload = kenpom.fetch(key, "archive", d=day)
+            if not named and kenpom.field_names(payload):
+                print("KenPom archive fields: " + ", ".join(kenpom.field_names(payload)))
+                named = True
+            table = second_opinion.parse_kenpom(payload)
+        except (kenpom.KenPomError, second_opinion.SecondOpinionError) as exc:
+            failed += 1
+            if failed == 1:
+                print(f"::warning::KenPom's archive for {day} could not be read: {exc}", file=sys.stderr)
+            continue
+        resolved, _ = second_opinion.resolve(table, schedule)
+        if int(resolved["team_id"].notna().sum()) < card_factors.SECOND_OPINION_MIN_TEAMS:
+            failed += 1
+            continue
+        out = resolved.copy()
+        out.insert(0, "source", second_opinion.KENPOM_SOURCE)
+        out.insert(0, "season", int(season))
+        out.insert(0, "as_of", day)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        out[list(card_factors.SECOND_OPINION_COLUMNS)].to_csv(path, index=False)
+        fetched += 1
+    print(f"KenPom archive: {fetched} dated day(s) written this run"
+          + (f", {failed} could not be read." if failed else "."))
 
 
 if __name__ == "__main__":

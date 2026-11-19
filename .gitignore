@@ -25,6 +25,7 @@ data/raw/cbb/layer_audit/
 # read by the model and never committed to this public repository.
 data/raw/cbb/kenpom/
 data/raw/cbb/second_opinion/*.kenpom.*
+data/raw/cbb/second_opinion/history/
 data/processed/*.csv
 # The frame-builder's unpairable census, written beside the frame it describes.
 # It is a count OF an ignored file and is regenerated with it, so committing it

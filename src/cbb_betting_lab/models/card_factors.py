@@ -218,8 +218,12 @@ SWITCHABLE: tuple[str, ...] = tuple(
 
 #: Pace form: each side's possessions over its last `FORM_GAMES` against the
 #: tempo the ratings expected, shrunk like net form and clamped per side.
-PACE_FORM_SHRINKAGE_GAMES = 15
-PACE_FORM_CLAMP = 3.0
+#: Shrunk at 5 games, not 15, from 2026-11-19 (decision 110): the layer audit
+#: of 2026-11-18 measured the move at 15 best scaled by 2.2 over 581 games
+#: (z +1.06), and five games against five of shrinkage is 2.0 times the old
+#: weight on a full last five. Still a candidate: off until the audit adds it.
+PACE_FORM_SHRINKAGE_GAMES = 5
+PACE_FORM_CLAMP = 6.0
 #: Three-point defence luck: the points per 100 possessions a side's opponents
 #: scored from three above what their attempts at the season's league-wide
 #: rate would have made. Opponents' three-point accuracy is the least repeatable
@@ -736,6 +740,47 @@ def second_opinion_path(raw_dir: Path | str | None, season: int, source: str | N
     return base / CBB.data_dir_segment / SECOND_OPINION_DIR / name
 
 
+#: Dated copies of a published table, one per source per day, so the layer
+#: audit's walk-forward over past days can read the table as it stood then
+#: (decision 110). Until 2026-11-19 every table on disk was dated the day it
+#: was fetched, so a past day refused all of them and the audit measured the
+#: second opinion as moving no game at all.
+SECOND_OPINION_HISTORY_DIR = "history"
+
+
+def second_opinion_history_path(raw_dir: Path | str | None, day: str, source: str) -> Path:
+    base = Path(raw_dir) if raw_dir else Path("data/raw")
+    return base / CBB.data_dir_segment / SECOND_OPINION_DIR / SECOND_OPINION_HISTORY_DIR / f"{str(day)[:10]}.{source}.csv"
+
+
+def history_paths(raw_dir: Path | str | None, *, day: str) -> list[Path]:
+    """For each source, the newest dated copy STRICTLY BEFORE `day` and within
+    `SECOND_OPINION_MAX_AGE_DAYS` of it: a table filed the day before the games
+    it prices, never one dated the day itself, because a dated copy may have
+    seen that day's results. A source that has a current table dated on or
+    before the day is still read from that table as before; both pass the same
+    date rules in `_load_one_opinion`."""
+    folder = second_opinion_history_path(raw_dir, "x", "x").parent
+    if not folder.is_dir():
+        return []
+    try:
+        target = pd.Timestamp(str(day)[:10])
+    except (TypeError, ValueError):
+        return []
+    newest: dict[str, tuple[str, Path]] = {}
+    for path in folder.glob("*.csv"):
+        stamp, _, source = path.stem.partition(".")
+        try:
+            when = pd.Timestamp(stamp)
+        except (TypeError, ValueError):
+            continue
+        if not source or when >= target or (target - when).days > SECOND_OPINION_MAX_AGE_DAYS:
+            continue
+        if source not in newest or stamp > newest[source][0]:
+            newest[source] = (stamp, path)
+    return [path for _, path in sorted(newest.values())]
+
+
 def load_second_opinion(
     raw_dir: Path | str | None, *, season: int, day: str
 ) -> tuple[SecondOpinion | None, str]:
@@ -762,6 +807,12 @@ def load_second_opinion(
             read.append(table)
         elif reason:
             reasons.append(reason)
+    # A dated copy stands in only for a source no current table supplied, so a
+    # source is never counted twice in the consensus.
+    for path in history_paths(raw_dir, day=day):
+        table, _ = _load_one_opinion(path, day=day)
+        if table is not None and table.source not in {t.source for t in read}:
+            read.append(table)
     if not read:
         return None, "; ".join(reasons[:1] or [f"no second opinion on disk at {primary}"])
     if len(read) == 1:
