@@ -1830,6 +1830,42 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    # ---------------------------------------------------------------------
+    # decision 110 (Cooper, 2026-11-19, "do all 4"): the candidate layer pace_form resized to the audit's measured scale (shrinkage 15 -> 5 games, clamp 3 -> 6), and the second opinion given dated copies so the layer audit can measure it on past days. One per tier for the two together. Per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="audit_inputs_2026_11_19",
+        name=(
+            "high-major: the decision-110 changes together (card_factors.PACE_FORM_SHRINKAGE_GAMES 15 -> 5 and PACE_FORM_CLAMP 3 -> 6 on the candidate layer pace_form, and the second opinion read from dated copies of KenPom's ratings archive on the days the layer audit re-prices) raise the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-19",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="audit_inputs_2026_11_19",
+        name=(
+            "mid-major: the decision-110 changes together (card_factors.PACE_FORM_SHRINKAGE_GAMES 15 -> 5 and PACE_FORM_CLAMP 3 -> 6 on the candidate layer pace_form, and the second opinion read from dated copies of KenPom's ratings archive on the days the layer audit re-prices) raise the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-19",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="audit_inputs_2026_11_19",
+        name=(
+            "low-major: the decision-110 changes together (card_factors.PACE_FORM_SHRINKAGE_GAMES 15 -> 5 and PACE_FORM_CLAMP 3 -> 6 on the candidate layer pace_form, and the second opinion read from dated copies of KenPom's ratings archive on the days the layer audit re-prices) raise the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-19",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 

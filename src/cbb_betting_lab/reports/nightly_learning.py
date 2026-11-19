@@ -52,11 +52,15 @@ import pandas as pd
 #: Risers and fallers listed each way.
 MOVERS = 10
 #: Columns of the season history, one row per graded night.
+TIERS = ("high_major", "mid_major", "low_major")
+#: Per tier, beside the night's pooled row (decision 110): a total or margin
+#: bias that holds in one tier for a week is the signal a correction would be
+#: built on, and a pooled bias can hide two tiers pulling opposite ways.
+TIER_HISTORY_FIELDS = ("games", "margin_bias", "total_bias")
 HISTORY_COLUMNS = (
     "day", "as_of", "games", "margin_mae", "margin_bias", "total_mae",
     "total_bias", "winner_pct", "prior_share_median",
-)
-TIERS = ("high_major", "mid_major", "low_major")
+) + tuple(f"{tier}_{field}" for tier in TIERS for field in TIER_HISTORY_FIELDS)
 
 
 def _tier_label(tier: str) -> str:
@@ -268,6 +272,14 @@ def history_row(record: Mapping) -> dict:
         "total_bias": _fmt(acc.get("total_bias")),
         "winner_pct": _fmt(acc.get("winner_pct"), 4),
         "prior_share_median": _fmt(float(np.median(shares)) if shares else None, 4),
+        **{
+            f"{tier}_{field}": (
+                str(int(stats.get("games", 0))) if field == "games" else _fmt(stats.get(field))
+            )
+            for tier in TIERS
+            for stats in [record.get("by_tier", {}).get(tier, {"games": 0})]
+            for field in TIER_HISTORY_FIELDS
+        },
     }
 
 
