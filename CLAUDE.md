@@ -74,11 +74,12 @@ read it.
 
 ## Current operating state
 
-**Thirty-two markets are allowlisted under receipts Cooper had executed on
+**Thirty-five markets are allowlisted under receipts Cooper had executed on
 his written instruction (2026-11-09; `spread`, `alternate_spread` and
 `alternate_team_total` were withdrawn on 2026-11-10 by the weekly loop's
-auto-demotion, committed on Cooper's word, their receipts moved to
-`superseded/`; re-citing the markets he signed on
+auto-demotion, committed on Cooper's word, and restored on 2026-11-19 by
+receipts executed as his delegate on his decision-card choice (decision 111);
+re-citing the markets he signed on
 2026-09-23 and 2026-09-28; the earlier receipts are kept under
 `human_acceptance_receipts/superseded/`); nothing is bet; no market has a
 demonstrated edge.** Each receipt records an owner's decision to
@@ -308,7 +309,7 @@ done, and names the file and the number it is waiting for.
 | `holdout/cbb_price_backtest.json` | 130 | x1.8115 |
 | `holdout/cbb_replication.json` | 133 | x1.8145 |
 
-**`data/outputs/cbb_price_backtest.md` is held at the render 32 human acceptance receipt(s) cite** (scored under 200 looks, x1.8685): the receipts pin it by checksum, this lab may not re-sign them, and so it is the one generated report not re-rendered when the ledger grows. Restated at the ledger's count, all 208 of its judgements are what the ledger's count gives; the gap is interval width only. Lifting the pin is Cooper's: re-read the current render and sign again.
+**`data/outputs/cbb_price_backtest.md` is held at the render 35 human acceptance receipt(s) cite** (scored under 200 looks, x1.8685): the receipts pin it by checksum, this lab may not re-sign them, and so it is the one generated report not re-rendered when the ledger grows. Restated at the ledger's count, all 208 of its judgements are what the ledger's count gives; the gap is interval width only. Lifting the pin is Cooper's: re-read the current render and sign again.
 
 **The populations those verdicts are measured on.**
 
@@ -1252,6 +1253,16 @@ candidate `pace_form` shrinks at 5 games rather than 15, the size the audit
 measured as best, and stays off until the audit adds it. The nightly learning
 history now carries bias per tier. Recent form is left to the audit. Registered
 as `audit_inputs_2026_11_19`, one per tier.
+
+### 2026-11-19: the card withdraws nothing (decision 111)
+
+Cooper: *"dont withdraw anything"*. The closing-line gate and the
+alternate-ladder cap are switched off (`closing_gate.GATE_ON`,
+`rung_cap.MAX_RUNG_DISTANCE`); both modules stay and their tests switch them on.
+The closing-line alarm still reports. On his decision-card choice the same
+day (*"Yes, restore all three"*), `spread`, `alternate_spread` and
+`alternate_team_total` are back on the allowlist under receipts executed as his
+delegate, citing the same pinned render as the other thirty-two.
 
 ## Contract strings — never change these
 

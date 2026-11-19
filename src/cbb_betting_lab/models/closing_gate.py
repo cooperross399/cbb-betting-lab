@@ -50,7 +50,7 @@ from typing import Iterable, Mapping
 from cbb_betting_lab.models.line_move import MAIN_MARKET
 
 #: False turns the gate off and the card selects as it did before decision 82.
-GATE_ON = True
+GATE_ON = False
 #: The oldest alarm record the card reads, in days before the card day.
 MAX_AGE_DAYS = 3
 RECORD_NAME = "cbb_closing_alarm.json"

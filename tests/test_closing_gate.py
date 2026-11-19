@@ -5,8 +5,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from cbb_betting_lab.models import closing_gate
 from cbb_betting_lab.reports.card_pricing import Quote, Wager
+
+
+@pytest.fixture(autouse=True)
+def _gate_on(monkeypatch):
+    # The card runs with the gate off (decision 111); these test the mechanism.
+    monkeypatch.setattr(closing_gate, "GATE_ON", True)
 
 
 def _wager(market: str, tier: str = "high_major", segment: str = "full_game", key: str = "") -> Wager:

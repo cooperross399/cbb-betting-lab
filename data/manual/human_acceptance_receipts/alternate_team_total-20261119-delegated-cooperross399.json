@@ -1,0 +1,19 @@
+{
+  "market": "alternate_team_total",
+  "receipt_id": "alternate_team_total-20261119-delegated-cooperross399",
+  "evidence": {
+    "path": "data/outputs/cbb_price_backtest.md",
+    "sha256": "1317efb3287795a42f9b3c76be94482ffe4e9117872ebb8e7a2b956971a378cc"
+  },
+  "signed_by": "Cooper Ross (delegated: executed by his AI assistant on his written instruction)",
+  "executed_by": "Claude",
+  "signed_on": "2026-11-19",
+  "supersedes": "alternate_team_total-20261109-delegated-cooperross399",
+  "authorisation": {
+    "instruction": "Chose \"Yes, restore all three\" on the decision card asking \"Put spread, alternate spread and alternate team total back on the card?\" (2026-11-19T13:06:56Z)",
+    "option_consequence": "I re-sign their receipts as your delegate (same evidence as the other 32) and they're back on tonight's card.",
+    "context": "The three markets were withdrawn on 2026-11-10 by the weekly loop's auto-demotion, committed on Cooper's word. On 2026-11-18 he said \"dont withdraw anything\", and on 2026-11-19 he chose to restore them. The evidence cited is the same receipt-pinned render the 32 allowlisted markets cite.",
+    "session": "https://claude.ai/code/session_01PSdZ6hM2BpfuBXtYZnNHNG"
+  },
+  "statement": "Executed by Claude on Cooper Ross's explicit written instruction, as his delegate; Cooper did not personally review this evidence first. It restores a market withdrawn on 2026-11-10 against the same price-backtest render every other allowlisted market cites. This receipt records an owner's decision to run the market forward and accumulate a live record, not a finding that an edge exists."
+}
