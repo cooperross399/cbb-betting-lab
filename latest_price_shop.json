@@ -1,39 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 107,
-      "away_team": "Georgia St Panthers",
-      "book": "courtside",
-      "books": 11,
-      "commence": "2026-11-21T00:00:00+00:00",
-      "edge": 0.035,
-      "event_id": "70ee5e0a821c9547549edc4e946098e2",
-      "fair_american": -100,
-      "game": "Georgia St Panthers at Jacksonville St Gamecocks",
-      "home_team": "Jacksonville St Gamecocks",
-      "line": -1.5,
-      "market": "spread",
-      "selection": "home"
-    },
-    {
-      "american": 130,
-      "away_team": "CSU Bakersfield Roadrunners",
-      "book": "betparx",
-      "books": 18,
-      "commence": "2026-11-21T02:00:00+00:00",
-      "edge": 0.0442,
-      "event_id": "73becee99238228e81a7770cea1108c8",
-      "fair_american": 120,
-      "game": "CSU Bakersfield Roadrunners at Idaho Vandals",
-      "home_team": "Idaho Vandals",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-20T21:15+00:00",
-  "captures": 260,
+  "alerts": [],
+  "as_of": "2026-11-20T22:15+00:00",
+  "captures": 261,
   "cells": [
     {
       "beat_close": 0.7619047619047619,
@@ -69,51 +38,20 @@
       "ungraded": 5
     },
     {
-      "beat_close": 0.7586206896551724,
-      "games": 26,
-      "graded": 29,
-      "high": null,
-      "low": null,
-      "mean": 0.018941567675506983,
-      "shops": 44,
+      "beat_close": 0.7741935483870968,
+      "games": 27,
+      "graded": 31,
+      "high": 0.0680663247929436,
+      "low": -0.026900008368073446,
+      "mean": 0.020583158212435077,
+      "shops": 46,
       "tier": "unplaced",
       "ungraded": 15
     }
   ],
   "correction_factor": 1.8779630285186144,
-  "current": [
-    {
-      "american": 107,
-      "away_team": "Georgia St Panthers",
-      "book": "courtside",
-      "books": 11,
-      "commence": "2026-11-21T00:00:00+00:00",
-      "edge": 0.035,
-      "event_id": "70ee5e0a821c9547549edc4e946098e2",
-      "fair_american": -100,
-      "game": "Georgia St Panthers at Jacksonville St Gamecocks",
-      "home_team": "Jacksonville St Gamecocks",
-      "line": -1.5,
-      "market": "spread",
-      "selection": "home"
-    },
-    {
-      "american": 130,
-      "away_team": "CSU Bakersfield Roadrunners",
-      "book": "betparx",
-      "books": 18,
-      "commence": "2026-11-21T02:00:00+00:00",
-      "edge": 0.0442,
-      "event_id": "73becee99238228e81a7770cea1108c8",
-      "fair_american": 120,
-      "game": "CSU Bakersfield Roadrunners at Idaho Vandals",
-      "home_team": "Idaho Vandals",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "latest_capture": "2026-11-20T21:13:38+00:00",
+  "current": [],
+  "latest_capture": "2026-11-20T22:13:37+00:00",
   "looks": 215,
   "min_books": 3,
   "shop_edge": 0.02
