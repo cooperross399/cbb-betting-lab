@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-20T19:14+00:00",
-  "captures": 258,
+  "as_of": "2026-11-20T20:17+00:00",
+  "captures": 259,
   "cells": [
     {
       "beat_close": 0.7619047619047619,
@@ -38,13 +38,13 @@
       "ungraded": 5
     },
     {
-      "beat_close": 0.7692307692307693,
-      "games": 24,
-      "graded": 26,
+      "beat_close": 0.7586206896551724,
+      "games": 26,
+      "graded": 29,
       "high": null,
       "low": null,
-      "mean": 0.01888101529931135,
-      "shops": 41,
+      "mean": 0.018941567675506983,
+      "shops": 44,
       "tier": "unplaced",
       "ungraded": 15
     }
@@ -53,21 +53,21 @@
   "current": [
     {
       "american": 107,
-      "away_team": "Georgia St Panthers",
+      "away_team": "Rhode Island Rams",
       "book": "courtside",
-      "books": 11,
-      "commence": "2026-11-21T00:00:00+00:00",
-      "edge": 0.035,
-      "event_id": "70ee5e0a821c9547549edc4e946098e2",
-      "fair_american": -100,
-      "game": "Georgia St Panthers at Jacksonville St Gamecocks",
-      "home_team": "Jacksonville St Gamecocks",
+      "books": 12,
+      "commence": "2026-11-20T21:30:00+00:00",
+      "edge": 0.023,
+      "event_id": "9d327abf7311461d1cfaeb835057b5db",
+      "fair_american": 102,
+      "game": "Rhode Island Rams at Liberty Flames",
+      "home_team": "Liberty Flames",
       "line": -1.5,
       "market": "spread",
-      "selection": "home"
+      "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-20T19:13:33+00:00",
+  "latest_capture": "2026-11-20T20:15:15+00:00",
   "looks": 215,
   "min_books": 3,
   "shop_edge": 0.02
