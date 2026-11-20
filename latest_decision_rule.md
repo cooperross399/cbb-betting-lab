@@ -4,9 +4,9 @@ As of 2026-11-20. This is a dry run: the rule is read on 2027-04-19, and nothing
 
 | Tier | Opinions | Games | Return | Corrected | Survived-price return | Outcome |
 |:---|---:|---:|---:|:---|---:|:---|
-| high-major | 61,560 | 281 | -6.8% | -9.1% to -4.6% | -4.1% | the test did not run |
-| mid-major | 53,152 | 248 | -5.8% | -8.3% to -3.3% | -3.1% | the test did not run |
-| low-major | 14,344 | 78 | -6.4% | -10.7% to -2.1% | +0.6% | the test did not run |
-| pooled (never the headline) | 129,532 | 609 | -6.4% | -7.9% to -4.8% | -3.2% | the test did not run |
+| high-major | 66,960 | 297 | -6.8% | -9.0% to -4.7% | -4.0% | the test did not run |
+| mid-major | 55,846 | 257 | -5.9% | -8.4% to -3.5% | -3.3% | the test did not run |
+| low-major | 15,486 | 82 | -6.2% | -10.4% to -2.0% | +0.8% | the test did not run |
+| pooled (never the headline) | 138,768 | 638 | -6.4% | -7.9% to -4.9% | -3.2% | the test did not run |
 
 The floor is 10,000 settled opinions across 2,000 distinct games. Below it the test did not run, and the number is not read. A candidate is never a green light: a second season confirms or kills it. A survived-price return of — means survival could not be labelled, so the reachability clause is unread rather than passed. The pooled row is computed for the stopping rule and is never the headline.
