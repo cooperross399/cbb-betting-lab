@@ -498,12 +498,24 @@ jobs:
           # A season is labelled by the year it ENDS, matching hoopR:
           # mbb_schedule_2027.parquet is the 2026-27 season.
           SEASONS="2024 2025 2026 2027"
-          python scripts/fetch_cbb_data.py --seasons $SEASONS
+          # ONE FEED THAT FAILS IS NOT A NIGHT WITHOUT TABLES. On 2026-11-20
+          # a cut-off download of the current season's play-by-play stopped
+          # this step before the build, so the card ran with no results
+          # tables and refused. The fetch now retries each asset
+          # (`hoopr.FETCH_ATTEMPTS`); if one still fails, the tables are
+          # built from everything that did arrive and the step still exits
+          # non-zero, so the run is marked degraded rather than clean.
+          FETCH_STATUS=0
+          python scripts/fetch_cbb_data.py --seasons $SEASONS || FETCH_STATUS=$?
           # The current season's finished games hoopR has not published yet,
           # read from ESPN in hoopR's own columns (`data/espn_box.py`), so the
           # ratings see last night's results whatever hoopR's nightly build did.
           python scripts/fetch_espn_box.py || echo "::warning::The ESPN results supplement did not run; the tables hold what hoopR published."
           python scripts/build_datasets.py --seasons $SEASONS
+          if [ "$FETCH_STATUS" -ne 0 ]; then
+            echo "::warning::At least one hoopR feed failed after its retries (exit $FETCH_STATUS); the tables were built from what arrived and this run is degraded."
+            exit "$FETCH_STATUS"
+          fi
 
       - name: Fetch the card's second opinion
         # A published adjusted-efficiency table, free, blended into tonight's

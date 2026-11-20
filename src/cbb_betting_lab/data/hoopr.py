@@ -57,7 +57,9 @@ tip-time guard and same-night settlement rather than for fitting.
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -204,23 +206,61 @@ def write_manifest(manifest: dict, raw_dir: Path | None = None) -> Path:
     return path
 
 
-def _http_get(url: str, *, timeout: float = 180.0) -> bytes:
+#: How many times one asset is asked for before the feed fails. A release
+#: asset of tens of megabytes is cut off mid-body now and then
+#: (`http.client.IncompleteRead`), and on 2026-11-20 one such cut on the
+#: current season's play-by-play stopped the table build, so the morning card
+#: ran with no results tables and refused. A cut body is a transport fault,
+#: not an answer, so it is asked for again; a 404 is an answer and is not.
+FETCH_ATTEMPTS = 4
+#: Seconds before the second attempt, doubling each time after.
+FETCH_BACKOFF_S = 5.0
+
+
+def _http_get_once(url: str, *, timeout: float) -> bytes:
     request = urllib.request.Request(
         url, headers={"User-Agent": "cbb-betting-lab (research; contact via GitHub)"}
     )
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            return response.read()
-    except urllib.error.HTTPError as exc:
-        name = url.rsplit("/", 1)[-1]
-        if exc.code == 404:
-            raise NotPublishedYet(
-                f"{name}: not published upstream yet (HTTP 404). For a season "
-                "that has not started this is the expected answer, not a fault."
-            ) from exc
-        raise FeedError(f"{name}: HTTP {exc.code}") from exc
-    except (urllib.error.URLError, OSError, TimeoutError) as exc:
-        raise FeedError(f"{url.rsplit('/', 1)[-1]}: {type(exc).__name__}") from exc
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        payload = response.read()
+        expected = response.headers.get("Content-Length")
+        if expected is not None and expected.isdigit() and len(payload) != int(expected):
+            raise http.client.IncompleteRead(payload, int(expected) - len(payload))
+        return payload
+
+
+def _http_get(
+    url: str,
+    *,
+    timeout: float = 180.0,
+    attempts: int | None = None,
+    backoff: float | None = None,
+    sleep=time.sleep,
+) -> bytes:
+    name = url.rsplit("/", 1)[-1]
+    tries = max(1, attempts if attempts is not None else FETCH_ATTEMPTS)
+    wait = FETCH_BACKOFF_S if backoff is None else backoff
+    last: Exception | None = None
+    for attempt in range(1, tries + 1):
+        try:
+            return _http_get_once(url, timeout=timeout)
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404:
+                raise NotPublishedYet(
+                    f"{name}: not published upstream yet (HTTP 404). For a season "
+                    "that has not started this is the expected answer, not a fault."
+                ) from exc
+            if exc.code < 500 and exc.code != 429:
+                raise FeedError(f"{name}: HTTP {exc.code}") from exc
+            last = exc
+        except (urllib.error.URLError, http.client.HTTPException, OSError, TimeoutError) as exc:
+            last = exc
+        if attempt < tries:
+            print(f"  {name}: {type(last).__name__} on attempt {attempt} of {tries}; asking again.")
+            sleep(wait)
+            wait *= 2
+    detail = f"HTTP {last.code}" if isinstance(last, urllib.error.HTTPError) else type(last).__name__
+    raise FeedError(f"{name}: {detail} after {tries} attempt(s)") from last
 
 
 def fetch(
