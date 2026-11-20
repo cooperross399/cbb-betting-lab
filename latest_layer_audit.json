@@ -2,46 +2,46 @@
   "as_of": "2026-11-20",
   "layers": [
     {
-      "best_scale": 0.9116094432322979,
+      "best_scale": 0.9116094432322975,
       "days": 19,
       "default": true,
-      "gain_at_best_scale": 22.87112139716535,
-      "gain_per_game": 22.65610005547455,
+      "gain_at_best_scale": 22.871121397165332,
+      "gain_per_game": 22.65610005547453,
       "games": 743,
       "key": "home_court",
       "label": "Home court",
       "on": true,
       "reason": "z +3.01 does not cross the -2.0 bar; kept as declared",
-      "standard_error": 7.524226240966854,
+      "standard_error": 7.524226240966847,
       "z": 3.0110870313972997
     },
     {
-      "best_scale": 0.138417479962466,
+      "best_scale": 0.1384174799624659,
       "days": 26,
       "default": true,
-      "gain_at_best_scale": 0.023464178977779377,
-      "gain_per_game": -0.8856475166102452,
+      "gain_at_best_scale": 0.023464178977778655,
+      "gain_per_game": -0.8856475166102445,
       "games": 673,
       "key": "form",
       "label": "Last five games",
       "on": true,
       "reason": "z -0.83 does not cross the -2.0 bar; kept as declared",
-      "standard_error": 1.066766228092755,
-      "z": -0.830217055327738
+      "standard_error": 1.0667662280927548,
+      "z": -0.8302170553277376
     },
     {
-      "best_scale": -0.30703260189178977,
+      "best_scale": -0.30703260189179,
       "days": 21,
       "default": true,
-      "gain_at_best_scale": 0.04774526512519901,
-      "gain_per_game": -0.8174899050453454,
+      "gain_at_best_scale": 0.04774526512519934,
+      "gain_per_game": -0.8174899050453465,
       "games": 279,
       "key": "rest",
       "label": "Rest",
       "on": true,
       "reason": "z -0.68 does not cross the -2.0 bar; kept as declared",
       "standard_error": 1.1953968675397872,
-      "z": -0.6838648546300764
+      "z": -0.6838648546300774
     },
     {
       "best_scale": -0.18388547953129317,
@@ -58,46 +58,46 @@
       "z": -1.8513145600295886
     },
     {
-      "best_scale": 1.0958269180109688,
+      "best_scale": 1.0958269180109692,
       "days": 18,
       "default": true,
-      "gain_at_best_scale": 28.45341028393481,
-      "gain_per_game": 28.235827044274913,
+      "gain_at_best_scale": 28.45341028393483,
+      "gain_per_game": 28.235827044274938,
       "games": 802,
       "key": "second_opinion",
       "label": "Second opinion",
       "on": true,
       "reason": "z +4.96 does not cross the -2.0 bar; kept as declared",
-      "standard_error": 5.687001194067772,
+      "standard_error": 5.687001194067777,
       "z": 4.964976457843597
     },
     {
-      "best_scale": 0.5883023542555849,
+      "best_scale": 0.5883023542555884,
       "days": 26,
       "default": false,
-      "gain_at_best_scale": 0.3361671008538422,
-      "gain_per_game": 0.17153640906047155,
+      "gain_at_best_scale": 0.3361671008538476,
+      "gain_per_game": 0.17153640906047826,
       "games": 674,
       "key": "pace_form",
       "label": "Pace, last five games",
       "on": false,
       "reason": "z +0.14 does not cross the +2.0 bar; kept as declared",
-      "standard_error": 1.232765343430622,
-      "z": 0.13914765691182437
+      "standard_error": 1.232765343430623,
+      "z": 0.13914765691182973
     },
     {
-      "best_scale": 1.2076108295312247,
+      "best_scale": 1.2076108295312245,
       "days": 15,
       "default": false,
-      "gain_at_best_scale": 5.236267473479473,
-      "gain_per_game": 5.081504226760142,
+      "gain_at_best_scale": 5.2362674734794705,
+      "gain_per_game": 5.081504226760141,
       "games": 59,
       "key": "three_point_luck",
       "label": "Three-point defence luck",
       "on": false,
       "reason": "59 game(s) over 15 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
-      "standard_error": 6.818964196160368,
-      "z": 0.7452017756041955
+      "standard_error": 6.81896419616037,
+      "z": 0.7452017756041952
     },
     {
       "best_scale": 1.0262401865898918,
@@ -114,24 +114,24 @@
       "z": 1.5931837097194335
     },
     {
-      "best_scale": 0.7091928136105706,
+      "best_scale": 0.70919281361057,
       "days": 26,
       "default": false,
-      "gain_at_best_scale": 0.3148931151118458,
-      "gain_per_game": 0.2619456976506998,
+      "gain_at_best_scale": 0.3148931151118451,
+      "gain_per_game": 0.2619456976507008,
       "games": 305,
       "key": "travel",
       "label": "Travel and time zones",
       "on": false,
       "reason": "z +0.27 does not cross the +2.0 bar; kept as declared",
-      "standard_error": 0.9836037649025612,
-      "z": 0.26631221534277977
+      "standard_error": 0.983603764902562,
+      "z": 0.2663122153427806
     },
     {
-      "best_scale": -0.12499740918837854,
+      "best_scale": -0.12499740918837862,
       "days": 15,
       "default": false,
-      "gain_at_best_scale": 0.08228115666877593,
+      "gain_at_best_scale": 0.08228115666877599,
       "gain_per_game": -6.5827381184266684,
       "games": 59,
       "key": "shooting_luck",
@@ -142,32 +142,32 @@
       "z": -0.8051913371695102
     },
     {
-      "best_scale": -0.2800190590075576,
+      "best_scale": -0.28001905900755825,
       "days": 15,
       "default": false,
-      "gain_at_best_scale": 0.700712930529427,
-      "gain_per_game": -13.941200016626345,
+      "gain_at_best_scale": 0.7007129305294334,
+      "gain_per_game": -13.941200016626357,
       "games": 59,
       "key": "shot_quality",
       "label": "Shot quality inside the arc",
       "on": false,
       "reason": "59 game(s) over 15 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
-      "standard_error": 12.936317460969388,
-      "z": -1.0776791817832876
+      "standard_error": 12.936317460969386,
+      "z": -1.0776791817832887
     },
     {
-      "best_scale": 0.3400971204354136,
+      "best_scale": 0.3400971204354137,
       "days": 5,
       "default": false,
-      "gain_at_best_scale": 2.268107800766169,
-      "gain_per_game": -6.271104863353667,
+      "gain_at_best_scale": 2.268107800766171,
+      "gain_per_game": -6.271104863353662,
       "games": 57,
       "key": "market_ratings",
       "label": "Ratings from the betting lines",
       "on": false,
       "reason": "57 game(s) over 5 day(s) is under the 200 games and 5 days the audit needs; kept as declared",
-      "standard_error": 5.854040281519463,
-      "z": -1.0712438865770755
+      "standard_error": 5.854040281519466,
+      "z": -1.0712438865770741
     },
     {
       "best_scale": 1.7123803556275825,
@@ -184,18 +184,18 @@
       "z": 1.1064669461130952
     },
     {
-      "best_scale": -0.5731979987289489,
+      "best_scale": -0.5731979987289478,
       "days": 17,
       "default": false,
-      "gain_at_best_scale": 0.5982888459606192,
-      "gain_per_game": -3.9085117798566205,
+      "gain_at_best_scale": 0.5982888459606168,
+      "gain_per_game": -3.9085117798566165,
       "games": 650,
       "key": "november_form",
       "label": "Early-season form, learned faster",
       "on": false,
       "reason": "z -2.52 does not cross the +2.0 bar; kept as declared",
-      "standard_error": 1.5516400251578137,
-      "z": -2.5189552450859822
+      "standard_error": 1.5516400251578135,
+      "z": -2.51895524508598
     },
     {
       "best_scale": 3.078718256187738,
@@ -226,32 +226,32 @@
       "z": -0.5018249896210387
     },
     {
-      "best_scale": 0.6371389131173707,
+      "best_scale": 0.6371389131173705,
       "days": 19,
       "default": false,
-      "gain_at_best_scale": 1.910037264193659,
-      "gain_per_game": 1.2905186300847138,
+      "gain_at_best_scale": 1.9100372641936627,
+      "gain_per_game": 1.2905186300847147,
       "games": 803,
       "key": "kenpom",
       "label": "KenPom's projection",
       "on": false,
       "reason": "z +0.52 does not cross the +2.0 bar; kept as declared",
-      "standard_error": 2.4934425576661163,
-      "z": 0.5175650131249265
+      "standard_error": 2.493442557666117,
+      "z": 0.5175650131249266
     },
     {
-      "best_scale": 0.1930640118140707,
+      "best_scale": 0.19306401181406996,
       "days": 28,
       "default": false,
-      "gain_at_best_scale": 0.250097851787166,
-      "gain_per_game": -4.118936687973029,
+      "gain_at_best_scale": 0.25009785178716604,
+      "gain_per_game": -4.118936687973041,
       "games": 827,
       "key": "margin_stretch",
       "label": "Margin stretch",
       "on": false,
       "reason": "z -1.77 does not cross the +2.0 bar; kept as declared",
-      "standard_error": 2.32795509849394,
-      "z": -1.769336827260009
+      "standard_error": 2.3279550984939386,
+      "z": -1.769336827260015
     }
   ],
   "notes": [],
