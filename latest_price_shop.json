@@ -1,8 +1,39 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-20T20:17+00:00",
-  "captures": 259,
+  "alerts": [
+    {
+      "american": 107,
+      "away_team": "Georgia St Panthers",
+      "book": "courtside",
+      "books": 11,
+      "commence": "2026-11-21T00:00:00+00:00",
+      "edge": 0.035,
+      "event_id": "70ee5e0a821c9547549edc4e946098e2",
+      "fair_american": -100,
+      "game": "Georgia St Panthers at Jacksonville St Gamecocks",
+      "home_team": "Jacksonville St Gamecocks",
+      "line": -1.5,
+      "market": "spread",
+      "selection": "home"
+    },
+    {
+      "american": 130,
+      "away_team": "CSU Bakersfield Roadrunners",
+      "book": "betparx",
+      "books": 18,
+      "commence": "2026-11-21T02:00:00+00:00",
+      "edge": 0.0442,
+      "event_id": "73becee99238228e81a7770cea1108c8",
+      "fair_american": 120,
+      "game": "CSU Bakersfield Roadrunners at Idaho Vandals",
+      "home_team": "Idaho Vandals",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    }
+  ],
+  "as_of": "2026-11-20T21:15+00:00",
+  "captures": 260,
   "cells": [
     {
       "beat_close": 0.7619047619047619,
@@ -53,21 +84,36 @@
   "current": [
     {
       "american": 107,
-      "away_team": "Rhode Island Rams",
+      "away_team": "Georgia St Panthers",
       "book": "courtside",
-      "books": 12,
-      "commence": "2026-11-20T21:30:00+00:00",
-      "edge": 0.023,
-      "event_id": "9d327abf7311461d1cfaeb835057b5db",
-      "fair_american": 102,
-      "game": "Rhode Island Rams at Liberty Flames",
-      "home_team": "Liberty Flames",
+      "books": 11,
+      "commence": "2026-11-21T00:00:00+00:00",
+      "edge": 0.035,
+      "event_id": "70ee5e0a821c9547549edc4e946098e2",
+      "fair_american": -100,
+      "game": "Georgia St Panthers at Jacksonville St Gamecocks",
+      "home_team": "Jacksonville St Gamecocks",
       "line": -1.5,
       "market": "spread",
+      "selection": "home"
+    },
+    {
+      "american": 130,
+      "away_team": "CSU Bakersfield Roadrunners",
+      "book": "betparx",
+      "books": 18,
+      "commence": "2026-11-21T02:00:00+00:00",
+      "edge": 0.0442,
+      "event_id": "73becee99238228e81a7770cea1108c8",
+      "fair_american": 120,
+      "game": "CSU Bakersfield Roadrunners at Idaho Vandals",
+      "home_team": "Idaho Vandals",
+      "line": null,
+      "market": "moneyline",
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-20T20:15:15+00:00",
+  "latest_capture": "2026-11-20T21:13:38+00:00",
   "looks": 215,
   "min_books": 3,
   "shop_edge": 0.02
