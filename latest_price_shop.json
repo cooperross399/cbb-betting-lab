@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-20T00:15+00:00",
-  "captures": 248,
+  "as_of": "2026-11-20T01:14+00:00",
+  "captures": 249,
   "cells": [
     {
       "beat_close": 0.7368421052631579,
@@ -38,36 +38,36 @@
       "ungraded": 5
     },
     {
-      "beat_close": 0.7692307692307693,
-      "games": 24,
-      "graded": 26,
+      "beat_close": 0.7777777777777778,
+      "games": 25,
+      "graded": 27,
       "high": null,
       "low": null,
-      "mean": 0.017587064461162035,
-      "shops": 41,
+      "mean": 0.017479289671852322,
+      "shops": 44,
       "tier": "unplaced",
-      "ungraded": 15
+      "ungraded": 17
     }
   ],
   "correction_factor": 1.8779630285186144,
   "current": [
     {
-      "american": 161,
-      "away_team": "Georgia Southern Eagles",
-      "book": "betonlineag",
-      "books": 17,
-      "commence": "2026-11-20T01:00:00+00:00",
-      "edge": 0.0208,
-      "event_id": "dbb1b55e5ce880c36dd40da9019cfc56",
-      "fair_american": 156,
-      "game": "Georgia Southern Eagles at Houston Christian Huskies",
-      "home_team": "Houston Christian Huskies",
-      "line": null,
-      "market": "moneyline",
+      "american": 100,
+      "away_team": "VCU Rams",
+      "book": "courtside",
+      "books": 8,
+      "commence": "2026-11-20T03:30:00+00:00",
+      "edge": 0.029,
+      "event_id": "42a35684e7ff6f13af5834f9a5004df6",
+      "fair_american": -106,
+      "game": "VCU Rams at Santa Clara Broncos",
+      "home_team": "Santa Clara Broncos",
+      "line": 1.5,
+      "market": "spread",
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-20T00:13:36+00:00",
+  "latest_capture": "2026-11-20T01:13:36+00:00",
   "looks": 215,
   "min_books": 3,
   "shop_edge": 0.02
