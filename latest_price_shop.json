@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-20T15:29+00:00",
-  "captures": 253,
+  "as_of": "2026-11-20T16:57+00:00",
+  "captures": 254,
   "cells": [
     {
       "beat_close": 0.7619047619047619,
@@ -50,8 +50,39 @@
     }
   ],
   "correction_factor": 1.8779630285186144,
-  "current": [],
-  "latest_capture": "2026-11-20T15:27:54+00:00",
+  "current": [
+    {
+      "american": 105,
+      "away_team": "Dayton Flyers",
+      "book": "hardrockbet",
+      "books": 17,
+      "commence": "2026-11-20T22:30:00+00:00",
+      "edge": 0.025,
+      "event_id": "e1804fe8283327513088eada01a00c7e",
+      "fair_american": -100,
+      "game": "Dayton Flyers at Utah Utes",
+      "home_team": "Utah Utes",
+      "line": -1.5,
+      "market": "spread",
+      "selection": "home"
+    },
+    {
+      "american": -110,
+      "away_team": "Dayton Flyers",
+      "book": "hardrockbet",
+      "books": 18,
+      "commence": "2026-11-20T22:30:00+00:00",
+      "edge": 0.0206,
+      "event_id": "e1804fe8283327513088eada01a00c7e",
+      "fair_american": -115,
+      "game": "Dayton Flyers at Utah Utes",
+      "home_team": "Utah Utes",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
+    }
+  ],
+  "latest_capture": "2026-11-20T16:56:30+00:00",
   "looks": 215,
   "min_books": 3,
   "shop_edge": 0.02
