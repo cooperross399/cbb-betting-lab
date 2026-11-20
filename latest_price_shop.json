@@ -1,89 +1,57 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": -271,
-      "away_team": "Western Illinois Leathernecks",
-      "book": "courtside",
-      "books": 13,
-      "commence": "2026-11-20T20:00:00+00:00",
-      "edge": 0.0459,
-      "event_id": "b2f8a6556938a584b2d3ce16aad1aa8c",
-      "fair_american": -324,
-      "game": "Western Illinois Leathernecks at Albany Great Danes",
-      "home_team": "Albany Great Danes",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "as_of": "2026-11-20T13:44+00:00",
-  "captures": 252,
+  "alerts": [],
+  "as_of": "2026-11-20T15:29+00:00",
+  "captures": 253,
   "cells": [
     {
-      "beat_close": 0.7368421052631579,
-      "games": 19,
+      "beat_close": 0.7619047619047619,
+      "games": 21,
+      "graded": 21,
+      "high": null,
+      "low": null,
+      "mean": 0.025518921185142558,
+      "shops": 34,
+      "tier": "high_major",
+      "ungraded": 13
+    },
+    {
+      "beat_close": 0.7027027027027027,
+      "games": 36,
+      "graded": 37,
+      "high": 0.28968242112585463,
+      "low": -0.1521174851435651,
+      "mean": 0.06878246799114478,
+      "shops": 52,
+      "tier": "mid_major",
+      "ungraded": 15
+    },
+    {
+      "beat_close": 0.6842105263157895,
+      "games": 17,
       "graded": 19,
       "high": null,
       "low": null,
-      "mean": 0.02583304550700725,
-      "shops": 30,
-      "tier": "high_major",
-      "ungraded": 11
-    },
-    {
-      "beat_close": 0.7222222222222222,
-      "games": 35,
-      "graded": 36,
-      "high": 0.2977087282387416,
-      "low": -0.15632254403472182,
-      "mean": 0.07069309210200991,
-      "shops": 48,
-      "tier": "mid_major",
-      "ungraded": 12
-    },
-    {
-      "beat_close": 0.6666666666666666,
-      "games": 16,
-      "graded": 18,
-      "high": null,
-      "low": null,
-      "mean": 0.00472871602204511,
-      "shops": 23,
+      "mean": 0.00496379809412835,
+      "shops": 24,
       "tier": "low_major",
       "ungraded": 5
     },
     {
-      "beat_close": 0.7586206896551724,
-      "games": 27,
-      "graded": 29,
+      "beat_close": 0.76,
+      "games": 23,
+      "graded": 25,
       "high": null,
       "low": null,
-      "mean": 0.01732183297396788,
-      "shops": 49,
+      "mean": 0.01792273602394345,
+      "shops": 40,
       "tier": "unplaced",
-      "ungraded": 20
+      "ungraded": 15
     }
   ],
   "correction_factor": 1.8779630285186144,
-  "current": [
-    {
-      "american": -271,
-      "away_team": "Western Illinois Leathernecks",
-      "book": "courtside",
-      "books": 13,
-      "commence": "2026-11-20T20:00:00+00:00",
-      "edge": 0.0459,
-      "event_id": "b2f8a6556938a584b2d3ce16aad1aa8c",
-      "fair_american": -324,
-      "game": "Western Illinois Leathernecks at Albany Great Danes",
-      "home_team": "Albany Great Danes",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "latest_capture": "2026-11-20T13:43:09+00:00",
+  "current": [],
+  "latest_capture": "2026-11-20T15:27:54+00:00",
   "looks": 215,
   "min_books": 3,
   "shop_edge": 0.02
