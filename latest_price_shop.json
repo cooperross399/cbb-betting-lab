@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-20T01:14+00:00",
-  "captures": 249,
+  "as_of": "2026-11-20T02:15+00:00",
+  "captures": 250,
   "cells": [
     {
       "beat_close": 0.7368421052631579,
@@ -38,15 +38,15 @@
       "ungraded": 5
     },
     {
-      "beat_close": 0.7777777777777778,
-      "games": 25,
-      "graded": 27,
+      "beat_close": 0.7857142857142857,
+      "games": 26,
+      "graded": 28,
       "high": null,
       "low": null,
-      "mean": 0.017479289671852322,
-      "shops": 44,
+      "mean": 0.017940469865895314,
+      "shops": 47,
       "tier": "unplaced",
-      "ungraded": 17
+      "ungraded": 19
     }
   ],
   "correction_factor": 1.8779630285186144,
@@ -55,11 +55,11 @@
       "american": 100,
       "away_team": "VCU Rams",
       "book": "courtside",
-      "books": 8,
+      "books": 9,
       "commence": "2026-11-20T03:30:00+00:00",
-      "edge": 0.029,
+      "edge": 0.0232,
       "event_id": "42a35684e7ff6f13af5834f9a5004df6",
-      "fair_american": -106,
+      "fair_american": -105,
       "game": "VCU Rams at Santa Clara Broncos",
       "home_team": "Santa Clara Broncos",
       "line": 1.5,
@@ -67,7 +67,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-20T01:13:36+00:00",
+  "latest_capture": "2026-11-20T02:13:33+00:00",
   "looks": 215,
   "min_books": 3,
   "shop_edge": 0.02
