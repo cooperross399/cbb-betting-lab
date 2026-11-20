@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-20T17:44+00:00",
-  "captures": 255,
+  "alerts": [
+    {
+      "american": 100,
+      "away_team": "Tenn-Martin Skyhawks",
+      "book": "hardrockbet",
+      "books": 5,
+      "commence": "2026-11-20T22:30:00+00:00",
+      "edge": 0.0347,
+      "event_id": "18bce8d38273bd5b44a6768f1d5aa1d6",
+      "fair_american": -107,
+      "game": "Tenn-Martin Skyhawks at Southern Illinois Salukis",
+      "home_team": "Southern Illinois Salukis",
+      "line": -1.5,
+      "market": "spread",
+      "selection": "home"
+    }
+  ],
+  "as_of": "2026-11-20T17:51+00:00",
+  "captures": 256,
   "cells": [
     {
       "beat_close": 0.7619047619047619,
@@ -85,11 +101,11 @@
       "american": 100,
       "away_team": "Tenn-Martin Skyhawks",
       "book": "hardrockbet",
-      "books": 9,
+      "books": 5,
       "commence": "2026-11-20T22:30:00+00:00",
-      "edge": 0.0285,
+      "edge": 0.0347,
       "event_id": "18bce8d38273bd5b44a6768f1d5aa1d6",
-      "fair_american": -106,
+      "fair_american": -107,
       "game": "Tenn-Martin Skyhawks at Southern Illinois Salukis",
       "home_team": "Southern Illinois Salukis",
       "line": -1.5,
@@ -99,7 +115,7 @@
     {
       "american": -120,
       "away_team": "Tenn-Martin Skyhawks",
-      "book": "fanduel",
+      "book": "hardrockbet",
       "books": 17,
       "commence": "2026-11-20T22:30:00+00:00",
       "edge": 0.0274,
@@ -110,9 +126,24 @@
       "line": null,
       "market": "moneyline",
       "selection": "home"
+    },
+    {
+      "american": 135,
+      "away_team": "North Texas Mean Green",
+      "book": "hardrockbet",
+      "books": 18,
+      "commence": "2026-11-20T23:30:00+00:00",
+      "edge": 0.0269,
+      "event_id": "90a6a382f23f5dc02ca9a06d1a019861",
+      "fair_american": 129,
+      "game": "North Texas Mean Green at Appalachian St Mountaineers",
+      "home_team": "Appalachian St Mountaineers",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-20T17:42:25+00:00",
+  "latest_capture": "2026-11-20T17:50:07+00:00",
   "looks": 215,
   "min_books": 3,
   "shop_edge": 0.02
