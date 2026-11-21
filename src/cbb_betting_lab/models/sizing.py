@@ -12,26 +12,25 @@ so a tier trusted at zero is the base 1u, and only a tier whose own settled
 record has earned trust is sized up, never past 2u. No trust table, or a tier
 it does not name, is the base size: the fail-safe direction.
 
-**A long price is sized by quarter Kelly (decision 115).** Cooper, 2026-11-20:
-*"Change the record/profit to reflect 1u risk/to win and quarter kelly sizing
-based off that for the longer odds"*. From +200 (where the NHL Due List ladder
-of decision 97 used to start) the size is
-
-    KELLY_FRACTION * KELLY_BANKROLL * edge / payout, rounded to 0.01u, at most 1u
-
-with 1u taken as 1% of the bankroll, `edge` the selection's own expected value
-per unit at the price (what the 2% bar reads) and `payout` the profit per unit
-staked. A selection with no edge is sized at the 2% bar; one at zero or less
-is 0u. The same rule counts every tracked bet on the site
+**A long price is sized by its price, not by trust (decision 97).** Cooper,
+2026-11-11: *"Use the same unit price ranges for cbb that we do for the NHL due
+list"*, *".25u,.15u,.1u,.05u"*. The NHL lab's Due List ladder
+(`PROP_STAKE_BRACKETS` there, copied here, not imported): up to +199 the size
+above; +200 to +500 is 0.6u, +501 to +1500 is 0.4u, longer than +1500 is
+0.2u (four times the NHL figures since 2026-11-21). The same ladder counts every tracked bet on the site
 (`web/site_pages.tracked_stake`), so the card and the record agree.
 
+**Scaled to a 1u base on 2026-11-21 (decision 115).** Cooper: *"use the due
+list ladder style pricing but with 1u as the main instead of .25u"*. Every size
+above is four times what it was: the base is 1u (trust-scaled to 2u), and the
+ladder is 0.6u / 0.4u / 0.2u. The proportions, and so the trust hypothesis,
+are unchanged.
+
 This is a column on the card and nothing else. **The site's tracker counts
-every bet at 1u (to win 1u on a minus price) up to +199, and by quarter Kelly
-from +200**, so the record reads the same whatever trust says. The base was
-0.25u, trust-scaled to 0.5u, until 2026-11-21; it is 1u scaled to 2u now, in the
-same proportion, so the trust hypothesis registered as
-`trust_sizing_2026_11_08` measures the same thing. Nothing here is a bet: this
-lab never places one.
+every bet at 1u (to win 1u on a minus price) up to +199, by Cooper's
+rule of 2026-11-04, and at the price ladder above from +200**, so the record
+reads the same whatever trust says. Nothing here is a bet: this lab never places
+one. Registered as `trust_sizing_2026_11_08`, one per tier.
 """
 
 from __future__ import annotations
@@ -39,55 +38,44 @@ from __future__ import annotations
 BASE_UNITS = 1.0
 MAX_UNITS = 2.0
 STEP = 0.2
-#: From this price a selection is sized by quarter Kelly, not by trust.
-KELLY_FROM = 200
-KELLY_FRACTION = 0.25
-#: 1u is 1% of the bankroll.
-KELLY_BANKROLL = 100.0
-#: A long price is never sized past this.
-KELLY_CAP = 1.0
-#: The card's edge bar: the edge a selection that kept none is sized at.
-KELLY_DEFAULT_EDGE = 0.02
+#: (longest price in the bracket, size); longer than the last is LONGEST_UNITS.
+#: The NHL lab's Due List ladder, Cooper 2026-11-11.
+PRICE_BRACKETS: tuple[tuple[int, float], ...] = ((500, 0.6), (1500, 0.4))
+LONGEST_UNITS = 0.2
+#: A price shorter than this is sized by trust; from it, by the ladder.
+LADDER_FROM = 200
 
 EXPLANATION = (
-    f"**Size** is {BASE_UNITS:g}u (to win {BASE_UNITS:g}u on a minus price), "
-    "scaled up by the trust the model has earned in the game's tier (the trust "
-    f"line above), at most {MAX_UNITS:g}u. A tier trusted at zero is the base "
-    f"size. From +{KELLY_FROM} the size is quarter Kelly on the pick's own edge, "
-    f"with 1u as 1% of the bankroll, never more than {KELLY_CAP:g}u. The site's "
-    f"record counts every bet at {BASE_UNITS:g}u, or to win {BASE_UNITS:g}u on a "
-    f"minus price, up to +{KELLY_FROM - 1}, and by the same quarter Kelly from "
-    f"+{KELLY_FROM}, whatever trust says."
+    f"**Size** is {BASE_UNITS:g}u, scaled up by the trust the model has earned "
+    f"in the game's tier (the trust line above), at most {MAX_UNITS:g}u. A tier "
+    "trusted at zero is the base size. A long price is sized by its price "
+    "instead: +200 to +500 0.6u, +501 to +1500 0.4u, longer than +1500 0.2u "
+    "(the NHL Due List ladder on a 1u base). The site's record counts every bet at "
+    f"{BASE_UNITS:g}u, or to win {BASE_UNITS:g}u on a minus price, up to +199, "
+    "and at that ladder from +200, whatever trust says."
 )
 
 
-def kelly_units(price, edge=None) -> float | None:
-    """The quarter-Kelly size for `price` at `edge`, or None below +200 (or
-    for no usable price), where the trust size stands."""
+def ladder_units(price) -> float | None:
+    """The size the price ladder sets for `price`, or None below +200
+    (or for no usable price), where the trust size stands."""
     try:
         p = float(price)
     except (TypeError, ValueError):
         return None
-    if p != p or p < KELLY_FROM:
+    if p != p or p < LADDER_FROM:
         return None
-    try:
-        e = float(edge)
-    except (TypeError, ValueError):
-        e = KELLY_DEFAULT_EDGE
-    if e != e:
-        e = KELLY_DEFAULT_EDGE
-    if e <= 0:
-        return 0.0
-    raw = KELLY_FRACTION * KELLY_BANKROLL * e / (p / 100.0)
-    return round(min(max(raw, 0.0), KELLY_CAP), 2)
+    for longest, size in PRICE_BRACKETS:
+        if p <= longest:
+            return size
+    return LONGEST_UNITS
 
 
-def units(weight, price=None, edge=None) -> float:
-    """The size for a selection at `price` and `edge` in a tier trusted at
-    `weight`."""
-    kelly = kelly_units(price, edge)
-    if kelly is not None:
-        return kelly
+def units(weight, price=None) -> float:
+    """The size for a selection at `price` in a tier trusted at `weight`."""
+    ladder = ladder_units(price)
+    if ladder is not None:
+        return ladder
     try:
         w = float(weight)
     except (TypeError, ValueError):

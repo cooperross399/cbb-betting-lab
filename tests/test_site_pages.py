@@ -258,12 +258,10 @@ def test_a_bet_kept_at_the_cards_stake_is_restated_at_a_quarter_unit():
     assert (rows["8"]["staked"], rows["8"]["units"]) == (1.0, 1.5)
     assert site_pages.quarter(-110, "push") == (0.0, 1.1)
     assert site_pages.quarter(None, "win") is None
-    # Quarter Kelly from +200 (Cooper, 2026-11-20), 1u = 1% of the bankroll.
-    assert site_pages.quarter(300, "win", 0.10) == (2.49, 0.83)
-    assert site_pages.quarter(300, "loss") == (-0.17, 0.17), "no edge kept: sized at the 2% bar"
-    assert site_pages.quarter(250, "win", 0.5) == (2.5, 1.0), "never past 1u"
-    assert site_pages.quarter(2000, "loss", -0.01) == (0.0, 0.0), "no edge, no stake"
-    assert site_pages.quarter(199, "win", 0.5) == (1.99, 1.0), "below +200 the 1u base stands"
+    # The NHL Due List ladder from +200 on the 1u base (Cooper, 2026-11-20).
+    assert site_pages.quarter(250, "win") == (1.5, 0.6)
+    assert site_pages.quarter(599, "loss") == (-0.4, 0.4)
+    assert site_pages.quarter(2000, "win") == (4.0, 0.2)
 
 
 def test_the_settled_night_keeps_its_graded_games():
@@ -491,7 +489,7 @@ def test_a_game_with_no_posted_line_carries_no_market_for_it(monkeypatch):
 
 def test_straight_up_and_totals_carry_their_units(monkeypatch):
     """Cooper, 2026-11-13: profit under straight up and totals, at the
-    tracked stake (1u, to win 1u on a minus price). Each call is
+    tracked stake ladder (1u, to win 1u on a minus price). Each call is
     priced at the frozen board's price for the called side; a call the board
     showed no price for is counted in `unpriced`, never given a price."""
     settle = _load(WEB / "settle_results.py", "test_site_pages_su_units")
@@ -520,9 +518,9 @@ def test_straight_up_risks_the_stake_flat_and_follows_the_ladder_from_plus_200()
     assert site_pages.flat_risk(-800, "loss") == (-1.0, 1.0)
     assert site_pages.flat_risk(-800, "win") == (0.125, 1.0)
     assert site_pages.flat_risk(150, "win") == (1.5, 1.0)
-    assert site_pages.flat_risk(300, "loss", 0.10) == (-0.83, 0.83)
-    assert site_pages.flat_risk(1000, "win", 0.20) == (5.0, 0.5)
-    assert site_pages.flat_risk(2000, "loss") == (-0.03, 0.03)
+    assert site_pages.flat_risk(300, "loss") == (-0.6, 0.6)
+    assert site_pages.flat_risk(1000, "win") == (4.0, 0.4)
+    assert site_pages.flat_risk(2000, "loss") == (-0.2, 0.2)
     assert site_pages.flat_risk(None, "win") is None
 
 

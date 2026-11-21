@@ -167,7 +167,7 @@ def test_the_site_grades_every_card_pick_at_the_tracked_stake_by_category():
          "book": "bovada", "tier": "mid_major", "result": "win", "clv": 0.012},
         {"date": "2026-11-19", "slot": "morning", "home": "Iowa State Cyclones", "away": "Memphis Tigers",
          "market": "alternate_team_total", "segment": "game", "category": "Team totals", "selection": "home_under",
-         "line": 77.5, "price": 490.0, "edge": 0.1175, "book": "fanduel", "tier": "high_major", "result": "loss", "clv": -0.02},
+         "line": 77.5, "price": 490.0, "book": "fanduel", "tier": "high_major", "result": "loss", "clv": -0.02},
         {"date": "2026-11-19", "slot": "evening", "home": "Liberty Flames", "away": "High Point Panthers",
          "market": "spread_h1", "segment": "h1", "category": "ATS", "selection": "away", "line": -2.5, "price": -110.0,
          "book": "fanduel", "tier": "mid_major", "result": "win", "clv": None},
@@ -178,7 +178,7 @@ def test_the_site_grades_every_card_pick_at_the_tracked_stake_by_category():
     assert len(rows) == 3  # the pending pick is not staked
     assert [r["label"] for r in rows] == ["VCU Rams to win", "Iowa State Cyclones under 77.5", "High Point Panthers -2.5"]
     assert [r["market"] for r in rows] == ["Moneyline", "Alt team total", "1st half spread"]
-    assert rows[0]["units"] == 1.25 and rows[1]["units"] == -0.6, "+490 at an 11.75% edge: quarter Kelly is 0.6u"
+    assert rows[0]["units"] == 1.25 and rows[1]["units"] == -0.6
     assert abs(rows[2]["units"] - 1.0) < 1e-9 and abs(rows[2]["staked"] - 1.1) < 1e-9
     page = site.tracker_page(rows, 1, record)
     assert page["source"] == "card"
