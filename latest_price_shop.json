@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 110,
-      "away_team": "Columbia Lions",
-      "book": "hardrockbet",
-      "books": 15,
-      "commence": "2026-11-21T17:00:00+00:00",
-      "edge": 0.0769,
-      "event_id": "78595a04d81f88f96e1045a0c36edf26",
-      "fair_american": -105,
-      "game": "Columbia Lions at Boston Univ. Terriers",
-      "home_team": "Boston Univ. Terriers",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-21T14:41+00:00",
-  "captures": 268,
+  "alerts": [],
+  "as_of": "2026-11-21T16:15+00:00",
+  "captures": 269,
   "cells": [
     {
       "beat_close": 0.7916666666666666,
@@ -54,13 +38,13 @@
       "ungraded": 5
     },
     {
-      "beat_close": 0.76,
-      "games": 23,
-      "graded": 25,
+      "beat_close": 0.7307692307692307,
+      "games": 24,
+      "graded": 26,
       "high": null,
       "low": null,
-      "mean": 0.01792273602394345,
-      "shops": 40,
+      "mean": 0.016354652647442895,
+      "shops": 41,
       "tier": "unplaced",
       "ungraded": 15
     }
@@ -68,52 +52,37 @@
   "correction_factor": 1.8815404941435947,
   "current": [
     {
-      "american": 110,
-      "away_team": "Columbia Lions",
-      "book": "hardrockbet",
-      "books": 15,
-      "commence": "2026-11-21T17:00:00+00:00",
-      "edge": 0.0769,
-      "event_id": "78595a04d81f88f96e1045a0c36edf26",
-      "fair_american": -105,
-      "game": "Columbia Lions at Boston Univ. Terriers",
-      "home_team": "Boston Univ. Terriers",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
       "american": 125,
-      "away_team": "New Mexico Lobos",
-      "book": "hardrockbet",
-      "books": 18,
-      "commence": "2026-11-21T19:00:00+00:00",
+      "away_team": "Albany Great Danes",
+      "book": "espnbet",
+      "books": 17,
+      "commence": "2026-11-21T21:00:00+00:00",
       "edge": 0.0228,
-      "event_id": "e9245afd02b038b953f892119fe558d6",
+      "event_id": "343eb2e0f080f6c844094408141efe87",
       "fair_american": 120,
-      "game": "New Mexico Lobos at Wichita St Shockers",
-      "home_team": "Wichita St Shockers",
+      "game": "Albany Great Danes at Canisius Golden Griffins",
+      "home_team": "Canisius Golden Griffins",
       "line": null,
       "market": "moneyline",
       "selection": "home"
     },
     {
-      "american": -271,
-      "away_team": "Presbyterian Blue Hose",
-      "book": "courtside",
-      "books": 13,
-      "commence": "2026-11-22T00:30:00+00:00",
-      "edge": 0.0251,
-      "event_id": "d579b046d1ffdb6960b62c6d4e8c46e5",
-      "fair_american": -298,
-      "game": "Presbyterian Blue Hose at Tennessee Tech Golden Eagles",
-      "home_team": "Tennessee Tech Golden Eagles",
+      "american": -200,
+      "away_team": "Longwood Lancers",
+      "book": "fanduel",
+      "books": 16,
+      "commence": "2026-11-21T21:00:00+00:00",
+      "edge": 0.0203,
+      "event_id": "0547585c4affb18dcbcc337074462c31",
+      "fair_american": -213,
+      "game": "Longwood Lancers at East Tennessee St Buccaneers",
+      "home_team": "East Tennessee St Buccaneers",
       "line": null,
       "market": "moneyline",
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-21T14:39:50+00:00",
+  "latest_capture": "2026-11-21T16:13:35+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
