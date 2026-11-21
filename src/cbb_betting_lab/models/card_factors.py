@@ -1221,6 +1221,21 @@ def load_kenpom(raw_dir: Path | str | None, *, day: str) -> tuple[dict, str]:
     return out, ""
 
 
+def outside_projection_margin(matchup) -> float | None:
+    """The paid projection's home margin this matchup read, or None.
+
+    For the site's strong-spread flag (decision 119), which publishes only
+    whether the call agrees with it: the projection itself stays off every
+    public page, as its subscription requires.
+    """
+    detail = (getattr(matchup, "context", None) or {}).get("kenpom") or {}
+    margin = detail.get("margin")
+    try:
+        return None if margin is None else float(margin)
+    except (TypeError, ValueError):
+        return None
+
+
 def kenpom_for(context: "DayContext", home_id, away_id) -> tuple[float, float, float] | None:
     """KenPom's (home points, away points, home win probability) oriented to
     THIS matchup's home side, or None. A neutral-floor game KenPom filed the
