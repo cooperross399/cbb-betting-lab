@@ -375,7 +375,9 @@ def night_record(results: dict) -> dict:
 #: straight up risks the tracked stake flat (`site_pages.flat_risk`).
 #: 6 (2026-11-13): a side the board carried no price for is priced from the
 #: hourly line captures (decision 102).
-GRADING = 6
+#: 7 (2026-11-21): the tracked stake is 1u (to win 1u on a minus price), the
+#: ladder from +200 0.6u / 0.4u / 0.2u (decision 115).
+GRADING = 7
 
 
 def _kept_night(path: Path) -> dict | None:

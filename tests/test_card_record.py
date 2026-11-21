@@ -178,8 +178,8 @@ def test_the_site_grades_every_card_pick_at_the_tracked_stake_by_category():
     assert len(rows) == 3  # the pending pick is not staked
     assert [r["label"] for r in rows] == ["VCU Rams to win", "Iowa State Cyclones under 77.5", "High Point Panthers -2.5"]
     assert [r["market"] for r in rows] == ["Moneyline", "Alt team total", "1st half spread"]
-    assert rows[0]["units"] == round(0.25 * 1.25, 4) and rows[1]["units"] == -0.15
-    assert abs(rows[2]["units"] - 0.25) < 1e-9 and abs(rows[2]["staked"] - 0.275) < 1e-9
+    assert rows[0]["units"] == 1.25 and rows[1]["units"] == -0.6
+    assert abs(rows[2]["units"] - 1.0) < 1e-9 and abs(rows[2]["staked"] - 1.1) < 1e-9
     page = site.tracker_page(rows, 1, record)
     assert page["source"] == "card"
     assert {c["key"] for c in page["byCategory"]} == {"Straight up", "Team totals", "ATS"}

@@ -1183,8 +1183,15 @@ tonight's stakes, every model, the ledgers and the policy are unchanged.
 due list"*, *".25u,.15u,.1u,.05u"*. From +200 the card's Size column and the
 site's tracker both read it: 0.15u up through +500, 0.1u up through +1500
 and 0.05u beyond that. Below +200 the rule above stands.
-`models/sizing.PRICE_BRACKETS` and `web/site_pages.STAKE_BRACKETS` are pinned
-equal by a test.
+**Scaled to a 1u base on 2026-11-21 (decision 115).**
+
+**2026-11-21: the record and the card are on a 1u base** (decision 115).
+Cooper: *"use the due list ladder style pricing but with 1u as the main
+instead of .25u"*. Every size is four times what it was: 1u (or to win 1u on
+a minus price; straight up risks 1u flat) up to +199, then 0.6u through +500,
+0.4u through +1500 and 0.2u beyond. The card's trust scaling runs 1-2u.
+Every past night is restated: the tracker is rebuilt each run and settled
+nights carry `GRADING = 7`.
 
 **A Pages deploy can stick on one commit.** On 2026-11-04 four Publish Board
 runs of commit 9b9ce5a failed at "Deploy to GitHub Pages" (three timeouts with

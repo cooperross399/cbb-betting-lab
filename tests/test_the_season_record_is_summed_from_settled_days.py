@@ -195,11 +195,11 @@ def test_a_lean_is_never_counted_in_picks(tmp_path: Path, monkeypatch) -> None:
     assert _wlp(season["picks"]) == {"w": 1, "l": 0, "p": 0}, "a lean reached the best bets' record"
     assert _wlp(season["leans"]) == {"w": 1, "l": 1, "p": 0}
     assert _wlp(board["record"]["picks"]) == {"w": 1, "l": 0, "p": 0}
-    # Units at the tracked stake: the bet won 0.25u at -150 (0.375 risked),
-    # the leans won 0.25u at -110 and lost 0.30u at -120.
-    assert season["picks"]["units"] == 0.25 and season["picks"]["staked"] == 0.38
-    assert season["leans"]["units"] == -0.05
-    assert results["games"][0]["pick"]["label"] == "Over 140.5 \u00b7 +0.25u"
+    # Units at the tracked stake: the bet won 1u at -150 (1.5 risked),
+    # the leans won 1u at -110 and lost 1.2u at -120.
+    assert season["picks"]["units"] == 1.0 and season["picks"]["staked"] == 1.5
+    assert season["leans"]["units"] == -0.2
+    assert results["games"][0]["pick"]["label"] == "Over 140.5 \u00b7 +1.00u"
     assert results["games"][0]["pick"]["baseLabel"] == "Over 140.5"
 
 

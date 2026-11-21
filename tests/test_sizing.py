@@ -13,7 +13,7 @@ def test_an_untrusted_or_unknown_tier_is_the_base_size():
 
 
 def test_earned_trust_sizes_up_in_steps_and_never_past_the_cap():
-    assert sizing.units(0.37) == 0.35
+    assert sizing.units(0.37) == 1.4
     assert sizing.units(1.0) == sizing.MAX_UNITS
     assert sizing.units(5.0) == sizing.MAX_UNITS
     sizes = [sizing.units(w / 20) for w in range(21)]
@@ -21,7 +21,7 @@ def test_earned_trust_sizes_up_in_steps_and_never_past_the_cap():
 
 
 def test_the_tracker_rule_is_untouched():
-    """Cooper's 2026-11-04 rule: the site counts every bet at 0.25u."""
+    """Cooper's rule, 1u since 2026-11-21: the site counts every bet at the card's base."""
     import importlib.util
     from pathlib import Path
 
@@ -34,11 +34,11 @@ def test_the_tracker_rule_is_untouched():
 
 def test_a_long_price_is_sized_by_the_nhl_due_list_ladder():
     """Cooper, 2026-11-11: the NHL Due List's price ranges, .25u/.15u/.1u/.05u."""
-    assert sizing.units(0.0, -150) == 0.25 and sizing.units(0.0, 199) == 0.25
+    assert sizing.units(0.0, -150) == 1.0 and sizing.units(0.0, 199) == 1.0
     assert sizing.units(1.0, 150) == sizing.MAX_UNITS, "below +200 the trust size stands"
-    assert sizing.units(1.0, 200) == 0.15 and sizing.units(0.0, 500) == 0.15
-    assert sizing.units(0.0, 501) == 0.1 and sizing.units(0.0, 1500) == 0.1
-    assert sizing.units(0.0, 1501) == 0.05 and sizing.units(0.0, 5000) == 0.05
+    assert sizing.units(1.0, 200) == 0.6 and sizing.units(0.0, 500) == 0.6
+    assert sizing.units(0.0, 501) == 0.4 and sizing.units(0.0, 1500) == 0.4
+    assert sizing.units(0.0, 1501) == 0.2 and sizing.units(0.0, 5000) == 0.2
     assert sizing.units(0.0, None) == sizing.BASE_UNITS
 
 

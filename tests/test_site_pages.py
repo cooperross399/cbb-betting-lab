@@ -222,13 +222,13 @@ def test_record_and_tracker_pages_are_built_from_frozen_boards_and_finals(tmp_pa
     assert record["markets"]["spread"]["games"] == 2 and record["markets"]["total"]["games"] == 2
     assert record["movement"] == {"toward": 1, "against": 0, "flat": 0, "picks": 1}, "ND shortened from -150 to -160: toward the pick"
     tracker = json.loads((tmp_path / "tracker.json").read_text(encoding="utf-8"))
-    # 0.25u, or to win 0.25u on a minus price (2026-11-04): -160 risks 0.4u to win 0.25u,
-    # whatever the 1u the frozen board recorded.
-    assert tracker["overall"] == {"w": 1, "l": 0, "p": 0, "bets": 1, "staked": 0.4, "units": 0.25, "returnPct": 62.5}
-    assert tracker["stake"] == 0.25 and tracker["teamPickDefaultUnits"] == 0.25
+    # 1u, or to win 1u on a minus price (2026-11-21): -160 risks 1.6u to win 1u,
+    # whatever the frozen board recorded.
+    assert tracker["overall"] == {"w": 1, "l": 0, "p": 0, "bets": 1, "staked": 1.6, "units": 1.0, "returnPct": 62.5}
+    assert tracker["stake"] == 1.0 and tracker["teamPickDefaultUnits"] == 1.0
     assert tracker["opinions"]["overall"]["bets"] == 1 and tracker["opinions"]["overall"]["staked"] == 0.0
     kinds = {r["kind"]: r for r in tracker["rows"]}
-    assert kinds["bet"]["result"] == "win" and kinds["bet"]["units"] == 0.25 and kinds["bet"]["staked"] == 0.4 and kinds["bet"]["team"] == "ND"
+    assert kinds["bet"]["result"] == "win" and kinds["bet"]["units"] == 1.0 and kinds["bet"]["staked"] == 1.6 and kinds["bet"]["team"] == "ND"
     assert kinds["pass"]["result"] == "loss" and kinds["pass"]["units"] is None and kinds["pass"]["staked"] == 0.0, "Kansas +3.5 lost by 5"
     assert kinds["bet"]["final"] == "NOVA 70, ND 78"
     assert [m["key"] for m in tracker["byMarket"]] == ["Moneyline"]
@@ -239,7 +239,7 @@ def test_record_and_tracker_pages_are_built_from_frozen_boards_and_finals(tmp_pa
 
 def test_a_bet_kept_at_the_cards_stake_is_restated_at_a_quarter_unit():
     """A frozen board records the card's stake (1u, 2u); the tracker never reads it.
-    Each bet is restated from its own price and result at 0.25u, or to win 0.25u."""
+    Each bet is restated from its own price and result at 1u, or to win 1u."""
     site_pages = _load(WEB / "site_pages.py", "test_site_pages_restake")
     game = {"id": "7", "home": {"abbr": "KU"}, "away": {"abbr": "DUKE"},
             "pick": {"kind": "bet", "market": "Moneyline", "label": "Kansas ML", "price": -200, "units": 2.0, "side": "home"}}
@@ -254,14 +254,14 @@ def test_a_bet_kept_at_the_cards_stake_is_restated_at_a_quarter_unit():
     graded = [{"date": "2026-11-14", "game": game, "home": 60, "away": 70, "teams": {}},
               {"date": "2026-11-14", "game": win, "home": 60, "away": 70, "teams": {}}]
     rows = {r["id"]: r for r in site_pages.tracker_rows(graded, Settle)}
-    assert (rows["7"]["staked"], rows["7"]["units"]) == (0.5, -0.5), "to win 0.25u at -200, not the card's 2u"
-    assert (rows["8"]["staked"], rows["8"]["units"]) == (0.25, 0.375)
-    assert site_pages.quarter(-110, "push") == (0.0, 0.275)
+    assert (rows["7"]["staked"], rows["7"]["units"]) == (2.0, -2.0), "to win 1u at -200"
+    assert (rows["8"]["staked"], rows["8"]["units"]) == (1.0, 1.5)
+    assert site_pages.quarter(-110, "push") == (0.0, 1.1)
     assert site_pages.quarter(None, "win") is None
-    # The NHL Due List ladder from +200 (Cooper, 2026-11-11).
-    assert site_pages.quarter(250, "win") == (0.375, 0.15)
-    assert site_pages.quarter(599, "loss") == (-0.1, 0.1)
-    assert site_pages.quarter(2000, "win") == (1.0, 0.05)
+    # The NHL Due List ladder from +200 on the 1u base (Cooper, 2026-11-20).
+    assert site_pages.quarter(250, "win") == (1.5, 0.6)
+    assert site_pages.quarter(599, "loss") == (-0.4, 0.4)
+    assert site_pages.quarter(2000, "win") == (4.0, 0.2)
 
 
 def test_the_settled_night_keeps_its_graded_games():
@@ -489,7 +489,7 @@ def test_a_game_with_no_posted_line_carries_no_market_for_it(monkeypatch):
 
 def test_straight_up_and_totals_carry_their_units(monkeypatch):
     """Cooper, 2026-11-13: profit under straight up and totals, at the
-    tracked stake ladder (0.25u, to win 0.25u on a minus price). Each call is
+    tracked stake ladder (1u, to win 1u on a minus price). Each call is
     priced at the frozen board's price for the called side; a call the board
     showed no price for is counted in `unpriced`, never given a price."""
     settle = _load(WEB / "settle_results.py", "test_site_pages_su_units")
@@ -507,20 +507,20 @@ def test_straight_up_and_totals_carry_their_units(monkeypatch):
     body, _ = settle.settle_day("cbb", None, board)
     su, tots = body["summary"]["straightUp"], body["summary"]["totals"]
     assert (su["w"], su["l"]) == (1, 1)
-    assert (su["units"], su["staked"]) == (-0.12, 0.5), "flat risk: +0.125u at -200 risking 0.25u, -0.25u at +120"
-    assert (tots["w"], tots["l"], tots["units"], tots["staked"], tots["unpriced"]) == (2, 0, 0.25, 0.26, 1)
+    assert (su["units"], su["staked"]) == (-0.5, 2.0), "flat risk: +0.5u at -200 risking 1u, -1u at +120"
+    assert (tots["w"], tots["l"], tots["units"], tots["staked"], tots["unpriced"]) == (2, 0, 1.0, 1.05, 1)
 
 
 def test_straight_up_risks_the_stake_flat_and_follows_the_ladder_from_plus_200():
     """Cooper, 2026-11-13: "do a flat .25u", and "bring the .15u, .1u, and
     .05u sizing disciplines into play like the NHL"."""
     site_pages = _load(WEB / "site_pages.py", "test_site_pages_flat_risk")
-    assert site_pages.flat_risk(-800, "loss") == (-0.25, 0.25)
-    assert site_pages.flat_risk(-800, "win") == (0.0312, 0.25)
-    assert site_pages.flat_risk(150, "win") == (0.375, 0.25)
-    assert site_pages.flat_risk(300, "loss") == (-0.15, 0.15)
-    assert site_pages.flat_risk(1000, "win") == (1.0, 0.1)
-    assert site_pages.flat_risk(2000, "loss") == (-0.05, 0.05)
+    assert site_pages.flat_risk(-800, "loss") == (-1.0, 1.0)
+    assert site_pages.flat_risk(-800, "win") == (0.125, 1.0)
+    assert site_pages.flat_risk(150, "win") == (1.5, 1.0)
+    assert site_pages.flat_risk(300, "loss") == (-0.6, 0.6)
+    assert site_pages.flat_risk(1000, "win") == (4.0, 0.4)
+    assert site_pages.flat_risk(2000, "loss") == (-0.2, 0.2)
     assert site_pages.flat_risk(None, "win") is None
 
 
@@ -547,7 +547,7 @@ def test_against_the_spread_carries_its_units(monkeypatch):
     body, _ = settle.settle_day("cbb", None, board)
     ats = body["summary"]["ats"]
     assert (ats["w"], ats["l"], ats["p"]) == (2, 1, 0)
-    assert (ats["units"], ats["staked"], ats["unpriced"]) == (0.0, 0.53, 1), "+0.25u risking 0.275u, -0.25u at +100"
+    assert (ats["units"], ats["staked"], ats["unpriced"]) == (0.0, 2.1, 1), "+1u risking 1.1u, -1u at +100"
 
 
 def test_a_side_the_board_did_not_price_is_priced_from_the_line_captures(monkeypatch):
@@ -576,11 +576,11 @@ def test_a_side_the_board_did_not_price_is_priced_from_the_line_captures(monkeyp
     body, _ = settle.settle_day("cbb", _date(2026, 11, 3), board)
     ats = body["summary"]["ats"]
     assert (ats["w"], ats.get("unpriced", 0)) == (1, 0)
-    assert (ats["units"], ats["staked"]) == (0.25, 0.28), "F +3.5 at -112 (the provider's home row), risking 0.28u to win 0.25u; E's -108 is the other side"
+    assert (ats["units"], ats["staked"]) == (1.0, 1.12), "F +3.5 at -112 (the provider's home row), risking 1.12u to win 1u; E's -108 is the other side"
 
 
 def test_a_lean_is_tracked_at_a_quarter_unit_apart_from_the_bets():
-    """Leans are tracked at the same 0.25u as the bets (2026-11-04), tallied
+    """Leans are tracked at the same 1u as the bets (2026-11-21), tallied
     under `opinions` and never in the bets' `overall`; a pass stakes nothing."""
     site_pages = _load(WEB / "site_pages.py", "test_site_pages_lean_units")
     lean = {"id": "9", "home": {"abbr": "UNLV"}, "away": {"abbr": "NAU"},
@@ -596,9 +596,9 @@ def test_a_lean_is_tracked_at_a_quarter_unit_apart_from_the_bets():
     graded = [{"date": "2026-11-03", "game": g, "home": 89, "away": 77, "teams": {}} for g in (lean, pas)]
     rows = site_pages.tracker_rows(graded, Settle)
     by = {r["id"]: r for r in rows}
-    assert (by["9"]["staked"], by["9"]["units"]) == (0.2625, -0.2625), "risk to win 0.25u at -105"
+    assert (by["9"]["staked"], by["9"]["units"]) == (1.05, -1.05), "risk to win 1u at -105"
     assert (by["10"]["staked"], by["10"]["units"]) == (0.0, None)
     page = site_pages.tracker_page(rows, 1)
     assert page["overall"]["bets"] == 0, "a lean never reaches the best bets"
     kinds = {k["key"]: k for k in page["opinions"]["byKind"]}
-    assert kinds["lean"]["units"] == -0.26 and kinds["lean"]["staked"] == 0.26
+    assert kinds["lean"]["units"] == -1.05 and kinds["lean"]["staked"] == 1.05

@@ -773,20 +773,20 @@ def _grade(settle, pick: dict, g: dict, hf: int, af: int, teams: dict) -> str | 
         return None
 
 
-#: Every tracked bet is counted at 0.25u on a plus price, or enough to win
-#: 0.25u on a minus price, whatever the card staked it (Cooper, 2026-11-04:
-#: "Make it so every bet weve tracked on the website in records and stuff is
-#: all .25u or to win .25u for -odds").
+#: Every tracked bet is counted at 1u on a plus price, or enough to win 1u
+#: on a minus price, whatever the card staked it (Cooper, 2026-11-20: "use the
+#: due list ladder style pricing but with 1u as the main instead of .25u"; it
+#: was 0.25u from 2026-11-04).
 #: From +200 the stake follows the NHL Due List's ladder (Cooper, 2026-11-11:
 #: "Use the same unit price ranges for cbb that we do for the NHL due list",
-#: ".25u,.15u,.1u,.05u"): +200 to +500 0.15u, +501 to +1500 0.1u, longer
-#: 0.05u. Each pair is (longest price, stake). Every past night is restated,
+#: ".25u,.15u,.1u,.05u"), scaled to the 1u base on 2026-11-21: +200 to
+#: +500 0.6u, +501 to +1500 0.4u, longer 0.2u. Each pair is (longest price, stake). Every past night is restated,
 #: because the tracker is rebuilt from the frozen boards each run. The card's
 #: Size column reads the same ladder (`models/sizing.py`).
-TRACKED_STAKE = 0.25
-STAKE_BRACKETS: tuple[tuple[int, float], ...] = ((500, 0.15), (1500, 0.1))
-STAKE_LONGEST = 0.05
-STAKE_RULE = "0.25u, to win 0.25u on a minus price; +200 to +500 0.15u, +501 to +1500 0.1u, longer than +1500 0.05u"
+TRACKED_STAKE = 1.0
+STAKE_BRACKETS: tuple[tuple[int, float], ...] = ((500, 0.6), (1500, 0.4))
+STAKE_LONGEST = 0.2
+STAKE_RULE = "1u, to win 1u on a minus price; +200 to +500 0.6u, +501 to +1500 0.4u, longer than +1500 0.2u"
 
 
 def tracked_stake(price) -> float:
@@ -815,9 +815,9 @@ def quarter(price, result) -> tuple[float, float] | None:
 
 def flat_risk(price, result) -> tuple[float, float] | None:
     """(profit, risked) for one straight-up call: the tracked stake is the
-    amount RISKED at every price (Cooper, 2026-11-13: "do a flat .25u", with
-    the NHL Due List's 0.15u / 0.1u / 0.05u from +200). A heavy favourite at
-    -800 risks 0.25u to win 0.03u, rather than 2u to win 0.25u."""
+    amount RISKED at every price (Cooper, 2026-11-13: "do a flat .25u", 1u
+    since 2026-11-21, with the ladder's 0.6u / 0.4u / 0.2u from +200). A heavy
+    favourite at -800 risks 1u to win 0.125u, rather than 8u to win 1u."""
     p = _num(price)
     if p is None or -100 < p < 100 or result not in ("win", "loss", "push"):
         return None
@@ -1065,7 +1065,7 @@ def tracker_page(rows: list[dict], nights: int, card: dict | None = None) -> dic
         },
         "rows": rows,
         "notes": [
-            "A bet is a selection a card made: it cleared the edge bar on an allowlisted market with a human receipt behind it. Every pick either daily card made is counted, in every market, once per game, side and number, at the first price it was published at: 0.25u, or enough to win 0.25u on a minus price, up to +199; +200 to +500 at 0.15u, +501 to +1500 at 0.1u and longer than +1500 at 0.05u, whatever the card staked it.",
+            "A bet is a selection a card made: it cleared the edge bar on an allowlisted market with a human receipt behind it. Every pick either daily card made is counted, in every market, once per game, side and number, at the first price it was published at: 1u, or enough to win 1u on a minus price, up to +199; +200 to +500 at 0.6u, +501 to +1500 at 0.4u and longer than +1500 at 0.2u, whatever the card staked it.",
             "Closing-line value is the closing chance the pick wins, from the last line capture before tip, minus the chance its price implied. Positive means the price beat the close. Halves have no captured close and carry none.",
             "An opinion is a frozen price the card did not select. A lean is tracked by the same stakes, apart from the bets; a pass is graded for the record and stakes nothing.",
             "Ten or more bets to read a row; fewer swing with one week.",
