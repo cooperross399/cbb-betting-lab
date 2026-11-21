@@ -484,6 +484,9 @@ def test_a_game_with_no_posted_line_carries_no_market_for_it(monkeypatch):
     body, _ = settle.settle_day("cbb", None, board)
     first, second = body["games"]
     assert first["markets"] == {}
+    # Decision 119: the graded call rides beside the line it was graded at.
+    call = second["markets"]["spread"].pop("call")
+    assert call["side"] == "away" and call["line"] == 3.5 and call["result"] == "win"
     assert second["markets"] == {"spread": {"line": -3.5, "proj": -4.0}, "total": {"line": 140.5, "proj": 138.0}}
 
 

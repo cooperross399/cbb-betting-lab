@@ -1322,6 +1322,18 @@ card-feed as `spread_bias.json`), and the `spread_bias` correction in
 covered 51.6%: not a demonstrated gain. Registered as `spread_bias_2026_11_21`,
 one per tier; no receipt is touched and no frozen opinion is re-cut.
 
+### 2026-11-21: the site grades the spread call at the best number (decision 119)
+
+Cooper: *"how can we get to 55%"*, *"all 3"*. No projection on file beat the
+line this season (decision 118's study), but grading the same calls at the
+best number any book offered their side lifted the cover rate about two and a
+half points. The site's ATS record is now graded there, with the
+consensus-number record beside it; a call within a point of the line takes the
+underdog; and a strong-spread record counts the calls that agree with the paid
+outside projection and have the line moving their way or a book a point
+better. Site only: the card already shops every book's line, nothing is
+registered, and the projection itself is never published.
+
 ## Contract strings — never change these
 
 Cooper's scheduled routines hard-code these. Renaming any of them silently

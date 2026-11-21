@@ -235,6 +235,42 @@ def _board_or_captured(board: dict, day, price, market: str, team: str, opponent
     return CAPTURES.price(day.isoformat(), market, name(team), name(opponent), selection, line, board.get("generatedAt"))
 
 
+#: The site's every-game spread call (decision 119): the side the projection
+#: is on, except that a projection within `DOG_TIEBREAK` points of the line --
+#: no real opinion -- takes the underdog, the side getting points. Mirrored in
+#: `build_board_json.ats_call_home`; `test_the_ats_call_is_one_rule` holds the
+#: two together.
+DOG_TIEBREAK = 1.0
+
+
+def ats_call_home(proj: float, current: float) -> bool:
+    if abs(float(proj) - float(current)) < DOG_TIEBREAK:
+        return float(current) > 0
+    return float(proj) < float(current)
+
+
+def _cover(mine: float, line: float) -> str:
+    adj = mine + float(line)
+    return "push" if adj == 0 else "win" if adj > 0 else "loss"
+
+
+def _best_number(board: dict, day: date, sp: dict, home: bool, team: str, other: str):
+    """(line, price) at the best number for the call's side, or None."""
+    shop = (sp.get("best") or {}).get("home" if home else "away")
+    if isinstance(shop, dict) and isinstance(shop.get("line"), (int, float)):
+        price = shop.get("price")
+        return float(shop["line"]), (int(price) if isinstance(price, (int, float)) else None)
+    if CAPTURES is None:
+        return None
+    try:
+        names = board.get("teams") or {}
+        name = lambda abbr: (names.get(abbr) or {}).get("name") or abbr
+        found = CAPTURES.best_line(day.isoformat(), name(team), name(other), board.get("generatedAt"))
+    except Exception:
+        return None
+    return found
+
+
 def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
     """One day's results.json body, and whether a game on it still has no final.
 
@@ -250,6 +286,7 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
     games = []
     picks, leans = {"w": 0, "l": 0, "p": 0}, {"w": 0, "l": 0, "p": 0}
     su, ats, tots = {"w": 0, "l": 0}, {"w": 0, "l": 0, "p": 0}, {"w": 0, "l": 0, "p": 0}
+    ats_market, ats_strong = {"w": 0, "l": 0, "p": 0}, {"w": 0, "l": 0, "p": 0}
     shown = [g for g in board.get("games", []) if isinstance(g, dict)]
     for g in shown:
         f = fin.get(str(g.get("id")))
@@ -302,18 +339,33 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
             if num(tt.get("current")):
                 row["markets"]["total"] = {"line": tt["current"], "proj": tt.get("proj")}
             if isinstance(sp.get("proj"), (int, float)) and isinstance(sp.get("current"), (int, float)):
-                model_home = sp["proj"] < sp["current"]
-                adj = (hf - af) + sp["current"]
-                res = "push" if adj == 0 else "win" if (adj > 0) == model_home else "loss"
-                ats[{"win": "w", "loss": "l", "push": "p"}[res]] += 1
-                # Priced at the frozen board's best price for the side the
-                # model's line picked; an older board carried only the home
-                # price, so an away call there stakes nothing (unpriced).
+                model_home = ats_call_home(sp["proj"], sp["current"])
+                margin = hf - af
+                mine = margin if model_home else -margin
                 team, other = (g["home"]["abbr"], g["away"]["abbr"]) if model_home else (g["away"]["abbr"], g["home"]["abbr"])
                 handicap = float(sp["current"]) if model_home else -float(sp["current"])
+                # At the market's consensus number, as this tally read until
+                # decision 119: kept beside the best number so the gain from
+                # shopping is on the page rather than asserted.
+                res = _cover(mine, handicap)
+                ats_market[{"win": "w", "loss": "l", "push": "p"}[res]] += 1
                 price = _board_or_captured(board, day, sp.get("homePrice" if model_home else "awayPrice"),
                                            "spread", team, other, "home" if model_home else "away", handicap)
+                _call_units(price, res, ats_market)
+                # At the best number any book offered the call's side
+                # (decision 119): the board's own `best` when it carried one,
+                # else the last hourly capture before the board froze, else
+                # the consensus number above.
+                shop = _best_number(board, day, sp, model_home, team, other)
+                line, price = (shop if shop else (handicap, price))
+                res = _cover(mine, line)
+                ats[{"win": "w", "loss": "l", "push": "p"}[res]] += 1
                 _call_units(price, res, ats)
+                if sp.get("strong") is True:
+                    ats_strong[{"win": "w", "loss": "l", "push": "p"}[res]] += 1
+                    _call_units(price, res, ats_strong)
+                row["markets"].setdefault("spread", {})["call"] = {"side": "home" if model_home else "away", "line": line,
+                                                                   "price": price, "strong": sp.get("strong") is True, "result": res}
             if isinstance(tt.get("proj"), (int, float)) and isinstance(tt.get("current"), (int, float)):
                 t = hf + af
                 res = "push" if t == tt["current"] else "win" if (tt["proj"] > tt["current"]) == (t > tt["current"]) else "loss"
@@ -323,14 +375,14 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
                                            g["home"]["abbr"], g["away"]["abbr"], "over" if over else "under", float(tt["current"]))
                 _call_units(price, res, tots)
         games.append(row)
-    for tally in (picks, leans, su, ats, tots):
+    for tally in (picks, leans, su, ats, tots, ats_market, ats_strong):
         if "units" in tally:
             tally["units"], tally["staked"] = round(tally["units"], 2), round(tally["staked"], 2)
     summary = {"picks": picks, "leans": leans}
     if sport == "epl":
         summary.update(result=su, totals={"w": tots["w"], "l": tots["l"]})
     else:
-        summary.update(straightUp=su, ats=ats, totals=tots)
+        summary.update(straightUp=su, ats=ats, totals=tots, atsMarket=ats_market, atsStrong=ats_strong)
     body = {"season": board.get("season", ""), "windowLabel": board.get("windowLabel"),
             "notice": None if games else "The games were played but no final was available when this ran; the next build settles them.",
             "summary": summary, "teams": board.get("teams", {}), "games": games}
@@ -346,7 +398,7 @@ SETTLED_DIR = "settled"
 
 #: The season tallies: the NHL lab's four (web/SCHEMA.md there), and the
 #: model's side against the spread (Cooper, 2026-11-13).
-SEASON_KEYS = ("straightUp", "picks", "leans", "totals", "ats")
+SEASON_KEYS = ("straightUp", "picks", "leans", "totals", "ats", "atsMarket", "atsStrong")
 
 #: How long a day with a game still lacking a final is settled again each run
 #: rather than kept: the NHL lab's patience, so a postponed game cannot hold a
@@ -377,7 +429,11 @@ def night_record(results: dict) -> dict:
 #: hourly line captures (decision 102).
 #: 7 (2026-11-21): the tracked stake is 1u (to win 1u on a minus price), the
 #: ladder from +200 0.6u / 0.4u / 0.2u (decision 115).
-GRADING = 7
+#: 8 (2026-11-21): the spread call is graded at the best number any book
+#: offered its side, a call within a point of the line takes the underdog,
+#: and the consensus-number and strong-spread tallies sit beside it
+#: (decision 119).
+GRADING = 8
 
 
 def _kept_night(path: Path) -> dict | None:

@@ -623,6 +623,58 @@ def best(rows, market, selection, line=None):
     return None if out is None else int(out)
 
 
+def best_number(rows, selection):
+    """The best spread number any book offers `selection` ("home"/"away"):
+    the largest handicap that side can be bet at, and the best price at it
+    (decision 119). `{"line", "price"}`, or None when no book quotes it."""
+    held = []
+    for r in rows:
+        if norm_market(r) != "spread" or (r.get("selection") or "").lower() != selection:
+            continue
+        try:
+            held.append((float(r["line"]), float(r["american_odds"])))
+        except (KeyError, TypeError, ValueError):
+            continue
+    if not held:
+        return None
+    line = max(l for l, _ in held)
+    return {"line": line, "price": int(max(p for l, p in held if l == line))}
+
+
+#: The site's every-game spread call (decision 119), mirrored from
+#: `settle_results.ats_call_home` so the board and the grader agree: the side
+#: the projection is on, except that a projection within `DOG_TIEBREAK` points
+#: of the line -- no real opinion -- takes the underdog, the side getting
+#: points. `test_the_ats_call_is_one_rule` holds the two copies together.
+DOG_TIEBREAK = 1.0
+
+
+def ats_call_home(proj: float, current: float) -> bool:
+    if abs(float(proj) - float(current)) < DOG_TIEBREAK:
+        return float(current) > 0
+    return float(proj) < float(current)
+
+
+#: A strong spread (decision 119): the call agrees with the paid outside
+#: projection's margin (`card_factors.outside_projection_margin`), and either the market has moved toward the call since the open or
+#: the best book offers the call's side at least `STRONG_SHOP_POINTS` more
+#: than the consensus line. Published as a flag only: the projection's own
+#: number is never on the public board.
+STRONG_SHOP_POINTS = 1.0
+
+
+def strong_spread(call_home: bool, current: float, outside_margin, opened, best_side) -> bool:
+    if outside_margin is None:
+        return False
+    outside_line = -float(outside_margin)
+    if outside_line == float(current) or (outside_line < float(current)) != call_home:
+        return False
+    moved = opened is not None and (float(current) < float(opened) if call_home else float(current) > float(opened))
+    side_line = float(current) if call_home else -float(current)
+    shopped = bool(best_side) and best_side.get("line") is not None and float(best_side["line"]) - side_line >= STRONG_SHOP_POINTS
+    return bool(moved or shopped)
+
+
 def consensus_line(rows, market, selection=None):
     lines = []
     for r in rows:
@@ -721,7 +773,7 @@ def load_model(lab: Path, day: date, slate: list[dict]):
     try:
         import pandas as pd  # type: ignore
         from cbb_betting_lab.competitions import CBB  # type: ignore
-        from cbb_betting_lab.models import ratings  # type: ignore
+        from cbb_betting_lab.models import card_factors, ratings  # type: ignore
         from cbb_betting_lab.reports import card_matchups  # type: ignore
         from cbb_betting_lab.selection import HOME, OVER  # type: ignore
     except ImportError:
@@ -794,6 +846,7 @@ def load_model(lab: Path, day: date, slate: list[dict]):
                 # The matchup itself, for the game page's layer-by-layer
                 # breakdown and the two sides' ratings.
                 "game": game,
+                "outsideMargin": card_factors.outside_projection_margin(game),
             }
         return cache[key]
 
@@ -1617,7 +1670,8 @@ def build(lab: Path, day: date) -> dict:
             total_line = consensus_line(mine, "total")
             row["moneyline"] = {"open": opens["moneyline"], "current": {"home": best(mine, "moneyline", "home"), "away": best(mine, "moneyline", "away")}, "fair": None}
             row["spread"] = {"open": opens["spread"], "current": spread_line, "homePrice": best(mine, "spread", "home", spread_line),
-                             "awayPrice": None if spread_line is None else best(mine, "spread", "away", -spread_line), "proj": None}
+                             "awayPrice": None if spread_line is None else best(mine, "spread", "away", -spread_line), "proj": None,
+                             "best": {"home": best_number(mine, "home"), "away": best_number(mine, "away")}}
             row["total"] = {"open": opens["total"], "current": total_line, "overPrice": best(mine, "total", "over", total_line),
                             "underPrice": best(mine, "total", "under", total_line), "proj": None}
             # Model probabilities the freeze recorded, when there is no live
@@ -1647,6 +1701,10 @@ def build(lab: Path, day: date) -> dict:
                 covered, _push, missed = pr["margin_triple"](spread_line)
                 row["spread"]["coverProb"] = round(covered, 4)
                 row["spread"]["fairHomePrice"] = fair_two_way(covered, missed)
+                call_home = ats_call_home(row["spread"]["proj"], spread_line)
+                row["spread"]["call"] = "home" if call_home else "away"
+                row["spread"]["strong"] = strong_spread(call_home, spread_line, pr.get("outsideMargin"), row["spread"].get("open"),
+                                                        (row["spread"].get("best") or {}).get("home" if call_home else "away"))
             if total_line is not None:
                 over, _push, under = pr["total_triple"](total_line)
                 row["total"]["overProb"] = round(over, 4)

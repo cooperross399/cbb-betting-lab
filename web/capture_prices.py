@@ -114,3 +114,28 @@ class CapturePrices:
             return None
         last = max(r["when"] for r in picked)
         return int(max(r["odds"] for r in picked if r["when"] == last))
+
+    def best_line(self, day: str, team: str, opponent: str, before) -> tuple[float, int] | None:
+        """The best spread number for `team`'s side in the last capture at or
+        before `before`: the largest handicap any book offered that side, and
+        the best price at it (decision 119). None when no capture holds it."""
+        cutoff = _when(before)
+        store = MARKETS.get("spread")
+        t, o = self.key(team), self.key(opponent)
+        rows = self._games.get((day or "", frozenset((t, o))))
+        if not rows or cutoff is None or store is None or t == o:
+            return None
+        picked = []
+        for r in rows:
+            if r["market"] != store or r["when"] > cutoff or r["line"] is None:
+                continue
+            side = "home" if r["home"] == t else "away" if r["away"] == t else None
+            if side is None or r["selection"] != side:
+                continue
+            picked.append(r)
+        if not picked:
+            return None
+        last = max(r["when"] for r in picked)
+        held = [r for r in picked if r["when"] == last]
+        line = max(r["line"] for r in held)
+        return line, int(max(r["odds"] for r in held if r["line"] == line))
