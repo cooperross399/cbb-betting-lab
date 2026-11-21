@@ -527,6 +527,7 @@ def select(
     price_band: tuple[float, float] = PRICE_BAND,
     per_game_cap: int = MAX_POSITIONS_PER_GAME,
     per_slate_cap: int = MAX_POSITIONS_PER_SLATE,
+    bars=None,
 ) -> SelectionResult:
     """Turn priced wagers into selections, or into counted reasons why not.
 
@@ -541,6 +542,10 @@ def select(
     treated as `NO_REPORT` and a missing `tip_state_for` as `UNCONFIRMED`,
     because ambiguity falls on the not-a-play side, always — a default of "fine"
     here would let a caller clear both gates by forgetting them.
+
+    `bars` (`models/card_bars.py`, decision 116) may only RAISE `threshold`
+    for a quote: its `threshold(wager, price)` is read in place of the flat
+    bar and its `bet_down_to` restates the same cut.
     """
     result = SelectionResult()
     allows = approved if callable(approved) else (lambda m, s=set(approved): m in s)
@@ -566,7 +571,11 @@ def select(
             (quote, expected_value(probability, quote.american_odds))
             for quote in wager.quotes
         ]
-        clearing = [(q, e) for q, e in priced if e is not None and e >= threshold]
+        clearing = [
+            (q, e) for q, e in priced
+            if e is not None
+            and e >= (threshold if bars is None else max(threshold, bars.threshold(wager, q.american_odds)))
+        ]
         if not clearing:
             result.bar(Bar.BELOW_THRESHOLD, wager)
             continue
@@ -597,8 +606,10 @@ def select(
                 "wager": wager,
                 "edge": float(best_edge),
                 "probability": float(probability),
-                "bet_down_to": bet_down_to(
-                    probability, threshold=threshold, price_band=price_band
+                "bet_down_to": (
+                    bet_down_to(probability, threshold=threshold, price_band=price_band)
+                    if bars is None
+                    else bars.bet_down_to(probability, wager, price_band=price_band)
                 ),
                 "american_odds": float(best_quote.american_odds),
                 "book": best_quote.book,

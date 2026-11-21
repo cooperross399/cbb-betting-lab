@@ -470,6 +470,14 @@ jobs:
             fi
           done
           echo "Snapshots restored: $(ls data/archive/priced_snapshots 2>/dev/null | wc -l)."
+          # The record of card picks, so the evening card can read what the
+          # morning card picked (models/card_bars.py, decision 116). Soft:
+          # without it the evening card applies no morning bar.
+          if git cat-file -e refs/card-feed-tip:card_selections.csv 2>/dev/null; then
+            git show refs/card-feed-tip:card_selections.csv > data/processed/cbb_card_selections.csv \
+              && echo "Card picks restored: $(( $(wc -l < data/processed/cbb_card_selections.csv) - 1 )) rows." \
+              || rm -f data/processed/cbb_card_selections.csv
+          fi
 
       - name: Restore the ESPN results supplement
         # The same-day box scores `scripts/fetch_espn_box.py` read on earlier

@@ -1902,6 +1902,42 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    # ---------------------------------------------------------------------
+    # decision 116 (Cooper, 2026-11-20, "All 4"): three stricter edge bars set from the card's own record and the closing-line alarm (models/card_bars.py), and the second opinion's weight 0.9 -> 1.0 from the 2026-11-20 layer audit (best scale 1.10 at 0.9, z +4.96 over 802 games). One per tier for the four together. Per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="card_bars_2026_11_20",
+        name=(
+            "high-major: the decision-116 card changes together (models/card_bars.py: a 5% edge bar on full-game alternate spreads, alternate totals, team totals and alternate team totals; a 4% bar on prices of -150 or shorter; on the evening card a 4% bar on games the morning card did not pick and no re-listed morning side below its morning bet-down-to price; and card_factors.BLEND_WEIGHT 0.9 -> 1.0 on the second opinion) raise the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-20",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="card_bars_2026_11_20",
+        name=(
+            "mid-major: the decision-116 card changes together (models/card_bars.py: a 5% edge bar on full-game alternate spreads, alternate totals, team totals and alternate team totals; a 4% bar on prices of -150 or shorter; on the evening card a 4% bar on games the morning card did not pick and no re-listed morning side below its morning bet-down-to price; and card_factors.BLEND_WEIGHT 0.9 -> 1.0 on the second opinion) raise the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-20",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="card_bars_2026_11_20",
+        name=(
+            "low-major: the decision-116 card changes together (models/card_bars.py: a 5% edge bar on full-game alternate spreads, alternate totals, team totals and alternate team totals; a 4% bar on prices of -150 or shorter; on the evening card a 4% bar on games the morning card did not pick and no re-listed morning side below its morning bet-down-to price; and card_factors.BLEND_WEIGHT 0.9 -> 1.0 on the second opinion) raise the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-20",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 
