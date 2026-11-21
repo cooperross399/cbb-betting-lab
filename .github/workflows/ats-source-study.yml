@@ -1,0 +1,71 @@
+name: CBB ATS Source Study
+
+# Decision 118 (Cooper, 2026-11-21: "use the kenpom and all the other rankings
+# to get that ATS hit to 55%"). Measures how often each projection the lab can
+# read picks the covering side of the main spread over this season's frozen
+# games: the card, KenPom's FanMatch projection, and each dated ratings table.
+# KenPom's files are a paid subscription's and are never committed, so the
+# study runs here, where the Gameday Refresh inputs artifact carries them, and
+# prints aggregate rates only. Reads no price, spends no credit, writes nothing
+# anywhere but this run's summary and its own artifact.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # `actions: read` to download the latest Gameday Refresh inputs artifact,
+  # and for no other reason.
+  actions: read
+
+jobs:
+  study:
+    name: ATS source study
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          set -eu
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt && python -m pip install -e .
+      - name: Restore the forward ledger and the latest model inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p data/processed data/raw
+          git fetch --depth=1 "https://github.com/${{ github.repository }}.git" +refs/heads/card-feed:refs/card-feed-tip
+          git show refs/card-feed-tip:forward_evidence.csv > data/processed/cbb_forward_evidence.csv
+          echo "Ledger: $(( $(wc -l < data/processed/cbb_forward_evidence.csv) - 1 )) rows."
+          run=$(gh run list --workflow cbb-gameday-refresh.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          artifact=$(gh api "repos/${{ github.repository }}/actions/runs/$run/artifacts" --jq '.artifacts[] | select(.name | startswith("cbb-gameday-inputs-")) | .name' | head -1)
+          seeded="$RUNNER_TEMP/inputs"
+          mkdir -p "$seeded"
+          gh run download "$run" --name "$artifact" --dir "$seeded"
+          for part in processed raw; do
+            if [ -d "$seeded/$part" ]; then
+              cp -R "$seeded/$part/." "data/$part/"
+            fi
+          done
+          echo "Inputs from run $run ($artifact): $(ls data/raw/cbb/kenpom/fanmatch 2>/dev/null | wc -l) KenPom day(s), $(ls data/raw/cbb/second_opinion/history 2>/dev/null | wc -l) dated table(s)."
+      - name: Measure
+        env:
+          PYTHONPATH: src
+        run: |
+          set -euo pipefail
+          python scripts/study_ats_sources.py --output data/outputs/cbb_ats_sources.md
+          cat data/outputs/cbb_ats_sources.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the report
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbb-ats-sources
+          path: data/outputs/cbb_ats_sources.md
+          if-no-files-found: error
+          retention-days: 14
