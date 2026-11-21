@@ -192,7 +192,10 @@ def with_units(pick: dict, tally: dict) -> dict:
     prints a pick's `label` and no units field, so the units ride on the
     label too; `units`, `staked` and `baseLabel` carry them as data. A pick
     with no usable price is left as it was, and so is the tally."""
-    got = _stake_rule()(pick.get("price"), pick.get("result"))
+    edge = pick.get("edge")
+    if not isinstance(edge, (int, float)) and isinstance(pick.get("edgePct"), (int, float)):
+        edge = pick["edgePct"] / 100.0
+    got = _stake_rule()(pick.get("price"), pick.get("result"), edge if isinstance(edge, (int, float)) else None)
     if got is None:
         return pick
     units, staked = got
@@ -202,18 +205,27 @@ def with_units(pick: dict, tally: dict) -> dict:
     return {**pick, "units": units, "staked": staked, "baseLabel": base, "label": f"{base} \u00b7 {fmt_units(units)}"}
 
 
-def _call_units(price, result, tally: dict, rule: str = "quarter") -> None:
+def _call_units(price, result, tally: dict, rule: str = "quarter", edge=None) -> None:
     """Units for a straight-up or totals call at the tracked stake, added to
     its tally (Cooper, 2026-11-13: profit under straight up and totals, at
     the NHL sizing). The price is the one the frozen board showed for the
     called side; a call the board showed no price for is counted in
     `unpriced` and stakes nothing, never a price made up for it."""
-    got = _stake_rule(rule)(price, result)
+    got = _stake_rule(rule)(price, result, edge)
     if got is None:
         tally["unpriced"] = tally.get("unpriced", 0) + 1
         return
     tally["units"] = tally.get("units", 0.0) + got[0]
     tally["staked"] = tally.get("staked", 0.0) + got[1]
+
+
+def _ev(probability, price):
+    """Expected value per unit at an American `price` for a win chance, the
+    edge quarter Kelly sizes a +200-or-longer call by; None without both."""
+    if not isinstance(probability, (int, float)) or not isinstance(price, (int, float)) or -100 < price < 100:
+        return None
+    payout = price / 100.0 if price > 0 else 100.0 / abs(price)
+    return probability * (1.0 + payout) - 1.0
 
 
 #: The hourly line captures (`capture_prices.CapturePrices`), set by `main`
@@ -288,7 +300,8 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
                 other = g["away"]["abbr"] if side == "home" else g["home"]["abbr"]
                 price = _board_or_captured(board, day, ((g.get("moneyline") or {}).get("current") or {}).get(side),
                                            "moneyline", row["projWinner"], other, side, None)
-                _call_units(price, "win" if hit else "loss", su, "flat_risk")
+                chance = hp if side == "home" else 1.0 - hp
+                _call_units(price, "win" if hit else "loss", su, "flat_risk", _ev(chance, price))
             sp, tt = g.get("spread") or {}, g.get("total") or {}
             # A market goes in only when the board carried its line: the shared
             # Results page formats `markets.spread.line` whenever `spread` is
@@ -375,7 +388,9 @@ def night_record(results: dict) -> dict:
 #: straight up risks the tracked stake flat (`site_pages.flat_risk`).
 #: 6 (2026-11-13): a side the board carried no price for is priced from the
 #: hourly line captures (decision 102).
-GRADING = 6
+#: 7 (2026-11-21): the tracked stake is 1u (to win 1u on a minus price), and
+#: quarter Kelly from +200 (decision 115).
+GRADING = 7
 
 
 def _kept_night(path: Path) -> dict | None:

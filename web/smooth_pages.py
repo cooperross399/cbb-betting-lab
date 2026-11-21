@@ -107,14 +107,14 @@ NO_TRACKER_TAB: dict[str, re.Pattern[str]] = {
     "lib/sports.js": re.compile(r'\n    \.\.\.\(has\("tracker"\) \? \[tab\("Tracker"[^\]]*\] : \[tab\("Archive"[^\]]*\]\),'),
 }
 
-# Under each season record on the board, how it would have paid at 0.25u a
+# Under each season record on the board, how it would have paid at 1u a (1u since 2026-11-21, 0.25u before)
 # bet (Cooper, 2026-11-03: "I want a tracked profit/loss for best
 # bets/totals/leans/straight up underneath the record", ".25u per bet. to win
 # .25u for -odds"). build_site_json.season_record writes `units` beside each
 # record; a record without it keeps the old line.
 PL = ('const pl = (key, alt) => { const m = r.season && r.season.money && r.season.money[key]; '
       'return m && typeof m.units === "number" ? '
-      '`${m.units > 0.004 ? "+" : m.units < -0.004 ? "−" : ""}${Math.abs(m.units).toFixed(2)}u at ${m.stake ?? 0.25}u a bet` : alt; };\n  ')
+      '`${m.units > 0.004 ? "+" : m.units < -0.004 ? "−" : ""}${Math.abs(m.units).toFixed(2)}u at ${m.stake ?? 1}u a bet` : alt; };\n  ')
 
 PATCHES: dict[str, list[tuple[str, str]]] = {
     "lib/sports.js": [
@@ -140,7 +140,7 @@ PATCHES: dict[str, list[tuple[str, str]]] = {
         ),
         (
             '[{ label: "Best bets · season", value: F.recStr(data.seasonRecord.picks) }]',
-            '[{ label: "Best bets · season", value: F.recStr(data.seasonRecord.picks), ...((m) => (m && typeof m.units === "number" ? { sub: `${m.units > 0.004 ? "+" : m.units < -0.004 ? "−" : ""}${Math.abs(m.units).toFixed(2)}u at ${m.stake ?? 0.25}u a bet` } : {}))((data.seasonRecord.money || {}).picks) }]',
+            '[{ label: "Best bets · season", value: F.recStr(data.seasonRecord.picks), ...((m) => (m && typeof m.units === "number" ? { sub: `${m.units > 0.004 ? "+" : m.units < -0.004 ? "−" : ""}${Math.abs(m.units).toFixed(2)}u at ${m.stake ?? 1}u a bet` } : {}))((data.seasonRecord.money || {}).picks) }]',
         ),
     ],
     "Board.dc.html": [

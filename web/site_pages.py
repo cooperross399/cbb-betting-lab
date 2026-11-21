@@ -773,58 +773,88 @@ def _grade(settle, pick: dict, g: dict, hf: int, af: int, teams: dict) -> str | 
         return None
 
 
-#: Every tracked bet is counted at 0.25u on a plus price, or enough to win
-#: 0.25u on a minus price, whatever the card staked it (Cooper, 2026-11-04:
-#: "Make it so every bet weve tracked on the website in records and stuff is
-#: all .25u or to win .25u for -odds").
-#: From +200 the stake follows the NHL Due List's ladder (Cooper, 2026-11-11:
-#: "Use the same unit price ranges for cbb that we do for the NHL due list",
-#: ".25u,.15u,.1u,.05u"): +200 to +500 0.15u, +501 to +1500 0.1u, longer
-#: 0.05u. Each pair is (longest price, stake). Every past night is restated,
-#: because the tracker is rebuilt from the frozen boards each run. The card's
-#: Size column reads the same ladder (`models/sizing.py`).
-TRACKED_STAKE = 0.25
-STAKE_BRACKETS: tuple[tuple[int, float], ...] = ((500, 0.15), (1500, 0.1))
-STAKE_LONGEST = 0.05
-STAKE_RULE = "0.25u, to win 0.25u on a minus price; +200 to +500 0.15u, +501 to +1500 0.1u, longer than +1500 0.05u"
+#: Every tracked bet is counted at 1u on a plus price, or enough to win 1u
+#: on a minus price, whatever the card staked it (Cooper, 2026-11-20: "Change
+#: the record/profit to reflect 1u risk/to win and quarter kelly sizing based
+#: off that for the longer odds"). It was 0.25u from 2026-11-04.
+#: From +200 (where the NHL Due List ladder used to start) a bet is sized by
+#: quarter Kelly instead, with 1u taken as 1% of the bankroll:
+#:
+#:     stake = KELLY_FRACTION * KELLY_BANKROLL * edge / payout, at most 1u
+#:
+#: where `edge` is the card's own expected value per unit at the price
+#: (`forward_evidence.expected_value`, what the 2% bar reads) and `payout` the
+#: profit per unit staked. A row that kept no edge is sized as if it had just
+#: cleared the 2% bar, never at a made-up edge; a row whose edge is zero or
+#: less stakes nothing. Every past night is restated, because the tracker is
+#: rebuilt from the frozen boards and the card record each run. The card's
+#: Size column reads the same rule (`models/sizing.py`).
+TRACKED_STAKE = 1.0
+KELLY_FROM = 200
+KELLY_FRACTION = 0.25
+KELLY_BANKROLL = 100.0
+KELLY_DEFAULT_EDGE = 0.02
+STAKE_RULE = ("1u, to win 1u on a minus price, up to +199; from +200 quarter Kelly on the pick's own edge "
+              "with 1u as 1% of the bankroll, at most 1u")
 
 
-def tracked_stake(price) -> float:
-    """The stake one tracked bet at `price` is counted at."""
+def kelly_stake(price, edge=None) -> float | None:
+    """The quarter-Kelly stake at `price` (+200 or longer) for a pick whose
+    expected value per unit is `edge`, in units, rounded to 0.01u; None below
+    +200 or without a usable price."""
     p = _num(price)
-    if p is None or p < 200:
-        return TRACKED_STAKE
-    for longest, stake in STAKE_BRACKETS:
-        if p <= longest:
-            return stake
-    return STAKE_LONGEST
+    if p is None or p < KELLY_FROM:
+        return None
+    e = _num(edge)
+    if e is None:
+        e = KELLY_DEFAULT_EDGE
+    if e <= 0:
+        return 0.0
+    raw = KELLY_FRACTION * KELLY_BANKROLL * e / (p / 100.0)
+    return round(min(max(raw, 0.0), TRACKED_STAKE), 2)
 
 
-def quarter(price, result) -> tuple[float, float] | None:
+def tracked_stake(price, edge=None) -> float:
+    """The stake one tracked bet at `price` is counted at."""
+    kelly = kelly_stake(price, edge)
+    return TRACKED_STAKE if kelly is None else kelly
+
+
+def quarter(price, result, edge=None) -> tuple[float, float] | None:
     """(profit, risked) for one graded bet at the tracked stake, or None
-    without a usable price. A push risks the stake and returns 0."""
+    without a usable price. A push risks the stake and returns 0. (The name
+    is from the 0.25u days; the stake is 1u now.)"""
     p = _num(price)
     if p is None or -100 < p < 100 or result not in ("win", "loss", "push"):
         return None
-    stake = tracked_stake(p)
+    stake = tracked_stake(p, edge)
     risk = stake * abs(p) / 100.0 if p < 0 else stake
     win = stake if p < 0 else stake * p / 100.0
     profit = win if result == "win" else -risk if result == "loss" else 0.0
     return round(profit, 4), round(risk, 4)
 
 
-def flat_risk(price, result) -> tuple[float, float] | None:
+def flat_risk(price, result, edge=None) -> tuple[float, float] | None:
     """(profit, risked) for one straight-up call: the tracked stake is the
-    amount RISKED at every price (Cooper, 2026-11-13: "do a flat .25u", with
-    the NHL Due List's 0.15u / 0.1u / 0.05u from +200). A heavy favourite at
-    -800 risks 0.25u to win 0.03u, rather than 2u to win 0.25u."""
+    amount RISKED at every price (Cooper, 2026-11-13: "do a flat .25u", now
+    1u), with quarter Kelly from +200. A heavy favourite at -800 risks 1u to
+    win 0.125u, rather than 8u to win 1u."""
     p = _num(price)
     if p is None or -100 < p < 100 or result not in ("win", "loss", "push"):
         return None
-    risk = tracked_stake(p)
+    risk = tracked_stake(p, edge)
     win = risk * 100.0 / abs(p) if p < 0 else risk * p / 100.0
     profit = win if result == "win" else -risk if result == "loss" else 0.0
     return round(profit, 4), round(risk, 4)
+
+
+def _edge_of(pick: dict):
+    """A board pick's edge as a fraction: `edge`, else `edgePct` / 100."""
+    e = _num(pick.get("edge"))
+    if e is not None:
+        return e
+    pct = _num(pick.get("edgePct"))
+    return None if pct is None else pct / 100.0
 
 
 def tracker_rows(graded: list[dict], settle=None, lines_for=None) -> list[dict]:
@@ -847,7 +877,7 @@ def tracker_rows(graded: list[dict], settle=None, lines_for=None) -> list[dict]:
         bet = kind == "bet"
         stake, units = 0.0, None
         if kind in ("bet", "lean"):  # leans tracked by the same rule, kept apart from the bets
-            got = quarter(price, result)
+            got = quarter(price, result, _edge_of(pick))
             if got is not None:  # no usable price: graded, never counted in units
                 units, stake = got
         home, away = (g.get("home") or {}).get("abbr"), (g.get("away") or {}).get("abbr")
@@ -946,7 +976,7 @@ def card_tracker_rows(record: dict | None, graded: list[dict] | None = None) -> 
         if not isinstance(r, dict) or r.get("result") not in ("win", "loss", "push"):
             continue
         price = _int(r.get("price"))
-        got = quarter(price, r["result"])
+        got = quarter(price, r["result"], _num(r.get("edge")))
         units, stake = (None, 0.0) if got is None else got
         hit = games.get((r.get("date"), _key_name(r.get("home")), _key_name(r.get("away")))) or {}
         clv = _num(r.get("clv"))
@@ -1031,9 +1061,10 @@ def tracker_page(rows: list[dict], nights: int, card: dict | None = None) -> dic
         "teamPickDefaultUnits": TRACKED_STAKE,
         "stake": TRACKED_STAKE,
         "stakeRule": STAKE_RULE,
-        "stakeLadder": [{"from": None, "to": 199, "stake": TRACKED_STAKE}]
-        + [{"from": lo, "to": hi, "stake": st} for lo, (hi, st) in zip([200] + [b[0] + 1 for b in STAKE_BRACKETS], STAKE_BRACKETS)]
-        + [{"from": STAKE_BRACKETS[-1][0] + 1, "to": None, "stake": STAKE_LONGEST}],
+        "stakeLadder": [{"from": None, "to": KELLY_FROM - 1, "stake": TRACKED_STAKE},
+                        {"from": KELLY_FROM, "to": None, "stake": None, "rule": "quarter Kelly"}],
+        "kelly": {"from": KELLY_FROM, "fraction": KELLY_FRACTION, "bankrollUnits": KELLY_BANKROLL,
+                  "cap": TRACKED_STAKE, "edgeWhenMissing": KELLY_DEFAULT_EDGE},
         "overall": _tally(bets),
         "byMarket": _grouped(bets, lambda r: [r["market"]]),
         "byTeam": _grouped(bets, lambda r: [r["team"]] if r["team"] else list(r["teams"])),
@@ -1065,7 +1096,7 @@ def tracker_page(rows: list[dict], nights: int, card: dict | None = None) -> dic
         },
         "rows": rows,
         "notes": [
-            "A bet is a selection a card made: it cleared the edge bar on an allowlisted market with a human receipt behind it. Every pick either daily card made is counted, in every market, once per game, side and number, at the first price it was published at: 0.25u, or enough to win 0.25u on a minus price, up to +199; +200 to +500 at 0.15u, +501 to +1500 at 0.1u and longer than +1500 at 0.05u, whatever the card staked it.",
+            "A bet is a selection a card made: it cleared the edge bar on an allowlisted market with a human receipt behind it. Every pick either daily card made is counted, in every market, once per game, side and number, at the first price it was published at: 1u, or enough to win 1u on a minus price, up to +199; from +200 by quarter Kelly on the pick's own edge, with 1u as 1% of the bankroll and never more than 1u, whatever the card staked it.",
             "Closing-line value is the closing chance the pick wins, from the last line capture before tip, minus the chance its price implied. Positive means the price beat the close. Halves have no captured close and carry none.",
             "An opinion is a frozen price the card did not select. A lean is tracked by the same stakes, apart from the bets; a pass is graded for the record and stakes nothing.",
             "Ten or more bets to read a row; fewer swing with one week.",

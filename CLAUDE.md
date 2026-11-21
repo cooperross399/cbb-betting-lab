@@ -1183,8 +1183,20 @@ tonight's stakes, every model, the ledgers and the policy are unchanged.
 due list"*, *".25u,.15u,.1u,.05u"*. From +200 the card's Size column and the
 site's tracker both read it: 0.15u up through +500, 0.1u up through +1500
 and 0.05u beyond that. Below +200 the rule above stands.
-`models/sizing.PRICE_BRACKETS` and `web/site_pages.STAKE_BRACKETS` are pinned
-equal by a test.
+**Superseded on 2026-11-21 (decision 115).**
+
+**2026-11-21: the record is 1u, and long prices are quarter Kelly** (decision
+115). Cooper: *"Change the record/profit to reflect 1u risk/to win and quarter
+kelly sizing based off that for the longer odds"*. Up to +199 every tracked bet
+risks 1u on a plus price or enough to win 1u on a minus price (straight up
+risks 1u flat). From +200 a bet is sized by quarter Kelly on its own edge
+(the expected value per unit the 2% bar reads), with 1u taken as 1% of the
+bankroll and never more than 1u; a row that kept no edge is sized at the 2%
+bar, and one at zero edge or less stakes nothing. The card's Size column reads
+the same rule, with its trust scaling moved from 0.25-0.5u to 1-2u. Every past
+night is restated, because the tracker is rebuilt each run and settled nights
+carry `GRADING = 7`. `models/sizing` and `web/site_pages` are pinned equal by a
+test.
 
 **A Pages deploy can stick on one commit.** On 2026-11-04 four Publish Board
 runs of commit 9b9ce5a failed at "Deploy to GitHub Pages" (three timeouts with
