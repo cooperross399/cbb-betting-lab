@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-21T16:15+00:00",
-  "captures": 269,
+  "as_of": "2026-11-21T17:15+00:00",
+  "captures": 270,
   "cells": [
     {
       "beat_close": 0.7916666666666666,
@@ -38,13 +38,13 @@
       "ungraded": 5
     },
     {
-      "beat_close": 0.7307692307692307,
-      "games": 24,
-      "graded": 26,
+      "beat_close": 0.7407407407407407,
+      "games": 25,
+      "graded": 27,
       "high": null,
       "low": null,
-      "mean": 0.016354652647442895,
-      "shops": 41,
+      "mean": 0.01850991049569399,
+      "shops": 42,
       "tier": "unplaced",
       "ungraded": 15
     }
@@ -52,37 +52,22 @@
   "correction_factor": 1.8815404941435947,
   "current": [
     {
-      "american": 125,
-      "away_team": "Albany Great Danes",
-      "book": "espnbet",
-      "books": 17,
-      "commence": "2026-11-21T21:00:00+00:00",
-      "edge": 0.0228,
-      "event_id": "343eb2e0f080f6c844094408141efe87",
-      "fair_american": 120,
-      "game": "Albany Great Danes at Canisius Golden Griffins",
-      "home_team": "Canisius Golden Griffins",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    },
-    {
-      "american": -200,
-      "away_team": "Longwood Lancers",
-      "book": "fanduel",
-      "books": 16,
-      "commence": "2026-11-21T21:00:00+00:00",
-      "edge": 0.0203,
-      "event_id": "0547585c4affb18dcbcc337074462c31",
-      "fair_american": -213,
-      "game": "Longwood Lancers at East Tennessee St Buccaneers",
-      "home_team": "East Tennessee St Buccaneers",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
+      "american": 100,
+      "away_team": "Coppin St Eagles",
+      "book": "hardrockbet",
+      "books": 11,
+      "commence": "2026-11-21T23:00:00+00:00",
+      "edge": 0.0232,
+      "event_id": "d4ff5572dfce3797f92425c0269392d5",
+      "fair_american": -105,
+      "game": "Coppin St Eagles at Georgetown Hoyas",
+      "home_team": "Georgetown Hoyas",
+      "line": 31.5,
+      "market": "spread",
+      "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-21T16:13:35+00:00",
+  "latest_capture": "2026-11-21T17:13:38+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
