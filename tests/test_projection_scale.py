@@ -24,9 +24,10 @@ def test_kenpom_carries_the_weight_the_audit_measured():
 
 
 def test_the_second_opinion_carries_the_weight_the_audit_measured():
-    # The same audit: best at 1.96 times a 0.5 blend, so 0.98; 0.9 rounds down.
-    assert CF.BLEND_WEIGHT == pytest.approx(0.9)
-    assert 0.5 < CF.BLEND_WEIGHT < 0.5 * 1.96
+    # 2026-11-19: best at 1.96 times a 0.5 blend (0.98), so 0.9 (decision 112).
+    # 2026-11-20: best at 1.10 times a 0.9 blend (0.99), so 1.0 (decision 116).
+    assert CF.BLEND_WEIGHT == pytest.approx(1.0)
+    assert CF.BLEND_WEIGHT == pytest.approx(0.9 * 1.10, abs=0.02)
 
 
 def test_the_margin_stretch_is_a_candidate_and_off_on_the_declared_card():

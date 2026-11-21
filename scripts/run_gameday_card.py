@@ -94,7 +94,7 @@ from cbb_betting_lab.config import OUTPUTS_DIR, PROCESSED_DIR, RAW_DIR, STAGING_
 from cbb_betting_lab import forward_evidence
 from cbb_betting_lab.forward_evidence import ARCHIVE_DIR, SnapshotKeyError
 from cbb_betting_lab import line_movement
-from cbb_betting_lab.models import closing_gate, line_move, trust
+from cbb_betting_lab.models import card_bars, closing_gate, line_move, trust
 from cbb_betting_lab.providers import staging
 from cbb_betting_lab.providers.env_file import load_provider_env, redact
 from cbb_betting_lab.providers.odds_api import (
@@ -253,6 +253,24 @@ def _closing_gate(day: str, outputs: Path):
     gate = closing_gate.load(outputs / closing_gate.RECORD_NAME, day)
     print(gate.line())
     return gate
+
+
+def _morning(day: str, slot_name: str, processed: Path):
+    """What the morning card picked today, for the evening card's bars
+    (`models/card_bars.py`, decision 116), read from the record of card picks
+    Gameday Refresh restores from card-feed. No record is no morning bar,
+    never every game treated as new."""
+    if slot_name != card_bars.EVENING:
+        return None
+    from cbb_betting_lab.reports import card_record
+
+    path = processed / card_record.SELECTIONS_FILENAME
+    if not path.is_file():
+        print(f"Morning card: no {path.name}; the evening card's morning bars are not applied.")
+        return None
+    morning = card_bars.Morning.from_rows(card_record.read_selections(path).to_dict("records"), day=day)
+    print(f"Morning card: {len(morning.games):,} game(s), {len(morning.sides):,} side(s) picked on {day}.")
+    return morning
 
 
 def _write_state(path: Path, run: GC.CardRun) -> None:
@@ -516,6 +534,7 @@ def main(argv: list[str] | None = None) -> int:
             trust=_trust_table(day, outputs, competition),
             moves=_line_moves(competition),
             gate=_closing_gate(day, outputs),
+            morning=_morning(day, slot.name, Path(args.processed_dir)),
         )
     except (ValueError, GC.CardError, SnapshotKeyError) as exc:
         # Refusal three, and its two neighbours. `AccountingIdentity` raises a

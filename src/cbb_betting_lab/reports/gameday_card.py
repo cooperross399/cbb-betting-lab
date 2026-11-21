@@ -149,6 +149,7 @@ from cbb_betting_lab.gates import (
 )
 from cbb_betting_lab.markets import FUTURES, MARKETS_BY_KEY, PLAYER, per_event_provider_keys
 from cbb_betting_lab.models import distributions, player_census, player_rates, slate
+from cbb_betting_lab.models import card_bars
 from cbb_betting_lab.models import closing_gate
 from cbb_betting_lab.models import line_move
 from cbb_betting_lab.models import rung_cap
@@ -2417,6 +2418,7 @@ def run_card(
     trust: "trust_model.TrustTable | None" = None,
     moves: "line_move.Moves | None" = None,
     gate: "closing_gate.Gate | None" = None,
+    morning: "card_bars.Morning | None" = None,
 ) -> CardRun:
     """Gate, price, freeze, and account for every row. In that order.
 
@@ -2496,6 +2498,9 @@ def run_card(
         tip_state_for=guard.state_for,
         threshold=EDGE_THRESHOLD,
         price_band=PRICE_BAND,
+        # Stricter bars on high-hold markets, heavy favourites and the evening
+        # card's new games (`models/card_bars.py`, decision 116). Raise only.
+        bars=card_bars.Bars(base=EDGE_THRESHOLD, card_slot=str(card_slot), morning=morning),
     )
     kept, withdrawn = guard.recheck(result.selections)
 

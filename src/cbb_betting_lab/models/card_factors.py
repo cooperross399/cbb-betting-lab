@@ -110,7 +110,9 @@ AVAILABILITY_FLOOR = 0.92
 #: 2026-11-19; **0.9 from decision 112**: the first audit that could see the
 #: second opinion (dated KenPom copies, decision 110) measured 0.5 best scaled
 #: by 1.96 over 773 games (z +5.82), which is 0.98, and 0.9 rounds it down.
-BLEND_WEIGHT = 0.9
+#: **1.0 from decision 116**: the 2026-11-20 audit measured 0.9 best scaled by
+#: 1.10 over 802 games (z +4.96), which is 0.99.
+BLEND_WEIGHT = 1.0
 SECOND_OPINION_MAX_AGE_DAYS = 2
 SECOND_OPINION_MIN_TEAMS = 300
 SECOND_OPINION_DIR = "second_opinion"
