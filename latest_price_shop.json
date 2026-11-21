@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": -190,
-      "away_team": "Arkansas-Little Rock Trojans",
-      "book": "betmgm",
-      "books": 6,
-      "commence": "2026-11-21T19:00:00+00:00",
-      "edge": 0.0316,
-      "event_id": "fb773220f5132a61b708f5d7ed605b9f",
-      "fair_american": -209,
-      "game": "Arkansas-Little Rock Trojans at North Florida Ospreys",
-      "home_team": "North Florida Ospreys",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-21T01:15+00:00",
-  "captures": 264,
+  "alerts": [],
+  "as_of": "2026-11-21T02:15+00:00",
+  "captures": 265,
   "cells": [
     {
       "beat_close": 0.7619047619047619,
@@ -54,43 +38,28 @@
       "ungraded": 5
     },
     {
-      "beat_close": 0.8108108108108109,
-      "games": 31,
-      "graded": 37,
-      "high": 0.06183796005602884,
-      "low": -0.01800334954945517,
-      "mean": 0.021917305253286834,
-      "shops": 54,
+      "beat_close": 0.8157894736842105,
+      "games": 32,
+      "graded": 38,
+      "high": 0.06076532164800229,
+      "low": -0.016934236712872055,
+      "mean": 0.021915542467565118,
+      "shops": 57,
       "tier": "unplaced",
-      "ungraded": 17
+      "ungraded": 19
     }
   ],
   "correction_factor": 1.8779630285186144,
   "current": [
     {
-      "american": 105,
-      "away_team": "Eastern Illinois Panthers",
-      "book": "bovada",
-      "books": 5,
-      "commence": "2026-11-21T02:00:00+00:00",
-      "edge": 0.025,
-      "event_id": "ccd4397771cec2458b64efaca3c2c783",
-      "fair_american": -100,
-      "game": "Eastern Illinois Panthers at Illinois Fighting Illini",
-      "home_team": "Illinois Fighting Illini",
-      "line": 164.5,
-      "market": "total_points",
-      "selection": "over"
-    },
-    {
       "american": -190,
       "away_team": "Arkansas-Little Rock Trojans",
       "book": "betmgm",
-      "books": 6,
+      "books": 7,
       "commence": "2026-11-21T19:00:00+00:00",
-      "edge": 0.0316,
+      "edge": 0.0296,
       "event_id": "fb773220f5132a61b708f5d7ed605b9f",
-      "fair_american": -209,
+      "fair_american": -207,
       "game": "Arkansas-Little Rock Trojans at North Florida Ospreys",
       "home_team": "North Florida Ospreys",
       "line": null,
@@ -98,22 +67,22 @@
       "selection": "away"
     },
     {
-      "american": 100,
-      "away_team": "Pennsylvania Quakers",
-      "book": "espnbet",
-      "books": 8,
-      "commence": "2026-11-21T21:00:00+00:00",
-      "edge": 0.0232,
-      "event_id": "b21de9c914b929255529918fffaa1efb",
-      "fair_american": -105,
-      "game": "Pennsylvania Quakers at La Salle Explorers",
-      "home_team": "La Salle Explorers",
-      "line": 1.5,
-      "market": "spread",
-      "selection": "away"
+      "american": -110,
+      "away_team": "Washington St Cougars",
+      "book": "fanduel",
+      "books": 6,
+      "commence": "2026-11-22T04:00:00+00:00",
+      "edge": 0.0214,
+      "event_id": "9f7f8d885eb724ca669f64bacad9321c",
+      "fair_american": -115,
+      "game": "Washington St Cougars at Duke Blue Devils",
+      "home_team": "Duke Blue Devils",
+      "line": 152.5,
+      "market": "total_points",
+      "selection": "under"
     }
   ],
-  "latest_capture": "2026-11-21T01:13:43+00:00",
+  "latest_capture": "2026-11-21T02:13:45+00:00",
   "looks": 215,
   "min_books": 3,
   "shop_edge": 0.02
