@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-21T00:15+00:00",
-  "captures": 263,
+  "alerts": [
+    {
+      "american": -190,
+      "away_team": "Arkansas-Little Rock Trojans",
+      "book": "betmgm",
+      "books": 6,
+      "commence": "2026-11-21T19:00:00+00:00",
+      "edge": 0.0316,
+      "event_id": "fb773220f5132a61b708f5d7ed605b9f",
+      "fair_american": -209,
+      "game": "Arkansas-Little Rock Trojans at North Florida Ospreys",
+      "home_team": "North Florida Ospreys",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    }
+  ],
+  "as_of": "2026-11-21T01:15+00:00",
+  "captures": 264,
   "cells": [
     {
       "beat_close": 0.7619047619047619,
@@ -50,8 +66,54 @@
     }
   ],
   "correction_factor": 1.8779630285186144,
-  "current": [],
-  "latest_capture": "2026-11-21T00:13:43+00:00",
+  "current": [
+    {
+      "american": 105,
+      "away_team": "Eastern Illinois Panthers",
+      "book": "bovada",
+      "books": 5,
+      "commence": "2026-11-21T02:00:00+00:00",
+      "edge": 0.025,
+      "event_id": "ccd4397771cec2458b64efaca3c2c783",
+      "fair_american": -100,
+      "game": "Eastern Illinois Panthers at Illinois Fighting Illini",
+      "home_team": "Illinois Fighting Illini",
+      "line": 164.5,
+      "market": "total_points",
+      "selection": "over"
+    },
+    {
+      "american": -190,
+      "away_team": "Arkansas-Little Rock Trojans",
+      "book": "betmgm",
+      "books": 6,
+      "commence": "2026-11-21T19:00:00+00:00",
+      "edge": 0.0316,
+      "event_id": "fb773220f5132a61b708f5d7ed605b9f",
+      "fair_american": -209,
+      "game": "Arkansas-Little Rock Trojans at North Florida Ospreys",
+      "home_team": "North Florida Ospreys",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    },
+    {
+      "american": 100,
+      "away_team": "Pennsylvania Quakers",
+      "book": "espnbet",
+      "books": 8,
+      "commence": "2026-11-21T21:00:00+00:00",
+      "edge": 0.0232,
+      "event_id": "b21de9c914b929255529918fffaa1efb",
+      "fair_american": -105,
+      "game": "Pennsylvania Quakers at La Salle Explorers",
+      "home_team": "La Salle Explorers",
+      "line": 1.5,
+      "market": "spread",
+      "selection": "away"
+    }
+  ],
+  "latest_capture": "2026-11-21T01:13:43+00:00",
   "looks": 215,
   "min_books": 3,
   "shop_edge": 0.02
