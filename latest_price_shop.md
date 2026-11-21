@@ -1,24 +1,27 @@
 # CBB price shop
 
-As of 2026-11-20T20:08+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
+As of 2026-11-21T12:07+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
 
 ## Right now
 
-From the capture of 2026-11-20T19:13:33+00:00.
+From the capture of 2026-11-21T03:13:38+00:00.
 
 | Tip (UTC) | Game | Side | Book | Price | Fair | Edge |
 |:---|:---|:---|:---|---:|---:|---:|
-| 2026-11-21 00:00 | Georgia St Panthers at Jacksonville St Gamecocks | home -1.5 | courtside | +107 | -100 | +3.5% |
+| 2026-11-21 16:00 | South Carolina Upstate Spartans at UNC Greensboro Spartans | home moneyline | espnbet | -270 | -302 | +2.9% |
+| 2026-11-21 19:00 | Arkansas-Little Rock Trojans at North Florida Ospreys | away moneyline | betmgm | -190 | -202 | +2.1% |
+| 2026-11-21 21:00 | Pennsylvania Quakers at La Salle Explorers | away moneyline | bovada | +120 | +115 | +2.1% |
+| 2026-11-22 00:30 | Presbyterian Blue Hose at Tennessee Tech Golden Eagles | home moneyline | courtside | -271 | -299 | +2.6% |
 
 ## Did the shops beat the close?
 
-Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (258 capture(s) read). Per tier, clustered by game, corrected across 215 cumulative hypotheses (x1.8780); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
+Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (266 capture(s) read). Per tier, clustered by game, corrected across 218 cumulative hypotheses (x1.8798); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
 
 | Tier | Shops | Graded | Games | Mean CLV | Corrected | Beat the close | Line gone at close |
 |:---|---:|---:|---:|---:|:---|---:|---:|
-| high-major | 34 | 21 | 21 | +2.6% | — | 76% | 13 |
-| mid-major | 52 | 37 | 36 | +6.9% | -15.2% to +29.0% (no demonstrated edge) | 70% | 15 |
-| low-major | 24 | 19 | 17 | +0.5% | — | 68% | 5 |
-| unplaced | 44 | 29 | 26 | +1.9% | — | 76% | 15 |
+| high-major | 39 | 24 | 23 | +2.5% | — | 79% | 15 |
+| mid-major | 61 | 44 | 41 | +6.4% | -12.2% to +24.9% (no demonstrated edge) | 75% | 17 |
+| low-major | 27 | 22 | 19 | +0.7% | — | 68% | 5 |
+| unplaced | 40 | 25 | 23 | +1.8% | — | 76% | 15 |
 
 Line gone at close: the side's line was no longer quoted by enough books at the last capture, so it is ungraded rather than guessed. Unplaced games are ones the forward ledger never froze.
