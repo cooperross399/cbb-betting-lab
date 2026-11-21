@@ -44,8 +44,19 @@ jobs:
           git fetch --depth=1 "https://github.com/${{ github.repository }}.git" +refs/heads/card-feed:refs/card-feed-tip
           git show refs/card-feed-tip:forward_evidence.csv > data/processed/cbb_forward_evidence.csv
           echo "Ledger: $(( $(wc -l < data/processed/cbb_forward_evidence.csv) - 1 )) rows."
-          run=$(gh run list --workflow cbb-gameday-refresh.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')
-          artifact=$(gh api "repos/${{ github.repository }}/actions/runs/$run/artifacts" --jq '.artifacts[] | select(.name | startswith("cbb-gameday-inputs-")) | .name' | head -1)
+          # The newest completed run that still holds an unexpired inputs
+          # artifact; a run can finish without one (a capture-only or early
+          # exit), so walk back rather than take the newest blindly.
+          run=""; artifact=""
+          for candidate in $(gh run list --workflow cbb-gameday-refresh.yml --status completed --limit 20 --json databaseId --jq '.[].databaseId'); do
+            artifact=$(gh api "repos/${{ github.repository }}/actions/runs/$candidate/artifacts" \
+              --jq '[.artifacts[] | select(.expired | not) | select(.name | startswith("cbb-gameday-inputs-"))] | last | .name // empty')
+            if [ -n "$artifact" ]; then run="$candidate"; break; fi
+          done
+          if [ -z "$run" ]; then
+            echo "::error::No recent CBB Gameday Refresh run holds an unexpired inputs artifact."
+            exit 1
+          fi
           seeded="$RUNNER_TEMP/inputs"
           mkdir -p "$seeded"
           gh run download "$run" --name "$artifact" --dir "$seeded"
