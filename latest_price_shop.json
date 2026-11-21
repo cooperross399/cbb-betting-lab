@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 210,
-      "away_team": "Stony Brook Seawolves",
-      "book": "hardrockbet",
-      "books": 17,
-      "commence": "2026-11-21T19:00:00+00:00",
-      "edge": 0.0443,
-      "event_id": "ce18dbed2bcc407de6487a10df8f1771",
-      "fair_american": 197,
-      "game": "Stony Brook Seawolves at Saint Peter's Peacocks",
-      "home_team": "Saint Peter's Peacocks",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "as_of": "2026-11-21T18:15+00:00",
-  "captures": 272,
+  "alerts": [],
+  "as_of": "2026-11-21T19:15+00:00",
+  "captures": 273,
   "cells": [
     {
       "beat_close": 0.7916666666666666,
@@ -54,36 +38,20 @@
       "ungraded": 5
     },
     {
-      "beat_close": 0.7142857142857143,
-      "games": 26,
-      "graded": 28,
-      "high": null,
-      "low": null,
-      "mean": 0.017503199562252804,
-      "shops": 43,
+      "beat_close": 0.7,
+      "games": 28,
+      "graded": 30,
+      "high": 0.0665814788416748,
+      "low": -0.032312246639840156,
+      "mean": 0.017134616100917325,
+      "shops": 46,
       "tier": "unplaced",
-      "ungraded": 15
+      "ungraded": 16
     }
   ],
   "correction_factor": 1.8815404941435947,
-  "current": [
-    {
-      "american": 210,
-      "away_team": "Stony Brook Seawolves",
-      "book": "hardrockbet",
-      "books": 17,
-      "commence": "2026-11-21T19:00:00+00:00",
-      "edge": 0.0443,
-      "event_id": "ce18dbed2bcc407de6487a10df8f1771",
-      "fair_american": 197,
-      "game": "Stony Brook Seawolves at Saint Peter's Peacocks",
-      "home_team": "Saint Peter's Peacocks",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "latest_capture": "2026-11-21T18:13:42+00:00",
+  "current": [],
+  "latest_capture": "2026-11-21T19:13:39+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
