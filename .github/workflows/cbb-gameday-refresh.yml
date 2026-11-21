@@ -478,6 +478,15 @@ jobs:
               && echo "Card picks restored: $(( $(wc -l < data/processed/cbb_card_selections.csv) - 1 )) rows." \
               || rm -f data/processed/cbb_card_selections.csv
           fi
+          # The spread-bias shifts already applied, by day (decision 117), so
+          # today's estimate adds them back rather than reading the corrected
+          # ledger as unbiased. Soft: without it no earlier shift is known.
+          if git cat-file -e refs/card-feed-tip:spread_bias.json 2>/dev/null; then
+            mkdir -p data/raw/cbb/layer_audit
+            git show refs/card-feed-tip:spread_bias.json > data/raw/cbb/layer_audit/spread_bias.json \
+              && echo "Spread-bias history restored." \
+              || rm -f data/raw/cbb/layer_audit/spread_bias.json
+          fi
 
       - name: Restore the ESPN results supplement
         # The same-day box scores `scripts/fetch_espn_box.py` read on earlier
@@ -586,6 +595,22 @@ jobs:
             echo "The line-movement branch holds no store yet; the card reads no movement."
             exit 1
           fi
+
+      - name: Measure the card's spread bias against the market
+        id: spread_bias
+        # Decision 117 (Cooper, 2026-11-21): each tier's mean disagreement
+        # between the card's margin and the main-market spread over the
+        # fortnight before today, read from the forward ledger, which the
+        # `spread_bias` layer takes out (`models/spread_bias.py`). Before the
+        # audit, so the audit re-prices past days on the shifts then in force.
+        # SOFT: a run that cannot measure leaves the newest shift for up to
+        # three days, then none.
+        continue-on-error: true
+        env:
+          PYTHONPATH: src
+        run: |
+          set -eu
+          python scripts/run_spread_bias.py --as-of "${{ steps.identity.outputs.day }}"
 
       - name: Audit the card's layers against what happened
         # The model checking itself (Cooper, 2026-10-30; decision 65). Re-prices
@@ -903,6 +928,9 @@ jobs:
           if [ "${{ steps.layer_audit.outcome }}" != "success" ]; then
             echo "::warning::The layer audit did not run to a verdict (outcome: ${{ steps.layer_audit.outcome }}); the card priced on its declared layers."
           fi
+          if [ "${{ steps.spread_bias.outcome }}" != "success" ]; then
+            echo "::warning::The spread bias was not measured (outcome: ${{ steps.spread_bias.outcome }}); the card used the newest recorded shift, if one is three days old or less."
+          fi
           if [ "${{ steps.line_moves.outcome }}" != "success" ]; then
             echo "::warning::The line-movement captures were not read (outcome: ${{ steps.line_moves.outcome }}); the card halved no lean for the market's move."
           fi
@@ -1157,6 +1185,11 @@ jobs:
             add card_selections.csv data/processed/cbb_card_selections.csv "$ROOT_INPUT"
           elif git cat-file -e refs/card-feed-tip:card_selections.csv 2>/dev/null; then
             printf '100644 blob %s\tcard_selections.csv\n' "$(git rev-parse refs/card-feed-tip:card_selections.csv)" >> "$ROOT_INPUT"
+          fi
+          if [ -s data/raw/cbb/layer_audit/spread_bias.json ]; then
+            add spread_bias.json data/raw/cbb/layer_audit/spread_bias.json "$ROOT_INPUT"
+          elif git cat-file -e refs/card-feed-tip:spread_bias.json 2>/dev/null; then
+            printf '100644 blob %s\tspread_bias.json\n' "$(git rev-parse refs/card-feed-tip:spread_bias.json)" >> "$ROOT_INPUT"
           fi
           if [ -s data/processed/cbb_nightly_learning_history.csv ]; then
             add nightly_learning_history.csv data/processed/cbb_nightly_learning_history.csv "$ROOT_INPUT"

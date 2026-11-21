@@ -33,7 +33,7 @@ Read `docs/what_we_can_and_cannot_claim.md` first. This says what the evidence *
 
 Measured on 175,690 graded bets over 26,622 games and 791 days of the 2021-2026 seasons, across 32 market-and-tier cells.
 
-Every interval is corrected for 218 cumulative distinct hypotheses — the experiment ledger's count at render time, not the count when the backtest ran — which widens each one by x1.88. The correction can only ever get stricter as the search continues, which is the only direction it is allowed to move.
+Every interval is corrected for 221 cumulative distinct hypotheses — the experiment ledger's count at render time, not the count when the backtest ran — which widens each one by x1.88. The correction can only ever get stricter as the search continues, which is the only direction it is allowed to move.
 
 | Tier | Result |
 |:---|:---|
@@ -99,15 +99,15 @@ In high-major (0.25160 against 0.25000, 53,844 rows) the model's Brier is worse 
   - claimed-edge bucket (-10% to -5%): 4,642 bets, **-0.8%**, corrected -8.7% to +7.1% — no demonstrated edge
   - claimed-edge bucket (-5% to +0%): 4,847 bets, **-5.2%**, corrected -12.1% to +1.8% — no demonstrated edge
   - claimed-edge bucket (+0% to +2%): 1,769 bets, **-6.4%**, corrected -20.1% to +7.2% — no demonstrated edge
-  - worst-returning bucket (+2% to +5%): 2,474 bets, **-9.5%**, corrected -19.5% to +0.4% — no demonstrated edge
+  - worst-returning bucket (+2% to +5%): 2,474 bets, **-9.5%**, corrected -19.5% to +0.5% — no demonstrated edge
   - claimed-edge bucket (+5% to +10%): 3,654 bets, **-4.7%**, corrected -15.8% to +6.3% — no demonstrated edge
   - claimed-edge bucket (+10% to +20%): 5,609 bets, **-3.8%**, corrected -12.7% to +5.1% — no demonstrated edge
   - claimed-edge bucket (+20% and above): 9,559 bets, **-2.9%**, corrected -11.2% to +5.5% — no demonstrated edge
 - mid-major: the return falls by **1.4 pp** from the smallest claimed-edge bucket to the largest across 8 usable buckets (46,974 rows in the smallest, 16,132 in the largest), and the two family-corrected intervals **overlap, so the fall is not demonstrated**.
   - claimed-edge bucket (below -10%): 46,974 bets, **-4.3%**, corrected -8.9% to +0.3% — no demonstrated edge
-  - claimed-edge bucket (-10% to -5%): 13,774 bets, **-1.4%**, corrected -5.6% to +2.9% — no demonstrated edge
+  - claimed-edge bucket (-10% to -5%): 13,774 bets, **-1.4%**, corrected -5.7% to +2.9% — no demonstrated edge
   - claimed-edge bucket (-5% to +0%): 14,264 bets, **-4.0%**, corrected -8.7% to +0.6% — no demonstrated edge
-  - claimed-edge bucket (+0% to +2%): 5,177 bets, **-4.8%**, corrected -12.6% to +2.9% — no demonstrated edge
+  - claimed-edge bucket (+0% to +2%): 5,177 bets, **-4.8%**, corrected -12.6% to +3.0% — no demonstrated edge
   - claimed-edge bucket (+2% to +5%): 7,278 bets, **-5.1%**, corrected -12.3% to +2.2% — no demonstrated edge
   - worst-returning bucket (+5% to +10%): 10,038 bets, **-6.2%**, corrected -13.1% to +0.7% — no demonstrated edge
   - claimed-edge bucket (+10% to +20%): 13,457 bets, **-2.7%**, corrected -9.4% to +4.0% — no demonstrated edge

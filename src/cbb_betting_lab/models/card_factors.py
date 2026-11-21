@@ -214,11 +214,17 @@ LINEUP_WEIGHT_MINUTES = "minutes"
 NOVEMBER_FORM_SHRINKAGE_GAMES = 5
 NOVEMBER_FORM_DAYS = 30
 NOVEMBER_FORM_CLAMP = 5.0
-LABELS = dict(LAYERS + CANDIDATE_LAYERS)
+#: Corrections applied after every layer and candidate, on by default and
+#: switchable by the audit like a declared layer, shown on a game's page only
+#: when they move its price (decision 117: `models/spread_bias.py`).
+CORRECTIONS: tuple[tuple[str, str], ...] = (
+    ("spread_bias", "Spread bias against the market"),
+)
+LABELS = dict(LAYERS + CANDIDATE_LAYERS + CORRECTIONS)
 #: The layers the audit may switch. Team strength is the model, not a layer
 #: on it, and is never switched off.
 SWITCHABLE: tuple[str, ...] = tuple(
-    key for key, _ in LAYERS + CANDIDATE_LAYERS if key != "strength"
+    key for key, _ in LAYERS + CANDIDATE_LAYERS + CORRECTIONS if key != "strength"
 )
 
 #: Pace form: each side's possessions over its last `FORM_GAMES` against the
@@ -324,7 +330,7 @@ READ_LAYER_AUDIT = True
 
 def default_switches() -> dict:
     """The declared card: the six layers on, the candidates off."""
-    core = {key for key, _ in LAYERS}
+    core = {key for key, _ in LAYERS + CORRECTIONS}
     return {key: key in core for key in SWITCHABLE}
 
 
@@ -399,6 +405,9 @@ class DayContext:
     #: (home_id, away_id) -> (home points, away points, home win probability),
     #: KenPom's projection for the day's games (candidate, decision 96).
     kenpom: dict = field(default_factory=dict)
+    #: tier -> points of home margin the card runs above the market's spread,
+    #: taken out by the `spread_bias` layer (decision 117).
+    spread_bias: dict = field(default_factory=dict)
     #: layer key -> on the card or not; `default_switches` unless an audit
     #: dated within `LAYER_AUDIT_MAX_AGE_DAYS` of the day said otherwise.
     switches: dict = field(default_factory=default_switches)
@@ -1307,6 +1316,11 @@ def build_context(
     context.kenpom, reason = load_kenpom(raw_dir, day=day)
     if reason:
         context.notes.append(reason)
+    from cbb_betting_lab.models import spread_bias as SB
+
+    context.spread_bias, reason = SB.shifts_for(raw_dir, day=day)
+    if reason:
+        context.notes.append(reason)
     switches, as_of, reason = load_layer_audit(raw_dir, day=day)
     if switches is not None:
         context.switches = switches
@@ -1646,6 +1660,24 @@ def apply(
         move = (stretch, -stretch, 0.0)
     detail["margin_stretch"] = {"factor": MARGIN_STRETCH}
     take("margin_stretch", move)
+
+    # Spread bias (decision 117): the card's margin, after every layer above,
+    # moved by minus its tier's measured mean disagreement with the market's
+    # spread over the fortnight before (`models/spread_bias.py`). The total is
+    # held. Last, so it corrects the margin the card would otherwise print.
+    from cbb_betting_lab.models import spread_bias as SB
+
+    tier = SB.higher_tier(getattr(base, "home_tier", None), getattr(base, "away_tier", None))
+    if tier == "unplaced":
+        tier = SB.higher_tier(_tier_of(ratings, home_id), _tier_of(ratings, away_id))
+    bias = float(context.spread_bias.get(tier, 0.0) or 0.0)
+    move = (0.0, 0.0, 0.0)
+    if bias and possessions > 0:
+        per_side = bias * 100.0 / possessions / 2.0
+        move = (-per_side, per_side, 0.0)
+    detail["spread_bias"] = {"tier": tier, "points": bias}
+    if bias or not context.is_on("spread_bias"):
+        take("spread_bias", move)
 
     detail["switches"] = {key: context.is_on(key) for key in SWITCHABLE}
     detail["audit_as_of"] = context.audit_as_of
