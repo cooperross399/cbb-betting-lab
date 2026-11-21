@@ -1938,6 +1938,42 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    # ---------------------------------------------------------------------
+    # decision 117 (Cooper, 2026-11-21, "Stay with every game and just fix our model so that it is predicting the correct spread more often"): the spread_bias card layer (models/spread_bias.py) takes out each tier's rolling 14-day mean disagreement between the card's own margin and the main-market spread, read from the forward ledger walk-forward. One per tier. Per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="spread_bias_2026_11_21",
+        name=(
+            "high-major: the spread_bias card layer (models/spread_bias.py: the card's home margin moved by minus the tier's mean disagreement with the main-market spread over the 14 slate days before, from the forward ledger, at least 20 games, clamped to 4 points) raises the share of games on which the card's own margin falls on the covering side of the main-market spread (forward ledger only)"
+        ),
+        tested_on="2026-11-21",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="spread_bias_2026_11_21",
+        name=(
+            "mid-major: the spread_bias card layer (models/spread_bias.py: the card's home margin moved by minus the tier's mean disagreement with the main-market spread over the 14 slate days before, from the forward ledger, at least 20 games, clamped to 4 points) raises the share of games on which the card's own margin falls on the covering side of the main-market spread (forward ledger only)"
+        ),
+        tested_on="2026-11-21",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="spread_bias_2026_11_21",
+        name=(
+            "low-major: the spread_bias card layer (models/spread_bias.py: the card's home margin moved by minus the tier's mean disagreement with the main-market spread over the 14 slate days before, from the forward ledger, at least 20 games, clamped to 4 points) raises the share of games on which the card's own margin falls on the covering side of the main-market spread (forward ledger only)"
+        ),
+        tested_on="2026-11-21",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 
