@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-20T23:15+00:00",
-  "captures": 262,
+  "as_of": "2026-11-21T00:15+00:00",
+  "captures": 263,
   "cells": [
     {
       "beat_close": 0.7619047619047619,
@@ -38,51 +38,20 @@
       "ungraded": 5
     },
     {
-      "beat_close": 0.7941176470588235,
-      "games": 29,
-      "graded": 34,
-      "high": 0.06421307966212202,
-      "low": -0.022445009449849004,
-      "mean": 0.020884035106136508,
-      "shops": 50,
+      "beat_close": 0.8108108108108109,
+      "games": 31,
+      "graded": 37,
+      "high": 0.06183796005602884,
+      "low": -0.01800334954945517,
+      "mean": 0.021917305253286834,
+      "shops": 54,
       "tier": "unplaced",
-      "ungraded": 16
+      "ungraded": 17
     }
   ],
   "correction_factor": 1.8779630285186144,
-  "current": [
-    {
-      "american": 180,
-      "away_team": "Saint Joseph's Hawks",
-      "book": "betparx",
-      "books": 17,
-      "commence": "2026-11-21T00:00:00+00:00",
-      "edge": 0.0237,
-      "event_id": "3290d93b2078b71d318a773cb4252d89",
-      "fair_american": 174,
-      "game": "Saint Joseph's Hawks at Drexel Dragons",
-      "home_team": "Drexel Dragons",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    },
-    {
-      "american": -310,
-      "away_team": "Denver Pioneers",
-      "book": "fanduel",
-      "books": 7,
-      "commence": "2026-11-21T18:00:00+00:00",
-      "edge": 0.027,
-      "event_id": "b3fab0afee75218dc01cdc6679c9ad17",
-      "fair_american": -347,
-      "game": "Denver Pioneers at Eastern Michigan Eagles",
-      "home_team": "Eastern Michigan Eagles",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "latest_capture": "2026-11-20T23:13:32+00:00",
+  "current": [],
+  "latest_capture": "2026-11-21T00:13:43+00:00",
   "looks": 215,
   "min_books": 3,
   "shop_edge": 0.02
