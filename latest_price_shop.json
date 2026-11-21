@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-21T17:15+00:00",
-  "captures": 270,
+  "as_of": "2026-11-21T17:43+00:00",
+  "captures": 271,
   "cells": [
     {
       "beat_close": 0.7916666666666666,
@@ -50,24 +50,8 @@
     }
   ],
   "correction_factor": 1.8815404941435947,
-  "current": [
-    {
-      "american": 100,
-      "away_team": "Coppin St Eagles",
-      "book": "hardrockbet",
-      "books": 11,
-      "commence": "2026-11-21T23:00:00+00:00",
-      "edge": 0.0232,
-      "event_id": "d4ff5572dfce3797f92425c0269392d5",
-      "fair_american": -105,
-      "game": "Coppin St Eagles at Georgetown Hoyas",
-      "home_team": "Georgetown Hoyas",
-      "line": 31.5,
-      "market": "spread",
-      "selection": "away"
-    }
-  ],
-  "latest_capture": "2026-11-21T17:13:38+00:00",
+  "current": [],
+  "latest_capture": "2026-11-21T17:41:57+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
