@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": -107,
-      "away_team": "Liberty Flames",
-      "book": "lowvig",
-      "books": 6,
-      "commence": "2026-11-22T21:30:00+00:00",
-      "edge": 0.0342,
-      "event_id": "05c828d73504c939e026a844ffcabd3c",
-      "fair_american": -115,
-      "game": "Liberty Flames at Richmond Spiders",
-      "home_team": "Richmond Spiders",
-      "line": 1.5,
-      "market": "spread",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-22T21:16+00:00",
-  "captures": 290,
+  "alerts": [],
+  "as_of": "2026-11-22T22:15+00:00",
+  "captures": 291,
   "cells": [
     {
       "beat_close": 0.8,
@@ -54,51 +38,20 @@
       "ungraded": 6
     },
     {
-      "beat_close": 0.75,
-      "games": 26,
-      "graded": 28,
+      "beat_close": 0.7586206896551724,
+      "games": 27,
+      "graded": 29,
       "high": null,
       "low": null,
-      "mean": 0.01800595602814023,
-      "shops": 45,
+      "mean": 0.01910919892372161,
+      "shops": 48,
       "tier": "unplaced",
-      "ungraded": 17
+      "ungraded": 19
     }
   ],
   "correction_factor": 1.8815404941435947,
-  "current": [
-    {
-      "american": -107,
-      "away_team": "Liberty Flames",
-      "book": "lowvig",
-      "books": 6,
-      "commence": "2026-11-22T21:30:00+00:00",
-      "edge": 0.0342,
-      "event_id": "05c828d73504c939e026a844ffcabd3c",
-      "fair_american": -115,
-      "game": "Liberty Flames at Richmond Spiders",
-      "home_team": "Richmond Spiders",
-      "line": 1.5,
-      "market": "spread",
-      "selection": "away"
-    },
-    {
-      "american": 105,
-      "away_team": "Liberty Flames",
-      "book": "bovada",
-      "books": 17,
-      "commence": "2026-11-22T21:30:00+00:00",
-      "edge": 0.025,
-      "event_id": "05c828d73504c939e026a844ffcabd3c",
-      "fair_american": -100,
-      "game": "Liberty Flames at Richmond Spiders",
-      "home_team": "Richmond Spiders",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "latest_capture": "2026-11-22T21:13:59+00:00",
+  "current": [],
+  "latest_capture": "2026-11-22T22:13:34+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
