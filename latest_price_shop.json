@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-22T22:15+00:00",
-  "captures": 291,
+  "as_of": "2026-11-22T23:15+00:00",
+  "captures": 292,
   "cells": [
     {
       "beat_close": 0.8,
@@ -51,7 +51,7 @@
   ],
   "correction_factor": 1.8815404941435947,
   "current": [],
-  "latest_capture": "2026-11-22T22:13:34+00:00",
+  "latest_capture": "2026-11-22T23:13:35+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
