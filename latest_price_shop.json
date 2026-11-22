@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-22T20:15+00:00",
-  "captures": 289,
+  "alerts": [
+    {
+      "american": -107,
+      "away_team": "Liberty Flames",
+      "book": "lowvig",
+      "books": 6,
+      "commence": "2026-11-22T21:30:00+00:00",
+      "edge": 0.0342,
+      "event_id": "05c828d73504c939e026a844ffcabd3c",
+      "fair_american": -115,
+      "game": "Liberty Flames at Richmond Spiders",
+      "home_team": "Richmond Spiders",
+      "line": 1.5,
+      "market": "spread",
+      "selection": "away"
+    }
+  ],
+  "as_of": "2026-11-22T21:16+00:00",
+  "captures": 290,
   "cells": [
     {
       "beat_close": 0.8,
@@ -52,6 +68,21 @@
   "correction_factor": 1.8815404941435947,
   "current": [
     {
+      "american": -107,
+      "away_team": "Liberty Flames",
+      "book": "lowvig",
+      "books": 6,
+      "commence": "2026-11-22T21:30:00+00:00",
+      "edge": 0.0342,
+      "event_id": "05c828d73504c939e026a844ffcabd3c",
+      "fair_american": -115,
+      "game": "Liberty Flames at Richmond Spiders",
+      "home_team": "Richmond Spiders",
+      "line": 1.5,
+      "market": "spread",
+      "selection": "away"
+    },
+    {
       "american": 105,
       "away_team": "Liberty Flames",
       "book": "bovada",
@@ -67,7 +98,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-22T20:13:39+00:00",
+  "latest_capture": "2026-11-22T21:13:59+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
