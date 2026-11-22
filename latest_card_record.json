@@ -1,16 +1,16 @@
 {
  "as_of": "2026-11-22",
- "picks": 438,
+ "picks": 441,
  "comments_read": 1,
  "outcomes": {
-  "lost": 279,
-  "pending": 3,
+  "lost": 280,
+  "pending": 5,
   "won": 156
  },
  "clv": {
-  "picks": 232,
-  "mean": -0.004,
-  "beatClosePct": 47.4
+  "picks": 233,
+  "mean": -0.0042,
+  "beatClosePct": 47.2
  },
  "rows": [
   {
@@ -9600,10 +9600,10 @@
    "model": 0.468524965308737,
    "edge": 0.04500000000000015,
    "tier": "high_major",
-   "outcome": "pending",
-   "result": null,
-   "closeProbability": 0.4638,
-   "clv": -0.0147
+   "outcome": "lost",
+   "result": "loss",
+   "closeProbability": 0.4279,
+   "clv": -0.0506
   },
   {
    "date": "2026-11-22",
@@ -9646,8 +9646,74 @@
    "tier": "low_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.5,
-   "clv": -0.0238
+   "closeProbability": 0.6075,
+   "clv": 0.0837
+  },
+  {
+   "date": "2026-11-22",
+   "slot": "evening",
+   "eventId": "44c35f271b07ee73f3cdeb6afb468ff6",
+   "home": "UCLA Bruins",
+   "away": "Delaware Blue Hens",
+   "market": "alternate_spread",
+   "segment": "game",
+   "category": "ATS",
+   "selection": "home",
+   "line": -35.5,
+   "price": 260.0,
+   "betDownTo": 259.0,
+   "book": "hardrockbet",
+   "model": 0.20590471011256323,
+   "edge": 0.054558706325946726,
+   "tier": "high_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": 0.2623,
+   "clv": -0.0155
+  },
+  {
+   "date": "2026-11-22",
+   "slot": "evening",
+   "eventId": "441228531de5a6035d73ba3bc9f49d19",
+   "home": "USC Trojans",
+   "away": "Louisiana Ragin' Cajuns",
+   "market": "alternate_spread",
+   "segment": "game",
+   "category": "ATS",
+   "selection": "away",
+   "line": 27.5,
+   "price": 200.0,
+   "betDownTo": 190.0,
+   "book": "hardrockbet",
+   "model": 0.3149106005329321,
+   "edge": 0.08623584257358141,
+   "tier": "high_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": 0.3329,
+   "clv": -0.0004
+  },
+  {
+   "date": "2026-11-22",
+   "slot": "evening",
+   "eventId": "193030f0c2c0c4a26223daa93d916bff",
+   "home": "UC San Diego Tritons",
+   "away": "Seattle Redhawks",
+   "market": "alternate_spread",
+   "segment": "game",
+   "category": "ATS",
+   "selection": "home",
+   "line": 4.5,
+   "price": -170.0,
+   "betDownTo": -175.0,
+   "book": "betmgm",
+   "model": 0.626859315941242,
+   "edge": 0.06162715046835987,
+   "tier": "mid_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": 0.6753,
+   "clv": 0.0457
   }
  ],
  "notes": [
