@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-22T17:44+00:00",
-  "captures": 286,
+  "as_of": "2026-11-22T18:15+00:00",
+  "captures": 287,
   "cells": [
     {
       "beat_close": 0.8,
@@ -44,28 +44,13 @@
       "high": null,
       "low": null,
       "mean": 0.018581964965394326,
-      "shops": 41,
+      "shops": 42,
       "tier": "unplaced",
-      "ungraded": 15
+      "ungraded": 16
     }
   ],
   "correction_factor": 1.8815404941435947,
   "current": [
-    {
-      "american": 110,
-      "away_team": "Utah Tech Trailblazers",
-      "book": "ballybet",
-      "books": 16,
-      "commence": "2026-11-22T19:00:00+00:00",
-      "edge": 0.0255,
-      "event_id": "20c6981840df47c0889d7ae41c56aa84",
-      "fair_american": 105,
-      "game": "Utah Tech Trailblazers at South Dakota Coyotes",
-      "home_team": "South Dakota Coyotes",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    },
     {
       "american": 105,
       "away_team": "Liberty Flames",
@@ -82,7 +67,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-22T17:43:02+00:00",
+  "latest_capture": "2026-11-22T18:13:43+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
