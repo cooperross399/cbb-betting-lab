@@ -1,16 +1,16 @@
 {
- "as_of": "2026-11-21",
- "picks": 435,
+ "as_of": "2026-11-22",
+ "picks": 438,
  "comments_read": 1,
  "outcomes": {
-  "lost": 273,
-  "pending": 9,
-  "won": 153
+  "lost": 279,
+  "pending": 3,
+  "won": 156
  },
  "clv": {
-  "picks": 225,
-  "mean": -0.0039,
-  "beatClosePct": 47.1
+  "picks": 232,
+  "mean": -0.004,
+  "beatClosePct": 47.4
  },
  "rows": [
   {
@@ -9402,8 +9402,8 @@
    "model": 0.5627348083776995,
    "edge": 0.13000522754104327,
    "tier": "low_major",
-   "outcome": "pending",
-   "result": null,
+   "outcome": "won",
+   "result": "win",
    "closeProbability": 0.2623,
    "clv": -0.0371
   },
@@ -9424,8 +9424,8 @@
    "model": 0.2712341941592549,
    "edge": 0.07287850434991805,
    "tier": "low_major",
-   "outcome": "pending",
-   "result": null,
+   "outcome": "lost",
+   "result": "loss",
    "closeProbability": 0.2335,
    "clv": 0.0103
   },
@@ -9446,8 +9446,8 @@
    "model": 0.31214530158743137,
    "edge": 0.08702446490901794,
    "tier": "mid_major",
-   "outcome": "pending",
-   "result": null,
+   "outcome": "won",
+   "result": "win",
    "closeProbability": 0.2623,
    "clv": 0.0207
   },
@@ -9468,8 +9468,8 @@
    "model": 0.5488779412308509,
    "edge": 0.054995978990851624,
    "tier": "mid_major",
-   "outcome": "pending",
-   "result": null,
+   "outcome": "won",
+   "result": "win",
    "closeProbability": 0.4751,
    "clv": -0.0371
   },
@@ -9490,10 +9490,10 @@
    "model": 0.17494101904546872,
    "edge": 0.056562558235011995,
    "tier": "high_major",
-   "outcome": "pending",
-   "result": null,
-   "closeProbability": 0.3085,
-   "clv": -0.014
+   "outcome": "lost",
+   "result": "loss",
+   "closeProbability": 0.3247,
+   "clv": 0.0021
   },
   {
    "date": "2026-11-21",
@@ -9512,10 +9512,10 @@
    "model": 0.7741617448475581,
    "edge": 0.07427383613825977,
    "tier": "low_major",
-   "outcome": "pending",
-   "result": null,
-   "closeProbability": 0.5614,
-   "clv": 0.0266
+   "outcome": "lost",
+   "result": "loss",
+   "closeProbability": 0.5411,
+   "clv": 0.0062
   },
   {
    "date": "2026-11-21",
@@ -9534,8 +9534,8 @@
    "model": 0.43210195638749904,
    "edge": 0.08612231108128232,
    "tier": "low_major",
-   "outcome": "pending",
-   "result": null,
+   "outcome": "lost",
+   "result": "loss",
    "closeProbability": null,
    "clv": null
   },
@@ -9556,8 +9556,8 @@
    "model": 0.36266913423097846,
    "edge": 0.03938085039336103,
    "tier": "mid_major",
-   "outcome": "pending",
-   "result": null,
+   "outcome": "lost",
+   "result": "loss",
    "closeProbability": null,
    "clv": null
   },
@@ -9578,10 +9578,76 @@
    "model": 0.286953485938057,
    "edge": 0.06764488002193669,
    "tier": "high_major",
-   "outcome": "pending",
-   "result": null,
+   "outcome": "lost",
+   "result": "loss",
    "closeProbability": 0.3412,
    "clv": -0.0036
+  },
+  {
+   "date": "2026-11-22",
+   "slot": "morning",
+   "eventId": "d3ff354cf7590632c2f875f2c49fa5e1",
+   "home": "Marquette Golden Eagles",
+   "away": "Chicago St Cougars",
+   "market": "spread",
+   "segment": "game",
+   "category": "ATS",
+   "selection": "away",
+   "line": 33.5,
+   "price": 109.0,
+   "betDownTo": 104.0,
+   "book": "lowvig",
+   "model": 0.468524965308737,
+   "edge": 0.04500000000000015,
+   "tier": "high_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": 0.4638,
+   "clv": -0.0147
+  },
+  {
+   "date": "2026-11-22",
+   "slot": "morning",
+   "eventId": "4ab6cb0c13c713f3c78fe051d94f32e5",
+   "home": "IUPUI Jaguars",
+   "away": "Maryland-Eastern Shore Hawks",
+   "market": "alternate_spread",
+   "segment": "game",
+   "category": "ATS",
+   "selection": "away",
+   "line": 2.5,
+   "price": 320.0,
+   "betDownTo": 319.0,
+   "book": "bovada",
+   "model": 0.37756505336165186,
+   "edge": 0.05392253626195087,
+   "tier": "low_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": 0.2335,
+   "clv": -0.0046
+  },
+  {
+   "date": "2026-11-22",
+   "slot": "morning",
+   "eventId": "9c6b98805955f109fb5038074601ddb3",
+   "home": "Albany Great Danes",
+   "away": "Mercyhurst Lakers",
+   "market": "spread",
+   "segment": "game",
+   "category": "ATS",
+   "selection": "away",
+   "line": 1.5,
+   "price": -110.0,
+   "betDownTo": -111.0,
+   "book": "williamhill_us",
+   "model": 0.7475764596363602,
+   "edge": 0.027190609963262835,
+   "tier": "low_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": 0.5,
+   "clv": -0.0238
   }
  ],
  "notes": [

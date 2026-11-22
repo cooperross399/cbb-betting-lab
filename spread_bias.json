@@ -1,17 +1,22 @@
 {
-  "as_of": "2026-11-21",
+  "as_of": "2026-11-22",
   "by_day": {
     "2026-11-21": {
       "high_major": -1.937,
       "low_major": -0.846,
       "mid_major": -0.014
+    },
+    "2026-11-22": {
+      "high_major": -1.897,
+      "low_major": -0.975,
+      "mid_major": 0.176
     }
   },
   "clamp": 4.0,
   "games": {
-    "high_major": 184,
-    "low_major": 68,
-    "mid_major": 186
+    "high_major": 180,
+    "low_major": 53,
+    "mid_major": 157
   },
   "min_games": 20,
   "sigma": 11.0,
