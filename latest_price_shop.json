@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-22T19:15+00:00",
-  "captures": 288,
+  "as_of": "2026-11-22T20:15+00:00",
+  "captures": 289,
   "cells": [
     {
       "beat_close": 0.8,
@@ -55,7 +55,7 @@
       "american": 105,
       "away_team": "Liberty Flames",
       "book": "bovada",
-      "books": 18,
+      "books": 17,
       "commence": "2026-11-22T21:30:00+00:00",
       "edge": 0.025,
       "event_id": "05c828d73504c939e026a844ffcabd3c",
@@ -67,7 +67,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-22T19:13:36+00:00",
+  "latest_capture": "2026-11-22T20:13:39+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
