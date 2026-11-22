@@ -1,104 +1,57 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 109,
-      "away_team": "Chicago St Cougars",
-      "book": "lowvig",
-      "books": 6,
-      "commence": "2026-11-22T18:00:00+00:00",
-      "edge": 0.045,
-      "event_id": "d3ff354cf7590632c2f875f2c49fa5e1",
-      "fair_american": 100,
-      "game": "Chicago St Cougars at Marquette Golden Eagles",
-      "home_team": "Marquette Golden Eagles",
-      "line": 33.5,
-      "market": "spread",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-22T03:15+00:00",
-  "captures": 281,
+  "alerts": [],
+  "as_of": "2026-11-22T13:44+00:00",
+  "captures": 282,
   "cells": [
     {
-      "beat_close": 0.7916666666666666,
-      "games": 23,
-      "graded": 24,
+      "beat_close": 0.8,
+      "games": 24,
+      "graded": 25,
       "high": null,
       "low": null,
-      "mean": 0.02540408546778812,
-      "shops": 39,
+      "mean": 0.024665363084591375,
+      "shops": 41,
       "tier": "high_major",
-      "ungraded": 15
+      "ungraded": 16
     },
     {
-      "beat_close": 0.75,
-      "games": 41,
-      "graded": 44,
-      "high": 0.2494894022385788,
-      "low": -0.12246988159121858,
-      "mean": 0.06350976032368011,
-      "shops": 61,
+      "beat_close": 0.7142857142857143,
+      "games": 45,
+      "graded": 49,
+      "high": 0.2255348578434626,
+      "low": -0.10918771191573834,
+      "mean": 0.05817357296386214,
+      "shops": 68,
       "tier": "mid_major",
-      "ungraded": 17
+      "ungraded": 19
     },
     {
-      "beat_close": 0.6818181818181818,
-      "games": 19,
-      "graded": 22,
+      "beat_close": 0.6428571428571429,
+      "games": 25,
+      "graded": 28,
       "high": null,
       "low": null,
-      "mean": 0.007079796911310781,
-      "shops": 27,
+      "mean": 0.0050794576910057065,
+      "shops": 34,
       "tier": "low_major",
-      "ungraded": 5
+      "ungraded": 6
     },
     {
-      "beat_close": 0.6756756756756757,
-      "games": 34,
-      "graded": 37,
-      "high": 0.054515890602409946,
-      "low": -0.027621332182242435,
-      "mean": 0.013447279210083755,
-      "shops": 55,
+      "beat_close": 0.76,
+      "games": 23,
+      "graded": 25,
+      "high": null,
+      "low": null,
+      "mean": 0.01792273602394345,
+      "shops": 40,
       "tier": "unplaced",
-      "ungraded": 18
+      "ungraded": 15
     }
   ],
   "correction_factor": 1.8815404941435947,
-  "current": [
-    {
-      "american": -105,
-      "away_team": "Miami (OH) RedHawks",
-      "book": "bovada",
-      "books": 16,
-      "commence": "2026-11-22T17:00:00+00:00",
-      "edge": 0.0212,
-      "event_id": "8df795d92371ff8d107e74c5f9e3a315",
-      "fair_american": -110,
-      "game": "Miami (OH) RedHawks at UIC Flames",
-      "home_team": "UIC Flames",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 109,
-      "away_team": "Chicago St Cougars",
-      "book": "lowvig",
-      "books": 6,
-      "commence": "2026-11-22T18:00:00+00:00",
-      "edge": 0.045,
-      "event_id": "d3ff354cf7590632c2f875f2c49fa5e1",
-      "fair_american": 100,
-      "game": "Chicago St Cougars at Marquette Golden Eagles",
-      "home_team": "Marquette Golden Eagles",
-      "line": 33.5,
-      "market": "spread",
-      "selection": "away"
-    }
-  ],
-  "latest_capture": "2026-11-22T03:13:38+00:00",
+  "current": [],
+  "latest_capture": "2026-11-22T13:42:11+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
