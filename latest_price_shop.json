@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": -110,
-      "away_team": "NJIT Highlanders",
-      "book": "fanatics",
-      "books": 5,
-      "commence": "2026-11-22T22:00:00+00:00",
-      "edge": 0.0683,
-      "event_id": "a156f22faa101eae5a832cfc5de4fbca",
-      "fair_american": -127,
-      "game": "NJIT Highlanders at Boston College Eagles",
-      "home_team": "Boston College Eagles",
-      "line": 24.5,
-      "market": "spread",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-22T14:37+00:00",
-  "captures": 283,
+  "alerts": [],
+  "as_of": "2026-11-22T16:16+00:00",
+  "captures": 284,
   "cells": [
     {
       "beat_close": 0.8,
@@ -83,37 +67,22 @@
       "selection": "away"
     },
     {
-      "american": -110,
-      "away_team": "NJIT Highlanders",
-      "book": "fanatics",
-      "books": 5,
-      "commence": "2026-11-22T22:00:00+00:00",
-      "edge": 0.0683,
-      "event_id": "a156f22faa101eae5a832cfc5de4fbca",
-      "fair_american": -127,
-      "game": "NJIT Highlanders at Boston College Eagles",
-      "home_team": "Boston College Eagles",
-      "line": 24.5,
-      "market": "spread",
-      "selection": "away"
-    },
-    {
-      "american": 105,
-      "away_team": "Seattle Redhawks",
-      "book": "betmgm",
-      "books": 15,
-      "commence": "2026-11-23T02:30:00+00:00",
-      "edge": 0.0202,
-      "event_id": "193030f0c2c0c4a26223daa93d916bff",
-      "fair_american": 101,
-      "game": "Seattle Redhawks at UC San Diego Tritons",
-      "home_team": "UC San Diego Tritons",
+      "american": 110,
+      "away_team": "Liberty Flames",
+      "book": "bovada",
+      "books": 14,
+      "commence": "2026-11-22T21:30:00+00:00",
+      "edge": 0.0256,
+      "event_id": "05c828d73504c939e026a844ffcabd3c",
+      "fair_american": 105,
+      "game": "Liberty Flames at Richmond Spiders",
+      "home_team": "Richmond Spiders",
       "line": null,
       "market": "moneyline",
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-22T14:35:22+00:00",
+  "latest_capture": "2026-11-22T16:14:23+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
