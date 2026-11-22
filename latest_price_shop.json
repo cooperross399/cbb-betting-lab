@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 110,
-      "away_team": "Liberty Flames",
-      "book": "bovada",
-      "books": 17,
-      "commence": "2026-11-22T21:30:00+00:00",
-      "edge": 0.0403,
-      "event_id": "05c828d73504c939e026a844ffcabd3c",
-      "fair_american": 102,
-      "game": "Liberty Flames at Richmond Spiders",
-      "home_team": "Richmond Spiders",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "as_of": "2026-11-22T17:15+00:00",
-  "captures": 285,
+  "alerts": [],
+  "as_of": "2026-11-22T17:44+00:00",
+  "captures": 286,
   "cells": [
     {
       "beat_close": 0.8,
@@ -68,29 +52,29 @@
   "correction_factor": 1.8815404941435947,
   "current": [
     {
-      "american": -110,
+      "american": 110,
       "away_team": "Utah Tech Trailblazers",
-      "book": "betmgm",
-      "books": 3,
+      "book": "ballybet",
+      "books": 16,
       "commence": "2026-11-22T19:00:00+00:00",
-      "edge": 0.0206,
+      "edge": 0.0255,
       "event_id": "20c6981840df47c0889d7ae41c56aa84",
-      "fair_american": -115,
+      "fair_american": 105,
       "game": "Utah Tech Trailblazers at South Dakota Coyotes",
       "home_team": "South Dakota Coyotes",
-      "line": 1.5,
-      "market": "spread",
-      "selection": "away"
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
     },
     {
-      "american": 110,
+      "american": 105,
       "away_team": "Liberty Flames",
       "book": "bovada",
-      "books": 17,
+      "books": 18,
       "commence": "2026-11-22T21:30:00+00:00",
-      "edge": 0.0403,
+      "edge": 0.025,
       "event_id": "05c828d73504c939e026a844ffcabd3c",
-      "fair_american": 102,
+      "fair_american": -100,
       "game": "Liberty Flames at Richmond Spiders",
       "home_team": "Richmond Spiders",
       "line": null,
@@ -98,7 +82,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-22T17:13:33+00:00",
+  "latest_capture": "2026-11-22T17:43:02+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
