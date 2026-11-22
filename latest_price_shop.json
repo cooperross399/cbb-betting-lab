@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": -172,
-      "away_team": "Duquesne Dukes",
-      "book": "fanduel",
-      "books": 8,
-      "commence": "2026-11-22T19:00:00+00:00",
-      "edge": 0.031,
-      "event_id": "9df92a4f1ca806fe512c3849b181da90",
-      "fair_american": -187,
-      "game": "Duquesne Dukes at Wyoming Cowboys",
-      "home_team": "Wyoming Cowboys",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "as_of": "2026-11-22T00:15+00:00",
-  "captures": 278,
+  "alerts": [],
+  "as_of": "2026-11-22T01:16+00:00",
+  "captures": 279,
   "cells": [
     {
       "beat_close": 0.7916666666666666,
@@ -54,36 +38,20 @@
       "ungraded": 5
     },
     {
-      "beat_close": 0.6666666666666666,
-      "games": 33,
-      "graded": 36,
-      "high": 0.054627934576766776,
-      "low": -0.029442291829069017,
-      "mean": 0.01259282137384888,
-      "shops": 54,
+      "beat_close": 0.6756756756756757,
+      "games": 34,
+      "graded": 37,
+      "high": 0.054515890602409946,
+      "low": -0.027621332182242435,
+      "mean": 0.013447279210083755,
+      "shops": 55,
       "tier": "unplaced",
       "ungraded": 18
     }
   ],
   "correction_factor": 1.8815404941435947,
-  "current": [
-    {
-      "american": -172,
-      "away_team": "Duquesne Dukes",
-      "book": "fanduel",
-      "books": 8,
-      "commence": "2026-11-22T19:00:00+00:00",
-      "edge": 0.031,
-      "event_id": "9df92a4f1ca806fe512c3849b181da90",
-      "fair_american": -187,
-      "game": "Duquesne Dukes at Wyoming Cowboys",
-      "home_team": "Wyoming Cowboys",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "latest_capture": "2026-11-22T00:13:36+00:00",
+  "current": [],
+  "latest_capture": "2026-11-22T01:13:40+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
