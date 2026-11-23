@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-23T21:29+00:00",
-  "captures": 301,
+  "as_of": "2026-11-23T22:03+00:00",
+  "captures": 302,
   "cells": [
     {
       "beat_close": 0.8,
@@ -52,22 +52,22 @@
   "correction_factor": 1.8815404941435947,
   "current": [
     {
-      "american": -190,
-      "away_team": "Texas Tech Red Raiders",
-      "book": "espnbet",
-      "books": 9,
-      "commence": "2026-11-25T01:00:00+00:00",
-      "edge": 0.0293,
-      "event_id": "712c581bb2dc9c3072e5280bd6ccecc4",
-      "fair_american": -207,
-      "game": "Texas Tech Red Raiders at Louisville Cardinals",
-      "home_team": "Louisville Cardinals",
+      "american": -171,
+      "away_team": "DePaul Blue Demons",
+      "book": "courtside",
+      "books": 8,
+      "commence": "2026-11-24T23:00:00+00:00",
+      "edge": 0.0242,
+      "event_id": "3493a2092ac513abea61c5182bef95d8",
+      "fair_american": -183,
+      "game": "DePaul Blue Demons at Purdue Boilermakers",
+      "home_team": "Purdue Boilermakers",
       "line": null,
       "market": "moneyline",
-      "selection": "away"
+      "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-23T21:27:17+00:00",
+  "latest_capture": "2026-11-23T22:00:53+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
