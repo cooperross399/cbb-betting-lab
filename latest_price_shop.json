@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": -280,
-      "away_team": "San Diego St Aztecs",
-      "book": "espnbet",
-      "books": 6,
-      "commence": "2026-11-24T22:00:00+00:00",
-      "edge": 0.048,
-      "event_id": "0dbbfc6c0ffe4c7d2c9b65eb8ab96cb3",
-      "fair_american": -339,
-      "game": "San Diego St Aztecs at Iowa State Cyclones",
-      "home_team": "Iowa State Cyclones",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "as_of": "2026-11-23T13:45+00:00",
-  "captures": 297,
+  "alerts": [],
+  "as_of": "2026-11-23T17:44+00:00",
+  "captures": 298,
   "cells": [
     {
       "beat_close": 0.8,
@@ -27,63 +11,47 @@
       "high": null,
       "low": null,
       "mean": 0.024665363084591375,
-      "shops": 41,
+      "shops": 43,
       "tier": "high_major",
-      "ungraded": 16
+      "ungraded": 18
     },
     {
-      "beat_close": 0.7142857142857143,
-      "games": 45,
-      "graded": 49,
-      "high": 0.2255348578434626,
-      "low": -0.10918771191573834,
-      "mean": 0.05817357296386214,
-      "shops": 68,
+      "beat_close": 0.7169811320754716,
+      "games": 49,
+      "graded": 53,
+      "high": 0.2102473901156251,
+      "low": -0.0990856459067504,
+      "mean": 0.05558087210443735,
+      "shops": 73,
       "tier": "mid_major",
-      "ungraded": 19
+      "ungraded": 20
     },
     {
-      "beat_close": 0.6428571428571429,
-      "games": 25,
-      "graded": 28,
+      "beat_close": 0.6551724137931034,
+      "games": 26,
+      "graded": 29,
       "high": null,
       "low": null,
-      "mean": 0.0050794576910057065,
-      "shops": 34,
+      "mean": 0.005892466714419978,
+      "shops": 36,
       "tier": "low_major",
-      "ungraded": 6
+      "ungraded": 7
     },
     {
-      "beat_close": 0.7666666666666667,
-      "games": 28,
-      "graded": 30,
-      "high": 0.06791865806481363,
-      "low": -0.029784906979844348,
-      "mean": 0.01906687554248464,
-      "shops": 49,
+      "beat_close": 0.76,
+      "games": 23,
+      "graded": 25,
+      "high": null,
+      "low": null,
+      "mean": 0.01792273602394345,
+      "shops": 40,
       "tier": "unplaced",
-      "ungraded": 19
+      "ungraded": 15
     }
   ],
   "correction_factor": 1.8815404941435947,
-  "current": [
-    {
-      "american": -280,
-      "away_team": "San Diego St Aztecs",
-      "book": "espnbet",
-      "books": 6,
-      "commence": "2026-11-24T22:00:00+00:00",
-      "edge": 0.048,
-      "event_id": "0dbbfc6c0ffe4c7d2c9b65eb8ab96cb3",
-      "fair_american": -339,
-      "game": "San Diego St Aztecs at Iowa State Cyclones",
-      "home_team": "Iowa State Cyclones",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "latest_capture": "2026-11-23T13:43:38+00:00",
+  "current": [],
+  "latest_capture": "2026-11-23T17:42:30+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
