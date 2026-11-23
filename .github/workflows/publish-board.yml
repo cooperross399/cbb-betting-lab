@@ -35,7 +35,7 @@ jobs:
     timeout-minutes: 15
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -313,6 +313,23 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
+        # Soft on the first try, and consulted by the retry below. One run in
+        # five from 2026-11-21 failed here with "No artifacts named
+        # github-pages were found" one second after the upload finished: the
+        # artifact listing had not caught up (the failing runs list one
+        # artifact, the board history, and the passing ones list two), so the
+        # site stayed up to an hour stale until the next capture published.
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Wait for the artifact listing to catch up
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 30
+
+      - name: Deploy to GitHub Pages, second try
+        id: deployment_retry
+        # Not soft: a second failure fails the run, as one failure did before.
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
 
       - name: Report the outcome
