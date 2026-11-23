@@ -1,9 +1,9 @@
 {
-  "date": "2026-11-22",
-  "slate_date": "2026-11-22",
+  "date": "2026-11-23",
+  "slate_date": "2026-11-23",
   "decision": "selections",
   "degraded": "false",
   "trigger": "schedule",
-  "run_url": "https://github.com/cooperross399/cbb-betting-lab/actions/runs/45057930385",
-  "card_slot": "evening"
+  "run_url": "https://github.com/cooperross399/cbb-betting-lab/actions/runs/45188736310",
+  "card_slot": "morning"
 }

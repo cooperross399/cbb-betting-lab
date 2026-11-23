@@ -1,16 +1,16 @@
 {
- "as_of": "2026-11-22",
- "picks": 441,
+ "as_of": "2026-11-23",
+ "picks": 445,
  "comments_read": 1,
  "outcomes": {
-  "lost": 280,
-  "pending": 5,
-  "won": 156
+  "lost": 282,
+  "pending": 4,
+  "won": 159
  },
  "clv": {
-  "picks": 233,
-  "mean": -0.0042,
-  "beatClosePct": 47.2
+  "picks": 238,
+  "mean": -0.0036,
+  "beatClosePct": 47.5
  },
  "rows": [
   {
@@ -9622,8 +9622,8 @@
    "model": 0.37756505336165186,
    "edge": 0.05392253626195087,
    "tier": "low_major",
-   "outcome": "pending",
-   "result": null,
+   "outcome": "lost",
+   "result": "loss",
    "closeProbability": 0.2335,
    "clv": -0.0046
   },
@@ -9644,8 +9644,8 @@
    "model": 0.7475764596363602,
    "edge": 0.027190609963262835,
    "tier": "low_major",
-   "outcome": "pending",
-   "result": null,
+   "outcome": "won",
+   "result": "win",
    "closeProbability": 0.6075,
    "clv": 0.0837
   },
@@ -9666,10 +9666,10 @@
    "model": 0.20590471011256323,
    "edge": 0.054558706325946726,
    "tier": "high_major",
-   "outcome": "pending",
-   "result": null,
-   "closeProbability": 0.2623,
-   "clv": -0.0155
+   "outcome": "won",
+   "result": "win",
+   "closeProbability": 0.2773,
+   "clv": -0.0005
   },
   {
    "date": "2026-11-22",
@@ -9688,10 +9688,10 @@
    "model": 0.3149106005329321,
    "edge": 0.08623584257358141,
    "tier": "high_major",
-   "outcome": "pending",
-   "result": null,
-   "closeProbability": 0.3329,
-   "clv": -0.0004
+   "outcome": "won",
+   "result": "win",
+   "closeProbability": 0.3581,
+   "clv": 0.0247
   },
   {
    "date": "2026-11-22",
@@ -9710,10 +9710,98 @@
    "model": 0.626859315941242,
    "edge": 0.06162715046835987,
    "tier": "mid_major",
+   "outcome": "lost",
+   "result": "loss",
+   "closeProbability": 0.6504,
+   "clv": 0.0208
+  },
+  {
+   "date": "2026-11-23",
+   "slot": "morning",
+   "eventId": "b1abd9ff77f5dc5c376c08041fae20ea",
+   "home": "Southern Utah Thunderbirds",
+   "away": "Arkansas St Red Wolves",
+   "market": "total_points_h1",
+   "segment": "h1",
+   "category": "Totals",
+   "selection": "over",
+   "line": 77.5,
+   "price": 110.0,
+   "betDownTo": 104.0,
+   "book": "bovada",
+   "model": 0.4437846647577051,
+   "edge": 0.050000000000000044,
+   "tier": "mid_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.6753,
-   "clv": 0.0457
+   "closeProbability": null,
+   "clv": null
+  },
+  {
+   "date": "2026-11-23",
+   "slot": "morning",
+   "eventId": "276deab7d659366b50ff0608d1501b6e",
+   "home": "Florida Gulf Coast Eagles",
+   "away": "Charlotte 49ers",
+   "market": "total_points_h1",
+   "segment": "h1",
+   "category": "Totals",
+   "selection": "under",
+   "line": 67.5,
+   "price": 120.0,
+   "betDownTo": 109.0,
+   "book": "bovada",
+   "model": 0.4908641049572144,
+   "edge": 0.07535117474673503,
+   "tier": "mid_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": null,
+   "clv": null
+  },
+  {
+   "date": "2026-11-23",
+   "slot": "morning",
+   "eventId": "c6b930f2b10901f7c145736cde09fd95",
+   "home": "Iona Gaels",
+   "away": "Fairleigh Dickinson Knights",
+   "market": "alternate_spread",
+   "segment": "game",
+   "category": "ATS",
+   "selection": "away",
+   "line": 3.5,
+   "price": 230.0,
+   "betDownTo": 230.0,
+   "book": "bovada",
+   "model": 0.44630289047473837,
+   "edge": 0.05275255614104046,
+   "tier": "low_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": 0.2927,
+   "clv": -0.0103
+  },
+  {
+   "date": "2026-11-23",
+   "slot": "morning",
+   "eventId": "c247dff2509498dedc2b2408ad1d5dd4",
+   "home": "Tenn-Martin Skyhawks",
+   "away": "Temple Owls",
+   "market": "alternate_total_points",
+   "segment": "game",
+   "category": "Totals",
+   "selection": "under",
+   "line": 146.5,
+   "price": -110.0,
+   "betDownTo": -114.0,
+   "book": "betmgm",
+   "model": 0.7355966320355017,
+   "edge": 0.0694143941561931,
+   "tier": "mid_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": 0.5497,
+   "clv": 0.0259
   }
  ],
  "notes": [
