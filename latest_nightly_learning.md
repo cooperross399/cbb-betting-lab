@@ -6,56 +6,56 @@
 
 | Tier | Games | Margin miss (avg) | Margin bias | Total miss (avg) | Total bias | Winner called |
 |:---|---:|---:|---:|---:|---:|---:|
-| high-major | 3 | 12.7 | +11.8 | 12.4 | +8.6 | 100.0% |
-| mid-major | 13 | 11.6 | +2.2 | 13.9 | +0.7 | 69.2% |
-| low-major | 22 | 10.3 | -1.4 | 12.7 | +4.9 | 54.5% |
+| high-major | 3 | 12.6 | +11.3 | 12.3 | +8.2 | 100.0% |
+| mid-major | 13 | 11.3 | +1.5 | 14.7 | -0.4 | 69.2% |
+| low-major | 22 | 10.4 | -1.6 | 12.6 | +4.4 | 54.5% |
 
-1 of them were matchups the season's results do not yet tie together (less than one head-to-head meeting's worth of common opponents), so the gap between the two teams leans on the preseason prior; each team's own rating still carries its games: margin miss 5.5, winner called 0.0%.
+15 of them were matchups the season's results do not yet tie together (less than one head-to-head meeting's worth of common opponents), so the gap between the two teams leans on the preseason prior; each team's own rating still carries its games: margin miss 12.0, winner called 53.3%.
 
 Per tier, never pooled. These are forecast-accuracy figures on free data: they say how close the projections were, not whether any bet had an edge. Bets are graded on the Record tab and in the forward ledger.
 
 **Biggest misses:**
-- Dayton at Northwestern: projected -3.4 (home), finished +24; total 140.3 projected, 134 scored.
-- UC San Diego at Seattle U: projected -1.2 (home), finished +26; total 150.4 projected, 154 scored.
-- Virginia Tech at Oklahoma State: projected +0.4 (home), finished +26; total 164.7 projected, 186 scored.
-- Fordham at San Diego: projected -2.7 (home), finished +22; total 145.5 projected, 138 scored.
-- Portland at California Baptist: projected -14.1 (home), finished +8; total 146.8 projected, 150 scored.
+- UC San Diego at Seattle U: projected -0.8 (home), finished +26; total 150.8 projected, 154 scored.
+- Dayton at Northwestern: projected -2.3 (home), finished +24; total 140.7 projected, 134 scored.
+- Virginia Tech at Oklahoma State: projected +0.2 (home), finished +26; total 165.1 projected, 186 scored.
+- Fordham at San Diego: projected -1.9 (home), finished +22; total 145.4 projected, 138 scored.
+- Western Illinois at Canisius: projected +1.8 (home), finished -20; total 143.0 projected, 112 scored.
 
 ## What the ratings took from it
 
-Refitted on 898 game(s) this season, through 2026-11-22 (was 864, through 2026-11-21). 219 team(s) moved by 0.05 points per 100 or more.
+Refitted on 771 game(s) this season, through 2026-11-22 (was 737, through 2026-11-21). 200 team(s) moved by 0.05 points per 100 or more.
 
-Median share of each rating still carried by the preseason prior: offence 32% → 32%, defence 44% → 44%, tempo 27% → 27%. This falls as the season's results take over.
+Median share of each rating still carried by the preseason prior: offence 38% → 37%, defence 49% → 48%, tempo 32% → 31%. This falls as the season's results take over.
 
 **Biggest risers** (net rating, points per 100 on a neutral floor):
 
 | Team | Tier | Before | After | Change |
 |:---|:---|---:|---:|---:|
-| Oklahoma State | high-major | +18.01 | +21.33 | +3.32 |
-| Northwestern | high-major | +3.79 | +7.06 | +3.27 |
-| Texas State | mid-major | +8.64 | +11.65 | +3.02 |
-| Western Illinois | low-major | -24.98 | -22.06 | +2.92 |
-| Seattle U | mid-major | +4.03 | +6.92 | +2.89 |
-| San Diego | mid-major | +1.34 | +4.10 | +2.75 |
-| Cal State Fullerton | low-major | +1.64 | +4.31 | +2.67 |
-| Marquette | high-major | +21.35 | +23.77 | +2.42 |
-| Southern Miss | mid-major | -6.95 | -4.57 | +2.38 |
-| UMass Lowell | low-major | -7.41 | -5.48 | +1.93 |
+| San Diego | mid-major | -0.49 | +3.12 | +3.62 |
+| Western Illinois | low-major | -25.84 | -22.34 | +3.50 |
+| Northwestern | high-major | +5.08 | +8.58 | +3.50 |
+| Oklahoma State | high-major | +17.89 | +21.24 | +3.35 |
+| Seattle U | mid-major | +6.42 | +9.65 | +3.23 |
+| Texas State | mid-major | +8.38 | +11.40 | +3.02 |
+| Marquette | high-major | +22.06 | +24.73 | +2.67 |
+| Cal State Fullerton | low-major | +1.51 | +3.93 | +2.42 |
+| Southern Miss | mid-major | -6.83 | -4.48 | +2.36 |
+| UMass Lowell | low-major | -7.44 | -5.27 | +2.17 |
 
 **Biggest fallers** (net rating, points per 100 on a neutral floor):
 
 | Team | Tier | Before | After | Change |
 |:---|:---|---:|---:|---:|
-| Dayton | mid-major | +9.45 | +5.61 | -3.84 |
-| McNeese | low-major | +12.46 | +8.69 | -3.76 |
-| UC San Diego | low-major | +5.09 | +1.53 | -3.55 |
-| Canisius | low-major | -19.35 | -22.43 | -3.07 |
-| Fordham | mid-major | +6.42 | +3.64 | -2.77 |
-| Virginia Tech | high-major | +18.25 | +15.75 | -2.50 |
-| West Florida | unplaced | -0.52 | -2.46 | -1.94 |
-| Cincinnati | high-major | +23.27 | +21.42 | -1.85 |
-| Portland State | low-major | +1.08 | -0.77 | -1.85 |
-| Duquesne | mid-major | +2.40 | +0.69 | -1.71 |
+| Dayton | mid-major | +7.57 | +3.71 | -3.86 |
+| McNeese | low-major | +12.62 | +8.79 | -3.83 |
+| Canisius | low-major | -15.94 | -19.57 | -3.63 |
+| UC San Diego | low-major | +5.02 | +1.75 | -3.28 |
+| Fordham | mid-major | +5.77 | +2.74 | -3.03 |
+| Virginia Tech | high-major | +18.65 | +15.69 | -2.96 |
+| UIC | mid-major | +8.94 | +6.51 | -2.43 |
+| Chicago State | low-major | -15.00 | -17.23 | -2.23 |
+| Cincinnati | high-major | +24.08 | +21.97 | -2.11 |
+| West Florida | unplaced | -0.42 | -2.51 | -2.08 |
 
 ## The other two learners
 
@@ -80,6 +80,6 @@ Median share of each rating still carried by the preseason prior: offence 32% �
 | 2026-11-19 | 29 | 9.89 | 10.08 | 58.6% | 37% |
 | 2026-11-20 | 51 | 10.57 | 13.87 | 60.8% | 33% |
 | 2026-11-21 | 51 | 10.90 | 12.10 | 68.6% | 32% |
-| 2026-11-22 | 38 | 10.98 | 13.10 | 63.2% | 32% |
+| 2026-11-22 | 38 | 10.84 | 13.27 | 63.2% | 37% |
 
 _4 of 42 game(s) on 2026-11-22 carry no graded projection: a non-D-I opponent, a team the prior does not know, or a score not yet in the tables._
