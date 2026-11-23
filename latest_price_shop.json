@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-23T02:15+00:00",
-  "captures": 295,
+  "as_of": "2026-11-23T03:15+00:00",
+  "captures": 296,
   "cells": [
     {
       "beat_close": 0.8,
@@ -38,13 +38,13 @@
       "ungraded": 6
     },
     {
-      "beat_close": 0.7586206896551724,
-      "games": 27,
-      "graded": 29,
-      "high": null,
-      "low": null,
-      "mean": 0.01910919892372161,
-      "shops": 48,
+      "beat_close": 0.7666666666666667,
+      "games": 28,
+      "graded": 30,
+      "high": 0.06791865806481363,
+      "low": -0.029784906979844348,
+      "mean": 0.01906687554248464,
+      "shops": 49,
       "tier": "unplaced",
       "ungraded": 19
     }
@@ -55,11 +55,11 @@
       "american": -127,
       "away_team": "Middle Tennessee Blue Raiders",
       "book": "courtside",
-      "books": 7,
+      "books": 12,
       "commence": "2026-11-23T20:00:00+00:00",
-      "edge": 0.0265,
+      "edge": 0.0229,
       "event_id": "f1dad846a15c864b10f3cf4914c7cbd5",
-      "fair_american": -135,
+      "fair_american": -134,
       "game": "Middle Tennessee Blue Raiders at Southern Illinois Salukis",
       "home_team": "Southern Illinois Salukis",
       "line": null,
@@ -67,7 +67,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-23T02:13:43+00:00",
+  "latest_capture": "2026-11-23T03:13:38+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
