@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-23T22:44+00:00",
-  "captures": 304,
+  "as_of": "2026-11-23T23:53+00:00",
+  "captures": 305,
   "cells": [
     {
       "beat_close": 0.8,
@@ -50,8 +50,39 @@
     }
   ],
   "correction_factor": 1.8815404941435947,
-  "current": [],
-  "latest_capture": "2026-11-23T22:42:24+00:00",
+  "current": [
+    {
+      "american": -114,
+      "away_team": "North Carolina A&T Aggies",
+      "book": "betparx",
+      "books": 17,
+      "commence": "2026-11-24T00:00:00+00:00",
+      "edge": 0.0238,
+      "event_id": "f35ec8dcc1ab5e6f04bdb796a46b1524",
+      "fair_american": -120,
+      "game": "North Carolina A&T Aggies at South Carolina St Bulldogs",
+      "home_team": "South Carolina St Bulldogs",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    },
+    {
+      "american": 220,
+      "away_team": "Tennessee Volunteers",
+      "book": "courtside",
+      "books": 8,
+      "commence": "2026-11-24T20:00:00+00:00",
+      "edge": 0.025,
+      "event_id": "38c575bb916b4b6634ccbc1d442b53a2",
+      "fair_american": 212,
+      "game": "Tennessee Volunteers at Maryland Terrapins",
+      "home_team": "Maryland Terrapins",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
+    }
+  ],
+  "latest_capture": "2026-11-23T23:51:57+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
