@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-23T03:15+00:00",
-  "captures": 296,
+  "alerts": [
+    {
+      "american": -280,
+      "away_team": "San Diego St Aztecs",
+      "book": "espnbet",
+      "books": 6,
+      "commence": "2026-11-24T22:00:00+00:00",
+      "edge": 0.048,
+      "event_id": "0dbbfc6c0ffe4c7d2c9b65eb8ab96cb3",
+      "fair_american": -339,
+      "game": "San Diego St Aztecs at Iowa State Cyclones",
+      "home_team": "Iowa State Cyclones",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
+    }
+  ],
+  "as_of": "2026-11-23T13:45+00:00",
+  "captures": 297,
   "cells": [
     {
       "beat_close": 0.8,
@@ -52,22 +68,22 @@
   "correction_factor": 1.8815404941435947,
   "current": [
     {
-      "american": -127,
-      "away_team": "Middle Tennessee Blue Raiders",
-      "book": "courtside",
-      "books": 12,
-      "commence": "2026-11-23T20:00:00+00:00",
-      "edge": 0.0229,
-      "event_id": "f1dad846a15c864b10f3cf4914c7cbd5",
-      "fair_american": -134,
-      "game": "Middle Tennessee Blue Raiders at Southern Illinois Salukis",
-      "home_team": "Southern Illinois Salukis",
+      "american": -280,
+      "away_team": "San Diego St Aztecs",
+      "book": "espnbet",
+      "books": 6,
+      "commence": "2026-11-24T22:00:00+00:00",
+      "edge": 0.048,
+      "event_id": "0dbbfc6c0ffe4c7d2c9b65eb8ab96cb3",
+      "fair_american": -339,
+      "game": "San Diego St Aztecs at Iowa State Cyclones",
+      "home_team": "Iowa State Cyclones",
       "line": null,
       "market": "moneyline",
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-23T03:13:38+00:00",
+  "latest_capture": "2026-11-23T13:43:38+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
