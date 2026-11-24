@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-24T22:26+00:00",
-  "captures": 321,
+  "as_of": "2026-11-24T23:03+00:00",
+  "captures": 322,
   "cells": [
     {
       "beat_close": 0.8,
@@ -38,13 +38,13 @@
       "ungraded": 7
     },
     {
-      "beat_close": 0.6842105263157895,
-      "games": 32,
-      "graded": 38,
-      "high": 0.2769046255222833,
-      "low": -0.1015885747882468,
-      "mean": 0.08765802536701824,
-      "shops": 55,
+      "beat_close": 0.6666666666666666,
+      "games": 35,
+      "graded": 42,
+      "high": 0.3027575559753958,
+      "low": -0.08680810332625818,
+      "mean": 0.10797472632456878,
+      "shops": 59,
       "tier": "unplaced",
       "ungraded": 17
     }
@@ -57,9 +57,9 @@
       "book": "courtside",
       "books": 9,
       "commence": "2026-11-26T00:00:00+00:00",
-      "edge": 0.0644,
+      "edge": 0.0592,
       "event_id": "482e1e1c8e5e977fcf7e2322241bb598",
-      "fair_american": 119,
+      "fair_american": 120,
       "game": "Duke Blue Devils at UConn Huskies",
       "home_team": "UConn Huskies",
       "line": null,
@@ -67,7 +67,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-24T22:24:56+00:00",
+  "latest_capture": "2026-11-24T23:00:36+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
