@@ -17,16 +17,16 @@
       "mid_major": 0.354
     },
     "2026-11-24": {
-      "high_major": -2.103,
-      "low_major": -0.961,
-      "mid_major": 0.303
+      "high_major": -2.212,
+      "low_major": -1.059,
+      "mid_major": 0.249
     }
   },
   "clamp": 4.0,
   "games": {
-    "high_major": 167,
-    "low_major": 76,
-    "mid_major": 184
+    "high_major": 175,
+    "low_major": 80,
+    "mid_major": 206
   },
   "min_games": 20,
   "sigma": 11.0,

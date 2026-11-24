@@ -1,10 +1,10 @@
 {
  "as_of": "2026-11-24",
- "picks": 465,
+ "picks": 469,
  "comments_read": 1,
  "outcomes": {
-  "lost": 283,
-  "pending": 20,
+  "lost": 285,
+  "pending": 22,
   "won": 162
  },
  "clv": {
@@ -9822,8 +9822,8 @@
    "tier": "low_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.7377,
-   "clv": 0.0155
+   "closeProbability": 0.7665,
+   "clv": 0.0442
   },
   {
    "date": "2026-11-24",
@@ -9910,8 +9910,8 @@
    "tier": "low_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.6219,
-   "clv": 0.087
+   "closeProbability": 0.5777,
+   "clv": 0.0428
   },
   {
    "date": "2026-11-24",
@@ -9954,8 +9954,8 @@
    "tier": "high_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.4638,
-   "clv": 0.0193
+   "closeProbability": 0.4279,
+   "clv": -0.0166
   },
   {
    "date": "2026-11-24",
@@ -9998,8 +9998,8 @@
    "tier": "low_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.5,
-   "clv": 0.0238
+   "closeProbability": 0.4819,
+   "clv": 0.0057
   },
   {
    "date": "2026-11-24",
@@ -10042,8 +10042,8 @@
    "tier": "high_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.7934,
-   "clv": 0.0712
+   "closeProbability": 0.7377,
+   "clv": 0.0155
   },
   {
    "date": "2026-11-24",
@@ -10064,8 +10064,8 @@
    "tier": "high_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.0976,
-   "clv": -0.0563
+   "closeProbability": 0.1479,
+   "clv": -0.0059
   },
   {
    "date": "2026-11-24",
@@ -10086,8 +10086,8 @@
    "tier": "high_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.3085,
-   "clv": 0.0228
+   "closeProbability": 0.2927,
+   "clv": 0.007
   },
   {
    "date": "2026-11-24",
@@ -10130,8 +10130,8 @@
    "tier": "low_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.4873,
-   "clv": -0.0029
+   "closeProbability": 0.501,
+   "clv": 0.0108
   },
   {
    "date": "2026-11-24",
@@ -10150,8 +10150,8 @@
    "model": 0.6226782226101104,
    "edge": 0.03673610358266144,
    "tier": "low_major",
-   "outcome": "pending",
-   "result": null,
+   "outcome": "lost",
+   "result": "loss",
    "closeProbability": null,
    "clv": null
   },
@@ -10194,8 +10194,8 @@
    "model": 0.5321211191634928,
    "edge": 0.025000000000000133,
    "tier": "mid_major",
-   "outcome": "pending",
-   "result": null,
+   "outcome": "lost",
+   "result": "loss",
    "closeProbability": null,
    "clv": null
   },
@@ -10240,8 +10240,96 @@
    "tier": "low_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.7377,
-   "clv": -0.0123
+   "closeProbability": 0.7523,
+   "clv": 0.0023
+  },
+  {
+   "date": "2026-11-24",
+   "slot": "evening",
+   "eventId": "cd53ee535b2696ad269d2a8411ee5e44",
+   "home": "Villanova Wildcats",
+   "away": "Coppin St Eagles",
+   "market": "alternate_spread",
+   "segment": "game",
+   "category": "ATS",
+   "selection": "away",
+   "line": 26.5,
+   "price": 275.0,
+   "betDownTo": 270.0,
+   "book": "hardrockbet",
+   "model": 0.3770584795385221,
+   "edge": 0.06512979942502217,
+   "tier": "high_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": 0.2549,
+   "clv": -0.0117
+  },
+  {
+   "date": "2026-11-24",
+   "slot": "evening",
+   "eventId": "4dc8cb6a7648e8a24132baf3563d8887",
+   "home": "Missouri Tigers",
+   "away": "Evansville Purple Aces",
+   "market": "alternate_spread",
+   "segment": "game",
+   "category": "ATS",
+   "selection": "away",
+   "line": 25.5,
+   "price": 195.0,
+   "betDownTo": 191.0,
+   "book": "hardrockbet",
+   "model": 0.3816136544224315,
+   "edge": 0.06645121565274392,
+   "tier": "high_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": 0.3247,
+   "clv": -0.0143
+  },
+  {
+   "date": "2026-11-24",
+   "slot": "evening",
+   "eventId": "ce03e086bc077ee90407285728e44a69",
+   "home": "Indiana Hoosiers",
+   "away": "Jacksonville Dolphins",
+   "market": "alternate_spread",
+   "segment": "game",
+   "category": "ATS",
+   "selection": "away",
+   "line": 22.5,
+   "price": 195.0,
+   "betDownTo": 190.0,
+   "book": "hardrockbet",
+   "model": 0.34101021588717895,
+   "edge": 0.0681319118640209,
+   "tier": "high_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": 0.3247,
+   "clv": -0.0143
+  },
+  {
+   "date": "2026-11-24",
+   "slot": "evening",
+   "eventId": "43f1834ce15a8fa15990477292bbd923",
+   "home": "Florida St Seminoles",
+   "away": "UNC Asheville Bulldogs",
+   "market": "spread_h1",
+   "segment": "h1",
+   "category": "ATS",
+   "selection": "away",
+   "line": 15.5,
+   "price": 120.0,
+   "betDownTo": 118.0,
+   "book": "bovada",
+   "model": 0.6061924291818198,
+   "edge": 0.0506631967543798,
+   "tier": "high_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": null,
+   "clv": null
   }
  ],
  "notes": [
