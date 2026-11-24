@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-24T03:59+00:00",
-  "captures": 312,
+  "as_of": "2026-11-24T04:19+00:00",
+  "captures": 313,
   "cells": [
     {
       "beat_close": 0.8,
@@ -52,6 +52,21 @@
   "correction_factor": 1.8815404941435947,
   "current": [
     {
+      "american": -350,
+      "away_team": "Binghamton Bearcats",
+      "book": "fanatics",
+      "books": 7,
+      "commence": "2026-11-25T00:00:00+00:00",
+      "edge": 0.0231,
+      "event_id": "9bfe60f0e81a07d8ac7c88c95a05879e",
+      "fair_american": -390,
+      "game": "Binghamton Bearcats at Lehigh Mountain Hawks",
+      "home_team": "Lehigh Mountain Hawks",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
+    },
+    {
       "american": -150,
       "away_team": "Army Knights",
       "book": "espnbet",
@@ -67,7 +82,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-24T03:57:17+00:00",
+  "latest_capture": "2026-11-24T04:17:11+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
