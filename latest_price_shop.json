@@ -2,23 +2,23 @@
   "alert_edge": 0.03,
   "alerts": [
     {
-      "american": 116,
-      "away_team": "Oregon Ducks",
-      "book": "ballybet",
-      "books": 10,
-      "commence": "2026-11-25T03:30:00+00:00",
-      "edge": 0.0699,
-      "event_id": "4b220aa94adc3b0fd23d9d892a130646",
-      "fair_american": 102,
-      "game": "Oregon Ducks at St. John's Red Storm",
-      "home_team": "St. John's Red Storm",
-      "line": 158.5,
-      "market": "total_points",
-      "selection": "over"
+      "american": -113,
+      "away_team": "Fort Wayne Mastodons",
+      "book": "fanduel",
+      "books": 6,
+      "commence": "2026-11-25T00:30:00+00:00",
+      "edge": 0.0974,
+      "event_id": "1093df65c3f02a9b287b474ff6c464b6",
+      "fair_american": -139,
+      "game": "Fort Wayne Mastodons at SE Missouri St Redhawks",
+      "home_team": "SE Missouri St Redhawks",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
     }
   ],
-  "as_of": "2026-11-24T00:50+00:00",
-  "captures": 306,
+  "as_of": "2026-11-24T01:40+00:00",
+  "captures": 307,
   "cells": [
     {
       "beat_close": 0.8,
@@ -68,16 +68,16 @@
   "correction_factor": 1.8815404941435947,
   "current": [
     {
-      "american": 220,
-      "away_team": "Tennessee Volunteers",
-      "book": "courtside",
-      "books": 10,
-      "commence": "2026-11-24T20:00:00+00:00",
-      "edge": 0.025,
-      "event_id": "38c575bb916b4b6634ccbc1d442b53a2",
-      "fair_american": 212,
-      "game": "Tennessee Volunteers at Maryland Terrapins",
-      "home_team": "Maryland Terrapins",
+      "american": -113,
+      "away_team": "Fort Wayne Mastodons",
+      "book": "fanduel",
+      "books": 6,
+      "commence": "2026-11-25T00:30:00+00:00",
+      "edge": 0.0974,
+      "event_id": "1093df65c3f02a9b287b474ff6c464b6",
+      "fair_american": -139,
+      "game": "Fort Wayne Mastodons at SE Missouri St Redhawks",
+      "home_team": "SE Missouri St Redhawks",
       "line": null,
       "market": "moneyline",
       "selection": "home"
@@ -88,9 +88,9 @@
       "book": "ballybet",
       "books": 10,
       "commence": "2026-11-25T03:30:00+00:00",
-      "edge": 0.0699,
+      "edge": 0.0624,
       "event_id": "4b220aa94adc3b0fd23d9d892a130646",
-      "fair_american": 102,
+      "fair_american": 103,
       "game": "Oregon Ducks at St. John's Red Storm",
       "home_team": "St. John's Red Storm",
       "line": 158.5,
@@ -98,7 +98,7 @@
       "selection": "over"
     }
   ],
-  "latest_capture": "2026-11-24T00:48:29+00:00",
+  "latest_capture": "2026-11-24T01:38:38+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
