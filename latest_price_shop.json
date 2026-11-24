@@ -1,39 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": -180,
-      "away_team": "Memphis Tigers",
-      "book": "fanatics",
-      "books": 4,
-      "commence": "2026-11-25T22:00:00+00:00",
-      "edge": 0.0352,
-      "event_id": "c18ec6dd46547be2ebc1e120f75faa56",
-      "fair_american": -199,
-      "game": "Memphis Tigers at Penn State Nittany Lions",
-      "home_team": "Penn State Nittany Lions",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 133,
-      "away_team": "Duke Blue Devils",
-      "book": "courtside",
-      "books": 8,
-      "commence": "2026-11-26T00:00:00+00:00",
-      "edge": 0.061,
-      "event_id": "482e1e1c8e5e977fcf7e2322241bb598",
-      "fair_american": 120,
-      "game": "Duke Blue Devils at UConn Huskies",
-      "home_team": "UConn Huskies",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-24T21:15+00:00",
-  "captures": 320,
+  "alerts": [],
+  "as_of": "2026-11-24T22:26+00:00",
+  "captures": 321,
   "cells": [
     {
       "beat_close": 0.8,
@@ -69,13 +38,13 @@
       "ungraded": 7
     },
     {
-      "beat_close": 0.6944444444444444,
-      "games": 31,
-      "graded": 36,
-      "high": 0.2902385195866751,
-      "low": -0.10916521209427524,
-      "mean": 0.09053665374619993,
-      "shops": 53,
+      "beat_close": 0.6842105263157895,
+      "games": 32,
+      "graded": 38,
+      "high": 0.2769046255222833,
+      "low": -0.1015885747882468,
+      "mean": 0.08765802536701824,
+      "shops": 55,
       "tier": "unplaced",
       "ungraded": 17
     }
@@ -83,59 +52,14 @@
   "correction_factor": 1.8815404941435947,
   "current": [
     {
-      "american": 110,
-      "away_team": "Green Bay Phoenix",
-      "book": "hardrockbet",
-      "books": 7,
-      "commence": "2026-11-25T01:00:00+00:00",
-      "edge": 0.0403,
-      "event_id": "ee1434c68caaef481b4433fdfb2c8164",
-      "fair_american": 102,
-      "game": "Green Bay Phoenix at UMKC Kangaroos",
-      "home_team": "UMKC Kangaroos",
-      "line": -1.5,
-      "market": "spread",
-      "selection": "home"
-    },
-    {
-      "american": -101,
-      "away_team": "South Carolina Gamecocks",
-      "book": "lowvig",
-      "books": 11,
-      "commence": "2026-11-25T21:30:00+00:00",
-      "edge": 0.0224,
-      "event_id": "836e49363e2e574ede8873b9e53cb5f7",
-      "fair_american": -106,
-      "game": "South Carolina Gamecocks at USC Trojans",
-      "home_team": "USC Trojans",
-      "line": 10.5,
-      "market": "spread",
-      "selection": "away"
-    },
-    {
-      "american": -180,
-      "away_team": "Memphis Tigers",
-      "book": "fanatics",
-      "books": 4,
-      "commence": "2026-11-25T22:00:00+00:00",
-      "edge": 0.0352,
-      "event_id": "c18ec6dd46547be2ebc1e120f75faa56",
-      "fair_american": -199,
-      "game": "Memphis Tigers at Penn State Nittany Lions",
-      "home_team": "Penn State Nittany Lions",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
       "american": 133,
       "away_team": "Duke Blue Devils",
       "book": "courtside",
-      "books": 8,
+      "books": 9,
       "commence": "2026-11-26T00:00:00+00:00",
-      "edge": 0.061,
+      "edge": 0.0644,
       "event_id": "482e1e1c8e5e977fcf7e2322241bb598",
-      "fair_american": 120,
+      "fair_american": 119,
       "game": "Duke Blue Devils at UConn Huskies",
       "home_team": "UConn Huskies",
       "line": null,
@@ -143,7 +67,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-24T21:13:19+00:00",
+  "latest_capture": "2026-11-24T22:24:56+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
