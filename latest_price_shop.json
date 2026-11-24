@@ -2,23 +2,23 @@
   "alert_edge": 0.03,
   "alerts": [
     {
-      "american": 110,
-      "away_team": "Green Bay Phoenix",
+      "american": 375,
+      "away_team": "Southern Utah Thunderbirds",
       "book": "hardrockbet",
-      "books": 7,
-      "commence": "2026-11-25T01:00:00+00:00",
-      "edge": 0.0403,
-      "event_id": "ee1434c68caaef481b4433fdfb2c8164",
-      "fair_american": 102,
-      "game": "Green Bay Phoenix at UMKC Kangaroos",
-      "home_team": "UMKC Kangaroos",
-      "line": -1.5,
-      "market": "spread",
-      "selection": "home"
+      "books": 18,
+      "commence": "2026-11-24T18:00:00+00:00",
+      "edge": 0.0777,
+      "event_id": "25c249c5d826256a741704663708b66f",
+      "fair_american": 341,
+      "game": "Southern Utah Thunderbirds at Florida Int'l Golden Panthers",
+      "home_team": "Florida Int'l Golden Panthers",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
     }
   ],
-  "as_of": "2026-11-24T17:45+00:00",
-  "captures": 315,
+  "as_of": "2026-11-24T17:48+00:00",
+  "captures": 316,
   "cells": [
     {
       "beat_close": 0.8,
@@ -68,6 +68,21 @@
   "correction_factor": 1.8815404941435947,
   "current": [
     {
+      "american": 375,
+      "away_team": "Southern Utah Thunderbirds",
+      "book": "hardrockbet",
+      "books": 18,
+      "commence": "2026-11-24T18:00:00+00:00",
+      "edge": 0.0777,
+      "event_id": "25c249c5d826256a741704663708b66f",
+      "fair_american": 341,
+      "game": "Southern Utah Thunderbirds at Florida Int'l Golden Panthers",
+      "home_team": "Florida Int'l Golden Panthers",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    },
+    {
       "american": 110,
       "away_team": "Green Bay Phoenix",
       "book": "hardrockbet",
@@ -83,7 +98,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-24T17:43:10+00:00",
+  "latest_capture": "2026-11-24T17:46:22+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
