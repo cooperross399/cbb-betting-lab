@@ -1,39 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 150,
-      "away_team": "Belmont Bruins",
-      "book": "hardrockbet",
-      "books": 15,
-      "commence": "2026-11-24T17:30:00+00:00",
-      "edge": 0.0313,
-      "event_id": "c027a1281dd4c9e8ac848bc06f0e29fb",
-      "fair_american": 142,
-      "game": "Belmont Bruins at Akron Zips",
-      "home_team": "Akron Zips",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 320,
-      "away_team": "Oregon Ducks",
-      "book": "betmgm",
-      "books": 12,
-      "commence": "2026-11-25T03:30:00+00:00",
-      "edge": 2.3326,
-      "event_id": "4b220aa94adc3b0fd23d9d892a130646",
-      "fair_american": -384,
-      "game": "Oregon Ducks at St. John's Red Storm",
-      "home_team": "St. John's Red Storm",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "as_of": "2026-11-24T03:21+00:00",
-  "captures": 311,
+  "alerts": [],
+  "as_of": "2026-11-24T03:59+00:00",
+  "captures": 312,
   "cells": [
     {
       "beat_close": 0.8,
@@ -83,37 +52,22 @@
   "correction_factor": 1.8815404941435947,
   "current": [
     {
-      "american": 150,
-      "away_team": "Belmont Bruins",
-      "book": "hardrockbet",
-      "books": 15,
-      "commence": "2026-11-24T17:30:00+00:00",
-      "edge": 0.0313,
-      "event_id": "c027a1281dd4c9e8ac848bc06f0e29fb",
-      "fair_american": 142,
-      "game": "Belmont Bruins at Akron Zips",
-      "home_team": "Akron Zips",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 320,
-      "away_team": "Oregon Ducks",
-      "book": "betmgm",
-      "books": 12,
-      "commence": "2026-11-25T03:30:00+00:00",
-      "edge": 2.3326,
-      "event_id": "4b220aa94adc3b0fd23d9d892a130646",
-      "fair_american": -384,
-      "game": "Oregon Ducks at St. John's Red Storm",
-      "home_team": "St. John's Red Storm",
+      "american": -150,
+      "away_team": "Army Knights",
+      "book": "espnbet",
+      "books": 7,
+      "commence": "2026-11-25T01:00:00+00:00",
+      "edge": 0.0277,
+      "event_id": "b96a1616ca40a186cf203b892683f222",
+      "fair_american": -161,
+      "game": "Army Knights at Air Force Falcons",
+      "home_team": "Air Force Falcons",
       "line": null,
       "market": "moneyline",
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-24T03:18:59+00:00",
+  "latest_capture": "2026-11-24T03:57:17+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
