@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-23T23:53+00:00",
-  "captures": 305,
+  "alerts": [
+    {
+      "american": 116,
+      "away_team": "Oregon Ducks",
+      "book": "ballybet",
+      "books": 10,
+      "commence": "2026-11-25T03:30:00+00:00",
+      "edge": 0.0699,
+      "event_id": "4b220aa94adc3b0fd23d9d892a130646",
+      "fair_american": 102,
+      "game": "Oregon Ducks at St. John's Red Storm",
+      "home_team": "St. John's Red Storm",
+      "line": 158.5,
+      "market": "total_points",
+      "selection": "over"
+    }
+  ],
+  "as_of": "2026-11-24T00:50+00:00",
+  "captures": 306,
   "cells": [
     {
       "beat_close": 0.8,
@@ -44,33 +60,18 @@
       "high": null,
       "low": null,
       "mean": 0.0218876428894515,
-      "shops": 41,
+      "shops": 42,
       "tier": "unplaced",
-      "ungraded": 15
+      "ungraded": 16
     }
   ],
   "correction_factor": 1.8815404941435947,
   "current": [
     {
-      "american": -114,
-      "away_team": "North Carolina A&T Aggies",
-      "book": "betparx",
-      "books": 17,
-      "commence": "2026-11-24T00:00:00+00:00",
-      "edge": 0.0238,
-      "event_id": "f35ec8dcc1ab5e6f04bdb796a46b1524",
-      "fair_american": -120,
-      "game": "North Carolina A&T Aggies at South Carolina St Bulldogs",
-      "home_team": "South Carolina St Bulldogs",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
       "american": 220,
       "away_team": "Tennessee Volunteers",
       "book": "courtside",
-      "books": 8,
+      "books": 10,
       "commence": "2026-11-24T20:00:00+00:00",
       "edge": 0.025,
       "event_id": "38c575bb916b4b6634ccbc1d442b53a2",
@@ -80,9 +81,24 @@
       "line": null,
       "market": "moneyline",
       "selection": "home"
+    },
+    {
+      "american": 116,
+      "away_team": "Oregon Ducks",
+      "book": "ballybet",
+      "books": 10,
+      "commence": "2026-11-25T03:30:00+00:00",
+      "edge": 0.0699,
+      "event_id": "4b220aa94adc3b0fd23d9d892a130646",
+      "fair_american": 102,
+      "game": "Oregon Ducks at St. John's Red Storm",
+      "home_team": "St. John's Red Storm",
+      "line": 158.5,
+      "market": "total_points",
+      "selection": "over"
     }
   ],
-  "latest_capture": "2026-11-23T23:51:57+00:00",
+  "latest_capture": "2026-11-24T00:48:29+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
