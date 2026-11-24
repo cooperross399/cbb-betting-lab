@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-24T23:03+00:00",
-  "captures": 322,
+  "alerts": [
+    {
+      "american": 520,
+      "away_team": "South Carolina Gamecocks",
+      "book": "fanduel",
+      "books": 9,
+      "commence": "2026-11-25T21:30:00+00:00",
+      "edge": 0.0499,
+      "event_id": "836e49363e2e574ede8873b9e53cb5f7",
+      "fair_american": 491,
+      "game": "South Carolina Gamecocks at USC Trojans",
+      "home_team": "USC Trojans",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    }
+  ],
+  "as_of": "2026-11-24T23:30+00:00",
+  "captures": 323,
   "cells": [
     {
       "beat_close": 0.8,
@@ -52,14 +68,29 @@
   "correction_factor": 1.8815404941435947,
   "current": [
     {
+      "american": 520,
+      "away_team": "South Carolina Gamecocks",
+      "book": "fanduel",
+      "books": 9,
+      "commence": "2026-11-25T21:30:00+00:00",
+      "edge": 0.0499,
+      "event_id": "836e49363e2e574ede8873b9e53cb5f7",
+      "fair_american": 491,
+      "game": "South Carolina Gamecocks at USC Trojans",
+      "home_team": "USC Trojans",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    },
+    {
       "american": 133,
       "away_team": "Duke Blue Devils",
       "book": "courtside",
       "books": 9,
       "commence": "2026-11-26T00:00:00+00:00",
-      "edge": 0.0592,
+      "edge": 0.0644,
       "event_id": "482e1e1c8e5e977fcf7e2322241bb598",
-      "fair_american": 120,
+      "fair_american": 119,
       "game": "Duke Blue Devils at UConn Huskies",
       "home_team": "UConn Huskies",
       "line": null,
@@ -67,7 +98,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-24T23:00:36+00:00",
+  "latest_capture": "2026-11-24T23:28:11+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
