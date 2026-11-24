@@ -1,19 +1,20 @@
 # CBB price shop
 
-As of 2026-11-24T23:30+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
+As of 2026-11-24T23:55+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
 
 ## Right now
 
-From the capture of 2026-11-24T23:28:11+00:00.
+From the capture of 2026-11-24T23:52:19+00:00.
 
 | Tip (UTC) | Game | Side | Book | Price | Fair | Edge |
 |:---|:---|:---|:---|---:|---:|---:|
+| 2026-11-25 00:00 | Nevada Wolf Pack at Santa Clara Broncos | home moneyline | hardrockbet | +105 | +101 | +2.1% |
 | 2026-11-25 21:30 | South Carolina Gamecocks at USC Trojans | away moneyline | fanduel | +520 | +491 | +5.0% |
 | 2026-11-26 00:00 | Duke Blue Devils at UConn Huskies | away moneyline | courtside | +133 | +119 | +6.4% |
 
 ## Did the shops beat the close?
 
-Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (323 capture(s) read). Per tier, clustered by game, corrected across 221 cumulative hypotheses (x1.8815); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
+Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (324 capture(s) read). Per tier, clustered by game, corrected across 221 cumulative hypotheses (x1.8815); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
 
 | Tier | Shops | Graded | Games | Mean CLV | Corrected | Beat the close | Line gone at close |
 |:---|---:|---:|---:|---:|:---|---:|---:|
