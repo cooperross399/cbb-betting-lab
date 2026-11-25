@@ -1,69 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 220,
-      "away_team": "N Colorado Bears",
-      "book": "hardrockbet",
-      "books": 18,
-      "commence": "2026-11-25T17:30:00+00:00",
-      "edge": 0.0439,
-      "event_id": "ec01b07ca0266d4bba14bda0f9ede21c",
-      "fair_american": 207,
-      "game": "N Colorado Bears at Detroit Mercy Titans",
-      "home_team": "Detroit Mercy Titans",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    },
-    {
-      "american": -105,
-      "away_team": "Holy Cross Crusaders",
-      "book": "fanduel",
-      "books": 5,
-      "commence": "2026-11-25T22:00:00+00:00",
-      "edge": 0.0583,
-      "event_id": "f22eff13dd2b5fe4bd600f3c4e582424",
-      "fair_american": -118,
-      "game": "Holy Cross Crusaders at Dartmouth Big Green",
-      "home_team": "Dartmouth Big Green",
-      "line": 146.5,
-      "market": "total_points",
-      "selection": "over"
-    },
-    {
-      "american": -110,
-      "away_team": "Holy Cross Crusaders",
-      "book": "rebet",
-      "books": 6,
-      "commence": "2026-11-25T22:00:00+00:00",
-      "edge": 0.0304,
-      "event_id": "f22eff13dd2b5fe4bd600f3c4e582424",
-      "fair_american": -117,
-      "game": "Holy Cross Crusaders at Dartmouth Big Green",
-      "home_team": "Dartmouth Big Green",
-      "line": -11.5,
-      "market": "spread",
-      "selection": "home"
-    },
-    {
-      "american": 120,
-      "away_team": "Maryland Terrapins",
-      "book": "espnbet",
-      "books": 9,
-      "commence": "2026-11-26T18:00:00+00:00",
-      "edge": 0.0372,
-      "event_id": "fce1d0e39b7353f5d69bc77cf21ee9d1",
-      "fair_american": 112,
-      "game": "Maryland Terrapins at San Diego St Aztecs",
-      "home_team": "San Diego St Aztecs",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "as_of": "2026-11-25T17:16+00:00",
-  "captures": 331,
+  "alerts": [],
+  "as_of": "2026-11-25T17:45+00:00",
+  "captures": 332,
   "cells": [
     {
       "beat_close": 0.8,
@@ -99,34 +38,19 @@
       "ungraded": 7
     },
     {
-      "beat_close": 0.6842105263157895,
-      "games": 48,
-      "graded": 57,
-      "high": 0.3494253200152665,
-      "low": -0.08614140687775304,
-      "mean": 0.13164195656875674,
-      "shops": 82,
+      "beat_close": 0.6896551724137931,
+      "games": 49,
+      "graded": 58,
+      "high": 0.3441507072634835,
+      "low": -0.0838920304724996,
+      "mean": 0.13012933839549196,
+      "shops": 83,
       "tier": "unplaced",
       "ungraded": 25
     }
   ],
   "correction_factor": 1.8815404941435947,
   "current": [
-    {
-      "american": 220,
-      "away_team": "N Colorado Bears",
-      "book": "hardrockbet",
-      "books": 18,
-      "commence": "2026-11-25T17:30:00+00:00",
-      "edge": 0.0439,
-      "event_id": "ec01b07ca0266d4bba14bda0f9ede21c",
-      "fair_american": 207,
-      "game": "N Colorado Bears at Detroit Mercy Titans",
-      "home_team": "Detroit Mercy Titans",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    },
     {
       "american": -105,
       "away_team": "Holy Cross Crusaders",
@@ -146,7 +70,7 @@
       "american": -110,
       "away_team": "Holy Cross Crusaders",
       "book": "rebet",
-      "books": 6,
+      "books": 7,
       "commence": "2026-11-25T22:00:00+00:00",
       "edge": 0.0304,
       "event_id": "f22eff13dd2b5fe4bd600f3c4e582424",
@@ -156,24 +80,9 @@
       "line": -11.5,
       "market": "spread",
       "selection": "home"
-    },
-    {
-      "american": 120,
-      "away_team": "Maryland Terrapins",
-      "book": "espnbet",
-      "books": 9,
-      "commence": "2026-11-26T18:00:00+00:00",
-      "edge": 0.0372,
-      "event_id": "fce1d0e39b7353f5d69bc77cf21ee9d1",
-      "fair_american": 112,
-      "game": "Maryland Terrapins at San Diego St Aztecs",
-      "home_team": "San Diego St Aztecs",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-25T17:14:15+00:00",
+  "latest_capture": "2026-11-25T17:42:23+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
