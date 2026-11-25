@@ -1,16 +1,16 @@
 {
  "as_of": "2026-11-25",
- "picks": 477,
+ "picks": 480,
  "comments_read": 1,
  "outcomes": {
-  "lost": 298,
-  "pending": 8,
+  "lost": 299,
+  "pending": 10,
   "won": 171
  },
  "clv": {
-  "picks": 256,
-  "mean": -0.0025,
-  "beatClosePct": 48.0
+  "picks": 257,
+  "mean": -0.0024,
+  "beatClosePct": 48.2
  },
  "rows": [
   {
@@ -10372,8 +10372,8 @@
    "tier": "mid_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.31,
-   "clv": 0.0202
+   "closeProbability": 0.3325,
+   "clv": 0.0426
   },
   {
    "date": "2026-11-25",
@@ -10394,8 +10394,8 @@
    "tier": "high_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.7665,
-   "clv": 0.0442
+   "closeProbability": 0.7377,
+   "clv": 0.0155
   },
   {
    "date": "2026-11-25",
@@ -10416,8 +10416,8 @@
    "tier": "mid_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.1817,
-   "clv": -0.0088
+   "closeProbability": 0.1587,
+   "clv": -0.0318
   },
   {
    "date": "2026-11-25",
@@ -10436,10 +10436,10 @@
    "model": 0.4188510761097072,
    "edge": 0.03417291218923979,
    "tier": "low_major",
-   "outcome": "pending",
-   "result": null,
-   "closeProbability": 0.334,
-   "clv": 0.0215
+   "outcome": "lost",
+   "result": "loss",
+   "closeProbability": 0.3388,
+   "clv": 0.0263
   },
   {
    "date": "2026-11-25",
@@ -10460,8 +10460,8 @@
    "tier": "high_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.2927,
-   "clv": -0.0299
+   "closeProbability": 0.3085,
+   "clv": -0.014
   },
   {
    "date": "2026-11-25",
@@ -10504,8 +10504,74 @@
    "tier": "low_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.5362,
-   "clv": 0.0124
+   "closeProbability": 0.5181,
+   "clv": -0.0057
+  },
+  {
+   "date": "2026-11-25",
+   "slot": "evening",
+   "eventId": "482e1e1c8e5e977fcf7e2322241bb598",
+   "home": "UConn Huskies",
+   "away": "Duke Blue Devils",
+   "market": "alternate_spread",
+   "segment": "game",
+   "category": "ATS",
+   "selection": "home",
+   "line": -14.5,
+   "price": 550.0,
+   "betDownTo": 526.0,
+   "book": "williamhill_us",
+   "model": 0.07527877641248067,
+   "edge": 0.09140071856794973,
+   "tier": "high_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": 0.1186,
+   "clv": -0.0352
+  },
+  {
+   "date": "2026-11-25",
+   "slot": "evening",
+   "eventId": "47afd1035c7a612b40883776528fff6c",
+   "home": "The Citadel Bulldogs",
+   "away": "South Carolina Upstate Spartans",
+   "market": "alternate_spread",
+   "segment": "game",
+   "category": "ATS",
+   "selection": "home",
+   "line": 3.5,
+   "price": -250.0,
+   "betDownTo": -250.0,
+   "book": "bovada",
+   "model": 0.8118379931666752,
+   "edge": 0.050904241660848504,
+   "tier": "low_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": 0.7377,
+   "clv": 0.0234
+  },
+  {
+   "date": "2026-11-25",
+   "slot": "evening",
+   "eventId": "87fec8c093d5b8f825bc61121105cc27",
+   "home": "Saint Louis Billikens",
+   "away": "Stanford Cardinal",
+   "market": "alternate_team_total",
+   "segment": "game",
+   "category": "Team totals",
+   "selection": "away_under",
+   "line": 72.5,
+   "price": 150.0,
+   "betDownTo": 148.0,
+   "book": "fanduel",
+   "model": 0.3765987782686826,
+   "edge": 0.06028104609053386,
+   "tier": "high_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": 0.4284,
+   "clv": 0.0284
   }
  ],
  "notes": [

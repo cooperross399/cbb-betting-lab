@@ -1,5 +1,5 @@
-**NCAA Division I men's basketball — 2026-11-25, morning slot.** Decision: `selections`. The card itself rendered without a problem; `latest_status.json` carries the run's health, which this process cannot see.
-# CBB card — 2026-11-25 (morning)
+**NCAA Division I men's basketball — 2026-11-25, evening slot.** Decision: `selections`. The card itself rendered without a problem; `latest_status.json` carries the run's health, which this process cannot see.
+# CBB card — 2026-11-25 (evening)
 
 This card is **accumulating evidence, not making recommendations.**
 
@@ -9,14 +9,9 @@ This card is **accumulating evidence, not making recommendations.**
 
 | Game | Market | Selection | Price | Bet down to | Size | When | Book | Model | Edge | Push mass | Prior weight | Tier |
 |:---|:---|:---|---:|---:|---:|:---|:---|---:|---:|---:|---:|:---|
-| Longwood Lancers at George Mason Patriots | alternate_spread (game) | away +5.5 | +425 | +388 | 0.60u | Near tip | bovada | 26.1% | +13.05% | 0.00% | 51% | mid_major |
-| LSU Tigers at Arizona St Sun Devils | alternate_spread (game) | away +3.5 | -260 | -265 | 1.00u | Near tip | bovada | 71.9% | +5.58% | 0.00% | 43% | high_major |
-| Northeastern Huskies at Wisconsin Badgers | alternate_spread (game) | home -25.5 | +210 | +210 | 0.60u | Near tip | betrivers | 22.6% | +5.31% | 0.00% | 47% | high_major |
-| Princeton Tigers at Liberty Flames | alternate_spread (game) | home +3.5 | -250 | -251 | 1.00u | Now | bovada | 81.9% | +5.20% | 0.00% | 52% | mid_major |
-| N Colorado Bears at Detroit Mercy Titans | moneyline (game) | home | +220 | +216 | 0.60u | Near tip | hardrockbet | 41.9% | +3.42% | 0.00% | 52% | low_major |
-| Abilene Christian Wildcats at South Dakota St Jackrabbits | total_points_h1 (h1) | under +66.5 | +110 | +108 | 1.20u | Near tip | hardrockbet | 51.9% | +3.35% | 0.00% | 50% | low_major |
-| SE Louisiana Lions at North Dakota Fighting Hawks | spread (game) | home +1.5 | -110 | -110 | 1.20u | Now | fanduel | 51.7% | +2.04% | 0.00% | 46% | low_major |
-| Akron Zips at Appalachian St Mountaineers | moneyline (game) | home | +245 | +245 | 0.60u | Near tip | betparx | 35.5% | +2.00% | 0.00% | 43% | mid_major |
+| Duke Blue Devils at UConn Huskies | alternate_spread (game) | home -14.5 | +550 | +526 | 0.40u | Near tip | williamhill_us | 7.5% | +9.14% | 0.00% | 46% | high_major |
+| Stanford Cardinal at Saint Louis Billikens | alternate_team_total (game) | away_under +72.5 | +150 | +148 | 1.00u | Near tip | fanduel | 37.7% | +6.03% | 0.00% | 39% | high_major |
+| South Carolina Upstate Spartans at The Citadel Bulldogs | alternate_spread (game) | home +3.5 | -250 | -250 | 1.20u | Near tip | bovada | 81.2% | +5.09% | 0.00% | 54% | low_major |
 
 **Bet down to** is the worst price at which the wager still clears the card's 2% edge bar on the probability the bar read, floored at the price band's -400. Below it the same wager would not be a selection.
 
@@ -30,28 +25,28 @@ The push mass is the probability the joint distribution puts on the line landing
 
 ## Exposure
 
-8 position(s) across 8 game(s); the cap is 1 per game and 20 per slate. 2 wager(s) cleared every bar and were held back by a cap. Spread, moneyline, team total, game total and a player's points are one event seen five ways: these are counted per game and per slate, and their edges are never summed.
+3 position(s) across 3 game(s); the cap is 1 per game and 20 per slate. 0 wager(s) cleared every bar and were held back by a cap. Spread, moneyline, team total, game total and a player's points are one event seen five ways: these are counted per game and per slate, and their edges are never summed.
 
 ## The accounting identity
 
-20,236 priced = 14,036 no opinion + 6,190 below threshold + 0 unparseable + 0 ambiguous + 2 gated + 8 bets (reconciles).
+21,104 priced = 15,988 no opinion + 5,006 below threshold + 0 unparseable + 4 ambiguous + 103 gated + 3 bets (reconciles).
 
-The unit is a **wager**, plus the price rows on this slate day that could not be made into one: 20,236 wager(s) and 0 unreadable row(s). A wager is one bet however many books hang it — twenty-one books quoting one game is not twenty-one bets, and counting quotes as bets is what made every interval in the NHL lab's first store √2.83 too narrow.
+The unit is a **wager**, plus the price rows on this slate day that could not be made into one: 21,104 wager(s) and 0 unreadable row(s). A wager is one bet however many books hang it — twenty-one books quoting one game is not twenty-one bets, and counting quotes as bets is what made every interval in the NHL lab's first store √2.83 too narrow.
 
 **This is the second of two identities and they are deliberately not merged.** The board section below carries the first, over the provider's *outcomes*: `outcomes = staged + unwired market + unknown selection + unreadable price + unplaceable event`. It reconciles on its own. Folding it into this one would put two populations on either side of a single equals sign — the outcomes are counted across every day the read saw, and these wagers are this slate day only — and an identity whose two sides describe different populations reconciles over whichever population survived. The count that joins them is the off-slate figure below.
 
 | Bar | Wagers | Bucket |
 |:---|---:|:---|
 | the market is not allowlisted by a reviewed policy | 0 | gated |
-| the model has no opinion on this selection | 14,036 | no_opinion |
-| no price on it clears the declared edge threshold | 6,190 | below_threshold |
-| every clearing price is outside the declared band | 0 | ambiguous |
+| the model has no opinion on this selection | 15,988 | no_opinion |
+| no price on it clears the declared edge threshold | 5,006 | below_threshold |
+| every clearing price is outside the declared band | 4 | ambiguous |
 | availability cannot be confirmed | 0 | gated |
-| the game has tipped, is imminent, or has no readable tip time | 0 | gated |
-| a position is already taken on this game | 2 | gated |
+| the game has tipped, is imminent, or has no readable tip time | 103 | gated |
+| a position is already taken on this game | 0 | gated |
 | the slate's declared position cap is already full | 0 | gated |
 
-314 staged row(s) belong to a slate day other than 2026-11-25 and were not considered here. The bulk endpoint returns every upcoming game, not tonight's; a row for tomorrow frozen under today's date would look unfrozen tomorrow and be priced twice.
+994 staged row(s) belong to a slate day other than 2026-11-25 and were not considered here. The bulk endpoint returns every upcoming game, not tonight's; a row for tomorrow frozen under today's date would look unfrozen tomorrow and be priced twice.
 
 ## The gates, each of which fails closed
 
@@ -59,13 +54,13 @@ The unit is a **wager**, plus the price rows on this slate day that could not be
 
 Measured, not assumed: ESPN's men's-college-basketball injuries endpoint returns zero records permanently (against 76 for the NBA in the NBA's own off-season), CollegeBasketballData has no availability endpoint at all, and the conference reports that do exist cover roughly 115 of 365 teams, conference games only. Nothing can reach `confirmed`, so no player prop can produce a selection.
 
-**Tip time.** Tip guard, run against each game's own tip: 57 game(s) judged — upcoming=57. Only `upcoming` may carry a stake. `imminent` is a game tipping inside 60 minutes of the run — the T-60 lead the historical store was bought at and the lead every measured number rests on — and it carries no stake, exactly like a game that has already started. `unconfirmed` is a tip time this lab could not read and it quarantines the same way.
+**Tip time.** Tip guard, run against each game's own tip: 46 game(s) judged — imminent=6, started=13, upcoming=27. Only `upcoming` may carry a stake. `imminent` is a game tipping inside 60 minutes of the run — the T-60 lead the historical store was bought at and the lead every measured number rests on — and it carries no stake, exactly like a game that has already started. `unconfirmed` is a tip time this lab could not read and it quarantines the same way.
 
 It is judged twice — once when the bars are applied and once again on a freshly read clock immediately before this card was written — because this sport tips games every fifteen minutes for twelve hours and a slate takes minutes to fetch.
 
 **Venue.** A game whose venue state is unknown or contradictory is quarantined rather than defaulted to neutral. Venue has three values in this sport and not two: of 709 games flagged neutral in 2025-26, 39 were in a participant's own city and 7 in their own arena.
 
-**Tier.** Tiers from season(s) [2024, 2025, 2026], strictly before this one: high_major=27, low_major=14, mid_major=25. A game takes the higher of its two sides' tiers, because the board's attention follows the stronger programme.
+**Tier.** Tiers from season(s) [2024, 2025, 2026], strictly before this one: high_major=36, low_major=12, mid_major=19. A game takes the higher of its two sides' tiers, because the board's attention follows the stronger programme.
 
 No pooled headline across the whole of Division I is ever reported. High-major, mid-major and low-major are different distributions, and `unplaced` is a state reported separately rather than folded into a tier's number.
 
@@ -73,42 +68,42 @@ No pooled headline across the whole of Division I is ever reported. High-major, 
 
 Source: the provider.
 
-57 game(s) priced on this slate day, out of 66 the read saw — the board carries every upcoming game, not tonight's. 47,406 staged quote(s) over 123 event block(s).
+46 game(s) priced on this slate day, out of 67 the read saw — the board carries every upcoming game, not tonight's. 50,191 staged quote(s) over 113 event block(s).
 
-123 event(s), 1,451 bookmaker block(s), 47,406 outcome(s) = 47,406 staged + 0 unwired market + 0 unknown selection + 0 unreadable price + 0 unplaceable event (reconciles).
+113 event(s), 1,405 bookmaker block(s), 50,191 outcome(s) = 50,191 staged + 0 unwired market + 0 unknown selection + 0 unreadable price + 0 unplaceable event (reconciles).
 
 Every outcome in this response was staged.
 
-1,212 credit(s) actually spent over 58 request(s); the pessimistic pre-flight bound was 5,478; 4905913 remaining.
+1,398 credit(s) actually spent over 47 request(s); the pessimistic pre-flight bound was 4,422; 4900046 remaining.
 
 The cap is enforced inside the provider adapter before every request, against the **measured** running total from the response headers, never against the pre-flight estimate.
 
-Ladders, halves and props were asked for on 57 of 57 game(s).
+Ladders, halves and props were asked for on 46 of 46 game(s).
 
-Frozen: `2026-11-25.csv`, from 20,236 wager(s) offered. **The first opinion of the day for a game is never retroactively replaced** — this run may add a game the earlier slot could not reach and may never re-price one it did.
+Frozen: `2026-11-25.csv`, from 13,993 wager(s) offered. **The first opinion of the day for a game is never retroactively replaced** — this run may add a game the earlier slot could not reach and may never re-price one it did.
 
-The whole board, every book, was written to `/home/runner/work/cbb-betting-lab/cbb-betting-lab/data/staging/cbb/2026-11-25_morning.csv` — which the card cannot read. Line shopping and price survival are measured from there; the freeze keeps one row per wager at the best price, which is the price this card would have taken.
+The whole board, every book, was written to `/home/runner/work/cbb-betting-lab/cbb-betting-lab/data/staging/cbb/2026-11-25_evening.csv` — which the card cannot read. Line shopping and price survival are measured from there; the freeze keeps one row per wager at the best price, which is the price this card would have taken.
 
 ## Each book's ladder against itself
 
-**33 quote(s) are dominated on their own book's ladder**: another rung on the same side offers a better line at a better price. This is a fact about the book's prices and is never an edge or a selection.
-- St. Bonaventure Bonnies at Belmont Bruins: betmgm total_points (game) over +137.5 at -110 is beaten by +136.5 at -105
-- St. Bonaventure Bonnies at Belmont Bruins: bovada total_points (game) over +138 at -110 is beaten by +137.5 at +105
-- St. Bonaventure Bonnies at Belmont Bruins: betmgm total_points (game) under +136.5 at -115 is beaten by +137.5 at -110
-- St. Bonaventure Bonnies at Belmont Bruins: bovada total_points (game) under +137.5 at -135 is beaten by +138 at -110
-- St. Bonaventure Bonnies at Belmont Bruins: bovada total_points (game) under +136.5 at -120 is beaten by +138 at -110
-- St. Bonaventure Bonnies at Belmont Bruins: bovada total_points (game) under +137 at -125 is beaten by +138 at -110
-- St. Bonaventure Bonnies at Belmont Bruins: fliff total_points_h1 (h1) over +64.5 at -125 is beaten by +63.5 at -120
-- St. Bonaventure Bonnies at Belmont Bruins: fliff total_points_h1 (h1) under +63.5 at -125 is beaten by +64.5 at -120
-- South Carolina Upstate Spartans at The Citadel Bulldogs: bovada total_points (game) under +137 at -115 is beaten by +137.5 at -110
-- Duke Blue Devils at UConn Huskies: courtside total_points (game) over +147.5 at -113 is beaten by +146.5 at -110
-- and 23 more.
+**63 quote(s) are dominated on their own book's ladder**: another rung on the same side offers a better line at a better price. This is a fact about the book's prices and is never an edge or a selection.
+- Ole Miss Rebels at Arizona Wildcats: bovada spread (game) away +5.5 at -150 is beaten by +6.5 at -120
+- Ole Miss Rebels at Arizona Wildcats: bovada spread (game) away +5 at -130 is beaten by +6.5 at -120
+- Ole Miss Rebels at Arizona Wildcats: bovada spread (game) away +6 at -170 is beaten by +6.5 at -120
+- Ole Miss Rebels at Arizona Wildcats: bovada spread (game) home -6.5 at -110 is beaten by -5.5 at +115
+- Ole Miss Rebels at Arizona Wildcats: bovada total_points (game) over +156.5 at -115 is beaten by +156 at -110
+- Ole Miss Rebels at Arizona Wildcats: bovada total_points (game) under +156 at -120 is beaten by +156.5 at -115
+- CSU Northridge Matadors at Weber State Wildcats: betrivers spread (game) home -0.5 at +114 is beaten by +0.5 at +117
+- Georgia St Panthers at Florida Gulf Coast Eagles: rebet total_points (game) over +143.5 at -105 is beaten by +142.5 at +100
+- Georgia St Panthers at Florida Gulf Coast Eagles: rebet total_points (game) under +142.5 at -125 is beaten by +143.5 at -118
+- Akron Zips at Appalachian St Mountaineers: rebet spread (game) away -4.5 at -133 is beaten by -3.5 at -111
+- and 53 more.
 
 ## What the model said
 
-Model `cbb_betting_lab.models.ratings:matchups_for` asked about 66 event(s) on 2026-11-25: 57 resolved to a scheduled game, 9 named no game on the schedule that day, 0 name(s) did not resolve. It returned 57 matchup(s), 57 priceable. History: 40,364 team-game row(s) strictly before 2026-11-25, through 2026-11-24, from `/home/runner/work/cbb-betting-lab/cbb-betting-lab/data/processed/cbb_team_games.csv`.
+Model `cbb_betting_lab.models.ratings:matchups_for` asked about 67 event(s) on 2026-11-25: 46 resolved to a scheduled game, 21 named no game on the schedule that day, 0 name(s) did not resolve. It returned 46 matchup(s), 46 priceable. History: 40,364 team-game row(s) strictly before 2026-11-25, through 2026-11-24, from `/home/runner/work/cbb-betting-lab/cbb-betting-lab/data/processed/cbb_team_games.csv`.
 
-18,860 of 20,236 priced wager(s) carry a modelled opinion. An absent opinion is **not** a probability of zero: it is the model declining, or never being asked.
+17,363 of 21,104 priced wager(s) carry a modelled opinion. An absent opinion is **not** a probability of zero: it is the model declining, or never being asked.
 
 Design 4's structural check was not asked: this card built no player distribution.
 
@@ -118,20 +113,19 @@ No scoring-event dispersion was chosen on this card: it built no player distribu
 
 | Why the model has no opinion | Wagers |
 |:---|---:|
-| the model was never asked about this event's athletes, so this prop carries no opinion: the model returned matchups only, so it was never asked about any athlete and no projection exists for this day. An absent projection is not a probability of zero | 1,375 |
-| refused: the store holds two quotes on one player-game. There is nothing to measure, and pricing it would add a pre-registered hypothesis -- widening every other interval in the lab -- in exchange for a sample of one. | 1 |
+| the model was never asked about this event's athletes, so this prop carries no opinion: the model returned matchups only, so it was never asked about any athlete and no projection exists for this day. An absent projection is not a probability of zero | 3,741 |
 
-12,660 wager(s) the model priced were taken out of the edge bar's reach before it read them, so the identity above counts them under `no_opinion` with the wagers the model declined:
+12,247 wager(s) the model priced were taken out of the edge bar's reach before it read them, so the identity above counts them under `no_opinion` with the wagers the model declined:
 
 | Withdrawn before the edge bar | Wagers |
 |:---|---:|
-| no fair price: fewer than the trust table's minimum of books quote both sides | 12,660 |
+| no fair price: fewer than the trust table's minimum of books quote both sides | 12,247 |
 
 Recorded verdicts in force: calibration_correction=off, champion_model=off, conference_tier_fits=off, endgame_segment_model=off, november_prior_schedule=off, overtime_segment_model=off, props_selectable_when_unconfirmed=off, schedule_state_adjustment=off, venue_home_effect=off.
 
 Trust in the model against the price, per tier (0 is the market, 1 is the model as it stands): high-major 0.000 (seed 0.046, 79,402 settled forward row(s), 46,140 closing-line row(s)); low-major 0.123 (seed 0.011, 27,628 settled forward row(s), 16,408 closing-line row(s)); mid-major 0.000 (seed 0.032, 82,492 settled forward row(s), 46,414 closing-line row(s)). Every wager's probability is pulled to market + trust x (model - market) before the edge bar; a wager with no two-sided price carries no trusted opinion.
 
-Line movement: 1,136 event(s) carry a move since their first capture; 294 lean(s) the market moved against were halved before the edge bar (a move of at least 2% on a moneyline or 1 point(s) on a spread or total).
+Line movement: 1,158 event(s) carry a move since their first capture; 185 lean(s) the market moved against were halved before the edge bar (a move of at least 2% on a moneyline or 1 point(s) on a spread or total).
 
 **This is a November-regime slate.** Roster turnover in this sport is enormous and the win/loss graph is nearly disconnected between conferences this early, so a rating now is identified almost entirely by the preseason prior. Every price on this card carries the prior's weight beside it, and a price whose rating records no prior weight is refused rather than shown — a November number must never be presentable as a February one.
 
@@ -146,4 +140,4 @@ No earlier card for this slate day was available to this run, so nothing is clai
 * Every market above was allowlisted by a reviewed policy with a human acceptance receipt behind it — verified when the policy was loaded, not asserted: a receipt file naming the market, citing an evidence record whose sha256 still matches the file on disk, signed by a person who is not Claude, and dated. A policy with one allowlisted market lacking any of that loads manual-only in its entirety. Claude may withdraw an allowlist and may never grant one.
 
 ---
-Run: https://github.com/cooperross399/cbb-betting-lab/actions/runs/45627086817
+Run: https://github.com/cooperross399/cbb-betting-lab/actions/runs/45699875196
