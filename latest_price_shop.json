@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-24T23:55+00:00",
-  "captures": 324,
+  "alerts": [
+    {
+      "american": -295,
+      "away_team": "Northern Iowa Panthers",
+      "book": "fanduel",
+      "books": 10,
+      "commence": "2026-11-25T16:00:00+00:00",
+      "edge": 0.0546,
+      "event_id": "ffd0046855b372187fbcfcddb6274995",
+      "fair_american": -371,
+      "game": "Northern Iowa Panthers at Charlotte 49ers",
+      "home_team": "Charlotte 49ers",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
+    }
+  ],
+  "as_of": "2026-11-25T00:39+00:00",
+  "captures": 325,
   "cells": [
     {
       "beat_close": 0.8,
@@ -38,66 +54,36 @@
       "ungraded": 7
     },
     {
-      "beat_close": 0.6666666666666666,
-      "games": 35,
-      "graded": 42,
-      "high": 0.3027575559753958,
-      "low": -0.08680810332625818,
-      "mean": 0.10797472632456878,
-      "shops": 59,
+      "beat_close": 0.6458333333333334,
+      "games": 40,
+      "graded": 48,
+      "high": 0.2684774396757642,
+      "low": -0.07439443469542206,
+      "mean": 0.09704150249017107,
+      "shops": 69,
       "tier": "unplaced",
-      "ungraded": 17
+      "ungraded": 21
     }
   ],
   "correction_factor": 1.8815404941435947,
   "current": [
     {
-      "american": 105,
-      "away_team": "Nevada Wolf Pack",
-      "book": "hardrockbet",
-      "books": 15,
-      "commence": "2026-11-25T00:00:00+00:00",
-      "edge": 0.0205,
-      "event_id": "36cd60be0deb29366cd82284a9668faa",
-      "fair_american": 101,
-      "game": "Nevada Wolf Pack at Santa Clara Broncos",
-      "home_team": "Santa Clara Broncos",
+      "american": -295,
+      "away_team": "Northern Iowa Panthers",
+      "book": "fanduel",
+      "books": 10,
+      "commence": "2026-11-25T16:00:00+00:00",
+      "edge": 0.0546,
+      "event_id": "ffd0046855b372187fbcfcddb6274995",
+      "fair_american": -371,
+      "game": "Northern Iowa Panthers at Charlotte 49ers",
+      "home_team": "Charlotte 49ers",
       "line": null,
       "market": "moneyline",
       "selection": "home"
-    },
-    {
-      "american": 520,
-      "away_team": "South Carolina Gamecocks",
-      "book": "fanduel",
-      "books": 9,
-      "commence": "2026-11-25T21:30:00+00:00",
-      "edge": 0.0499,
-      "event_id": "836e49363e2e574ede8873b9e53cb5f7",
-      "fair_american": 491,
-      "game": "South Carolina Gamecocks at USC Trojans",
-      "home_team": "USC Trojans",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    },
-    {
-      "american": 133,
-      "away_team": "Duke Blue Devils",
-      "book": "courtside",
-      "books": 9,
-      "commence": "2026-11-26T00:00:00+00:00",
-      "edge": 0.0644,
-      "event_id": "482e1e1c8e5e977fcf7e2322241bb598",
-      "fair_american": 119,
-      "game": "Duke Blue Devils at UConn Huskies",
-      "home_team": "UConn Huskies",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-24T23:52:19+00:00",
+  "latest_capture": "2026-11-25T00:37:04+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
