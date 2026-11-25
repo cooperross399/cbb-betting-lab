@@ -2,23 +2,23 @@
   "alert_edge": 0.03,
   "alerts": [
     {
-      "american": -176,
-      "away_team": "Memphis Tigers",
-      "book": "fanduel",
-      "books": 9,
-      "commence": "2026-11-25T22:00:00+00:00",
-      "edge": 0.0354,
-      "event_id": "c18ec6dd46547be2ebc1e120f75faa56",
-      "fair_american": -194,
-      "game": "Memphis Tigers at Penn State Nittany Lions",
-      "home_team": "Penn State Nittany Lions",
+      "american": -139,
+      "away_team": "Colorado Buffaloes",
+      "book": "courtside",
+      "books": 18,
+      "commence": "2026-11-25T04:59:00+00:00",
+      "edge": 0.0885,
+      "event_id": "7a374c26e6bdab50be65f2b155fef2c8",
+      "fair_american": -173,
+      "game": "Colorado Buffaloes at Stanford Cardinal",
+      "home_team": "Stanford Cardinal",
       "line": null,
       "market": "moneyline",
-      "selection": "away"
+      "selection": "home"
     }
   ],
-  "as_of": "2026-11-25T02:25+00:00",
-  "captures": 327,
+  "as_of": "2026-11-25T02:44+00:00",
+  "captures": 328,
   "cells": [
     {
       "beat_close": 0.8,
@@ -68,6 +68,21 @@
   "correction_factor": 1.8815404941435947,
   "current": [
     {
+      "american": -139,
+      "away_team": "Colorado Buffaloes",
+      "book": "courtside",
+      "books": 18,
+      "commence": "2026-11-25T04:59:00+00:00",
+      "edge": 0.0885,
+      "event_id": "7a374c26e6bdab50be65f2b155fef2c8",
+      "fair_american": -173,
+      "game": "Colorado Buffaloes at Stanford Cardinal",
+      "home_team": "Stanford Cardinal",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
+    },
+    {
       "american": -176,
       "away_team": "Memphis Tigers",
       "book": "fanduel",
@@ -81,24 +96,9 @@
       "line": null,
       "market": "moneyline",
       "selection": "away"
-    },
-    {
-      "american": -176,
-      "away_team": "Wake Forest Demon Deacons",
-      "book": "fanduel",
-      "books": 9,
-      "commence": "2026-11-26T00:30:00+00:00",
-      "edge": 0.0257,
-      "event_id": "a0ecce85720e6b272a86b2160699e242",
-      "fair_american": -189,
-      "game": "Wake Forest Demon Deacons at Mississippi St Bulldogs",
-      "home_team": "Mississippi St Bulldogs",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-25T02:22:15+00:00",
+  "latest_capture": "2026-11-25T02:42:09+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
