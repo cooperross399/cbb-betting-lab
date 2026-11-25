@@ -1,8 +1,39 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-25T19:20+00:00",
-  "captures": 334,
+  "alerts": [
+    {
+      "american": 189,
+      "away_team": "Maryland Terrapins",
+      "book": "courtside",
+      "books": 9,
+      "commence": "2026-11-26T18:00:00+00:00",
+      "edge": 0.0366,
+      "event_id": "fce1d0e39b7353f5d69bc77cf21ee9d1",
+      "fair_american": 179,
+      "game": "Maryland Terrapins at San Diego St Aztecs",
+      "home_team": "San Diego St Aztecs",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
+    },
+    {
+      "american": -140,
+      "away_team": "St. John's Red Storm",
+      "book": "fanduel",
+      "books": 9,
+      "commence": "2026-11-27T02:00:00+00:00",
+      "edge": 0.0465,
+      "event_id": "3cb03cfb4f93a60fd1ce506ee8555130",
+      "fair_american": -157,
+      "game": "St. John's Red Storm at Louisville Cardinals",
+      "home_team": "Louisville Cardinals",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    }
+  ],
+  "as_of": "2026-11-25T19:56+00:00",
+  "captures": 335,
   "cells": [
     {
       "beat_close": 0.8,
@@ -55,7 +86,7 @@
       "american": 180,
       "away_team": "Washington Huskies",
       "book": "betrivers",
-      "books": 18,
+      "books": 17,
       "commence": "2026-11-26T03:00:00+00:00",
       "edge": 0.0219,
       "event_id": "40a69bfe7d0a391985e1ca60741d208e",
@@ -67,14 +98,29 @@
       "selection": "away"
     },
     {
-      "american": -168,
+      "american": 189,
+      "away_team": "Maryland Terrapins",
+      "book": "courtside",
+      "books": 9,
+      "commence": "2026-11-26T18:00:00+00:00",
+      "edge": 0.0366,
+      "event_id": "fce1d0e39b7353f5d69bc77cf21ee9d1",
+      "fair_american": 179,
+      "game": "Maryland Terrapins at San Diego St Aztecs",
+      "home_team": "San Diego St Aztecs",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
+    },
+    {
+      "american": -140,
       "away_team": "St. John's Red Storm",
-      "book": "rebet",
-      "books": 7,
+      "book": "fanduel",
+      "books": 9,
       "commence": "2026-11-27T02:00:00+00:00",
-      "edge": 0.0436,
+      "edge": 0.0465,
       "event_id": "3cb03cfb4f93a60fd1ce506ee8555130",
-      "fair_american": -189,
+      "fair_american": -157,
       "game": "St. John's Red Storm at Louisville Cardinals",
       "home_team": "Louisville Cardinals",
       "line": null,
@@ -82,7 +128,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-25T19:18:36+00:00",
+  "latest_capture": "2026-11-25T19:53:54+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
