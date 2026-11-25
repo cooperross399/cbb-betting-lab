@@ -2,38 +2,23 @@
   "alert_edge": 0.03,
   "alerts": [
     {
-      "american": -240,
-      "away_team": "SMU Mustangs",
-      "book": "espnbet",
-      "books": 8,
-      "commence": "2026-11-27T00:00:00+00:00",
-      "edge": 0.0407,
-      "event_id": "8cdf0f9df5b4480c117a9455b60b067b",
-      "fair_american": -277,
-      "game": "SMU Mustangs at LSU Tigers",
-      "home_team": "LSU Tigers",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    },
-    {
-      "american": 174,
-      "away_team": "Baylor Bears",
-      "book": "courtside",
-      "books": 10,
-      "commence": "2026-11-27T04:30:00+00:00",
-      "edge": 0.0384,
-      "event_id": "00ffa84e4fac12fc9b2885305e76ad31",
-      "fair_american": 164,
-      "game": "Baylor Bears at Gonzaga Bulldogs",
-      "home_team": "Gonzaga Bulldogs",
+      "american": -128,
+      "away_team": "St. John's Red Storm",
+      "book": "rebet",
+      "books": 11,
+      "commence": "2026-11-27T02:00:00+00:00",
+      "edge": 0.048,
+      "event_id": "3cb03cfb4f93a60fd1ce506ee8555130",
+      "fair_american": -143,
+      "game": "St. John's Red Storm at Louisville Cardinals",
+      "home_team": "Louisville Cardinals",
       "line": null,
       "market": "moneyline",
       "selection": "away"
     }
   ],
-  "as_of": "2026-11-25T21:42+00:00",
-  "captures": 337,
+  "as_of": "2026-11-25T22:31+00:00",
+  "captures": 338,
   "cells": [
     {
       "beat_close": 0.8,
@@ -69,15 +54,15 @@
       "ungraded": 7
     },
     {
-      "beat_close": 0.6984126984126984,
-      "games": 52,
-      "graded": 63,
-      "high": 0.32079255283376795,
-      "low": -0.07388650814666312,
-      "mean": 0.1234530223435524,
-      "shops": 90,
+      "beat_close": 0.6875,
+      "games": 53,
+      "graded": 64,
+      "high": 0.3154061916325599,
+      "low": -0.07333233729324473,
+      "mean": 0.12103692716965758,
+      "shops": 93,
       "tier": "unplaced",
-      "ungraded": 27
+      "ungraded": 29
     }
   ],
   "correction_factor": 1.8815404941435947,
@@ -113,29 +98,14 @@
       "selection": "home"
     },
     {
-      "american": -240,
-      "away_team": "SMU Mustangs",
-      "book": "espnbet",
-      "books": 8,
-      "commence": "2026-11-27T00:00:00+00:00",
-      "edge": 0.0407,
-      "event_id": "8cdf0f9df5b4480c117a9455b60b067b",
-      "fair_american": -277,
-      "game": "SMU Mustangs at LSU Tigers",
-      "home_team": "LSU Tigers",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    },
-    {
-      "american": -140,
+      "american": -128,
       "away_team": "St. John's Red Storm",
-      "book": "fanduel",
-      "books": 10,
+      "book": "rebet",
+      "books": 11,
       "commence": "2026-11-27T02:00:00+00:00",
-      "edge": 0.0273,
+      "edge": 0.048,
       "event_id": "3cb03cfb4f93a60fd1ce506ee8555130",
-      "fair_american": -150,
+      "fair_american": -143,
       "game": "St. John's Red Storm at Louisville Cardinals",
       "home_team": "Louisville Cardinals",
       "line": null,
@@ -173,7 +143,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-25T21:40:56+00:00",
+  "latest_capture": "2026-11-25T22:29:11+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
