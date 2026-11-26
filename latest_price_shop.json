@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-26T18:27+00:00",
-  "captures": 349,
+  "as_of": "2026-11-26T19:04+00:00",
+  "captures": 350,
   "cells": [
     {
       "beat_close": 0.8,
@@ -50,24 +50,8 @@
     }
   ],
   "correction_factor": 1.8867178582120565,
-  "current": [
-    {
-      "american": -275,
-      "away_team": "Saint Mary's Gaels",
-      "book": "hardrockbet",
-      "books": 19,
-      "commence": "2026-11-26T22:00:00+00:00",
-      "edge": 0.0211,
-      "event_id": "ae417d224a63774815f9e4816a7d776f",
-      "fair_american": -298,
-      "game": "Saint Mary's Gaels at UCLA Bruins",
-      "home_team": "UCLA Bruins",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "latest_capture": "2026-11-26T18:24:17+00:00",
+  "current": [],
+  "latest_capture": "2026-11-26T19:02:03+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02
