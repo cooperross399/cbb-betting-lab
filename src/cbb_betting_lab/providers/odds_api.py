@@ -83,6 +83,13 @@ PROVIDER_TYPE = "odds_api"
 #: most important thing this lab is trying not to do.
 DEFAULT_REGIONS = "us,us2"
 
+#: The sharp book read as a FAIR-PRICE REFERENCE only (decision 122). Its
+#: quotes are never staged into the board, never a wager's quote and never a
+#: price the card can select: Cooper cannot bet there, which is exactly why it
+#: may set what a price is worth and never be one. Asked by `bookmakers`, which
+#: the provider bills as one region.
+REFERENCE_BOOKMAKERS = "pinnacle"
+
 #: The only markets the bulk endpoint will serve. Anything else there makes the
 #: provider refuse the whole request with a 422 that names nothing — which took
 #: down every team-market fetch in the NHL lab and looked like an off-season
@@ -561,6 +568,38 @@ class OddsApiProvider:
         spend.record(headers, fallback=bound)
         if not isinstance(payload, list):
             raise ProviderError("The bulk odds response is not a JSON list.")
+        return [item for item in payload if isinstance(item, dict)]
+
+    def fetch_reference_bulk(
+        self, markets: tuple[str, ...], *, spend: Spend, credit_cap: int,
+        bookmakers: str = REFERENCE_BOOKMAKERS,
+    ) -> list[dict[str, Any]]:
+        """The featured markets at the reference book only (decision 122).
+
+        Billed `markets x 1`: up to ten named bookmakers count as one region.
+        The caller keeps these payloads apart from the board; nothing here is
+        a price the card may take.
+        """
+        self._require_credential()
+        forbidden = tuple(m for m in markets if m not in BULK_SAFE_MARKETS)
+        if forbidden:
+            raise ProviderError(f"{forbidden} cannot be asked of the bulk endpoint.")
+        bound = len(markets)
+        _guard(spend, credit_cap, bound, "the reference prices")
+        spend.credits_estimated += bound
+        payload, headers = self._get(
+            f"{self.base_url}/v4/sports/{self.sport_key}/odds",
+            {
+                "apiKey": self.api_key,
+                "bookmakers": bookmakers,
+                "markets": ",".join(markets),
+                "oddsFormat": "american",
+                "dateFormat": "iso",
+            },
+        )
+        spend.record(headers, fallback=bound)
+        if not isinstance(payload, list):
+            raise ProviderError("The reference odds response is not a JSON list.")
         return [item for item in payload if isinstance(item, dict)]
 
     def fetch_event_odds(

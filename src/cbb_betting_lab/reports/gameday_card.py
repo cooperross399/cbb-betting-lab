@@ -160,6 +160,7 @@ from cbb_betting_lab.population import VenueState
 from cbb_betting_lab.providers import staging, team_names
 from cbb_betting_lab.providers.odds_api import (
     BULK_SAFE_MARKETS,
+    REFERENCE_BOOKMAKERS,
     CreditCapReached,
     OddsApiProvider,
     ProviderError,
@@ -526,6 +527,10 @@ class Board:
     #: safest and is the worst.
     quota_ever_reported: bool = False
     quota_unwatched_responses: int = 0
+    #: The reference book's quotes (decision 122, `odds_api.REFERENCE_BOOKMAKERS`),
+    #: kept apart from `rows` on purpose: they set the fair price the trust
+    #: table reads and are never a quote the card may take.
+    reference_rows: pd.DataFrame = field(default_factory=pd.DataFrame)
     notes: list[str] = field(default_factory=list)
     degraded: list[str] = field(default_factory=list)
 
@@ -536,6 +541,19 @@ class Board:
             and self.quota_ever_reported
             and not self.quota_unwatched_responses
         )
+
+
+def _reference_fair(board: "Board", *, day: str, competition, key_for, tiers) -> dict:
+    """Wager key -> the reference book's de-vigged probability, for this day."""
+    rows = getattr(board, "reference_rows", None)
+    if rows is None or rows.empty:
+        return {}
+    if "slate_date" in rows.columns:
+        rows = rows.loc[rows["slate_date"].astype(str) == str(day)].reset_index(drop=True)
+    if rows.empty:
+        return {}
+    wagers, _, _ = build_wagers(rows, competition=competition, key_for=key_for, tiers=tiers)
+    return trust_model.reference_probabilities(wagers)
 
 
 def board_from_payloads(
@@ -650,6 +668,7 @@ def fetch_board(
     credit_cap: int,
     day: str,
     market_tiers: tuple[int, ...] = (1, 2, 3),
+    reference: bool = False,
 ) -> Board:
     """Fetch the board under a hard cap, in two stages, and never a prefix.
 
@@ -858,6 +877,22 @@ def fetch_board(
                     "quoted tonight.**"
                 )
                 break
+
+    # The reference book, read for its fair price only (decision 122). Soft:
+    # without it the fair price is the US books' median, as before.
+    if reference and trust_model.REFERENCE_ON and not board.stopped_on_quota:
+        try:
+            reference, _ = staging.stage_payloads(
+                provider.fetch_reference_bulk(bulk_keys, spend=spend, credit_cap=credit_cap),
+                competition=competition,
+            )
+            board.reference_rows = reference
+            board.notes.append(
+                f"Reference prices: {len(reference):,} quote(s) from "
+                f"`{REFERENCE_BOOKMAKERS}`, read for the fair price only."
+            )
+        except (ProviderError, CreditCapReached, AttributeError) as exc:
+            board.notes.append(f"Reference prices were not read ({exc}); the fair price is the US books' median.")
 
     board.rows = (
         pd.concat(frames, ignore_index=True)[list(staging.STAGED_COLUMNS)]
@@ -2454,10 +2489,13 @@ def run_card(
         rows, competition=competition, key_for=key_for, tiers=placement.tiers
     )
     probabilities, opinions = opinions_for(wagers, matchups, day=day)
+    # The reference book's fair price (decision 122), where it quotes both
+    # sides at the wager's own number. Never a quote the card can take.
+    reference = _reference_fair(board, day=day, competition=competition, key_for=key_for, tiers=placement.tiers)
     # The edge bar reads the model pulled toward the market by how far it has
     # earned trust in its tier (`models/trust.py`); the freeze below keeps the
     # model's own probability, so the forward test still measures the model.
-    trusted = trust_model.apply(probabilities, wagers, trust)
+    trusted = trust_model.apply(probabilities, wagers, trust, reference=reference)
     # A wager the model priced that the trust table could not pull toward a
     # fair price (fewer than `trust.MIN_FAIR_BOOKS` books quote both sides)
     # leaves the edge bar's reach here. Counted, so the identity's
@@ -2466,7 +2504,10 @@ def run_card(
         1 for w in wagers
         if _has_probability(probabilities, w.key) and w.key not in trusted
     )
-    market = trust_model.market_probabilities(wagers) if trust is not None and trust.active else {}
+    market = (
+        trust_model.market_probabilities(wagers, reference=reference)
+        if trust is not None and trust.active else {}
+    )
     # A lean the market has moved against since its first capture is halved
     # (`models/line_move.py`). It needs the de-vigged price, so it acts only
     # where trust does.

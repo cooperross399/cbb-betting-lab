@@ -2010,6 +2010,78 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    # ---------------------------------------------------------------------
+    # decision 122 (Cooper, 2026-11-26): the fair price the trust table, the line-move restraint and the card's edge bar read is the reference book's (pinnacle, read by bookmakers and never a price the card can take) power-de-vigged two-sided price wherever it quotes the wager's own number, in place of the median of the US books. One per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="pinnacle_fair_2026_11_26",
+        name=(
+            "high-major: the reference-book fair price (models/trust.py REFERENCE_ON: the pinnacle power-de-vigged price at the wager's own number in place of the US-book median, wherever pinnacle quotes both sides; pinnacle quotes never selectable) raises the closing-line value of the card's team selections against the last capture before tip (forward ledger only)"
+        ),
+        tested_on="2026-11-26",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="pinnacle_fair_2026_11_26",
+        name=(
+            "mid-major: the reference-book fair price (models/trust.py REFERENCE_ON: the pinnacle power-de-vigged price at the wager's own number in place of the US-book median, wherever pinnacle quotes both sides; pinnacle quotes never selectable) raises the closing-line value of the card's team selections against the last capture before tip (forward ledger only)"
+        ),
+        tested_on="2026-11-26",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="pinnacle_fair_2026_11_26",
+        name=(
+            "low-major: the reference-book fair price (models/trust.py REFERENCE_ON: the pinnacle power-de-vigged price at the wager's own number in place of the US-book median, wherever pinnacle quotes both sides; pinnacle quotes never selectable) raises the closing-line value of the card's team selections against the last capture before tip (forward ledger only)"
+        ),
+        tested_on="2026-11-26",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    # ---------------------------------------------------------------------
+    # decision 123 (Cooper, 2026-11-26, "find a way to add torvik yourself"): T-Rank's daily ratings, read through the cbbdata API with Cooper's account, join the second-opinion consensus as a named table and as dated copies the layer audit can read. One per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="torvik_second_opinion_2026_11_26",
+        name=(
+            "high-major: adding T-Rank (through the cbbdata API) to the second-opinion consensus the card blends at card_factors.BLEND_WEIGHT lowers the card's walk-forward margin error against final scores and raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-26",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="torvik_second_opinion_2026_11_26",
+        name=(
+            "mid-major: adding T-Rank (through the cbbdata API) to the second-opinion consensus the card blends at card_factors.BLEND_WEIGHT lowers the card's walk-forward margin error against final scores and raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-26",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="torvik_second_opinion_2026_11_26",
+        name=(
+            "low-major: adding T-Rank (through the cbbdata API) to the second-opinion consensus the card blends at card_factors.BLEND_WEIGHT lowers the card's walk-forward margin error against final scores and raises the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-26",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 

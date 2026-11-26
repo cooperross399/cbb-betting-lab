@@ -419,6 +419,116 @@ DROP_NAME = re.compile(r"^(?P<source>[a-z0-9_]+)_(?P<day>\d{4}-\d{2}-\d{2})\.csv
 NET_FALLBACK_SD = 11.5
 
 
+#: T-Rank through the cbbdata API (decision 123, Cooper 2026-11-26: *"find a
+#: way to add torvik yourself"*). barttorvik.com closes itself to this agent by
+#: name and is never fetched; cbbdata is Andrew Weatherman's API that serves
+#: T-Rank's ratings to registered users. The account is Cooper's, created from
+#: the `CBD_USER`, `CBD_PW` and `CBD_EMAIL` secrets he set, and the key it logs
+#: in to is never printed, logged or written.
+TORVIK_SOURCE = "torvik"
+CBBDATA_LOGIN_URL = "https://www.cbbdata.com/api/auth/login"
+CBBDATA_REGISTER_URL = "https://www.cbbdata.com/api/auth/register"
+TORVIK_ARCHIVE_URL = "https://www.cbbdata.com/api/torvik/ratings/archive"
+
+
+def _post_json(url: str, body: dict, *, timeout: float = 60.0) -> tuple[int, bytes]:
+    request = urllib.request.Request(
+        url, data=json.dumps(body).encode("utf-8"), method="POST",
+        headers={"User-Agent": USER_AGENT, "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return int(response.status), response.read()
+    except urllib.error.HTTPError as exc:
+        return int(exc.code), b""
+    except (urllib.error.URLError, OSError, TimeoutError) as exc:
+        raise SecondOpinionError(f"{url}: {type(exc).__name__}") from exc
+
+
+def _key_from_login(payload: bytes) -> str:
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        return ""
+    if isinstance(data, dict):
+        data = data.get("api_key") or data.get("key") or next(iter(data.values()), "")
+    if isinstance(data, list):
+        data = data[0] if data else ""
+    return str(data or "").strip()
+
+
+def cbbdata_key(user: str, password: str, email: str = "") -> tuple[str, bool]:
+    """The account's API key, and whether this call created the account.
+
+    Logs in; when the login is refused and an email is given, registers the
+    account once and logs in again. Nothing here prints a credential."""
+    if not user or not password:
+        raise SecondOpinionError("no cbbdata username or password")
+    status, body = _post_json(CBBDATA_LOGIN_URL, {"username": user, "password": password})
+    key = _key_from_login(body) if status < 300 else ""
+    if key:
+        return key, False
+    if not email:
+        raise SecondOpinionError(f"cbbdata refused the login (HTTP {status}) and no email was given to register")
+    status, _ = _post_json(CBBDATA_REGISTER_URL, {
+        "username": user, "email": email, "password": password, "confirm_password": password,
+    })
+    if status != 201:
+        raise SecondOpinionError(f"cbbdata refused the registration (HTTP {status})")
+    status, body = _post_json(CBBDATA_LOGIN_URL, {"username": user, "password": password})
+    key = _key_from_login(body) if status < 300 else ""
+    if not key:
+        raise SecondOpinionError(f"cbbdata registered the account but refused the login (HTTP {status})")
+    return key, True
+
+
+def fetch_torvik_archive(key: str, season: int) -> pd.DataFrame:
+    """T-Rank's day-by-day ratings for `season` (labelled by the year it ends,
+    as cbbdata labels it), as a parquet file. The key rides in the query, as
+    the API asks, and is never printed: errors name the path only."""
+    if not key:
+        raise SecondOpinionError("no cbbdata key")
+    url = TORVIK_ARCHIVE_URL + "?" + urllib.parse.urlencode({"year": int(season), "key": key})
+    payload = _get(url)
+    try:
+        import io
+
+        return pd.read_parquet(io.BytesIO(payload))
+    except Exception as exc:  # noqa: BLE001
+        raise SecondOpinionError(f"cbbdata's T-Rank archive was not a parquet file ({type(exc).__name__})") from exc
+
+
+def torvik_on(archive: pd.DataFrame, day: str) -> pd.DataFrame:
+    """`team, adj_off, adj_def, adj_tempo` as T-Rank stood on its newest date
+    on or before `day`. Refused when the archive has no date at or before it."""
+    if archive is None or archive.empty:
+        raise SecondOpinionError("cbbdata's T-Rank archive is empty")
+    columns = {_key(c): c for c in archive.columns}
+    pick = {name: next((columns[k] for k in keys if k in columns), None) for name, keys in HEADER_NAMES.items()}
+    date_col = columns.get("date")
+    if date_col is None or pick["team"] is None or pick["adj_off"] is None or pick["adj_def"] is None:
+        raise SecondOpinionError("cbbdata's T-Rank archive lacks a date, team, offence or defence column: "
+                                 + ", ".join(map(str, archive.columns)))
+    dates = pd.to_datetime(archive[date_col], errors="coerce").dt.date.astype(str)
+    eligible = sorted(d for d in set(dates) if d != "NaT" and d <= str(day))
+    if not eligible:
+        raise SecondOpinionError(f"cbbdata's T-Rank archive has no date on or before {day}")
+    rows = archive.loc[dates == eligible[-1]]
+    out = pd.DataFrame({
+        "team": rows[pick["team"]].astype(str).str.strip(),
+        "adj_off": pd.to_numeric(rows[pick["adj_off"]], errors="coerce"),
+        "adj_def": pd.to_numeric(rows[pick["adj_def"]], errors="coerce"),
+        "adj_tempo": pd.to_numeric(rows[pick["adj_tempo"]], errors="coerce") if pick["adj_tempo"] else float("nan"),
+    })
+    ok = out["adj_off"].between(*EFFICIENCY_RANGE) & out["adj_def"].between(*EFFICIENCY_RANGE)
+    out = out.loc[ok].drop_duplicates("team").reset_index(drop=True)
+    out.loc[~out["adj_tempo"].between(*TEMPO_RANGE), "adj_tempo"] = float("nan")
+    if out.empty:
+        raise SecondOpinionError("cbbdata's T-Rank archive held no team with offence and defence")
+    out.attrs["as_of"] = eligible[-1]
+    return out
+
+
 def allowed_by_robots(url: str, *, timeout: float = 30.0) -> tuple[bool, str]:
     """Whether the site's robots.txt allows every agent in ROBOTS_AGENTS.
 

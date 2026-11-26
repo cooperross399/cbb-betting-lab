@@ -1,0 +1,19 @@
+{
+  "market": "alternate_spread",
+  "receipt_id": "alternate_spread-20261126-delegated-cooperross399",
+  "evidence": {
+    "path": "data/outputs/cbb_price_backtest.md",
+    "sha256": "ada1c0b5c7d047875bf5d3da203240673c501c2eb1e9ad089159fb987e4ea625"
+  },
+  "signed_by": "Cooper Ross (delegated: executed by his AI assistant on his written instruction)",
+  "executed_by": "Claude",
+  "signed_on": "2026-11-26",
+  "supersedes": "alternate_spread-20261119-delegated-cooperross399",
+  "authorisation": {
+    "instruction": "Chose \"Yes, re-sign all 35 now\" on the decision card asking \"Re-sign the 35 market receipts so new model changes can register?\" (2026-11-26T17:11:03Z)",
+    "option_consequence": "Like Oct 30 and Nov 9: I re-render the report and re-execute all 35 receipts as your delegate. T-Rank and the Dec 1 reversals can then go in.",
+    "context": "Registering T-Rank as a second-opinion table took the experiment ledger from 227 to 230, at which one blind null-baseline cell in the signed report (mid_major / spread) moves from demonstrated deficit to no demonstrated edge. The earlier receipts cited the render at 200 looks.",
+    "session": "https://claude.ai/code/session_01PSdZ6hM2BpfuBXtYZnNHNG"
+  },
+  "statement": "Executed by Claude on Cooper Ross's explicit written instruction, as his delegate; Cooper did not personally review this evidence first. It restores a market withdrawn on 2026-11-10 against the same price-backtest render every other allowlisted market cites. This receipt records an owner's decision to run the market forward and accumulate a live record, not a finding that an edge exists."
+}

@@ -31,14 +31,14 @@
   },
   "blind": [
     {
-      "adjusted_high": 0.05162088551857774,
-      "adjusted_low": -0.5567608330582938,
+      "adjusted_high": 0.052174433388589625,
+      "adjusted_low": -0.5573143809283058,
       "bets": 6618,
       "cluster_unit": "game",
       "clusters": 94,
       "enough_evidence": true,
       "high": -0.09104905222240531,
-      "looks": 224,
+      "looks": 230,
       "low": -0.4140908953173108,
       "market": "alternate_total_points",
       "name": "always under",
@@ -47,14 +47,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.053781097953090884,
-      "adjusted_low": -0.3616105276074123,
+      "adjusted_high": -0.05350101339448396,
+      "adjusted_low": -0.36189061216601925,
       "bets": 15628,
       "cluster_unit": "day",
       "clusters": 101,
       "enough_evidence": true,
       "high": -0.12596933803755214,
-      "looks": 224,
+      "looks": 230,
       "low": -0.28942228752295107,
       "market": "alternate_spread",
       "name": "always home",
@@ -63,14 +63,14 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": -0.08994365548347606,
-      "adjusted_low": -0.3065086179245928,
+      "adjusted_high": -0.08974660966500718,
+      "adjusted_low": -0.30670566374306163,
       "bets": 6207,
       "cluster_unit": "day",
       "clusters": 695,
       "enough_evidence": true,
       "high": -0.14072971424380096,
-      "looks": 224,
+      "looks": 230,
       "low": -0.25572255916426784,
       "market": "moneyline",
       "name": "always the underdog",
@@ -79,14 +79,14 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": -0.09333634887269703,
-      "adjusted_low": -0.2958275263050747,
+      "adjusted_high": -0.093152108359642,
+      "adjusted_low": -0.29601176681812974,
       "bets": 6213,
       "cluster_unit": "day",
       "clusters": 695,
       "enough_evidence": true,
       "high": -0.14082200269042489,
-      "looks": 224,
+      "looks": 230,
       "low": -0.24834187248734685,
       "market": "moneyline",
       "name": "always away",
@@ -95,14 +95,14 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": 0.14191270356446456,
-      "adjusted_low": -0.5287388612328605,
+      "adjusted_high": 0.14252290885807872,
+      "adjusted_low": -0.5293490665264746,
       "bets": 593,
       "cluster_unit": "day",
       "clusters": 68,
       "enough_evidence": true,
       "high": -0.01535996600119302,
-      "looks": 224,
+      "looks": 230,
       "low": -0.37146619166720285,
       "market": "spread_h1",
       "name": "always home",
@@ -113,14 +113,14 @@
   ],
   "cells": [
     {
-      "adjusted_high": 0.41898759933199303,
-      "adjusted_low": -0.5091316282052599,
+      "adjusted_high": 0.41983206655681715,
+      "adjusted_low": -0.509976095430084,
       "bets": 2213,
       "cluster_unit": "game",
       "clusters": 58,
       "enough_evidence": true,
       "high": 0.20133689030231666,
-      "looks": 224,
+      "looks": 230,
       "low": -0.2914809191755835,
       "market": "alternate_spread",
       "name": "alternate_spread",
@@ -129,14 +129,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.5682603132705036,
-      "adjusted_low": -0.5626896383213712,
+      "adjusted_high": 0.5692893299514423,
+      "adjusted_low": -0.5637186550023099,
       "bets": 2136,
       "cluster_unit": "game",
       "clusters": 63,
       "enough_evidence": true,
       "high": 0.3030443242706748,
-      "looks": 224,
+      "looks": 230,
       "low": -0.29747364932154235,
       "market": "alternate_total_points",
       "name": "alternate_total_points",
@@ -145,14 +145,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.0035779591398723137,
-      "adjusted_low": -0.21788240522315055,
+      "adjusted_high": -0.003382970095919813,
+      "adjusted_low": -0.21807739426710304,
       "bets": 4393,
       "cluster_unit": "day",
       "clusters": 609,
       "enough_evidence": true,
       "high": -0.05383391037364349,
-      "looks": 224,
+      "looks": 230,
       "low": -0.16762645398937936,
       "market": "moneyline",
       "name": "moneyline",
@@ -161,14 +161,14 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": 0.07276096239207291,
-      "adjusted_low": -0.8850600355385552,
+      "adjusted_high": 0.07363245434698801,
+      "adjusted_low": -0.8859315274934703,
       "bets": 47,
       "cluster_unit": "day",
       "clusters": 37,
       "enough_evidence": false,
       "high": -0.1518550278145795,
-      "looks": 224,
+      "looks": 230,
       "low": -0.6604440453319028,
       "market": "moneyline_h1",
       "name": "moneyline_h1",
@@ -177,14 +177,14 @@
       "verdict": "not enough evidence (47 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 0.025678080579253897,
-      "adjusted_low": -0.08298412423490292,
+      "adjusted_high": 0.02577694898734213,
+      "adjusted_low": -0.08308299264299115,
       "bets": 10908,
       "cluster_unit": "game",
       "clusters": 4711,
       "enough_evidence": true,
       "high": 0.0001960032546788476,
-      "looks": 224,
+      "looks": 230,
       "low": -0.05750204691032788,
       "market": "spread",
       "name": "spread",
@@ -193,14 +193,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.22037002438379538,
-      "adjusted_low": -0.7376856368711873,
+      "adjusted_high": 0.2212417298516735,
+      "adjusted_low": -0.7385573423390654,
       "bets": 189,
       "cluster_unit": "game",
       "clusters": 57,
       "enough_evidence": false,
       "high": -0.004300996079114661,
-      "looks": 224,
+      "looks": 230,
       "low": -0.5130146164082772,
       "market": "spread_h1",
       "name": "spread_h1",
@@ -209,14 +209,14 @@
       "verdict": "not enough evidence (189 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 0.018921831110847914,
-      "adjusted_low": -0.0927958825163353,
+      "adjusted_high": 0.019023479632709464,
+      "adjusted_low": -0.09289753103819685,
       "bets": 5570,
       "cluster_unit": "game",
       "clusters": 2312,
       "enough_evidence": true,
       "high": -0.007276785252969188,
-      "looks": 224,
+      "looks": 230,
       "low": -0.06659726615251821,
       "market": "team_total",
       "name": "team_total",
@@ -225,14 +225,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.023240584036771393,
-      "adjusted_low": -0.08873224619562989,
+      "adjusted_high": 0.023342464681409013,
+      "adjusted_low": -0.08883412684026751,
       "bets": 12302,
       "cluster_unit": "day",
       "clusters": 688,
       "enough_evidence": true,
       "high": -0.0030178590264217098,
-      "looks": 224,
+      "looks": 230,
       "low": -0.06247380313243679,
       "market": "total_points",
       "name": "total_points",
@@ -241,14 +241,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.4853617887462605,
-      "adjusted_low": -0.5695430955830179,
+      "adjusted_high": 0.4863216143523809,
+      "adjusted_low": -0.5705029211891383,
       "bets": 181,
       "cluster_unit": "game",
       "clusters": 57,
       "enough_evidence": false,
       "high": 0.2379789210920933,
-      "looks": 224,
+      "looks": 230,
       "low": -0.3221602279288506,
       "market": "total_points_h1",
       "name": "total_points_h1",
@@ -257,14 +257,14 @@
       "verdict": "not enough evidence (181 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 0.12329973156627802,
-      "adjusted_low": -0.2590403895323111,
+      "adjusted_high": 0.123647611118197,
+      "adjusted_low": -0.25938826908423007,
       "bets": 8349,
       "cluster_unit": "day",
       "clusters": 89,
       "enough_evidence": true,
       "high": 0.03363819242500418,
-      "looks": 224,
+      "looks": 230,
       "low": -0.16937885039103726,
       "market": "alternate_spread",
       "name": "alternate_spread",
@@ -273,14 +273,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.1357037769083863,
-      "adjusted_low": -1.231003322782148,
+      "adjusted_high": -0.13470719743840864,
+      "adjusted_low": -1.2319999022521257,
       "bets": 13,
       "cluster_unit": "day",
       "clusters": 3,
       "enough_evidence": false,
       "high": -0.39255948648341304,
-      "looks": 224,
+      "looks": 230,
       "low": -0.9741476132071214,
       "market": "alternate_team_total",
       "name": "alternate_team_total",
@@ -289,14 +289,14 @@
       "verdict": "not enough evidence (13 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 0.08326263708374901,
-      "adjusted_low": -0.3961225466737499,
+      "adjusted_high": 0.08369881496234302,
+      "adjusted_low": -0.39655872455234387,
       "bets": 7598,
       "cluster_unit": "game",
       "clusters": 231,
       "enough_evidence": true,
       "high": -0.0291566750557071,
-      "looks": 224,
+      "looks": 230,
       "low": -0.2837032345342938,
       "market": "alternate_total_points",
       "name": "alternate_total_points",
@@ -305,14 +305,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.01148983022288401,
-      "adjusted_low": -0.14925180180737668,
+      "adjusted_high": -0.011364484829341256,
+      "adjusted_low": -0.14937714720091944,
       "bets": 8873,
       "cluster_unit": "day",
       "clusters": 648,
       "enough_evidence": true,
       "high": -0.04379601449648528,
-      "looks": 224,
+      "looks": 230,
       "low": -0.1169456175337754,
       "market": "moneyline",
       "name": "moneyline",
@@ -321,14 +321,14 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": 0.5990345658803007,
-      "adjusted_low": -0.45377251438820365,
+      "adjusted_high": 0.5999924827588343,
+      "adjusted_low": -0.4547304312667373,
       "bets": 168,
       "cluster_unit": "game",
       "clusters": 168,
       "enough_evidence": false,
       "high": 0.3521436485356258,
-      "looks": 224,
+      "looks": 230,
       "low": -0.20688159704352876,
       "market": "moneyline_h1",
       "name": "moneyline_h1",
@@ -337,14 +337,14 @@
       "verdict": "not enough evidence (168 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 0.012208098061203269,
-      "adjusted_low": -0.07039493250607805,
+      "adjusted_high": 0.012283256025735812,
+      "adjusted_low": -0.07047009047061059,
       "bets": 19968,
       "cluster_unit": "day",
       "clusters": 650,
       "enough_evidence": true,
       "high": -0.00716291337519883,
-      "looks": 224,
+      "looks": 230,
       "low": -0.051023921069675945,
       "market": "spread",
       "name": "spread",
@@ -353,14 +353,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.11318342096666381,
-      "adjusted_low": -0.4163435318630949,
+      "adjusted_high": 0.1136652213033644,
+      "adjusted_low": -0.41682533219979545,
       "bets": 693,
       "cluster_unit": "game",
       "clusters": 216,
       "enough_evidence": true,
       "high": -0.01099450069921934,
-      "looks": 224,
+      "looks": 230,
       "low": -0.29216561019721177,
       "market": "spread_h1",
       "name": "spread_h1",
@@ -369,14 +369,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.023333483325729744,
-      "adjusted_low": -0.10207808746604805,
+      "adjusted_high": -0.02326183602508638,
+      "adjusted_low": -0.1021497347666914,
       "bets": 11618,
       "cluster_unit": "day",
       "clusters": 345,
       "enough_evidence": true,
       "high": -0.04179966570283554,
-      "looks": 224,
+      "looks": 230,
       "low": -0.08361190508894224,
       "market": "team_total",
       "name": "team_total",
@@ -385,14 +385,14 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": 0.016446348901855135,
-      "adjusted_low": -0.06477802522608225,
+      "adjusted_high": 0.01652025246916933,
+      "adjusted_low": -0.06485192879339645,
       "bets": 23517,
       "cluster_unit": "day",
       "clusters": 728,
       "enough_evidence": true,
       "high": -0.0026013575726103882,
-      "looks": 224,
+      "looks": 230,
       "low": -0.045730318751616726,
       "market": "total_points",
       "name": "total_points",
@@ -401,14 +401,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.2615616040640387,
-      "adjusted_low": -0.3036162954066889,
+      "adjusted_high": 0.26207584210386947,
+      "adjusted_low": -0.30413053344651964,
       "bets": 607,
       "cluster_unit": "game",
       "clusters": 207,
       "enough_evidence": true,
       "high": 0.12902327612300962,
-      "looks": 224,
+      "looks": 230,
       "low": -0.17107796746565979,
       "market": "total_points_h1",
       "name": "total_points_h1",
@@ -417,14 +417,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.29190349503638774,
-      "adjusted_low": -0.37905366185247485,
+      "adjusted_high": 0.29251397837887516,
+      "adjusted_low": -0.3796641451949623,
       "bets": 3214,
       "cluster_unit": "game",
       "clusters": 120,
       "enough_evidence": true,
       "high": 0.13455916190270611,
-      "looks": 224,
+      "looks": 230,
       "low": -0.22170932871879329,
       "market": "alternate_spread",
       "name": "alternate_spread",
@@ -440,7 +440,7 @@
       "clusters": 1,
       "enough_evidence": false,
       "high": 0.0,
-      "looks": 224,
+      "looks": 230,
       "low": 0.0,
       "market": "alternate_team_total",
       "name": "alternate_team_total",
@@ -449,14 +449,14 @@
       "verdict": "not enough evidence (10 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 0.2775967136178261,
-      "adjusted_low": -0.4784420536805435,
+      "adjusted_high": 0.27828461010864014,
+      "adjusted_low": -0.4791299501713575,
       "bets": 3763,
       "cluster_unit": "game",
       "clusters": 117,
       "enough_evidence": true,
       "high": 0.10030012404813332,
-      "looks": 224,
+      "looks": 230,
       "low": -0.3011454641108507,
       "market": "alternate_total_points",
       "name": "alternate_total_points",
@@ -465,14 +465,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.025625672819817175,
-      "adjusted_low": -0.17004622791877252,
+      "adjusted_high": -0.02549426898531673,
+      "adjusted_low": -0.17017763175327297,
       "bets": 6967,
       "cluster_unit": "day",
       "clusters": 590,
       "enough_evidence": true,
       "high": -0.05949334335515839,
-      "looks": 224,
+      "looks": 230,
       "low": -0.13617855738343132,
       "market": "moneyline",
       "name": "moneyline",
@@ -481,14 +481,14 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": 0.8375319622022931,
-      "adjusted_low": -0.546392721695964,
+      "adjusted_high": 0.8387911528348138,
+      "adjusted_low": -0.5476519123284846,
       "bets": 79,
       "cluster_unit": "game",
       "clusters": 79,
       "enough_evidence": false,
       "high": 0.5129915586020064,
-      "looks": 224,
+      "looks": 230,
       "low": -0.22185231809567726,
       "market": "moneyline_h1",
       "name": "moneyline_h1",
@@ -497,14 +497,14 @@
       "verdict": "not enough evidence (79 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 0.03892432737650028,
-      "adjusted_low": -0.05324602588722422,
+      "adjusted_high": 0.039008190354577144,
+      "adjusted_low": -0.05332988886530109,
       "bets": 14596,
       "cluster_unit": "day",
       "clusters": 589,
       "enough_evidence": true,
       "high": 0.0173097091850458,
-      "looks": 224,
+      "looks": 230,
       "low": -0.03163140769576975,
       "market": "spread",
       "name": "spread",
@@ -513,14 +513,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.4389144346306299,
-      "adjusted_low": -0.3341467448399635,
+      "adjusted_high": 0.4396178192922957,
+      "adjusted_low": -0.3348501295016293,
       "bets": 370,
       "cluster_unit": "game",
       "clusters": 117,
       "enough_evidence": true,
       "high": 0.2576259656032613,
-      "looks": 224,
+      "looks": 230,
       "low": -0.15285827581259492,
       "market": "spread_h1",
       "name": "spread_h1",
@@ -529,14 +529,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.014932007833840917,
-      "adjusted_low": -0.09100760738924707,
+      "adjusted_high": 0.015028399041147077,
+      "adjusted_low": -0.09110399859655324,
       "bets": 9042,
       "cluster_unit": "day",
       "clusters": 313,
       "enough_evidence": true,
       "high": -0.009911602430348661,
-      "looks": 224,
+      "looks": 230,
       "low": -0.0661639971250575,
       "market": "team_total",
       "name": "team_total",
@@ -545,14 +545,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.007334159401499389,
-      "adjusted_low": -0.09681479490749006,
+      "adjusted_high": -0.007252743715131432,
+      "adjusted_low": -0.09689621059385801,
       "bets": 17978,
       "cluster_unit": "game",
       "clusters": 7137,
       "enough_evidence": true,
       "high": -0.028318019216560915,
-      "looks": 224,
+      "looks": 230,
       "low": -0.07583093509242853,
       "market": "total_points",
       "name": "total_points",
@@ -561,14 +561,14 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": 0.2807854001728827,
-      "adjusted_low": -0.5054208554429843,
+      "adjusted_high": 0.2815007451362459,
+      "adjusted_low": -0.5061362004063475,
       "bets": 321,
       "cluster_unit": "game",
       "clusters": 106,
       "enough_evidence": true,
       "high": 0.09641431518586034,
-      "looks": 224,
+      "looks": 230,
       "low": -0.32104977045596195,
       "market": "total_points_h1",
       "name": "total_points_h1",
@@ -584,7 +584,7 @@
       "clusters": 1,
       "enough_evidence": false,
       "high": 0.0,
-      "looks": 224,
+      "looks": 230,
       "low": 0.0,
       "market": "moneyline",
       "name": "moneyline",
@@ -593,14 +593,14 @@
       "verdict": "not enough evidence (1 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 2.8015056353198338,
-      "adjusted_low": -3.5175550180358828,
+      "adjusted_high": 2.807255154837487,
+      "adjusted_low": -3.523304537553536,
       "bets": 3,
       "cluster_unit": "game",
       "clusters": 2,
       "enough_evidence": false,
       "high": 1.3196399538449846,
-      "looks": 224,
+      "looks": 230,
       "low": -2.035689336561034,
       "market": "spread",
       "name": "spread",
@@ -616,7 +616,7 @@
       "clusters": 1,
       "enough_evidence": false,
       "high": 0.0,
-      "looks": 224,
+      "looks": 230,
       "low": 0.0,
       "market": "total_points",
       "name": "total_points",
@@ -630,24 +630,24 @@
     "applied": true,
     "budget_declared_on": "2026-09-01",
     "budget_per_week": 6,
-    "discovery": 183,
+    "discovery": 189,
     "error": "",
-    "factor": 1.8832907611851908,
+    "factor": 1.8867178582120565,
     "holdout": 41,
-    "hypotheses": 224,
-    "looks": 224,
+    "hypotheses": 230,
+    "looks": 230,
     "reversals": 0,
     "source": "data/outputs/experiment_ledger.json"
   },
   "every_market": {
-    "adjusted_high": -0.022017456799468302,
-    "adjusted_low": -0.07611272717717596,
+    "adjusted_high": -0.02196823717175604,
+    "adjusted_low": -0.07616194680488822,
     "bets": 175690,
     "cluster_unit": "game",
     "clusters": 26086,
     "enough_evidence": true,
     "high": -0.03470319113567193,
-    "looks": 224,
+    "looks": 230,
     "low": -0.06342699284097233,
     "market": "",
     "name": "every market",
@@ -682,8 +682,8 @@
     "generated_at": "2026-09-18T03:04:50Z",
     "pooled": {
       "advantage_over_raw": {
-        "adjusted_high": -0.008732255032941429,
-        "adjusted_low": -0.013575283409236704,
+        "adjusted_high": -0.00872784850993088,
+        "adjusted_low": -0.013579689932247252,
         "enough_evidence": true,
         "high": -0.009867980410324799,
         "low": -0.012439558031853334,
@@ -695,8 +695,8 @@
       "anti_predictive": {
         "deficit_buckets": [
           {
-            "adjusted_high": -0.008470535916007833,
-            "adjusted_low": -0.06639376439325598,
+            "adjusted_high": -0.008417833346603221,
+            "adjusted_low": -0.0664464669626606,
             "cluster_unit": "game",
             "clusters": 25013,
             "enough_evidence": true,
@@ -708,8 +708,8 @@
             "verdict": "demonstrated deficit"
           },
           {
-            "adjusted_high": -0.01645881044890573,
-            "adjusted_low": -0.07659395685820125,
+            "adjusted_high": -0.016404095323202108,
+            "adjusted_low": -0.07664867198390486,
             "cluster_unit": "game",
             "clusters": 11424,
             "enough_evidence": true,
@@ -721,8 +721,8 @@
             "verdict": "demonstrated deficit"
           },
           {
-            "adjusted_high": -0.00734219904760882,
-            "adjusted_low": -0.10141164638368641,
+            "adjusted_high": -0.007256608142070291,
+            "adjusted_low": -0.10149723728922494,
             "cluster_unit": "game",
             "clusters": 9195,
             "enough_evidence": true,
@@ -734,8 +734,8 @@
             "verdict": "demonstrated deficit"
           },
           {
-            "adjusted_high": -0.005995189950177067,
-            "adjusted_low": -0.09577107667160284,
+            "adjusted_high": -0.0059135056237819145,
+            "adjusted_low": -0.09585276099799798,
             "cluster_unit": "day",
             "clusters": 723,
             "enough_evidence": true,
@@ -747,8 +747,8 @@
             "verdict": "demonstrated deficit"
           },
           {
-            "adjusted_high": -0.0031106840914755865,
-            "adjusted_low": -0.09648066474770742,
+            "adjusted_high": -0.0030257296092202485,
+            "adjusted_low": -0.09656561922996276,
             "cluster_unit": "game",
             "clusters": 13759,
             "enough_evidence": true,
@@ -767,8 +767,8 @@
         "measurable": true,
         "measured_buckets": [
           {
-            "adjusted_high": -0.008470535916007833,
-            "adjusted_low": -0.06639376439325598,
+            "adjusted_high": -0.008417833346603221,
+            "adjusted_low": -0.0664464669626606,
             "cluster_unit": "game",
             "clusters": 25013,
             "enough_evidence": true,
@@ -780,8 +780,8 @@
             "verdict": "demonstrated deficit"
           },
           {
-            "adjusted_high": 0.01844123837583521,
-            "adjusted_low": -0.03837779048259302,
+            "adjusted_high": 0.018492936267866387,
+            "adjusted_low": -0.038429488374624204,
             "cluster_unit": "game",
             "clusters": 14141,
             "enough_evidence": true,
@@ -793,8 +793,8 @@
             "verdict": "no demonstrated edge"
           },
           {
-            "adjusted_high": -0.01645881044890573,
-            "adjusted_low": -0.07659395685820125,
+            "adjusted_high": -0.016404095323202108,
+            "adjusted_low": -0.07664867198390486,
             "cluster_unit": "game",
             "clusters": 11424,
             "enough_evidence": true,
@@ -806,8 +806,8 @@
             "verdict": "demonstrated deficit"
           },
           {
-            "adjusted_high": 0.01284363299538955,
-            "adjusted_low": -0.08949570958993683,
+            "adjusted_high": 0.012936748425023174,
+            "adjusted_low": -0.08958882501957047,
             "cluster_unit": "game",
             "clusters": 7107,
             "enough_evidence": true,
@@ -819,8 +819,8 @@
             "verdict": "no demonstrated edge"
           },
           {
-            "adjusted_high": -0.00734219904760882,
-            "adjusted_low": -0.10141164638368641,
+            "adjusted_high": -0.007256608142070291,
+            "adjusted_low": -0.10149723728922494,
             "cluster_unit": "game",
             "clusters": 9195,
             "enough_evidence": true,
@@ -832,8 +832,8 @@
             "verdict": "demonstrated deficit"
           },
           {
-            "adjusted_high": -0.005995189950177067,
-            "adjusted_low": -0.09577107667160284,
+            "adjusted_high": -0.0059135056237819145,
+            "adjusted_low": -0.09585276099799798,
             "cluster_unit": "day",
             "clusters": 723,
             "enough_evidence": true,
@@ -845,8 +845,8 @@
             "verdict": "demonstrated deficit"
           },
           {
-            "adjusted_high": 0.004089125621489664,
-            "adjusted_low": -0.08223384369385406,
+            "adjusted_high": 0.0041676682442190055,
+            "adjusted_low": -0.0823123863165834,
             "cluster_unit": "game",
             "clusters": 13902,
             "enough_evidence": true,
@@ -858,8 +858,8 @@
             "verdict": "no demonstrated edge"
           },
           {
-            "adjusted_high": -0.0031106840914755865,
-            "adjusted_low": -0.09648066474770742,
+            "adjusted_high": -0.0030257296092202485,
+            "adjusted_low": -0.09656561922996276,
             "cluster_unit": "game",
             "clusters": 13759,
             "enough_evidence": true,
@@ -876,8 +876,8 @@
         "readable": true,
         "usable_buckets": 8,
         "worst_bucket": {
-          "adjusted_high": -0.00734219904760882,
-          "adjusted_low": -0.10141164638368641,
+          "adjusted_high": -0.007256608142070291,
+          "adjusted_low": -0.10149723728922494,
           "cluster_unit": "game",
           "clusters": 9195,
           "enough_evidence": true,
@@ -903,8 +903,8 @@
     "tiers": [
       {
         "advantage_over_raw": {
-          "adjusted_high": -0.011632879506230383,
-          "adjusted_low": -0.02401985148566696,
+          "adjusted_high": -0.011621608980266594,
+          "adjusted_low": -0.024031122011630747,
           "enough_evidence": true,
           "high": -0.014537714525335609,
           "low": -0.021115016466561734,
@@ -922,8 +922,8 @@
           "measurable": true,
           "measured_buckets": [
             {
-              "adjusted_high": 0.023137178000059447,
-              "adjusted_low": -0.09220578443186574,
+              "adjusted_high": 0.023242125024641992,
+              "adjusted_low": -0.09231073145644828,
               "cluster_unit": "game",
               "clusters": 5802,
               "enough_evidence": true,
@@ -935,8 +935,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.070865085450597,
-              "adjusted_low": -0.08718210963432191,
+              "adjusted_high": 0.07100888774696656,
+              "adjusted_low": -0.08732591193069147,
               "cluster_unit": "day",
               "clusters": 606,
               "enough_evidence": true,
@@ -948,8 +948,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.01846782337278466,
-              "adjusted_low": -0.12146873513828774,
+              "adjusted_high": 0.018595147356289282,
+              "adjusted_low": -0.12159605912179236,
               "cluster_unit": "day",
               "clusters": 573,
               "enough_evidence": true,
@@ -961,8 +961,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.07248035465682903,
-              "adjusted_low": -0.20108045938182303,
+              "adjusted_high": 0.07272925925291723,
+              "adjusted_low": -0.20132936397791124,
               "cluster_unit": "day",
               "clusters": 488,
               "enough_evidence": true,
@@ -974,8 +974,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.0046103711925554736,
-              "adjusted_low": -0.19501543331179028,
+              "adjusted_high": 0.004792004590648505,
+              "adjusted_low": -0.1951970667098833,
               "cluster_unit": "day",
               "clusters": 534,
               "enough_evidence": true,
@@ -987,8 +987,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.06356219782526082,
-              "adjusted_low": -0.15816848756135113,
+              "adjusted_high": 0.06376394377663352,
+              "adjusted_low": -0.1583702335127238,
               "cluster_unit": "day",
               "clusters": 570,
               "enough_evidence": true,
@@ -1000,8 +1000,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.050846704914445595,
-              "adjusted_low": -0.12734289384592754,
+              "adjusted_high": 0.051008834166262715,
+              "adjusted_low": -0.12750502309774464,
               "cluster_unit": "game",
               "clusters": 2927,
               "enough_evidence": true,
@@ -1013,8 +1013,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.055339641016451446,
-              "adjusted_low": -0.11249214434370766,
+              "adjusted_high": 0.05549234601147289,
+              "adjusted_low": -0.1126448493387291,
               "cluster_unit": "day",
               "clusters": 634,
               "enough_evidence": true,
@@ -1031,8 +1031,8 @@
           "readable": true,
           "usable_buckets": 8,
           "worst_bucket": {
-            "adjusted_high": 0.0046103711925554736,
-            "adjusted_low": -0.19501543331179028,
+            "adjusted_high": 0.004792004590648505,
+            "adjusted_low": -0.1951970667098833,
             "cluster_unit": "day",
             "clusters": 534,
             "enough_evidence": true,
@@ -1054,8 +1054,8 @@
       },
       {
         "advantage_over_raw": {
-          "adjusted_high": -0.006901891134030485,
-          "adjusted_low": -0.014423062474669606,
+          "adjusted_high": -0.006895047850860595,
+          "adjusted_low": -0.014429905757839496,
           "enough_evidence": true,
           "high": -0.00866566051457387,
           "low": -0.012659293094126221,
@@ -1073,8 +1073,8 @@
           "measurable": true,
           "measured_buckets": [
             {
-              "adjusted_high": 0.002956116119128306,
-              "adjusted_low": -0.08939768106455961,
+              "adjusted_high": 0.003040146007202732,
+              "adjusted_low": -0.08948171095263403,
               "cluster_unit": "game",
               "clusters": 10888,
               "enough_evidence": true,
@@ -1086,8 +1086,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.02948332142765251,
-              "adjusted_low": -0.05657046073143595,
+              "adjusted_high": 0.02956161912524287,
+              "adjusted_low": -0.05664875842902631,
               "cluster_unit": "game",
               "clusters": 6170,
               "enough_evidence": true,
@@ -1099,8 +1099,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.006482737535024485,
-              "adjusted_low": -0.08726270450086364,
+              "adjusted_high": 0.006568033638075836,
+              "adjusted_low": -0.08734800060391498,
               "cluster_unit": "game",
               "clusters": 5068,
               "enough_evidence": true,
@@ -1112,8 +1112,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.029626417269717445,
-              "adjusted_low": -0.12635692828221695,
+              "adjusted_high": 0.029768341732683862,
+              "adjusted_low": -0.12649885274518338,
               "cluster_unit": "day",
               "clusters": 585,
               "enough_evidence": true,
@@ -1125,8 +1125,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.02193479897736776,
-              "adjusted_low": -0.12301887020110287,
+              "adjusted_high": 0.022066687876021465,
+              "adjusted_low": -0.12315075909975658,
               "cluster_unit": "game",
               "clusters": 4095,
               "enough_evidence": true,
@@ -1138,8 +1138,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.007408100034953735,
-              "adjusted_low": -0.13076218752061097,
+              "adjusted_high": 0.007533816942677768,
+              "adjusted_low": -0.130887904428335,
               "cluster_unit": "day",
               "clusters": 644,
               "enough_evidence": true,
@@ -1151,8 +1151,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.04030988184172975,
-              "adjusted_low": -0.09447762269769429,
+              "adjusted_high": 0.04043252085891874,
+              "adjusted_low": -0.09460026171488328,
               "cluster_unit": "game",
               "clusters": 6054,
               "enough_evidence": true,
@@ -1164,8 +1164,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.01627960939637014,
-              "adjusted_low": -0.1309526777853467,
+              "adjusted_high": 0.016413571539672316,
+              "adjusted_low": -0.13108663992864886,
               "cluster_unit": "game",
               "clusters": 5987,
               "enough_evidence": true,
@@ -1182,8 +1182,8 @@
           "readable": true,
           "usable_buckets": 8,
           "worst_bucket": {
-            "adjusted_high": 0.007408100034953735,
-            "adjusted_low": -0.13076218752061097,
+            "adjusted_high": 0.007533816942677768,
+            "adjusted_low": -0.130887904428335,
             "cluster_unit": "day",
             "clusters": 644,
             "enough_evidence": true,
@@ -1205,8 +1205,8 @@
       },
       {
         "advantage_over_raw": {
-          "adjusted_high": -0.004316207843122909,
-          "adjusted_low": -0.011327392271296493,
+          "adjusted_high": -0.004309828581406178,
+          "adjusted_low": -0.011333771533013223,
           "enough_evidence": true,
           "high": -0.005960381583579715,
           "low": -0.009683218530839687,
@@ -1218,8 +1218,8 @@
         "anti_predictive": {
           "deficit_buckets": [
             {
-              "adjusted_high": -0.006560669209811014,
-              "adjusted_low": -0.09848187071183931,
+              "adjusted_high": -0.006477032927281995,
+              "adjusted_low": -0.09856550699436833,
               "cluster_unit": "game",
               "clusters": 4181,
               "enough_evidence": true,
@@ -1238,8 +1238,8 @@
           "measurable": true,
           "measured_buckets": [
             {
-              "adjusted_high": 0.017275941467723082,
-              "adjusted_low": -0.07893867100227933,
+              "adjusted_high": 0.01736348419323656,
+              "adjusted_low": -0.07902621372779281,
               "cluster_unit": "day",
               "clusters": 639,
               "enough_evidence": true,
@@ -1251,8 +1251,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.03764866253508875,
-              "adjusted_low": -0.05006006464422742,
+              "adjusted_high": 0.03772846601640495,
+              "adjusted_low": -0.05013986812554362,
               "cluster_unit": "day",
               "clusters": 576,
               "enough_evidence": true,
@@ -1264,8 +1264,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": -0.006560669209811014,
-              "adjusted_low": -0.09848187071183931,
+              "adjusted_high": -0.006477032927281995,
+              "adjusted_low": -0.09856550699436833,
               "cluster_unit": "game",
               "clusters": 4181,
               "enough_evidence": true,
@@ -1277,8 +1277,8 @@
               "verdict": "demonstrated deficit"
             },
             {
-              "adjusted_high": 0.06771560710782137,
-              "adjusted_low": -0.09538549145733086,
+              "adjusted_high": 0.06786400779599218,
+              "adjusted_low": -0.09553389214550166,
               "cluster_unit": "game",
               "clusters": 2652,
               "enough_evidence": true,
@@ -1290,8 +1290,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.03622229686212291,
-              "adjusted_low": -0.11800767904856294,
+              "adjusted_high": 0.036362625987818954,
+              "adjusted_low": -0.118148008174259,
               "cluster_unit": "day",
               "clusters": 531,
               "enough_evidence": true,
@@ -1303,8 +1303,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.027678966301801958,
-              "adjusted_low": -0.1048372758871791,
+              "adjusted_high": 0.0277995387670254,
+              "adjusted_low": -0.10495784835240254,
               "cluster_unit": "game",
               "clusters": 4312,
               "enough_evidence": true,
@@ -1316,8 +1316,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.018309790444785562,
-              "adjusted_low": -0.1290389167590803,
+              "adjusted_high": 0.018443858515095946,
+              "adjusted_low": -0.12917298482939069,
               "cluster_unit": "day",
               "clusters": 596,
               "enough_evidence": true,
@@ -1329,8 +1329,8 @@
               "verdict": "no demonstrated edge"
             },
             {
-              "adjusted_high": 0.026211953425199046,
-              "adjusted_low": -0.1427868684993692,
+              "adjusted_high": 0.026365720271003847,
+              "adjusted_low": -0.142940635345174,
               "cluster_unit": "day",
               "clusters": 586,
               "enough_evidence": true,
@@ -1347,8 +1347,8 @@
           "readable": true,
           "usable_buckets": 8,
           "worst_bucket": {
-            "adjusted_high": 0.026211953425199046,
-            "adjusted_low": -0.1427868684993692,
+            "adjusted_high": 0.026365720271003847,
+            "adjusted_low": -0.142940635345174,
             "cluster_unit": "day",
             "clusters": 586,
             "enough_evidence": true,
@@ -1370,8 +1370,8 @@
       },
       {
         "advantage_over_raw": {
-          "adjusted_high": 0.2769732043561775,
-          "adjusted_low": -0.4518362766213467,
+          "adjusted_high": 0.27763632575434066,
+          "adjusted_low": -0.45249939801950984,
           "enough_evidence": false,
           "high": 0.10606208046617964,
           "low": -0.28092515273134877,
@@ -1404,17 +1404,17 @@
       }
     ]
   },
-  "generated_at": "2026-11-26T15:37:16+00:00",
+  "generated_at": "2026-11-26T17:16:14+00:00",
   "pooled": [
     {
-      "adjusted_high": 0.09866893849741999,
-      "adjusted_low": -0.2157485062530714,
+      "adjusted_high": 0.09895501728894472,
+      "adjusted_low": -0.2160345850445961,
       "bets": 13776,
       "cluster_unit": "game",
       "clusters": 425,
       "enough_evidence": true,
       "high": 0.02493576095854956,
-      "looks": 224,
+      "looks": 230,
       "low": -0.14201532871420097,
       "market": "alternate_spread",
       "name": "alternate_spread",
@@ -1423,14 +1423,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 2.3816856594107763,
-      "adjusted_low": -2.132073759271863,
+      "adjusted_high": 2.38579259069366,
+      "adjusted_low": -2.1361806905547467,
       "bets": 23,
       "cluster_unit": "game",
       "clusters": 4,
       "enough_evidence": false,
       "high": 1.3231762473468787,
-      "looks": 224,
+      "looks": 230,
       "low": -1.0735643472079652,
       "market": "alternate_team_total",
       "name": "alternate_team_total",
@@ -1439,14 +1439,14 @@
       "verdict": "not enough evidence (23 bets, below the 200 declared in advance)"
     },
     {
-      "adjusted_high": 0.07776135656214586,
-      "adjusted_low": -0.3089973087018425,
+      "adjusted_high": 0.0781132564119085,
+      "adjusted_low": -0.3093492085516051,
       "bets": 13497,
       "cluster_unit": "game",
       "clusters": 411,
       "enough_evidence": true,
       "high": -0.01293636332180037,
-      "looks": 224,
+      "looks": 230,
       "low": -0.21829958881789624,
       "market": "alternate_total_points",
       "name": "alternate_total_points",
@@ -1455,14 +1455,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.04604692133622339,
-      "adjusted_low": -0.13999548323514244,
+      "adjusted_high": -0.04596144042063723,
+      "adjusted_low": -0.1400809641507286,
       "bets": 20234,
       "cluster_unit": "day",
       "clusters": 694,
       "enough_evidence": true,
       "high": -0.06807854238546776,
-      "looks": 224,
+      "looks": 230,
       "low": -0.11796386218589808,
       "market": "moneyline",
       "name": "moneyline",
@@ -1471,14 +1471,14 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": 0.3784698960038727,
-      "adjusted_low": -0.34708905174269034,
+      "adjusted_high": 0.379130059841525,
+      "adjusted_low": -0.3477492155803426,
       "bets": 294,
       "cluster_unit": "game",
       "clusters": 294,
       "enough_evidence": true,
       "high": 0.20832104579752703,
-      "looks": 224,
+      "looks": 230,
       "low": -0.1769402015363446,
       "market": "moneyline_h1",
       "name": "moneyline_h1",
@@ -1487,14 +1487,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.004242769560115343,
-      "adjusted_low": -0.04818244397466738,
+      "adjusted_high": 0.004290469654317685,
+      "adjusted_low": -0.04823014406886972,
       "bets": 45475,
       "cluster_unit": "game",
       "clusters": 20550,
       "enough_evidence": true,
       "high": -0.008051324300169062,
-      "looks": 224,
+      "looks": 230,
       "low": -0.035888350114382975,
       "market": "spread",
       "name": "spread",
@@ -1503,14 +1503,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": 0.09378590475827576,
-      "adjusted_low": -0.30872085874293814,
+      "adjusted_high": 0.0941521333197169,
+      "adjusted_low": -0.3090870873043793,
       "bets": 1252,
       "cluster_unit": "game",
       "clusters": 390,
       "enough_evidence": true,
       "high": -0.0006048586975574283,
-      "looks": 224,
+      "looks": 230,
       "low": -0.21433009528710495,
       "market": "spread_h1",
       "name": "spread_h1",
@@ -1519,14 +1519,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.02001442146256355,
-      "adjusted_low": -0.07744595470851619,
+      "adjusted_high": -0.019962166271572306,
+      "adjusted_low": -0.07749820989950743,
       "bets": 26230,
       "cluster_unit": "day",
       "clusters": 365,
       "enough_evidence": true,
       "high": -0.033482533705870454,
-      "looks": 224,
+      "looks": 230,
       "low": -0.06397784246520928,
       "market": "team_total",
       "name": "team_total",
@@ -1535,14 +1535,14 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": -0.00950073428737546,
-      "adjusted_low": -0.061515703641288826,
+      "adjusted_high": -0.00945340746177336,
+      "adjusted_low": -0.061563030466890926,
       "bets": 53800,
       "cluster_unit": "game",
       "clusters": 21189,
       "enough_evidence": true,
       "high": -0.021698622903557292,
-      "looks": 224,
+      "looks": 230,
       "low": -0.049317815025106994,
       "market": "total_points",
       "name": "total_points",
@@ -1551,14 +1551,14 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": 0.15927852247775018,
-      "adjusted_low": -0.2610566968006937,
+      "adjusted_high": 0.15966097260440232,
+      "adjusted_low": -0.2614391469273458,
       "bets": 1109,
       "cluster_unit": "game",
       "clusters": 370,
       "enough_evidence": true,
       "high": 0.06070685647654591,
-      "looks": 224,
+      "looks": 230,
       "low": -0.16248503079948942,
       "market": "total_points_h1",
       "name": "total_points_h1",
@@ -1567,14 +1567,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.022017456799468302,
-      "adjusted_low": -0.07611272717717596,
+      "adjusted_high": -0.02196823717175604,
+      "adjusted_low": -0.07616194680488822,
       "bets": 175690,
       "cluster_unit": "game",
       "clusters": 26086,
       "enough_evidence": true,
       "high": -0.03470319113567193,
-      "looks": 224,
+      "looks": 230,
       "low": -0.06342699284097233,
       "market": "",
       "name": "every market",
@@ -1606,14 +1606,14 @@
   },
   "tiers": [
     {
-      "adjusted_high": 0.01564910189043328,
-      "adjusted_low": -0.09878001986376068,
+      "adjusted_high": 0.015753217439405623,
+      "adjusted_low": -0.09888413541273303,
       "bets": 37939,
       "cluster_unit": "game",
       "clusters": 5984,
       "enough_evidence": true,
       "high": -0.01118535939912536,
-      "looks": 224,
+      "looks": 230,
       "low": -0.07194555857420204,
       "market": "",
       "name": "high_major",
@@ -1622,14 +1622,14 @@
       "verdict": "no demonstrated edge"
     },
     {
-      "adjusted_high": -0.012862338735490135,
-      "adjusted_low": -0.09672897792389076,
+      "adjusted_high": -0.012786031052221161,
+      "adjusted_low": -0.09680528560715973,
       "bets": 81404,
       "cluster_unit": "game",
       "clusters": 11323,
       "enough_evidence": true,
       "high": -0.03252967558371718,
-      "looks": 224,
+      "looks": 230,
       "low": -0.07706164107566371,
       "market": "",
       "name": "mid_major",
@@ -1638,14 +1638,14 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": -0.0015183136863277866,
-      "adjusted_low": -0.08998449846095954,
+      "adjusted_high": -0.0014378210175726644,
+      "adjusted_low": -0.09006499112971467,
       "bets": 56340,
       "cluster_unit": "game",
       "clusters": 8777,
       "enough_evidence": true,
       "high": -0.022264277426828048,
-      "looks": 224,
+      "looks": 230,
       "low": -0.06923853472045928,
       "market": "",
       "name": "low_major",
@@ -1654,14 +1654,14 @@
       "verdict": "demonstrated deficit"
     },
     {
-      "adjusted_high": 0.1456151202373992,
-      "adjusted_low": -1.595350569972849,
+      "adjusted_high": 0.14719917153307915,
+      "adjusted_low": -1.596934621268529,
       "bets": 7,
       "cluster_unit": "game",
       "clusters": 2,
       "enough_evidence": false,
       "high": -0.262653996087304,
-      "looks": 224,
+      "looks": 230,
       "low": -1.1870814536481458,
       "market": "",
       "name": "unplaced",

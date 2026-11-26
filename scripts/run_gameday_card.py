@@ -444,6 +444,8 @@ def main(argv: list[str] | None = None) -> int:
                 credit_cap=cap,
                 day=day,
                 market_tiers=tiers,
+                # The sharp book's fair price (decision 122): never a price.
+                reference=True,
             )
         except ProviderError as exc:
             print(redact(f"::error::{exc}"), file=sys.stderr)

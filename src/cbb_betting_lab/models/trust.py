@@ -307,7 +307,22 @@ def fair_from_pair(first: float, second: float) -> float | None:
     return first / total if total > 1.0 else None
 
 
-def market_probabilities(wagers: Iterable, min_books: int | None = None) -> dict[tuple, float]:
+#: Decision 122 (Cooper, 2026-11-26): where the reference book
+#: (`odds_api.REFERENCE_BOOKMAKERS`, the sharpest market there is) quotes both
+#: sides of a wager at its own number, its power-de-vigged price IS the fair
+#: price, in place of the US books' median. Its quotes never become a price
+#: the card can take. `REFERENCE_ON = False` restores the median everywhere.
+REFERENCE_ON = True
+
+
+def reference_probabilities(wagers: Iterable) -> dict[tuple, float]:
+    """Wager key -> the reference book's own de-vigged probability (one book)."""
+    return market_probabilities(wagers, min_books=1)
+
+
+def market_probabilities(
+    wagers: Iterable, min_books: int | None = None, reference: Mapping | None = None
+) -> dict[tuple, float]:
     """Wager key -> de-vigged market probability, the median over books that
     quote both sides, when at least `MIN_FAIR_BOOKS` do. A wager with fewer is
     absent: a missing price stays missing, and a thin one is not a price."""
@@ -337,17 +352,24 @@ def market_probabilities(wagers: Iterable, min_books: int | None = None) -> dict
         if fair and len(fair) >= floor:
             out[first.key] = float(median(fair))
             out[second.key] = 1.0 - out[first.key]
+    if reference and REFERENCE_ON:
+        for wager in wagers:
+            value = reference.get(wager.key)
+            if value is not None and value == value:
+                out[wager.key] = float(value)
     return out
 
 
-def apply(probabilities: Mapping, wagers: Iterable, table: TrustTable | None) -> dict:
+def apply(
+    probabilities: Mapping, wagers: Iterable, table: TrustTable | None, reference: Mapping | None = None
+) -> dict:
     """The probability map the edge bar reads. Unchanged when `table` is absent
     or inactive; otherwise every wager is pulled toward its market price, and a
     wager with no two-sided price is dropped (no trusted opinion)."""
     if table is None or not table.active:
         return dict(probabilities or {})
     wagers = list(wagers)
-    market = market_probabilities(wagers)
+    market = market_probabilities(wagers, reference=reference)
     out: dict = {}
     for wager in wagers:
         raw = (probabilities or {}).get(wager.key)

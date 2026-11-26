@@ -558,6 +558,9 @@ jobs:
           # Cooper's KenPom subscription key (decision 92). Absent, KenPom
           # is skipped and the log says so; it is never printed.
           KENPOM_API_KEY: ${{ secrets.KENPOM_API_KEY }}
+          CBD_USER: ${{ secrets.CBD_USER }}
+          CBD_PW: ${{ secrets.CBD_PW }}
+          CBD_EMAIL: ${{ secrets.CBD_EMAIL }}
         run: |
           set -eu
           python scripts/fetch_second_opinion.py --as-of "${{ steps.identity.outputs.day }}"
