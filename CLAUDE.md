@@ -1347,6 +1347,15 @@ half in the Size column. Nothing is withdrawn. Registered as
 `card_bars_2026_11_26`, one per tier; no receipt is touched and no frozen
 opinion is re-cut.
 
+### 2026-11-26: the card keeps its candidates, and replays its own rules (decision 121)
+
+Cooper: *"all 3"*. Each card run keeps every wager that cleared the flat 2%
+bar and every gate but the stricter bars (`cbb_card_candidates.csv`, carried
+on card-feed as `card_candidates.csv`), and `reports/card_whatif.py`
+replays every slot with today's card rules and with each rule switched the
+other way, per tier, published as `latest_card_whatif.md`. Descriptive only;
+nothing registered, nothing the card reads is changed.
+
 ## Contract strings — never change these
 
 Cooper's scheduled routines hard-code these. Renaming any of them silently

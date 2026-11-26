@@ -577,6 +577,29 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Wrote {card}")
     print(f"Wrote {comment}")
     _write_state(state, run)
+    if not args.rehearsal:
+        # Every candidate the card considered, for the what-if replay
+        # (`reports/card_whatif.py`). Soft: a failure here never stops a card.
+        try:
+            from cbb_betting_lab.reports import card_whatif
+
+            # Carried in the processed store when the card reads the real one
+            # (where the workflow restores and publishes it); beside the card's
+            # own outputs otherwise, so a run over fixtures writes nothing into
+            # the tree it reads.
+            if Path(args.processed_dir).resolve() == Path(PROCESSED_DIR).resolve():
+                carried = Path(PROCESSED_DIR) / card_whatif.CANDIDATES_FILENAME
+            else:
+                carried = outputs / card_whatif.CANDIDATES_FILENAME
+            card_whatif.write(
+                card_whatif.append(
+                    card_whatif.read(carried), run.result.candidates, slate_date=day, card_slot=slot.name
+                ),
+                carried,
+            )
+            print(f"Candidates: {len(run.result.candidates):,} kept for the what-if replay in {carried}.")
+        except Exception as exc:  # noqa: BLE001
+            print(f"::warning::The card's candidates were not kept for the what-if replay: {exc}")
 
     if not run.selections:
         # The allowlist half of this sentence is read off the policy, never
