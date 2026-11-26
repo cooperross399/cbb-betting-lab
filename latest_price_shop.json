@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 184,
-      "away_team": "Maryland Terrapins",
-      "book": "courtside",
-      "books": 11,
-      "commence": "2026-11-26T18:00:00+00:00",
-      "edge": 0.036,
-      "event_id": "fce1d0e39b7353f5d69bc77cf21ee9d1",
-      "fair_american": 174,
-      "game": "Maryland Terrapins at San Diego St Aztecs",
-      "home_team": "San Diego St Aztecs",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "as_of": "2026-11-26T03:15+00:00",
-  "captures": 345,
+  "alerts": [],
+  "as_of": "2026-11-26T13:44+00:00",
+  "captures": 346,
   "cells": [
     {
       "beat_close": 0.8,
@@ -68,12 +52,12 @@
   "correction_factor": 1.8815404941435947,
   "current": [
     {
-      "american": 184,
+      "american": 189,
       "away_team": "Maryland Terrapins",
       "book": "courtside",
-      "books": 11,
+      "books": 19,
       "commence": "2026-11-26T18:00:00+00:00",
-      "edge": 0.036,
+      "edge": 0.056,
       "event_id": "fce1d0e39b7353f5d69bc77cf21ee9d1",
       "fair_american": 174,
       "game": "Maryland Terrapins at San Diego St Aztecs",
@@ -81,24 +65,9 @@
       "line": null,
       "market": "moneyline",
       "selection": "home"
-    },
-    {
-      "american": 168,
-      "away_team": "Baylor Bears",
-      "book": "courtside",
-      "books": 11,
-      "commence": "2026-11-27T04:30:00+00:00",
-      "edge": 0.0235,
-      "event_id": "00ffa84e4fac12fc9b2885305e76ad31",
-      "fair_american": 162,
-      "game": "Baylor Bears at Gonzaga Bulldogs",
-      "home_team": "Gonzaga Bulldogs",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-26T03:13:36+00:00",
+  "latest_capture": "2026-11-26T13:42:25+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
