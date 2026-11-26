@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-26T23:00+00:00",
-  "captures": 356,
+  "as_of": "2026-11-26T23:50+00:00",
+  "captures": 357,
   "cells": [
     {
       "beat_close": 0.8,
@@ -52,22 +52,37 @@
   "correction_factor": 1.8867178582120565,
   "current": [
     {
-      "american": -105,
-      "away_team": "Liberty Flames",
-      "book": "betmgm",
-      "books": 5,
-      "commence": "2026-11-27T17:00:00+00:00",
-      "edge": 0.0305,
-      "event_id": "f3cd5043f4c5a7d9f1a5b5dc4f0417f3",
-      "fair_american": -112,
-      "game": "Liberty Flames at St. Thomas (MN) Tommies",
-      "home_team": "St. Thomas (MN) Tommies",
-      "line": 1.5,
-      "market": "spread",
+      "american": -245,
+      "away_team": "SMU Mustangs",
+      "book": "fanduel",
+      "books": 18,
+      "commence": "2026-11-27T00:00:00+00:00",
+      "edge": 0.0279,
+      "event_id": "8cdf0f9df5b4480c117a9455b60b067b",
+      "fair_american": -270,
+      "game": "SMU Mustangs at LSU Tigers",
+      "home_team": "LSU Tigers",
+      "line": null,
+      "market": "moneyline",
       "selection": "home"
+    },
+    {
+      "american": -240,
+      "away_team": "North Texas Mean Green",
+      "book": "fanduel",
+      "books": 7,
+      "commence": "2026-11-28T01:00:00+00:00",
+      "edge": 0.0236,
+      "event_id": "d41c0bb8557bb274bce7d03b0dd33d3a",
+      "fair_american": -260,
+      "game": "North Texas Mean Green at North Dakota St Bison",
+      "home_team": "North Dakota St Bison",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-26T22:57:20+00:00",
+  "latest_capture": "2026-11-26T23:47:58+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02
