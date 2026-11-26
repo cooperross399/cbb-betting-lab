@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-25T23:38+00:00",
-  "captures": 341,
+  "as_of": "2026-11-26T00:20+00:00",
+  "captures": 342,
   "cells": [
     {
       "beat_close": 0.8,
@@ -38,13 +38,13 @@
       "ungraded": 7
     },
     {
-      "beat_close": 0.6875,
-      "games": 53,
-      "graded": 64,
-      "high": 0.3155351719923781,
-      "low": -0.07316078563279307,
-      "mean": 0.12118719317979251,
-      "shops": 93,
+      "beat_close": 0.6865671641791045,
+      "games": 56,
+      "graded": 67,
+      "high": 0.30305567306434295,
+      "low": -0.06841231132135356,
+      "mean": 0.1173216808714947,
+      "shops": 96,
       "tier": "unplaced",
       "ungraded": 29
     }
@@ -55,11 +55,11 @@
       "american": -364,
       "away_team": "Georgetown Hoyas",
       "book": "courtside",
-      "books": 11,
+      "books": 10,
       "commence": "2026-11-26T19:30:00+00:00",
-      "edge": 0.0248,
+      "edge": 0.026,
       "event_id": "1ea8ceedbe8d577ba3c6ed8239137c4c",
-      "fair_american": -410,
+      "fair_american": -412,
       "game": "Georgetown Hoyas at Texas Longhorns",
       "home_team": "Texas Longhorns",
       "line": null,
@@ -82,14 +82,14 @@
       "selection": "away"
     },
     {
-      "american": -116,
+      "american": -110,
       "away_team": "Baylor Bears",
-      "book": "courtside",
-      "books": 7,
+      "book": "williamhill_us",
+      "books": 8,
       "commence": "2026-11-27T04:30:00+00:00",
-      "edge": 0.0248,
+      "edge": 0.0224,
       "event_id": "00ffa84e4fac12fc9b2885305e76ad31",
-      "fair_american": -122,
+      "fair_american": -115,
       "game": "Baylor Bears at Gonzaga Bulldogs",
       "home_team": "Gonzaga Bulldogs",
       "line": 4.5,
@@ -97,7 +97,7 @@
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-25T23:35:55+00:00",
+  "latest_capture": "2026-11-26T00:17:09+00:00",
   "looks": 221,
   "min_books": 3,
   "shop_edge": 0.02
