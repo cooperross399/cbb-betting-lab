@@ -2,23 +2,23 @@
   "alert_edge": 0.03,
   "alerts": [
     {
-      "american": -110,
-      "away_team": "Saint Mary's Gaels",
-      "book": "williamhill_us",
-      "books": 4,
-      "commence": "2026-11-26T22:20:00+00:00",
-      "edge": 0.0312,
-      "event_id": "ae417d224a63774815f9e4816a7d776f",
-      "fair_american": -117,
-      "game": "Saint Mary's Gaels at UCLA Bruins",
-      "home_team": "UCLA Bruins",
-      "line": 150.5,
-      "market": "total_points",
-      "selection": "over"
+      "american": -105,
+      "away_team": "Liberty Flames",
+      "book": "betmgm",
+      "books": 5,
+      "commence": "2026-11-27T17:00:00+00:00",
+      "edge": 0.0305,
+      "event_id": "f3cd5043f4c5a7d9f1a5b5dc4f0417f3",
+      "fair_american": -112,
+      "game": "Liberty Flames at St. Thomas (MN) Tommies",
+      "home_team": "St. Thomas (MN) Tommies",
+      "line": 1.5,
+      "market": "spread",
+      "selection": "home"
     }
   ],
-  "as_of": "2026-11-26T22:20+00:00",
-  "captures": 354,
+  "as_of": "2026-11-26T22:44+00:00",
+  "captures": 355,
   "cells": [
     {
       "beat_close": 0.8,
@@ -68,22 +68,22 @@
   "correction_factor": 1.8867178582120565,
   "current": [
     {
-      "american": -110,
-      "away_team": "Saint Mary's Gaels",
-      "book": "williamhill_us",
-      "books": 4,
-      "commence": "2026-11-26T22:20:00+00:00",
-      "edge": 0.0312,
-      "event_id": "ae417d224a63774815f9e4816a7d776f",
-      "fair_american": -117,
-      "game": "Saint Mary's Gaels at UCLA Bruins",
-      "home_team": "UCLA Bruins",
-      "line": 150.5,
-      "market": "total_points",
-      "selection": "over"
+      "american": -105,
+      "away_team": "Liberty Flames",
+      "book": "betmgm",
+      "books": 5,
+      "commence": "2026-11-27T17:00:00+00:00",
+      "edge": 0.0305,
+      "event_id": "f3cd5043f4c5a7d9f1a5b5dc4f0417f3",
+      "fair_american": -112,
+      "game": "Liberty Flames at St. Thomas (MN) Tommies",
+      "home_team": "St. Thomas (MN) Tommies",
+      "line": 1.5,
+      "market": "spread",
+      "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-26T22:17:54+00:00",
+  "latest_capture": "2026-11-26T22:42:29+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02
