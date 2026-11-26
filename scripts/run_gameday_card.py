@@ -583,7 +583,14 @@ def main(argv: list[str] | None = None) -> int:
         try:
             from cbb_betting_lab.reports import card_whatif
 
-            carried = Path(args.processed_dir) / card_whatif.CANDIDATES_FILENAME
+            # Carried in the processed store when the card reads the real one
+            # (where the workflow restores and publishes it); beside the card's
+            # own outputs otherwise, so a run over fixtures writes nothing into
+            # the tree it reads.
+            if Path(args.processed_dir).resolve() == Path(PROCESSED_DIR).resolve():
+                carried = Path(PROCESSED_DIR) / card_whatif.CANDIDATES_FILENAME
+            else:
+                carried = outputs / card_whatif.CANDIDATES_FILENAME
             card_whatif.write(
                 card_whatif.append(
                     card_whatif.read(carried), run.result.candidates, slate_date=day, card_slot=slot.name
