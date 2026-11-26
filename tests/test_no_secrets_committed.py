@@ -71,6 +71,7 @@ probe genuinely recorded does not excuse the same hex run in `scripts/`.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -114,6 +115,31 @@ PLACEHOLDERS = {
 #: an uppercased key were all full passes. The lookarounds still refuse to fire
 #: inside a longer hex run, so a SHA-256 in a manifest is not a finding.
 HEX_KEY = re.compile(r"(?<![0-9A-Fa-f])[0-9A-Fa-f]{32}(?![0-9A-Fa-f])")
+
+
+#: The Cloudflare Web Analytics site token in the shared pages' beacon tag is
+#: 32 hex, the shape of a provider key, and it is public by design: every
+#: visitor's browser sends it. Cooper approved allowing exactly that one token
+#: (2026-11-26). It is recorded by SHA-256 so this file holds no 32-hex run,
+#: and it is dropped only inside `data-cf-beacon` in a page under `web/`; the
+#: same value anywhere else, or any other value in the attribute, is a finding.
+PUBLIC_BEACON_TOKEN_SHA256: frozenset[str] = frozenset(
+    {"470aa5f7fdf48c265327ec0eedef19299df3f6deea1506c4b4d638447a7c504a"}
+)
+BEACON_SCOPE = "web/"
+BEACON_ATTRIBUTE = re.compile(r"""data-cf-beacon='\{"token": "([0-9a-f]{32})"\}'""")
+
+
+def _without_public_beacon(relative: str, text: str) -> str:
+    """`text` with the one approved beacon attribute removed, in a page only."""
+    if not relative.startswith(BEACON_SCOPE):
+        return text
+
+    def drop(match: re.Match[str]) -> str:
+        digest = hashlib.sha256(match.group(1).encode("ascii")).hexdigest()
+        return "" if digest in PUBLIC_BEACON_TOKEN_SHA256 else match.group(0)
+
+    return BEACON_ATTRIBUTE.sub(drop, text)
 
 #: The matcher this replaces, kept so the regression tests can show what it
 #: missed rather than assert it from memory.
@@ -551,7 +577,7 @@ def _hex_key_offenders(
             found += [match.group(0) for match in HEX_KEY.finditer(relative)]
             found += [match.group(0) for match in HEX_KEY.finditer(_link_target(path))]
         if bodies:
-            found += [match.group(0) for match in HEX_KEY.finditer(_read(path))]
+            found += [match.group(0) for match in HEX_KEY.finditer(_without_public_beacon(relative, _read(path)))]
         for value in found:
             if value in permitted:
                 continue
@@ -1136,3 +1162,33 @@ def test_the_gaps_this_guard_still_has_are_the_ones_written_down(tmp_path: Path)
     unknown.write_text(f'SECRET_THING = "{SEPARATED_SHAPED}"\n', encoding="utf-8")
     assert _assignment_offenders([unknown], tmp_path) == []
     assert CREDENTIAL_NAME_SHAPE.findall("SECRET_THING") == []
+
+
+def test_the_public_beacon_token_is_exempt_only_in_its_attribute_in_a_page(tmp_path: Path) -> None:
+    """The approved beacon token passes only inside `data-cf-beacon` in a page
+    under `web/`. The digest is swapped for a fake value's so this module still
+    holds no real 32-hex run."""
+    fake = "0123456789abcdef" * 2
+    tag = "<script data-cf-beacon='{\"token\": \"%s\"}'></script>"
+    global PUBLIC_BEACON_TOKEN_SHA256
+    saved = PUBLIC_BEACON_TOKEN_SHA256
+    PUBLIC_BEACON_TOKEN_SHA256 = frozenset({hashlib.sha256(fake.encode()).hexdigest()})
+    try:
+        (tmp_path / "web").mkdir()
+        (tmp_path / "scripts").mkdir()
+        page = tmp_path / "web" / "page.html"
+        page.write_text(tag % fake, encoding="utf-8")
+        other = tmp_path / "scripts" / "page.html"
+        other.write_text(tag % fake, encoding="utf-8")
+        bare = tmp_path / "web" / "bare.html"
+        bare.write_text(f"token {fake}", encoding="utf-8")
+        unrecorded = tmp_path / "web" / "unrecorded.html"
+        unrecorded.write_text(tag % ("f" * 32), encoding="utf-8")
+        found = _hex_key_offenders([page, other, bare, unrecorded], set(), tmp_path)
+    finally:
+        PUBLIC_BEACON_TOKEN_SHA256 = saved
+    assert sorted(line.split(":")[0] for line in found) == [
+        "scripts/page.html",
+        "web/bare.html",
+        "web/unrecorded.html",
+    ]
