@@ -1,0 +1,12 @@
+slate_date,card_slot,event_id,commence_time,home_team,away_team,market,segment,player,selection,line,tier,american_odds,book,probability,edge
+2026-11-26,evening,f8c8f160933b1de8443aee985386d93f,2026-11-27T03:30:00Z,Pacific Tigers,Omaha Mavericks,moneyline,game,,home,,mid_major,-310.0,fanduel,0.7714236222708036,0.02026995203557891
+2026-11-26,evening,f026af6e32a421c5d3478e37d9198de0,2026-11-26T23:00:00Z,Creighton Bluejays,TCU Horned Frogs,alternate_spread,game,,away,4.5,high_major,-155.0,betmgm,0.6221319284059682,0.023507366087238024
+2026-11-26,evening,f026af6e32a421c5d3478e37d9198de0,2026-11-26T23:00:00Z,Creighton Bluejays,TCU Horned Frogs,alternate_spread,game,,away,5.5,high_major,-175.0,betmgm,0.6591733683112864,0.03584386448916432
+2026-11-26,evening,958c447826e0cf914c566770b0f9bdab,2026-11-27T00:00:00Z,Pittsburgh Panthers,DePaul Blue Demons,alternate_spread,game,,home,4.5,high_major,-185.0,betmgm,0.6632189307421553,0.0217156500622393
+2026-11-26,evening,8cdf0f9df5b4480c117a9455b60b067b,2026-11-27T00:00:00Z,LSU Tigers,SMU Mustangs,total_points_h1,h1,,over,75.5,high_major,136.0,fanduel,0.43565210675575,0.028138971943570068
+2026-11-26,evening,8d107304a440a02e1eaf34b9e8eac486,2026-11-27T01:00:00Z,UC Davis Aggies,Jacksonville St Gamecocks,alternate_spread,game,,away,6.5,mid_major,-380.0,bovada,0.8217661944704855,0.03802045617324468
+2026-11-26,evening,8d107304a440a02e1eaf34b9e8eac486,2026-11-27T01:00:00Z,UC Davis Aggies,Jacksonville St Gamecocks,alternate_spread,game,,away,4.5,mid_major,-275.0,bovada,0.7493742926731688,0.021874035463412156
+2026-11-26,evening,00ffa84e4fac12fc9b2885305e76ad31,2026-11-27T04:30:00Z,Gonzaga Bulldogs,Baylor Bears,alternate_spread,game,,home,5.5,high_major,-340.0,bovada,0.792622740469809,0.025747075902105676
+2026-11-26,evening,00ffa84e4fac12fc9b2885305e76ad31,2026-11-27T04:30:00Z,Gonzaga Bulldogs,Baylor Bears,alternate_spread,game,,home,3.5,high_major,-245.0,bovada,0.7278560219893406,0.02494011259723483
+2026-11-26,evening,00ffa84e4fac12fc9b2885305e76ad31,2026-11-27T04:30:00Z,Gonzaga Bulldogs,Baylor Bears,alternate_spread,game,,home,2.5,high_major,-210.0,bovada,0.6919283903640372,0.02141810006119793
+2026-11-26,evening,3ce2ec8471b46e17dc7b246a086a3e8d,2026-11-27T04:30:00Z,Oregon Ducks,Texas Tech Red Raiders,alternate_spread,game,,home,3.5,high_major,280.0,bovada,0.2686165509318341,0.020742893540969698

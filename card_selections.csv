@@ -481,3 +481,4 @@ slate_date,card_slot,event_id,commence_time,home_team,away_team,market,segment,p
 2026-11-25,evening,47afd1035c7a612b40883776528fff6c,2026-11-26T00:00:00Z,The Citadel Bulldogs,South Carolina Upstate Spartans,alternate_spread,game,,home,3.5,-250.0,-250.0,bovada,0.8118379931666752,0.050904241660848504,low_major,state
 2026-11-26,morning,8cdf0f9df5b4480c117a9455b60b067b,2026-11-27T00:00:00Z,LSU Tigers,SMU Mustangs,total_points_h1,h1,,over,77.5,148.0,137.0,fanduel,0.36989433299223834,0.06953002347871551,high_major,state
 2026-11-26,morning,fce1d0e39b7353f5d69bc77cf21ee9d1,2026-11-26T18:00:00Z,San Diego St Aztecs,Maryland Terrapins,moneyline,game,,home,,189.0,180.0,courtside,0.394282721737837,0.05602607711832763,high_major,state
+2026-11-26,evening,8cdf0f9df5b4480c117a9455b60b067b,2026-11-27T00:00:00Z,LSU Tigers,SMU Mustangs,total_points_h1,h1,,over,75.5,136.0,135.0,fanduel,0.4467488274430822,0.028138971943570068,high_major,state

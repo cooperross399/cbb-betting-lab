@@ -1,16 +1,16 @@
 {
  "as_of": "2026-11-26",
- "picks": 482,
+ "picks": 483,
  "comments_read": 1,
  "outcomes": {
   "lost": 303,
   "pending": 3,
-  "won": 176
+  "won": 177
  },
  "clv": {
-  "picks": 265,
-  "mean": -0.0022,
-  "beatClosePct": 48.3
+  "picks": 266,
+  "mean": -0.0021,
+  "beatClosePct": 48.5
  },
  "rows": [
   {
@@ -10590,10 +10590,10 @@
    "model": 0.394282721737837,
    "edge": 0.05602607711832763,
    "tier": "high_major",
-   "outcome": "pending",
-   "result": null,
-   "closeProbability": 0.3726,
-   "clv": 0.0265
+   "outcome": "won",
+   "result": "win",
+   "closeProbability": 0.3704,
+   "clv": 0.0243
   },
   {
    "date": "2026-11-26",
@@ -10611,6 +10611,28 @@
    "book": "fanduel",
    "model": 0.36989433299223834,
    "edge": 0.06953002347871551,
+   "tier": "high_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": null,
+   "clv": null
+  },
+  {
+   "date": "2026-11-26",
+   "slot": "evening",
+   "eventId": "8cdf0f9df5b4480c117a9455b60b067b",
+   "home": "LSU Tigers",
+   "away": "SMU Mustangs",
+   "market": "total_points_h1",
+   "segment": "h1",
+   "category": "Totals",
+   "selection": "over",
+   "line": 75.5,
+   "price": 136.0,
+   "betDownTo": 135.0,
+   "book": "fanduel",
+   "model": 0.4467488274430822,
+   "edge": 0.028138971943570068,
    "tier": "high_major",
    "outcome": "pending",
    "result": null,
