@@ -348,9 +348,7 @@ class Component extends DCLogic {
       cell("Best bets · season", picks, "picks", (x) => wr(x)),
       cell(epl ? "Favoured side · season" : "Straight up · season", kept(r.straightUp) ? r.straightUp : null, "straightUp", (x) => `${wr(x)} of ${epl ? "matches" : "games"}`),
       cell(epl ? "Total 2.5 · season" : "Totals · season", kept(r.totals) ? r.totals : null, "totals", () => "model side of the line"),
-      ...(cbb ? [cell("Spread · season", kept(r.ats) ? r.ats : null, "ats", (x) => `${wr(x)} · model side, best number`),
-                 cell("Spread · market number", kept(r.atsMarket) ? r.atsMarket : null, "atsMarket", (x) => `${wr(x)} · same side, consensus line`),
-                 cell("Strong spreads · season", kept(r.atsStrong) ? r.atsStrong : null, "atsStrong", (x) => `${wr(x)} · agrees with the outside projection, line moved or shopped`)] : []),
+      ...(cbb ? [cell("Spread · season", kept(r.ats) ? r.ats : null, "ats", (x) => `${wr(x)} · model side, best number`)] : []),
       cell("Leans · season", kept(r.leans) ? r.leans : null, "leans", () => "tracked, no bet"),
     ];
   }
