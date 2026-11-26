@@ -4,11 +4,11 @@
 
 College basketball's large sample makes this **more** urgent, not less. A bigger n narrows every interval, including the intervals of the hypotheses that are wrong. Sample size buys power, never innocence.
 
-**224 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.88** before it means what it says.
+**230 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.89** before it means what it says.
 
 **Alpha budget: 6 new hypotheses a week**, declared 2026-09-01. Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state — re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise.
 
-**183 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
+**189 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
 
 | Search | Hypotheses |
 |:---|---:|
@@ -50,6 +50,8 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | card_bars_2026_11_20 | 3 |
 | spread_bias_2026_11_21 | 3 |
 | card_bars_2026_11_26 | 3 |
+| pinnacle_fair_2026_11_26 | 3 |
+| torvik_second_opinion_2026_11_26 | 3 |
 | november_prior | 2 |
 | reachability | 1 |
 | champion_challenger | 1 |
@@ -282,6 +284,12 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | 222 | card_bars_2026_11_26 | high-major: the decision-120 card changes together (models/card_bars.py: the -150 heavy-favourite bar switched off; a 7% edge bar on full-game alternate spreads priced +200 or longer; a game's one slot ranked by an edge that keeps a quarter of any claim above 8% and gives a moneyline two points; and the evening card's picks on games the morning card did not pick sized at half) raise the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-26 | pending |
 | 223 | card_bars_2026_11_26 | mid-major: the decision-120 card changes together (models/card_bars.py: the -150 heavy-favourite bar switched off; a 7% edge bar on full-game alternate spreads priced +200 or longer; a game's one slot ranked by an edge that keeps a quarter of any claim above 8% and gives a moneyline two points; and the evening card's picks on games the morning card did not pick sized at half) raise the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-26 | pending |
 | 224 | card_bars_2026_11_26 | low-major: the decision-120 card changes together (models/card_bars.py: the -150 heavy-favourite bar switched off; a 7% edge bar on full-game alternate spreads priced +200 or longer; a game's one slot ranked by an edge that keeps a quarter of any claim above 8% and gives a moneyline two points; and the evening card's picks on games the morning card did not pick sized at half) raise the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-26 | pending |
+| 225 | pinnacle_fair_2026_11_26 | high-major: the reference-book fair price (models/trust.py REFERENCE_ON: the pinnacle power-de-vigged price at the wager's own number in place of the US-book median, wherever pinnacle quotes both sides; pinnacle quotes never selectable) raises the closing-line value of the card's team selections against the last capture before tip (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-26 | pending |
+| 226 | pinnacle_fair_2026_11_26 | mid-major: the reference-book fair price (models/trust.py REFERENCE_ON: the pinnacle power-de-vigged price at the wager's own number in place of the US-book median, wherever pinnacle quotes both sides; pinnacle quotes never selectable) raises the closing-line value of the card's team selections against the last capture before tip (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-26 | pending |
+| 227 | pinnacle_fair_2026_11_26 | low-major: the reference-book fair price (models/trust.py REFERENCE_ON: the pinnacle power-de-vigged price at the wager's own number in place of the US-book median, wherever pinnacle quotes both sides; pinnacle quotes never selectable) raises the closing-line value of the card's team selections against the last capture before tip (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-26 | pending |
+| 228 | torvik_second_opinion_2026_11_26 | high-major: adding T-Rank (through the cbbdata API) to the second-opinion consensus the card blends at card_factors.BLEND_WEIGHT lowers the card's walk-forward margin error against final scores and raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-26 | pending |
+| 229 | torvik_second_opinion_2026_11_26 | mid-major: adding T-Rank (through the cbbdata API) to the second-opinion consensus the card blends at card_factors.BLEND_WEIGHT lowers the card's walk-forward margin error against final scores and raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-26 | pending |
+| 230 | torvik_second_opinion_2026_11_26 | low-major: adding T-Rank (through the cbbdata API) to the second-opinion consensus the card blends at card_factors.BLEND_WEIGHT lowers the card's walk-forward margin error against final scores and raises the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-26 | pending |
 
 ## 7 quantities declared descriptive-only
 

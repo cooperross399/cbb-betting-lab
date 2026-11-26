@@ -2937,3 +2937,30 @@ def test_attach_game_ids_says_which_events_the_provider_files_reversed():
     assert by_event["reversed"]["game_id"] == 401920982
     assert bool(by_event["reversed"]["flipped"]) is True
     assert bool(by_event["straight"]["flipped"]) is False
+
+
+def test_the_reference_book_is_read_apart_and_never_staged_as_a_price(now):
+    """Decision 122: the sharp book's quotes set the fair price only. They are
+    asked by `bookmakers`, never by region, and never reach `board.rows`."""
+    seen: list[dict] = []
+
+    def requester(url, *, params, timeout):
+        seen.append(dict(params))
+        if url.endswith("/events"):
+            return FakeResponse([], {})
+        return FakeResponse(board_payloads(now), {"x-requests-last": "3"})
+
+    provider = odds_api.OddsApiProvider(
+        CBB, environment={"CBB_ODDS_API_KEY": "x" * 20}, requester=requester
+    )
+    plain = GC.fetch_board(provider, competition=CBB, credit_cap=40_000, day="2027-01-12")
+    assert plain.reference_rows.empty
+    assert not any("bookmakers" in p for p in seen)
+    seen.clear()
+    board = GC.fetch_board(provider, competition=CBB, credit_cap=40_000, day="2027-01-12", reference=True)
+    reference_calls = [p for p in seen if "bookmakers" in p]
+    assert len(reference_calls) == 1
+    assert reference_calls[0]["bookmakers"] == odds_api.REFERENCE_BOOKMAKERS
+    assert "regions" not in reference_calls[0]
+    assert not board.reference_rows.empty
+    assert len(board.rows) == len(plain.rows)

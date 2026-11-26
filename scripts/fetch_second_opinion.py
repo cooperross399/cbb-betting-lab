@@ -168,6 +168,7 @@ def _more_tables(season: int, as_of: str, raw_dir: Path) -> bool:
         _kenpom_history(key, season, as_of, raw_dir, schedule)
     else:
         print("KenPom: no KENPOM_API_KEY secret, so not read.")
+    wrote |= _torvik(season, as_of, raw_dir, schedule)
     allowed, why = second_opinion.allowed_by_robots(second_opinion.NET_URL)
     if allowed:
         try:
@@ -292,6 +293,61 @@ def _kenpom_history(key: str, season: int, as_of: str, raw_dir: Path, schedule) 
         fetched += 1
     print(f"KenPom archive: {fetched} dated day(s) written this run"
           + (f", {failed} could not be read." if failed else "."))
+
+
+def _torvik(season: int, as_of: str, raw_dir: Path, schedule) -> bool:
+    """T-Rank through cbbdata (decision 123), with the account in Cooper's
+    secrets: today's table as a named second opinion, and one dated copy per
+    day of the last `kenpom.BACKFILL_DAYS` for the layer audit. Soft."""
+    import os
+    from datetime import date, timedelta
+
+    user = os.environ.get("CBD_USER", "").strip()
+    password = os.environ.get("CBD_PW", "").strip()
+    if not user or not password:
+        print("T-Rank: no CBD_USER / CBD_PW secrets, so not read.")
+        return False
+    try:
+        key, created = second_opinion.cbbdata_key(user, password, os.environ.get("CBD_EMAIL", "").strip())
+        if created:
+            print("T-Rank: the cbbdata account was created from the secrets and logged in.")
+        archive = second_opinion.fetch_torvik_archive(key, season)
+        print(f"T-Rank archive: {len(archive):,} row(s); fields: " + ", ".join(map(str, archive.columns)))
+        table = second_opinion.torvik_on(archive, as_of)
+    except second_opinion.SecondOpinionError as exc:
+        print(f"::warning::T-Rank could not be read through cbbdata: {exc}", file=sys.stderr)
+        return False
+    wrote = _write_named(table, source=second_opinion.TORVIK_SOURCE, season=season,
+                         as_of=table.attrs.get("as_of", as_of), raw_dir=raw_dir, schedule=schedule)
+    if schedule is None:
+        return wrote
+    from cbb_betting_lab.data import kenpom
+
+    today = date.fromisoformat(as_of)
+    written = 0
+    for n in range(kenpom.BACKFILL_DAYS, 0, -1):
+        day = (today - timedelta(days=n)).isoformat()
+        path = card_factors.second_opinion_history_path(raw_dir, day, second_opinion.TORVIK_SOURCE)
+        if path.is_file():
+            continue
+        try:
+            dated = second_opinion.torvik_on(archive, day)
+        except second_opinion.SecondOpinionError:
+            continue
+        if dated.attrs.get("as_of") != day:
+            continue
+        resolved, _ = second_opinion.resolve(dated, schedule)
+        if int(resolved["team_id"].notna().sum()) < card_factors.SECOND_OPINION_MIN_TEAMS:
+            continue
+        out = resolved.copy()
+        out.insert(0, "source", second_opinion.TORVIK_SOURCE)
+        out.insert(0, "season", int(season))
+        out.insert(0, "as_of", day)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        out[list(card_factors.SECOND_OPINION_COLUMNS)].to_csv(path, index=False)
+        written += 1
+    print(f"T-Rank archive: {written} dated day(s) written this run.")
+    return wrote
 
 
 if __name__ == "__main__":

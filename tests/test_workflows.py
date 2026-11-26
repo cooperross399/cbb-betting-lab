@@ -151,7 +151,7 @@ LEDGER_SCRIPT = "check_ledger_append_only.py"
 #: The credential names no gate workflow may bind into an `env:`. The suite
 #: must pass without either, and its absence is the proof that no test
 #: depends on a live provider.
-CREDENTIAL_NAMES = frozenset({"CBB_ODDS_API_KEY", "CBBD_API_KEY", "KENPOM_API_KEY"})
+CREDENTIAL_NAMES = frozenset({"CBB_ODDS_API_KEY", "CBBD_API_KEY", "KENPOM_API_KEY", "CBD_USER", "CBD_PW", "CBD_EMAIL"})
 
 #: The CLOSED SET of workflows allowed to write to this repository, and the
 #: one ref each may write. GitHub cannot scope `contents: write` to a ref, so
