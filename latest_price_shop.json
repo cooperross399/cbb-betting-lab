@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-26T21:32+00:00",
-  "captures": 353,
+  "alerts": [
+    {
+      "american": -110,
+      "away_team": "Saint Mary's Gaels",
+      "book": "williamhill_us",
+      "books": 4,
+      "commence": "2026-11-26T22:20:00+00:00",
+      "edge": 0.0312,
+      "event_id": "ae417d224a63774815f9e4816a7d776f",
+      "fair_american": -117,
+      "game": "Saint Mary's Gaels at UCLA Bruins",
+      "home_team": "UCLA Bruins",
+      "line": 150.5,
+      "market": "total_points",
+      "selection": "over"
+    }
+  ],
+  "as_of": "2026-11-26T22:20+00:00",
+  "captures": 354,
   "cells": [
     {
       "beat_close": 0.8,
@@ -38,20 +54,36 @@
       "ungraded": 7
     },
     {
-      "beat_close": 0.6533333333333333,
-      "games": 62,
-      "graded": 75,
-      "high": 0.26960460580246115,
-      "low": -0.06613155963387612,
-      "mean": 0.10173652308429251,
-      "shops": 104,
+      "beat_close": 0.6578947368421053,
+      "games": 63,
+      "graded": 76,
+      "high": 0.26649577175345285,
+      "low": -0.06480961153601694,
+      "mean": 0.10084308010871795,
+      "shops": 106,
       "tier": "unplaced",
-      "ungraded": 29
+      "ungraded": 30
     }
   ],
   "correction_factor": 1.8867178582120565,
-  "current": [],
-  "latest_capture": "2026-11-26T21:29:58+00:00",
+  "current": [
+    {
+      "american": -110,
+      "away_team": "Saint Mary's Gaels",
+      "book": "williamhill_us",
+      "books": 4,
+      "commence": "2026-11-26T22:20:00+00:00",
+      "edge": 0.0312,
+      "event_id": "ae417d224a63774815f9e4816a7d776f",
+      "fair_american": -117,
+      "game": "Saint Mary's Gaels at UCLA Bruins",
+      "home_team": "UCLA Bruins",
+      "line": 150.5,
+      "market": "total_points",
+      "selection": "over"
+    }
+  ],
+  "latest_capture": "2026-11-26T22:17:54+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02

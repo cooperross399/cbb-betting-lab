@@ -2,7 +2,7 @@
 
 **What this measures is reachability, not edge.** A backtest can say that a price would have won. Only this can say whether the price was still there when a human reached for it. In this sport that gap is the whole argument: the plausible edge lives in low-major games, and low-major games have the smallest limits and the fastest moves.
 
-**1,380,858 quotes across 372 captures**, 2026-10-24T03:13:39+00:00 to 2026-11-26T21:29:58+00:00, over 1,185 events and 19 books.
+**1,383,264 quotes across 373 captures**, 2026-10-24T03:13:39+00:00 to 2026-11-26T22:17:54+00:00, over 1,185 events and 19 books.
 
 | From | To | Judged | Survived | Gone | Unjudgeable |
 |:---|:---|---:|---:|---:|---:|
@@ -377,5 +377,6 @@
 | 2026-11-26T19:02:03+00:00 | 2026-11-26T19:35:04+00:00 | 1,982 | 68.2% | 631 | 66 |
 | 2026-11-26T19:35:04+00:00 | 2026-11-26T20:12:14+00:00 | 1,936 | 61.4% | 748 | 0 |
 | 2026-11-26T20:12:14+00:00 | 2026-11-26T21:29:58+00:00 | 1,842 | 65.0% | 645 | 262 |
+| 2026-11-26T21:29:58+00:00 | 2026-11-26T22:17:54+00:00 | 2,142 | 65.3% | 743 | 88 |
 
 **Unjudgeable is not gone.** A quote in an event the later capture did not cover says nothing about whether the book pulled the price. Scoring those as gone would manufacture a reachability finding out of a coverage gap — the same failure as reading a starved fetch as an unquoted market, one layer down.
