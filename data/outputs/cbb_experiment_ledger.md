@@ -4,11 +4,11 @@
 
 College basketball's large sample makes this **more** urgent, not less. A bigger n narrows every interval, including the intervals of the hypotheses that are wrong. Sample size buys power, never innocence.
 
-**221 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.88** before it means what it says.
+**224 distinct hypotheses tested.** Any new 95% interval must be widened by **x1.88** before it means what it says.
 
 **Alpha budget: 6 new hypotheses a week**, declared 2026-09-01. Six new hypotheses a week, declared before the season opened and before a single price had been measured. Six is what a weekly refit-and-measure can genuinely pre-register with a falsifiable direction for each; the queue that feeds it is `data/manual/weekly_search_queue.json`, which the loop reads and never writes. When that queue is empty the loop spends nothing, which is the steady state — re-measuring a hypothesis already in this ledger on another week's data is the same look, not a new one, and `Hypothesis.key()` makes that structural rather than a promise.
 
-**180 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
+**183 discovery, 41 holdout.** Putting a discovery finding to the holdout is a second look and is counted as one.
 
 | Search | Hypotheses |
 |:---|---:|
@@ -49,6 +49,7 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | projection_weights_2026_11_19 | 3 |
 | card_bars_2026_11_20 | 3 |
 | spread_bias_2026_11_21 | 3 |
+| card_bars_2026_11_26 | 3 |
 | november_prior | 2 |
 | reachability | 1 |
 | champion_challenger | 1 |
@@ -278,6 +279,9 @@ College basketball's large sample makes this **more** urgent, not less. A bigger
 | 219 | spread_bias_2026_11_21 | high-major: the spread_bias card layer (models/spread_bias.py: the card's home margin moved by minus the tier's mean disagreement with the main-market spread over the 14 slate days before, from the forward ledger, at least 20 games, clamped to 4 points) raises the share of games on which the card's own margin falls on the covering side of the main-market spread (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-21 | pending |
 | 220 | spread_bias_2026_11_21 | mid-major: the spread_bias card layer (models/spread_bias.py: the card's home margin moved by minus the tier's mean disagreement with the main-market spread over the 14 slate days before, from the forward ledger, at least 20 games, clamped to 4 points) raises the share of games on which the card's own margin falls on the covering side of the main-market spread (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-21 | pending |
 | 221 | spread_bias_2026_11_21 | low-major: the spread_bias card layer (models/spread_bias.py: the card's home margin moved by minus the tier's mean disagreement with the main-market spread over the 14 slate days before, from the forward ledger, at least 20 games, clamped to 4 points) raises the share of games on which the card's own margin falls on the covering side of the main-market spread (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-21 | pending |
+| 222 | card_bars_2026_11_26 | high-major: the decision-120 card changes together (models/card_bars.py: the -150 heavy-favourite bar switched off; a 7% edge bar on full-game alternate spreads priced +200 or longer; a game's one slot ranked by an edge that keeps a quarter of any claim above 8% and gives a moneyline two points; and the evening card's picks on games the morning card did not pick sized at half) raise the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-26 | pending |
+| 223 | card_bars_2026_11_26 | mid-major: the decision-120 card changes together (models/card_bars.py: the -150 heavy-favourite bar switched off; a 7% edge bar on full-game alternate spreads priced +200 or longer; a game's one slot ranked by an edge that keeps a quarter of any claim above 8% and gives a moneyline two points; and the evening card's picks on games the morning card did not pick sized at half) raise the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-26 | pending |
+| 224 | card_bars_2026_11_26 | low-major: the decision-120 card changes together (models/card_bars.py: the -150 heavy-favourite bar switched off; a 7% edge bar on full-game alternate spreads priced +200 or longer; a game's one slot ranked by an edge that keeps a quarter of any claim above 8% and gives a moneyline two points; and the evening card's picks on games the morning card did not pick sized at half) raise the return of the card's team selections against the card-time price (forward ledger only) | discovery | higher | — | 2027, 2028, 2029 | 2026-11-26 | pending |
 
 ## 7 quantities declared descriptive-only
 

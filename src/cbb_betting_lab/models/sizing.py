@@ -52,7 +52,8 @@ EXPLANATION = (
     "instead: +200 to +500 0.6u, +501 to +1500 0.4u, longer than +1500 0.2u "
     "(the NHL Due List ladder on a 1u base). The site's record counts every bet at "
     f"{BASE_UNITS:g}u, or to win {BASE_UNITS:g}u on a minus price, up to +199, "
-    "and at that ladder from +200, whatever trust says."
+    "and at that ladder from +200, whatever trust says. On the evening card a "
+    "pick on a game the morning card did not pick is bet at half that size."
 )
 
 

@@ -2490,6 +2490,7 @@ def run_card(
     for wager in wagers:
         guard.state_for(wager)
 
+    bars = card_bars.Bars(base=EDGE_THRESHOLD, card_slot=str(card_slot), morning=morning)
     result = select(
         wagers,
         trusted,
@@ -2500,8 +2501,11 @@ def run_card(
         price_band=PRICE_BAND,
         # Stricter bars on high-hold markets, heavy favourites and the evening
         # card's new games (`models/card_bars.py`, decision 116). Raise only.
-        bars=card_bars.Bars(base=EDGE_THRESHOLD, card_slot=str(card_slot), morning=morning),
+        bars=bars,
     )
+    # The evening card's new games are sized down (decision 120).
+    for row in result.selections:
+        row["size_scale"] = bars.size_scale(row)
     kept, withdrawn = guard.recheck(result.selections)
 
     # Freeze first. Only wagers whose game is still upcoming: an opinion frozen
@@ -2889,7 +2893,7 @@ def _selections_section(run: CardRun) -> list[str]:
                 f"| {row['selection']}{line} "
                 f"| {float(row['american_odds']):+g} "
                 f"| {_bet_down_to_cell(row)} "
-                f"| {sizing.units(run.trust_weights.get(str(row.get('tier') or '')), row.get('american_odds')):.2f}u "
+                f"| {sizing.units(run.trust_weights.get(str(row.get('tier') or '')), row.get('american_odds')) * float(row.get('size_scale') or 1.0):.2f}u "
                 f"| {row.get('timing') or timing.NEAR_TIP} "
                 f"| {row['book']} "
                 f"| {float(row['model_probability']):.1%} "
