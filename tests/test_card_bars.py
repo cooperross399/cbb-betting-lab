@@ -56,21 +56,56 @@ def test_high_hold_markets_need_five_percent_and_halves_do_not():
     assert _pick(alt, 0.419, CB.Bars(base=0.02, card_slot="morning")) == []
 
 
-def test_heavy_favourites_need_four_percent_and_bet_down_to_says_so():
+def test_the_heavy_favourite_bar_is_off_since_decision_120():
     bars = CB.Bars(base=0.02, card_slot="morning")
     fav = _wager(odds=(-200,))
-    assert bars.threshold(fav, -200) == CB.HEAVY_FAVOURITE_EDGE
-    assert bars.threshold(fav, -149) == 0.02
-    # p = 0.69 at -200 is a 3.5% edge: a pick under the old bar, none now.
-    assert _pick(fav, 0.69, CB.Bars(base=0.02, on=False))
-    assert _pick(fav, 0.69, bars) == []
-    picked = _pick(fav, 0.70, bars)
-    assert picked and picked[0]["bet_down_to"] <= -150
-    number = picked[0]["bet_down_to"]
-    assert CP.expected_value(0.70, number) >= CB.HEAVY_FAVOURITE_EDGE
-    # A price just inside the line clears at 2%, so the number stops at -149.
-    near = CB.Bars(base=0.02, card_slot="morning").bet_down_to(0.62, fav, price_band=CP.PRICE_BAND)
-    assert near == -149
+    assert CB.HEAVY_FAVOURITE_ON is False
+    assert bars.threshold(fav, -200) == 0.02
+    # p = 0.69 at -200 is a 3.5% edge: a pick again.
+    picked = _pick(fav, 0.69, bars)
+    assert picked
+    assert CP.expected_value(0.69, picked[0]["bet_down_to"]) >= 0.02
+
+
+def test_long_alternate_spreads_need_seven_percent():
+    bars = CB.Bars(base=0.02, card_slot="morning")
+    alt = _wager(market="alternate_spread", line=-12.5, odds=(250,))
+    assert bars.threshold(alt, 250) == CB.LONG_ALT_EDGE
+    assert bars.threshold(alt, 199) == CB.HIGH_HOLD_EDGE
+    assert bars.threshold(_wager(market="alternate_spread", segment="h1", line=-6.5), 250) == 0.02
+    # p = 0.31 at +250 is an 8.5% edge; p = 0.30 is 5%.
+    assert _pick(alt, 0.31, bars)
+    assert _pick(alt, 0.30, bars) == []
+    number = _pick(alt, 0.31, bars)[0]["bet_down_to"]
+    assert number >= CB.LONG_ALT_ODDS
+    assert CP.expected_value(0.31, number) >= CB.LONG_ALT_EDGE - 1e-9
+
+
+def test_a_game_keeps_the_believable_side_and_moneylines_lead():
+    bars = CB.Bars(base=0.02, card_slot="morning")
+    # A 14% claim on an alternate ladder and a 6% moneyline on the same game:
+    # 0.08 + 0.25 * 0.06 = 9.5% against 6% + 2%, so the ladder still leads...
+    assert bars.rank_edge(_wager(market="alternate_spread"), 0.14) == 0.08 + 0.25 * 0.06
+    assert bars.rank_edge(_wager(market="moneyline"), 0.06) == 0.06 + CB.MONEYLINE_RANK_BONUS
+    # ...but a 12% ladder claim (9%) loses to a 7.5% moneyline (9.5%).
+    ladder = _wager(market="alternate_spread", line=-7.5, odds=(200,))
+    ml = _wager(market="moneyline", odds=(150,))
+    probabilities = {ladder.key: (1 + 0.12) / 3.0, ml.key: (1 + 0.075) / 2.5}
+    result = select([ladder, ml], probabilities, approved=lambda m: True,
+                    tip_state_for=lambda w: CP.TipState.UPCOMING, threshold=CP.EDGE_THRESHOLD, bars=bars)
+    assert [r["market"] for r in result.selections] == ["moneyline"]
+    # Without bars the claimed edge alone decides, as before.
+    result = select([ladder, ml], probabilities, approved=lambda m: True,
+                    tip_state_for=lambda w: CP.TipState.UPCOMING, threshold=CP.EDGE_THRESHOLD)
+    assert [r["market"] for r in result.selections] == ["alternate_spread"]
+
+
+def test_the_evening_card_bets_new_games_at_half_size():
+    morning = CB.Morning.from_rows(MORNING_ROWS, day="2026-11-20")
+    evening = CB.Bars(base=0.02, card_slot="evening", morning=morning)
+    assert evening.size_scale({"home_team": "Iowa State Cyclones", "away_team": "Memphis Tigers"}) == 1.0
+    assert evening.size_scale({"home_team": "X", "away_team": "Y"}) == CB.EVENING_NEW_GAME_SIZE
+    assert CB.Bars(base=0.02, card_slot="morning", morning=morning).size_scale({"home_team": "X", "away_team": "Y"}) == 1.0
 
 
 def test_the_evening_card_reads_the_morning():

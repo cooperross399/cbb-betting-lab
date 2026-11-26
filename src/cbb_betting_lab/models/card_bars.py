@@ -25,6 +25,28 @@ Each bar only RAISES the card's threshold, so it can remove a selection and
 can never add one, and it never touches the allowlist, the forward ledger (which
 still freezes every opinion) or the board's leans. `ON = False` turns all three
 off. Registered as `card_bars_2026_11_20`, one per tier, before it was built.
+
+**Decision 120 (Cooper, 2026-11-26, *"all 4"*)** read the card's record over
+its first 479 graded picks and changed four things, registered first as
+`card_bars_2026_11_26`, one per tier:
+
+1. **The heavy-favourite bar is off** (`HEAVY_FAVOURITE_ON`). The card's
+   favourites at -150 or shorter beat the close 77% of the time; the bar was
+   set on ten picks and was costing the card its best-priced side.
+2. **Moneylines lead.** The card's moneylines returned +23% and beat the close
+   67% of the time, against an alternate spread that lost 1% to it. When a game
+   has more than one side clearing its bar, a moneyline ranks
+   `MONEYLINE_RANK_BONUS` ahead of the rest for the one slot a game gets.
+3. **A claimed edge above `EDGE_SHRINK_FROM` is distrusted.** Above 8% the
+   card's picks beat the close 32% of the time; between 5% and 8%, 59%. For
+   ranking, an edge above 8% keeps only `EDGE_SHRINK` of its excess, so a
+   believable 6% side wins the game's slot over a 14% claim. No bar is lowered.
+4. **Long alternate spreads need more.** A full-game alternate spread priced
+   `LONG_ALT_ODDS` or longer needs `LONG_ALT_EDGE` (the +200 to +399 rungs beat
+   the close 38% of the time, the +400 rungs went 0-13).
+
+And the evening card's picks on games the morning card did not pick are
+sized at `EVENING_NEW_GAME_SIZE` of the card's size (`size_scale`).
 """
 
 from __future__ import annotations
@@ -45,6 +67,21 @@ HIGH_HOLD_EDGE = 0.05
 #: A price this short or shorter is a heavy favourite.
 HEAVY_FAVOURITE_ODDS = -150.0
 HEAVY_FAVOURITE_EDGE = 0.04
+#: Decision 120: the heavy-favourite bar is off.
+HEAVY_FAVOURITE_ON = False
+
+#: Decision 120: full-game alternate spreads at +200 or longer.
+LONG_ALT_MARKET = "alternate_spread"
+LONG_ALT_ODDS = 200.0
+LONG_ALT_EDGE = 0.07
+
+#: Decision 120: ranking only, never a bar.
+EDGE_SHRINK_FROM = 0.08
+EDGE_SHRINK = 0.25
+MONEYLINE_RANK_BONUS = 0.02
+
+#: Decision 120: the evening card's new games are bet at half size.
+EVENING_NEW_GAME_SIZE = 0.5
 
 EVENING_NEW_GAME_EDGE = 0.04
 EVENING = "evening"
@@ -121,6 +158,33 @@ class Bars:
                 threshold = max(threshold, EVENING_NEW_GAME_EDGE)
         return threshold
 
+    def _long_alt(self, wager) -> bool:
+        return str(wager.market) == LONG_ALT_MARKET and str(wager.segment) in FULL_GAME
+
+    def rank_edge(self, wager, edge: float) -> float:
+        """The edge the card ranks a game's candidates by (decision 120).
+
+        Never a bar: the threshold is read on the claimed edge. Above
+        `EDGE_SHRINK_FROM` only `EDGE_SHRINK` of the excess counts, and a
+        moneyline gets `MONEYLINE_RANK_BONUS`.
+        """
+        edge = float(edge)
+        if not self.on:
+            return edge
+        if edge > EDGE_SHRINK_FROM:
+            edge = EDGE_SHRINK_FROM + EDGE_SHRINK * (edge - EDGE_SHRINK_FROM)
+        if str(wager.market) == "moneyline":
+            edge += MONEYLINE_RANK_BONUS
+        return edge
+
+    def size_scale(self, row) -> float:
+        """The share of the card's size this pick is bet at (decision 120)."""
+        if not self.on or self.card_slot != EVENING or self.morning is None:
+            return 1.0
+        if _game(row.get("home_team"), row.get("away_team")) in self.morning.games:
+            return 1.0
+        return EVENING_NEW_GAME_SIZE
+
     def morning_floor(self, wager) -> float | None:
         if not self.on or self.card_slot != EVENING or self.morning is None:
             return None
@@ -137,8 +201,10 @@ class Bars:
         floor = self.morning_floor(wager)
         if floor is not None and worse_than(american_odds, floor):
             return math.inf
-        if float(american_odds) <= HEAVY_FAVOURITE_ODDS:
+        if HEAVY_FAVOURITE_ON and float(american_odds) <= HEAVY_FAVOURITE_ODDS:
             threshold = max(threshold, HEAVY_FAVOURITE_EDGE)
+        if self._long_alt(wager) and float(american_odds) >= LONG_ALT_ODDS:
+            threshold = max(threshold, LONG_ALT_EDGE)
         return threshold
 
     def bet_down_to(self, probability: object, wager, *, price_band: tuple[float, float]) -> int | None:
@@ -149,7 +215,14 @@ class Bars:
         number = _bet_down_to(probability, threshold=base, price_band=price_band)
         if number is None or not self.on:
             return number
-        if number <= HEAVY_FAVOURITE_ODDS:
+        if self._long_alt(wager) and number >= LONG_ALT_ODDS:
+            longer = _bet_down_to(
+                probability, threshold=max(base, LONG_ALT_EDGE), price_band=price_band
+            )
+            number = longer if longer is not None else number
+            if number is not None and number < LONG_ALT_ODDS:
+                number = int(LONG_ALT_ODDS)
+        if HEAVY_FAVOURITE_ON and number is not None and number <= HEAVY_FAVOURITE_ODDS:
             heavy = _bet_down_to(
                 probability, threshold=max(base, HEAVY_FAVOURITE_EDGE), price_band=price_band
             )

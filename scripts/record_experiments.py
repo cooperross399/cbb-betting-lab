@@ -1974,6 +1974,42 @@ HYPOTHESES: tuple[E.Hypothesis, ...] = (
         predicted_direction="higher",
         stage="discovery",
     ),
+    # ---------------------------------------------------------------------
+    # decision 120 (Cooper, 2026-11-26, "all 4"): four card changes read off the card's own record. One per tier, forward only.
+    # ---------------------------------------------------------------------
+    E.Hypothesis(
+        search="card_bars_2026_11_26",
+        name=(
+            "high-major: the decision-120 card changes together (models/card_bars.py: the -150 heavy-favourite bar switched off; a 7% edge bar on full-game alternate spreads priced +200 or longer; a game's one slot ranked by an edge that keeps a quarter of any claim above 8% and gives a moneyline two points; and the evening card's picks on games the morning card did not pick sized at half) raise the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-26",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="card_bars_2026_11_26",
+        name=(
+            "mid-major: the decision-120 card changes together (models/card_bars.py: the -150 heavy-favourite bar switched off; a 7% edge bar on full-game alternate spreads priced +200 or longer; a game's one slot ranked by an edge that keeps a quarter of any claim above 8% and gives a moneyline two points; and the evening card's picks on games the morning card did not pick sized at half) raise the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-26",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
+    E.Hypothesis(
+        search="card_bars_2026_11_26",
+        name=(
+            "low-major: the decision-120 card changes together (models/card_bars.py: the -150 heavy-favourite bar switched off; a 7% edge bar on full-game alternate spreads priced +200 or longer; a game's one slot ranked by an edge that keeps a quarter of any claim above 8% and gives a moneyline two points; and the evening card's picks on games the morning card did not pick sized at half) raise the return of the card's team selections against the card-time price (forward ledger only)"
+        ),
+        tested_on="2026-11-26",
+        seasons=FORWARD,
+        outcome="pending",
+        predicted_direction="higher",
+        stage="discovery",
+    ),
 )
 
 

@@ -618,7 +618,8 @@ def select(
         )
 
     result.selections, result.exposure = _apply_exposure_caps(
-        cleared, result, per_game_cap=per_game_cap, per_slate_cap=per_slate_cap
+        cleared, result, per_game_cap=per_game_cap, per_slate_cap=per_slate_cap,
+        rank_edge=None if bars is None else bars.rank_edge,
     )
     return result
 
@@ -629,6 +630,7 @@ def _apply_exposure_caps(
     *,
     per_game_cap: int,
     per_slate_cap: int,
+    rank_edge=None,
 ) -> tuple[list[dict], Exposure]:
     """Keep the highest-edge position per game, then hold the slate to its cap.
 
@@ -638,7 +640,11 @@ def _apply_exposure_caps(
     makes `selection_fingerprint` mean anything.
     """
     exposure = Exposure(per_game_cap=per_game_cap, per_slate_cap=per_slate_cap)
-    ranked = sorted(cleared, key=lambda c: (-c["edge"], c["wager"].label()))
+    # `rank_edge` (decision 120, `models/card_bars.py`) re-orders, never bars.
+    def _rank(c: dict) -> float:
+        return c["edge"] if rank_edge is None else rank_edge(c["wager"], c["edge"])
+
+    ranked = sorted(cleared, key=lambda c: (-_rank(c), c["wager"].label()))
     kept: list[dict] = []
     for candidate in ranked:
         wager: Wager = candidate["wager"]
