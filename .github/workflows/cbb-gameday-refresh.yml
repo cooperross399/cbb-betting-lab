@@ -478,6 +478,14 @@ jobs:
               && echo "Card picks restored: $(( $(wc -l < data/processed/cbb_card_selections.csv) - 1 )) rows." \
               || rm -f data/processed/cbb_card_selections.csv
           fi
+          # Every candidate the card has considered, for the what-if replay
+          # (`reports/card_whatif.py`). Soft: without it the replay starts
+          # again from this run.
+          if git cat-file -e refs/card-feed-tip:card_candidates.csv 2>/dev/null; then
+            git show refs/card-feed-tip:card_candidates.csv > data/processed/cbb_card_candidates.csv \
+              && echo "Card candidates restored: $(( $(wc -l < data/processed/cbb_card_candidates.csv) - 1 )) rows." \
+              || rm -f data/processed/cbb_card_candidates.csv
+          fi
           # The spread-bias shifts already applied, by day (decision 117), so
           # today's estimate adds them back rather than reading the corrected
           # ledger as unbiased. Soft: without it no earlier shift is known.
@@ -1013,6 +1021,20 @@ jobs:
           fi
           python scripts/run_card_record.py --comments-dir "$COMMENTS"
 
+      - name: Replay the card's rules on its candidates
+        # What each card rule did (Cooper, 2026-11-26: "all 3"): every slot's
+        # candidates replayed with today's rules and with each rule switched
+        # the other way, graded by the forward ledger's settlement
+        # (`reports/card_whatif.py`). SOFT: it spends no credit and changes
+        # nothing the card reads.
+        id: card_whatif
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          PYTHONPATH: src
+        run: python scripts/run_card_whatif.py
+
       - name: Zero email, and it takes two changes rather than one
         # The card comment MENTIONS NOBODY. That is half of zero email and only
         # half: an @mention overrides an ignored repository subscription, so
@@ -1185,6 +1207,12 @@ jobs:
             add card_selections.csv data/processed/cbb_card_selections.csv "$ROOT_INPUT"
           elif git cat-file -e refs/card-feed-tip:card_selections.csv 2>/dev/null; then
             printf '100644 blob %s\tcard_selections.csv\n' "$(git rev-parse refs/card-feed-tip:card_selections.csv)" >> "$ROOT_INPUT"
+          fi
+          add latest_card_whatif.md data/outputs/cbb_card_whatif.md "$ROOT_INPUT"
+          if [ -s data/processed/cbb_card_candidates.csv ]; then
+            add card_candidates.csv data/processed/cbb_card_candidates.csv "$ROOT_INPUT"
+          elif git cat-file -e refs/card-feed-tip:card_candidates.csv 2>/dev/null; then
+            printf '100644 blob %s\tcard_candidates.csv\n' "$(git rev-parse refs/card-feed-tip:card_candidates.csv)" >> "$ROOT_INPUT"
           fi
           if [ -s data/raw/cbb/layer_audit/spread_bias.json ]; then
             add spread_bias.json data/raw/cbb/layer_audit/spread_bias.json "$ROOT_INPUT"

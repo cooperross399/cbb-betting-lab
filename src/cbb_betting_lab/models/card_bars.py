@@ -83,6 +83,24 @@ MONEYLINE_RANK_BONUS = 0.02
 #: Decision 120: the evening card's new games are bet at half size.
 EVENING_NEW_GAME_SIZE = 0.5
 
+#: Every rule this module can apply, by name. `Bars.rules` names the ones in
+#: force; the what-if replay (`reports/card_whatif.py`) switches them one at a
+#: time to see what each did to the card's record.
+RULES = (
+    "high_hold",          # decision 116: 5% on full-game ladders and team totals
+    "heavy_favourite",    # decision 116: 4% at -150 or shorter (off since 120)
+    "evening_new_game",   # decision 116: 4% on the evening card's new games
+    "morning_floor",      # decision 116: no evening re-list below the morning's number
+    "long_alt",           # decision 120: 7% on full-game alt spreads at +200 or longer
+    "rank",               # decision 120: big edges shrunk, moneylines first, for the slot
+    "evening_size",       # decision 120: evening new games at half size
+)
+
+
+def default_rules() -> frozenset:
+    """The rules the card applies today."""
+    return frozenset(r for r in RULES if r != "heavy_favourite" or HEAVY_FAVOURITE_ON)
+
 EVENING_NEW_GAME_EDGE = 0.04
 EVENING = "evening"
 
@@ -145,15 +163,19 @@ class Bars:
     card_slot: str = ""
     morning: Morning | None = None
     on: bool = ON
+    rules: frozenset = field(default_factory=default_rules)
+
+    def _has(self, rule: str) -> bool:
+        return self.on and rule in self.rules
 
     def wager_threshold(self, wager) -> float:
         """Every bar that depends on the wager alone."""
         threshold = float(self.base)
         if not self.on:
             return threshold
-        if str(wager.market) in HIGH_HOLD_MARKETS and str(wager.segment) in FULL_GAME:
+        if self._has("high_hold") and str(wager.market) in HIGH_HOLD_MARKETS and str(wager.segment) in FULL_GAME:
             threshold = max(threshold, HIGH_HOLD_EDGE)
-        if self.card_slot == EVENING and self.morning is not None:
+        if self._has("evening_new_game") and self.card_slot == EVENING and self.morning is not None:
             if _game(wager.home_team, wager.away_team) not in self.morning.games:
                 threshold = max(threshold, EVENING_NEW_GAME_EDGE)
         return threshold
@@ -169,7 +191,7 @@ class Bars:
         moneyline gets `MONEYLINE_RANK_BONUS`.
         """
         edge = float(edge)
-        if not self.on:
+        if not self._has("rank"):
             return edge
         if edge > EDGE_SHRINK_FROM:
             edge = EDGE_SHRINK_FROM + EDGE_SHRINK * (edge - EDGE_SHRINK_FROM)
@@ -179,14 +201,14 @@ class Bars:
 
     def size_scale(self, row) -> float:
         """The share of the card's size this pick is bet at (decision 120)."""
-        if not self.on or self.card_slot != EVENING or self.morning is None:
+        if not self._has("evening_size") or self.card_slot != EVENING or self.morning is None:
             return 1.0
         if _game(row.get("home_team"), row.get("away_team")) in self.morning.games:
             return 1.0
         return EVENING_NEW_GAME_SIZE
 
     def morning_floor(self, wager) -> float | None:
-        if not self.on or self.card_slot != EVENING or self.morning is None:
+        if not self._has("morning_floor") or self.card_slot != EVENING or self.morning is None:
             return None
         key = _game(wager.home_team, wager.away_team) + (
             str(wager.market), str(wager.segment), str(wager.selection), _line(wager.line),
@@ -201,9 +223,9 @@ class Bars:
         floor = self.morning_floor(wager)
         if floor is not None and worse_than(american_odds, floor):
             return math.inf
-        if HEAVY_FAVOURITE_ON and float(american_odds) <= HEAVY_FAVOURITE_ODDS:
+        if self._has("heavy_favourite") and float(american_odds) <= HEAVY_FAVOURITE_ODDS:
             threshold = max(threshold, HEAVY_FAVOURITE_EDGE)
-        if self._long_alt(wager) and float(american_odds) >= LONG_ALT_ODDS:
+        if self._has("long_alt") and self._long_alt(wager) and float(american_odds) >= LONG_ALT_ODDS:
             threshold = max(threshold, LONG_ALT_EDGE)
         return threshold
 
@@ -215,14 +237,14 @@ class Bars:
         number = _bet_down_to(probability, threshold=base, price_band=price_band)
         if number is None or not self.on:
             return number
-        if self._long_alt(wager) and number >= LONG_ALT_ODDS:
+        if self._has("long_alt") and self._long_alt(wager) and number >= LONG_ALT_ODDS:
             longer = _bet_down_to(
                 probability, threshold=max(base, LONG_ALT_EDGE), price_band=price_band
             )
             number = longer if longer is not None else number
             if number is not None and number < LONG_ALT_ODDS:
                 number = int(LONG_ALT_ODDS)
-        if HEAVY_FAVOURITE_ON and number is not None and number <= HEAVY_FAVOURITE_ODDS:
+        if self._has("heavy_favourite") and number is not None and number <= HEAVY_FAVOURITE_ODDS:
             heavy = _bet_down_to(
                 probability, threshold=max(base, HEAVY_FAVOURITE_EDGE), price_band=price_band
             )

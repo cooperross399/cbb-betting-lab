@@ -239,6 +239,11 @@ class SelectionResult:
     bar_counts: dict[str, int] = field(default_factory=dict)
     exposure: Exposure = field(default_factory=Exposure)
     priced_wagers: int = 0
+    #: Every wager that cleared the flat bar at its best in-band price and
+    #: every gate but the stricter bars (decision 120's what-if replay,
+    #: `reports/card_whatif.py`). A record of what the card considered, never
+    #: a selection.
+    candidates: list[dict] = field(default_factory=list)
 
     def bar(self, reason: Bar, wager: "Wager") -> None:
         self.barred.setdefault(reason.value, []).append(wager.label())
@@ -571,17 +576,27 @@ def select(
             (quote, expected_value(probability, quote.american_odds))
             for quote in wager.quotes
         ]
+        flat = [
+            (q, e) for q, e in priced
+            if e is not None and e >= threshold and in_price_band(q.american_odds, price_band)
+        ]
         clearing = [
             (q, e) for q, e in priced
             if e is not None
             and e >= (threshold if bars is None else max(threshold, bars.threshold(wager, q.american_odds)))
         ]
         if not clearing:
+            if flat and _passes_gates(wager, availability_for, tip_state_for):
+                flat_quote, flat_edge = max(flat, key=lambda pair: pair[1])
+                result.candidates.append(_candidate(wager, flat_quote, flat_edge, probability))
             result.bar(Bar.BELOW_THRESHOLD, wager)
             continue
 
         in_band = [(q, e) for q, e in clearing if in_price_band(q.american_odds, price_band)]
         if not in_band:
+            if flat and _passes_gates(wager, availability_for, tip_state_for):
+                flat_quote, flat_edge = max(flat, key=lambda pair: pair[1])
+                result.candidates.append(_candidate(wager, flat_quote, flat_edge, probability))
             result.bar(Bar.OUTSIDE_PRICE_BAND, wager)
             continue
 
@@ -596,6 +611,10 @@ def select(
         if not can_be_played(state):
             result.bar(Bar.TIP_GUARD, wager)
             continue
+
+        if flat:
+            flat_quote, flat_edge = max(flat, key=lambda pair: pair[1])
+            result.candidates.append(_candidate(wager, flat_quote, flat_edge, probability))
 
         # Best price last, and only among quotes that cleared every bar on their
         # own. `max` on the edge rather than on the American number: +150 beats
@@ -622,6 +641,34 @@ def select(
         rank_edge=None if bars is None else bars.rank_edge,
     )
     return result
+
+
+def _passes_gates(wager, availability_for, tip_state_for) -> bool:
+    availability = availability_for(wager) if availability_for else Availability.NO_REPORT
+    if wager.is_player_market and not can_produce_a_selection(availability):
+        return False
+    state = tip_state_for(wager) if tip_state_for else TipState.UNCONFIRMED
+    return can_be_played(state)
+
+
+def _candidate(wager, quote, edge, probability) -> dict:
+    return {
+        "event_id": wager.event_id,
+        "slate_date": wager.slate_date,
+        "commence_time": wager.commence_time,
+        "home_team": wager.home_team,
+        "away_team": wager.away_team,
+        "market": wager.market,
+        "segment": wager.segment,
+        "player": wager.player,
+        "selection": wager.selection,
+        "line": wager.line,
+        "tier": wager.tier,
+        "american_odds": float(quote.american_odds),
+        "book": quote.book,
+        "probability": float(probability),
+        "edge": float(edge),
+    }
 
 
 def _apply_exposure_caps(
