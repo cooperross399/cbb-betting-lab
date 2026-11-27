@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-27T19:30+00:00",
-  "captures": 367,
+  "as_of": "2026-11-27T20:01+00:00",
+  "captures": 368,
   "cells": [
     {
       "beat_close": 0.6756756756756757,
@@ -44,14 +44,14 @@
       "high": 0.2865191140399757,
       "low": -0.06569944894827286,
       "mean": 0.11040983254585142,
-      "shops": 102,
+      "shops": 103,
       "tier": "unplaced",
-      "ungraded": 31
+      "ungraded": 32
     }
   ],
   "correction_factor": 1.8867178582120565,
   "current": [],
-  "latest_capture": "2026-11-27T19:26:59+00:00",
+  "latest_capture": "2026-11-27T19:58:59+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02
