@@ -442,6 +442,10 @@ TORVIK_FACTORS_URL = "https://www.cbbdata.com/api/torvik/factors"
 TORVIK_FACTORS_QUERY = {"venue": "all", "type": "all", "quad": "4", "top": "0"}
 
 
+#: The shape of the last login reply (values withheld), for the fetch log.
+LAST_LOGIN_SHAPE = ""
+
+
 def _post_json(url: str, body: dict, *, timeout: float = 60.0) -> tuple[int, bytes]:
     request = urllib.request.Request(
         url, data=json.dumps(body).encode("utf-8"), method="POST",
@@ -457,15 +461,45 @@ def _post_json(url: str, body: dict, *, timeout: float = 60.0) -> tuple[int, byt
 
 
 def _key_from_login(payload: bytes) -> str:
+    """The API key in a cbbdata login reply. The reply has been seen as an
+    object and is read by the R client as a data frame, so it may also be a
+    list of objects or a bare list; each shape is unwrapped until a string is
+    left. Before 2026-11-27 a list of objects was stringified whole, which
+    sent a key cbbdata answers with an empty table for every season."""
     try:
         data = json.loads(payload)
     except ValueError:
-        return ""
-    if isinstance(data, dict):
-        data = data.get("api_key") or data.get("key") or next(iter(data.values()), "")
-    if isinstance(data, list):
-        data = data[0] if data else ""
-    return str(data or "").strip()
+        text = payload.decode("utf-8", "replace").strip().strip('"')
+        return text if re.fullmatch(r"[A-Za-z0-9_\-]{8,}", text) else ""
+    for _ in range(4):
+        if isinstance(data, list):
+            data = data[0] if data else ""
+        elif isinstance(data, dict):
+            keyed = {_key(k): v for k, v in data.items()}
+            data = next((keyed[k] for k in ("apikey", "key", "token") if keyed.get(k)), "")
+        else:
+            break
+    return data.strip() if isinstance(data, str) else ""
+
+
+def login_shape(payload: bytes) -> str:
+    """The shape of a login reply with every value withheld, for the log:
+    which containers and field names it has, never what they hold."""
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        return f"not JSON ({len(payload)} bytes)"
+
+    def shape(node, depth=0):
+        if depth > 3:
+            return "..."
+        if isinstance(node, dict):
+            return "{" + ", ".join(f"{k}: {shape(v, depth + 1)}" for k, v in node.items()) + "}"
+        if isinstance(node, list):
+            return f"[{len(node)} x " + (shape(node[0], depth + 1) if node else "nothing") + "]"
+        return type(node).__name__
+
+    return shape(data)
 
 
 def cbbdata_key(user: str, password: str, email: str = "") -> tuple[str, bool]:
@@ -476,6 +510,8 @@ def cbbdata_key(user: str, password: str, email: str = "") -> tuple[str, bool]:
     if not user or not password:
         raise SecondOpinionError("no cbbdata username or password")
     status, body = _post_json(CBBDATA_LOGIN_URL, {"username": user, "password": password})
+    global LAST_LOGIN_SHAPE
+    LAST_LOGIN_SHAPE = f"HTTP {status}, " + login_shape(body)
     key = _key_from_login(body) if status < 300 else ""
     if key:
         return key, False
