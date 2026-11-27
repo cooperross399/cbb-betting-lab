@@ -325,7 +325,9 @@ def _torvik_table(key: str, season: int, as_of: str):
     try:
         last = second_opinion.fetch_torvik_archive(key, season - 1)
         print(f"T-Rank diagnostic: cbbdata's archive holds {len(last):,} row(s) for {season - 1} "
-              f"and none for {season}, so cbbdata has not published this season yet.")
+              f"and none for {season}"
+              + (", so cbbdata has not published this season yet." if len(last)
+                 else ": empty for a finished season too, so the key or the account is what is refused."))
     except second_opinion.SecondOpinionError as exc:
         print(f"T-Rank diagnostic: last season's archive could not be read either ({exc}).")
     print(f"::warning::T-Rank: no cbbdata source holds {season} yet; nothing was read.", file=sys.stderr)
@@ -348,6 +350,8 @@ def _torvik(season: int, as_of: str, raw_dir: Path, schedule) -> bool:
         key, created = second_opinion.cbbdata_key(user, password, os.environ.get("CBD_EMAIL", "").strip())
         if created:
             print("T-Rank: the cbbdata account was created from the secrets and logged in.")
+        print(f"T-Rank: cbbdata login reply {second_opinion.LAST_LOGIN_SHAPE}; key of {len(key)} "
+              f"character(s), {'plain' if key.replace('-', '').replace('_', '').isalnum() else 'NOT plain'}.")
     except second_opinion.SecondOpinionError as exc:
         print(f"::warning::T-Rank could not be read through cbbdata: {exc}", file=sys.stderr)
         return False

@@ -110,4 +110,25 @@ def test_the_fetch_falls_through_to_the_first_source_holding_the_season(monkeypa
     monkeypatch.setattr(script.second_opinion, "fetch_torvik_factors", lambda key, season, day: empty)
     assert script._torvik_table("k", 2027, "2026-11-27") == (None, None)
     out = capsys.readouterr()
-    assert "has not published this season" in out.out and "nothing was read" in out.err
+    assert "the key or the account is what is refused" in out.out and "nothing was read" in out.err
+
+
+@pytest.mark.parametrize("reply", [
+    {"api_key": "abc123def456"},
+    [{"api_key": "abc123def456"}],
+    {"data": [{"api_key": "abc123def456"}]} ,
+    ["abc123def456"],
+    [{"apiKey": "abc123def456", "username": "u"}],
+])
+def test_the_key_is_unwrapped_from_every_login_shape(reply):
+    payload = json.dumps(reply).encode()
+    if isinstance(reply, dict) and "data" in reply:
+        # A wrapper object with no key field is not guessed at.
+        assert SO._key_from_login(payload) == ""
+    else:
+        assert SO._key_from_login(payload) == "abc123def456"
+
+
+def test_the_login_shape_withholds_every_value():
+    shape = SO.login_shape(json.dumps([{"api_key": "secret-value-123"}]).encode())
+    assert "secret" not in shape and "api_key: str" in shape
