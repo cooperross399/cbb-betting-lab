@@ -2670,21 +2670,31 @@ def supplement_schedule(
         base = _cached_schedule(season, raw_dir)
     except FileNotFoundError:
         return 0
-    have = set(pd.to_numeric(base["id"], errors="coerce").dropna().astype(int))
-    ids = pd.to_numeric(supplement["id"], errors="coerce")
-    extra = supplement[ids.notna() & ~ids.fillna(-1).astype(int).isin(have)]
+    extra = supplement.copy()
+    for column in ("id", "home_id", "away_id"):
+        extra[column] = pd.to_numeric(extra.get(column), errors="coerce")
+    extra = extra.dropna(subset=["id", "home_id", "away_id"])
+    for column in ("id", "home_id", "away_id"):
+        extra[column] = extra[column].astype("int64")
+    base_ids = pd.to_numeric(base["id"], errors="coerce")
+    held = {
+        int(i): {h, a}
+        for i, h, a in zip(base_ids, pd.to_numeric(base["home_id"], errors="coerce"),
+                           pd.to_numeric(base["away_id"], errors="coerce"))
+        if i == i
+    }
+    # A game the cache holds under the SAME two teams is never replaced. One it
+    # holds under other teams -- a bracket slot filed before the pairing was
+    # set, under placeholder ids -- takes ESPN's pairing, because pricing two
+    # placeholders is a projection for a game nobody is playing.
+    keep = [held.get(int(i)) != {int(h), int(a)}
+            for i, h, a in zip(extra["id"], extra["home_id"], extra["away_id"])]
+    extra = extra[keep]
     if extra.empty:
         return 0
-    extra = extra.copy()
-    for column in ("id", "home_id", "away_id"):
-        if column in extra.columns:
-            extra[column] = pd.to_numeric(extra[column], errors="coerce")
-    extra = extra.dropna(subset=[c for c in ("id", "home_id", "away_id") if c in extra.columns])
-    for column in ("id", "home_id", "away_id"):
-        if column in extra.columns:
-            extra[column] = extra[column].astype("int64")
-    if extra.empty:
-        return 0
+    replaced = set(extra["id"].tolist()) & set(held)
+    if replaced:
+        base = base[~base_ids.isin(replaced)]
     merged = pd.concat([base, extra], ignore_index=True)
     _SCHEDULE_CACHE[key] = merged
     _CLASSIFIED_CACHE.pop(key, None)
