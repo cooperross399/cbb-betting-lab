@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-27T01:16+00:00",
-  "captures": 359,
+  "as_of": "2026-11-27T02:16+00:00",
+  "captures": 360,
   "cells": [
     {
       "beat_close": 0.8,
@@ -38,20 +38,51 @@
       "ungraded": 7
     },
     {
-      "beat_close": 0.6455696202531646,
-      "games": 65,
-      "graded": 79,
-      "high": 0.2553509483359975,
-      "low": -0.06439401409090835,
-      "mean": 0.09547846712254456,
-      "shops": 109,
+      "beat_close": 0.6375,
+      "games": 66,
+      "graded": 80,
+      "high": 0.2504693243688655,
+      "low": -0.06603247912792566,
+      "mean": 0.0922184226204699,
+      "shops": 110,
       "tier": "unplaced",
       "ungraded": 30
     }
   ],
   "correction_factor": 1.8867178582120565,
-  "current": [],
-  "latest_capture": "2026-11-27T01:13:42+00:00",
+  "current": [
+    {
+      "american": -285,
+      "away_team": "Omaha Mavericks",
+      "book": "fanduel",
+      "books": 18,
+      "commence": "2026-11-27T03:30:00+00:00",
+      "edge": 0.0233,
+      "event_id": "f8c8f160933b1de8443aee985386d93f",
+      "fair_american": -312,
+      "game": "Omaha Mavericks at Pacific Tigers",
+      "home_team": "Pacific Tigers",
+      "line": null,
+      "market": "moneyline",
+      "selection": "home"
+    },
+    {
+      "american": -109,
+      "away_team": "Bellarmine Knights",
+      "book": "rebet",
+      "books": 3,
+      "commence": "2026-11-27T20:00:00+00:00",
+      "edge": 0.025,
+      "event_id": "bc3fb1851c83444219f558d4229a1f0c",
+      "fair_american": -115,
+      "game": "Bellarmine Knights at Butler Bulldogs",
+      "home_team": "Butler Bulldogs",
+      "line": -18.5,
+      "market": "spread",
+      "selection": "home"
+    }
+  ],
+  "latest_capture": "2026-11-27T02:13:37+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02
