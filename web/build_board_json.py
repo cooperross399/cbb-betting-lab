@@ -147,8 +147,48 @@ def slate_for(day: date) -> list[dict]:
             "state": ((ev.get("status") or {}).get("type") or {}).get("state", "pre"),
             "home": {"name": (h.get("team") or {}).get("displayName", ""), "abbr": (h.get("team") or {}).get("abbreviation", ""), "color": (h.get("team") or {}).get("color"), "record": rec(h), "score": h.get("score")},
             "away": {"name": (a.get("team") or {}).get("displayName", ""), "abbr": (a.get("team") or {}).get("abbreviation", ""), "color": (a.get("team") or {}).get("color"), "record": rec(a), "score": a.get("score")},
+            "fixture": espn_fixture(ev, comp, h, a, day),
         })
     return out
+
+
+def espn_fixture(ev: dict, comp: dict, h: dict, a: dict, day: date) -> dict | None:
+    """ESPN's fixture for one game in hoopR's schedule columns, or None.
+
+    hoopR's schedule IS ESPN's scoreboard, rebuilt nightly, and ESPN's event
+    id is its game id. A game set after the nightly build -- a tournament's
+    second-day pairing -- is on this slate and not in the cached schedule, and
+    `ratings.supplement_schedule` adds it from this row so the model can price
+    it (Cooper, 2026-11-27: a projection for every game). Who is playing and
+    where, never a score.
+    """
+    try:
+        game_id, home_id, away_id = int(ev.get("id")), int((h.get("team") or {}).get("id")), int((a.get("team") or {}).get("id"))
+    except (TypeError, ValueError):
+        return None
+    venue = comp.get("venue") or {}
+    address = venue.get("address") or {}
+    row = {"id": game_id, "game_id": game_id, "game_date": day, "date": ev.get("date"),
+           "neutral_site": bool(comp.get("neutralSite")), "notes_headline": next((n.get("headline") for n in comp.get("notes") or [] if n.get("headline")), ""),
+           "venue_id": pd_int(venue.get("id")), "venue_full_name": venue.get("fullName"),
+           "venue_address_city": address.get("city"), "venue_address_state": address.get("state"),
+           "status_type_name": ((ev.get("status") or {}).get("type") or {}).get("name") or "STATUS_SCHEDULED",
+           "season": None}
+    for side, c in (("home", h), ("away", a)):
+        team = c.get("team") or {}
+        row.update({f"{side}_id": home_id if side == "home" else away_id, f"{side}_location": team.get("location"),
+                    f"{side}_name": team.get("name"), f"{side}_abbreviation": team.get("abbreviation"),
+                    f"{side}_display_name": team.get("displayName"), f"{side}_short_display_name": team.get("shortDisplayName"),
+                    f"{side}_conference_id": pd_int(team.get("conferenceId"))})
+    return row
+
+
+def pd_int(value) -> float | None:
+    """An id ESPN sends as a string, as a number hoopR's columns would hold."""
+    try:
+        return float(int(value))
+    except (TypeError, ValueError):
+        return None
 
 
 def _american(text) -> int | None:
@@ -834,6 +874,11 @@ def load_model(lab: Path, day: date, slate: list[dict]):
             for g in subjects
         ]
     )
+    fixtures = [g["fixture"] for g in subjects if g.get("fixture")]
+    supplement = pd.DataFrame(fixtures) if fixtures else None
+    if supplement is not None:
+        from cbb_betting_lab.season import season_for_slate_date  # type: ignore
+        supplement = supplement.drop(columns=["season"]).assign(season=season_for_slate_date(day.isoformat()))
     try:
         built = card_matchups.matchups_for_card(
             rows,
@@ -841,6 +886,7 @@ def load_model(lab: Path, day: date, slate: list[dict]):
             day=day.isoformat(),
             processed_dir=lab / "data" / "processed",
             raw_dir=lab / "data" / "raw",
+            supplement=supplement,
         )
     except card_matchups.InputsAbsent:
         return None
@@ -856,10 +902,18 @@ def load_model(lab: Path, day: date, slate: list[dict]):
 
     neutral_states = {"neutral", "quasi_neutral"}
     cache: dict[tuple[str, str], dict | None] = {}
-    state = {"asked": len(by_pair), "priced": 0, "refused": 0, "declined_on_venue": 0, "unjoined": 0}
+    state = {"asked": len(by_pair), "priced": 0, "refused": 0, "declined_on_venue": 0, "unjoined": 0,
+             "non_di_rated": 0}
 
-    def price(home_key: str, away_key: str, neutral: bool):
+    by_event = {str(k): v for k, v in built.matchups.items()}
+
+    def price(home_key: str, away_key: str, neutral: bool, event_id: str = ""):
         game = by_pair.get((str(home_key), str(away_key)))
+        if game is None and event_id:
+            # The slate's own event id: a school the name resolver leaves out
+            # (a non-D-I visitor) still finds the matchup priced for its game,
+            # in ESPN's orientation, which is the schedule's.
+            game = by_event.get(str(event_id))
         if game is None:
             state["unjoined"] += 1
             return None
@@ -875,6 +929,8 @@ def load_model(lab: Path, day: date, slate: list[dict]):
         key = (str(home_key), str(away_key))
         if key not in cache:
             state["priced"] += 1
+            if getattr(game, "identified_by", "") == "non_di_baseline":
+                state["non_di_rated"] += 1
             dist = ratings.to_distribution(game)
             margin, total = dist.expected_margin, dist.expected_total
             cache[key] = {
@@ -1733,7 +1789,7 @@ def build(lab: Path, day: date) -> dict:
             if ml_home is not None:
                 row["home"]["winProb"], row["away"]["winProb"] = round(ml_home, 4), round(1 - ml_home, 4)
                 row["moneyline"]["fair"] = {"home": to_american(ml_home), "away": to_american(1 - ml_home)}
-        pr = model(hk, ak, g["neutral"]) if model else None
+        pr = model(hk, ak, g["neutral"], g["id"]) if model else None
         if pr:
             row["home"].update(projPts=round(pr["hp"], 1), winProb=round(pr["home_win"], 4))
             row["away"].update(projPts=round(pr["ap"], 1), winProb=round(1 - pr["home_win"], 4))
@@ -1902,7 +1958,8 @@ def main(argv=None) -> int:
     print(f"projections: {len(board['games']) - len(unprojected)} of {len(board['games'])} games "
           f"({sum(1 for g in board['games'] if g['home'].get('projPts') is not None)} from the model, "
           f"{sum(1 for g in board['games'] if g.get('lineNote') in (PROJECTION_NOTE, ESPN_ONLY_NOTE))} from ESPN, "
-          f"{sum(1 for g in board['games'] if g.get('lineNote') == MARKET_ONLY_NOTE)} from the market).")
+          f"{sum(1 for g in board['games'] if g.get('lineNote') == MARKET_ONLY_NOTE)} from the market; "
+          f"{(board.get('model') or {}).get('non_di_rated', 0)} of the model's are a non-D-I school rated from its games against D-I).")
     for g in unprojected:
         print(f"::warning::{day}: {g['away']['abbr']} at {g['home']['abbr']} (event {g['id']}) has no projection from any source.")
     # The ratings and season pages read the fit the board priced on. They

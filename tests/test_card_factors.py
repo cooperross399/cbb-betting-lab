@@ -78,8 +78,16 @@ def test_every_priced_matchup_carries_the_layers_in_order_and_ends_at_its_price(
         assert game.context["home_court"]["applied_by"] in ("the fit", "the card")
 
 
-def test_a_refused_matchup_carries_no_layer(lab, frames):
+def test_a_refused_matchup_carries_no_layer(lab, frames, monkeypatch):
+    # The thin fixture's refusals are non-D-I visitors, which decision 124
+    # now rates; switched off, they are refused as before and this property
+    # is still the one under test.
+    from cbb_betting_lab.models import non_division_one
+
+    monkeypatch.setattr(non_division_one, "RATE_NON_DIVISION_ONE", False)
+    ratings.clear_caches()
     out = _priced(lab, frames)
+    ratings.clear_caches()
     refused = [m for m in out.values() if not m.priceable]
     assert refused, "the thin fixture should refuse at least one pair on connectivity"
     for game in refused:
