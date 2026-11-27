@@ -931,6 +931,8 @@ def load_model(lab: Path, day: date, slate: list[dict]):
             state["priced"] += 1
             if getattr(game, "identified_by", "") == "non_di_baseline":
                 state["non_di_rated"] += 1
+                state.setdefault("non_di_games", []).append(
+                    f"{away_key} at {home_key} ({getattr(game, 'unidentified_reason', '')[:60]})")
             dist = ratings.to_distribution(game)
             margin, total = dist.expected_margin, dist.expected_total
             cache[key] = {
@@ -1960,6 +1962,8 @@ def main(argv=None) -> int:
           f"{sum(1 for g in board['games'] if g.get('lineNote') in (PROJECTION_NOTE, ESPN_ONLY_NOTE))} from ESPN, "
           f"{sum(1 for g in board['games'] if g.get('lineNote') == MARKET_ONLY_NOTE)} from the market; "
           f"{(board.get('model') or {}).get('non_di_rated', 0)} of the model's are a non-D-I school rated from its games against D-I).")
+    for line in (board.get('model') or {}).get('non_di_games', []):
+        print(f"non-D-I rating used: {line}")
     for g in unprojected:
         print(f"::warning::{day}: {g['away']['abbr']} at {g['home']['abbr']} (event {g['id']}) has no projection from any source.")
     # The ratings and season pages read the fit the board priced on. They

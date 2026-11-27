@@ -124,3 +124,14 @@ def test_a_fixture_the_cached_schedule_lacks_is_added_from_the_slate(monkeypatch
     assert merged.loc[merged["id"] == 401000002, "home_id"].iloc[0] == 2
     # A game already held is never replaced, so a second pass adds nothing.
     assert ratings.supplement_schedule(2027, extra, raw) == 0
+
+
+def test_a_bracket_slot_filed_under_placeholders_takes_the_slate_pairing(monkeypatch):
+    raw = Path("/nonexistent-raw-2")
+    key = (2027, str(raw))
+    base = _schedule().assign(home_id=-1, away_id=-2)
+    monkeypatch.setitem(ratings._SCHEDULE_CACHE, key, base)
+    assert ratings.supplement_schedule(2027, _schedule(), raw) == 1
+    merged = ratings._SCHEDULE_CACHE[key]
+    assert len(merged) == 1
+    assert (merged["home_id"].iloc[0], merged["away_id"].iloc[0]) == (1, 900)
