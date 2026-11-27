@@ -1,28 +1,28 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-27T03:17+00:00",
-  "captures": 361,
+  "as_of": "2026-11-27T13:45+00:00",
+  "captures": 362,
   "cells": [
     {
-      "beat_close": 0.8,
-      "games": 24,
-      "graded": 25,
-      "high": null,
-      "low": null,
-      "mean": 0.024665363084591375,
-      "shops": 43,
+      "beat_close": 0.6756756756756757,
+      "games": 32,
+      "graded": 37,
+      "high": 0.05072559489920479,
+      "low": -0.03581123452276977,
+      "mean": 0.007457180188217511,
+      "shops": 57,
       "tier": "high_major",
-      "ungraded": 18
+      "ungraded": 20
     },
     {
-      "beat_close": 0.7222222222222222,
-      "games": 50,
-      "graded": 54,
-      "high": 0.2090556416326233,
-      "low": -0.09547058474142579,
-      "mean": 0.05679252844559875,
-      "shops": 75,
+      "beat_close": 0.7272727272727273,
+      "games": 51,
+      "graded": 55,
+      "high": 0.2056616234309216,
+      "low": -0.09329315327907495,
+      "mean": 0.05618423507592333,
+      "shops": 76,
       "tier": "mid_major",
       "ungraded": 21
     },
@@ -38,36 +38,20 @@
       "ungraded": 7
     },
     {
-      "beat_close": 0.6375,
-      "games": 66,
-      "graded": 80,
-      "high": 0.2504693243688655,
-      "low": -0.06603247912792566,
-      "mean": 0.0922184226204699,
-      "shops": 110,
+      "beat_close": 0.6714285714285714,
+      "games": 59,
+      "graded": 70,
+      "high": 0.2894239671571051,
+      "low": -0.06787958594463334,
+      "mean": 0.11077219060623589,
+      "shops": 99,
       "tier": "unplaced",
-      "ungraded": 30
+      "ungraded": 29
     }
   ],
   "correction_factor": 1.8867178582120565,
-  "current": [
-    {
-      "american": -285,
-      "away_team": "Omaha Mavericks",
-      "book": "fanduel",
-      "books": 18,
-      "commence": "2026-11-27T03:30:00+00:00",
-      "edge": 0.0233,
-      "event_id": "f8c8f160933b1de8443aee985386d93f",
-      "fair_american": -312,
-      "game": "Omaha Mavericks at Pacific Tigers",
-      "home_team": "Pacific Tigers",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "latest_capture": "2026-11-27T03:13:37+00:00",
+  "current": [],
+  "latest_capture": "2026-11-27T13:42:34+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02
