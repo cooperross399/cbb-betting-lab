@@ -51,7 +51,8 @@ def test_no_email_means_no_registration(monkeypatch):
 
 
 def test_the_reader_never_asks_barttorvik_com():
-    for url in (SO.CBBDATA_LOGIN_URL, SO.CBBDATA_REGISTER_URL, SO.TORVIK_ARCHIVE_URL, SO.TORVIK_CURRENT_URL):
+    for url in (SO.CBBDATA_LOGIN_URL, SO.CBBDATA_REGISTER_URL, SO.TORVIK_ARCHIVE_URL, SO.TORVIK_CURRENT_URL,
+                SO.TORVIK_FACTORS_URL):
         assert url.startswith("https://www.cbbdata.com/api/")
         assert "barttorvik" not in url
 
@@ -71,3 +72,42 @@ def test_the_current_table_is_read_as_the_day_it_was_read(monkeypatch):
     assert len(table) == 5 and table["adj_tempo"].eq(67.0).all()
     with pytest.raises(SO.SecondOpinionError):
         SO.torvik_on(SO.fetch_torvik_current("k", 2027, "2026-11-27"), "2026-11-26")
+
+
+def test_the_team_factors_are_read_as_json_and_dated_the_day_read(monkeypatch):
+    rows = [{"team": f"Team {i}", "adj_o": 111.0 + i, "adj_d": 98.0, "adj_t": 69.0} for i in range(5)]
+    seen = []
+    monkeypatch.setattr(SO, "_get", lambda url, **_: seen.append(url) or json.dumps(rows).encode())
+    table = SO.torvik_on(SO.fetch_torvik_factors("k", 2027, "2026-11-27"), "2026-11-27")
+    assert seen[0].startswith(SO.TORVIK_FACTORS_URL + "?") and "year=2027" in seen[0]
+    assert table.attrs["as_of"] == "2026-11-27" and len(table) == 5
+    assert table.loc[table["team"] == "Team 2", "adj_off"].item() == 113.0
+
+
+def test_an_answer_that_is_no_table_is_refused():
+    with pytest.raises(SO.SecondOpinionError):
+        SO.read_table(b"<html>maintenance</html>", "probe")
+
+
+def test_the_fetch_falls_through_to_the_first_source_holding_the_season(monkeypatch, capsys):
+    import importlib.util
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "fetch_second_opinion_chain", Path(__file__).resolve().parents[1] / "scripts" / "fetch_second_opinion.py")
+    script = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(script)
+    empty = pd.DataFrame(columns=["team", "adj_o", "adj_d", "date"])
+    factors = pd.DataFrame({"team": [f"Team {i}" for i in range(5)], "adj_o": [110.0] * 5,
+                            "adj_d": [100.0] * 5, "date": ["2026-11-27"] * 5})
+    monkeypatch.setattr(script.second_opinion, "fetch_torvik_archive", lambda key, season: empty)
+    monkeypatch.setattr(script.second_opinion, "fetch_torvik_current", lambda key, season, day: empty)
+    monkeypatch.setattr(script.second_opinion, "fetch_torvik_factors", lambda key, season, day: factors)
+    _, table = script._torvik_table("k", 2027, "2026-11-27")
+    assert len(table) == 5
+    assert "read from cbbdata's team factors" in capsys.readouterr().out
+
+    monkeypatch.setattr(script.second_opinion, "fetch_torvik_factors", lambda key, season, day: empty)
+    assert script._torvik_table("k", 2027, "2026-11-27") == (None, None)
+    out = capsys.readouterr()
+    assert "has not published this season" in out.out and "nothing was read" in out.err

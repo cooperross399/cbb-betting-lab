@@ -434,6 +434,12 @@ TORVIK_ARCHIVE_URL = "https://www.cbbdata.com/api/torvik/ratings/archive"
 #: is read from here when the archive holds nothing, stamped with the day it
 #: was read. It never reaches back: the audit's earlier days stay unfilled.
 TORVIK_CURRENT_URL = "https://www.cbbdata.com/api/torvik/ratings"
+#: T-Rank's team factors over the season to date (adjusted offence, defence
+#: and tempo among them), the table cbbdata builds on request rather than from
+#: its nightly ratings job. Read when both ratings endpoints hold nothing for
+#: the season (2026-11-27: both empty for 2026-27), stamped with the day read.
+TORVIK_FACTORS_URL = "https://www.cbbdata.com/api/torvik/factors"
+TORVIK_FACTORS_QUERY = {"venue": "all", "type": "all", "quad": "4", "top": "0"}
 
 
 def _post_json(url: str, body: dict, *, timeout: float = 60.0) -> tuple[int, bytes]:
@@ -501,6 +507,44 @@ def fetch_torvik_archive(key: str, season: int) -> pd.DataFrame:
         return pd.read_parquet(io.BytesIO(payload))
     except Exception as exc:  # noqa: BLE001
         raise SecondOpinionError(f"cbbdata's T-Rank archive was not a parquet file ({type(exc).__name__})") from exc
+
+
+def read_table(payload: bytes, what: str) -> pd.DataFrame:
+    """A cbbdata answer as a table: parquet as the API usually sends, then
+    JSON records, then CSV. Refused, naming `what`, when it is none of them."""
+    import io
+
+    try:
+        return pd.read_parquet(io.BytesIO(payload))
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        data = json.loads(payload)
+        if isinstance(data, dict):
+            data = next((v for v in data.values() if isinstance(v, list)), [data])
+        if isinstance(data, list) and all(isinstance(r, dict) for r in data):
+            return pd.DataFrame(data)
+    except ValueError:
+        pass
+    try:
+        table = pd.read_csv(io.BytesIO(payload))
+        if len(table.columns) > 1:
+            return table
+    except Exception:  # noqa: BLE001
+        pass
+    raise SecondOpinionError(f"{what} was not a table cbbdata sends")
+
+
+def fetch_torvik_factors(key: str, season: int, day: str) -> pd.DataFrame:
+    """T-Rank's season-to-date team factors in the archive's shape, every row
+    dated `day` (the day it was read). The key is never printed."""
+    if not key:
+        raise SecondOpinionError("no cbbdata key")
+    url = TORVIK_FACTORS_URL + "?" + urllib.parse.urlencode({"year": int(season), **TORVIK_FACTORS_QUERY, "key": key})
+    table = read_table(_get(url), "cbbdata's T-Rank factors")
+    table = table.drop(columns=[c for c in table.columns if _key(c) == "date"])
+    table["date"] = str(day)
+    return table
 
 
 def fetch_torvik_current(key: str, season: int, day: str) -> pd.DataFrame:
