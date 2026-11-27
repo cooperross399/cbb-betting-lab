@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 130,
-      "away_team": "Iowa State Cyclones",
-      "book": "bovada",
-      "books": 18,
-      "commence": "2026-11-27T18:00:00+00:00",
-      "edge": 0.0458,
-      "event_id": "6d123a59bb5220938562ae9ab3a41d77",
-      "fair_american": 120,
-      "game": "Iowa State Cyclones at St. John's Red Storm",
-      "home_team": "St. John's Red Storm",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "as_of": "2026-11-27T16:43+00:00",
-  "captures": 363,
+  "alerts": [],
+  "as_of": "2026-11-27T17:45+00:00",
+  "captures": 364,
   "cells": [
     {
       "beat_close": 0.6756756756756757,
@@ -60,45 +44,45 @@
       "high": 0.2894239671571051,
       "low": -0.06787958594463334,
       "mean": 0.11077219060623589,
-      "shops": 99,
+      "shops": 100,
       "tier": "unplaced",
-      "ungraded": 29
+      "ungraded": 30
     }
   ],
   "correction_factor": 1.8867178582120565,
   "current": [
     {
-      "american": 130,
-      "away_team": "Iowa State Cyclones",
-      "book": "bovada",
-      "books": 18,
+      "american": 120,
+      "away_team": "Hampton Pirates",
+      "book": "hardrockbet",
+      "books": 17,
       "commence": "2026-11-27T18:00:00+00:00",
-      "edge": 0.0458,
-      "event_id": "6d123a59bb5220938562ae9ab3a41d77",
-      "fair_american": 120,
-      "game": "Iowa State Cyclones at St. John's Red Storm",
-      "home_team": "St. John's Red Storm",
+      "edge": 0.0239,
+      "event_id": "6c246469b03c12801d6ff588d968a6e4",
+      "fair_american": 115,
+      "game": "Hampton Pirates at UMass Lowell River Hawks",
+      "home_team": "UMass Lowell River Hawks",
       "line": null,
       "market": "moneyline",
       "selection": "away"
     },
     {
-      "american": 110,
-      "away_team": "Western Kentucky Hilltoppers",
-      "book": "ballybet",
+      "american": 130,
+      "away_team": "Iowa State Cyclones",
+      "book": "bovada",
       "books": 14,
-      "commence": "2026-11-27T23:00:00+00:00",
-      "edge": 0.0255,
-      "event_id": "1f87dcbca697a752ec04a6d6294636f0",
-      "fair_american": 105,
-      "game": "Western Kentucky Hilltoppers at Illinois Fighting Illini",
-      "home_team": "Illinois Fighting Illini",
-      "line": 26.5,
-      "market": "spread",
+      "commence": "2026-11-27T18:05:00+00:00",
+      "edge": 0.085,
+      "event_id": "6d123a59bb5220938562ae9ab3a41d77",
+      "fair_american": 112,
+      "game": "Iowa State Cyclones at St. John's Red Storm",
+      "home_team": "St. John's Red Storm",
+      "line": null,
+      "market": "moneyline",
       "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-27T16:40:29+00:00",
+  "latest_capture": "2026-11-27T17:42:56+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02
