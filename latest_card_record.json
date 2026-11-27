@@ -1,10 +1,10 @@
 {
  "as_of": "2026-11-27",
- "picks": 490,
+ "picks": 494,
  "comments_read": 1,
  "outcomes": {
   "lost": 305,
-  "pending": 8,
+  "pending": 12,
   "won": 177
  },
  "clv": {
@@ -10680,8 +10680,8 @@
    "tier": "mid_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.7934,
-   "clv": 0.0832
+   "closeProbability": 0.6753,
+   "clv": -0.0349
   },
   {
    "date": "2026-11-27",
@@ -10702,8 +10702,8 @@
    "tier": "mid_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.8183,
-   "clv": 0.0183
+   "closeProbability": 0.8301,
+   "clv": 0.0301
   },
   {
    "date": "2026-11-27",
@@ -10724,8 +10724,8 @@
    "tier": "high_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.4486,
-   "clv": 0.0042
+   "closeProbability": 0.4865,
+   "clv": 0.042
   },
   {
    "date": "2026-11-27",
@@ -10746,8 +10746,8 @@
    "tier": "low_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.7934,
-   "clv": 0.0565
+   "closeProbability": 0.7802,
+   "clv": 0.0433
   },
   {
    "date": "2026-11-27",
@@ -10768,8 +10768,8 @@
    "tier": "mid_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.6548,
-   "clv": -0.0119
+   "closeProbability": 0.7155,
+   "clv": 0.0488
   },
   {
    "date": "2026-11-27",
@@ -10790,8 +10790,96 @@
    "tier": "high_major",
    "outcome": "pending",
    "result": null,
-   "closeProbability": 0.2927,
-   "clv": -0.0521
+   "closeProbability": 0.3581,
+   "clv": 0.0132
+  },
+  {
+   "date": "2026-11-27",
+   "slot": "evening",
+   "eventId": "015a5c88e4f2a9776b503e419aa2055e",
+   "home": "Kansas St Wildcats",
+   "away": "Michigan Wolverines",
+   "market": "team_total_h1",
+   "segment": "h1",
+   "category": "Team totals",
+   "selection": "home_under",
+   "line": 36.5,
+   "price": 100.0,
+   "betDownTo": -102.0,
+   "book": "espnbet",
+   "model": 0.37405471087267766,
+   "edge": 0.05072207818762786,
+   "tier": "high_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": null,
+   "clv": null
+  },
+  {
+   "date": "2026-11-27",
+   "slot": "evening",
+   "eventId": "ebb91d3cb7c017b0bf6de2b333909d71",
+   "home": "UC Davis Aggies",
+   "away": "Pacific Tigers",
+   "market": "team_total_h1",
+   "segment": "h1",
+   "category": "Team totals",
+   "selection": "home_under",
+   "line": 31.5,
+   "price": -115.0,
+   "betDownTo": -120.0,
+   "book": "espnbet",
+   "model": 0.6384721375254288,
+   "edge": 0.04077002405904073,
+   "tier": "mid_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": null,
+   "clv": null
+  },
+  {
+   "date": "2026-11-27",
+   "slot": "evening",
+   "eventId": "8df0c9cd54ab128fd63e0f56b9ee0a2e",
+   "home": "Louisville Cardinals",
+   "away": "Tennessee Volunteers",
+   "market": "spread_h1",
+   "segment": "h1",
+   "category": "ATS",
+   "selection": "home",
+   "line": -2.0,
+   "price": 110.0,
+   "betDownTo": 108.0,
+   "book": "bovada",
+   "model": 0.34142365105358913,
+   "edge": 0.050000000000000266,
+   "tier": "high_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": null,
+   "clv": null
+  },
+  {
+   "date": "2026-11-27",
+   "slot": "evening",
+   "eventId": "a3b0558a4bc97d4aedb25c7e618304f4",
+   "home": "Georgia Bulldogs",
+   "away": "UCF Knights",
+   "market": "total_points_h1",
+   "segment": "h1",
+   "category": "Totals",
+   "selection": "over",
+   "line": 75.5,
+   "price": -115.0,
+   "betDownTo": -116.0,
+   "book": "fanduel",
+   "model": 0.6006426221116913,
+   "edge": 0.0466331176968906,
+   "tier": "high_major",
+   "outcome": "pending",
+   "result": null,
+   "closeProbability": null,
+   "clv": null
   }
  ],
  "notes": [

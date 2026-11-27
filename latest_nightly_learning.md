@@ -58,8 +58,8 @@ Median share of each rating still carried by the preseason prior: offence 27% â†
 ## The other two learners
 
 - Trust in the model against the price, per tier (0 is the market, 1 is the model as it stands): high-major 0.000 (seed 0.046, 86,304 settled forward row(s), 48,252 closing-line row(s)); low-major 0.123 (seed 0.011, 27,628 settled forward row(s), 16,408 closing-line row(s)); mid-major 0.000 (seed 0.032, 83,648 settled forward row(s), 46,608 closing-line row(s)). Every wager's probability is pulled to market + trust x (model - market) before the edge bar; a wager with no two-sided price carries no trusted opinion.
-- Layer audit (2026-11-27): on the card: Home court, Rest, Who is missing, Second opinion, Three-point defence luck, Spread bias against the market.
-- Switched from the declared card: Last five games, Three-point defence luck.
+- Layer audit (2026-11-27): on the card: Home court, Last five games, Rest, Who is missing, Second opinion, Spread bias against the market.
+- Switched from the declared card: nothing.
 
 ## The season so far
 

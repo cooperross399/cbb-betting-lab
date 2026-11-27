@@ -489,3 +489,7 @@ slate_date,card_slot,event_id,commence_time,home_team,away_team,market,segment,p
 2026-11-27,morning,eaf627a916aa57020a2810007ee9bcf2,2026-11-27T18:30:00Z,Wake Forest Demon Deacons,Memphis Tigers,moneyline,game,,home,,125.0,123.0,hardrockbet,0.3043462362611853,0.029909692135495103,high_major,state
 2026-11-27,morning,ebb91d3cb7c017b0bf6de2b333909d71,2026-11-28T01:00:00Z,UC Davis Aggies,Pacific Tigers,moneyline,game,,away,,-200.0,-201.0,fanduel,0.8058734313127078,0.023345355820953984,mid_major,state
 2026-11-27,morning,bc3fb1851c83444219f558d4229a1f0c,2026-11-27T20:00:00Z,Butler Bulldogs,Bellarmine Knights,spread_h1,h1,,away,9.5,110.0,109.0,bovada,0.5590696574415688,0.026471575894611243,high_major,state
+2026-11-27,evening,015a5c88e4f2a9776b503e419aa2055e,2026-11-27T22:30:00Z,Kansas St Wildcats,Michigan Wolverines,team_total_h1,h1,,home_under,36.5,100.0,-102.0,espnbet,0.37405471087267766,0.05072207818762786,high_major,state
+2026-11-27,evening,8df0c9cd54ab128fd63e0f56b9ee0a2e,2026-11-28T02:00:00Z,Louisville Cardinals,Tennessee Volunteers,spread_h1,h1,,home,-2.0,110.0,108.0,bovada,0.34142365105358913,0.050000000000000266,high_major,state
+2026-11-27,evening,a3b0558a4bc97d4aedb25c7e618304f4,2026-11-28T00:00:00Z,Georgia Bulldogs,UCF Knights,total_points_h1,h1,,over,75.5,-115.0,-116.0,fanduel,0.6006426221116913,0.0466331176968906,high_major,state
+2026-11-27,evening,ebb91d3cb7c017b0bf6de2b333909d71,2026-11-28T01:00:00Z,UC Davis Aggies,Pacific Tigers,team_total_h1,h1,,home_under,31.5,-115.0,-120.0,espnbet,0.6384721375254288,0.04077002405904073,mid_major,state
