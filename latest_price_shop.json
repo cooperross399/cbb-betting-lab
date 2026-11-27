@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-26T23:50+00:00",
-  "captures": 357,
+  "as_of": "2026-11-27T00:36+00:00",
+  "captures": 358,
   "cells": [
     {
       "beat_close": 0.8,
@@ -38,51 +38,20 @@
       "ungraded": 7
     },
     {
-      "beat_close": 0.6578947368421053,
-      "games": 63,
-      "graded": 76,
-      "high": 0.26649577175345285,
-      "low": -0.06480961153601694,
-      "mean": 0.10084308010871795,
-      "shops": 106,
+      "beat_close": 0.6455696202531646,
+      "games": 65,
+      "graded": 79,
+      "high": 0.2553509483359975,
+      "low": -0.06439401409090835,
+      "mean": 0.09547846712254456,
+      "shops": 109,
       "tier": "unplaced",
       "ungraded": 30
     }
   ],
   "correction_factor": 1.8867178582120565,
-  "current": [
-    {
-      "american": -245,
-      "away_team": "SMU Mustangs",
-      "book": "fanduel",
-      "books": 18,
-      "commence": "2026-11-27T00:00:00+00:00",
-      "edge": 0.0279,
-      "event_id": "8cdf0f9df5b4480c117a9455b60b067b",
-      "fair_american": -270,
-      "game": "SMU Mustangs at LSU Tigers",
-      "home_team": "LSU Tigers",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    },
-    {
-      "american": -240,
-      "away_team": "North Texas Mean Green",
-      "book": "fanduel",
-      "books": 7,
-      "commence": "2026-11-28T01:00:00+00:00",
-      "edge": 0.0236,
-      "event_id": "d41c0bb8557bb274bce7d03b0dd33d3a",
-      "fair_american": -260,
-      "game": "North Texas Mean Green at North Dakota St Bison",
-      "home_team": "North Dakota St Bison",
-      "line": null,
-      "market": "moneyline",
-      "selection": "away"
-    }
-  ],
-  "latest_capture": "2026-11-26T23:47:58+00:00",
+  "current": [],
+  "latest_capture": "2026-11-27T00:34:08+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02
