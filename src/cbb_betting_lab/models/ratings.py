@@ -258,7 +258,7 @@ from cbb_betting_lab import config, verdicts
 from cbb_betting_lab.competitions import CBB, Competition
 from cbb_betting_lab.conferences import Tier, TierTable, tier_table
 from cbb_betting_lab.data.build_datasets import REGULATION_PERIODS
-from cbb_betting_lab.models import card_factors, distributions
+from cbb_betting_lab.models import card_factors, distributions, non_division_one
 from cbb_betting_lab.population import GameState, VenueState, classify, home_venues
 from cbb_betting_lab.season import clean_text, season_for_slate_date
 
@@ -1732,6 +1732,9 @@ class Ratings:
     residual_sd: float = 0.0
     venue_level_home_effect: bool = False
     venue_effect_note: str = ""
+    #: Non-D-I schools rated by `non_division_one.extend` rather than by the
+    #: fit (Cooper, 2026-11-27: every team on a D-I schedule is projected).
+    baseline_teams: frozenset = frozenset()
 
     # -- reading one team --------------------------------------------------
 
@@ -2294,6 +2297,8 @@ def matchup(
         if not (PRICE_UNIDENTIFIED_ON_PRIOR and known_to_prior):
             return refuse(reason, effective_resistance=resistance)
         identified_by = "prior"
+        if home_team_id in ratings.baseline_teams or away_team_id in ratings.baseline_teams:
+            identified_by = "non_di_baseline"
 
     weights = [
         ratings.prior_weight_for(home_team_id, OFFENCE),
@@ -2645,6 +2650,48 @@ def _cached_schedule(season: int, raw_dir: Path | str | None = None) -> "pd.Data
     return frame
 
 
+def supplement_schedule(
+    season: int, supplement: "pd.DataFrame | None", raw_dir: Path | str | None = None
+) -> int:
+    """Add fixtures hoopR's cached schedule does not hold yet. Returns how many.
+
+    A tournament's second-day pairings are set by its first day's results, so a
+    game can be on ESPN's slate hours before hoopR's nightly build lists it --
+    ten games on 2026-11-27, which the board then drew without a projection.
+    The supplement is ESPN's own fixture in hoopR's columns (ESPN's event id is
+    hoopR's game id), so who is playing and where is read, never guessed. A
+    game the cache already holds is never replaced.
+    """
+    if supplement is None or supplement.empty or "id" not in supplement.columns:
+        return 0
+    root = Path(raw_dir) if raw_dir else Path(config.RAW_DIR)
+    key = (int(season), str(root))
+    try:
+        base = _cached_schedule(season, raw_dir)
+    except FileNotFoundError:
+        return 0
+    have = set(pd.to_numeric(base["id"], errors="coerce").dropna().astype(int))
+    ids = pd.to_numeric(supplement["id"], errors="coerce")
+    extra = supplement[ids.notna() & ~ids.fillna(-1).astype(int).isin(have)]
+    if extra.empty:
+        return 0
+    extra = extra.copy()
+    for column in ("id", "home_id", "away_id"):
+        if column in extra.columns:
+            extra[column] = pd.to_numeric(extra[column], errors="coerce")
+    extra = extra.dropna(subset=[c for c in ("id", "home_id", "away_id") if c in extra.columns])
+    for column in ("id", "home_id", "away_id"):
+        if column in extra.columns:
+            extra[column] = extra[column].astype("int64")
+    if extra.empty:
+        return 0
+    merged = pd.concat([base, extra], ignore_index=True)
+    _SCHEDULE_CACHE[key] = merged
+    _CLASSIFIED_CACHE.pop(key, None)
+    _FIXTURES_CACHE.pop(key, None)
+    return int(len(extra))
+
+
 def _cached_classified(season: int, raw_dir: Path | str | None = None) -> "pd.DataFrame":
     root = Path(raw_dir) if raw_dir else Path(config.RAW_DIR)
     key = (int(season), str(root))
@@ -2900,6 +2947,18 @@ def matchups_for(
         _record_fit(day, season, ratings, None, out)
         return out
 
+    # EVERY SCHOOL ON TONIGHT'S SLATE GETS A RATING (Cooper, 2026-11-27). A
+    # non-D-I visitor is rated from its own games against D-I opposition,
+    # measured against its D-I opponents' fitted ratings and shrunk to the
+    # class's measured level (`non_division_one`). The D-I fit is untouched.
+    # The pages that list "every team the fit rates" read the recorded fit,
+    # so the D-I fit is what is recorded; the extension prices tonight only.
+    fitted = ratings
+    ratings, _baseline = non_division_one.extend(
+        fitted, history, season=int(season), day=str(day),
+        teams=[t for _, _, h, a in asked for t in (h, a)],
+    )
+
     # TONIGHT'S CONTEXT, on the same seam. Form, rest and who is missing are
     # read off the frames this function was handed — already cut strictly
     # before the day, and refused again inside `build_context` if not — and the
@@ -2941,5 +3000,5 @@ def matchups_for(
             local_team_id=local_side,
             venue_address_state=fixture.get("venue_address_state"),
         )
-    _record_fit(day, season, ratings, context, out)
+    _record_fit(day, season, fitted, context, out)
     return out

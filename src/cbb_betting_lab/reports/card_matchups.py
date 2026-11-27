@@ -389,6 +389,22 @@ def fixture_index_from_schedule(schedule: pd.DataFrame) -> _FixtureIndex:
     return _FixtureIndex(by_pair, by_team_day, game)
 
 
+def _fixture_by_event_id(event_id: str, day: str, fixtures: _FixtureIndex, schedule: pd.DataFrame):
+    """The schedule's game whose id IS this event id, on this day, or None."""
+    if not event_id.isdigit():
+        return None
+    game_id = int(event_id)
+    if game_id not in fixtures.game or schedule is None or schedule.empty:
+        return None
+    ids = schedule["id"] if "id" in schedule.columns else schedule.get("game_id")
+    if ids is None:
+        return None
+    dates = schedule.loc[pd.to_numeric(ids, errors="coerce") == game_id, "game_date"]
+    if dates.empty or str(dates.iloc[0])[:10] != str(day)[:10]:
+        return None
+    return game_id
+
+
 def attach_game_ids(
     rows: pd.DataFrame,
     *,
@@ -429,6 +445,15 @@ def attach_game_ids(
         home = clean_text(record.get("home_team"))
         away = clean_text(record.get("away_team"))
         game_id = fixtures.resolve(home, away, str(day), index)
+        by_event_id = False
+        if game_id is None:
+            # AN ESPN EVENT ID IS THE SCHEDULE'S OWN GAME ID. The board asks
+            # about ESPN's slate, so where the names do not resolve -- a
+            # non-D-I school, which `build_index` leaves out on purpose -- the
+            # fixture is read by its id, never guessed. A provider's event id
+            # is a hex string and can never match one.
+            game_id = _fixture_by_event_id(event_id, str(day), fixtures, schedule)
+            by_event_id = game_id is not None
         if game_id is None:
             if index.resolve(home) is not None and index.resolve(away) is not None:
                 no_fixture += 1
@@ -444,7 +469,7 @@ def attach_game_ids(
         # games on opening day), and a `home` selection names the provider's
         # home. Resolved among the fixture's own two ids, so a name can only
         # ever land on one of them (decision 72).
-        provider_home = index.resolve(home, among={home_id, away_id} - {None})
+        provider_home = None if by_event_id else index.resolve(home, among={home_id, away_id} - {None})
         out.append(
             {
                 "event_id": event_id,
@@ -537,8 +562,13 @@ def matchups_for_card(
     processed_dir: Path | str | None = None,
     raw_dir: Path | str | None = None,
     model: Callable | str = PB.DEFAULT_MODEL,
+    supplement: pd.DataFrame | None = None,
 ) -> CardMatchups:
     """One matchup per event the model can price, for the card's day.
+
+    `supplement` is fixtures in hoopR's schedule columns that the cached
+    schedule does not hold yet (`ratings.supplement_schedule`); the board
+    passes ESPN's own slate. The card passes none.
 
     Raises :class:`InputsAbsent` when either results table or the season's
     schedule is not on disk. Returns an empty mapping — and says so in its
@@ -578,6 +608,11 @@ def matchups_for_card(
     player_games = load_player_games(competition, processed_dir)
     season = season_for_slate_date(day)
     schedule = load_schedule(season, raw_dir)
+    if supplement is not None and not supplement.empty:
+        from cbb_betting_lab.models import ratings as _ratings
+
+        if _ratings.supplement_schedule(season, supplement, raw_dir):
+            schedule = _ratings._cached_schedule(season, raw_dir)
 
     # One definition of "strictly earlier", for both tables. A second copy of
     # this cut is how a card comes to be fitted on a population no measurement

@@ -1381,6 +1381,19 @@ blind side in the receipt-pinned report, so on Cooper's decision-card choice
 (*"Yes, re-sign all 35 now"*) the report was re-rendered and the 35 receipts
 re-executed as his delegate, as on 2026-10-30 and 2026-11-09.
 
+### 2026-11-27: every school on the slate is projected (decision 125)
+
+Cooper: *"Still need full projections for every game and figure out how to
+learn every team so you can do that. Need total projections and spreads"*.
+A non-D-I visitor (NAIA, D-II, D-III) is rated by `models/non_division_one.py`
+from its own games against D-I opposition only, measured against its D-I
+opponents' fitted ratings and shrunk to the class's measured level; the D-I
+fit is untouched and no non-D-I game is fitted on, carded or graded, so this
+does not widen the lab past the scope line at the top of this file. The board
+also finds a fixture by its ESPN event id and adds one the cached schedule
+lacks from ESPN's slate, which is where the tournament second-day games went
+missing at 3 AM. The card is unchanged and nothing is registered.
+
 ## Contract strings — never change these
 
 Cooper's scheduled routines hard-code these. Renaming any of them silently
