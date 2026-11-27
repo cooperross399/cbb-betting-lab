@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": 106,
-      "away_team": "SE Missouri St Redhawks",
-      "book": "lowvig",
-      "books": 5,
-      "commence": "2026-11-28T20:00:00+00:00",
-      "edge": 0.03,
-      "event_id": "80ecbeefa04e5a4cf874933165d05193",
-      "fair_american": -100,
-      "game": "SE Missouri St Redhawks at UMKC Kangaroos",
-      "home_team": "UMKC Kangaroos",
-      "line": 148.5,
-      "market": "total_points",
-      "selection": "over"
-    }
-  ],
-  "as_of": "2026-11-27T22:45+00:00",
-  "captures": 372,
+  "alerts": [],
+  "as_of": "2026-11-27T23:27+00:00",
+  "captures": 373,
   "cells": [
     {
       "beat_close": 0.6756756756756757,
@@ -54,13 +38,13 @@
       "ungraded": 7
     },
     {
-      "beat_close": 0.676056338028169,
-      "games": 60,
-      "graded": 71,
-      "high": 0.2865191140399757,
-      "low": -0.06569944894827286,
-      "mean": 0.11040983254585142,
-      "shops": 103,
+      "beat_close": 0.6805555555555556,
+      "games": 61,
+      "graded": 72,
+      "high": 0.28286659445377016,
+      "low": -0.0644898090031073,
+      "mean": 0.10918839272533143,
+      "shops": 104,
       "tier": "unplaced",
       "ungraded": 32
     }
@@ -81,84 +65,9 @@
       "line": -22.5,
       "market": "spread",
       "selection": "home"
-    },
-    {
-      "american": 109,
-      "away_team": "Toledo Rockets",
-      "book": "lowvig",
-      "books": 9,
-      "commence": "2026-11-28T20:00:00+00:00",
-      "edge": 0.0313,
-      "event_id": "670132cf2f68a5e807430276ec9dfe39",
-      "fair_american": 103,
-      "game": "Toledo Rockets at Valparaiso Beacons",
-      "home_team": "Valparaiso Beacons",
-      "line": 4.5,
-      "market": "spread",
-      "selection": "away"
-    },
-    {
-      "american": 106,
-      "away_team": "SE Missouri St Redhawks",
-      "book": "lowvig",
-      "books": 5,
-      "commence": "2026-11-28T20:00:00+00:00",
-      "edge": 0.03,
-      "event_id": "80ecbeefa04e5a4cf874933165d05193",
-      "fair_american": -100,
-      "game": "SE Missouri St Redhawks at UMKC Kangaroos",
-      "home_team": "UMKC Kangaroos",
-      "line": 148.5,
-      "market": "total_points",
-      "selection": "over"
-    },
-    {
-      "american": 105,
-      "away_team": "Liberty Flames",
-      "book": "fanatics",
-      "books": 5,
-      "commence": "2026-11-28T20:00:00+00:00",
-      "edge": 0.0295,
-      "event_id": "74d396c4a2e6763a77d3f70ba178d6b9",
-      "fair_american": -101,
-      "game": "Liberty Flames at UNC Wilmington Seahawks",
-      "home_team": "UNC Wilmington Seahawks",
-      "line": -6.5,
-      "market": "spread",
-      "selection": "home"
-    },
-    {
-      "american": -105,
-      "away_team": "Tennessee Tech Golden Eagles",
-      "book": "fanatics",
-      "books": 3,
-      "commence": "2026-11-28T21:00:00+00:00",
-      "edge": 0.0215,
-      "event_id": "53a900069a7d4e77c1e6962800e3c409",
-      "fair_american": -110,
-      "game": "Tennessee Tech Golden Eagles at Eastern Kentucky Colonels",
-      "home_team": "Eastern Kentucky Colonels",
-      "line": -4.0,
-      "market": "spread",
-      "selection": "away"
-    },
-    {
-      "american": 105,
-      "away_team": "North Dakota St Bison",
-      "book": "fanatics",
-      "books": 3,
-      "commence": "2026-11-28T23:00:00+00:00",
-      "edge": 0.025,
-      "event_id": "154f6ed9e99356bd23a0acd542c26f5c",
-      "fair_american": 100,
-      "game": "North Dakota St Bison at Drake Bulldogs",
-      "home_team": "Drake Bulldogs",
-      "line": 5.5,
-      "market": "spread",
-      "selection": "away"
     }
   ],
-  "latest_capture": "2026-11-27T22:42:58+00:00",
+  "latest_capture": "2026-11-27T23:24:37+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02
