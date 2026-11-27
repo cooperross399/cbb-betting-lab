@@ -295,6 +295,43 @@ def _kenpom_history(key: str, season: int, as_of: str, raw_dir: Path, schedule) 
           + (f", {failed} could not be read." if failed else "."))
 
 
+def _torvik_table(key: str, season: int, as_of: str):
+    """The first cbbdata T-Rank source that holds this season: the day-by-day
+    archive, then today's ratings, then the season-to-date team factors. Each
+    one tried is logged with its row count. When none holds the season, last
+    season's archive is counted (never used) so the log says whether the
+    account reads cbbdata at all or cbbdata has not published this season."""
+    sources = (
+        ("archive", lambda: second_opinion.fetch_torvik_archive(key, season)),
+        ("today's ratings", lambda: second_opinion.fetch_torvik_current(key, season, as_of)),
+        ("team factors", lambda: second_opinion.fetch_torvik_factors(key, season, as_of)),
+    )
+    for name, fetch in sources:
+        try:
+            archive = fetch()
+        except second_opinion.SecondOpinionError as exc:
+            print(f"T-Rank {name}: could not be read ({exc}).")
+            continue
+        print(f"T-Rank {name}: {len(archive):,} row(s) for {season}; fields: " + ", ".join(map(str, archive.columns)))
+        if archive.empty:
+            continue
+        try:
+            table = second_opinion.torvik_on(archive, as_of)
+        except second_opinion.SecondOpinionError as exc:
+            print(f"T-Rank {name}: not usable ({exc}).")
+            continue
+        print(f"T-Rank: read from cbbdata's {name}, {len(table):,} team(s) as of {table.attrs.get('as_of')}.")
+        return archive, table
+    try:
+        last = second_opinion.fetch_torvik_archive(key, season - 1)
+        print(f"T-Rank diagnostic: cbbdata's archive holds {len(last):,} row(s) for {season - 1} "
+              f"and none for {season}, so cbbdata has not published this season yet.")
+    except second_opinion.SecondOpinionError as exc:
+        print(f"T-Rank diagnostic: last season's archive could not be read either ({exc}).")
+    print(f"::warning::T-Rank: no cbbdata source holds {season} yet; nothing was read.", file=sys.stderr)
+    return None, None
+
+
 def _torvik(season: int, as_of: str, raw_dir: Path, schedule) -> bool:
     """T-Rank through cbbdata (decision 123), with the account in Cooper's
     secrets: today's table as a named second opinion, and one dated copy per
@@ -311,15 +348,11 @@ def _torvik(season: int, as_of: str, raw_dir: Path, schedule) -> bool:
         key, created = second_opinion.cbbdata_key(user, password, os.environ.get("CBD_EMAIL", "").strip())
         if created:
             print("T-Rank: the cbbdata account was created from the secrets and logged in.")
-        archive = second_opinion.fetch_torvik_archive(key, season)
-        print(f"T-Rank archive: {len(archive):,} row(s); fields: " + ", ".join(map(str, archive.columns)))
-        if archive.empty:
-            archive = second_opinion.fetch_torvik_current(key, season, as_of)
-            print(f"T-Rank: the archive is empty, so today's table was read instead: {len(archive):,} row(s); "
-                  "fields: " + ", ".join(map(str, archive.columns)))
-        table = second_opinion.torvik_on(archive, as_of)
     except second_opinion.SecondOpinionError as exc:
         print(f"::warning::T-Rank could not be read through cbbdata: {exc}", file=sys.stderr)
+        return False
+    archive, table = _torvik_table(key, season, as_of)
+    if table is None:
         return False
     wrote = _write_named(table, source=second_opinion.TORVIK_SOURCE, season=season,
                          as_of=table.attrs.get("as_of", as_of), raw_dir=raw_dir, schedule=schedule)
