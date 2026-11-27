@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-27T20:01+00:00",
-  "captures": 368,
+  "as_of": "2026-11-27T21:17+00:00",
+  "captures": 369,
   "cells": [
     {
       "beat_close": 0.6756756756756757,
@@ -50,8 +50,24 @@
     }
   ],
   "correction_factor": 1.8867178582120565,
-  "current": [],
-  "latest_capture": "2026-11-27T19:58:59+00:00",
+  "current": [
+    {
+      "american": 100,
+      "away_team": "Wofford Terriers",
+      "book": "espnbet",
+      "books": 7,
+      "commence": "2026-11-28T18:00:00+00:00",
+      "edge": 0.0226,
+      "event_id": "c4a6554a12974505dde21dd18cb52f76",
+      "fair_american": -105,
+      "game": "Wofford Terriers at Fort Wayne Mastodons",
+      "home_team": "Fort Wayne Mastodons",
+      "line": -1.5,
+      "market": "spread",
+      "selection": "home"
+    }
+  ],
+  "latest_capture": "2026-11-27T21:15:04+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02
