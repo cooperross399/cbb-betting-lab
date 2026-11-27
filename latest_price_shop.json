@@ -1,8 +1,39 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-27T21:17+00:00",
-  "captures": 369,
+  "alerts": [
+    {
+      "american": 109,
+      "away_team": "Toledo Rockets",
+      "book": "lowvig",
+      "books": 8,
+      "commence": "2026-11-28T20:00:00+00:00",
+      "edge": 0.0332,
+      "event_id": "670132cf2f68a5e807430276ec9dfe39",
+      "fair_american": 102,
+      "game": "Toledo Rockets at Valparaiso Beacons",
+      "home_team": "Valparaiso Beacons",
+      "line": 4.5,
+      "market": "spread",
+      "selection": "away"
+    },
+    {
+      "american": 109,
+      "away_team": "UC Irvine Anteaters",
+      "book": "lowvig",
+      "books": 8,
+      "commence": "2026-11-28T22:00:00+00:00",
+      "edge": 0.045,
+      "event_id": "316f12cd1c67e9a5c294bfd16a30d062",
+      "fair_american": 100,
+      "game": "UC Irvine Anteaters at Seattle Redhawks",
+      "home_team": "Seattle Redhawks",
+      "line": 4.5,
+      "market": "spread",
+      "selection": "away"
+    }
+  ],
+  "as_of": "2026-11-27T21:59+00:00",
+  "captures": 370,
   "cells": [
     {
       "beat_close": 0.6756756756756757,
@@ -52,22 +83,52 @@
   "correction_factor": 1.8867178582120565,
   "current": [
     {
-      "american": 100,
-      "away_team": "Wofford Terriers",
-      "book": "espnbet",
-      "books": 7,
-      "commence": "2026-11-28T18:00:00+00:00",
-      "edge": 0.0226,
-      "event_id": "c4a6554a12974505dde21dd18cb52f76",
-      "fair_american": -105,
-      "game": "Wofford Terriers at Fort Wayne Mastodons",
-      "home_team": "Fort Wayne Mastodons",
-      "line": -1.5,
+      "american": 109,
+      "away_team": "Toledo Rockets",
+      "book": "lowvig",
+      "books": 8,
+      "commence": "2026-11-28T20:00:00+00:00",
+      "edge": 0.0332,
+      "event_id": "670132cf2f68a5e807430276ec9dfe39",
+      "fair_american": 102,
+      "game": "Toledo Rockets at Valparaiso Beacons",
+      "home_team": "Valparaiso Beacons",
+      "line": 4.5,
       "market": "spread",
-      "selection": "home"
+      "selection": "away"
+    },
+    {
+      "american": 109,
+      "away_team": "UC Irvine Anteaters",
+      "book": "lowvig",
+      "books": 8,
+      "commence": "2026-11-28T22:00:00+00:00",
+      "edge": 0.045,
+      "event_id": "316f12cd1c67e9a5c294bfd16a30d062",
+      "fair_american": 100,
+      "game": "UC Irvine Anteaters at Seattle Redhawks",
+      "home_team": "Seattle Redhawks",
+      "line": 4.5,
+      "market": "spread",
+      "selection": "away"
+    },
+    {
+      "american": 105,
+      "away_team": "California Golden Bears",
+      "book": "fanatics",
+      "books": 6,
+      "commence": "2026-11-29T01:00:00+00:00",
+      "edge": 0.0204,
+      "event_id": "2969a91168251baffa46c87c548deab4",
+      "fair_american": 101,
+      "game": "California Golden Bears at Minnesota Golden Gophers",
+      "home_team": "Minnesota Golden Gophers",
+      "line": 140.5,
+      "market": "total_points",
+      "selection": "under"
     }
   ],
-  "latest_capture": "2026-11-27T21:15:04+00:00",
+  "latest_capture": "2026-11-27T21:57:04+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02
