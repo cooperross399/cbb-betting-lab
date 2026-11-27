@@ -1392,7 +1392,11 @@ fit is untouched and no non-D-I game is fitted on, carded or graded, so this
 does not widen the lab past the scope line at the top of this file. The board
 also finds a fixture by its ESPN event id and adds one the cached schedule
 lacks from ESPN's slate, which is where the tournament second-day games went
-missing at 3 AM. The card is unchanged and nothing is registered.
+missing at 3 AM. The card is unchanged and nothing is registered. The same
+morning the non-D-I rating was recalibrated: a visitor's tempo is read
+against the week's D-I drift (every game slows through November) and its
+offence and defence carry a slope on the D-I host's strength, because a weak
+host beats a non-D-I visitor by more than its rating says.
 
 ## Contract strings — never change these
 

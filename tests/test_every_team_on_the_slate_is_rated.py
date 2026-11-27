@@ -135,3 +135,33 @@ def test_a_bracket_slot_filed_under_placeholders_takes_the_slate_pairing(monkeyp
     merged = ratings._SCHEDULE_CACHE[key]
     assert len(merged) == 1
     assert (merged["home_id"].iloc[0], merged["away_id"].iloc[0]) == (1, 900)
+
+
+def test_a_weak_division_one_host_is_expected_to_beat_a_visitor_by_more():
+    # 40 games: against host 1 (net +10) the visitors score 20 per 100 below
+    # what the additive model says, against host 2 (net 0) 10 below.
+    rows = []
+    for i in range(20):
+        rows += _game(100 + i, 1, 900 + i, 90, 63, 70.0)
+        rows += _game(200 + i, 2, 950 + i, 80, 70, 70.0)
+    base = _ratings()
+    _, baseline = non_division_one.extend(
+        base, pd.DataFrame(rows), season=2027, day="2026-11-27",
+        teams=[1, 2, 990, 991], opponents={990: 1, 991: 2})
+    assert baseline.level.slope("offence") != 0.0
+    # The same never-seen school is rated differently by who it visits, and
+    # the visitor to the weaker host (2) scores less against the league than
+    # it would against the stronger one only if the slope says so.
+    assert baseline.offence[990] != pytest.approx(baseline.offence[991])
+
+
+def test_tonight_tempo_carries_the_recent_division_one_drift():
+    rows = _game(10, 1, 900, 90, 60, 70.0) + _game(11, 2, 900, 80, 62, 70.0)
+    # Thirty D-I games the day before, each 3 possessions slower than the fit.
+    for i in range(30):
+        rows += [{**r, "game_state": "countable"} for r in _game(500 + i, 1, 2, 70, 70, 68.0 + 1.0 - 3.0, day="2026-11-26")]
+    base = _ratings()
+    _, baseline = non_division_one.extend(
+        base, pd.DataFrame(rows), season=2027, day="2026-11-27", teams=[1, 900])
+    # league 68 + tempo(1) 0 + tempo(2) 1 = 69 expected; played 66.
+    assert baseline.level.tempo_drift == pytest.approx(-3.0)
