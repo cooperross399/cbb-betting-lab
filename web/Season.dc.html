@@ -190,11 +190,41 @@ html body nav[aria-label="Board sections"][style]::-webkit-scrollbar { display:n
             </div>
             <input type="search" value="{{ query }}" onInput="{{ onSearch }}" placeholder="Find a team" aria-label="Find a team" style="width:100%;max-width:300px;min-height:44px;padding:0 12px;background:var(--paper);color:var(--ink);border:1px solid var(--ink);font-family:inherit;font-size:14px;">
           </div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;" role="group" aria-label="Conference">
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;" role="group" aria-label="Rankings or conference">
             <sc-for list="{{ confChips }}" as="c" hint-placeholder-count="12">
               <button class="chip" onClick="{{ c.onClick }}" aria-pressed="{{ c.pressed }}" style="background:{{ c.bg }};color:{{ c.fg }};">{{ c.label }}</button>
             </sc-for>
           </div>
+          <sc-if value="{{ top25 }}" hint-placeholder-val="{{ true }}">
+          <div style="margin-top:14px;overflow-x:auto;scrollbar-width:thin;margin-left:calc(-1 * clamp(16px,3vw,24px));margin-right:calc(-1 * clamp(16px,3vw,24px));padding:0 clamp(16px,3vw,24px);">
+            <div role="table" aria-label="Top 25" style="min-width:820px;border-top:2px solid var(--ink);">
+              <div role="row" style="display:grid;grid-template-columns:36px minmax(200px,2fr) minmax(90px,1fr) 70px 90px 70px 60px 60px minmax(90px,1fr);gap:0 10px;padding:6px 0;align-items:center;">
+                <sc-for list="{{ topHead }}" as="h" hint-placeholder-count="9">
+                  <span class="th" style="text-align:{{ h.align }};color:var(--mute);">{{ h.label }}</span>
+                </sc-for>
+              </div>
+              <sc-for list="{{ topRows }}" as="r" hint-placeholder-count="25">
+                <div role="row" style="display:grid;grid-template-columns:36px minmax(200px,2fr) minmax(90px,1fr) 70px 90px 70px 60px 60px minmax(90px,1fr);gap:0 10px;padding:8px 0;border-top:1px solid var(--rule-2);align-items:center;font-size:13px;">
+                  <span class="mono" style="font-weight:700;">{{ r.rank }}</span>
+                  <span style="display:flex;align-items:center;gap:10px;min-width:0;">
+                    <span aria-hidden="true" style="position:relative;width:26px;height:26px;border-radius:50%;flex:none;overflow:hidden;background:var(--rule-2);"><img src="{{ r.logo }}" alt="" loading="lazy" decoding="async" onError="{{ r.onLogoError }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:2px;"></span>
+                    <span style="min-width:0;"><span style="display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.name }}</span><span class="mono" style="display:block;font-size:11px;color:var(--mute);">{{ r.sub }}</span></span>
+                  </span>
+                  <span style="font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.conference }}</span>
+                  <span class="mono" style="text-align:right;">{{ r.overall }}</span>
+                  <span class="mono" style="text-align:right;font-weight:600;">{{ r.projOverall }}</span>
+                  <span class="mono" style="text-align:right;color:{{ r.netColor }};">{{ r.net }}</span>
+                  <span class="mono" style="text-align:right;">{{ r.other }}</span>
+                  <span class="mono" style="text-align:right;color:{{ r.moveColor }};">{{ r.move }}</span>
+                  <span class="mono" style="font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.tonight }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <sc-if value="{{ noTopRows }}" hint-placeholder-val="{{ false }}"><p style="margin:12px 0 0;font-size:14px;color:var(--ink-2);">{{ noTopRowsText }}</p></sc-if>
+          <p class="mono" style="margin:10px 0 0;font-size:11px;color:var(--mute);">{{ topNote }}</p>
+          </sc-if>
+          <sc-if value="{{ confTable }}" hint-placeholder-val="{{ false }}">
           <div style="margin-top:14px;overflow-x:auto;scrollbar-width:thin;margin-left:calc(-1 * clamp(16px,3vw,24px));margin-right:calc(-1 * clamp(16px,3vw,24px));padding:0 clamp(16px,3vw,24px);">
             <div role="table" aria-label="Standings" style="min-width:760px;border-top:2px solid var(--ink);">
               <div role="row" style="display:grid;grid-template-columns:36px minmax(200px,2fr) 90px 70px 90px 100px 90px 100px 60px;gap:0 10px;padding:6px 0;align-items:center;">
@@ -222,6 +252,7 @@ html body nav[aria-label="Board sections"][style]::-webkit-scrollbar { display:n
           </div>
           <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}"><p style="margin:12px 0 0;font-size:14px;color:var(--ink-2);">{{ noRowsText }}</p></sc-if>
           <p class="mono" style="margin:10px 0 0;font-size:11px;color:var(--mute);">Proj = expected record: each remaining game adds our chance of winning it. Net is points per 100 possessions against the Division I average. Left is games still to play.</p>
+          </sc-if>
         </section>
       </sc-if>
 
@@ -302,7 +333,7 @@ html body nav[aria-label="Board sections"][style]::-webkit-scrollbar { display:n
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;scenario&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Sample&quot;,&quot;Before the first game&quot;],&quot;default&quot;:&quot;Sample&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Preview&quot;}}">
 class Component extends DCLogic {
-  state = { season: null, ratings: null, loadedFor: null, isSample: false, err: "", view: "standings", conf: null, query: "", sort: { k: "projRank", dir: 1 }, rsort: { k: "rank", dir: 1 }, rfilter: "all" };
+  state = { season: null, ratings: null, loadedFor: null, isSample: false, err: "", view: "standings", conf: "top25", poll: null, pollTried: false, query: "", sort: { k: "projRank", dir: 1 }, rsort: { k: "rank", dir: 1 }, rfilter: "all" };
   onSite() { return /(^|\.)maverickhightower\.com$/.test(location.hostname); }
   async load() {
     const want = this.props.scenario || "";
@@ -320,7 +351,20 @@ class Component extends DCLogic {
     const view = q.get("view") === "ratings" ? "ratings" : this.state.view;
     this.setState({ season, ratings, view, isSample: !live, err: season ? "" : "unreachable" });
   }
-  componentDidMount() { this.load(); }
+  // The AP Top 25 is read from ESPN's public rankings feed in the browser, the way the
+  // Game page reads its box scores. If it does not answer, the page shows our own top 25.
+  async loadPoll() {
+    if (this.state.pollTried) return;
+    this.setState({ pollTried: true });
+    try {
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 8000);
+      const r = await fetch("https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/rankings", { cache: "no-store", signal: ctl.signal }).finally(() => clearTimeout(t));
+      const d = r.ok ? await r.json() : null;
+      const ap = ((d && d.rankings) || []).find((x) => x && (x.type === "ap" || /AP/.test(x.name || "")));
+      if (ap && (ap.ranks || []).length) this.setState({ poll: { label: ap.shortHeadline || ap.headline || "AP Top 25", week: (ap.occurrence && ap.occurrence.displayValue) || "", date: String(ap.date || "").slice(0, 10), ranks: ap.ranks } });
+    } catch (_) { /* our own top 25 stands in */ }
+  }
+  componentDidMount() { this.load(); this.loadPoll(); }
   componentDidUpdate() { this.load(); }
   renderVals() {
     // mh-guard (2026-11-26): one bad field in a feed must not blank the page. Keep the last good view;
@@ -357,9 +401,17 @@ class Component extends DCLogic {
     const confs = (s.conferences || []).slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
     const score = (c) => (c.teams || []).reduce((n, t) => n + (t.tier === "High major" ? 1 : 0), 0) * 1000 + (c.teams || []).reduce((n, t) => n + (typeof t.net === "number" ? t.net : 0), 0);
     const defaultConf = confs.slice().sort((a, b) => score(b) - score(a))[0];
-    const chosen = this.state.conf != null ? confs.find((c) => String(c.id) === String(this.state.conf)) || defaultConf : defaultConf;
+    const top = this.state.conf === "top25" || this.state.conf === "ours" || this.state.conf == null;
+    const poll = this.state.poll;
+    const useAp = top && this.state.conf !== "ours" && !!poll;
+    const chosen = !top ? confs.find((c) => String(c.id) === String(this.state.conf)) || defaultConf : null;
     const views = [["standings", "Standings"], ["ratings", "Ratings"]].map(([k, label]) => ({ label, selected: this.state.view === k ? "true" : "false", line: this.state.view === k ? "var(--ink)" : "transparent", color: this.state.view === k ? "var(--ink)" : "var(--mute)", onClick: () => this.setState({ view: k }) }));
-    const confChips = confs.map((c) => { const on = !q && chosen && c.id === chosen.id; return { label: c.name, pressed: on ? "true" : "false", bg: on ? "var(--ink)" : "transparent", fg: on ? "var(--paper)" : "var(--ink)", onClick: () => this.setState({ conf: c.id, query: "" }) }; });
+    const chip = (label, on, onClick) => ({ label, pressed: on ? "true" : "false", bg: on ? "var(--ink)" : "transparent", fg: on ? "var(--paper)" : "var(--ink)", onClick });
+    const confChips = [
+      chip("AP Top 25", !q && top && this.state.conf !== "ours", () => this.setState({ conf: "top25", query: "" })),
+      chip("Our Top 25", !q && this.state.conf === "ours", () => this.setState({ conf: "ours", query: "" })),
+      ...confs.map((c) => chip(c.name, !q && chosen && c.id === chosen.id, () => this.setState({ conf: c.id, query: "" }))),
+    ];
     // Standings
     const wl = (r) => (r ? `${r.w}–${r.l}` : "—");
     const pwl = (r) => (r ? `${Number(r.w).toFixed(1)}–${Number(r.l).toFixed(1)}` : "—");
@@ -371,8 +423,25 @@ class Component extends DCLogic {
     const th = (keys, cur, set) => keys.map(([k, label, align]) => ({ label, align: align || "left", sort: cur.k === k ? (cur.dir === 1 ? "ascending" : "descending") : "none", color: cur.k === k ? "var(--ink)" : "var(--mute)", onClick: () => set(k) }));
     const setSort = (k) => this.setState((st) => ({ sort: { k, dir: st.sort.k === k ? -st.sort.dir : 1 } }));
     const stHead = th([["projRank", "#"], ["name", "Team"], ["tier", "Tier"], ["net", "Net", "right"], ["conf", "Conf", "right"], ["projConf", "Proj conf", "right"], ["overall", "Overall", "right"], ["projOverall", "Proj overall", "right"], ["left", "Left", "right"]], sort, setSort);
-    // Ratings
+    // Top 25: the AP poll when it answers, otherwise (or on request) our own ratings' top 25.
     const rteams = (R && R.teams) || [];
+    const byId = {}; for (const t of allTeams) byId[String(t.id)] = t;
+    const ratedById = {}; for (const t of rteams) ratedById[String(t.id)] = t;
+    const apById = {}; for (const x of (poll && poll.ranks) || []) if (x && x.team) apById[String(x.team.id)] = x.current;
+    const netColor = (v) => (typeof v === "number" ? (v > 0 ? "var(--win)" : v < 0 ? "var(--alert)" : "var(--mute)") : "var(--mute)");
+    const topRow = (id, rank, fallback, other, move, moveColor) => {
+      const t = byId[id] || {}, r = ratedById[id] || {};
+      const abbr = t.abbr || r.abbr || (fallback && fallback.abbreviation) || "";
+      return { rank: String(rank), name: t.name || r.name || (fallback && [fallback.location, fallback.name].filter(Boolean).join(" ")) || abbr, sub: abbr, logo: t.logo || r.logo || (abbr ? `./logos/${encodeURIComponent(abbr)}.png` : (fallback && fallback.logo) || ""), onLogoError: hideLogo, conference: t.conference || r.conference || "", overall: t.record ? wl(t.record) : (fallback && fallback.record) || "—", projOverall: pwl(t.projOverall), net: signed(t.net ?? r.net), netColor: netColor(t.net ?? r.net), other, move, moveColor, tonight: r.tonight ? r.tonight.vs || r.tonight.label : "" };
+    };
+    let topRows = [];
+    if (top && !q) {
+      if (useAp) topRows = (poll.ranks || []).slice().sort((a, b) => a.current - b.current).map((x) => { const id = String((x.team || {}).id); const tr = String(x.trend || ""); const r = ratedById[id]; return topRow(id, x.current, { ...(x.team || {}), record: x.recordSummary }, r && typeof r.rank === "number" ? String(r.rank) : "—", tr && tr !== "-" ? tr : x.previous ? "–" : "new", /^\+/.test(tr) ? "var(--win)" : /^-\d/.test(tr) ? "var(--alert)" : "var(--mute)"); });
+      else topRows = rteams.filter((t) => typeof t.rank === "number" && t.rank <= 25).sort((a, b) => a.rank - b.rank).map((t) => topRow(String(t.id), t.rank, null, apById[String(t.id)] ? String(apById[String(t.id)]) : "—", "", "var(--mute)"));
+    }
+    const topHead = [["#"], ["Team"], ["Conference"], ["Overall", "right"], ["Proj overall", "right"], ["Net", "right"], [useAp ? "Our #" : "AP #", "right"], [useAp ? "Move" : "", "right"], ["Tonight"]].map(([label, align]) => ({ label, align: align || "left" }));
+    const showTop = top && !q;
+    // Ratings
     const rf = this.state.rfilter;
     const ratingChips = [["all", "Everyone"], ["tonight", "Playing tonight"], ["High major", "High major"], ["Mid major", "Mid major"], ["Low major", "Low major"]].map(([k, label]) => ({ label, pressed: rf === k ? "true" : "false", bg: rf === k ? "var(--ink)" : "transparent", fg: rf === k ? "var(--paper)" : "var(--ink)", onClick: () => this.setState({ rfilter: k }) }));
     const rkeys = { rank: (t) => t.rank, name: (t) => t.name, conference: (t) => t.conference || "", tier: (t) => t.tier || "", net: (t) => -(t.net ?? -99), offence: (t) => -(t.offence ?? -99), defence: (t) => t.defence ?? 99, tempo: (t) => -(t.tempo ?? -99), form: (t) => -(t.form ?? -99), wab: (t) => -(t.wab ?? -99), netRank: (t) => t.netRank ?? 999, bpiRank: (t) => t.bpiRank ?? 999, tonight: (t) => (t.tonight ? 0 : 1) };
@@ -385,9 +454,12 @@ class Component extends DCLogic {
     const standings = this.state.view !== "ratings";
     return { ...base, ready: true, empty: false, seasonLabel,
       title: pre ? "Before the first game" : "Standings and projections",
-      intro: pre ? "No game has been played. The ratings below open on last season's finish and each team's returning production; the standings fill in from the first night." : "Every conference, with the record so far and the record our ratings expect by the end. The ratings view is the whole of Division I in one table.",
+      intro: pre ? "No game has been played. The ratings below open on last season's finish and each team's returning production; the standings fill in from the first night." : "The Top 25 first, then every conference, with the record so far and the record our ratings expect by the end. The ratings view is the whole of Division I in one table.",
       headline, views, standings, ratingsView: !standings,
-      confTitle: q ? `Teams matching “${this.state.query}”` : chosen ? chosen.name : "Standings", confStamp: q ? `${stRows.length} teams across Division I` : chosen ? `${(chosen.teams || []).length} teams · sorted by ${sort.k === "projRank" ? "projected finish" : sort.k}` : "",
+      confTitle: q ? `Teams matching “${this.state.query}”` : showTop ? (useAp ? "AP Top 25" : "Our Top 25") : chosen ? chosen.name : "Standings",
+      confStamp: q ? `${stRows.length} teams across Division I` : showTop ? (useAp ? [poll.week, poll.date ? `released ${poll.date}` : ""].filter(Boolean).join(" · ") : R ? `ranked by our net rating${R.asOf ? ` · as of ${R.asOf}` : ""}` : "") : chosen ? `${(chosen.teams || []).length} teams · sorted by ${sort.k === "projRank" ? "projected finish" : sort.k}` : "",
+      top25: showTop, confTable: !showTop, topHead, topRows, noTopRows: showTop && topRows.length === 0, noTopRowsText: "The rankings have not loaded yet.",
+      topNote: useAp ? "The Associated Press poll, as published by ESPN. Our # is the team's place in our own ratings. Move is the change from last week's poll. Proj overall is the record our ratings expect by the end. Pick a conference above to see its standings." : `Ranked by our net rating, points per 100 possessions against the Division I average.${poll ? " AP # is the team's place in this week's AP poll." : ""} Pick a conference above to see its standings.`,
       query: this.state.query, onSearch: (e) => this.setState({ query: e.target.value }), confChips, stHead, stRows, noRows: stRows.length === 0, noRowsText: q ? `No team matches “${this.state.query}”.` : "No team in this conference has a rating yet.",
       ratingsStamp: R ? `${R.rated || rteams.length} teams rated${R.asOf ? ` · as of ${R.asOf}` : ""}${R.league && typeof R.league.efficiency === "number" ? ` · average ${R.league.efficiency.toFixed(1)} per 100 at ${Number(R.league.tempo).toFixed(1)} possessions` : ""}` : "ratings not published with this board",
       ratingChips, rtHead, rtRows, noRatingRows: rtRows.length === 0, noRatingRowsText: R ? (q ? `No team matches “${this.state.query}”.` : "No team fits this filter.") : "The ratings file was not published with this board.", ratingsNote: R && R.note ? R.note : "",
