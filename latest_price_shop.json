@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-27T02:16+00:00",
-  "captures": 360,
+  "as_of": "2026-11-27T03:17+00:00",
+  "captures": 361,
   "cells": [
     {
       "beat_close": 0.8,
@@ -65,24 +65,9 @@
       "line": null,
       "market": "moneyline",
       "selection": "home"
-    },
-    {
-      "american": -109,
-      "away_team": "Bellarmine Knights",
-      "book": "rebet",
-      "books": 3,
-      "commence": "2026-11-27T20:00:00+00:00",
-      "edge": 0.025,
-      "event_id": "bc3fb1851c83444219f558d4229a1f0c",
-      "fair_american": -115,
-      "game": "Bellarmine Knights at Butler Bulldogs",
-      "home_team": "Butler Bulldogs",
-      "line": -18.5,
-      "market": "spread",
-      "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-27T02:13:37+00:00",
+  "latest_capture": "2026-11-27T03:13:37+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02
