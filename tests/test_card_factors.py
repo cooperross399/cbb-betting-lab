@@ -79,7 +79,7 @@ def test_every_priced_matchup_carries_the_layers_in_order_and_ends_at_its_price(
 
 
 def test_a_refused_matchup_carries_no_layer(lab, frames, monkeypatch):
-    # The thin fixture's refusals are non-D-I visitors, which decision 124
+    # The thin fixture's refusals are non-D-I visitors, which decision 125
     # now rates; switched off, they are refused as before and this property
     # is still the one under test.
     from cbb_betting_lab.models import non_division_one

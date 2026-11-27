@@ -1381,7 +1381,7 @@ blind side in the receipt-pinned report, so on Cooper's decision-card choice
 (*"Yes, re-sign all 35 now"*) the report was re-rendered and the 35 receipts
 re-executed as his delegate, as on 2026-10-30 and 2026-11-09.
 
-### 2026-11-27: every school on the slate is projected (decision 124)
+### 2026-11-27: every school on the slate is projected (decision 125)
 
 Cooper: *"Still need full projections for every game and figure out how to
 learn every team so you can do that. Need total projections and spreads"*.
