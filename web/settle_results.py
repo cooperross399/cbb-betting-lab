@@ -54,7 +54,7 @@ def fetch(url):
 
 def finals(sport: str, day: date) -> dict:
     out = {}
-    for ev in fetch(ESPN[sport].format(d=f"{day:%Y%m%d}")).get("events", []):
+    for ev in fetch_retrying(ESPN[sport].format(d=f"{day:%Y%m%d}")).get("events", []):
         comp = (ev.get("competitions") or [{}])[0]
         st = ((ev.get("status") or {}).get("type") or {})
         if not st.get("completed"):
@@ -66,6 +66,225 @@ def finals(sport: str, day: date) -> dict:
         except (KeyError, ValueError, TypeError):
             continue
     return out
+
+
+# ---------- fallbacks: every game settled, whatever one source does ----------
+#
+# Cooper, 2026-11-27: "We need to find a way for every game to be settled from
+# the night before no matter what in the results page, have many fallbacks
+# options to get that data." `finals` above is the first source and stays the
+# one every test stubs. `all_finals` asks it (retried), then, for each board
+# game it did not settle, asks in turn:
+#
+#   1. ESPN's game summary for that one event (retried), which answers for a
+#      game the day's scoreboard dropped or filed under another date;
+#   2. the lab's own processed table `cbb_team_games.csv`, restored from the
+#      last Gameday Refresh, keyed by the same ESPN event id;
+#   3. hoopR's cached schedule for the season, also keyed by ESPN event id;
+#   4. The Odds API's scores endpoint (2 credits, only when a game is still
+#      missing and `CBB_ODDS_API_KEY` is set), joined by the lab's own team
+#      name resolver on both names, never on one.
+#
+# A final is taken only when a source says the game is COMPLETED and gives both
+# scores. Nothing is ever inferred: a game no source has a final for stays
+# unsettled, is named in the log and in results.json's `unsettled`, and the
+# season re-settles its day on every run for PATIENCE_DAYS.
+
+import os
+import time
+
+#: Off unless `--fallbacks` is passed (the publish passes it), so a test that
+#: stubs `finals` never reaches the network through a fallback.
+FALLBACKS_ON = False
+
+#: Seconds before the second and third attempt at any one URL.
+RETRY_DELAYS = (2.0, 5.0)
+SLEEP = time.sleep
+
+ESPN_SUMMARY = {
+    "cbb": "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary?event={id}",
+}
+
+#: The lab checkout `--lab` names, for the offline sources.
+LAB: Path | None = None
+
+
+def fetch_retrying(url):
+    """`fetch`, tried up to three times. The last error is raised."""
+    last = None
+    for attempt in range(len(RETRY_DELAYS) + 1):
+        if attempt:
+            SLEEP(RETRY_DELAYS[attempt - 1])
+        try:
+            return fetch(url)
+        except urllib.error.HTTPError as exc:
+            last = exc
+            if exc.code not in (403, 408, 429) and exc.code < 500:
+                break  # an answer, not an outage
+        except FETCH_ERRORS as exc:
+            last = exc
+    raise last  # type: ignore[misc]
+
+
+def _final_of(competition: dict, status: dict) -> dict | None:
+    """A completed competition's final, in `finals`' shape, or None."""
+    if not (status or {}).get("completed"):
+        return None
+    sides = {c.get("homeAway"): c for c in competition.get("competitors", []) if isinstance(c, dict)}
+    try:
+        return {"home": int(sides["home"]["score"]), "away": int(sides["away"]["score"]),
+                "finish": "OT" if (status.get("detail") or "").upper().find("OT") >= 0 else "REG"}
+    except (KeyError, ValueError, TypeError):
+        return None
+
+
+def summary_final(sport: str, event_id: str) -> dict | None:
+    """One game's final from ESPN's game summary, or None."""
+    url = ESPN_SUMMARY.get(sport)
+    if not url:
+        return None
+    try:
+        payload = fetch_retrying(url.format(id=event_id))
+    except FETCH_ERRORS:
+        return None
+    competition = (((payload or {}).get("header") or {}).get("competitions") or [{}])[0]
+    status = (competition.get("status") or {}).get("type") or {}
+    return _final_of(competition, status)
+
+
+def lab_table_finals(ids: set[str]) -> dict:
+    """Finals for `ids` from the lab's processed team-games table."""
+    import csv
+
+    if LAB is None:
+        return {}
+    path = LAB / "data" / "processed" / "cbb_team_games.csv"
+    if not path.is_file():
+        return {}
+    out: dict = {}
+    try:
+        with path.open(newline="", encoding="utf-8") as handle:
+            for row in csv.DictReader(handle):
+                gid = str(row.get("game_id") or "").strip()
+                if gid not in ids or gid in out or row.get("home_away") not in ("home", "away"):
+                    continue
+                try:
+                    team, opp = int(float(row["team_score"])), int(float(row["opponent_score"]))
+                except (KeyError, TypeError, ValueError):
+                    continue
+                home, away = (team, opp) if row["home_away"] == "home" else (opp, team)
+                overtime = str(row.get("overtime") or "").strip().lower() == "true"
+                out[gid] = {"home": home, "away": away, "finish": "OT" if overtime else "REG"}
+    except (OSError, UnicodeError, csv.Error):
+        return {}
+    return out
+
+
+def schedule_finals(ids: set[str], day: date) -> dict:
+    """Finals for `ids` from hoopR's cached schedule for the day's season."""
+    if LAB is None:
+        return {}
+    season = day.year + 1 if day.month >= 7 else day.year
+    path = LAB / "data" / "raw" / "cbb" / "schedules" / f"mbb_schedule_{season}.parquet"
+    if not path.is_file():
+        return {}
+    try:
+        import pandas as pd  # noqa: PLC0415
+
+        frame = pd.read_parquet(path, columns=["game_id", "home_score", "away_score", "status_type_completed"])
+    except Exception:  # noqa: BLE001 - a fallback, never the settlement
+        return {}
+    out: dict = {}
+    for row in frame.itertuples(index=False):
+        gid = str(row.game_id)
+        if gid in ids and bool(row.status_type_completed):
+            try:
+                out[gid] = {"home": int(row.home_score), "away": int(row.away_score), "finish": "REG"}
+            except (TypeError, ValueError):
+                continue
+    return out
+
+
+def odds_api_finals(board: dict, games: list[dict], day: date) -> dict:
+    """Finals for `games` from The Odds API's scores, joined on both names.
+
+    2 credits a call, and only called when a game is still missing after every
+    free source. A name the lab's resolver cannot place joins nothing.
+    """
+    if not os.environ.get("CBB_ODDS_API_KEY") or LAB is None or not games:
+        return {}
+    try:
+        import importlib.util
+
+        from cbb_betting_lab.competitions import CBB  # type: ignore  # noqa: PLC0415
+        from cbb_betting_lab.providers.odds_api import OddsApiProvider, Spend  # type: ignore  # noqa: PLC0415
+
+        spec = importlib.util.spec_from_file_location("board_names_for_settle", Path(__file__).resolve().parent / "build_board_json.py")
+        builder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(builder)
+        resolve = builder.load_names(LAB, day)
+        days_from = max(1, min(3, (datetime.now(SLATE_TZ).date() - day).days + 1))
+        scores = OddsApiProvider(CBB).fetch_scores(days_from=days_from, spend=Spend(), credit_cap=2)
+    except Exception as exc:  # noqa: BLE001 - a fallback, never the settlement
+        print(f"Odds API scores not read ({type(exc).__name__}).")
+        return {}
+    by_pair: dict = {}
+    for item in scores:
+        if not item.get("completed"):
+            continue
+        try:
+            when = datetime.fromisoformat(str(item["commence_time"]).replace("Z", "+00:00")).astimezone(SLATE_TZ).date()
+            points = {str(s["name"]): int(float(s["score"])) for s in item.get("scores") or []}
+        except (KeyError, TypeError, ValueError):
+            continue
+        if when != day or len(points) != 2:
+            continue
+        keyed = {resolve(name): value for name, value in points.items()}
+        if len(keyed) == 2:
+            by_pair[frozenset(keyed)] = keyed
+    names = board.get("teams") or {}
+    out: dict = {}
+    for g in games:
+        home = resolve((names.get(g["home"]["abbr"]) or {}).get("name") or g["home"]["abbr"])
+        away = resolve((names.get(g["away"]["abbr"]) or {}).get("name") or g["away"]["abbr"])
+        found = by_pair.get(frozenset((home, away)))
+        if home != away and found:
+            out[str(g["id"])] = {"home": found[home], "away": found[away], "finish": "REG"}
+    return out
+
+
+def all_finals(sport: str, day: date, board: dict) -> tuple[dict, dict]:
+    """Every final the sources can give for the board's games, and which
+    source gave each. Raises the scoreboard's error only when the scoreboard
+    failed and no fallback settled anything."""
+    sources: dict = {}
+    error = None
+    try:
+        fin = dict(finals(sport, day))
+    except FETCH_ERRORS as exc:
+        fin, error = {}, exc
+    for gid in fin:
+        sources[gid] = "espn scoreboard"
+    games = [g for g in board.get("games", []) if isinstance(g, dict) and g.get("id") is not None]
+    missing = lambda: {str(g["id"]) for g in games} - set(fin)
+    if FALLBACKS_ON and missing():
+        for gid in sorted(missing()):
+            found = summary_final(sport, gid)
+            if found:
+                fin[gid], sources[gid] = found, "espn game summary"
+        for name, read in (("lab team games", lambda ids: lab_table_finals(ids)),
+                           ("hoopR schedule", lambda ids: schedule_finals(ids, day))):
+            if not missing():
+                break
+            for gid, found in read(missing()).items():
+                fin[gid], sources[gid] = found, name
+        if missing() and sport == "cbb":
+            still = [g for g in games if str(g["id"]) in missing()]
+            for gid, found in odds_api_finals(board, still, day).items():
+                fin[gid], sources[gid] = found, "odds api scores"
+    if error is not None and not fin:
+        raise error
+    return fin, sources
 
 
 def side_named(label: str, g: dict, teams: dict) -> str | None:
@@ -282,7 +501,7 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
     graded the same way and never added to `picks`. A frozen opinion (`kind`
     "pass") is graded into neither.
     """
-    fin = finals(sport, day)
+    fin, sources = all_finals(sport, day, board)
     games = []
     picks, leans = {"w": 0, "l": 0, "p": 0}, {"w": 0, "l": 0, "p": 0}
     su, ats, tots = {"w": 0, "l": 0}, {"w": 0, "l": 0, "p": 0}, {"w": 0, "l": 0, "p": 0}
@@ -303,6 +522,8 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
                 shown_pick = with_units(shown_pick, tally)
         row = {"id": g["id"], "home": {"abbr": g["home"]["abbr"], "final": hf}, "away": {"abbr": g["away"]["abbr"], "final": af}, "finish": f["finish"],
                "pick": shown_pick}
+        if sources.get(str(g.get("id"))) not in (None, "espn scoreboard"):
+            row["finalSource"] = sources[str(g["id"])]
         if sport == "epl":
             row["home"]["projGoals"], row["away"]["projGoals"] = g["home"].get("projGoals"), g["away"].get("projGoals")
             hp, dp, ap_ = g["home"].get("winProb"), g.get("drawProb"), g["away"].get("winProb")
@@ -383,9 +604,14 @@ def settle_day(sport: str, day: date, board: dict) -> tuple[dict, bool]:
         summary.update(result=su, totals={"w": tots["w"], "l": tots["l"]})
     else:
         summary.update(straightUp=su, ats=ats, totals=tots, atsMarket=ats_market, atsStrong=ats_strong)
+    settled_ids = {str(r["id"]) for r in games}
+    unsettled = [{"id": g.get("id"), "home": (g.get("home") or {}).get("abbr"), "away": (g.get("away") or {}).get("abbr")}
+                 for g in shown if str(g.get("id")) not in settled_ids]
     body = {"season": board.get("season", ""), "windowLabel": board.get("windowLabel"),
             "notice": None if games else "The games were played but no final was available when this ran; the next build settles them.",
             "summary": summary, "teams": board.get("teams", {}), "games": games}
+    if unsettled:
+        body["unsettled"] = unsettled
     return body, len(games) < len(shown)
 
 
@@ -609,9 +835,14 @@ def main(argv=None) -> int:
     ap.add_argument("--sport", required=True, choices=list(ESPN))
     ap.add_argument("--date", default="")
     ap.add_argument("--lab", default="", help="the lab checkout: its cbb_line_movement.csv prices a side the board did not")
+    ap.add_argument("--fallbacks", action="store_true",
+                    help="ask every fallback source for a game the scoreboard did not settle (the publish passes it)")
     args = ap.parse_args(argv)
     data = Path(args.data)
+    global FALLBACKS_ON, LAB
+    FALLBACKS_ON = bool(args.fallbacks)
     if args.lab:
+        LAB = Path(args.lab)
         load_captures(Path(args.lab))
     day = date.fromisoformat(args.date) if args.date else slate_yesterday()
     hist = data / "history"
@@ -650,6 +881,14 @@ def main(argv=None) -> int:
         else:
             results = {**base, **latest}
             print(f"settled {len(results['games'])} of {len(board.get('games', []))} games for {day}. No bet was placed.")
+            fallback = sorted({g["finalSource"] for g in results["games"] if g.get("finalSource")})
+            if fallback:
+                print("finals from fallback sources: " + ", ".join(
+                    f"{name} {sum(1 for g in results['games'] if g.get('finalSource') == name)}" for name in fallback))
+            for g in results.get("unsettled") or []:
+                # A warning on the run, so a game no source could settle is
+                # seen rather than silently absent; the next run retries it.
+                print(f"::warning::{day}: {g['away']} at {g['home']} (event {g['id']}) has no final from any source yet.")
     try:
         season_so_far = season_record(args.sport, day, hist, latest, waiting)
     except Exception as exc:  # noqa: BLE001 - the season line must never take the day's results or the deploy down

@@ -46,6 +46,8 @@ import glob
 import json
 import math
 import sys
+import time
+import urllib.error
 import urllib.request
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -242,6 +244,37 @@ ESPN_SUMMARY = ESPN.rsplit("/", 1)[0] + "/summary"
 #: a book (decision 104). The page prints it under the win bar.
 PROJECTION_NOTE = "No book line · ESPN projection"
 
+#: Cooper, 2026-11-27: every game carries a projection at 3 AM. A game the
+#: books price but the model cannot (a team the ratings do not know) takes
+#: ESPN's predictor in the projection slots, and its lines stay as quoted; with
+#: no predictor either, the market's own de-vigged moneyline is the projection.
+#: Both are labelled, and neither writes a win probability, so neither enters
+#: the model's record.
+ESPN_ONLY_NOTE = "ESPN projection"
+MARKET_ONLY_NOTE = "Market projection"
+
+
+def fill_projection(row: dict, home_chance: float, note: str) -> None:
+    """Put a labelled projection in the Fair and Proj slots a row left empty.
+    Quoted lines are never touched."""
+    projected = projected_line(home_chance)
+    ml = row.setdefault("moneyline", {"open": None, "current": None})
+    if not ml.get("fair"):
+        ml["fair"] = projected["moneyline"]["fair"]
+    sp = row.setdefault("spread", {"open": None, "current": None, "homePrice": None})
+    if sp.get("proj") is None:
+        sp["proj"] = projected["spread"]["proj"]
+    row["lineNote"] = note
+
+
+def market_home_chance(row: dict) -> float | None:
+    """The moneyline's two best prices, de-vigged in proportion, or None."""
+    current = ((row.get("moneyline") or {}).get("current") or {})
+    home, away = implied(current.get("home")), implied(current.get("away"))
+    if home is None or away is None or home + away <= 0:
+        return None
+    return home / (home + away)
+
 
 def _margin_sd() -> float:
     """The lab's spread of a final margin about its expectation, in points."""
@@ -259,9 +292,21 @@ def espn_home_chance(event_id: str) -> float | None:
     of the win-probability chart after it. A chance outside (0, 1), a missing field or a
     fetch that fails is None: the game then shows no projection.
     """
-    try:
-        payload = fetch_json(f"{ESPN_SUMMARY}?event={event_id}")
-    except Exception:  # noqa: BLE001 - a projection beside the board, never the board
+    payload = None
+    for attempt in range(3):
+        if attempt:
+            time.sleep(2.0 * attempt)
+        try:
+            payload = fetch_json(f"{ESPN_SUMMARY}?event={event_id}")
+            break
+        except urllib.error.HTTPError as exc:
+            # An answer, not an outage: a game ESPN does not hold is not asked
+            # again. Only a refusal or a throttle is worth a second try.
+            if exc.code not in (403, 408, 429) and exc.code < 500:
+                return None
+        except Exception:  # noqa: BLE001 - a projection beside the board, never the board
+            continue
+    if payload is None:
         return None
     pred = payload.get("predictor") or {}
     home = finite((pred.get("homeTeam") or {}).get("gameProjection"))
@@ -1740,6 +1785,14 @@ def build(lab: Path, day: date) -> dict:
             if chance is not None:
                 row.update(projected_line(chance))
                 row["lineNote"] = PROJECTION_NOTE
+        elif mine and not pr:
+            chance = espn_home_chance(g["id"])
+            if chance is not None:
+                fill_projection(row, chance, ESPN_ONLY_NOTE)
+            else:
+                chance = market_home_chance(row)
+                if chance is not None:
+                    fill_projection(row, chance, MARKET_ONLY_NOTE)
         games.append(row)
     # "No market is allowlisted" was written into both sentences as a
     # constant. It is a fact about a file that Cooper can change in one pull
@@ -1818,6 +1871,13 @@ def build(lab: Path, day: date) -> dict:
     return out
 
 
+def has_projection(g: dict) -> bool:
+    """Whether a board row carries any projection: the model's points, or a
+    projected spread or fair moneyline from a fallback."""
+    return (g.get("home") or {}).get("projPts") is not None or (g.get("spread") or {}).get("proj") is not None \
+        or bool((g.get("moneyline") or {}).get("fair"))
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--lab", default=".")
@@ -1837,7 +1897,14 @@ def main(argv=None) -> int:
     frozen = hist / f"{day.isoformat()}_{board['cardSlot']}.json"
     if not frozen.exists():
         frozen.write_text(text, encoding="utf-8")
-    print(f"board {day} ({board['cardSlot']}): {len(board['games'])} games, {sum(1 for g in board['games'] if (g.get('spread') or {}).get('current') is not None or (g.get('moneyline') or {}).get('current'))} with a market line, {sum(1 for g in board['games'] if g.get('lineNote'))} with a labelled ESPN projection only. No odds were bought, no credit was spent, and no bet was placed.")
+    print(f"board {day} ({board['cardSlot']}): {len(board['games'])} games, {sum(1 for g in board['games'] if (g.get('spread') or {}).get('current') is not None or (g.get('moneyline') or {}).get('current'))} with a market line, {sum(1 for g in board['games'] if g.get('lineNote') == PROJECTION_NOTE)} with a labelled ESPN projection only. No odds were bought, no credit was spent, and no bet was placed.")
+    unprojected = [g for g in board["games"] if not has_projection(g)]
+    print(f"projections: {len(board['games']) - len(unprojected)} of {len(board['games'])} games "
+          f"({sum(1 for g in board['games'] if g['home'].get('projPts') is not None)} from the model, "
+          f"{sum(1 for g in board['games'] if g.get('lineNote') in (PROJECTION_NOTE, ESPN_ONLY_NOTE))} from ESPN, "
+          f"{sum(1 for g in board['games'] if g.get('lineNote') == MARKET_ONLY_NOTE)} from the market).")
+    for g in unprojected:
+        print(f"::warning::{day}: {g['away']['abbr']} at {g['home']['abbr']} (event {g['id']}) has no projection from any source.")
     # The ratings and season pages read the fit the board priced on. They
     # are pages beside the board, not the board: a failure here is a warning
     # and the board stands.

@@ -177,7 +177,11 @@ def test_a_game_nobody_prices_carries_a_labelled_projection(tmp_path: Path, monk
     built = board_mod.build(tmp_path, DAY)
     json.dumps(built, allow_nan=False)
 
-    assert asked == ["504"], "only the game with no line and no model asks ESPN"
+    # Since 2026-11-27 every game the model cannot project asks ESPN, priced
+    # or not (Cooper: every game carries a projection); with no model here
+    # that is all four, and only 504, which no book prices, is labelled as
+    # having no book line.
+    assert asked == ["501", "502", "503", "504"], "every game the model cannot project asks ESPN"
     g = _game(built, "504")
     assert g["lineNote"] == board_mod.PROJECTION_NOTE
     assert g["moneyline"]["current"] is None and g["spread"]["current"] is None, "a projection is never a price"
@@ -185,7 +189,8 @@ def test_a_game_nobody_prices_carries_a_labelled_projection(tmp_path: Path, monk
     # 75% at a margin spread of 11 points is a home side about 7.4 points better.
     assert g["spread"]["proj"] == -7.5
     assert "winProb" not in g["home"] and "winProb" not in g["away"], "ESPN's chance never enters the model's record"
-    assert "lineNote" not in _game(built, "501")
+    assert _game(built, "501")["lineNote"] == board_mod.ESPN_ONLY_NOTE
+    assert _game(built, "501")["moneyline"]["current"], "a priced game keeps its quoted line beside the projection"
 
 
 def test_the_cbb_board_draws_the_note_under_the_win_bar() -> None:
