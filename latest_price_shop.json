@@ -2,23 +2,23 @@
   "alert_edge": 0.03,
   "alerts": [
     {
-      "american": -105,
-      "away_team": "Tennessee Tech Golden Eagles",
-      "book": "fanatics",
-      "books": 3,
-      "commence": "2026-11-28T21:00:00+00:00",
-      "edge": 0.0437,
-      "event_id": "53a900069a7d4e77c1e6962800e3c409",
-      "fair_american": -115,
-      "game": "Tennessee Tech Golden Eagles at Eastern Kentucky Colonels",
-      "home_team": "Eastern Kentucky Colonels",
-      "line": -4.0,
-      "market": "spread",
-      "selection": "away"
+      "american": 106,
+      "away_team": "SE Missouri St Redhawks",
+      "book": "lowvig",
+      "books": 5,
+      "commence": "2026-11-28T20:00:00+00:00",
+      "edge": 0.03,
+      "event_id": "80ecbeefa04e5a4cf874933165d05193",
+      "fair_american": -100,
+      "game": "SE Missouri St Redhawks at UMKC Kangaroos",
+      "home_team": "UMKC Kangaroos",
+      "line": 148.5,
+      "market": "total_points",
+      "selection": "over"
     }
   ],
-  "as_of": "2026-11-27T22:41+00:00",
-  "captures": 371,
+  "as_of": "2026-11-27T22:45+00:00",
+  "captures": 372,
   "cells": [
     {
       "beat_close": 0.6756756756756757,
@@ -98,6 +98,21 @@
       "selection": "away"
     },
     {
+      "american": 106,
+      "away_team": "SE Missouri St Redhawks",
+      "book": "lowvig",
+      "books": 5,
+      "commence": "2026-11-28T20:00:00+00:00",
+      "edge": 0.03,
+      "event_id": "80ecbeefa04e5a4cf874933165d05193",
+      "fair_american": -100,
+      "game": "SE Missouri St Redhawks at UMKC Kangaroos",
+      "home_team": "UMKC Kangaroos",
+      "line": 148.5,
+      "market": "total_points",
+      "selection": "over"
+    },
+    {
       "american": 105,
       "away_team": "Liberty Flames",
       "book": "fanatics",
@@ -118,9 +133,9 @@
       "book": "fanatics",
       "books": 3,
       "commence": "2026-11-28T21:00:00+00:00",
-      "edge": 0.0437,
+      "edge": 0.0215,
       "event_id": "53a900069a7d4e77c1e6962800e3c409",
-      "fair_american": -115,
+      "fair_american": -110,
       "game": "Tennessee Tech Golden Eagles at Eastern Kentucky Colonels",
       "home_team": "Eastern Kentucky Colonels",
       "line": -4.0,
@@ -141,24 +156,9 @@
       "line": 5.5,
       "market": "spread",
       "selection": "away"
-    },
-    {
-      "american": 105,
-      "away_team": "California Golden Bears",
-      "book": "fanatics",
-      "books": 5,
-      "commence": "2026-11-29T01:00:00+00:00",
-      "edge": 0.0202,
-      "event_id": "2969a91168251baffa46c87c548deab4",
-      "fair_american": 101,
-      "game": "California Golden Bears at Minnesota Golden Gophers",
-      "home_team": "Minnesota Golden Gophers",
-      "line": 140.5,
-      "market": "total_points",
-      "selection": "under"
     }
   ],
-  "latest_capture": "2026-11-27T22:39:51+00:00",
+  "latest_capture": "2026-11-27T22:42:58+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02
