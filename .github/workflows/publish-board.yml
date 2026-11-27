@@ -14,7 +14,9 @@ on:
   workflow_run:
     # Line Movement too (decision 93): each hourly capture re-shops the
     # board, and the game pages show the shops it found.
-    workflows: ["CBB Gameday Refresh", "Line Movement"]
+    # Nightly Results too: it waits until 3 AM ET, so the night's finals are
+    # settled onto Results without waiting for the morning card.
+    workflows: ["CBB Gameday Refresh", "Line Movement", "Nightly Results"]
     types: [completed]
   workflow_dispatch:
 

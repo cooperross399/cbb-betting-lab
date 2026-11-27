@@ -1,0 +1,61 @@
+name: Nightly Results
+
+# Cooper, 2026-11-27: "We should just have it do that at like 3am every night
+# once all the games are done and people can see the results in the results
+# tab". This workflow does nothing but wait until 08:00 UTC (3 AM ET all
+# winter; 4 AM in March, under daylight time) and then finish, and Publish
+# Board runs when it finishes (`workflow_run` in publish-board.yml), which
+# settles the night just played and republishes Results and Record. The last
+# Line Movement round before it is 03:13 UTC, while late games are still on.
+#
+# The wait lives here and not in Publish Board because Publish Board cancels
+# any run in progress when a new one starts (`cancel-in-progress`), so a run
+# holding there for hours would be cancelled by the next hourly capture.
+#
+# THE CRON FIRES EIGHT HOURS BEFORE ITS ROUND and the `wait` jobs hold it until
+# 08:00 UTC (scripts/wait_for_round.py), because GitHub starts this account's
+# scheduled runs hours late. A manual dispatch does not wait. Reads no secret,
+# spends no credit, pushes nothing and places no bet.
+
+on:
+  schedule:
+    - cron: "0 0 * * *"   # round 08:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-results
+  cancel-in-progress: false
+
+jobs:
+  wait:
+    name: Wait for 3 AM ET
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Wait for the round
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+        run: python3 scripts/wait_for_round.py --schedule "$SCHEDULE" --budget-minutes 340
+
+  wait-more:
+    name: Wait for 3 AM ET (continued)
+    needs: wait
+    # A wait that failed must not cost the night's results: publish late
+    # rather than not at all.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Wait for the round
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+        run: python3 scripts/wait_for_round.py --schedule "$SCHEDULE" --budget-minutes 340
