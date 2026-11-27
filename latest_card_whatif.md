@@ -2,25 +2,25 @@
 
 Each slot's candidates (every wager that cleared the flat 2% bar and every gate except the stricter bars) replayed through the card's rules as they stand today, and again with each rule switched the other way, one at a time. Graded by the forward ledger's settlement at the candidate's own price, sized on the record's 1u ladder. **Per tier; the column under each rule is what switching it would have changed**, in units. A small sample, and not a demonstrated effect either way.
 
-**Window:** 2026-11-26 to 2026-11-26 (1 slate day(s), 11 candidate(s)).
+**Window:** 2026-11-26 to 2026-11-27 (2 slate day(s), 55 candidate(s)).
 
 | Variant | high-major | mid-major | low-major |
 |:---|---:|---:|---:|
-| Today's card | 0-0-0 +0.00u (—, n=0, 1 pending) | 0-0-0 +0.00u (—, n=0, 1 pending) | — |
-| Without: 5% bar on alt ladders and team totals (decision 116) | 0-0-0 +0.00u (—, n=0, 4 pending) | 0-0-0 +0.00u (—, n=0, 2 pending) | — |
-| With: 4% bar at -150 or shorter (decision 116, off since 120) | 0-0-0 +0.00u (—, n=0, 1 pending) | — | — |
-| Without: 4% bar on the evening card's new games (decision 116) | 0-0-0 +0.00u (—, n=0, 1 pending) | 0-0-0 +0.00u (—, n=0, 1 pending) | — |
-| Without: evening re-lists only at the morning's number (decision 116) | 0-0-0 +0.00u (—, n=0, 1 pending) | 0-0-0 +0.00u (—, n=0, 1 pending) | — |
-| Without: 7% bar on alt spreads at +200 or longer (decision 120) | 0-0-0 +0.00u (—, n=0, 1 pending) | 0-0-0 +0.00u (—, n=0, 1 pending) | — |
-| Without: big edges shrunk, moneylines first, for a game's slot (decision 120) | 0-0-0 +0.00u (—, n=0, 1 pending) | 0-0-0 +0.00u (—, n=0, 1 pending) | — |
-| Without: evening new games at half size (decision 120) | 0-0-0 +0.00u (—, n=0, 1 pending) | 0-0-0 +0.00u (—, n=0, 1 pending) | — |
+| Today's card | 0-1-0 -1.00u (-100.0%, n=1, 3 pending) | 1-0-0 +1.00u (+32.3%, n=1, 3 pending) | 0-0-0 +0.00u (—, n=0, 1 pending) |
+| Without: 5% bar on alt ladders and team totals (decision 116) | 2-2-0 -0.75u (-9.4%, n=4, 6 pending) | 2-0-0 +2.00u (+29.0%, n=2, 7 pending) | 0-0-0 +0.00u (—, n=0, 4 pending) |
+| With: 4% bar at -150 or shorter (decision 116, off since 120) | 0-1-0 -1.00u (-100.0%, n=1, 3 pending) | 0-0-0 +0.00u (—, n=0, 2 pending) | 0-0-0 +0.00u (—, n=0, 1 pending) |
+| Without: 4% bar on the evening card's new games (decision 116) | 0-1-0 -1.00u (-100.0%, n=1, 3 pending) | 1-0-0 +1.00u (+32.3%, n=1, 3 pending) | 0-0-0 +0.00u (—, n=0, 1 pending) |
+| Without: evening re-lists only at the morning's number (decision 116) | 0-1-0 -1.00u (-100.0%, n=1, 3 pending) | 1-0-0 +1.00u (+32.3%, n=1, 3 pending) | 0-0-0 +0.00u (—, n=0, 1 pending) |
+| Without: 7% bar on alt spreads at +200 or longer (decision 120) | 0-1-0 -1.00u (-100.0%, n=1, 3 pending) | 1-0-0 +1.00u (+32.3%, n=1, 3 pending) | 0-0-0 +0.00u (—, n=0, 1 pending) |
+| Without: big edges shrunk, moneylines first, for a game's slot (decision 120) | 0-1-0 -1.00u (-100.0%, n=1, 3 pending) | 1-0-0 +1.00u (+32.3%, n=1, 3 pending) | 0-0-0 +0.00u (—, n=0, 1 pending) |
+| Without: evening new games at half size (decision 120) | 0-1-0 -1.00u (-100.0%, n=1, 3 pending) | 1-0-0 +1.00u (+32.3%, n=1, 3 pending) | 0-0-0 +0.00u (—, n=0, 1 pending) |
 
 **Units each switch would have changed against today's card** (positive: the switch would have earned more).
 
 | Switch | high-major | mid-major | low-major |
 |:---|---:|---:|---:|
-| Without: 5% bar on alt ladders and team totals (decision 116) | +0.00u | +0.00u | +0.00u |
-| With: 4% bar at -150 or shorter (decision 116, off since 120) | +0.00u | +0.00u | +0.00u |
+| Without: 5% bar on alt ladders and team totals (decision 116) | +0.25u | +1.00u | +0.00u |
+| With: 4% bar at -150 or shorter (decision 116, off since 120) | +0.00u | -1.00u | +0.00u |
 | Without: 4% bar on the evening card's new games (decision 116) | +0.00u | +0.00u | +0.00u |
 | Without: evening re-lists only at the morning's number (decision 116) | +0.00u | +0.00u | +0.00u |
 | Without: 7% bar on alt spreads at +200 or longer (decision 120) | +0.00u | +0.00u | +0.00u |
