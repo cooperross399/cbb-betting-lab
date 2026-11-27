@@ -2967,6 +2967,7 @@ def matchups_for(
     ratings, _baseline = non_division_one.extend(
         fitted, history, season=int(season), day=str(day),
         teams=[t for _, _, h, a in asked for t in (h, a)],
+        opponents={**{a: h for _, _, h, a in asked}, **{h: a for _, _, h, a in asked}},
     )
 
     # TONIGHT'S CONTEXT, on the same seam. Form, rest and who is missing are
