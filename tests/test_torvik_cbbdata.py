@@ -51,6 +51,23 @@ def test_no_email_means_no_registration(monkeypatch):
 
 
 def test_the_reader_never_asks_barttorvik_com():
-    for url in (SO.CBBDATA_LOGIN_URL, SO.CBBDATA_REGISTER_URL, SO.TORVIK_ARCHIVE_URL):
+    for url in (SO.CBBDATA_LOGIN_URL, SO.CBBDATA_REGISTER_URL, SO.TORVIK_ARCHIVE_URL, SO.TORVIK_CURRENT_URL):
         assert url.startswith("https://www.cbbdata.com/api/")
         assert "barttorvik" not in url
+
+
+def test_the_current_table_is_read_as_the_day_it_was_read(monkeypatch):
+    import io
+
+    current = pd.DataFrame({"team": [f"Team {i}" for i in range(5)], "adj_o": [112.0] * 5,
+                            "adj_d": [99.0] * 5, "adj_t": [67.0] * 5, "year": [2027] * 5})
+    buffer = io.BytesIO()
+    current.to_parquet(buffer)
+    seen = []
+    monkeypatch.setattr(SO, "_get", lambda url, **_: seen.append(url) or buffer.getvalue())
+    table = SO.torvik_on(SO.fetch_torvik_current("k", 2027, "2026-11-27"), "2026-11-27")
+    assert seen[0].startswith(SO.TORVIK_CURRENT_URL + "?")
+    assert table.attrs["as_of"] == "2026-11-27"
+    assert len(table) == 5 and table["adj_tempo"].eq(67.0).all()
+    with pytest.raises(SO.SecondOpinionError):
+        SO.torvik_on(SO.fetch_torvik_current("k", 2027, "2026-11-27"), "2026-11-26")

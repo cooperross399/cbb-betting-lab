@@ -313,6 +313,10 @@ def _torvik(season: int, as_of: str, raw_dir: Path, schedule) -> bool:
             print("T-Rank: the cbbdata account was created from the secrets and logged in.")
         archive = second_opinion.fetch_torvik_archive(key, season)
         print(f"T-Rank archive: {len(archive):,} row(s); fields: " + ", ".join(map(str, archive.columns)))
+        if archive.empty:
+            archive = second_opinion.fetch_torvik_current(key, season, as_of)
+            print(f"T-Rank: the archive is empty, so today's table was read instead: {len(archive):,} row(s); "
+                  "fields: " + ", ".join(map(str, archive.columns)))
         table = second_opinion.torvik_on(archive, as_of)
     except second_opinion.SecondOpinionError as exc:
         print(f"::warning::T-Rank could not be read through cbbdata: {exc}", file=sys.stderr)

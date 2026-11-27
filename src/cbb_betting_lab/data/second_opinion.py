@@ -429,6 +429,11 @@ TORVIK_SOURCE = "torvik"
 CBBDATA_LOGIN_URL = "https://www.cbbdata.com/api/auth/login"
 CBBDATA_REGISTER_URL = "https://www.cbbdata.com/api/auth/register"
 TORVIK_ARCHIVE_URL = "https://www.cbbdata.com/api/torvik/ratings/archive"
+#: T-Rank's ratings as they stand now. The day-by-day archive came back empty
+#: for 2026-27 on the first publish that read it (2026-11-27), so today's table
+#: is read from here when the archive holds nothing, stamped with the day it
+#: was read. It never reaches back: the audit's earlier days stay unfilled.
+TORVIK_CURRENT_URL = "https://www.cbbdata.com/api/torvik/ratings"
 
 
 def _post_json(url: str, body: dict, *, timeout: float = 60.0) -> tuple[int, bytes]:
@@ -496,6 +501,25 @@ def fetch_torvik_archive(key: str, season: int) -> pd.DataFrame:
         return pd.read_parquet(io.BytesIO(payload))
     except Exception as exc:  # noqa: BLE001
         raise SecondOpinionError(f"cbbdata's T-Rank archive was not a parquet file ({type(exc).__name__})") from exc
+
+
+def fetch_torvik_current(key: str, season: int, day: str) -> pd.DataFrame:
+    """T-Rank's ratings as they stand when read, in the archive's shape, with
+    every row dated `day` (the day it was read), so `torvik_on` reads it the
+    same way. The key is never printed: errors name the path only."""
+    if not key:
+        raise SecondOpinionError("no cbbdata key")
+    url = TORVIK_CURRENT_URL + "?" + urllib.parse.urlencode({"year": int(season), "key": key})
+    payload = _get(url)
+    try:
+        import io
+
+        table = pd.read_parquet(io.BytesIO(payload))
+    except Exception as exc:  # noqa: BLE001
+        raise SecondOpinionError(f"cbbdata's current T-Rank table was not a parquet file ({type(exc).__name__})") from exc
+    table = table.drop(columns=[c for c in table.columns if _key(c) == "date"])
+    table["date"] = str(day)
+    return table
 
 
 def torvik_on(archive: pd.DataFrame, day: str) -> pd.DataFrame:
