@@ -6,7 +6,7 @@ name: Publish Board
 #
 # Runs after every CBB Gameday Refresh and on its own clock, so a dark day still
 # refreshes the slate. Read-only on repository contents (see permissions),
-# pushes to no branch, buys no odds (the free scoreboard's posted line fills games the card did not capture), spends no credit, edits no policy,
+# pushes to no branch, buys no odds (the free scoreboard's posted line fills games the card did not capture), spends no credit except the 2-credit scores fallback when a game is otherwise unsettled, edits no policy,
 # and places no bet.
 on:
   schedule:
@@ -281,10 +281,14 @@ jobs:
       - name: Build the board
         env:
           PYTHONPATH: src
+          # Read only by settle_results.py's last fallback, The Odds API's
+          # scores (2 credits), when a game from last night still has no final
+          # after ESPN's scoreboard, its game summary and the lab's own tables.
+          CBB_ODDS_API_KEY: ${{ secrets.CBB_ODDS_API_KEY }}
         run: |
           python web/build_board_json.py --lab . --out dist/data
           python web/site_history.py --data dist/data
-          python web/settle_results.py --data dist/data --sport cbb --lab .
+          python web/settle_results.py --data dist/data --sport cbb --lab . --fallbacks
           python web/build_site_pages.py --data dist/data
           printf '{"sport":"cbb","pages":["season","record","tracker","methods","game"]}' > dist/site.json
 

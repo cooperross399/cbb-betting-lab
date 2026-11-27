@@ -311,8 +311,8 @@ def test_publish_board_builds_the_feeds_and_lists_the_pages():
     steps = workflow["jobs"]["build"]["steps"] if "build" in workflow["jobs"] else next(iter(workflow["jobs"].values()))["steps"]
     build = next(s for s in steps if s.get("name") == "Build the board")["run"]
     lines = [line.strip() for line in build.splitlines() if line.strip()]
-    assert "python web/settle_results.py --data dist/data --sport cbb --lab ." in lines
-    assert lines.index("python web/build_site_pages.py --data dist/data") > lines.index("python web/settle_results.py --data dist/data --sport cbb --lab ."), "the record pages read what the settle kept"
+    assert "python web/settle_results.py --data dist/data --sport cbb --lab . --fallbacks" in lines
+    assert lines.index("python web/build_site_pages.py --data dist/data") > lines.index("python web/settle_results.py --data dist/data --sport cbb --lab . --fallbacks"), "the record pages read what the settle kept"
     site = next(line for line in lines if line.startswith("printf"))
     payload = json.loads(re.search(r"'(\{.*\})'", site).group(1))
     assert payload == {"sport": "cbb", "pages": ["season", "record", "tracker", "methods", "game"]}
