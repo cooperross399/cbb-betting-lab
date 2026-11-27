@@ -1,8 +1,24 @@
 {
   "alert_edge": 0.03,
-  "alerts": [],
-  "as_of": "2026-11-27T13:45+00:00",
-  "captures": 362,
+  "alerts": [
+    {
+      "american": 130,
+      "away_team": "Iowa State Cyclones",
+      "book": "bovada",
+      "books": 18,
+      "commence": "2026-11-27T18:00:00+00:00",
+      "edge": 0.0458,
+      "event_id": "6d123a59bb5220938562ae9ab3a41d77",
+      "fair_american": 120,
+      "game": "Iowa State Cyclones at St. John's Red Storm",
+      "home_team": "St. John's Red Storm",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    }
+  ],
+  "as_of": "2026-11-27T16:43+00:00",
+  "captures": 363,
   "cells": [
     {
       "beat_close": 0.6756756756756757,
@@ -50,8 +66,39 @@
     }
   ],
   "correction_factor": 1.8867178582120565,
-  "current": [],
-  "latest_capture": "2026-11-27T13:42:34+00:00",
+  "current": [
+    {
+      "american": 130,
+      "away_team": "Iowa State Cyclones",
+      "book": "bovada",
+      "books": 18,
+      "commence": "2026-11-27T18:00:00+00:00",
+      "edge": 0.0458,
+      "event_id": "6d123a59bb5220938562ae9ab3a41d77",
+      "fair_american": 120,
+      "game": "Iowa State Cyclones at St. John's Red Storm",
+      "home_team": "St. John's Red Storm",
+      "line": null,
+      "market": "moneyline",
+      "selection": "away"
+    },
+    {
+      "american": 110,
+      "away_team": "Western Kentucky Hilltoppers",
+      "book": "ballybet",
+      "books": 14,
+      "commence": "2026-11-27T23:00:00+00:00",
+      "edge": 0.0255,
+      "event_id": "1f87dcbca697a752ec04a6d6294636f0",
+      "fair_american": 105,
+      "game": "Western Kentucky Hilltoppers at Illinois Fighting Illini",
+      "home_team": "Illinois Fighting Illini",
+      "line": 26.5,
+      "market": "spread",
+      "selection": "away"
+    }
+  ],
+  "latest_capture": "2026-11-27T16:40:29+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02
