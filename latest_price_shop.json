@@ -1,8 +1,8 @@
 {
   "alert_edge": 0.03,
   "alerts": [],
-  "as_of": "2026-11-27T23:27+00:00",
-  "captures": 373,
+  "as_of": "2026-11-28T00:16+00:00",
+  "captures": 374,
   "cells": [
     {
       "beat_close": 0.6756756756756757,
@@ -55,7 +55,7 @@
       "american": 105,
       "away_team": "Elon Phoenix",
       "book": "fanatics",
-      "books": 6,
+      "books": 7,
       "commence": "2026-11-28T17:00:00+00:00",
       "edge": 0.025,
       "event_id": "116e2b16a8e37b44d9c399492ba4ec7c",
@@ -67,7 +67,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-27T23:24:37+00:00",
+  "latest_capture": "2026-11-28T00:13:37+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02
