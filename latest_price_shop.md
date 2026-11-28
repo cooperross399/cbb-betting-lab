@@ -1,22 +1,20 @@
 # CBB price shop
 
-As of 2026-11-28T01:16+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
+As of 2026-11-28T02:16+00:00. Every main-market side where one book's price beats the market's fair price (the median of 3+ books' own no-vig quotes) by at least 2%. No model is read: this is a slow book, not an opinion about the game. Advice only; the card does not read it.
 
 ## Right now
 
-From the capture of 2026-11-28T01:13:40+00:00.
+From the capture of 2026-11-28T02:13:36+00:00.
 
 | Tip (UTC) | Game | Side | Book | Price | Fair | Edge |
 |:---|:---|:---|:---|---:|---:|---:|
-| 2026-11-28 17:00 | St. Thomas (MN) Tommies at Princeton Tigers | away moneyline | fanduel | -128 | -134 | +2.2% |
-| 2026-11-28 19:00 | Ball State Cardinals at Southern Indiana Screaming Eagles | away moneyline | fanduel | -137 | -144 | +2.1% |
-| 2026-11-28 20:00 | Toledo Rockets at Valparaiso Beacons | home moneyline | fanduel | -150 | -158 | +2.1% |
-| 2026-11-28 20:30 | Buffalo Bulls at Towson Tigers | home moneyline | fanduel | -140 | -151 | +3.0% |
+| 2026-11-28 19:00 | Troy Trojans at Chattanooga Mocs | home moneyline | fanduel | -138 | -157 | +5.3% |
 | 2026-11-28 21:00 | San José St Spartans at Utah Valley Wolverines | home -5.5 | fanatics | +105 | -100 | +2.5% |
+| 2026-11-28 23:00 | North Dakota St Bison at Drake Bulldogs | home moneyline | espnbet | -210 | -224 | +2.0% |
 
 ## Did the shops beat the close?
 
-Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (375 capture(s) read). Per tier, clustered by game, corrected across 230 cumulative hypotheses (x1.8867); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
+Each side's first shop, graded against the fair price of the same side at the same line at the last capture before tip (376 capture(s) read). Per tier, clustered by game, corrected across 230 cumulative hypotheses (x1.8867); a tier needs 30 graded sides for an interval. Closing-line value is not a return.
 
 | Tier | Shops | Graded | Games | Mean CLV | Corrected | Beat the close | Line gone at close |
 |:---|---:|---:|---:|---:|:---|---:|---:|
