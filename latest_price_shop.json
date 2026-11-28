@@ -1,24 +1,8 @@
 {
   "alert_edge": 0.03,
-  "alerts": [
-    {
-      "american": -138,
-      "away_team": "Troy Trojans",
-      "book": "fanduel",
-      "books": 8,
-      "commence": "2026-11-28T19:00:00+00:00",
-      "edge": 0.0535,
-      "event_id": "69b3a66c6f994631d5c0bded42fe67ac",
-      "fair_american": -157,
-      "game": "Troy Trojans at Chattanooga Mocs",
-      "home_team": "Chattanooga Mocs",
-      "line": null,
-      "market": "moneyline",
-      "selection": "home"
-    }
-  ],
-  "as_of": "2026-11-28T02:16+00:00",
-  "captures": 376,
+  "alerts": [],
+  "as_of": "2026-11-28T03:16+00:00",
+  "captures": 377,
   "cells": [
     {
       "beat_close": 0.6756756756756757,
@@ -73,7 +57,7 @@
       "book": "fanduel",
       "books": 8,
       "commence": "2026-11-28T19:00:00+00:00",
-      "edge": 0.0535,
+      "edge": 0.0526,
       "event_id": "69b3a66c6f994631d5c0bded42fe67ac",
       "fair_american": -157,
       "game": "Troy Trojans at Chattanooga Mocs",
@@ -86,7 +70,7 @@
       "american": 105,
       "away_team": "San Jos\u00e9 St Spartans",
       "book": "fanatics",
-      "books": 11,
+      "books": 12,
       "commence": "2026-11-28T21:00:00+00:00",
       "edge": 0.025,
       "event_id": "708deb9075e9f29c4c8393fd9d3eefb5",
@@ -113,7 +97,7 @@
       "selection": "home"
     }
   ],
-  "latest_capture": "2026-11-28T02:13:36+00:00",
+  "latest_capture": "2026-11-28T03:13:37+00:00",
   "looks": 230,
   "min_books": 3,
   "shop_edge": 0.02
